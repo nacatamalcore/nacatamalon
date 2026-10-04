@@ -165,6 +165,26 @@ export type TPhysicsBodyHandle2d = {
      * Set the angular velocity (rotation speed).
      */
     setAngularVelocity: (w: number) => void;
+
+    /**
+     * Moves the body to another collision layer, and changes what it collides with, while the game
+     * runs: a player who passes through enemies for a moment after being hit, a ball that stops
+     * meeting the pegs once it has bounced. The same two values the body was created with (see the
+     * engine's `TPhysicsSurface`), and the same mutual rule: two bodies meet only if each one's mask
+     * includes the other's layer.
+     *
+     * `collidesWith` left out keeps the mask the body already had. The object's physics record is
+     * updated too, so a scene saved afterwards keeps the layers it is simulating with.
+     */
+    setLayers: (layer: number, collidesWith?: number) => void;
+
+    /**
+     * Takes the body out of the simulation and leaves the object where it is, still drawn and
+     * still running its code: a coin that stops colliding while it plays its pick-up animation.
+     * Destroying the object does this on its own. Safe to call twice, and a push through this handle
+     * afterwards does nothing.
+     */
+    destroy: () => void;
 };
 
 /**

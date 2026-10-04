@@ -211,6 +211,21 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
         }
     };
 
+    /**
+     * The collision filter a body's layers ask for, at creation and again when `setLayers` changes
+     * them.
+     */
+    const filterOf = (spec: TBodySpec): { categoryBits: bigint; maskBits: bigint; groupIndex: number } => ({
+        categoryBits: 1n << BigInt(spec.material?.layer ?? 0),
+        // Widened by the mover bit unless this body opted out: a character walks by querying, and a
+        // shape whose mask does not accept the query is a shape the character passes straight
+        // through. See `MOVER_CATEGORY` for why the opt-out has to live on this side.
+        maskBits: spec.hiddenFromMovers
+            ? BigInt(spec.material?.collidesWith ?? ALL_LAYERS)
+            : BigInt(spec.material?.collidesWith ?? ALL_LAYERS) | MOVER_CATEGORY,
+        groupIndex: 0,
+    });
+
     const materialize = (entry: TBodyEntry): void => {
         if (!b3 || world === null || entry.destroyed) return;
         // In WORLD space: the solver knows one world, while `transform` is relative to the box's
@@ -248,19 +263,9 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
         // Layers. box3d's filter is 64-bit (`bigint`), while the format caps at 16 layers
         // because Rapier2D's `u32` packs membership and mask into one word, so the widening
         // here is free and the narrowing lives in the format, deliberately.
+        // Untouched shapes keep box3d's all-ones default, which already includes the mover bit.
         if (entry.spec.hiddenFromMovers || (mat && (mat.layer !== undefined || mat.collidesWith !== undefined))) {
-            shapeDef.filter = {
-                categoryBits: 1n << BigInt(mat?.layer ?? 0),
-                // Widened by the mover bit unless this body opted out: a character walks by
-                // querying, and a shape whose mask does not accept the query is a shape the
-                // character passes straight through. See `MOVER_CATEGORY` for why the opt-out
-                // has to live on this side. Untouched shapes keep box3d's all-ones default,
-                // which already includes the bit.
-                maskBits: entry.spec.hiddenFromMovers
-                    ? BigInt(mat?.collidesWith ?? ALL_LAYERS)
-                    : BigInt(mat?.collidesWith ?? ALL_LAYERS) | MOVER_CATEGORY,
-                groupIndex: 0,
-            };
+            shapeDef.filter = filterOf(entry.spec);
         }
         // Every event flag defaults to false in box3d, so both of these are real opt-ins.
         shapeDef.enableContactEvents = entry.wantsEvents;
@@ -320,6 +325,9 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
             const entry = byBody.get(shapeKey(moveEvent.bodyId));
             // A body destroyed mid-step is still in this step's events.
             if (!entry || entry.destroyed) continue;
+            // Its object was destroyed this frame and the body goes at the sweep: nothing is
+            // written onto an object that is already dead.
+            if (entry.spec.box.destroyed) continue;
             // A driven body follows its transform rather than deciding it (see `TBodySpec.driven`).
             if (entry.spec.driven) continue;
 
@@ -353,6 +361,9 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
         const announce = (a: TBodyEntry | undefined, b: TBodyEntry | undefined, started: boolean): void => {
             // A shape this world did not create, or one already torn down mid-step.
             if (!a || !b) return;
+            // Destroyed earlier in this frame: its body is still in the world until the sweep, but
+            // a contact with something already dead is not news to anyone.
+            if (a.spec.box.destroyed || b.spec.box.destroyed) return;
             if (started) {
                 a.onEnter?.emit(b.spec.box);
                 b.onEnter?.emit(a.spec.box);
@@ -498,6 +509,20 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
             applyTorque: (x, y, z) => act('torque', x, y, z),
             setLinearVelocity: (x, y, z) => act('linear', x, y, z),
             setAngularVelocity: (x, y, z) => act('angular', x, y, z),
+            setLayers: (layer, collidesWith) => {
+                if (entry.destroyed) return;
+                const mask = collidesWith ?? spec.material?.collidesWith ?? ALL_LAYERS;
+                // Kept on the spec as well as applied, so a body still waiting for the WebAssembly
+                // is built on the new layers when it lands.
+                spec.material = { ...spec.material, layer, collidesWith: mask };
+                if (spec.box.physics?._type === 'physics3d') {
+                    spec.box.physics.layer = layer;
+                    spec.box.physics.collidesWith = mask;
+                }
+                // `true` re-tests the contacts it is already in, so a body leaving a layer stops
+                // touching what it was resting on instead of waiting for the next contact.
+                if (b3 && entry.shape !== null) b3.b3Shape_SetFilter(entry.shape, filterOf(spec), true);
+            },
             destroy: () => {
                 if (entry.destroyed) return;
                 entry.destroyed = true;
@@ -519,6 +544,12 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
         // box's entry: `bodyOf` on a character's box should find the character's collider if it
         // has one, never the invisible capsule standing in for it.
         if (!spec.driven) byBoxId.set(spec.box.id, body);
+
+        // Destroying the object takes its body out of the world. `destroy` runs an object's
+        // cleanups, children first, for it and everything under it; before this hook a destroyed
+        // object kept its body, an invisible wall where it used to be. The world's own teardown
+        // already skips bodies destroyed this way.
+        spec.box.cleanups.push(body.destroy);
 
         return { body, entry };
     };
@@ -642,7 +673,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
                 driven: true,
             });
 
-            characters.push((dt) => {
+            const advance = (dt: number): void => {
                 step(dt);
                 // Teleported rather than given a velocity: the solver has already decided where
                 // the character is, and a kinematic body asked to travel there would arrive a
@@ -650,6 +681,13 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
                 if (b3 && proxy.id !== null && !proxy.destroyed) {
                     b3.b3Body_SetTransform(proxy.id, toB3(centre), IDENTITY_ROTATION);
                 }
+            };
+            characters.push(advance);
+            // A destroyed character stops walking, as its proxy stops colliding (`addEntry` hangs
+            // that one on the same cleanups).
+            box.cleanups.push(() => {
+                const at = characters.indexOf(advance);
+                if (at >= 0) characters.splice(at, 1);
             });
 
             return body;

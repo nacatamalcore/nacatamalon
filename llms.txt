@@ -104,6 +104,11 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
 - Physics is behind its own imports and is switched on once: `installPhysics2d()` from
   `nacatamalon/physics2d`, or `installPhysics3d()` from `nacatamalon/physics3d`. The physics engines
   are included in the package: there is nothing else to install.
+- A `'static'` body never moves. Something that moves and pushes others (a platform, a moving peg) is
+  `body: 'kinematic'`, moved with `setLinearVelocity` on its handle, which is
+  `getPhysicsWorld2d()?.bodyOf(useSelf())` (or `getPhysicsWorld3d`) taken while the object is built.
+  The handle's `setLayers(layer, collidesWith)` changes what it collides with, and its `destroy()`
+  removes the body and keeps the object. `destroy(object)` removes the object's body too.
 
 ## Where things are (search llms-full.txt for each name)
 

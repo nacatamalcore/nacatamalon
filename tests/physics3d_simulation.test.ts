@@ -17,6 +17,10 @@ import { useTransform } from '../src/hooks/transform/use_transform';
 import { useSignal } from '../src/hooks/signal/use_signal';
 import { stopScene } from '../src/scene/stop_scene';
 import type { TGameObject } from '../src/hooks/spawn/use_spawn';
+import { destroy } from '../src/destroy/destroy';
+import { flushDestroyed } from '../src/destroy/flush_destroyed';
+import type { TRuntimeStore } from '../src/store';
+import type { TPhysicsBodyHandle3d } from '../src/physics/box3d/types';
 
 /**
  * The half that only simulating proves.
@@ -347,5 +351,83 @@ describe('a collider made of triangles, and a ray', () => {
         expect(hit!.point.x).toBeCloseTo(1, 3);
         expect(hit!.normal.y).toBeCloseTo(1, 3);
         expect(hit!.distance).toBeCloseTo(5, 3);
+    });
+});
+
+/**
+ * Frames as the game runs them: the updates, then the sweep that finishes what `destroy` queued.
+ */
+const runFrames = async (store: TRuntimeStore, root: TGameObject, frames: number): Promise<void> => {
+    await loadBox3D();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    for (let i = 0; i < frames; i++) {
+        runHookUpdates(root, FRAME);
+        flushDestroyed(store);
+    }
+};
+
+/**
+ * A destroyed object used to keep its body, an invisible wall where it used to be. The handle had a
+ * `destroy()` of its own, but destroying the object never called it.
+ */
+describe('a destroyed object', () => {
+    it('takes its body with it, so nothing collides with where it used to be', async () => {
+        const { store } = createTestGame();
+        let floor!: TGameObject;
+        const root = startTestScene(store, 'Level', () => {
+            usePhysicsWorld3d();
+            useSpawn(function DestroyableFloor() {
+                Floor();
+                floor = useSelf();
+            })();
+            useSpawn(function Crate() {
+                useTransform({ y: 3 });
+                createMesh({ geometry: useCubeGeometry(), tint });
+                usePhysicsBody3d({ body: 'dynamic', collider: { shape: 'box', size: [1, 1, 1] } });
+            })();
+            return createScene();
+        });
+        const crate = root.children[1];
+
+        await runFrames(store, root, 180);
+        expect(crate.transform!.y).toBeCloseTo(0.5, 1);
+
+        destroy(floor);
+        await runFrames(store, root, 60);
+
+        expect(crate.transform!.y).toBeLessThan(-2);
+    });
+});
+
+/**
+ * A body moved to another layer while the game runs.
+ */
+describe('a body changed at runtime', () => {
+    it('stops colliding with a layer it has left, and the record says so', async () => {
+        const { store } = createTestGame();
+        let crate!: TGameObject;
+        let body!: TPhysicsBodyHandle3d;
+        const root = startTestScene(store, 'Level', () => {
+            usePhysicsWorld3d();
+            useSpawn(Floor)();
+            useSpawn(function Crate() {
+                useTransform({ y: 3 });
+                createMesh({ geometry: useCubeGeometry(), tint });
+                usePhysicsBody3d({ body: 'dynamic', collider: { shape: 'box', size: [1, 1, 1] } });
+                crate = useSelf();
+                body = getPhysicsWorld3d()!.bodyOf(crate)!;
+            })();
+            return createScene();
+        });
+
+        await runFrames(store, root, 180);
+        expect(crate.transform!.y).toBeCloseTo(0.5, 1);
+
+        // Layer 1, meeting only layer 1: the floor is on layer 0.
+        body.setLayers(1, 1 << 1);
+        await runFrames(store, root, 60);
+
+        expect(crate.transform!.y).toBeLessThan(-2);
+        expect(crate.physics).toMatchObject({ layer: 1, collidesWith: 1 << 1 });
     });
 });

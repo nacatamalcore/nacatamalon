@@ -15,7 +15,7 @@ type TBodyEntry = {
     box: TGameObject;
     rapierBodyHandle: number;
     rapierColliderHandle: number;
-    impulseQueue: Array<{ x: number; y: number; type: 'impulse' | 'force' }>;
+    impulseQueue: Array<{ x: number; y: number; type: 'impulse' | 'force' | 'linear' | 'angular' }>;
     /**
      * Whether this collider asked Rapier to report its contacts. False until someone reads
      * `onEnter`/`onExit` (or the collider is a sensor, which is pointless without them),
@@ -36,6 +36,12 @@ type TBodyEntry = {
      * Assigned right after construction; never null once the map holds the entry.
      */
     handle: TPhysicsBodyHandle2d;
+    /**
+     * Whether the body has left the world, because its object was destroyed. Once true nothing
+     * reaches Rapier through this entry again: a push from a handle somebody kept is dropped, and
+     * a materialization still waiting for the WebAssembly never happens.
+     */
+    removed: boolean;
 };
 
 const FIXED_TIMESTEP = 1 / 60;
@@ -99,9 +105,13 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         for (const q of entry.impulseQueue) {
             if (q.type === 'impulse') {
                 body.applyImpulse({ x: q.x, y: q.y }, true);
-            } else {
+            } else if (q.type === 'force') {
                 // `true` wakes it: a force on a sleeping body does nothing otherwise.
                 body.addForce({ x: q.x, y: q.y }, true);
+            } else if (q.type === 'linear') {
+                body.setLinvel({ x: q.x, y: q.y }, true);
+            } else {
+                body.setAngvel(q.x, true);
             }
         }
         entry.impulseQueue = [];
@@ -109,6 +119,9 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
 
     const writebackBody = (entry: TBodyEntry) => {
         if (!rapier || !world) return;
+        // Destroyed this frame and still waiting for the sweep: its body is gone at the end of the
+        // frame, and until then nothing is written onto an object that is already dead.
+        if (entry.box.destroyed) return;
         // The placement the object really has, the same one `createBody` asked for: reading
         // `box.transform` alone would skip every object placed by what it draws, which here is most
         // of them, and the body would simulate perfectly with nothing on screen moving.
@@ -156,6 +169,9 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
             const b = byCollider.get(handleB);
             // A collider this world did not create, or one already torn down mid-frame.
             if (!a || !b) continue;
+            // Destroyed earlier in this frame: its body is still in the world until the sweep, but
+            // a contact with something already dead is not news to anyone.
+            if (a.box.destroyed || b.box.destroyed) continue;
 
             if (started) {
                 a.onEnter?.emit(b.box);
@@ -219,10 +235,11 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
             onExit: null,
             // Filled in below, once the handle this entry describes actually exists.
             handle: null as unknown as TPhysicsBodyHandle2d,
+            removed: false,
         };
 
         const materialize = () => {
-            if (!rapier || !world) return;
+            if (!rapier || !world || bodyEntry.removed) return;
 
             // Re-read at materialization rather than reusing `pose`: WASM loads async, so a box moved
             // between scene init and this moment would otherwise start at where it used to be.
@@ -281,11 +298,36 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
 
         bodies.set(box.id, bodyEntry);
 
+        /**
+         * Takes the body out of the world when its object is destroyed.
+         *
+         * Hung on the object's own cleanups, which `destroy` runs, children first, for the object
+         * and everything under it. Without it a destroyed object kept its body: an invisible wall
+         * where the sprite used to be, a ball falling forever, and two maps that only grew.
+         *
+         * When the whole scene ends, these run before the world's own teardown (the world lives on
+         * the scene's root, and a root's children are torn down before it), and if the world is
+         * already gone there is nothing to take out of it.
+         */
+        const remove = (): void => {
+            if (bodyEntry.removed) return;
+            bodyEntry.removed = true;
+            if (bodies.get(box.id) === bodyEntry) bodies.delete(box.id);
+            byCollider.delete(bodyEntry.rapierColliderHandle);
+            if (!world) return;
+            const body = world.getRigidBody(bodyEntry.rapierBodyHandle);
+            // Removing the body removes its collider with it.
+            if (body) world.removeRigidBody(body);
+        };
+        box.cleanups.push(remove);
+
         const handle: TPhysicsBodyHandle2d = {
             get onEnter() { return ensureSignal('onEnter'); },
             get onExit() { return ensureSignal('onExit'); },
 
+            // A handle kept past its object's destruction pushes nothing.
             applyImpulse: (x: number, y: number) => {
+                if (bodyEntry.removed) return;
                 if (rapier && world) {
                     const body = world.getRigidBody(bodyEntry.rapierBodyHandle);
                     if (body) body.applyImpulse({ x, y }, true);
@@ -295,6 +337,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
             },
 
             applyForce: (x: number, y: number) => {
+                if (bodyEntry.removed) return;
                 if (rapier && world) {
                     const body = world.getRigidBody(bodyEntry.rapierBodyHandle);
                     if (body) body.addForce({ x, y }, true);
@@ -304,18 +347,44 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
             },
 
             setLinearVelocity: (vx: number, vy: number) => {
+                if (bodyEntry.removed) return;
                 if (rapier && world) {
                     const body = world.getRigidBody(bodyEntry.rapierBodyHandle);
                     if (body) body.setLinvel({ x: vx, y: vy }, true);
+                } else {
+                    // Queued like a push: a velocity set while the object is built, which is where
+                    // a moving platform sets its own, used to be dropped before Rapier had loaded.
+                    bodyEntry.impulseQueue.push({ x: vx, y: vy, type: 'linear' });
                 }
             },
 
             setAngularVelocity: (w: number) => {
+                if (bodyEntry.removed) return;
                 if (rapier && world) {
                     const body = world.getRigidBody(bodyEntry.rapierBodyHandle);
                     if (body) body.setAngvel(w, true);
+                } else {
+                    bodyEntry.impulseQueue.push({ x: w, y: 0, type: 'angular' });
                 }
             },
+
+            setLayers: (layer: number, collidesWith?: number) => {
+                if (bodyEntry.removed) return;
+                const mask = collidesWith ?? shape.collidesWith ?? ALL_LAYERS;
+                // Kept on the shape as well as applied, so a body still waiting for the WebAssembly
+                // is built on the new layers when it lands.
+                shape.layer = layer;
+                shape.collidesWith = mask;
+                if (box.physics?._type === 'physics2d') {
+                    box.physics.layer = layer;
+                    box.physics.collidesWith = mask;
+                }
+                if (world && bodyEntry.rapierColliderHandle >= 0) {
+                    world.getCollider(bodyEntry.rapierColliderHandle)?.setCollisionGroups(collisionGroupsOf(layer, mask));
+                }
+            },
+
+            destroy: remove,
         };
 
         bodyEntry.handle = handle;
@@ -445,6 +514,13 @@ const enclosesArea = (vertices: Array<[number, number]>): boolean => {
 };
 
 /**
+ * A layer and a mask as Rapier wants them: one 32-bit word, the membership in the high half and the
+ * mask in the low one. That packing is why the format stops at 16 layers.
+ */
+const collisionGroupsOf = (layer: number, collidesWith: number): number =>
+    (((1 << layer) << 16) | collidesWith) >>> 0;
+
+/**
  * Create a Rapier collider descriptor from shape options.
  */
 const createColliderDesc = (rapier: TRapierModule, options: TBodyOptions): ColliderDesc | null => {
@@ -472,9 +548,7 @@ const createColliderDesc = (rapier: TRapierModule, options: TBodyOptions): Colli
         // That 16-bit ceiling is why the format caps at 16 layers even though Box3D's filter is
         // 64-bit wide; see core's `PHYSICS_LAYERS`.
         if (options.layer !== undefined || options.collidesWith !== undefined) {
-            const membership = 1 << (options.layer ?? 0);
-            const mask = options.collidesWith ?? ALL_LAYERS;
-            colliderDesc.setCollisionGroups(((membership << 16) | mask) >>> 0);
+            colliderDesc.setCollisionGroups(collisionGroupsOf(options.layer ?? 0, options.collidesWith ?? ALL_LAYERS));
         }
     }
 
