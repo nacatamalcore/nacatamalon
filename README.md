@@ -194,4 +194,4 @@ installPhysics2d();
 MIT © 2026 Francisco José Pereira Alvarado. See [LICENSE](./LICENSE).
 
 The built-in font, Nacatamal Arcade, is derived from Press Start 2P and is
-licensed under the SIL Open Font License 1.1: see [OFL.txt](./OFL.txt).
+licensed under the SIL Open Font License 1.1: see [licenses/OFL.txt](./licenses/OFL.txt).

@@ -4,7 +4,7 @@
  *
  * Nacatamal Arcade is derived from Press Start 2P, Copyright 2012 The Press Start 2P Project
  * Authors (cody@zone38.net), and is distributed under the SIL Open Font License 1.1, in
- * `OFL.txt` at the root of this package. "Press Start 2P" is a Reserved Font Name, which is why the
+ * `licenses/OFL.txt` in this package. "Press Start 2P" is a Reserved Font Name, which is why the
  * modified version has a name of its own.
  *
  * 16 columns of 8 x 8 cells, in the order of `DEFAULT_FONT_CHARS` in `default_font.ts`.
