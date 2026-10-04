@@ -1,0 +1,123 @@
+# nacatamalon
+
+> A 2D and 3D game engine for the web, in TypeScript, on WebGPU with a WebGL2 fallback, aimed at
+> the look of the consoles from the SNES to the GameCube. A scene is a function; it asks for what it
+> needs with hooks, and what it creates is plain data you change.
+
+This is the short guide. `llms-full.txt`, next to this file, is the full reference: every export
+with its signature and documentation, each under a `### name` heading. Search it for any name below.
+
+## The mental model
+
+- A **scene** is a function that runs **once**, when the scene starts. It creates things and
+  registers what happens later, then returns `createScene()`.
+- **Hooks** (`use*`) work only while a scene, or something spawned with `useSpawn`, is being built.
+  Call them at the top of the function and keep what they return.
+- **`create*` returns plain data.** Change its fields and the next frame shows it:
+  `sprite.transform.x += 1`, `sprite.tint = getColor('red')`, `text.text = 'SCORE 10'`.
+- **`useUpdate((delta, time) => { ... })`** runs every frame. `delta` is seconds since the last frame,
+  capped at 0.25; `time` is seconds since the scene started.
+- What acts on a thing is a function that takes it first: `destroy(sprite)`. What a hook returns is a
+  handle with methods: `keys.isDown('ArrowLeft')`, `useScene().change('Level')`.
+- Files load in the background. `useLoadTexture` and the other loaders return at once, and what uses
+  the file appears when it arrives. `useLoader()` reports progress.
+
+## A whole game
+
+```ts
+import { createGame, createScene, createSprite, createText, getColor, useKeyboard, useUpdate } from 'nacatamalon';
+
+const Game = () => {
+    const keys = useKeyboard();
+    const paddle = createSprite({ width: 64, height: 10, tint: getColor('#ff6b1a'), transform: { x: 240, y: 300 } });
+    const score = createText({ text: 'SCORE 0', transform: { x: 8, y: 8 } });
+    let points = 0;
+
+    useUpdate((delta) => {
+        if (keys.isDown('ArrowLeft')) {
+            paddle.transform.x -= 340 * delta;
+        }
+        if (keys.isDown('ArrowRight')) {
+            paddle.transform.x += 340 * delta;
+        }
+        // The anchor is the middle, so the paddle's edges are half its width away.
+        const half = paddle.width / 2;
+        paddle.transform.x = Math.min(Math.max(paddle.transform.x, half), 480 - half);
+        if (keys.justPressed('Space')) {
+            points += 10;
+            score.text = 'SCORE ' + points;
+        }
+    });
+
+    return createScene();
+};
+
+// The page needs <div id="app"></div>. The first scene in the object starts.
+createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })({ Game });
+```
+
+## Conventions
+
+- **2D is pixels**, origin at the top-left of the game, y grows down. With no `useCamera2d`, `x`
+  and `y` are positions on the screen. **3D is y-up**; give every 3D scene a `useCamera3d`.
+- **Canvas size**: `createGame` `width` and `height` are the game's size, and by default (`scaling:
+  'none'`) the canvas is shown at exactly that size; it does not fit the page. Pass `scaling:
+  'integer'` (whole multiples, crisp pixel art) or `'contain'` (as large as fits).
+- **Sprite anchor** defaults to the middle, `{ x: 0.5, y: 0.5 }`: `transform` places the centre.
+  `{ x: 0, y: 0 }` places the top-left corner, `{ x: 0.5, y: 1 }` the feet.
+- **Text anchor** defaults to the top-left corner, `{ x: 0, y: 0 }`. `{ x: 0.5, y: 0 }` centres it on
+  `x`; `{ x: 1, y: 0 }` puts its right edge on `x` (a score at the right of the screen);
+  `{ x: 0.5, y: 0.5 }` centres it both ways on the point.
+- **Sprite size**: a sprite created with both `width` and `height` has them as numbers. A sprite
+  sized by its picture (a `texture`, no `width`/`height`) has them `undefined` until the picture loads.
+- **Keys** are `KeyboardEvent.key` names: letters lowercase (`'a'`), named keys as they are
+  (`'ArrowLeft'`, `'Enter'`, `'Escape'`). The space bar is `'Space'`; `' '` also works.
+- **Text** needs no font: `createText({ text })` uses the built-in 8 px font, which has lowercase,
+  accents, ñ, ¿ and ¡. `style.fontSize` is the line height in pixels; multiples of 8 stay crisp. A
+  font of your own: `useLoadFont({ json, atlas })`, passed as `font`.
+- **Colours** are `{ r, g, b, a }`, each 0 to 1. `getColor` takes `'#ff6b1a'`, `0xff6b1a`, a CSS
+  name (`'red'`) or any CSS colour (`'rgba(255, 0, 0, 0.5)'`, `'hsl(30 100% 50%)'`).
+- **Angles** are radians.
+- **Types** come from the same imports as the functions, all starting with `T`:
+  `import type { TSprite, TText } from 'nacatamalon';`.
+- **Scenes** are registered by name: `createGame(...)({ Title, Level })`, an object, not an array.
+  `useScene().change('Level')` starts `Level` and stops the current scene: its objects are removed
+  and its `useUpdate` stops. Changing back runs that scene's function again from the start, so
+  anything kept in its local variables or `useData` starts over.
+- **`change()` acts at once, but the frame it is called in finishes**: the code after it and the old
+  scene's other `useUpdate` callbacks still run that one frame, then never again. `return` right
+  after `change()` if the rest should not run. The new scene's first update is the next frame, so the
+  key that caused the change is not a fresh `justPressed` there.
+- **Data that outlives a scene** goes in a store, created once at module level:
+  `const session = createGameStore({ key: 'session', state: { score: 0 } });`, then
+  `session.set((s) => { s.score += 10; })` in one scene and `session.state.score` in the next.
+  `key` is required and must be unique per game: two stores with one key warn, and the later replaces
+  the earlier.
+
+## Gotchas
+
+- A hook called inside `useUpdate`, an event handler, a timeout or after `await` throws
+  `[NacatamalOn] <hook>: call it inside a scene body...`. Create everything up front and change
+  `visible`, or spawn things with `useSpawn`.
+- Movement without `* delta` runs faster on screens with a higher refresh rate.
+- `createGame` with no matching element throws: the page needs the element before the script runs.
+- Physics is behind its own imports and is switched on once: `installPhysics2d()` from
+  `nacatamalon/physics2d`, or `installPhysics3d()` from `nacatamalon/physics3d`. The physics engines
+  are included in the package: there is nothing else to install.
+
+## Where things are (search llms-full.txt for each name)
+
+- **Game and scenes**: `createGame`, `createScene`, `useScene`, `useGame`, `useSpawn`, `useSelf`, `destroy`, `useSceneUnmount`.
+- **Time**: `useUpdate`, `useTimer`, `useTween`, easings such as `linear` and `easeInOutSine`.
+- **Input**: `useKeyboard`, `usePointer`, `useGamepad`, `useActions`, `useAction`.
+- **2D**: `createSprite`, `useLoadTexture`, `useLoadAtlas`, `useSpriteAnimation`, `createText`, `useLoadFont`, `createNineSlice`, `createTilemap`, `tileAt`, `solidAt`, `createParticles`, `useCamera2d`.
+- **3D**: `createMesh`, `useCubeGeometry`, `usePlaneGeometry`, `useUvSphereGeometry`, `createMaterial`, `useLoadGltf`, `createModel`, `useSkeletalAnimation`, `useCamera3d`, `cameraLookAt`, `useLight`, `usePointLight`, `useSpotLight`, `useBlobShadow`, `createParticles3d`.
+- **The 1997 look**: material options `vertexSnap` and `affine`, `useFog`, `usePostProcess` with `dither`, `posterize`, `paletteMatch`, `lutGrade`, `crt` and `COLOR_LEVELS`.
+- **Audio**: `useSound`, `useMusic`, `useLoadAudio`, `useAudio`, `useAudioListener`.
+- **State**: `useData`, `useWatch`, `createGameStore`, `useStore`, `createGameSignal`, `useSignal`.
+- **Maths and random**: `useRandom`, `clamp`, `lerp`, `vec2Add`, `vec3Add` and the other `vec2*`/`vec3*`.
+- **2D physics** (`nacatamalon/physics2d`): `installPhysics2d`, `usePhysicsWorld2d`, `usePhysicsBody2d`.
+- **3D physics** (`nacatamalon/physics3d`): `installPhysics3d`, `usePhysicsWorld3d`, `usePhysicsBody3d`, `useCharacterBody`.
+- **Saved scenes**: `sceneFromDoc`, `parseSceneDoc`.
+
+`nacatamalon/authoring` and `nacatamalon/extend` are for tools and engine extensions; a game never needs them.

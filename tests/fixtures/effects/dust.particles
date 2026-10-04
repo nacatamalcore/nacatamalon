@@ -1,0 +1,89 @@
+{
+    "format": 1,
+    "kind": "particles3d",
+    "texture": "../assets/textures/spark.png",
+    "max": 90,
+    "blend": "alpha",
+    "worldSpace": true,
+    "emission": {
+        "rate": 14,
+        "burst": 0,
+        "duration": 0,
+        "loop": true
+    },
+    "shape": {
+        "kind": "box",
+        "size": [
+            5,
+            0.2,
+            5
+        ]
+    },
+    "direction": {
+        "x": 0.19611613513818402,
+        "y": 0.9805806756909201,
+        "z": 0
+    },
+    "spread": 1.2,
+    "life": [
+        2.5,
+        4
+    ],
+    "speed": [
+        0.15,
+        0.4
+    ],
+    "size": [
+        0.08,
+        0.16
+    ],
+    "spin": [
+        -0.4,
+        0.4
+    ],
+    "gravity": {
+        "x": 0,
+        "y": 0.05,
+        "z": 0
+    },
+    "damping": 0,
+    "colorOverLife": [
+        {
+            "t": 0,
+            "color": "#d8c9a8",
+            "alpha": 0
+        },
+        {
+            "t": 0.25,
+            "color": "#d8c9a8",
+            "alpha": 0.45
+        },
+        {
+            "t": 1,
+            "color": "#8f8168",
+            "alpha": 0
+        }
+    ],
+    "sizeOverLife": [
+        {
+            "t": 0,
+            "scale": 1
+        },
+        {
+            "t": 1,
+            "scale": 1.2
+        }
+    ],
+    "bounds": {
+        "center": {
+            "x": 0.06,
+            "y": 0.87,
+            "z": -0.11
+        },
+        "size": {
+            "x": 5.94,
+            "y": 2.19,
+            "z": 5.95
+        }
+    }
+}

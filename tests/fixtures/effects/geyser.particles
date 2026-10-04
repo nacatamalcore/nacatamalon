@@ -1,0 +1,90 @@
+{
+    "format": 1,
+    "kind": "particles3d",
+    "texture": "../assets/textures/spark.png",
+    "max": 220,
+    "blend": "additive",
+    "worldSpace": true,
+    "emission": {
+        "rate": 70,
+        "burst": 0,
+        "duration": 0,
+        "loop": true
+    },
+    "shape": {
+        "kind": "cone",
+        "radius": 0.35,
+        "angle": 0.32
+    },
+    "direction": {
+        "x": 0,
+        "y": 1,
+        "z": 0
+    },
+    "spread": 0.25,
+    "life": [
+        1.1,
+        1.8
+    ],
+    "speed": [
+        2.4,
+        3.6
+    ],
+    "size": [
+        0.16,
+        0.3
+    ],
+    "spin": [
+        -1.5,
+        1.5
+    ],
+    "gravity": {
+        "x": 0,
+        "y": -3.2,
+        "z": 0
+    },
+    "damping": 0.25,
+    "colorOverLife": [
+        {
+            "t": 0,
+            "color": "#bfe9ff",
+            "alpha": 0.9
+        },
+        {
+            "t": 0.45,
+            "color": "#5fa9e8",
+            "alpha": 0.7
+        },
+        {
+            "t": 1,
+            "color": "#1d3f66",
+            "alpha": 0
+        }
+    ],
+    "sizeOverLife": [
+        {
+            "t": 0,
+            "scale": 0.5
+        },
+        {
+            "t": 0.3,
+            "scale": 1
+        },
+        {
+            "t": 1,
+            "scale": 0.35
+        }
+    ],
+    "bounds": {
+        "center": {
+            "x": -0.04,
+            "y": 0.26,
+            "z": -0.01
+        },
+        "size": {
+            "x": 3.73,
+            "y": 2.84,
+            "z": 3.68
+        }
+    }
+}

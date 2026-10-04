@@ -1,0 +1,17 @@
+{
+    "$schema": "https://typedoc.org/schema.json",
+    "entryPoints": ["src/index.ts", "src/authoring/index.ts", "src/extend/index.ts", "src/physics/rapier2d/index.ts", "src/physics/box3d/index.ts"],
+    "out": "docs/api",
+    "name": "nacatamalon",
+    "readme": "none",
+    "excludeInternal": true,
+    "excludePrivate": true,
+    "excludeNotDocumented": true,
+    "categorizeByGroup": true,
+    "navigation": {
+        "includeCategories": true,
+        "includeGroups": true
+    },
+    "sort": ["source-order"],
+    "intentionallyNotExported": ["TRuntimeState"]
+}

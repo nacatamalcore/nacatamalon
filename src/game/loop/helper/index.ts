@@ -1,0 +1,1 @@
+export { collectDrawables } from './collect_drawables';

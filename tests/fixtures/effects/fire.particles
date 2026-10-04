@@ -1,0 +1,23 @@
+{
+    "format": 1,
+    "kind": "particles2d",
+    "texture": "../assets/particles/spark.png",
+    "max": 220,
+    "blend": "additive",
+    "emission": { "rate": 90, "burst": 0, "duration": 0, "loop": true },
+    "shape": { "kind": "circle", "radius": 10, "edge": false },
+    "direction": -1.5708,
+    "spread": 0.9,
+    "life": [0.5, 1.1],
+    "speed": [30, 70],
+    "size": [10, 22],
+    "spin": [-1, 1],
+    "gravity": { "x": 0, "y": -40 },
+    "damping": 0.6,
+    "colorOverLife": [
+        { "t": 0,    "color": "#fff3c4", "alpha": 0.9 },
+        { "t": 0.35, "color": "#ff9d2e", "alpha": 0.8 },
+        { "t": 1,    "color": "#8c1d00", "alpha": 0 }
+    ],
+    "sizeOverLife": [{ "t": 0, "scale": 0.6 }, { "t": 0.3, "scale": 1 }, { "t": 1, "scale": 0.35 }]
+}

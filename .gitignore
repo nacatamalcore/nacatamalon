@@ -1,0 +1,11 @@
+node_modules
+dist
+
+# Generated API docs (`bun run docs`)
+docs/api
+
+.DS_Store
+
+.local
+# Generated on build (bun run build:llms)
+llms-full.txt
