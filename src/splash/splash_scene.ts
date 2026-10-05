@@ -2,6 +2,8 @@ import { getColor } from '../color/get_color';
 import type { TColor } from '../color';
 import { createSprite } from '../gameobjects/sprite/create_sprite';
 import { createText } from '../gameobjects/text/create_text';
+import { screenSizeOf } from '../DOM/screen_size';
+import { useCamera2d } from '../hooks/camera/use_camera_2d';
 import { useLoadTexture } from '../hooks/loaders/use_load_texture';
 import { useSceneUnmount } from '../hooks/scene/use_scene_unmount';
 import { useTween } from '../hooks/tween/use_tween';
@@ -79,13 +81,16 @@ const prefersStill = (): boolean =>
  * The scene that says "Made with NacatamalOn" before the game: the N grows in, the name slides in
  * beside "Made with", and it is over in under two seconds. A key or a click ends it early.
  *
- * Everything is placed from the game's own size, so it reads the same in a 320 x 240 game and in a
- * full-HD one. `done` is called once, when it has finished or been skipped; what comes after it is
+ * Everything is placed from the size the canvas really has, not the one the game asked for: with a
+ * free side (`keep: 'none'`, `'width'` or `'height'`) the two differ, and a splash laid out in the
+ * asked-for size would sit in a corner of the screen. It reads the same in a 320 x 240 game and in
+ * a full-HD one. `done` is called once, when it has finished or been skipped; what comes after it is
  * not this scene's business.
  *
  * @internal
  */
-export const createSplashScene = (width: number, height: number, canvas: HTMLCanvasElement, done: () => void): TSceneFn => () => {
+export const createSplashScene = (canvas: HTMLCanvasElement, done: () => void): TSceneFn => () => {
+    const { width, height } = screenSizeOf(canvas);
     const still = prefersStill();
     const tween = useTween();
     const bone = getColor(BONE);
@@ -109,7 +114,7 @@ export const createSplashScene = (width: number, height: number, canvas: HTMLCan
     const madeWithY = top + markHeight + gap;
     const nameY = madeWithY + smallHeight + Math.round(smallHeight * 0.6);
 
-    createSprite({
+    const background = createSprite({
         width,
         height,
         tint: getColor(SPLASH_BACKGROUND),
@@ -253,7 +258,16 @@ export const createSplashScene = (width: number, height: number, canvas: HTMLCan
         finished = true;
         done();
     };
+    // The canvas can still change size while the splash is up (the window being resized, a free
+    // side settling). Laying it all out again would fight the tweens, so the camera keeps the
+    // block in the middle instead, and the background is stretched to cover the new size.
+    const camera = useCamera2d();
     useUpdate((_delta, time) => {
+        const now = screenSizeOf(canvas);
+        camera.transform.x = Math.round((width - now.width) / 2);
+        camera.transform.y = Math.round((height - now.height) / 2);
+        background.width = now.width;
+        background.height = now.height;
         if (time >= DONE_AT) {
             finish();
         }

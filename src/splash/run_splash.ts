@@ -25,7 +25,6 @@ export const SPLASH_SCENE = 'nacatamalon:splash';
  * @internal
  */
 export const startWithSplash = (store: TRuntimeStore, initial: string, canvas: HTMLCanvasElement): void => {
-    const { width, height } = store.get('config');
     let splash: TBox | null = null;
     let game: TBox | null = null;
 
@@ -44,7 +43,7 @@ export const startWithSplash = (store: TRuntimeStore, initial: string, canvas: H
         startTransition(store, transition, game, splash);
     };
 
-    registerScene(store, SPLASH_SCENE, createSplashScene(width, height, canvas, reveal));
+    registerScene(store, SPLASH_SCENE, createSplashScene(canvas, reveal));
     splash = startScene(store, SPLASH_SCENE);
     game = startScene(store, initial);
     game.held = true;
