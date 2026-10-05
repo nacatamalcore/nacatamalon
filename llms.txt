@@ -7,6 +7,9 @@
 This is the short guide. `llms-full.txt`, next to this file, is the full reference: every export
 with its signature and documentation, each under a `### name` heading. Search it for any name below.
 
+Worked examples, one per feature with all their code: https://nacatamalon.com/llms/examples.md lists
+them by topic, each with an id, and `https://nacatamalon.com/llms/examples/<id>.md` is one of them.
+
 ## The mental model
 
 - A **scene** is a function that runs **once**, when the scene starts. It creates things and
