@@ -190,7 +190,7 @@ installPhysics2d();
 ## Community
 
 - Website: [nacatamalon.com](https://nacatamalon.com)
-- Discord: [discord.gg/E5YPyyvG3](https://discord.gg/E5YPyyvG3)
+- Discord: [discord.gg/jtyY3RkYTc](https://discord.gg/jtyY3RkYTc)
 - X (Twitter): [@nacatamalcore](https://x.com/nacatamalcore)
 
 ## License
