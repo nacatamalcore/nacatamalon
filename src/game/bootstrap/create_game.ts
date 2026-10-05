@@ -9,7 +9,8 @@ import type { TGameConfig } from "../types/t_game_config";
 import type { TGameInstance } from "../types/t_game_instance";
 import type { TGameOptions } from "../types/t_game_options";
 import { cleanGameOptions } from "./clean_gameoptions";
-import { openHost } from "../handle/editor_handle_of";
+import { isHostClaimed, openHost } from "../handle/editor_handle_of";
+import { isDevelopmentPage, shouldShowSplash } from "../../splash/should_show_splash";
 import { createGameEvents } from "./create_game_events";
 import { createGameHandle } from "../handle/create_game_handle";
 import { watchVisibility } from "./watch_visibility";
@@ -97,7 +98,8 @@ export const createGame = (target: TGameTarget, game_options: TGameOptions) => {
         pixelRatio,
         fullscreenScaling,
         pauseOnBlur,
-        banner
+        banner,
+        splash
     } = cleanedOptions;
     const screen = createCanvas(target, { width, height, smooth, scaling, keep, pixelRatio, fullscreenScaling });
     // Null until half 2: the store cannot exist without a renderer, and the renderer is the
@@ -159,6 +161,17 @@ export const createGame = (target: TGameTarget, game_options: TGameOptions) => {
         const host = openHost(instance);
 
         const run = async () => {
+            // Fetched while the renderer starts, so it is there by the time the first scene is, and
+            // never fetched at all by a game that does not show it: the splash and its picture are a
+            // module of their own. A failure to fetch it costs the splash, never the game.
+            const splashModule = shouldShowSplash(splash)
+                ? import('../../splash/run_splash').catch(() => null)
+                : null;
+            // Said once, so a game that asked for the splash and never sees it while being made
+            // knows it is not broken, and knows it will show once published.
+            if (splash === true && isDevelopmentPage()) {
+                console.info('[NacatamalOn] The splash is skipped while developing (localhost or a browser driven by automation); it shows once the game is published. `splash: \'always\'` shows it here too.');
+            }
             // Not named `renderer`: that one is already taken by the destructuring above, where
             // it is the REQUEST ('AUTO' | 'WEBGPU' | 'WEBGL2'). This is the instance that won.
             const rendererInstance = await createRenderer(screen.canvas, { renderer, msaa, background, smooth });
@@ -237,7 +250,16 @@ export const createGame = (target: TGameTarget, game_options: TGameOptions) => {
             // Only the requested scene runs; the rest stay dormant until something launches them.
             // Without an initial scene, the first one declared starts. With no scenes, nothing does.
             const initial = initialScene ?? Object.keys(scenes)[0];
-            if (initial !== undefined) startScene(runtime, initial);
+            if (initial !== undefined) {
+                // Decided here and not at `createGame`: a tool asks for the handle just after that
+                // returns, and a game a tool drives opens on its scene, not on a logo.
+                const withSplash = splashModule !== null && !isHostClaimed(instance) ? await splashModule : null;
+                if (withSplash) {
+                    withSplash.startWithSplash(runtime, initial, screen.canvas);
+                } else {
+                    startScene(runtime, initial);
+                }
+            }
             // `runtime`, not `store`: the const that cannot be null, rather than the outer `let`
             // that only exists so `destroy` can look at it from half 1.
             // `performance.now()` for the first call because there is no scheduler timestamp

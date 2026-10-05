@@ -119,6 +119,10 @@ With an element to draw into on the page:
   asks for what it needs: a key, a texture, code that runs every frame.
 - `useUpdate(fn)` runs `fn` every frame with the seconds since the last one, and
   the seconds the scene has been running.
+- `splash: true` in the options opens the published game with a short "Made
+  with NacatamalOn" (under two seconds, a key or a click skips it) while the
+  first scene loads behind it. It is off unless you ask for it, and skipped while
+  you develop on `localhost`.
 
 ## Coding with an AI assistant
 

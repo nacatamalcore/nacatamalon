@@ -18,6 +18,21 @@ import { MAX_FRAME_DELTA } from '../../CONFIG';
 const hosts = new WeakMap<TGameInstance, Promise<TRuntimeStore>>();
 
 /**
+ * The games a tool has asked to drive. A tool asks for the handle straight after `createGame`
+ * returns, before the renderer has answered, so by the time the game decides whether to show its
+ * splash it already knows that nobody is going to play it: an editor's viewport is not a game
+ * starting, and must not open with a logo.
+ */
+const claimed = new WeakSet<TGameInstance>();
+
+/**
+ * Whether a tool has asked for this game's handle.
+ *
+ * @internal
+ */
+export const isHostClaimed = (instance: TGameInstance): boolean => claimed.has(instance);
+
+/**
  * Registers an instance before its game has started, and returns the two ends of the promise its
  * state arrives on.
  *
@@ -84,6 +99,7 @@ export const editorHandleOf = async (instance: TGameInstance): Promise<TEditorHa
     if (pending === undefined) {
         throw new Error('[NacatamalOn] editorHandleOf: that is not a game made with createGame.');
     }
+    claimed.add(instance);
     const store = await pending;
     return {
         ...createGameHandle(store),

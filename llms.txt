@@ -66,6 +66,10 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
 - **Canvas size**: `createGame` `width` and `height` are the game's size, and by default (`scaling:
   'none'`) the canvas is shown at exactly that size; it does not fit the page. Pass `scaling:
   'integer'` (whole multiples, crisp pixel art) or `'contain'` (as large as fits).
+- **Splash**: off unless asked for. `createGame` `splash: true` opens the published game with
+  "Made with NacatamalOn" for under two seconds while the first scene loads behind it; it is
+  skipped on `localhost` and in automated browsers, so development and tests never see it.
+  `splash: 'always'` shows it there too.
 - **Sprite anchor** defaults to the middle, `{ x: 0.5, y: 0.5 }`: `transform` places the centre.
   `{ x: 0, y: 0 }` places the top-left corner, `{ x: 0.5, y: 1 }` the feet.
 - **Text anchor** defaults to the top-left corner, `{ x: 0, y: 0 }`. `{ x: 0.5, y: 0 }` centres it on

@@ -109,6 +109,7 @@ const TEST_CONFIG: TGameConfig = {
     fullscreenScaling: 'integer',
     actions: [],
     banner: false,
+    splash: false,
 };
 
 /**

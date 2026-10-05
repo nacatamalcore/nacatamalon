@@ -35,6 +35,8 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
     const post = game_options.post;
     // Nor for the startup line: it is on unless the game says otherwise.
     const banner = game_options.banner ?? true;
+    // Nor for the splash: off unless the game asks for it.
+    const splash = game_options.splash ?? false;
 
     return {
         width,
@@ -52,7 +54,8 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
         actions,
         actionsPersist,
         post,
-        banner
+        banner,
+        splash
     };
 
 }

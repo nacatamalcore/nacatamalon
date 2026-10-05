@@ -148,6 +148,22 @@ export type TGameOptions = {
      */
     banner?: boolean;
     /**
+     * Open with "Made with NacatamalOn": the N grows in, the name slides in beside it, and the game
+     * starts. Off unless asked for.
+     *
+     * - `true` shows it in the published game and skips it while you develop: on `localhost` (and
+     *   `127.0.0.1`, `::1`, `.local` names) and in a browser driven by automation (Playwright,
+     *   Puppeteer, Selenium), so neither a reload nor a test ever waits for it.
+     * - `'always'` shows it there too, to see it while working on the game.
+     * - `false`, or leaving it out, never shows it.
+     *
+     * It costs the game no time. The first scene is built and loads its files while the splash
+     * plays, and the splash fades into it once those have arrived, so on a game with a lot to
+     * load it is the loading screen. It lasts under two seconds, and a key or a click ends it. It
+     * never shows when a tool drives the game (`editorHandleOf`).
+     */
+    splash?: boolean | 'always';
+    /**
      * The game's **input map**: named actions (`'jump'`, `'move_left'`) and the keys, gamepad
      * buttons and stick directions each one listens to, read with `useActions`.
      *
