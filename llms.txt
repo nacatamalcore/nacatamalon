@@ -128,8 +128,8 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
 - **Audio**: `useSound`, `useMusic`, `useLoadAudio`, `useAudio`, `useAudioListener`.
 - **State**: `useData`, `useWatch`, `createGameStore`, `useStore`, `createGameSignal`, `useSignal`.
 - **Maths and random**: `useRandom`, `clamp`, `lerp`, `vec2Add`, `vec3Add` and the other `vec2*`/`vec3*`.
-- **2D physics** (`nacatamalon/physics2d`): `installPhysics2d`, `usePhysicsWorld2d`, `usePhysicsBody2d`.
-- **3D physics** (`nacatamalon/physics3d`): `installPhysics3d`, `usePhysicsWorld3d`, `usePhysicsBody3d`, `useCharacterBody`.
+- **2D physics**: `installPhysics2d` from `nacatamalon/physics2d`; `usePhysicsWorld2d` and `usePhysicsBody2d` from `nacatamalon`.
+- **3D physics**: `installPhysics3d` and `useCharacterBody` from `nacatamalon/physics3d`; `usePhysicsWorld3d` and `usePhysicsBody3d` from `nacatamalon`.
 - **Saved scenes**: `sceneFromDoc`, `parseSceneDoc`.
 
 `nacatamalon/authoring` and `nacatamalon/extend` are for tools and engine extensions; a game never needs them.
