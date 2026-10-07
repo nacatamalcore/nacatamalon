@@ -1,6 +1,7 @@
 import { spawnBox } from '../../box';
 import { getActiveBox, getActiveGame } from '../../store';
 import { nanoId } from '../../utils';
+import { markMadeTexture } from '../../loaders';
 import type { TTexture } from '../../loaders';
 import type { TRuntimeStore } from '../../store';
 import type { TSpriteTexture, TSpriteTextureOptions } from './types';
@@ -57,6 +58,7 @@ export const newSpriteTexture = (store: TRuntimeStore, options: TSpriteTextureOp
             gpu: store.get('screen').renderer.createRenderTexture(width, height),
         };
         pictures.add(texture);
+        markMadeTexture(texture);
         textures.set(key, texture);
     }
 

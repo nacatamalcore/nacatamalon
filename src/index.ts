@@ -10,6 +10,15 @@ export { createPack } from './gameobjects/pack';
 export type { TPackOptions } from './gameobjects/pack';
 export { createSpriteTexture } from './gameobjects/sprite_texture';
 export type { TSpriteTexture, TSpriteTextureSees, TSpriteTextureOptions } from './gameobjects/sprite_texture';
+// Pictures painted in code, in plain JavaScript, and the textures made from them: a game's own art
+// with no image files and no page, the same in the browser, on the native runtime and in a test.
+export {
+    createPixels, setPixel, getPixel, fillRect, drawLine, fillCircle, drawCircle, blitPixels, mapPixels,
+    fillGradient, fillNoise, fillChecker,
+} from './pixels';
+export type { TPixels, TPixelRegion, TFillGradientOptions, TFillNoiseOptions } from './pixels';
+export { createPixelTexture, updatePixelTexture } from './gameobjects/pixel_texture';
+export type { TPixelTextureOptions } from './gameobjects/pixel_texture';
 export type { TModel, TModelOptions } from './gameobjects/model';
 export { MAX_LIGHTS } from './light';
 export type { TLight, TDirectionalLight, TPointLight, TSpotLight, TAmbientLight, TLightOptionsBase } from './light';

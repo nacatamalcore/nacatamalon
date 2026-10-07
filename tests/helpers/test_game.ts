@@ -4,7 +4,7 @@ import { startScene } from '../../src/scene/start_scene';
 import type { TBox } from '../../src/box';
 import type { IRenderer, TFrameContext } from '../../src/render';
 // `ITexture` is not on the render barrel, only on the interface folder.
-import type { IBuffer, ITexture } from '../../src/render/interface';
+import type { IBuffer, ITexture, TTextureRegion } from '../../src/render/interface';
 import type { TGameConfig } from '../../src/game/types/t_game_config';
 import type { TRuntimeStore } from '../../src/store';
 import type { TSceneFn } from '../../src/scene';
@@ -34,6 +34,11 @@ export type TFakeRenderer = IRenderer & {
      * Every texture it was told to let go, oldest first.
      */
     destroyedTextures: ITexture[];
+    /**
+     * Every time a texture made from bytes was sent again, oldest first, with the rectangle asked
+     * for (`undefined` for the whole picture).
+     */
+    dataUpdates: Array<{ texture: ITexture; width: number; height: number; region: TTextureRegion | undefined }>;
 };
 
 export const createFakeRenderer = (): TFakeRenderer => {
@@ -41,6 +46,7 @@ export const createFakeRenderer = (): TFakeRenderer => {
     const smoothCalls: boolean[] = [];
     const buffers: TFakeRenderer['buffers'] = [];
     const destroyedTextures: ITexture[] = [];
+    const dataUpdates: TFakeRenderer['dataUpdates'] = [];
 
     /**
      * The bookkeeping of one buffer, found by the handle the game holds.
@@ -52,6 +58,7 @@ export const createFakeRenderer = (): TFakeRenderer => {
         smoothCalls,
         buffers,
         destroyedTextures,
+        dataUpdates,
         capabilities: { backend: 'WEBGPU', msaa: 1 },
         frame: (ctx) => { frames.push(ctx); },
         createTexture: (): ITexture => ({ resourceType: 'texture' }),
@@ -82,6 +89,12 @@ export const createFakeRenderer = (): TFakeRenderer => {
                 throw new Error('createDataTexture: the bytes do not match the size.');
             }
             return { resourceType: 'texture' };
+        },
+        updateDataTexture: (texture, data, width, height, region) => {
+            if (data.length !== width * height * 4) {
+                throw new Error('updateDataTexture: the bytes do not match the size.');
+            }
+            dataUpdates.push({ texture, width, height, region });
         },
         createRenderTexture: (): ITexture => ({ resourceType: 'texture' }),
         readTexture: async () => ({ width: 0, height: 0, data: new Uint8Array(0) }),

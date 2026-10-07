@@ -62,6 +62,8 @@ export { serializeTilemapDoc, emptyTilemapDoc } from '../loaders';
 // Where each of a map's layers is drawn among the rest, which is what a layer list shows.
 export { resolveLayerOrder, TILE_LAYER_BANDS } from '../loaders';
 export { serializePaletteDoc, emptyPaletteDoc } from '../loaders/palette';
+// Saving a picture painted in code as a file, for a build script or a tool: no page needed.
+export { encodePng } from '../pixels/encode_png';
 
 // The effects' tooling: saving one and starting one, the footprint and reach a tool draws around an
 // emitter, and the curves its gradient editor has to draw exactly as the particles are baked.

@@ -1,7 +1,7 @@
 import { SCENE_FORMAT, SCENE_VERSION } from './types/t_scene_doc';
 import { DEFAULT_FONT_KEY } from '../../gameobjects/text/default_font';
 import { UNSUPPORTED_COMPONENTS } from './parse_scene_doc';
-import { isSpriteTexture } from '../../gameobjects/sprite_texture';
+import { isMadeTexture } from '../../loaders';
 import type { TFog } from '../../fog/types/t_fog';
 import type { TTexture } from '../../loaders';
 import type { TColor } from '../../color';
@@ -128,12 +128,13 @@ const writeMaterial = (material: TMaterial, writing: TWriting): TMaterialDoc => 
 };
 
 /**
- * Lists an image the scene shows among what it has to load, unless it is a picture drawn inside the
- * game: that one is written by its object, and a file has nothing to fetch for it. Listed, the scene
- * would try to load it from nowhere when opened, and take its name before the picture is made.
+ * Lists an image the scene shows among what it has to load, unless the game made it: a picture drawn
+ * into by a component (written by its own object) or one painted in code (which the game makes again
+ * before loading the document). Neither has a file to fetch. Listed, the scene would try to load it
+ * from nowhere when opened, and take its name before the picture is made.
  */
 const listTexture = (texture: TTexture, writing: TWriting): void => {
-    if (!isSpriteTexture(texture)) {
+    if (!isMadeTexture(texture)) {
         writing.assets.set(texture.key, { type: 'texture', key: texture.key, src: texture.src });
     }
 };

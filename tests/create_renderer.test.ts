@@ -18,6 +18,7 @@ const fakeRenderer = (backend: 'WEBGPU' | 'WEBGL2'): IRenderer => ({
     updateBuffer: () => {},
     destroyBuffer: () => {},
     createDataTexture: () => ({ resourceType: 'texture' }),
+    updateDataTexture: () => {},
     createRenderTexture: () => ({ resourceType: 'texture' }),
     readTexture: async () => ({ width: 0, height: 0, data: new Uint8Array(0) }),
     destroyTexture: () => {},

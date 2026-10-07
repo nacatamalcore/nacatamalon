@@ -2,6 +2,7 @@ export type { IRenderer } from './i_renderer';
 export type { ITexture } from './i_texture';
 export type { IBuffer, TBufferUsage } from './i_buffer';
 export type { TCaptureResult } from './t_capture_result';
+export type { TTextureRegion } from './t_texture_region';
 export type { TDrawTexture } from './draw/t_draw_texture';
 export type { TFrameContext, TRenderPass } from './t_frame_context';
 export type { TDrawSprite } from './draw/t_draw_sprite';

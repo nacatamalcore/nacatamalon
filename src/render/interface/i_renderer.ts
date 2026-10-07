@@ -3,6 +3,7 @@ import type { TRendererCapabilities } from './t_renderer_capabilities';
 import type { ITexture } from './i_texture';
 import type { IBuffer, TBufferUsage } from './i_buffer';
 import type { TCaptureResult } from './t_capture_result';
+import type { TTextureRegion } from './t_texture_region';
 
 /**
  * The contract both backends implement, and the line nothing above `render/` may cross.
@@ -72,6 +73,16 @@ export type IRenderer = {
      * colours that look plausible and are wrong.
      */
     createDataTexture(data: Uint8Array, width: number, height: number): ITexture;
+    /**
+     * Uploads again what is in `data` to a texture `createDataTexture` made, all of it or only the
+     * rectangle `region`. `data` is the whole picture, `width * height * 4` bytes laid out as it was
+     * created; only the bytes inside `region` are sent.
+     *
+     * It is how a picture worked out in code changes while the game runs (a minimap filling in, a
+     * floor with a crater in it) without a new texture each time, and sending only the part that
+     * changed is what keeps that cheap.
+     */
+    updateDataTexture(texture: ITexture, data: Uint8Array, width: number, height: number, region?: TTextureRegion): void;
     /**
      * Makes an empty picture that a pass can draw **into** (`TRenderPass.renderTarget`) and that
      * anything else can then show like any other image: a mirror, a security camera, a screen inside

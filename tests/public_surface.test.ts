@@ -131,6 +131,8 @@ describe('the tools door', () => {
             // and the angles a tool aims a light with.
             'resolveLayerOrder', 'TILE_LAYER_BANDS', 'POST_BUILTINS', 'findPostBuiltin', 'normalizePostChain',
             'DEFAULT_PROJECT_SETTINGS', 'eulerAim',
+            // Saving a picture painted in code as a file: a build script's, never a running game's.
+            'encodePng',
         ].sort());
     });
 

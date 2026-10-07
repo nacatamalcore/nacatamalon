@@ -5,7 +5,7 @@ import { createGpuResources } from './create_gpu_resources';
 import { renderFrame } from './frame';
 import { FRAME_UNIFORM_FLOATS } from './frame/write_frame_uniforms';
 import { uploadTexture, type TWebGL2Texture } from './texture';
-import { createWebGL2Buffer, createWebGL2DataTexture, createWebGL2RenderTexture, destroyWebGL2Texture, readWebGL2Texture, toGlBuffer, updateWebGL2Buffer } from './resources';
+import { createWebGL2Buffer, createWebGL2DataTexture, createWebGL2RenderTexture, destroyWebGL2Texture, readWebGL2Texture, toGlBuffer, updateWebGL2Buffer, updateWebGL2DataTexture } from './resources';
 import type { TWebGL2State } from './types/t_webgl2_state';
 import { createContext } from './utils';
 
@@ -90,6 +90,8 @@ export const createWebGL2Renderer = async (
             state.textures.add(texture);
             return texture;
         },
+        updateDataTexture: (texture, data, width, height, region) =>
+            updateWebGL2DataTexture(gl, state.lost, texture, data, width, height, region),
         createRenderTexture: (width, height) => {
             const texture = createWebGL2RenderTexture(gl, width, height) as TWebGL2Texture;
             state.textures.add(texture);

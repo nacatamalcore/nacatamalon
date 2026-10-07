@@ -7,7 +7,7 @@ import { FRAME_UNIFORM_FLOATS } from './frame/write_frame_uniforms';
 import { createSpritePipeline } from './sprite/create_sprite_pipeline';
 import { createTilemapPipeline } from './tilemap/create_tilemap_pipeline';
 import { createMeshPipeline } from './mesh/create_mesh_pipeline';
-import { createWebGPUBuffer, createWebGPUDataTexture, createWebGPURenderTexture, readWebGPUTexture, toGpuBuffer, updateWebGPUBuffer } from './resources';
+import { createWebGPUBuffer, createWebGPUDataTexture, createWebGPURenderTexture, readWebGPUTexture, toGpuBuffer, updateWebGPUBuffer, updateWebGPUDataTexture } from './resources';
 import type { TWebGPUState } from './types/t_webgpu_state';
 import { createWebGPUTexture, createWhiteTexture, toGpuTexture } from './texture';
 
@@ -121,6 +121,8 @@ export const createWebGPURenderer = async (
         updateBuffer: (buffer, data) => updateWebGPUBuffer(device, buffer, data),
         destroyBuffer: (buffer) => { toGpuBuffer(buffer).destroy(); },
         createDataTexture: (data, width, height) => createWebGPUDataTexture(device, data, width, height),
+        updateDataTexture: (texture, data, width, height, region) =>
+            updateWebGPUDataTexture(device, texture, data, width, height, region),
         createRenderTexture: (width, height) => createWebGPURenderTexture(device, format, width, height),
         readTexture: (texture) => readWebGPUTexture(device, texture),
         // Everything cached for a texture here is kept in a `WeakMap`, so the texture is all there is
