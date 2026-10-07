@@ -1,6 +1,6 @@
 {
     "name": "nacatamalon",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "description": "A retro-first 2D and 3D game engine for the web, on WebGPU with a WebGL2 fallback, written with hooks and plain functions.",
     "license": "MIT",
     "author": "Francisco José Pereira Alvarado",

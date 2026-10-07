@@ -21,7 +21,7 @@ export type TPostChainEntry = {
      */
     shader: string;
     /**
-     * A key from the engine's own four. Wins over `shader` if somebody wrote both.
+     * A key from `POST_BUILTINS`, the engine's own effects. Wins over `shader` if somebody wrote both.
      */
     builtin?: string;
     /**

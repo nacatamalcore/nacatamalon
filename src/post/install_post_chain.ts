@@ -83,6 +83,8 @@ export const installPostChain = (store: TRuntimeStore, chain: TPostChain): void 
                 // The entry's values laid over what the built-in starts them at.
                 uniforms: { ...built.uniforms, ...asked },
                 uniformSig: built.uniformSig,
+                passes: built.passes,
+                history: built.history,
                 enabled: entry.enabled ?? true,
             }, null, 'project');
         } else {

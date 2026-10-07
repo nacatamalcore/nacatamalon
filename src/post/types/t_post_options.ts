@@ -2,6 +2,7 @@ import type { TLut } from '../../loaders/lut/types/t_lut';
 import type { TPalette } from '../../loaders/palette/types/t_palette';
 import type { TShader } from '../../loaders/shader/types/t_shader';
 import type { TUniformSignature, TUniformValues } from '../../materials/types/t_uniforms';
+import type { TPostPass } from './t_post_effect';
 
 /**
  * What `usePostProcess` is asked for.
@@ -51,10 +52,19 @@ export type TPostProcessOptions<U extends TUniformValues = TUniformValues> = {
      * What kind each knob is, when it is already known.
      *
      * Left out, it is worked out from the values, which is what a hand-written effect wants. The
-     * engine's own four pass it because they already know, and because spreading one of them in is
+     * engine's own effects pass it because they already know, and because spreading one of them in is
      * meant to be a whole effect rather than a starting point.
      */
     uniformSig?: TUniformSignature;
+    /**
+     * Steps run before `fragment`, for an effect that needs more than one read of the frame. Ignored
+     * when `effect` names a file: a file holds one hook.
+     */
+    passes?: readonly TPostPass[];
+    /**
+     * Whether the effect reads what it showed last frame, through `sampleHistory`. Default `false`.
+     */
+    history?: boolean;
     /**
      * The colours to match against, from `useLoadPalette`.
      */

@@ -124,7 +124,8 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
 - **Input**: `useKeyboard`, `usePointer`, `useGamepad`, `useActions`, `useAction`.
 - **2D**: `createSprite`, `useLoadTexture`, `useLoadAtlas`, `useSpriteAnimation`, `createText`, `useLoadFont`, `createNineSlice`, `createTilemap`, `tileAt`, `solidAt`, `createParticles`, `useCamera2d`.
 - **3D**: `createMesh`, `useCubeGeometry`, `usePlaneGeometry`, `useUvSphereGeometry`, `createMaterial`, `useLoadGltf`, `createModel`, `useSkeletalAnimation`, `useCamera3d`, `cameraLookAt`, `useLight`, `usePointLight`, `useSpotLight`, `useBlobShadow`, `createParticles3d`.
-- **The 1997 look**: material options `vertexSnap` and `affine`, `useFog`, `usePostProcess` with `dither`, `posterize`, `paletteMatch`, `lutGrade`, `crt` and `COLOR_LEVELS`.
+- **The 1997 look**: material options `vertexSnap` and `affine`, `useFog`, `usePostProcess` with `dither`, `posterize`, `paletteMatch`, `lutGrade`, `crt` (with `CRT_PRESETS`) and `COLOR_LEVELS`.
+- **Screen effects** (each spread into `usePostProcess`, tuned by writing into `effect.uniforms`): `colorAdjust`, `mosaic`, `wave`, `shockwave`, `distort`, `rgbSplit`, `glitch`, `grain`, `oldFilm`, `halftone`, `blur`, `zoomBlur`, `motionBlur`, `tiltShift`, `bloom`, `godrays`, `phosphor`, `ntsc`, `lcd`. A hand-written effect can read `sampleTextureSmooth`, `sampleInput` and `sampleHistory`, and take `passes` for more than one read of the frame.
 - **Audio**: `useSound`, `useMusic`, `useLoadAudio`, `useAudio`, `useAudioListener`.
 - **State**: `useData`, `useWatch`, `createGameStore`, `useStore`, `createGameSignal`, `useSignal`.
 - **Maths and random**: `useRandom`, `clamp`, `lerp`, `vec2Add`, `vec3Add` and the other `vec2*`/`vec3*`.

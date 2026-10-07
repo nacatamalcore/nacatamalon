@@ -1,4 +1,5 @@
 import type { TUniformSignature, TUniformValues } from '../../../materials/types/t_uniforms';
+import type { TPostPass } from '../../types/t_post_effect';
 
 /**
  * One of the engine's own effects, ready to be spread into `usePostProcess`.
@@ -19,6 +20,14 @@ export type TBuiltinPostEffect<U extends TUniformValues = TUniformValues> = {
     fragmentGlsl: string;
     uniforms: U;
     uniformSig: TUniformSignature;
+    /**
+     * Its steps before `fragment`, each in both languages, for the same reason the hook is.
+     */
+    passes?: readonly (TPostPass & { fragmentGlsl: string })[];
+    /**
+     * Whether it reads what it showed last frame.
+     */
+    history?: boolean;
 };
 
 /**

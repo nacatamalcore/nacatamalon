@@ -2,6 +2,7 @@ import { buildPostShader, POST_UNIFORMS_BINDING } from './post_shader';
 import { buildUniformLayout, POST_ENGINE_FIELDS, writeUniformValues } from '../../shared/material_uniforms';
 import { createWebGPUDataTexture, createWebGPURenderTexture } from '../resources';
 import { toGpuTexture } from '../texture';
+import { passSize, postStepsOf } from '../../shared/post_steps';
 import type { ITexture } from '../../interface';
 import type { TPostEffect } from '../../../post/types/t_post_effect';
 import type { TUniformLayout } from '../../shared/material_uniforms';
@@ -34,8 +35,22 @@ type TCompiled = {
  */
 export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat) => {
     const compiled = new Map<string, TCompiled>();
-    const groups = new Map<GPUTexture, Map<GPUTexture, GPUBindGroup>>();
+    const groups = new Map<string, GPUBindGroup>();
     const values = new Float32Array(SLOT_FLOATS);
+
+    /**
+     * A number for each picture, so a bind group can be found by the four it binds.
+     */
+    const ids = new WeakMap<GPUTexture, number>();
+    let nextId = 0;
+    const idOf = (texture: GPUTexture): number => {
+        let id = ids.get(texture);
+        if (id === undefined) {
+            id = nextId++;
+            ids.set(texture, id);
+        }
+        return id;
+    };
 
     const bindGroupLayout = device.createBindGroupLayout({
         label: 'post bind group layout',
@@ -50,6 +65,9 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
                 // One buffer with a slot per effect, so the whole chain records into one submit.
                 buffer: { type: 'uniform', hasDynamicOffset: true, minBindingSize: SLOT },
             },
+            { binding: 5, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+            { binding: 6, visibility: GPUShaderStage.FRAGMENT, texture: {} },
+            { binding: 7, visibility: GPUShaderStage.FRAGMENT, texture: {} },
         ],
     });
     const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] });
@@ -57,14 +75,24 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
     // Nearest everywhere. A palette read smoothly would invent colours it does not contain, and the
     // frame is being read at exactly its own size.
     const sampler = device.createSampler({ magFilter: 'nearest', minFilter: 'nearest' });
+    // For `sampleTextureSmooth`: a pass at a smaller size, a bent picture, a blur.
+    const smoothSampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
 
     let parameters: GPUBuffer | null = null;
     let capacity = 0;
     /**
-     * The picture the world is drawn into, and the two the chain passes between.
+     * The picture the world is drawn into.
      */
     let scene: ITexture | null = null;
-    const scratch: (ITexture | null)[] = [null, null];
+    /**
+     * The pictures the chain passes between, by size. Made the first time a size is asked for, so a
+     * chain of one-step effects only ever has two, both the size of the canvas.
+     */
+    const pool = new Map<string, ITexture[]>();
+    /**
+     * Last frame and this frame, for each effect that asked to read what it showed.
+     */
+    const histories = new Map<TPostEffect, { pair: [ITexture, ITexture]; read: 0 | 1 }>();
     let width = 0;
     let height = 0;
     /**
@@ -87,25 +115,75 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
         if (nextWidth === width && nextHeight === height) {
             return;
         }
-        for (const old of [scene, ...scratch]) {
-            if (old !== null) {
-                toGpuTexture(old).destroy();
-            }
+        if (scene !== null) {
+            toGpuTexture(scene).destroy();
         }
         scene = null;
-        scratch[0] = null;
-        scratch[1] = null;
+        dropPool();
+        for (const history of histories.values()) {
+            history.pair.forEach((texture) => toGpuTexture(texture).destroy());
+        }
+        histories.clear();
         groups.clear();
         width = nextWidth;
         height = nextHeight;
     };
 
-    const scratchAt = (index: number): ITexture => {
-        scratch[index] ??= createWebGPURenderTexture(device, format, width, height);
-        return scratch[index]!;
+    const dropPool = (): void => {
+        for (const list of pool.values()) {
+            list.forEach((texture) => toGpuTexture(texture).destroy());
+        }
+        pool.clear();
     };
 
-    const build = (effect: TPostEffect): TCompiled => {
+    /**
+     * A picture of this size that is none of the ones this draw reads.
+     */
+    const scratchOf = (w: number, h: number, avoid: readonly ITexture[]): ITexture => {
+        const key = `${w}x${h}`;
+        let list = pool.get(key);
+        if (list === undefined) {
+            list = [];
+            pool.set(key, list);
+        }
+        const free = list.find((texture) => !avoid.includes(texture));
+        if (free !== undefined) {
+            return free;
+        }
+        const made = createWebGPURenderTexture(device, format, w, h);
+        list.push(made);
+        return made;
+    };
+
+    const historyOf = (effect: TPostEffect) => {
+        let history = histories.get(effect);
+        if (history === undefined) {
+            history = {
+                pair: [
+                    createWebGPURenderTexture(device, format, width, height),
+                    createWebGPURenderTexture(device, format, width, height),
+                ],
+                read: 0,
+            };
+            histories.set(effect, history);
+        }
+        return history;
+    };
+
+    /**
+     * Lets go of the history of every effect that has left the chain.
+     */
+    const pruneHistories = (chain: readonly TPostEffect[]): void => {
+        for (const [effect, history] of histories) {
+            if (!chain.includes(effect)) {
+                history.pair.forEach((texture) => toGpuTexture(texture).destroy());
+                histories.delete(effect);
+                groups.clear();
+            }
+        }
+    };
+
+    const build = (effect: Pick<TPostEffect, 'name' | 'id' | 'fragment' | 'uniformSig'>): TCompiled => {
         const layout = buildUniformLayout(effect.uniformSig, POST_ENGINE_FIELDS);
         if (layout.floatCount > SLOT_FLOATS) {
             console.warn(
@@ -156,25 +234,27 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
         return identity;
     };
 
-    const compiledFor = (effect: TPostEffect): TCompiled => {
+    /**
+     * One step of an effect, compiled. A pass is compiled exactly like a hook, with the same knobs.
+     */
+    const compiledFor = (effect: TPostEffect, fragment: string | null): TCompiled => {
+        if (fragment === null) {
+            return identityFor();
+        }
         // By what it says and not by which object said it, so two effects running the same shader
         // compile once.
-        const key = `${JSON.stringify(effect.uniformSig)} ${effect.fragment ?? ''}`;
+        const key = `${JSON.stringify(effect.uniformSig)} ${fragment}`;
         let entry = compiled.get(key);
         if (entry === undefined) {
-            entry = build(effect);
+            entry = build({ name: effect.name, id: effect.id, fragment, uniformSig: effect.uniformSig });
             compiled.set(key, entry);
         }
         return entry.failed ? identityFor() : entry;
     };
 
-    const bindGroupFor = (source: GPUTexture, data: GPUTexture): GPUBindGroup => {
-        let inner = groups.get(source);
-        if (inner === undefined) {
-            inner = new Map();
-            groups.set(source, inner);
-        }
-        const existing = inner.get(data);
+    const bindGroupFor = (source: GPUTexture, data: GPUTexture, input: GPUTexture, history: GPUTexture): GPUBindGroup => {
+        const key = `${idOf(source)} ${idOf(data)} ${idOf(input)} ${idOf(history)}`;
+        const existing = groups.get(key);
         if (existing !== undefined) {
             return existing;
         }
@@ -188,9 +268,12 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
                 { binding: 2, resource: sampler },
                 { binding: 3, resource: data.createView() },
                 { binding: POST_UNIFORMS_BINDING, resource: { buffer: parameters!, offset: 0, size: SLOT } },
+                { binding: 5, resource: smoothSampler },
+                { binding: 6, resource: input.createView() },
+                { binding: 7, resource: history.createView() },
             ],
         });
-        inner.set(data, group);
+        groups.set(key, group);
         return group;
     };
 
@@ -213,6 +296,8 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
          * A buffer that grew in the middle would throw away the one the draws already recorded were
          * pointing at, and they would find nothing there at the moment of submitting. The same trap
          * models and maps avoid the same way.
+         *
+         * `count` is draws and not effects: `countPostSteps` says how many a chain makes.
          */
         beginFrame: (count: number): void => {
             if (parameters !== null && count <= capacity) {
@@ -232,13 +317,15 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
         /**
          * Runs the chain from the world's picture to the screen.
          *
-         * The **last** effect always writes the real destination, so there is never a copy at the
-         * end and no special case for an odd or even number of them. The ones before it alternate
-         * between two scratch pictures, which are only made if there is a second effect to need one.
+         * The **last** draw always writes the real destination, so there is never a copy at the end
+         * for an ordinary chain. Every other draw writes a picture from the pool that is none of the
+         * ones it reads, which is what lets an effect's passes and its hook read the effect's input
+         * while writing somewhere else. The one exception is an effect that keeps a history and is
+         * last: it writes its history, because next frame has to read it, and that is copied out.
          *
-         * `pixelRatio` is how many real pixels the picture has per game pixel. The effects run on
-         * every real one, but the `resolution` they read is the game's, so a dither or a palette
-         * pattern keeps the size of a game pixel instead of getting finer.
+         * `pixelRatio` is how many real pixels the picture has per game pixel. The hooks run on every
+         * real one, but the `resolution` they read is the game's, so a dither or a palette pattern
+         * keeps the size of a game pixel instead of getting finer. A pass reads its own size.
          */
         run: (
             encoder: GPUCommandEncoder,
@@ -249,19 +336,24 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
             phase: number,
             pixelRatio = 1,
         ): void => {
+            pruneHistories(chain);
+            const gameWidth = width / pixelRatio;
+            const gameHeight = height / pixelRatio;
             let source = scene!;
+            let slot = 0;
 
-            for (let i = 0; i < chain.length; i++) {
-                const effect = chain[i]!;
-                const entry = compiledFor(effect);
-                const last = i === chain.length - 1;
-                if (entry.pipeline === null) {
-                    continue;
-                }
-                const target = last ? destination : toGpuTexture(scratchAt(i % 2)).createView();
-
+            const draw = (
+                effect: TPostEffect,
+                entry: TCompiled,
+                target: GPUTextureView,
+                read: ITexture,
+                input: ITexture,
+                history: ITexture,
+                resolutionWidth: number,
+                resolutionHeight: number,
+            ): void => {
                 values.fill(0);
-                writeUniformValues(values, entry.layout, effect.uniforms, time, width / pixelRatio, height / pixelRatio);
+                writeUniformValues(values, entry.layout, effect.uniforms, time, resolutionWidth, resolutionHeight);
 
                 // The two the engine owns for a full-screen effect, poked in after the rest rather
                 // than merged into the effect's own values: they change every frame and every frame
@@ -271,12 +363,12 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
                     values[entry.layout.offsets.progress] = progress;
                     values[entry.layout.offsets.phase] = phase;
                 }
-                device.queue.writeBuffer(parameters!, i * SLOT, values, 0, SLOT_FLOATS);
+                device.queue.writeBuffer(parameters!, slot * SLOT, values, 0, SLOT_FLOATS);
 
                 const data = effect.palette?.gpu ?? effect.lut?.gpu ?? blankTexture();
 
                 const pass = encoder.beginRenderPass({
-                    label: `post ${effect.name ?? i}`,
+                    label: `post ${effect.name ?? effect.id}`,
                     colorAttachments: [{
                         view: target,
                         // Always cleared: one triangle covers every pixel, so loading what was there
@@ -286,23 +378,75 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
                         clearValue: { r: 0, g: 0, b: 0, a: 1 },
                     }],
                 });
-                pass.setPipeline(entry.pipeline);
-                pass.setBindGroup(0, bindGroupFor(toGpuTexture(source), toGpuTexture(data)), [i * SLOT]);
+                pass.setPipeline(entry.pipeline!);
+                pass.setBindGroup(
+                    0,
+                    bindGroupFor(toGpuTexture(read), toGpuTexture(data), toGpuTexture(input), toGpuTexture(history)),
+                    [slot * SLOT],
+                );
                 pass.draw(3);
                 pass.end();
+                slot++;
+            };
 
-                if (!last) {
-                    source = scratchAt(i % 2);
+            for (let i = 0; i < chain.length; i++) {
+                const effect = chain[i]!;
+                const lastEffect = i === chain.length - 1;
+                const input = source;
+                const history = effect.history === true ? historyOf(effect) : null;
+                const historyRead = history === null ? blankTexture() : history.pair[history.read];
+                const steps = postStepsOf(effect);
+
+                for (let j = 0; j < steps.length; j++) {
+                    const step = steps[j]!;
+                    const entry = compiledFor(effect, step.fragment);
+                    if (entry.pipeline === null) {
+                        continue;
+                    }
+                    const own = j === steps.length - 1;
+
+                    if (!own) {
+                        const [w, h] = passSize(step.scale!, gameWidth, gameHeight);
+                        const out = scratchOf(w, h, [source, input, historyRead]);
+                        draw(effect, entry, toGpuTexture(out).createView(), source, input, historyRead, w, h);
+                        source = out;
+                        continue;
+                    }
+
+                    if (history !== null) {
+                        const written = history.pair[1 - history.read]!;
+                        draw(effect, entry, toGpuTexture(written).createView(), source, input, historyRead, gameWidth, gameHeight);
+                        history.read = history.read === 0 ? 1 : 0;
+                        source = written;
+                        if (lastEffect) {
+                            draw(effect, identityFor(), destination, written, written, written, gameWidth, gameHeight);
+                        }
+                        continue;
+                    }
+
+                    if (lastEffect) {
+                        draw(effect, entry, destination, source, input, historyRead, gameWidth, gameHeight);
+                        continue;
+                    }
+
+                    const out = scratchOf(width, height, [source, input]);
+                    draw(effect, entry, toGpuTexture(out).createView(), source, input, historyRead, gameWidth, gameHeight);
+                    source = out;
                 }
             }
         },
 
         destroy: (): void => {
-            for (const texture of [scene, ...scratch, blank]) {
+            for (const texture of [scene, blank]) {
                 if (texture !== null) {
                     toGpuTexture(texture).destroy();
                 }
             }
+            dropPool();
+            for (const history of histories.values()) {
+                history.pair.forEach((texture) => toGpuTexture(texture).destroy());
+            }
+            histories.clear();
             parameters?.destroy();
             compiled.clear();
             groups.clear();

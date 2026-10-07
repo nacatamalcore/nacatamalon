@@ -65,8 +65,11 @@ export { parseParticlesDoc, PARTICLES_FORMAT } from './loaders/particles';
 export type { TParticles, TParticlesOptions, TParticleOverrides, TParticles3d, TParticles3dOptions } from './gameobjects/particles';
 export type { TParticleCollider2d, TParticleCollider3d, TParticleColliderShape2d, TParticleColliderShape3d } from './gameobjects/particles/colliders/t_particle_collider';
 export type { TParticlesFile, TParticlesDoc, TParticlesDoc2d, TParticlesDoc3d, TParticleBlend, TEmitShape2d, TEmitShape3d, TParticleCollision, TParticleTrail, TParticlesBounds, TChildEmitter } from './loaders/particles';
-export { dither, posterize, paletteMatch, lutGrade, crt, COLOR_LEVELS } from './post';
-export type { TPostEffect, TPostChain, TPostChainEntry, TPostProcessOptions, TBuiltinPostEffect } from './post';
+export {
+    dither, posterize, paletteMatch, lutGrade, COLOR_LEVELS,
+    crt, CRT_PRESETS, colorAdjust, mosaic, rgbSplit, wave, shockwave, distort, glitch, grain, oldFilm, halftone, ntsc, lcd, zoomBlur, motionBlur, blur, bloom, godrays, tiltShift, phosphor,
+} from './post';
+export type { TPostEffect, TPostPass, TPostChain, TPostChainEntry, TPostProcessOptions, TBuiltinPostEffect, TCrtOptions, TCrtUniforms } from './post';
 
 export { fade, wipe, iris, pixelate } from './transition';
 export type { TTransition, TSceneChangeOptions, TWipeDirection } from './transition';

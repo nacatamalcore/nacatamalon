@@ -37,10 +37,16 @@ out vec4 fragColor;
 
 uniform sampler2D sceneTexture;
 uniform sampler2D dataTexture;
+uniform sampler2D inputTexture;
+uniform sampler2D historyTexture;
+uniform sampler2D smoothTexture;
 `;
 
 /**
  * The same helpers by the same names, so one effect file runs on either card.
+ *
+ * `smoothTexture` is the same picture as `sceneTexture` on a unit of its own: in GL the filtering
+ * belongs to the unit, so one picture read two ways needs two units.
  *
  * **The picture is turned upside down here and not in the vertex half**, which is where its WGSL
  * twin does it. A framebuffer in GL has its origin at the bottom, so what was drawn into it is
@@ -51,6 +57,18 @@ uniform sampler2D dataTexture;
 const HELPERS = /* glsl */ `
 vec4 sampleTexture(vec2 uv) {
     return textureLod(sceneTexture, vec2(uv.x, 1.0 - uv.y), 0.0);
+}
+
+vec4 sampleTextureSmooth(vec2 uv) {
+    return textureLod(smoothTexture, vec2(uv.x, 1.0 - uv.y), 0.0);
+}
+
+vec4 sampleInput(vec2 uv) {
+    return textureLod(inputTexture, vec2(uv.x, 1.0 - uv.y), 0.0);
+}
+
+vec4 sampleHistory(vec2 uv) {
+    return textureLod(historyTexture, vec2(uv.x, 1.0 - uv.y), 0.0);
 }
 
 int paletteSize() {

@@ -22,6 +22,9 @@ struct VertexOut {
 @group(0) @binding(1) var sceneTexture: texture_2d<f32>;
 @group(0) @binding(2) var dataSampler: sampler;
 @group(0) @binding(3) var dataTexture: texture_2d<f32>;
+@group(0) @binding(5) var smoothSampler: sampler;
+@group(0) @binding(6) var inputTexture: texture_2d<f32>;
+@group(0) @binding(7) var historyTexture: texture_2d<f32>;
 
 @vertex
 fn vs(@builtin(vertex_index) index: u32) -> VertexOut {
@@ -38,6 +41,11 @@ fn vs(@builtin(vertex_index) index: u32) -> VertexOut {
  * What an effect may call. **These names are API**: an effect written against them is a file
  * somebody keeps, so renaming one breaks every effect anybody wrote.
  *
+ * `sampleTextureSmooth` reads the same picture blended between its pixels, which is what a pass at a
+ * smaller size, a bent picture or a blur wants. `sampleInput` is the frame the effect was handed,
+ * which only differs from `sampleTexture` inside an effect with passes. `sampleHistory` is what the
+ * effect showed last frame, black until it has shown one, and white for an effect that did not ask.
+ *
  * `paletteSize` and `lutSize` read the shape of the picture rather than a number they were told,
  * which is what stops a palette ever disagreeing with how many colours the shader thinks it has.
  *
@@ -50,6 +58,18 @@ fn vs(@builtin(vertex_index) index: u32) -> VertexOut {
 const HELPERS = /* wgsl */ `
 fn sampleTexture(uv: vec2<f32>) -> vec4<f32> {
     return textureSampleLevel(sceneTexture, sceneSampler, uv, 0.0);
+}
+
+fn sampleTextureSmooth(uv: vec2<f32>) -> vec4<f32> {
+    return textureSampleLevel(sceneTexture, smoothSampler, uv, 0.0);
+}
+
+fn sampleInput(uv: vec2<f32>) -> vec4<f32> {
+    return textureSampleLevel(inputTexture, sceneSampler, uv, 0.0);
+}
+
+fn sampleHistory(uv: vec2<f32>) -> vec4<f32> {
+    return textureSampleLevel(historyTexture, sceneSampler, uv, 0.0);
 }
 
 fn paletteSize() -> u32 {

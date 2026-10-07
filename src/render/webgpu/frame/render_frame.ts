@@ -8,6 +8,7 @@ import { createParticlesPipeline } from '../particles/create_particles_pipeline'
 import { countLineCorners, drawLines } from '../lines/draw_lines';
 import { createLinesPipeline } from '../lines/create_lines_pipeline';
 import { createPostPipelines } from '../post/post_pipeline';
+import { countPostSteps } from '../../shared/post_steps';
 import { depthViewFor, multisampledViewFor, releaseUnusedDepths } from './depth';
 import { canvasContextFor } from './canvas_context';
 import { createShadowMap } from '../shadow/shadow_map';
@@ -81,7 +82,7 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
     const chain = ctx.post ?? null;
     if (chain !== null) {
         gpu.post ??= createPostPipelines(gpu.device, gpu.format);
-        gpu.post.beginFrame(chain.length);
+        gpu.post.beginFrame(countPostSteps(chain));
     }
 
     // Drawn before anything that reads it, once for the whole frame. `null` is the ordinary answer

@@ -32,6 +32,9 @@ export const newPostEffect = (
         fragmentGlsl: shader !== null ? null : options.fragmentGlsl ?? null,
         uniforms: shader !== null ? {} : asked,
         uniformSig: shader !== null ? {} : sig,
+        // A file holds one hook, so a file never brings passes of its own.
+        ...(shader === null && options.passes !== undefined ? { passes: options.passes } : {}),
+        ...(options.history === true ? { history: true } : {}),
         palette: options.palette ?? null,
         lut: options.lut ?? null,
         source,
