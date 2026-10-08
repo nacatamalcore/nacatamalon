@@ -23,6 +23,8 @@ import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useTransform } from '../src/hooks/transform/use_transform';
 import { usePhysicsBody2d, usePhysicsWorld2d } from '../src/hooks/physics';
 import { createTestFont } from './helpers/test_font';
+import { createTestVectorFont } from './helpers/test_ttf';
+import { getActiveGame } from '../src/store';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import type { TBox } from '../src/box';
 import type { TComponentDoc, TSceneDoc } from '../src/scene/document';
@@ -198,6 +200,25 @@ describe('the manifest', () => {
         expect(fonts[0]).toHaveProperty('json');
         expect(fonts[0]).toHaveProperty('atlas');
         expect(doc.assets.filter((asset) => asset.type === 'texture')).toHaveLength(0);
+    });
+
+    it('names a vector font by its one file, beside a bitmap one, and never lists its atlas', () => {
+        const { doc } = written(() => {
+            createText({ text: 'AB', font: createTestVectorFont(getActiveGame()!), tint });
+            createText({ text: 'CD', font: createTestFont(), tint });
+        });
+
+        expect(doc.assets.filter((asset) => asset.type === 'font')).toEqual([{ type: 'font', key: 'test-sans.ttf', src: 'test-sans.ttf' }]);
+        expect(doc.assets.filter((asset) => asset.type === 'bitmapFont')).toHaveLength(1);
+        // Its atlas is drawn in the game, so there is no file to name.
+        expect(doc.assets.filter((asset) => asset.type === 'texture')).toHaveLength(0);
+        expect(parseSceneDoc(doc, '/scenes/level.scene')).toEqual(doc);
+
+        // Built again in another game, the text asks for the same font by the same key, and the scene
+        // writes down the same.
+        const fetchSpy = spyOn(globalThis, 'fetch').mockImplementation((() => new Promise(() => {})) as unknown as typeof fetch);
+        expect(rebuilt(doc).assets).toEqual(doc.assets);
+        fetchSpy.mockRestore();
     });
 
     it('leaves out a mesh whose shape nothing could build again, and says so', () => {

@@ -32,6 +32,11 @@ export type TAssetEntry =
      * extension goes with which is the sort of rule that works until somebody names a file oddly.
      */
     | { type: 'bitmapFont'; key: string; json: string; atlas: string }
+    /**
+     * A vector font: one `.ttf` or `.woff`. `size` is how finely its letters are kept, left out when
+     * it is the default of 48.
+     */
+    | { type: 'font'; key: string; src: string; size?: number }
     | { type: 'atlas'; key: string; src: string }
     | { type: 'shader'; key: string; src: string }
     | { type: 'particles'; key: string; src: string }

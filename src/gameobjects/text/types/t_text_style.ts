@@ -8,7 +8,12 @@
  */
 export type TTextStyle = {
     /**
-     * How tall one line is, in pixels. Default: the font's own height, so the font as drawn. A pixel
+     * How big the letters are, in pixels.
+     *
+     * For a vector font (`useLoadFont`), the size of the font as anywhere else type is set: one em is
+     * this many pixels, and the line is as tall as the font says. Default 16. Any size is sharp.
+     *
+     * For a bitmap font, how tall one line is. Default: the font's own height, so the font as drawn. A pixel
      * font looks crisp at whole multiples of its height (16 or 24 for an 8 pixel font) and uneven in
      * between.
      */

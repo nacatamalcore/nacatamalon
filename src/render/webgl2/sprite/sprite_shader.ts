@@ -1,3 +1,5 @@
+import { DISTANCE_FIELD_RANGE } from '../../shared/distance_field';
+
 /**
  * The GLSL twin of `render/webgpu/sprite/sprite_shader.ts`. The two must draw the same picture, so
  * the arithmetic is copied line for line and only the language changes:
@@ -124,3 +126,47 @@ void main() {
  * @author Francisco Pereira Alvarado
  */
 export const SPRITE_FRAGMENT_SHADER = SPRITE_FRAGMENT_HEAD_GLSL + SPRITE_FRAGMENT_MAIN_GLSL;
+
+/**
+ * The GLSL twin of `DISTANCE_FIELD_COVERAGE`: how much of a pixel a distance-field read covers, with
+ * the edge one screen pixel soft at whatever size the letter is drawn. Line for line the same
+ * arithmetic, so a vector font's text looks the same on both backends.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const DISTANCE_FIELD_COVERAGE_GLSL = /* glsl */ `
+const float DISTANCE_FIELD_RANGE = ${DISTANCE_FIELD_RANGE}.0;
+
+float distanceFieldCoverage(vec4 sampled, vec2 uv) {
+    float distance = max(min(sampled.r, sampled.g), min(max(sampled.r, sampled.g), sampled.b)) - 0.5;
+    vec2 unit = vec2(DISTANCE_FIELD_RANGE) / vec2(textureSize(spriteTexture, 0));
+    vec2 screen = 1.0 / fwidth(uv);
+    float range = max(0.5 * dot(unit, screen), 1.0);
+    return clamp(distance * range + 0.5, 0.0, 1.0);
+}
+`;
+
+/**
+ * The built-in ending for a distance field: the tint, as opaque as the edge says.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const SPRITE_DISTANCE_FIELD_MAIN_GLSL = /* glsl */ `
+void main() {
+    vec4 sampled = texture(spriteTexture, insideWindow(vUv, vWindow));
+    fragColor = vec4(vTint.rgb, vTint.a * distanceFieldCoverage(sampled, vUv));
+}
+`;
+
+/**
+ * The whole fragment half for sprites cut from a distance field: a vector font's letters.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const SPRITE_DISTANCE_FIELD_FRAGMENT_SHADER = SPRITE_FRAGMENT_HEAD_GLSL + DISTANCE_FIELD_COVERAGE_GLSL + SPRITE_DISTANCE_FIELD_MAIN_GLSL;

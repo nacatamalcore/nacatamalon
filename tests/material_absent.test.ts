@@ -26,8 +26,10 @@ const fakeGl = nothing() as WebGL2RenderingContext;
 
 const webgpuPipeline = (): TWebGPUSpritePipeline => ({
     pipeline: nothing() as GPURenderPipeline,
+    distanceFieldPipeline: nothing() as GPURenderPipeline,
     layouts: nothing() as TWebGPUSpritePipeline['layouts'],
     materials: nothing() as TWebGPUSpritePipeline['materials'],
+    distanceFieldMaterials: nothing() as TWebGPUSpritePipeline['materials'],
     quad: {} as GPUBuffer,
     bindGroup: {} as GPUBindGroup,
     instances: nothing() as GPUBuffer,
@@ -43,7 +45,9 @@ const webgpuPipeline = (): TWebGPUSpritePipeline => ({
 
 const webgl2Pipeline = (): TWebGL2SpritePipeline => ({
     materials: nothing() as TWebGL2SpritePipeline['materials'],
+    distanceFieldMaterials: nothing() as TWebGL2SpritePipeline['materials'],
     program: {} as WebGLProgram,
+    distanceFieldProgram: {} as WebGLProgram,
     vao: {} as WebGLVertexArrayObject,
     quad: {} as WebGLBuffer,
     instances: {} as WebGLBuffer,

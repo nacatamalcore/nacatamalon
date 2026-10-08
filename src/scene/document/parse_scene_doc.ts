@@ -729,6 +729,10 @@ const parseAsset = (value: unknown): TAssetEntry | null => {
         const source = parseGeometrySource(raw.source);
         return source === null ? null : { type: 'geometry', key, source };
     }
+    if (raw.type === 'font') {
+        const src = asString(raw.src, key);
+        return typeof raw.size === 'number' && Number.isFinite(raw.size) ? { type: 'font', key, src, size: raw.size } : { type: 'font', key, src };
+    }
     if (raw.type === 'bitmapFont') {
         return { type: 'bitmapFont', key, json: asString(raw.json, ''), atlas: asString(raw.atlas, '') };
     }

@@ -48,6 +48,7 @@ const placeInPack = (pack: TLoadedPack, doc: TSceneDoc): TSceneDoc => {
     for (const asset of doc.assets) {
         switch (asset.type) {
             case 'texture':
+            case 'font':
             case 'audio':
             case 'shader':
             case 'atlas':

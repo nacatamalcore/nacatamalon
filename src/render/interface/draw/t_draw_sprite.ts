@@ -81,6 +81,13 @@ export type TDrawSprite = {
      */
     readonly smooth?: boolean;
     /**
+     * The texture is a multi-channel distance field (a vector font's letters), not a picture: the
+     * shader takes the median of its three channels and turns it into an edge exactly one screen
+     * pixel soft, at whatever size the sprite is drawn. Its alpha is the coverage and its colour the
+     * tint. Set only by the engine, for the characters of a text in a vector font.
+     */
+    readonly distanceField?: boolean;
+    /**
      * An effect of its own, or nothing for the built-in shader.
      *
      * Only the shader half: a sprite's picture and colour are its own and are already above. Two

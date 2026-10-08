@@ -1,9 +1,9 @@
 import type { TColor } from '../../../color';
-import type { TBitmapFont } from '../../../loaders';
+import type { TBitmapFont, TFont } from '../../../loaders';
 import type { TTextStyle } from './t_text_style';
 
 /**
- * A text in the scene, as `createText` gives it back: a string drawn with a bitmap font. Plain
+ * A text in the scene, as `createText` gives it back: a string drawn with a bitmap or a vector font. Plain
  * data; change any field (`text` above all) and the next frame shows it.
  *
  * @category Game objects
@@ -17,7 +17,11 @@ export type TText = {
      * What it says. `\n` starts a new line.
      */
     text: string;
-    font: TBitmapFont;
+    /**
+     * A bitmap font (`useLoadBitmapFont`) or a vector one (`useLoadFont`). Can be swapped for another
+     * of either kind at any time.
+     */
+    font: TBitmapFont | TFont;
     /**
      * Size, alignment and spacing. Held by reference, so a shared style changes every text using it.
      */

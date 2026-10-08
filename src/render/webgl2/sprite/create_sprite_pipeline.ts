@@ -1,7 +1,8 @@
 import { compileProgram } from '../utils/compile_program';
 import { createWhiteTexture } from '../texture';
-import { SPRITE_FRAGMENT_SHADER, SPRITE_VERTEX_SHADER } from './sprite_shader';
+import { SPRITE_DISTANCE_FIELD_FRAGMENT_SHADER, SPRITE_FRAGMENT_SHADER, SPRITE_VERTEX_SHADER } from './sprite_shader';
 import { createSpriteMaterials } from '../material/sprite_materials';
+import { buildSpriteDistanceFieldMaterialShaderGlsl } from '../material/sprite_material_shader';
 import { INITIAL_SPRITE_CAPACITY, SPRITE_FLOATS, SPRITE_STRIDE } from './write_sprite_instances';
 import type { TSpritePipeline } from './types/t_sprite_pipeline';
 import { FRAME_UNIFORMS_BINDING } from '../bindings';
@@ -56,14 +57,20 @@ export const createSpritePipeline = (
     frameUniforms: WebGLBuffer,
     defaultSmooth: boolean,
 ): TSpritePipeline => {
-    const program = compileProgram(gl, SPRITE_VERTEX_SHADER, SPRITE_FRAGMENT_SHADER, 'sprite');
-
-    // The uniform block reads binding 0, and binding 0 holds the frame uniforms.
-    gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, 'Uniforms'), FRAME_UNIFORMS_BINDING);
+    // The plain one and the one for distance fields share the corners and everything they read, and
+    // differ only in the ending, so both are set up alike.
+    const programFor = (fragment: string, label: string): WebGLProgram => {
+        const built = compileProgram(gl, SPRITE_VERTEX_SHADER, fragment, label);
+        // The uniform block reads binding 0, and binding 0 holds the frame uniforms.
+        gl.uniformBlockBinding(built, gl.getUniformBlockIndex(built, 'Uniforms'), FRAME_UNIFORMS_BINDING);
+        // The texture is always on unit 0.
+        gl.useProgram(built);
+        gl.uniform1i(gl.getUniformLocation(built, 'spriteTexture'), 0);
+        return built;
+    };
+    const distanceFieldProgram = programFor(SPRITE_DISTANCE_FIELD_FRAGMENT_SHADER, 'sprite distance field');
+    const program = programFor(SPRITE_FRAGMENT_SHADER, 'sprite');
     gl.bindBufferBase(gl.UNIFORM_BUFFER, FRAME_UNIFORMS_BINDING, frameUniforms);
-    // The texture is always on unit 0.
-    gl.useProgram(program);
-    gl.uniform1i(gl.getUniformLocation(program, 'spriteTexture'), 0);
 
     const vao = gl.createVertexArray();
     gl.bindVertexArray(vao);
@@ -95,7 +102,9 @@ export const createSpritePipeline = (
 
     return {
         materials: createSpriteMaterials(gl),
+        distanceFieldMaterials: createSpriteMaterials(gl, buildSpriteDistanceFieldMaterialShaderGlsl),
         program,
+        distanceFieldProgram,
         vao,
         quad,
         instances,

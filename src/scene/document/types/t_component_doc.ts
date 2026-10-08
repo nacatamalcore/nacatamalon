@@ -230,7 +230,7 @@ export type TSpriteAnimationDoc = {
 };
 
 /**
- * Words drawn with a bitmap font.
+ * Words drawn with a bitmap or a vector font.
  *
  * @category Scenes
  * @since 1.0.0

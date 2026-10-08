@@ -66,6 +66,7 @@ const addToRun = (
     bindGroup: GPUBindGroup,
     material: TDrawShader | null,
     uniforms: TUniformValues | null,
+    distanceField: boolean,
     index: number,
     drawable: number,
     broken: boolean,
@@ -75,6 +76,7 @@ const addToRun = (
         && last !== undefined
         && last.bindGroup === bindGroup
         && last.material === material
+        && last.distanceField === distanceField
         && last.uniforms === null
         && uniforms === null;
     if (joins) {
@@ -84,10 +86,11 @@ const addToRun = (
 
     const run = sprites.runs[sprites.runCount];
     if (run === undefined) {
-        sprites.runs.push({ bindGroup, material, uniforms, start: index, count: 1, firstDrawable: drawable });
+        sprites.runs.push({ bindGroup, material, uniforms, distanceField, start: index, count: 1, firstDrawable: drawable });
     } else {
         run.bindGroup = bindGroup;
         run.material = material;
+        run.distanceField = distanceField;
         run.uniforms = uniforms;
         run.start = index;
         run.count = 1;
@@ -182,7 +185,7 @@ export const writeSpriteInstances = (
                 const camera = cameraIndex[i] ?? -1;
                 data[o + 17] = camera >= 0 && camera < MAX_VIEWS - 1 ? camera + 1 : 0;
 
-                addToRun(sprites, bindGroup, item.material ?? null, item.uniforms ?? null, count, i, broken);
+                addToRun(sprites, bindGroup, item.material ?? null, item.uniforms ?? null, item.distanceField === true, count, i, broken);
                 broken = false;
                 count++;
                 break;

@@ -1,3 +1,5 @@
+import { DISTANCE_FIELD_RANGE } from '../../shared/distance_field';
+
 /**
  * Everything a sprite shader needs before it decides a colour: the views, the sheet, the instance,
  * and the vertex that places the quad.
@@ -138,3 +140,53 @@ fn fs(in: VertexOut) -> @location(0) vec4f {
  * @author Francisco Pereira Alvarado
  */
 export const SPRITE_SHADER = SPRITE_SHADER_HEAD + SPRITE_SHADER_FRAGMENT;
+
+/**
+ * How much of a pixel a distance-field read covers, from the read and where it was taken.
+ *
+ * The median of the three channels is the distance to the edge, with 0.5 on it. How steep to make the
+ * step from outside to inside is worked out from how many pixels of the image this screen pixel spans
+ * (`fwidth` of the coordinate): the edge comes out one screen pixel soft whether the letter is drawn
+ * tiny, huge, turned or through a zoomed camera, which is what keeps it sharp without ever stepping.
+ *
+ * Called at the top of the ending and nowhere inside a branch, because `fwidth` needs every pixel of
+ * the group to reach it together.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const DISTANCE_FIELD_COVERAGE = /* wgsl */ `
+const DISTANCE_FIELD_RANGE = ${DISTANCE_FIELD_RANGE}.0;
+
+fn distanceFieldCoverage(sample: vec4f, uv: vec2f) -> f32 {
+    let distance = max(min(sample.r, sample.g), min(max(sample.r, sample.g), sample.b)) - 0.5;
+    let unit = vec2f(DISTANCE_FIELD_RANGE) / vec2f(textureDimensions(spriteTexture, 0));
+    let screen = 1.0 / fwidth(uv);
+    let range = max(0.5 * dot(unit, screen), 1.0);
+    return clamp(distance * range + 0.5, 0.0, 1.0);
+}
+`;
+
+/**
+ * The built-in ending for a distance field: the tint, as opaque as the edge says.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const SPRITE_DISTANCE_FIELD_FRAGMENT = /* wgsl */ `@fragment
+fn fs(in: VertexOut) -> @location(0) vec4f {
+    let sample = textureSample(spriteTexture, spriteSampler, insideWindow(in.uv, in.window));
+    return vec4f(in.tint.rgb, in.tint.a * distanceFieldCoverage(sample, in.uv));
+}
+`;
+
+/**
+ * The whole built-in shader for sprites cut from a distance field: a vector font's letters.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const SPRITE_DISTANCE_FIELD_SHADER = SPRITE_SHADER_HEAD + DISTANCE_FIELD_COVERAGE + SPRITE_DISTANCE_FIELD_FRAGMENT;

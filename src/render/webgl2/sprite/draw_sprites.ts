@@ -54,21 +54,29 @@ export const drawSpriteRun = (
 ): boolean => {
     let ordinary = true;
     const material = run.material;
+    const materials = run.distanceField ? sprites.distanceFieldMaterials : sprites.materials;
 
     if (material !== null && material.fragment !== null) {
-        sprites.materials.warnIfWgpuOnly(material);
+        materials.warnIfWgpuOnly(material);
 
         if (material.fragmentGlsl !== null) {
-            const compiled = sprites.materials.get(material);
+            const compiled = materials.get(material);
             if (!compiled.failed && compiled.program !== null) {
                 gl.useProgram(compiled.program);
-                sprites.materials.bind(compiled, material.uniforms ?? {}, run.uniforms, time, width, height);
+                materials.bind(compiled, material.uniforms ?? {}, run.uniforms, time, width, height);
                 // `vertexAttribPointer` below reads whatever is bound now, and binding the parameters
                 // left something else there.
                 gl.bindBuffer(gl.ARRAY_BUFFER, sprites.instances);
                 ordinary = false;
             }
         }
+    }
+
+    if (ordinary && run.distanceField) {
+        // Everything but the program is what plain sprites use, so only that is swapped, and the
+        // next plain batch is told to set it back.
+        gl.useProgram(sprites.distanceFieldProgram);
+        ordinary = false;
     }
 
     const base = run.start * SPRITE_STRIDE;

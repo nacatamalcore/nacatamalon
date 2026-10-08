@@ -1,4 +1,4 @@
-import { SPRITE_FRAGMENT_HEAD_GLSL, SPRITE_VERTEX_SHADER } from '../sprite/sprite_shader';
+import { DISTANCE_FIELD_COVERAGE_GLSL, SPRITE_FRAGMENT_HEAD_GLSL, SPRITE_VERTEX_SHADER } from '../sprite/sprite_shader';
 import { glslUniformBlock } from './uniform_block';
 import type { TUniformSignature } from '../../../materials';
 
@@ -24,6 +24,18 @@ void main() {
 `;
 
 /**
+ * The ending for a material on a distance field, as its twin: the hook is handed the tint, as opaque
+ * as the edge says, worked out before the hook so `fwidth` is reached by every pixel together.
+ */
+const DISTANCE_FIELD_TAIL = /* glsl */ `
+void main() {
+    vec4 sampled = sampleTexture(insideWindow(vUv, vWindow));
+    float coverage = distanceFieldCoverage(sampled, vUv);
+    fragColor = effect(vec4(vTint.rgb, vTint.a * coverage), vUv);
+}
+`;
+
+/**
  * Builds a sprite material's two halves for this backend.
  *
  * **The vertex half is the built-in one, untouched.** A sprite is a flat square whose corners the
@@ -44,4 +56,19 @@ export const buildSpriteMaterialShaderGlsl = (
 ): { vertex: string; fragment: string } => ({
     vertex: SPRITE_VERTEX_SHADER,
     fragment: [SPRITE_FRAGMENT_HEAD_GLSL, glslUniformBlock(sig), SAMPLE, fragment, TAIL].join('\n'),
+});
+
+/**
+ * The same for sprites cut from a distance field: the characters of a text in a vector font.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const buildSpriteDistanceFieldMaterialShaderGlsl = (
+    fragment: string,
+    sig: TUniformSignature,
+): { vertex: string; fragment: string } => ({
+    vertex: SPRITE_VERTEX_SHADER,
+    fragment: [SPRITE_FRAGMENT_HEAD_GLSL, DISTANCE_FIELD_COVERAGE_GLSL, glslUniformBlock(sig), SAMPLE, fragment, DISTANCE_FIELD_TAIL].join('\n'),
 });

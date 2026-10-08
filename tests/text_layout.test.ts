@@ -50,13 +50,15 @@ describe('layoutText', () => {
     it('draws a lowercase letter the font lacks with its capital', () => {
         const layout = lay('ab');
 
-        expect(layout.placements.map((p) => p.glyph.char)).toEqual(['A', 'B']);
+        // A and B, by where they are in the font's image.
+        expect(layout.placements.map((p) => p.source.x)).toEqual([0, 8]);
     });
 
     it('leaves a space-wide gap for a character the font does not have, and draws nothing there', () => {
         const layout = lay('A?B');
 
-        expect(layout.placements.map((p) => p.glyph.char)).toEqual(['A', 'B']);
+        // A and B, by where they are in the font's image.
+        expect(layout.placements.map((p) => p.source.x)).toEqual([0, 8]);
         // A (8) + tracking (1) + the space's 6 + tracking (1)
         expect(layout.placements[1].x).toBe(16);
     });

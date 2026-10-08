@@ -17,6 +17,11 @@ export type TSpriteRun = {
      */
     material: TDrawShader | null;
     /**
+     * Whether its sheet is a distance field (a vector font's letters), which is drawn with its own
+     * ending.
+     */
+    distanceField: boolean;
+    /**
      * The knobs of the one sprite in this run, when it brought its own.
      *
      * Its presence is why the run has one sprite in it: the numbers are written once per run, so

@@ -1,5 +1,5 @@
-import { SPRITE_SHADER } from './sprite_shader';
-import { buildSpriteMaterialShader } from '../material/sprite_material_shader';
+import { SPRITE_DISTANCE_FIELD_SHADER, SPRITE_SHADER } from './sprite_shader';
+import { buildSpriteDistanceFieldMaterialShader, buildSpriteMaterialShader } from '../material/sprite_material_shader';
 import { createFlatMaterials } from '../material/flat_materials';
 import type { TSpritePipeline } from './types/t_sprite_pipeline';
 import { INITIAL_SPRITE_CAPACITY, SPRITE_FLOATS } from './write_sprite_instance';
@@ -94,37 +94,43 @@ export const createSpritePipeline = (
         ],
     });
 
-    const module = device.createShaderModule({ label: 'sprite shader', code: SPRITE_SHADER });
-    const pipeline = device.createRenderPipeline({
-        label: 'sprite pipeline',
-        layout: device.createPipelineLayout({
-            label: 'sprite pipeline layout',
-            bindGroupLayouts: [frameLayout, textureLayout],
-        }),
-        vertex: {
-            module,
-            entryPoint: 'vs',
-            buffers: VERTEX_BUFFERS,
-        },
-        fragment: {
-            module,
-            entryPoint: 'fs',
-            targets: [{
-                format,
-                // Straight alpha, which is what the loader decodes (`premultiplyAlpha: 'none'`): the
-                // transparent parts of an image show what was drawn behind them.
-                blend: {
-                    color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-                    alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-                },
-            }],
-        },
-        primitive: { topology: 'triangle-strip' },
-        // Declared, not used: a pass with depth only accepts pipelines that say what they do with
-        // it. Sprites neither test nor write it.
-        depthStencil: FLAT_DEPTH,
-        multisample: { count: samples },
+    const pipelineLayout = device.createPipelineLayout({
+        label: 'sprite pipeline layout',
+        bindGroupLayouts: [frameLayout, textureLayout],
     });
+    // The plain one and the one for distance fields differ in their ending and in nothing else.
+    const pipelineFor = (label: string, code: string): GPURenderPipeline => {
+        const module = device.createShaderModule({ label: `${label} shader`, code });
+        return device.createRenderPipeline({
+            label: `${label} pipeline`,
+            layout: pipelineLayout,
+            vertex: {
+                module,
+                entryPoint: 'vs',
+                buffers: VERTEX_BUFFERS,
+            },
+            fragment: {
+                module,
+                entryPoint: 'fs',
+                targets: [{
+                    format,
+                    // Straight alpha, which is what the loader decodes (`premultiplyAlpha: 'none'`): the
+                    // transparent parts of an image show what was drawn behind them.
+                    blend: {
+                        color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+                        alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+                    },
+                }],
+            },
+            primitive: { topology: 'triangle-strip' },
+            // Declared, not used: a pass with depth only accepts pipelines that say what they do with
+            // it. Sprites neither test nor write it.
+            depthStencil: FLAT_DEPTH,
+            multisample: { count: samples },
+        });
+    };
+    const pipeline = pipelineFor('sprite', SPRITE_SHADER);
+    const distanceFieldPipeline = pipelineFor('sprite distance field', SPRITE_DISTANCE_FIELD_SHADER);
 
 
     // Buffers
@@ -170,6 +176,7 @@ export const createSpritePipeline = (
 
     return {
         pipeline,
+        distanceFieldPipeline,
         layouts: { frame: frameLayout, texture: textureLayout },
         materials: createFlatMaterials(device, {
             label: 'sprite',
@@ -179,6 +186,15 @@ export const createSpritePipeline = (
             vertexBuffers: VERTEX_BUFFERS,
             topology: 'triangle-strip',
             build: buildSpriteMaterialShader,
+        }),
+        distanceFieldMaterials: createFlatMaterials(device, {
+            label: 'sprite distance field',
+            format,
+            samples,
+            shared: [frameLayout, textureLayout],
+            vertexBuffers: VERTEX_BUFFERS,
+            topology: 'triangle-strip',
+            build: buildSpriteDistanceFieldMaterialShader,
         }),
         quad: quadBuffer,
         bindGroup,

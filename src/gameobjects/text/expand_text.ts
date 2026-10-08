@@ -1,5 +1,6 @@
-import { bitmapFontGlyphs } from '../../loaders';
+import { bitmapFontGlyphs, uploadFontAtlas } from '../../loaders';
 import { layoutText } from './layout_text';
+import { layoutFontText } from './layout_font_text';
 import type { TDrawSprite } from '../../render/interface';
 import type { TText } from './types/t_text';
 import { worldOf } from '../../render/shared/world_of';
@@ -18,6 +19,7 @@ type TGlyphSprite = {
     uvOffset: { x: number; y: number };
     uvScale: { x: number; y: number };
     smooth?: boolean;
+    distanceField?: boolean;
     material?: TText['material'];
     uniforms?: TText['uniforms'];
 };
@@ -94,9 +96,13 @@ export const expandText = (text: TText): readonly TDrawSprite[] => {
     const { font, style } = text;
     // Where the block ends up, so a text inside a box that moved takes its characters with it.
     const transform = worldOf(text);
-    const layout = layoutText(text.text, style, font.meta, bitmapFontGlyphs(font));
+    const vector = font.type === 'font';
+    const layout = vector ? layoutFontText(text.text, style, font) : layoutText(text.text, style, font.meta, bitmapFontGlyphs(font));
 
-    if (font.meta !== null && !Number.isInteger(layout.scale)) {
+    if (vector) {
+        // Letters drawn for the first time just now are only in memory until this sends them.
+        uploadFontAtlas(font);
+    } else if (font.meta !== null && !Number.isInteger(layout.scale)) {
         const id = `${font.key}:${style.fontSize}`;
         if (!warned.has(id)) {
             warned.add(id);
@@ -134,7 +140,7 @@ export const expandText = (text: TText): readonly TDrawSprite[] => {
     const anchorY = (text.anchor?.y ?? 0) * layout.height;
     const cos = Math.cos(transform.rotation);
     const sin = Math.sin(transform.rotation);
-    const { atlasWidth, atlasHeight, glyphHeight } = font.meta ?? { atlasWidth: 1, atlasHeight: 1, glyphHeight: 1 };
+    const { atlasWidth, atlasHeight } = font.meta ?? { atlasWidth: 1, atlasHeight: 1 };
 
     for (let i = 0; i < layout.placements.length; i++) {
         const placement = layout.placements[i];
@@ -152,15 +158,18 @@ export const expandText = (text: TText): readonly TDrawSprite[] => {
         sprite.height = placement.height;
         sprite.texture = font.texture;
         sprite.tint = text.tint;
-        sprite.smooth = text.smooth;
+        // A distance field is read between its pixels by its nature: it is always smoothed, and it is
+        // the shader that makes the edge crisp.
+        sprite.smooth = vector ? true : text.smooth;
+        sprite.distanceField = vector ? true : undefined;
         // Every letter of one text carries the same material object, so they all land in a single
         // batch rather than one draw per letter.
         sprite.material = text.material;
         sprite.uniforms = text.uniforms;
-        sprite.uvOffset.x = placement.glyph.x / atlasWidth;
-        sprite.uvOffset.y = placement.glyph.y / atlasHeight;
-        sprite.uvScale.x = placement.glyph.w / atlasWidth;
-        sprite.uvScale.y = glyphHeight / atlasHeight;
+        sprite.uvOffset.x = placement.source.x / atlasWidth;
+        sprite.uvOffset.y = placement.source.y / atlasHeight;
+        sprite.uvScale.x = placement.source.width / atlasWidth;
+        sprite.uvScale.y = placement.source.height / atlasHeight;
     }
 
     return pool;

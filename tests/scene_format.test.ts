@@ -170,17 +170,21 @@ describe('what the reader fills in', () => {
             assets: [
                 { type: 'texture', key: '/assets/hero.png' },
                 { type: 'bitmapFont', key: 'pac', json: '/f.json', atlas: '/f.png' },
+                { type: 'font', key: 'inter', src: '/fonts/inter.ttf', size: 48 },
+                { type: 'font', key: '/fonts/plain.woff' },
                 { type: 'geometry', key: 'cube:1:1:1', source: { kind: 'cube' } },
                 { type: 'nonsense', key: 'x' },
             ],
         }), '/scenes/x.scene');
 
         silence();
-        expect(read.assets).toHaveLength(3);
+        expect(read.assets).toHaveLength(5);
         expect(read.assets[0]).toEqual({ type: 'texture', key: '/assets/hero.png', src: '/assets/hero.png' });
         expect(read.assets[1]).toEqual({ type: 'bitmapFont', key: 'pac', json: '/f.json', atlas: '/f.png' });
+        expect(read.assets[2]).toEqual({ type: 'font', key: 'inter', src: '/fonts/inter.ttf', size: 48 });
+        expect(read.assets[3]).toEqual({ type: 'font', key: '/fonts/plain.woff', src: '/fonts/plain.woff' });
         // A recipe, not the corners: `{ kind: 'cube' }` is the cube `useCubeGeometry({})` makes.
-        expect(read.assets[2]).toEqual({ type: 'geometry', key: 'cube:1:1:1', source: { kind: 'cube' } });
+        expect(read.assets[4]).toEqual({ type: 'geometry', key: 'cube:1:1:1', source: { kind: 'cube' } });
     });
 });
 

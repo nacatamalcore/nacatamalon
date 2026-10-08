@@ -16,7 +16,7 @@ export { useTransform } from './transform';
 export { useLight, usePointLight, useSpotLight, useAmbientLight, useBlobShadow } from './light';
 export { useParticleCollider2d, useParticleCollider3d } from './particles';
 export { useCubeGeometry, usePlaneGeometry, useCircleGeometry, useUvSphereGeometry, useIcoSphereGeometry, useCylinderGeometry, useConeGeometry, useTorusGeometry } from './geometry';
-export { useLoadTexture, useLoadAtlas, useLoadBitmapFont, useLoadGltf, useLoadShader, useLoadPalette, useLoadLut, useLoadParticles, useLoadPack, useLoadAudio, useLoader, useLoadPixels } from './loaders';
+export { useLoadTexture, useLoadAtlas, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadShader, useLoadPalette, useLoadLut, useLoadParticles, useLoadPack, useLoadAudio, useLoader, useLoadPixels } from './loaders';
 export type { TUseLoadPackOptions } from './loaders';
 export { usePostProcess } from './post/use_post_process';
 export { useScene, useSceneUnmount } from './scene';
@@ -25,7 +25,7 @@ export { useData, useWatch } from './state';
 export { useScript, provide, useApi } from './script';
 export { useEvent } from './events';
 
-export type { TUseLoadTextureOptions, TUseLoadAtlasOptions, TUseLoadBitmapFontOptions, TUseLoadGltfOptions, TUseLoadShaderOptions } from './loaders';
+export type { TUseLoadTextureOptions, TUseLoadAtlasOptions, TUseLoadBitmapFontOptions, TUseLoadFontOptions, TUseLoadGltfOptions, TUseLoadShaderOptions } from './loaders';
 export type { TSceneHandle } from './scene';
 export type { TDataRecord, TDataSetter, TWatchDep } from './state';
 export type { TTransformOptions } from './transform';

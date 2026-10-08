@@ -1,4 +1,4 @@
-import { SPRITE_SHADER_HEAD } from '../sprite/sprite_shader';
+import { DISTANCE_FIELD_COVERAGE, SPRITE_SHADER_HEAD } from '../sprite/sprite_shader';
 import { buildUniformLayout } from '../../shared/material_uniforms';
 import type { TUniformSignature } from '../../../materials';
 
@@ -45,6 +45,34 @@ fn fs(in: VertexOut) -> @location(0) vec4f {
 `;
 
 /**
+ * The ending for a material on a distance field: the hook is handed what the built-in distance-field
+ * ending would have returned, the tint as opaque as the edge, so an effect on a vector font's text is
+ * written exactly as one on a sprite. The coverage is worked out before the hook runs, where every
+ * pixel still reaches it together.
+ */
+const DISTANCE_FIELD_TAIL = /* wgsl */ `
+@fragment
+fn fs(in: VertexOut) -> @location(0) vec4f {
+    let sample = sampleTexture(insideWindow(in.uv, in.window));
+    let coverage = distanceFieldCoverage(sample, in.uv);
+    return effect(vec4f(in.tint.rgb, in.tint.a * coverage), in.uv);
+}
+`;
+
+const buildWith = (tail: string, fragment: string, sig: TUniformSignature): string => {
+    const { structText } = buildUniformLayout(sig);
+
+    return [
+        SPRITE_SHADER_HEAD,
+        SAMPLE,
+        structText,
+        `@group(${SPRITE_MATERIAL_GROUP}) @binding(0) var<uniform> mu: MaterialUniforms;`,
+        fragment,
+        tail,
+    ].join('\n');
+};
+
+/**
  * Builds the whole shader for a sprite material: the engine's own preamble, the knobs the author
  * declared, the author's hook, and the ending that calls it.
  *
@@ -57,15 +85,15 @@ fn fs(in: VertexOut) -> @location(0) vec4f {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const buildSpriteMaterialShader = (fragment: string, sig: TUniformSignature): string => {
-    const { structText } = buildUniformLayout(sig);
+export const buildSpriteMaterialShader = (fragment: string, sig: TUniformSignature): string =>
+    buildWith(TAIL, fragment, sig);
 
-    return [
-        SPRITE_SHADER_HEAD,
-        SAMPLE,
-        structText,
-        `@group(${SPRITE_MATERIAL_GROUP}) @binding(0) var<uniform> mu: MaterialUniforms;`,
-        fragment,
-        TAIL,
-    ].join('\n');
-};
+/**
+ * The same for sprites cut from a distance field: the characters of a text in a vector font.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const buildSpriteDistanceFieldMaterialShader = (fragment: string, sig: TUniformSignature): string =>
+    buildWith(DISTANCE_FIELD_COVERAGE + DISTANCE_FIELD_TAIL, fragment, sig);

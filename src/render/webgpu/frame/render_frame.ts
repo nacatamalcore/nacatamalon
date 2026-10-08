@@ -197,12 +197,18 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         reserveMeshSlots(gpu.device, gpu.meshes, meshCount);
         gpu.meshes.materials.beginFrame(meshCount);
         let withEffect = 0;
+        let fieldsWithEffect = 0;
         for (let r = 0; r < gpu.sprites.runCount; r++) {
             if (gpu.sprites.runs[r].material !== null) {
-                withEffect++;
+                if (gpu.sprites.runs[r].distanceField) {
+                    fieldsWithEffect++;
+                } else {
+                    withEffect++;
+                }
             }
         }
         gpu.sprites.materials.beginFrame(withEffect);
+        gpu.sprites.distanceFieldMaterials.beginFrame(fieldsWithEffect);
         gpu.tilemaps.materials.beginFrame(
             drawables.reduce((n, item) => n + (item.type === 'tilemap' ? 1 : 0), 0),
         );

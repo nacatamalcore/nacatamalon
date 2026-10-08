@@ -3,7 +3,7 @@ import type { TGameConfig } from '../../game/types/t_game_config';
 import type { IRenderer } from '../../render';
 import type { TBox } from '../../box';
 import type { TSceneFn } from '../../scene';
-import type { TAudioClip, TLoadedAtlas, TBitmapFont, TTexture, TGltfModel } from '../../loaders';
+import type { TAudioClip, TLoadedAtlas, TBitmapFont, TFont, TTexture, TGltfModel } from '../../loaders';
 import type { TShader } from '../../loaders/shader/types/t_shader';
 import type { TPalette } from '../../loaders/palette/types/t_palette';
 import type { TLut } from '../../loaders/lut/types/t_lut';
@@ -238,6 +238,7 @@ export type TRuntimeState = {
         textures: Map<string, TTexture>;
         atlases: Map<string, TLoadedAtlas>;
         bitmapFonts: Map<string, TBitmapFont>;
+        fonts: Map<string, TFont>;
         sounds: Map<string, TAudioClip>;
         tilemaps: Map<string, TTilemap>;
         /**

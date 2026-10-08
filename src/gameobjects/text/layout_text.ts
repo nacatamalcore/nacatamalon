@@ -6,7 +6,16 @@ import type { TTextStyle } from './types/t_text_style';
  *
  * @internal
  */
-export type TGlyphPlacement = { x: number; y: number; width: number; height: number; glyph: TBitmapFontGlyph };
+export type TGlyphPlacement = {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    /**
+     * Where the character's picture is in the font's image, in pixels of the image.
+     */
+    source: { x: number; y: number; width: number; height: number };
+};
 
 /**
  * Where every character of a text goes, and how big the whole block is.
@@ -15,7 +24,45 @@ export type TGlyphPlacement = { x: number; y: number; width: number; height: num
  */
 export type TTextLayout = { width: number; height: number; scale: number; placements: TGlyphPlacement[] };
 
-const EMPTY: TTextLayout = { width: 0, height: 0, scale: 1, placements: [] };
+/**
+ * A text with nothing to lay out yet, because its font has not loaded.
+ *
+ * @internal
+ */
+export const EMPTY_LAYOUT: TTextLayout = { width: 0, height: 0, scale: 1, placements: [] };
+
+/**
+ * One line of a text, laid out from the left edge: its characters and how wide it is.
+ *
+ * @internal
+ */
+export type TTextLine = { width: number; placements: TGlyphPlacement[] };
+
+/**
+ * Puts the lines together into one block: each moved along by `align` inside the width of the
+ * longest, and the block's size worked out. Shared by every kind of font, so they all align alike.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const alignLines = (lines: readonly TTextLine[], style: TTextStyle, lineHeight: number, scale: number): TTextLayout => {
+    const lineSpacing = style.lineSpacing ?? 0;
+    const width = Math.max(0, ...lines.map((line) => line.width));
+    const height = lines.length * lineHeight + (lines.length - 1) * lineSpacing;
+
+    const align = style.align ?? 'left';
+    const placements: TGlyphPlacement[] = [];
+    for (const line of lines) {
+        const offset = align === 'center' ? (width - line.width) / 2 : align === 'right' ? width - line.width : 0;
+        for (const placement of line.placements) {
+            placement.x += offset;
+            placements.push(placement);
+        }
+    }
+
+    return { width, height, scale, placements };
+};
 
 /**
  * The glyph to draw for a character: its own, or its capital when the font has only capitals (most
@@ -51,7 +98,7 @@ const glyphFor = (char: string, glyphs: ReadonlyMap<string, TBitmapFontGlyph>): 
  */
 export const layoutText = (text: string, style: TTextStyle, meta: TBitmapFontMeta | null, glyphs: ReadonlyMap<string, TBitmapFontGlyph>): TTextLayout => {
     if (meta === null) {
-        return EMPTY;
+        return EMPTY_LAYOUT;
     }
 
     const lineHeight = style.fontSize ?? meta.glyphHeight;
@@ -70,7 +117,13 @@ export const layoutText = (text: string, style: TTextStyle, meta: TBitmapFontMet
         for (const char of line) {
             const glyph = glyphFor(char, glyphs);
             if (glyph !== undefined) {
-                placements.push({ x: pen, y: top, width: glyph.w * scale, height: lineHeight, glyph });
+                placements.push({
+                    x: pen,
+                    y: top,
+                    width: glyph.w * scale,
+                    height: lineHeight,
+                    source: { x: glyph.x, y: glyph.y, width: glyph.w, height: meta.glyphHeight },
+                });
             }
             pen += (glyph?.w ?? spaceWidth) * scale + gap;
             count++;
@@ -81,18 +134,5 @@ export const layoutText = (text: string, style: TTextStyle, meta: TBitmapFontMet
         return { width, placements };
     });
 
-    const width = Math.max(0, ...lines.map((line) => line.width));
-    const height = lines.length * lineHeight + (lines.length - 1) * lineSpacing;
-
-    const align = style.align ?? 'left';
-    const placements: TGlyphPlacement[] = [];
-    for (const line of lines) {
-        const offset = align === 'center' ? (width - line.width) / 2 : align === 'right' ? width - line.width : 0;
-        for (const placement of line.placements) {
-            placement.x += offset;
-            placements.push(placement);
-        }
-    }
-
-    return { width, height, scale, placements };
+    return alignLines(lines, style, lineHeight, scale);
 };

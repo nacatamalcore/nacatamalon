@@ -5,7 +5,7 @@ import { MATERIAL_UNIFORMS_BINDING } from './uniform_block';
 import { FRAME_UNIFORMS_BINDING } from '../bindings';
 import type { TDrawShader } from '../../interface/draw/t_draw_material';
 import type { TUniformLayout } from '../../shared/material_uniforms';
-import type { TUniformValues } from '../../../materials';
+import type { TUniformSignature, TUniformValues } from '../../../materials';
 
 /**
  * One compiled effect, or the record that it would not compile.
@@ -33,7 +33,10 @@ type TCompiled = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const createSpriteMaterials = (gl: WebGL2RenderingContext) => {
+export const createSpriteMaterials = (
+    gl: WebGL2RenderingContext,
+    buildShader: (fragment: string, sig: TUniformSignature) => { vertex: string; fragment: string } = buildSpriteMaterialShaderGlsl,
+) => {
     const compiled = new Map<string, TCompiled>();
     const values = new Float32Array(64);
     /**
@@ -56,7 +59,7 @@ export const createSpriteMaterials = (gl: WebGL2RenderingContext) => {
 
     const build = (material: TDrawShader): TCompiled => {
         const layout = buildUniformLayout(material.uniformSig ?? {});
-        const sources = buildSpriteMaterialShaderGlsl(material.fragmentGlsl as string, material.uniformSig ?? {});
+        const sources = buildShader(material.fragmentGlsl as string, material.uniformSig ?? {});
 
         try {
             const program = compileProgram(

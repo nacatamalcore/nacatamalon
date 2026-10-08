@@ -63,7 +63,7 @@ export { useScript, provide, useApi, useEvent } from './hooks';
 export { registerScript } from './scripts';
 export type { TScriptFn, TScriptProps, TScriptField, TScriptOptions, TScriptRequirement, TScriptAttachment } from './scripts';
 export type { TDataRecord, TDataSetter, TWatchDep } from './hooks';
-export { useUpdate, useLoadTexture, useLoadAtlas, useLoader, useScene, useSceneUnmount, useSpawn, useSelf, useKeyboard, useGame, useSpriteAnimation, getSpriteAnimation, useSkeletalAnimation, useTween, useTimer, useCamera2d, useScreenSpace, usePointer, useGamepad, useActions, useAction, useVector, useInputMap, useRandom, useSignal, useStore, useStoreLink, usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d, useLoadBitmapFont, useLoadGltf, useLoadShader, useLoadPalette, useLoadLut, useLoadParticles, useLoadPack, useLoadAudio, useLoadPixels, useSound, useAudio, useMusic, useAudioListener, usePostProcess, useParticleCollider2d, useParticleCollider3d } from './hooks';
+export { useUpdate, useLoadTexture, useLoadAtlas, useLoader, useScene, useSceneUnmount, useSpawn, useSelf, useKeyboard, useGame, useSpriteAnimation, getSpriteAnimation, useSkeletalAnimation, useTween, useTimer, useCamera2d, useScreenSpace, usePointer, useGamepad, useActions, useAction, useVector, useInputMap, useRandom, useSignal, useStore, useStoreLink, usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadShader, useLoadPalette, useLoadLut, useLoadParticles, useLoadPack, useLoadAudio, useLoadPixels, useSound, useAudio, useMusic, useAudioListener, usePostProcess, useParticleCollider2d, useParticleCollider3d } from './hooks';
 export { createMaterial } from './gameobjects/material';
 // Lines in space: the debug helpers (an axis gizmo, a floor grid) and any lines a game wants to draw.
 export { useHelperLines, useHelperAxis, useHelperGrid } from './hooks';
@@ -135,7 +135,7 @@ export type { TSpriteAnimation, TSpriteAnimationOptions, TAnimationClip } from '
 export type { TTweenOptions, TTweenHandle, TTweenStarter } from './hooks';
 export type { TTimer, TTimerHandle } from './hooks';
 export type { TDestroyOptions } from './destroy';
-export type { TLoader, TLoadStatus, TTexture, TLoadedAtlas, TBitmapFont, TAudioClip, TGltfModel, TGltfPart, TShading } from './loaders';
+export type { TLoader, TLoadStatus, TTexture, TLoadedAtlas, TBitmapFont, TFont, TAudioClip, TGltfModel, TGltfPart, TShading } from './loaders';
 export type { TSkeleton, TSkeletalClip, TJointPose, TClipEvent } from './animation';
 export type {
     TMaterial, TSpriteMaterial, TMeshMaterial, TMaterialMap, TTextureWrap, TMaterialShader, TMaterialOptions,
@@ -231,14 +231,14 @@ export type {
 export type { TSceneFromDocOptions } from './scene/document';
 export type { TComposerBinaryOp } from './shader_composer/math';
 export type { TAtlasFrame } from './atlas';
-export type { TLoadable, TBitmapFontMeta } from './loaders';
+export type { TLoadable, TBitmapFontMeta, TFontMeta } from './loaders';
 export type { TGltfNodeInfo } from './loaders';
 export type { TParticleRange, TParticleColorStop, TParticleScaleStop, TEmissionDoc } from './loaders/particles';
 export type { TShaderTarget } from './loaders/shader/types/t_shader_target';
 export type { TRendererType } from './render';
 export type { TCanvasScaling, TCanvasKeep } from './DOM';
 export type { TUseActionsOptions } from './hooks';
-export type { TUseLoadAudioOptions, TUseLoadBitmapFontOptions, TUseLoadLutOptions, TUseLoadPaletteOptions, TUseLoadParticlesOptions, TUseLoadPackOptions } from './hooks/loaders';
+export type { TUseLoadAudioOptions, TUseLoadBitmapFontOptions, TUseLoadFontOptions, TUseLoadLutOptions, TUseLoadPaletteOptions, TUseLoadParticlesOptions, TUseLoadPackOptions } from './hooks/loaders';
 export type { TLoadedPack } from './loaders/pack';
 export type { TPhysicsBody2dOptions, TPhysicsBody3dOptions } from './hooks/physics/use_physics_body';
 

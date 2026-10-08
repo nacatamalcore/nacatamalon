@@ -100,7 +100,7 @@ export const createRuntimeStore = (init: TRuntimeStoreInit): TRuntimeStore => {
             inputMap: createInputMap(actions, init.config.actionsPersist ?? null),
         },
         random: { rng: createRandom(init.config.seed) },
-        assets: { textures: new Map(), atlases: new Map(), bitmapFonts: new Map(), sounds: new Map(), tilemaps: new Map(), geometries: new Map(), gltf: new Map(), shaders: new Map(), particles: new Map(), palettes: new Map(), luts: new Map(), packs: new Map(), pixels: new Map() },
+        assets: { textures: new Map(), atlases: new Map(), bitmapFonts: new Map(), fonts: new Map(), sounds: new Map(), tilemaps: new Map(), geometries: new Map(), gltf: new Map(), shaders: new Map(), particles: new Map(), palettes: new Map(), luts: new Map(), packs: new Map(), pixels: new Map() },
         // Empty, and empty has to stay free: with no effects the frame is drawn exactly as it was
         // before any of this existed. See `TRuntimeState.post`.
         post: { effects: [], enabled: true },

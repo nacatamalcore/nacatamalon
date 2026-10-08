@@ -22,6 +22,10 @@ export type TSpriteRun = {
      */
     material: TDrawShader | null;
     /**
+     * Whether its texture is a distance field (a vector font's letters), drawn with its own ending.
+     */
+    distanceField: boolean;
+    /**
      * The knobs of the one sprite in this run, when it brought its own.
      */
     uniforms: TUniformValues | null;

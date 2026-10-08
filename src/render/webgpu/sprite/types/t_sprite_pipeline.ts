@@ -12,6 +12,10 @@ export type TSpritePipeline = {
      */
     pipeline: GPURenderPipeline;
     /**
+     * The same, ending in the distance-field read: for the characters of a text in a vector font.
+     */
+    distanceFieldPipeline: GPURenderPipeline;
+    /**
      * The first two groups, spelled out rather than taken from the pipeline.
      *
      * Shared with every material pipeline, which is the whole reason they are spelled out: a bind
@@ -23,6 +27,11 @@ export type TSpritePipeline = {
      * The effects this game has compiled, and the numbers they are drawn with.
      */
     materials: TFlatMaterials;
+    /**
+     * The same effects compiled to end in the distance-field read, for a vector font's text that
+     * carries one. Kept apart because the same material is a different shader there.
+     */
+    distanceFieldMaterials: TFlatMaterials;
     /**
      * The 4 corners of a quad (a triangle strip), shared by every sprite.
      */

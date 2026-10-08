@@ -181,10 +181,10 @@ This project uses the nacatamalon game engine: read node_modules/nacatamalon/llm
   signals, tweens and timers, seeded random, and the everyday maths (`clamp`,
   `lerp`, vectors).
 
-Text is drawn with bitmap fonts. `createText({ text: 'SCORE 0' })` works as is,
-with the font the engine carries (Nacatamal Arcade, an 8 px arcade font with
-lowercase, accents and ñ); load one of your own with `useLoadBitmapFont` and hand it
-to `createText` as `font`.
+`createText({ text: 'SCORE 0' })` works as is, with the font the engine carries
+(Nacatamal Arcade, an 8 px arcade font with lowercase, accents and ñ). Load a
+`.ttf` or `.woff` with `useLoadFont`, sharp at any size, or a bitmap font with
+`useLoadBitmapFont`, and hand it to `createText` as `font`.
 
 ## Physics
 

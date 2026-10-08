@@ -15,9 +15,18 @@ export type TSpritePipeline = {
      */
     materials: TSpriteMaterials;
     /**
+     * The same effects built to end in the distance-field read, for a vector font's text that
+     * carries one.
+     */
+    distanceFieldMaterials: TSpriteMaterials;
+    /**
      * The linked sprite shader.
      */
     program: WebGLProgram;
+    /**
+     * The same corners, ending in the distance-field read: for the characters of a text in a vector font.
+     */
+    distanceFieldProgram: WebGLProgram;
     /**
      * Remembers which buffer feeds each attribute and that the per-sprite ones advance per instance.
      */

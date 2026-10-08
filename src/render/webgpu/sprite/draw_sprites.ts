@@ -47,10 +47,11 @@ export const drawSpriteRun = (
     height: number,
 ): boolean => {
     const material = run.material;
+    const materials = run.distanceField ? sprites.distanceFieldMaterials : sprites.materials;
     if (material !== null && material.fragment !== null) {
-        const compiled = sprites.materials.get(material);
+        const compiled = materials.get(material);
         if (!compiled.failed && compiled.pipeline !== null) {
-            const parameters = sprites.materials.bind(
+            const parameters = materials.bind(
                 compiled,
                 material.uniforms ?? {},
                 run.uniforms,
@@ -62,12 +63,24 @@ export const drawSpriteRun = (
             gpuPass.setPipeline(compiled.pipeline);
             gpuPass.setBindGroup(0, sprites.bindGroup);
             gpuPass.setBindGroup(1, run.bindGroup);
-            gpuPass.setBindGroup(sprites.materials.group, parameters);
+            gpuPass.setBindGroup(materials.group, parameters);
             gpuPass.setVertexBuffer(0, sprites.quad);
             gpuPass.setVertexBuffer(1, sprites.instances);
             gpuPass.draw(4, run.count, 0, run.start);
             return false;
         }
+    }
+
+    if (run.distanceField) {
+        // Everything but the pipeline is what the plain sprites use, so only that is swapped, and
+        // the next plain batch is told to set it back.
+        gpuPass.setPipeline(sprites.distanceFieldPipeline);
+        gpuPass.setBindGroup(0, sprites.bindGroup);
+        gpuPass.setBindGroup(1, run.bindGroup);
+        gpuPass.setVertexBuffer(0, sprites.quad);
+        gpuPass.setVertexBuffer(1, sprites.instances);
+        gpuPass.draw(4, run.count, 0, run.start);
+        return false;
     }
 
     gpuPass.setBindGroup(1, run.bindGroup);

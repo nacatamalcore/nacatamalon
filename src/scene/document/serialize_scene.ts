@@ -1,7 +1,7 @@
 import { SCENE_FORMAT, SCENE_VERSION } from './types/t_scene_doc';
 import { DEFAULT_FONT_KEY } from '../../gameobjects/text/default_font';
 import { UNSUPPORTED_COMPONENTS } from './parse_scene_doc';
-import { isMadeTexture } from '../../loaders';
+import { DEFAULT_FONT_ATLAS_SIZE, isMadeTexture } from '../../loaders';
 import type { TFog } from '../../fog/types/t_fog';
 import type { TTexture } from '../../loaders';
 import type { TColor } from '../../color';
@@ -240,8 +240,11 @@ const writeText = (text: TText, writing: TWriting): TComponentDoc => {
     // One entry and not two: a font is its metrics **and** its sheet, so its sheet is not also
     // registered as a texture of its own. Whoever loads the font loads both.
     // The engine's own font is not a file: every game has it, so the scene names it and lists nothing.
-    if (text.font.key !== DEFAULT_FONT_KEY) {
-        writing.assets.set(text.font.key, { type: 'bitmapFont', key: text.font.key, json: text.font.src, atlas: text.font.texture.src });
+    const font = text.font;
+    if (font.type === 'font') {
+        writing.assets.set(font.key, { type: 'font', key: font.key, src: font.src, ...(font.size !== DEFAULT_FONT_ATLAS_SIZE ? { size: font.size } : {}) });
+    } else if (font.key !== DEFAULT_FONT_KEY) {
+        writing.assets.set(font.key, { type: 'bitmapFont', key: font.key, json: font.src, atlas: font.texture.src });
     }
     const place = writeFlatPlace(text.transform);
     return {
