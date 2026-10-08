@@ -3,7 +3,7 @@ import { isTransparentMesh } from '../../shared/is_transparent_mesh';
 import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
 import { toGlBuffer } from '../resources';
 import { toGlTexture } from '../texture';
-import { MESH_JOINTS_UNIT, MESH_LIGHTS_BINDING, MESH_SHADOW_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
+import { MESH_JOINTS_UNIT, MESH_LIGHTS_BINDING, MESH_MAP_UNITS, MESH_SHADOW_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
 import type { TCameraSpace } from '../../shared/compute_mvp_3d';
 import type { TDrawMesh, TDrawView3d } from '../../interface';
 import type { TShadowUniforms } from '../../shared/fill_light_uniforms';
@@ -153,6 +153,21 @@ export const drawMesh = (
 
     if (effect !== null) {
         meshes.materials.bind(effect, surface.uniforms ?? {}, null, time, width, height);
+        // The extra maps, on their own units, in the order the shader reads them. A map the material
+        // does not carry, or one still loading, reads as white and the model is drawn anyway.
+        MESH_MAP_UNITS.forEach((unit, i) => {
+            const name = effect!.mapNames[i];
+            const map = name === undefined ? undefined : surface.maps?.[name];
+            if (name !== undefined && map === undefined) {
+                meshes.materials.warnIfMapMissing(surface, name);
+            }
+            const ready = map !== undefined && map.texture.status === 'ready' && map.texture.gpu !== null;
+            gl.activeTexture(gl.TEXTURE0 + unit);
+            gl.bindTexture(gl.TEXTURE_2D, ready ? toGlTexture(map.texture.gpu!) : meshes.whiteTexture);
+            const { u, v } = textureWrapOf(map ?? {});
+            const filter = (map?.smooth ?? surface.smooth ?? meshes.defaultSmooth) ? 'linear' : 'nearest';
+            gl.bindSampler(unit, meshes.wrapSamplers.get(wrapKey(filter, u, v))!);
+        });
     }
 
     if (bends) {

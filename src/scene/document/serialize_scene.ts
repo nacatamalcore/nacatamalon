@@ -139,6 +139,35 @@ const listTexture = (texture: TTexture, writing: TWriting): void => {
     }
 };
 
+/**
+ * What a picture does past its edge, written only when it does not repeat, which is the default
+ * however it is spelled.
+ */
+const writtenWrap = (wrap: TMeshMaterial['wrap']): Pick<TMeshMaterialDoc, 'wrap'> =>
+    (wrap === undefined || wrap === 'repeat' || (typeof wrap === 'object' && wrap.u === 'repeat' && wrap.v === 'repeat')
+        ? {}
+        : { wrap: typeof wrap === 'string' ? wrap : { u: wrap.u, v: wrap.v } });
+
+/**
+ * A material's extra maps, each by the key of its picture, with the pictures listed among what the
+ * scene loads (except those the game paints itself, which have no file).
+ */
+const writeMaps = (maps: TMeshMaterial['maps'], writing: TWriting): Pick<TMeshMaterialDoc, 'maps'> => {
+    if (maps === undefined || Object.keys(maps).length === 0) {
+        return {};
+    }
+    const written: NonNullable<TMeshMaterialDoc['maps']> = {};
+    for (const [name, map] of Object.entries(maps)) {
+        listTexture(map.texture, writing);
+        written[name] = {
+            texture: map.texture.key,
+            ...writtenWrap(map.wrap),
+            ...(map.smooth !== undefined ? { smooth: map.smooth } : {}),
+        };
+    }
+    return { maps: written };
+};
+
 const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting): TMeshMaterialDoc => {
     if (material.texture !== null) {
         listTexture(material.texture, writing);
@@ -153,10 +182,8 @@ const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting): TMeshMat
         alpha: material.alpha,
         ...unless('smooth', material.smooth, undefined),
         // Repeating is the default, however it is spelled, so it is never written down.
-        ...(material.wrap === undefined || material.wrap === 'repeat'
-            || (typeof material.wrap === 'object' && material.wrap.u === 'repeat' && material.wrap.v === 'repeat')
-            ? {}
-            : { wrap: typeof material.wrap === 'string' ? material.wrap : { u: material.wrap.u, v: material.wrap.v } }),
+        ...writtenWrap(material.wrap),
+        ...writeMaps(material.maps, writing),
         ...(material.vertexSnap === true || (typeof material.vertexSnap === 'number' && material.vertexSnap > 0)
             ? { vertexSnap: material.vertexSnap }
             : {}),

@@ -47,6 +47,19 @@ export type TDrawShader = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
+/**
+ * One extra picture a model's material hands its shader.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TDrawMaterialMap = {
+    readonly texture: TDrawTexture;
+    readonly wrap?: TTextureWrap | { readonly u: TTextureWrap; readonly v: TTextureWrap };
+    readonly smooth?: boolean;
+};
+
 export type TDrawMaterial = TDrawShader & {
     readonly texture: TDrawTexture | null;
     readonly tint: TColor;
@@ -63,6 +76,10 @@ export type TDrawMaterial = TDrawShader & {
      * What the picture does past its edge. Omitted, it repeats.
      */
     readonly wrap?: TTextureWrap | { readonly u: TTextureWrap; readonly v: TTextureWrap };
+    /**
+     * Extra pictures its shader reads by name with `sampleMap_<name>`.
+     */
+    readonly maps?: Readonly<Record<string, TDrawMaterialMap>>;
     readonly vertexSnap?: boolean | number;
     /**
      * Its picture stretched across the screen without correcting for depth. Omitted, it is held true.

@@ -341,10 +341,27 @@ const gatherTree = (
 };
 
 /**
- * Whether a model shows `texture`, which it must not while that texture is being drawn into.
+ * Whether a model shows `texture`, as its picture or as one of its maps, which it must not while
+ * that texture is being drawn into.
  */
-const shows = (item: TDrawable | TDrawSprite, texture: TTexture): boolean =>
-    item.type === 'mesh' && item.material.texture === texture;
+const shows = (item: TDrawable | TDrawSprite, texture: TTexture): boolean => {
+    if (item.type !== 'mesh') {
+        return false;
+    }
+    if (item.material.texture === texture) {
+        return true;
+    }
+    const maps = item.material.maps;
+    if (maps === undefined) {
+        return false;
+    }
+    for (const name in maps) {
+        if (maps[name]!.texture === texture) {
+            return true;
+        }
+    }
+    return false;
+};
 
 /**
  * The pass each picture is drawn in, kept between frames like the screen's.

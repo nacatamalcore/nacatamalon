@@ -15,6 +15,8 @@ const INPUT_SOURCE: Record<TInputKind, Partial<Record<TStageCtx, string>>> = {
     viewDir:        { 'mesh3d.frag': 'ctx.viewDir', 'preview.frag': 'vec3<f32>(0.0, 0.0, 1.0)' },
     light:          { 'mesh3d.frag': 'ctx.light', 'preview.frag': 'sgPreviewLight(uv)' },
     emissive:       { 'mesh3d.frag': 'ctx.emissive', 'preview.frag': 'vec3<f32>(0.0, 0.0, 0.0)' },
+    shine:          { 'mesh3d.frag': 'ctx.shine', 'preview.frag': 'vec3<f32>(0.0, 0.0, 0.0)' },
+    envUv:          { 'mesh3d.frag': 'envUv(ctx)', 'preview.frag': 'uv' },
     vertexPosition: { 'mesh3d.vert': 'pos', 'preview.frag': 'sgPreviewPos(uv)' },
     vertexNormal:   { 'mesh3d.vert': 'ctx.normal', 'preview.frag': 'sgPreviewNormal(uv)' },
     vertexColor:    { 'mesh3d.frag': 'ctx.color', 'mesh3d.vert': 'ctx.color', 'preview.frag': 'vec4<f32>(1.0, 1.0, 1.0, 1.0)' },

@@ -46,6 +46,20 @@ export type TMaterialDoc = {
 };
 
 /**
+ * One extra map of a model's material, as a document writes it: the picture by asset key, and how
+ * it is read when that differs from the defaults.
+ *
+ * @category Scenes
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TMaterialMapDoc = {
+    texture: string;
+    wrap?: TTextureWrap | { u: TTextureWrap; v: TTextureWrap };
+    smooth?: boolean;
+};
+
+/**
  * A model's material, which is a material **plus a surface**: what the light finds when it gets
  * there.
  *
@@ -74,6 +88,10 @@ export type TMeshMaterialDoc = TMaterialDoc & {
      * repeats, which is the default; a model from a file does what the file says unless this does.
      */
     wrap?: TTextureWrap | { u: TTextureWrap; v: TTextureWrap };
+    /**
+     * Extra pictures its shader reads by name, each by asset key. Left out when there are none.
+     */
+    maps?: Record<string, TMaterialMapDoc>;
     /**
      * Corners on a coarse grid of the screen: `true` for the game's own rows, or how many rows. Left
      * out when off, which is the default.

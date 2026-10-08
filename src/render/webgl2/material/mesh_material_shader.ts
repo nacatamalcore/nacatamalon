@@ -1,3 +1,4 @@
+import { MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import {
     MESH_FRAGMENT_HEAD_GLSL, MESH_SAMPLE_LIGHT_GLSL, MESH_VERTEX_ATTRIBUTES_GLSL,
 } from '../mesh/mesh_shader';
@@ -64,6 +65,27 @@ vec4 sampleTexture(vec2 uv) {
     return textureLod(meshTexture, uv, 0.0);
 }
 `;
+
+/**
+ * The material's extra maps: always all four samplers, and one reader per name the shader uses, in
+ * the order it first reads them. The same readers by the same names as its WGSL twin.
+ *
+ * `envUv` is where a reflection of the world lands on a round picture of its surroundings.
+ */
+const maps = (names: readonly string[]): string => {
+    const slots = Array.from({ length: MAX_MATERIAL_MAPS }, (_, i) => `uniform sampler2D meshMap${i};`).join('\n');
+    const readers = names.map((name, i) =>
+        `vec4 sampleMap_${name}(vec2 uv) {\n    return textureLod(meshMap${i}, uv, 0.0);\n}`).join('\n');
+    return `${slots}
+
+vec2 envUv(FragContext ctx) {
+    vec3 r = reflect(-ctx.viewDir, normalize(ctx.normal));
+    float m = max(2.0 * sqrt(r.x * r.x + r.y * r.y + (r.z + 1.0) * (r.z + 1.0)), 0.0001);
+    return vec2(r.x / m + 0.5, 0.5 - r.y / m);
+}
+${readers}
+`;
+};
 
 /**
  * A corner hook that moves nothing.
@@ -198,6 +220,7 @@ export const buildMeshMaterialShaderGlsl = (
     fragment: string | null,
     vertex: string | null,
     sig: TUniformSignature,
+    mapNames: readonly string[] = [],
 ): { vertex: string; fragment: string } => ({
     vertex: [
         MESH_VERTEX_ATTRIBUTES_GLSL,
@@ -214,6 +237,7 @@ export const buildMeshMaterialShaderGlsl = (
         VARYINGS('in'),
         FRAG_CONTEXT,
         SAMPLE,
+        maps(mapNames),
         fragment ?? DEFAULT_EFFECT,
         FRAGMENT_BODY,
     ].join('\n'),

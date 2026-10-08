@@ -38,7 +38,7 @@ import type { TAssetEntry } from './types/t_asset_entry';
 import type { TBox } from '../../box';
 import type { TBoxNode, TSceneDoc } from './types/t_scene_doc';
 import type { TComponentDoc, TMaterialDoc, TSpriteTextureComponent, TTilemapComponent } from './types/t_component_doc';
-import type { TMeshMaterial, TSpriteMaterial } from '../../materials';
+import type { TMaterialMap, TMeshMaterial, TSpriteMaterial } from '../../materials';
 import type { TRuntimeStore } from '../../store';
 import type { TSprite } from '../../gameobjects/sprite/types/t_sprite';
 import type { TSceneFn } from '../types/t_scene_fn';
@@ -355,6 +355,18 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
             }
             const surface = component.material;
             const texture = surface.texture === null ? undefined : found(assets.textures, surface.texture, 'model', src);
+            // Each map by its picture's key; one whose picture is not there is left out and reads white.
+            const maps: Record<string, TMaterialMap> = {};
+            for (const [name, map] of Object.entries(surface.maps ?? {})) {
+                const picture = found(assets.textures, map.texture, 'model', src);
+                if (picture !== undefined) {
+                    maps[name] = {
+                        texture: picture,
+                        ...(map.wrap !== undefined ? { wrap: map.wrap } : {}),
+                        ...(map.smooth !== undefined ? { smooth: map.smooth } : {}),
+                    };
+                }
+            }
             const model = createMesh({
                 ...(component.transform !== undefined ? { transform: component.transform } : {}),
                 geometry,
@@ -375,6 +387,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                     alpha: surface.alpha,
                     ...(surface.smooth !== undefined ? { smooth: surface.smooth } : {}),
                     ...(surface.wrap !== undefined ? { wrap: surface.wrap } : {}),
+                    ...(Object.keys(maps).length > 0 ? { maps } : {}),
                     ...(surface.vertexSnap !== undefined ? { vertexSnap: surface.vertexSnap } : {}),
                     ...(surface.affine === true ? { affine: true } : {}),
                 }) as TMeshMaterial,

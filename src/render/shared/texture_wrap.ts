@@ -11,7 +11,7 @@ import type { TTextureWrap } from '../../materials/types/t_material';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const textureWrapOf = (material: TDrawMaterial): { u: TTextureWrap; v: TTextureWrap } => {
+export const textureWrapOf = (material: Pick<TDrawMaterial, 'wrap'>): { u: TTextureWrap; v: TTextureWrap } => {
     const wrap = material.wrap ?? 'repeat';
     return typeof wrap === 'string' ? { u: wrap, v: wrap } : { u: wrap.u, v: wrap.v };
 };

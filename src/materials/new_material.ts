@@ -2,7 +2,8 @@ import { getColor } from '../color';
 import { createRecord } from '../gameobjects/create_record';
 import { applyShader, rememberOverrides } from './apply_shader';
 import { deriveSignature } from './derive_signature';
-import type { TMaterial, TMeshMaterial, TSpriteMaterial } from './types/t_material';
+import { MAP_NAME, MAX_MATERIAL_MAPS } from '../render/shared/material_maps';
+import type { TMaterial, TMaterialMap, TMeshMaterial, TSpriteMaterial } from './types/t_material';
 import type { TMaterialOptions, TMeshMaterialOptions } from './types/t_material_options';
 import type { TShader } from '../loaders/shader/types/t_shader';
 import type { TTexture } from '../loaders';
@@ -12,6 +13,29 @@ import type { TTexture } from '../loaders';
  */
 const isSnapping = (value: boolean | number | undefined): boolean =>
     value === true || (typeof value === 'number' && Number.isFinite(value) && value > 0);
+
+/**
+ * The extra maps as the record keeps them: each one in the long form, after checking there are few
+ * enough and that each name can be part of a function name in a shader.
+ */
+const mapsOf = (asked: Record<string, TTexture | TMaterialMap> | undefined): Record<string, TMaterialMap> | undefined => {
+    if (asked === undefined) {
+        return undefined;
+    }
+    const names = Object.keys(asked);
+    if (names.length > MAX_MATERIAL_MAPS) {
+        throw new Error(`[NacatamalOn] createMaterial: a material carries at most ${MAX_MATERIAL_MAPS} maps, and was given ${names.length} (${names.join(', ')}).`);
+    }
+    const maps: Record<string, TMaterialMap> = {};
+    for (const name of names) {
+        if (!MAP_NAME.test(name)) {
+            throw new Error(`[NacatamalOn] createMaterial: '${name}' cannot name a map: the shader reads it as sampleMap_${name}, so it has to be a letter-first lowercase name of letters and digits, such as 'noise' or 'env'.`);
+        }
+        const given = asked[name]!;
+        maps[name] = 'type' in given && given.type === 'texture' ? { texture: given } : { ...(given as TMaterialMap) };
+    }
+    return maps;
+};
 
 /**
  * Builds the material record from what was asked for, with the lookups already done.
@@ -68,6 +92,8 @@ export const newMaterial = (
             smooth: (options as TMeshMaterialOptions).smooth,
             // Left out when not asked for: absent is repeat, and a default is not a decision.
             ...((options as TMeshMaterialOptions).wrap !== undefined ? { wrap: (options as TMeshMaterialOptions).wrap } : {}),
+            // Left out when there are none, so a material that never had maps saves as before.
+            ...((options as TMeshMaterialOptions).maps !== undefined ? { maps: mapsOf((options as TMeshMaterialOptions).maps) } : {}),
             // The same: left out unless asked, so a material that never mentioned it saves as before.
             ...(isSnapping((options as TMeshMaterialOptions).vertexSnap) ? { vertexSnap: (options as TMeshMaterialOptions).vertexSnap } : {}),
             ...((options as TMeshMaterialOptions).affine === true ? { affine: true } : {}),

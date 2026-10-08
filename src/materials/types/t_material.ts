@@ -87,6 +87,32 @@ export type TSpriteMaterial = TShaderHalf & {
 export type TTextureWrap = 'repeat' | 'clamp' | 'mirror';
 
 /**
+ * One extra picture a model's material carries for its shader to read, besides the picture it is
+ * covered with: a reflection, a mask, a fine detail, a ripple.
+ *
+ * The shader reads it by name, `sampleMap_<name>(uv)`, with the same wrap and filtering choices the
+ * main picture has.
+ *
+ * @category Materials
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TMaterialMap = {
+    /**
+     * The picture. One still loading reads as white until it lands; the model is drawn meanwhile.
+     */
+    texture: TTexture;
+    /**
+     * What the picture does past its edge. Default `'repeat'`.
+     */
+    wrap?: TTextureWrap | { u: TTextureWrap; v: TTextureWrap };
+    /**
+     * How it is read between pixels. Omitted, the material's own `smooth` decides.
+     */
+    smooth?: boolean;
+};
+
+/**
  * A material for models: a surface, and optionally a shader over it.
  *
  * Here the surface **is** the material's, because that is what a hundred crates want to share. They
@@ -142,6 +168,11 @@ export type TMeshMaterial = TShaderHalf & {
      * way on its own (`u` across, `v` down), which is how a fence repeats sideways and not upwards.
      */
     wrap?: TTextureWrap | { u: TTextureWrap; v: TTextureWrap };
+    /**
+     * Extra pictures for its shader to read, by name, up to four: `sampleMap_<name>(uv)` in the
+     * shader reads the one under that name. Read every frame, so swapping one shows at once.
+     */
+    maps?: Record<string, TMaterialMap>;
     /**
      * Its corners land on a coarse grid of the screen, the way the PlayStation drew them: a model
      * shivers as it moves and its edges crawl as the camera turns.

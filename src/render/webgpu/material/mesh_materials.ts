@@ -1,7 +1,10 @@
 import { buildMeshMaterialShader, MESH_MATERIAL_GROUP } from './mesh_material_shader';
 import { buildUniformLayout, writeUniformValues } from '../../shared/material_uniforms';
+import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
+import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
+import { toGpuTexture } from '../texture';
 import { describeMeshPipeline, MESH_COLORS, MESH_CORNERS } from '../mesh/pipeline_state';
-import type { TDrawShader } from '../../interface/draw/t_draw_material';
+import type { TDrawMaterial, TDrawShader } from '../../interface/draw/t_draw_material';
 import type { TMeshPipeline } from '../mesh/types/t_mesh_pipeline';
 import type { TUniformLayout } from '../../shared/material_uniforms';
 import type { TUniformValues } from '../../../materials';
@@ -25,6 +28,10 @@ type TCompiled = {
     transparentPipeline: GPURenderPipeline | null;
     layout: TUniformLayout;
     failed: boolean;
+    /**
+     * The maps the shader reads, in the order of their slots.
+     */
+    mapNames: string[];
 };
 
 /**
@@ -41,15 +48,26 @@ export const createMeshMaterials = (
     format: GPUTextureFormat,
     samples: number,
     layouts: TMeshPipeline['layouts'],
+    whiteTexture: GPUTexture,
+    wrapSamplers: Map<string, GPUSampler>,
 ) => {
+    const mapEntries: GPUBindGroupLayoutEntry[] = [];
+    for (let i = 0; i < MAX_MATERIAL_MAPS; i++) {
+        mapEntries.push(
+            { binding: 1 + i * 2, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+            { binding: 2 + i * 2, visibility: GPUShaderStage.FRAGMENT, texture: {} },
+        );
+    }
     const materialLayout = device.createBindGroupLayout({
         label: 'mesh material layout',
         entries: [{
             binding: 0,
             // Both stages, because a corner hook turns knobs as readily as a colour hook does.
             visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-            buffer: { type: 'uniform' },
-        }],
+            // Where this model's numbers start is given at draw time, so a group depends only on the
+            // maps it binds and not on which slot of the buffer this model landed in.
+            buffer: { type: 'uniform', hasDynamicOffset: true, minBindingSize: MESH_MATERIAL_STRIDE },
+        }, ...mapEntries],
     });
     const pipelineLayout = device.createPipelineLayout({
         label: 'mesh material pipeline layout',
@@ -62,9 +80,25 @@ export const createMeshMaterials = (
     const values = new Float32Array(MAX_MATERIAL_FLOATS);
 
     let slots: GPUBuffer | null = null;
-    let slotBindGroups: Array<GPUBindGroup | undefined> = [];
     let capacity = 0;
     let used = 0;
+
+    /**
+     * Bind groups by the four pictures and samplers they hold. Cleared when the buffer they point at
+     * is replaced, and when it grows past what a game with a sensible number of maps would make.
+     */
+    const groups = new Map<string, GPUBindGroup>();
+    const ids = new WeakMap<GPUTexture, number>();
+    let nextId = 0;
+    const idOf = (texture: GPUTexture): number => {
+        let id = ids.get(texture);
+        if (id === undefined) {
+            id = nextId++;
+            ids.set(texture, id);
+        }
+        return id;
+    };
+    const warned = new Set<string>();
 
     const grow = (needed: number): void => {
         let size = Math.max(capacity === 0 ? 8 : capacity, 1);
@@ -77,22 +111,30 @@ export const createMeshMaterials = (
             size: size * MESH_MATERIAL_STRIDE,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
-        slotBindGroups = [];
+        groups.clear();
         capacity = size;
     };
 
     const build = (material: TDrawShader): TCompiled => {
         const layout = buildUniformLayout(material.uniformSig ?? {});
+        const mapNames = mapNamesOf(material.fragment);
 
         if (layout.floatCount > MAX_MATERIAL_FLOATS) {
             console.warn(
                 `[NacatamalOn] the material "${material.name ?? 'mesh material'}" declares more parameters ` +
                 `than fit in ${MESH_MATERIAL_STRIDE} bytes. It is drawing with the built-in shader instead.`,
             );
-            return { pipeline: null, transparentPipeline: null, layout, failed: true };
+            return { pipeline: null, transparentPipeline: null, layout, failed: true, mapNames };
+        }
+        if (mapNames.length > MAX_MATERIAL_MAPS) {
+            console.warn(
+                `[NacatamalOn] the material "${material.name ?? 'mesh material'}" reads ${mapNames.length} maps ` +
+                `(${mapNames.join(', ')}) and a material has ${MAX_MATERIAL_MAPS}. It is drawing with the built-in shader instead.`,
+            );
+            return { pipeline: null, transparentPipeline: null, layout, failed: true, mapNames };
         }
 
-        const entry: TCompiled = { pipeline: null, transparentPipeline: null, layout, failed: false };
+        const entry: TCompiled = { pipeline: null, transparentPipeline: null, layout, failed: false, mapNames };
         const fail = (reason: unknown): void => {
             if (entry.failed) {
                 return;
@@ -109,7 +151,7 @@ export const createMeshMaterials = (
 
         const module = device.createShaderModule({
             label: `mesh material ${material.name ?? material.id}`,
-            code: buildMeshMaterialShader(material.fragment, material.vertex, material.uniformSig ?? {}),
+            code: buildMeshMaterialShader(material.fragment, material.vertex, material.uniformSig ?? {}, mapNames),
         });
 
         device.pushErrorScope('validation');
@@ -164,19 +206,27 @@ export const createMeshMaterials = (
             }
             return entry;
         },
+        /**
+         * Writes this model's numbers into a slot of their own and gives back the group that binds its
+         * maps, with the offset of that slot to pass alongside it.
+         *
+         * A map the shader reads and the material does not have, or one still loading, reads as white:
+         * a map is a second picture, and a model should not vanish while one is on its way.
+         */
         bind: (
             entry: TCompiled,
-            uniforms: TUniformValues,
+            material: TDrawMaterial,
+            defaultSmooth: boolean,
             overrides: TUniformValues | null,
             time: number,
             width: number,
             height: number,
-        ): GPUBindGroup => {
+        ): { group: GPUBindGroup; offset: number } => {
             const slot = Math.min(used, capacity - 1);
             used += 1;
 
             values.fill(0, 0, entry.layout.floatCount);
-            writeUniformValues(values, entry.layout, uniforms, time, width, height, overrides);
+            writeUniformValues(values, entry.layout, material.uniforms ?? {}, time, width, height, overrides);
             device.queue.writeBuffer(
                 slots as GPUBuffer,
                 slot * MESH_MATERIAL_STRIDE,
@@ -185,29 +235,51 @@ export const createMeshMaterials = (
                 entry.layout.floatCount * 4,
             );
 
-            let group = slotBindGroups[slot];
-            if (group === undefined) {
-                group = device.createBindGroup({
-                    label: `mesh material slot ${slot}`,
-                    layout: materialLayout,
-                    entries: [{
-                        binding: 0,
-                        resource: {
-                            buffer: slots as GPUBuffer,
-                            offset: slot * MESH_MATERIAL_STRIDE,
-                            size: MESH_MATERIAL_STRIDE,
-                        },
-                    }],
-                });
-                slotBindGroups[slot] = group;
+            const views: GPUTexture[] = [];
+            const samplers: string[] = [];
+            for (let i = 0; i < MAX_MATERIAL_MAPS; i++) {
+                const name = entry.mapNames[i];
+                const map = name === undefined ? undefined : material.maps?.[name];
+                if (name !== undefined && map === undefined) {
+                    const said = `${material.name ?? material.id} ${name}`;
+                    if (!warned.has(said)) {
+                        warned.add(said);
+                        console.warn(`[NacatamalOn] the material "${material.name ?? 'mesh material'}" reads the map '${name}' and has none by that name, so it reads as white. Add it to the material's maps.`);
+                    }
+                }
+                const ready = map !== undefined && map.texture.status === 'ready' && map.texture.gpu !== null;
+                views.push(ready ? toGpuTexture(map.texture.gpu!) : whiteTexture);
+                const filter = (map?.smooth ?? material.smooth ?? defaultSmooth) ? 'linear' : 'nearest';
+                const { u, v } = textureWrapOf(map ?? {});
+                samplers.push(wrapKey(filter, u, v));
             }
-            return group;
+
+            const key = views.map((view, i) => `${idOf(view)} ${samplers[i]}`).join('|');
+            let group = groups.get(key);
+            if (group === undefined) {
+                if (groups.size > 512) {
+                    groups.clear();
+                }
+                const entries: GPUBindGroupEntry[] = [{
+                    binding: 0,
+                    resource: { buffer: slots as GPUBuffer, offset: 0, size: MESH_MATERIAL_STRIDE },
+                }];
+                for (let i = 0; i < MAX_MATERIAL_MAPS; i++) {
+                    entries.push(
+                        { binding: 1 + i * 2, resource: wrapSamplers.get(samplers[i]!)! },
+                        { binding: 2 + i * 2, resource: views[i]!.createView() },
+                    );
+                }
+                group = device.createBindGroup({ label: 'mesh material', layout: materialLayout, entries });
+                groups.set(key, group);
+            }
+            return { group, offset: slot * MESH_MATERIAL_STRIDE };
         },
         group: MESH_MATERIAL_GROUP,
         destroy: (): void => {
             slots?.destroy();
             slots = null;
-            slotBindGroups = [];
+            groups.clear();
             capacity = 0;
         },
     };

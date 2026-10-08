@@ -231,9 +231,8 @@ export const drawMesh = (
     } else if (effect !== null) {
         // The same group number the bones would have used, which is free precisely because the two
         // can never be wanted at once.
-        pass.setBindGroup(meshes.materials.group, meshes.materials.bind(
-            effect, surface.uniforms ?? {}, null, time, width, height,
-        ));
+        const bound = meshes.materials.bind(effect, surface, meshes.defaultSmooth, null, time, width, height);
+        pass.setBindGroup(meshes.materials.group, bound.group, [bound.offset]);
     }
 
     pass.setIndexBuffer(toGpuBuffer(geometry.indexBuffer), geometry.indexType);

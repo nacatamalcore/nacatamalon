@@ -3,8 +3,8 @@ export {
 } from './constructors';
 export {
     composerUv, composerTime, composerResolution, composerSurface, composerWorldNormal, composerWorldPos,
-    composerViewDir, composerLight, composerEmissive, composerVertexPosition, composerVertexNormal, composerVertexColor,
-    composerTextureSample, composerUniform,
+    composerViewDir, composerLight, composerEmissive, composerShine, composerEnvUv, composerVertexPosition, composerVertexNormal, composerVertexColor,
+    composerTextureSample, composerMapSample, composerUniform,
 } from './inputs';
 export {
     composerAdd, composerSub, composerMul, composerDiv, composerAbs, composerFloor, composerFract, composerSin,

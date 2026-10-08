@@ -1,5 +1,6 @@
 import { MESH_SHADER_TYPES } from '../mesh/mesh_shader';
 import { buildUniformLayout } from '../../shared/material_uniforms';
+import { MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import type { TUniformSignature } from '../../../materials';
 
 /**
@@ -91,6 +92,31 @@ fn sampleTexture(uv: vec2<f32>) -> vec4<f32> {
 /**
  * A corner hook that moves nothing, for a material that only recolours.
  */
+/**
+ * The material's extra maps: always all four slots, so every material shader has the same layout, and
+ * one reader per name the shader uses. Which slot a name reads is the order the shader first reads it
+ * in, which the caller works out once and binds by.
+ *
+ * `envUv` is where a reflection of the world lands on a round picture of its surroundings: the chrome
+ * of the era, read as `sampleMap_env(envUv(ctx))`.
+ */
+const maps = (names: readonly string[]): string => {
+    const slots = Array.from({ length: MAX_MATERIAL_MAPS }, (_, i) =>
+        `@group(${MESH_MATERIAL_GROUP}) @binding(${1 + i * 2}) var mapSampler${i}: sampler;\n` +
+        `@group(${MESH_MATERIAL_GROUP}) @binding(${2 + i * 2}) var mapTexture${i}: texture_2d<f32>;`).join('\n');
+    const readers = names.map((name, i) =>
+        `fn sampleMap_${name}(uv: vec2<f32>) -> vec4<f32> {\n    return textureSampleLevel(mapTexture${i}, mapSampler${i}, uv, 0.0);\n}`).join('\n');
+    return `${slots}
+
+fn envUv(ctx: FragContext) -> vec2<f32> {
+    let r = reflect(-ctx.viewDir, normalize(ctx.normal));
+    let m = max(2.0 * sqrt(r.x * r.x + r.y * r.y + (r.z + 1.0) * (r.z + 1.0)), 0.0001);
+    return vec2<f32>(r.x / m + 0.5, 0.5 - r.y / m);
+}
+${readers}
+`;
+};
+
 const DEFAULT_VERTEX = /* wgsl */ `
 fn vertex(pos: vec3<f32>, ctx: VertContext) -> vec3<f32> {
     return pos;
@@ -224,6 +250,7 @@ export const buildMeshMaterialShader = (
     fragment: string | null,
     vertex: string | null,
     sig: TUniformSignature,
+    mapNames: readonly string[] = [],
 ): string => {
     const { structText } = buildUniformLayout(sig);
 
@@ -235,6 +262,7 @@ export const buildMeshMaterialShader = (
         FRAG_CONTEXT,
         VERTEX_OUTPUT,
         SAMPLE,
+        maps(mapNames),
         vertex ?? DEFAULT_VERTEX,
         fragment ?? DEFAULT_EFFECT,
         body(vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL),

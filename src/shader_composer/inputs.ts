@@ -1,3 +1,4 @@
+import { MAP_NAME } from '../render/shared/material_maps';
 import { newNode } from './new_node';
 import { valueType } from './value_type';
 import { MATERIAL_RULES } from '../materials/derive_signature';
@@ -143,6 +144,35 @@ export const composerVertexNormal = (): TComposerNode => newNode('input', 'vec3<
 export const composerVertexColor = (): TComposerNode => newNode('input', 'vec4<f32>', [], { input: 'vertexColor' });
 
 /**
+ * The highlight the lamps put on the surface (`vec3`), already shadowed: the shine a material's
+ * `specular` and `shininess` ask for. The built-in look adds it on top of the lit colour. Models
+ * only, colour stage.
+ * @returns The node, to use as the input of another.
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const composerShine = (): TComposerNode => newNode('input', 'vec3<f32>', [], { input: 'shine' });
+
+/**
+ * Where the surface's reflection of the world lands on a round picture of its surroundings (`vec2`):
+ * read a map there and the model looks like chrome, the reflection the consoles of the era made with
+ * a second texture. Use it as the coordinate of `composerMapSample`. Models only, colour stage.
+ * @returns The node, to use as the input of another.
+ *
+ * @example
+ * ```ts
+ * const chrome = composerMapSample('env', composerEnvUv());
+ * ```
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const composerEnvUv = (): TComposerNode => newNode('input', 'vec2<f32>', [], { input: 'envUv' });
+
+/**
  * Reads the material's own picture, tinted, at any coordinate (`vec4`). What waves, pixelation, a
  * colour split or a blur are made of: `composerSurface()` is this read at the fragment's own
  * coordinate. Colour stage only.
@@ -154,6 +184,25 @@ export const composerVertexColor = (): TComposerNode => newNode('input', 'vec4<f
  * @author Francisco Pereira Alvarado
  */
 export const composerTextureSample = (coord: TComposerNode): TComposerNode => newNode('texture', 'vec4<f32>', [coord]);
+
+/**
+ * Reads one of the material's extra maps by name, at any coordinate (`vec4`): a reflection, a mask, a
+ * detail, a ripple. The material carries the picture under the same name in its `maps`; one it does
+ * not carry reads white. Colour stage of a model only.
+ * @param name - The map's name, as the material's `maps` gives it: lowercase first, letters and digits.
+ * @param coord - Where to read it, in `0`-`1`.
+ * @returns The node, to use as the input of another.
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const composerMapSample = (name: string, coord: TComposerNode): TComposerNode => {
+    if (!MAP_NAME.test(name)) {
+        throw new Error(`[NacatamalOn] shader composer: '${name}' cannot name a map. It has to be a letter-first lowercase name of letters and digits, such as 'noise'.`);
+    }
+    return newNode('texture', 'vec4<f32>', [coord], { params: [name] });
+};
 
 /**
  * A parameter with a name, which the game can change while it runs.

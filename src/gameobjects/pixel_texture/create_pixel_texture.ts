@@ -50,10 +50,11 @@ export type TPixelTextureOptions = {
  * Turns a picture painted in code into a texture, ready at once: a sprite, a model's material or a
  * shader shows it like any image loaded from a file.
  *
- * It is how a game makes its own art with no image files and no page: a sky in bands, a car from a
- * few rectangles, a rock texture from noise for a model, a panel for the HUD. It works the same in
- * the browser and on the native runtime, because nothing here draws with the page. **Prefer it to a
- * `<canvas>`**: a canvas only exists in a browser.
+ * It is how a game turns a **generated** picture into something it can show, with no image file and no
+ * page: a procedural sky, a rock texture from noise for a model, a mask for a shader, a placeholder
+ * while the real art is drawn. Art someone drew is loaded with `useLoadTexture` instead. It works the
+ * same in the browser and on the native runtime, because nothing here draws with the page. **Use it
+ * instead of a `<canvas>`**: a canvas only exists in a browser.
  *
  * The texture keeps reading from `pixels`. Paint on the picture again and call `updatePixelTexture`
  * to show the change: a minimap filling in, a floor with a crater in it.

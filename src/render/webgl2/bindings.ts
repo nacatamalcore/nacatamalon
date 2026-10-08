@@ -37,3 +37,15 @@ export const MESH_JOINTS_UNIT = 1;
  * outright, and it refuses it at draw time rather than at compile time.
  */
 export const MESH_SHADOW_UNIT = 2;
+
+/**
+ * The units a material's extra maps are read from, one per slot, after the three a model already
+ * uses (its picture, its bones and the shadow map). Every one is set on the program by name: a
+ * sampler left unset reads unit 0, beside the picture, and this card throws the draw away when a
+ * comparing sampler and an ordinary one end up sharing a unit.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const MESH_MAP_UNITS: readonly number[] = [3, 4, 5, 6];

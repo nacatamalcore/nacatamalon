@@ -3,7 +3,14 @@ import type { TColor } from '../color';
 import type { TPixels } from './types/t_pixels';
 
 /**
- * A new picture to paint on, transparent or filled with one colour.
+ * A new picture to paint on in code, transparent or filled with one colour: what to use **instead of a
+ * `<canvas>`** whenever a picture has to be generated rather than drawn.
+ *
+ * Drawn art (characters, tiles, backgrounds) is made in a pixel-art editor and loaded with
+ * `useLoadTexture`. This is for the pictures nobody draws by hand: procedural variations, placeholders,
+ * noise and masks for a shader, a picture that changes while the game runs, or art made by an agent
+ * that has no image editor. A canvas only exists in a browser; this runs the same there, on the
+ * native runtime and in a test.
  *
  * It lives in memory only: paint it with `fillRect`, `drawLine`, `fillGradient` and the rest, then
  * make it a texture with `createPixelTexture`. It needs no game, so a build script or a test can make

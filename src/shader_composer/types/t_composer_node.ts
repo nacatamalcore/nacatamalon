@@ -22,6 +22,8 @@ export type TInputKind =
     | 'viewDir'
     | 'light'
     | 'emissive'
+    | 'shine'
+    | 'envUv'
     | 'vertexPosition'
     | 'vertexNormal'
     | 'vertexColor';

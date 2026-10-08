@@ -1,5 +1,7 @@
 /**
- * A picture held in memory, to paint on in code and then hand to `createPixelTexture`.
+ * A picture held in memory, to paint on in code and then hand to `createPixelTexture`: the engine's
+ * replacement for drawing on a `<canvas>`, which only exists in a browser. Drawn art is loaded with
+ * `useLoadTexture` instead; this is for pictures that are generated.
  *
  * Four bytes a pixel (red, green, blue, alpha, each `0` to `255`), row after row, with row `0` at the
  * **top**: the same way round as an image file and as the game's own `y`. Nothing in it touches the

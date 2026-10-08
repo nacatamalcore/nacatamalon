@@ -2,7 +2,7 @@ import type { TColor } from '../../color';
 import type { TTexture } from '../../loaders';
 import type { TShader } from '../../loaders/shader/types/t_shader';
 import type { TUniformValues } from './t_uniforms';
-import type { TTextureWrap } from './t_material';
+import type { TMaterialMap, TTextureWrap } from './t_material';
 
 /**
  * The shader half of what a material can be asked for, which both kinds share.
@@ -107,6 +107,25 @@ export type TMeshMaterialOptions = TMaterialShaderOptions & {
      * way on its own (`u` across, `v` down), which is how a fence repeats sideways and not upwards.
      */
     wrap?: TTextureWrap | { u: TTextureWrap; v: TTextureWrap };
+    /**
+     * Extra pictures for the shader to read by name, up to four, each a texture or a texture with its
+     * own `wrap` and `smooth`. In the shader, `sampleMap_<name>(uv)` reads the one under that name.
+     *
+     * @example
+     * ```ts
+     * createMaterial({
+     *     shader: 'mesh3d',
+     *     texture: bricks,
+     *     maps: { noise: createPixelTexture(noise) },
+     *     fragment: `fn effect(surface: vec4<f32>, ctx: FragContext) -> vec4<f32> {
+     *         if (sampleMap_noise(ctx.uv).r < mu.cut) { return vec4<f32>(0.0); }
+     *         return vec4<f32>(surface.rgb * ctx.light, surface.a);
+     *     }`,
+     *     uniforms: { cut: 0.3 },
+     * });
+     * ```
+     */
+    maps?: Record<string, TTexture | TMaterialMap>;
     /**
      * Its corners land on a coarse grid of the screen, the way the PlayStation drew them: a model
      * shivers as it moves and its edges crawl as the camera turns. A number is how many rows the grid

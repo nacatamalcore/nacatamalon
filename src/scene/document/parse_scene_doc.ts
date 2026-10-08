@@ -1,3 +1,4 @@
+import { MAP_NAME, MAX_MATERIAL_MAPS } from '../../render/shared/material_maps';
 import { SCENE_FORMAT, SCENE_VERSION } from './types/t_scene_doc';
 import { asArray, asBoolean, asColor, asNumber, asOneOf, asRecord, asString } from '../../utils';
 import { nanoId } from '../../utils';
@@ -132,6 +133,7 @@ const parseMeshMaterial = (value: unknown): TMeshMaterialDoc => {
         alpha: asNumber(raw.alpha, 1),
         ...(typeof raw.smooth === 'boolean' ? { smooth: raw.smooth } : {}),
         ...parseWrap(raw.wrap),
+        ...parseMaps(raw.maps),
         // `true`, or a row count above zero; anything else is off, which is the default.
         ...(raw.vertexSnap === true || (typeof raw.vertexSnap === 'number' && Number.isFinite(raw.vertexSnap) && raw.vertexSnap > 0)
             ? { vertexSnap: raw.vertexSnap }
@@ -153,6 +155,30 @@ const parseWrap = (value: unknown): Pick<TMeshMaterialDoc, 'wrap'> => {
     }
     const pair = asRecord(value);
     return pair !== null && isWrap(pair.u) && isWrap(pair.v) ? { wrap: { u: pair.u, v: pair.v } } : {};
+};
+
+/**
+ * A material's extra maps. A map with no picture key, or a name a shader could not read it by, is
+ * left out, and so is any past the fourth: the scene loads with what it can use.
+ */
+const parseMaps = (value: unknown): Pick<TMeshMaterialDoc, 'maps'> => {
+    const raw = asRecord(value);
+    if (raw === null) {
+        return {};
+    }
+    const maps: NonNullable<TMeshMaterialDoc['maps']> = {};
+    for (const [name, entry] of Object.entries(raw)) {
+        const map = asRecord(entry);
+        if (!MAP_NAME.test(name) || map === null || typeof map.texture !== 'string' || Object.keys(maps).length >= MAX_MATERIAL_MAPS) {
+            continue;
+        }
+        maps[name] = {
+            texture: map.texture,
+            ...parseWrap(map.wrap),
+            ...(typeof map.smooth === 'boolean' ? { smooth: map.smooth } : {}),
+        };
+    }
+    return Object.keys(maps).length === 0 ? {} : { maps };
 };
 
 /**

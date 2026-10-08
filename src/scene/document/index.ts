@@ -10,6 +10,7 @@ export type {
     TComponentDoc,
     TMaterialDoc,
     TMeshMaterialDoc,
+    TMaterialMapDoc,
     TSpriteComponent,
     TSpriteAnimationDoc,
     TTextComponent,

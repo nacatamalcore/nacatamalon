@@ -2,7 +2,8 @@ import { buildMeshMaterialShaderGlsl } from './mesh_material_shader';
 import { buildUniformLayout, writeUniformValues } from '../../shared/material_uniforms';
 import { compileProgram } from '../utils/compile_program';
 import { MATERIAL_UNIFORMS_BINDING } from './uniform_block';
-import { MESH_LIGHTS_BINDING, MESH_SHADOW_UNIT, MESH_TEXTURE_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
+import { MESH_LIGHTS_BINDING, MESH_MAP_UNITS, MESH_SHADOW_UNIT, MESH_TEXTURE_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
+import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import type { TDrawShader } from '../../interface/draw/t_draw_material';
 import type { TUniformLayout } from '../../shared/material_uniforms';
 import type { TUniformValues } from '../../../materials';
@@ -11,6 +12,10 @@ type TCompiled = {
     program: WebGLProgram | null;
     layout: TUniformLayout;
     failed: boolean;
+    /**
+     * The maps the shader reads, in the order of their units.
+     */
+    mapNames: string[];
 };
 
 /**
@@ -44,10 +49,19 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
 
     const build = (material: TDrawShader): TCompiled => {
         const layout = buildUniformLayout(material.uniformSig ?? {});
+        const mapNames = mapNamesOf(material.fragmentGlsl);
+        if (mapNames.length > MAX_MATERIAL_MAPS) {
+            console.warn(
+                `[NacatamalOn] the material "${material.name ?? 'mesh material'}" reads ${mapNames.length} maps ` +
+                `(${mapNames.join(', ')}) and a material has ${MAX_MATERIAL_MAPS}. It is drawing with the built-in shader instead.`,
+            );
+            return { program: null, layout, failed: true, mapNames };
+        }
         const sources = buildMeshMaterialShaderGlsl(
             material.fragmentGlsl,
             material.vertexGlsl,
             material.uniformSig ?? {},
+            mapNames,
         );
 
         try {
@@ -71,19 +85,35 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
             // out at all. That is how a blob shadow's disc vanished here while the scene beside it
             // was fine, because the disc is the only thing in it wearing a material of its own.
             gl.uniform1i(gl.getUniformLocation(program, 'shadowMap'), MESH_SHADOW_UNIT);
+            // The extra maps, each on a unit of its own, for the same reason: every one is declared
+            // whether the shader reads it or not, and any left at 0 would sit beside the picture.
+            MESH_MAP_UNITS.forEach((unit, i) => {
+                gl.uniform1i(gl.getUniformLocation(program, `meshMap${i}`), unit);
+            });
             gl.useProgram(null);
-            return { program, layout, failed: false };
+            return { program, layout, failed: false, mapNames };
         } catch (error) {
             console.warn(
                 `[NacatamalOn] the material "${material.name ?? 'mesh material'}" did not compile on WebGL2. ` +
                 'It is drawing with the built-in shader instead.',
                 error,
             );
-            return { program: null, layout, failed: true };
+            return { program: null, layout, failed: true, mapNames };
         }
     };
 
     return {
+        /**
+         * Says once that a shader reads a map its material does not carry, which then reads white.
+         */
+        warnIfMapMissing: (material: TDrawShader, name: string): void => {
+            const said = `${material.name ?? material.id} ${name}`;
+            if (warned.has(said)) {
+                return;
+            }
+            warned.add(said);
+            console.warn(`[NacatamalOn] the material "${material.name ?? 'mesh material'}" reads the map '${name}' and has none by that name, so it reads as white. Add it to the material's maps.`);
+        },
         /**
          * Says once that an effect was written for the other card only.
          */

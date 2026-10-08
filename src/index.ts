@@ -136,7 +136,7 @@ export type { TDestroyOptions } from './destroy';
 export type { TLoader, TLoadStatus, TTexture, TLoadedAtlas, TFont, TAudioClip, TGltfModel, TGltfPart, TShading } from './loaders';
 export type { TSkeleton, TSkeletalClip, TJointPose, TClipEvent } from './animation';
 export type {
-    TMaterial, TSpriteMaterial, TMeshMaterial, TTextureWrap, TMaterialShader, TMaterialOptions,
+    TMaterial, TSpriteMaterial, TMeshMaterial, TMaterialMap, TTextureWrap, TMaterialShader, TMaterialOptions,
     TSpriteMaterialOptions, TMeshMaterialOptions, TUniformType, TUniformValues, TUniformSignature,
 } from './materials';
 export type { TShader, TParsedShader } from './loaders/shader';
@@ -149,8 +149,8 @@ export {
     compileShader,
     composerFloat, composerVec2, composerVec3, composerVec4, composerSwizzle, composerX, composerY, composerZ, composerW,
     composerUv, composerTime, composerResolution, composerSurface, composerWorldNormal, composerWorldPos,
-    composerViewDir, composerLight, composerEmissive, composerVertexPosition, composerVertexNormal, composerVertexColor,
-    composerTextureSample, composerUniform,
+    composerViewDir, composerLight, composerEmissive, composerShine, composerEnvUv, composerVertexPosition, composerVertexNormal, composerVertexColor,
+    composerTextureSample, composerMapSample, composerUniform,
     composerAdd, composerSub, composerMul, composerDiv, composerAbs, composerFloor, composerFract, composerSin,
     composerCos, composerSqrt, composerSign, composerNormalize, composerLength, composerDistance, composerDot,
     composerCross, composerPow, composerMin, composerMax, composerClamp, composerMix, composerStep,
@@ -183,7 +183,7 @@ export type { TProjectSettings } from './project';
 // Writing one down is `serializeScene`, in `nacatamalon/authoring`: reading is not authoring.
 export { parseSceneDoc, sceneFromDoc, SCENE_FORMAT, SCENE_VERSION } from './scene';
 export type {
-    TSceneDoc, TBoxNode, TDataEntry, TAssetEntry, TGeometrySource, TComponentDoc, TMaterialDoc, TMeshMaterialDoc,
+    TSceneDoc, TBoxNode, TDataEntry, TAssetEntry, TGeometrySource, TComponentDoc, TMaterialDoc, TMeshMaterialDoc, TMaterialMapDoc,
     TSpriteComponent, TTextComponent, TMeshComponent, TTilemapComponent, TTilemapLayerOverride, TParticlesComponent, TParticles3dComponent, TParticleCollider2dComponent, TParticleCollider3dComponent, TSpriteTextureComponent, TMusicComponent, TAudioListenerComponent, TCamera2dComponent,
     TCamera3dComponent, TFogComponent, TLightComponent, TSpriteAnimationDoc,
 } from './scene';

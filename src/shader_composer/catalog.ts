@@ -1,6 +1,6 @@
 import { composerFloat, composerSwizzle, composerVec2, composerVec3, composerVec4 } from './constructors';
 import {
-    composerEmissive, composerLight, composerResolution, composerSurface, composerTextureSample, composerTime,
+    composerEmissive, composerEnvUv, composerLight, composerMapSample, composerShine, composerResolution, composerSurface, composerTextureSample, composerTime,
     composerUniform, composerUv, composerVertexColor, composerVertexNormal, composerVertexPosition, composerViewDir, composerWorldNormal,
     composerWorldPos,
 } from './inputs';
@@ -189,6 +189,8 @@ const DEFS: TNodeDef[] = [
     inputNode('viewDir', 'View Direction', V3, 'Unit vector from the fragment towards the camera.', ['mesh3d']),
     inputNode('light', 'Light', V3, 'The accumulated scene lighting for this fragment.', ['mesh3d']),
     inputNode('emissive', 'Emissive', V3, 'The material\'s emissive color, untouched by lighting.', ['mesh3d']),
+    inputNode('shine', 'Shine', V3, 'The highlight the lamps put on the surface, already shadowed.', ['mesh3d']),
+    inputNode('envUv', 'Reflection UV', V2, 'Where the surface reflects the world on a round map of its surroundings: feed it to Map Sample for chrome.', ['mesh3d']),
     inputNode('vertexPosition', 'Vertex Position', V3, 'The vertex\'s local-space position. Vertex stage only.', ['mesh3d']),
     inputNode('vertexNormal', 'Vertex Normal', V3, 'The vertex\'s normal. Vertex stage only.', ['mesh3d']),
     inputNode('vertexColor', 'Vertex Color', V4, 'The color painted on the model\'s vertices. Already part of Surface.', ['mesh3d']),
@@ -203,6 +205,18 @@ const DEFS: TNodeDef[] = [
         params: [],
         outputType: V4,
         build: (i) => composerTextureSample(i.uv),
+    },
+    {
+        type: 'mapSample',
+        label: 'Map Sample',
+        category: 'input',
+        summary: 'Samples one of the material\'s extra maps by name: a reflection, a mask, a detail, a ripple.',
+        inputs: [port('uv', V2, () => composerUv())],
+        outputs: OUT,
+        params: [{ name: 'name', label: 'Map', kind: 'text', default: 'noise' }],
+        outputType: V4,
+        targets: ['mesh3d'],
+        build: (i, p) => composerMapSample(text(p, 'name', 'noise'), i.uv),
     },
     {
         type: 'uniform',
@@ -546,6 +560,8 @@ export const INPUT_BUILDERS: Record<string, () => TComposerNode> = {
     viewDir: composerViewDir,
     light: composerLight,
     emissive: composerEmissive,
+    shine: composerShine,
+    envUv: composerEnvUv,
     vertexPosition: composerVertexPosition,
     vertexNormal: composerVertexNormal,
     vertexColor: composerVertexColor,

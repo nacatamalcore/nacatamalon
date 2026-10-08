@@ -95,11 +95,15 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   scene's other `useUpdate` callbacks still run that one frame, then never again. `return` right
   after `change()` if the rest should not run. The new scene's first update is the next frame, so the
   key that caused the change is not a fresh `justPressed` there.
-- **Art made in code**: paint a picture with `createPixels` and `fillRect`, `drawLine`, `fillCircle`,
-  `fillGradient`, `fillNoise`, `blitPixels`..., then `createPixelTexture(pixels)` in the scene body
-  gives a texture for `createSprite({ texture })` or `createMaterial({ texture })`. **Do not draw on a
-  `<canvas>`** (`document.createElement('canvas')`, `getImageData`): the native runtime has no page,
-  and the pixels functions run everywhere. Paint on the picture again and `updatePixelTexture(texture,
+- **Pictures generated in code, instead of a `<canvas>`**: drawn art (characters, tiles, backgrounds)
+  is made in a pixel-art editor and loaded with `useLoadTexture`. When a picture has to be *generated*
+  instead (procedural variations, a placeholder, noise or a mask for a shader, a picture that changes
+  while the game runs, or art made by an agent with no image editor), use `createPixels` and paint it
+  with `fillRect`, `drawLine`, `fillCircle`, `fillGradient`, `fillNoise`, `blitPixels`, `mapPixels`...;
+  then `createPixelTexture(pixels)` in the scene body gives a texture for `createSprite({ texture })`
+  or `createMaterial({ texture })`. **Do not draw on a `<canvas>`** (`document.createElement('canvas')`,
+  `getContext('2d')`, `getImageData`): it only exists in a browser, and the native runtime has no page;
+  the pixels functions run everywhere. Paint on the picture again and `updatePixelTexture(texture,
   region)` shows it, at any time. A build script saves one as a file with `encodePng` from
   `nacatamalon/authoring`.
 - **Data that outlives a scene** goes in a store, created once at module level:
@@ -131,6 +135,7 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
 - **Input**: `useKeyboard`, `usePointer`, `useGamepad`, `useActions`, `useAction`.
 - **2D**: `createSprite`, `useLoadTexture`, `useLoadAtlas`, `useSpriteAnimation`, `createText`, `useLoadFont`, `createNineSlice`, `createTilemap`, `tileAt`, `solidAt`, `createParticles`, `useCamera2d`.
 - **3D**: `createMesh`, `useCubeGeometry`, `usePlaneGeometry`, `useUvSphereGeometry`, `createMaterial`, `useLoadGltf`, `createModel`, `useSkeletalAnimation`, `useCamera3d`, `cameraLookAt`, `useLight`, `usePointLight`, `useSpotLight`, `useBlobShadow`, `createParticles3d`.
+- **Material maps** (extra pictures for a model's shader): `createMaterial({ shader: 'mesh3d', texture, maps: { noise, env }, fragment })` carries up to 4 named maps; the shader reads one with `sampleMap_<name>(uv)` (`sampleMap_noise(ctx.uv)`), and `envUv(ctx)` gives the coordinates of a chrome reflection (`sampleMap_env(envUv(ctx))`). A map the material lacks reads white. In the shader composer, `composerMapSample(name, uv)`, `composerEnvUv()` and `composerShine()` (prefer the composer: it writes both shader languages from one graph).
 - **The 1997 look**: material options `vertexSnap` and `affine`, `useFog`, `usePostProcess` with `dither`, `posterize`, `paletteMatch`, `lutGrade`, `crt` (with `CRT_PRESETS`) and `COLOR_LEVELS`.
 - **Screen effects** (each spread into `usePostProcess`, tuned by writing into `effect.uniforms`): `colorAdjust`, `mosaic`, `wave`, `shockwave`, `distort`, `rgbSplit`, `glitch`, `grain`, `oldFilm`, `halftone`, `blur`, `zoomBlur`, `motionBlur`, `tiltShift`, `bloom`, `godrays`, `phosphor`, `ntsc`, `lcd`. A hand-written effect can read `sampleTextureSmooth`, `sampleInput` and `sampleHistory`, and take `passes` for more than one read of the frame.
 - **Pixels** (pictures painted in code): `createPixels`, `setPixel`, `getPixel`, `fillRect`, `drawLine`, `fillCircle`, `drawCircle`, `fillGradient`, `fillNoise`, `fillChecker`, `blitPixels`, `mapPixels`, `createPixelTexture`, `updatePixelTexture`.

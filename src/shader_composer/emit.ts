@@ -39,11 +39,24 @@ const emitExpr = (n: TComposerNode, refs: string[], stage: TStageCtx, target: TS
             return `mu.${n.uniform!.name}`;
         case 'input':
             return inputSource(n.input!, stage, target);
-        case 'texture':
+        case 'texture': {
             if (stage === 'mesh3d.vert') {
                 throw new Error('[NacatamalOn] shader composer: textureSample is not available in a vertex graph.');
             }
-            return `sampleTexture(${refs[0]})`;
+            const map = n.params?.[0];
+            if (typeof map !== 'string') {
+                return `sampleTexture(${refs[0]})`;
+            }
+            // A map belongs to a model's material. A node's own thumbnail has none, so it shows white,
+            // which is what a map the material does not carry reads as anyway.
+            if (stage === 'preview.frag') {
+                return `${target.type('vec4<f32>')}(1.0)`;
+            }
+            if (stage !== 'mesh3d.frag') {
+                throw new Error(`[NacatamalOn] shader composer: the map '${map}' can only be read in a model's colour graph.`);
+            }
+            return `sampleMap_${map}(${refs[0]})`;
+        }
         case 'construct':
             return `${target.type(n.type)}(${refs.join(', ')})`;
         case 'swizzle':

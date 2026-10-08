@@ -190,7 +190,7 @@ export const createMeshPipeline = (
         transparentPipeline,
         transparentSkinnedPipeline,
         layouts,
-        materials: createMeshMaterials(device, format, samples, layouts),
+        materials: createMeshMaterials(device, format, samples, layouts, whiteTexture, wrapSamplers),
         joints: createJointPalette(device),
         jointBindGroups: new Map(),
         samplers,
