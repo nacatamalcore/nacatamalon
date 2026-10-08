@@ -31,7 +31,7 @@ export type TAssetEntry =
      * rather than one guessed from the other, because the loader takes both and guessing which
      * extension goes with which is the sort of rule that works until somebody names a file oddly.
      */
-    | { type: 'font'; key: string; json: string; atlas: string }
+    | { type: 'bitmapFont'; key: string; json: string; atlas: string }
     | { type: 'atlas'; key: string; src: string }
     | { type: 'shader'; key: string; src: string }
     | { type: 'particles'; key: string; src: string }

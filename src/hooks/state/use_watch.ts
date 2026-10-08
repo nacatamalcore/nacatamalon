@@ -79,7 +79,7 @@ export const useWatch = (fn: () => void, deps: readonly TWatchDep[]): void => {
         if (!isWatchable(dep)) {
             throw new Error(
                 '[NacatamalOn] useWatch: nothing announces changes on this, so the watch would run once and never again. ' +
-                'It can watch state from useData and assets from useLoadTexture, useLoadFont, useLoadAtlas and the rest. ' +
+                'It can watch state from useData and assets from useLoadTexture, useLoadBitmapFont, useLoadAtlas and the rest. ' +
                 'Something the game moves by hand, a transform for instance, is changed in place and is never announced: ' +
                 'do that work in useUpdate.',
             );

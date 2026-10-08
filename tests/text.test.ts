@@ -5,7 +5,7 @@ import { createText } from '../src/gameobjects/text/create_text';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useCamera2d } from '../src/hooks/camera/use_camera_2d';
 import { useScreenSpace } from '../src/hooks/camera/use_screen_space';
-import { useLoadFont } from '../src/hooks/loaders/use_load_font';
+import { useLoadBitmapFont } from '../src/hooks/loaders/use_load_bitmap_font';
 import { useLoader } from '../src/hooks/loaders/use_loader';
 import { fillFrameContext } from '../src/game/loop/fill_frame_context';
 import { pickTargets } from '../src/input/pick_targets';
@@ -175,15 +175,15 @@ describe('createText', () => {
         let fontsCounted = 0;
 
         startTestScene(store, 'Level', () => {
-            const font = useLoadFont({ json: '/f.json', atlas: '/f.png' });
+            const font = useLoadBitmapFont({ json: '/f.json', atlas: '/f.png' });
             // The same font asked twice is loaded once and listed once.
-            useLoadFont({ json: '/f.json', atlas: '/f.png' });
+            useLoadBitmapFont({ json: '/f.json', atlas: '/f.png' });
             fontsCounted = useLoader([font]).total;
             return createScene();
         });
 
         expect(fontsCounted).toBe(1);
-        expect(store.get('assets').fonts.size).toBe(1);
+        expect(store.get('assets').bitmapFonts.size).toBe(1);
         fetchSpy.mockRestore();
     });
 });

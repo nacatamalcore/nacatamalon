@@ -729,8 +729,8 @@ const parseAsset = (value: unknown): TAssetEntry | null => {
         const source = parseGeometrySource(raw.source);
         return source === null ? null : { type: 'geometry', key, source };
     }
-    if (raw.type === 'font') {
-        return { type: 'font', key, json: asString(raw.json, ''), atlas: asString(raw.atlas, '') };
+    if (raw.type === 'bitmapFont') {
+        return { type: 'bitmapFont', key, json: asString(raw.json, ''), atlas: asString(raw.atlas, '') };
     }
     if (raw.type === 'texture' || raw.type === 'atlas' || raw.type === 'shader' || raw.type === 'particles' || raw.type === 'tilemap' || raw.type === 'audio') {
         // `src` defaults to the key, because for most of these they are the same string and a file

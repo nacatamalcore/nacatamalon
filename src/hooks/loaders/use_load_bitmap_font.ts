@@ -1,7 +1,7 @@
 import { rootOf } from '../../box';
-import { loadFont, newFont, trackLoad } from '../../loaders';
+import { loadBitmapFont, newBitmapFont, trackLoad } from '../../loaders';
 import { getActiveBox, getActiveGame } from '../../store';
-import type { TFont } from '../../loaders';
+import type { TBitmapFont } from '../../loaders';
 
 /**
  * Where a bitmap font comes from.
@@ -10,7 +10,7 @@ import type { TFont } from '../../loaders';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TUseLoadFontOptions = {
+export type TUseLoadBitmapFontOptions = {
     /**
      * The font's description file: where each character sits in the image.
      */
@@ -39,7 +39,7 @@ export type TUseLoadFontOptions = {
  * @example
  * ```ts
  * export const Title: TSceneFn = () => {
- *     const font = useLoadFont({
+ *     const font = useLoadBitmapFont({
  *         json: '/fonts/arcade/arcade.json',
  *         atlas: '/fonts/arcade/arcade.png',
  *     });
@@ -54,21 +54,21 @@ export type TUseLoadFontOptions = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const useLoadFont = ({ json, atlas, key }: TUseLoadFontOptions): TFont => {
+export const useLoadBitmapFont = ({ json, atlas, key }: TUseLoadBitmapFontOptions): TBitmapFont => {
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useLoadFont: call it inside a scene body.');
+        throw new Error('[NacatamalOn] useLoadBitmapFont: call it inside a scene body.');
     }
 
     const cacheKey = key ?? json;
-    const { fonts } = store.get('assets');
+    const { bitmapFonts } = store.get('assets');
 
-    let font = fonts.get(cacheKey);
+    let font = bitmapFonts.get(cacheKey);
     if (font === undefined) {
-        font = newFont(json, atlas, cacheKey);
-        fonts.set(cacheKey, font);
-        trackLoad(font, loadFont(store, font));
+        font = newBitmapFont(json, atlas, cacheKey);
+        bitmapFonts.set(cacheKey, font);
+        trackLoad(font, loadBitmapFont(store, font));
     }
 
     // Listed on the scene even when it came from the cache, so `useLoader()` counts it.

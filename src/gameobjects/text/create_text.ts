@@ -14,7 +14,7 @@ import type { TTextOptions } from './types/t_text_options';
  * shows on the next frame. It draws nothing until its font has loaded, and appears on its own then.
  *
  * The font is optional: left out, the text uses the one the engine carries (Nacatamal Arcade, 8 px,
- * with lowercase, accents and ñ), which is there from the start. Pass `font` from `useLoadFont` for
+ * with lowercase, accents and ñ), which is there from the start. Pass `font` from `useLoadBitmapFont` for
  * a font of your own.
  *
  * - `style.fontSize` is how tall a line is, in pixels. A pixel font looks crisp at whole multiples of
@@ -37,7 +37,7 @@ import type { TTextOptions } from './types/t_text_options';
  *     // No font given: the engine's own.
  *     const score = createText({ text: 'SCORE 0', style: { fontSize: 16 }, transform: { x: 8, y: 8 } });
  *     // A font of your own, loaded from its two files.
- *     const font = useLoadFont({ json: '/fonts/arcade/arcade.json', atlas: '/fonts/arcade/arcade.png' });
+ *     const font = useLoadBitmapFont({ json: '/fonts/arcade/arcade.json', atlas: '/fonts/arcade/arcade.png' });
  *     createText({ text: 'HI SCORE', font, transform: { x: 8, y: 28 } });
  *     let points = 0;
  *

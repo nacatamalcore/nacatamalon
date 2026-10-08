@@ -169,7 +169,7 @@ describe('what the reader fills in', () => {
         const read = parseSceneDoc(doc({
             assets: [
                 { type: 'texture', key: '/assets/hero.png' },
-                { type: 'font', key: 'pac', json: '/f.json', atlas: '/f.png' },
+                { type: 'bitmapFont', key: 'pac', json: '/f.json', atlas: '/f.png' },
                 { type: 'geometry', key: 'cube:1:1:1', source: { kind: 'cube' } },
                 { type: 'nonsense', key: 'x' },
             ],
@@ -178,7 +178,7 @@ describe('what the reader fills in', () => {
         silence();
         expect(read.assets).toHaveLength(3);
         expect(read.assets[0]).toEqual({ type: 'texture', key: '/assets/hero.png', src: '/assets/hero.png' });
-        expect(read.assets[1]).toEqual({ type: 'font', key: 'pac', json: '/f.json', atlas: '/f.png' });
+        expect(read.assets[1]).toEqual({ type: 'bitmapFont', key: 'pac', json: '/f.json', atlas: '/f.png' });
         // A recipe, not the corners: `{ kind: 'cube' }` is the cube `useCubeGeometry({})` makes.
         expect(read.assets[2]).toEqual({ type: 'geometry', key: 'cube:1:1:1', source: { kind: 'cube' } });
     });

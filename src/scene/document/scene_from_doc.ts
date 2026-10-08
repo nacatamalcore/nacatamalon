@@ -27,7 +27,7 @@ import {
     useCircleGeometry, useConeGeometry, useCubeGeometry, useCylinderGeometry,
     useIcoSphereGeometry, usePlaneGeometry, useTorusGeometry, useUvSphereGeometry,
 } from '../../hooks/geometry';
-import { useLoadAtlas, useLoadAudio, useLoadFont, useLoadGltf, useLoadParticles, useLoadShader, useLoadTexture } from '../../hooks/loaders';
+import { useLoadAtlas, useLoadAudio, useLoadBitmapFont, useLoadGltf, useLoadParticles, useLoadShader, useLoadTexture } from '../../hooks/loaders';
 import { useScreenSpace } from '../../hooks/camera/use_screen_space';
 import { useTransform } from '../../hooks/transform/use_transform';
 import { whenLoaded } from '../../loaders';
@@ -59,7 +59,7 @@ const loadAssets = (assets: readonly TAssetEntry[], src: string): void => {
             case 'shader': useLoadShader({ src: asset.src, key: asset.key }); break;
             case 'particles': useLoadParticles({ src: asset.src, key: asset.key }); break;
             case 'audio': useLoadAudio({ src: asset.src, key: asset.key }); break;
-            case 'font': useLoadFont({ json: asset.json, atlas: asset.atlas, key: asset.key }); break;
+            case 'bitmapFont': useLoadBitmapFont({ json: asset.json, atlas: asset.atlas, key: asset.key }); break;
             // A map is asked for by the thing that shows it, because `createTilemap` is what puts
             // its layers on a box. The entry is here so the manifest still lists the file.
             case 'tilemap': break;
@@ -323,7 +323,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
         case 'text': {
             // The engine's own font is in no manifest: left out, `createText` uses it.
             const own = component.font === DEFAULT_FONT_KEY;
-            const font = own ? undefined : found(assets.fonts, component.font, 'text', src);
+            const font = own ? undefined : found(assets.bitmapFonts, component.font, 'text', src);
             if (font === undefined && !own) {
                 break;
             }

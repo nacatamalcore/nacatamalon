@@ -1,6 +1,6 @@
 import { markWatchable } from '../../store/record_version';
 import { newTexture } from '../texture/new_texture';
-import type { TFont } from './types/t_font';
+import type { TBitmapFont } from './types/t_bitmap_font';
 
 /**
  * A font that has not loaded yet: known by its paths, with an empty texture waiting for the image.
@@ -9,8 +9,8 @@ import type { TFont } from './types/t_font';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const newFont = (src: string, atlas: string, key: string): TFont => markWatchable({
-    type: 'font',
+export const newBitmapFont = (src: string, atlas: string, key: string): TBitmapFont => markWatchable({
+    type: 'bitmapFont',
     key,
     src,
     status: 'loading',

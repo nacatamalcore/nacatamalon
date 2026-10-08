@@ -1,10 +1,10 @@
-import type { TFont, TFontMeta } from '../../src/loaders';
+import type { TBitmapFont, TBitmapFontMeta } from '../../src/loaders';
 
 /**
  * A made-up 8 px font, already loaded: capitals A to E at 8 px wide each except I (4 px), a space
  * 6 px wide, one pixel of tracking, and an 64x16 image. Round numbers so a layout reads at a glance.
  */
-export const TEST_FONT_META: TFontMeta = {
+export const TEST_FONT_META: TBitmapFontMeta = {
     name: 'Test',
     glyphHeight: 8,
     tracking: 1,
@@ -25,8 +25,8 @@ export const TEST_FONT_META: TFontMeta = {
 /**
  * A font record that is ready to draw, with a texture the renderer would accept.
  */
-export const createTestFont = (key = 'test-font'): TFont => ({
-    type: 'font',
+export const createTestFont = (key = 'test-font'): TBitmapFont => ({
+    type: 'bitmapFont',
     key,
     src: `${key}.json`,
     status: 'ready',

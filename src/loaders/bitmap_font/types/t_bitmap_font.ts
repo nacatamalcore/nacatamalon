@@ -8,7 +8,7 @@ import type { TTexture } from '../../texture/types/t_texture';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TFontGlyph = {
+export type TBitmapFontGlyph = {
     /**
      * The character, one per entry.
      */
@@ -34,7 +34,7 @@ export type TFontGlyph = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TFontMeta = {
+export type TBitmapFontMeta = {
     name: string;
     /**
      * How tall every character is, in pixels of the image.
@@ -50,11 +50,11 @@ export type TFontMeta = {
     baseline: number;
     atlasWidth: number;
     atlasHeight: number;
-    chars: TFontGlyph[];
+    chars: TBitmapFontGlyph[];
 };
 
 /**
- * A bitmap font, returned by `useLoadFont` the moment it is asked for.
+ * A bitmap font, returned by `useLoadBitmapFont` the moment it is asked for.
  *
  * It is born `'loading'` and fills itself in once both its description and its image have arrived.
  * Texts made with it draw nothing until then, and appear on their own when it is ready.
@@ -63,8 +63,8 @@ export type TFontMeta = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TFont = {
-    readonly type: 'font';
+export type TBitmapFont = {
+    readonly type: 'bitmapFont';
     /**
      * What it is cached under in this game. The description's path unless a `key` was given.
      */
@@ -81,5 +81,5 @@ export type TFont = {
     /**
      * The description, or `null` until it has arrived.
      */
-    meta: TFontMeta | null;
+    meta: TBitmapFontMeta | null;
 };

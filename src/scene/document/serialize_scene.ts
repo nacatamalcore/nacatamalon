@@ -241,7 +241,7 @@ const writeText = (text: TText, writing: TWriting): TComponentDoc => {
     // registered as a texture of its own. Whoever loads the font loads both.
     // The engine's own font is not a file: every game has it, so the scene names it and lists nothing.
     if (text.font.key !== DEFAULT_FONT_KEY) {
-        writing.assets.set(text.font.key, { type: 'font', key: text.font.key, json: text.font.src, atlas: text.font.texture.src });
+        writing.assets.set(text.font.key, { type: 'bitmapFont', key: text.font.key, json: text.font.src, atlas: text.font.texture.src });
     }
     const place = writeFlatPlace(text.transform);
     return {

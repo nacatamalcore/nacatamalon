@@ -1,4 +1,4 @@
-import type { TFontGlyph, TFontMeta } from '../../loaders';
+import type { TBitmapFontGlyph, TBitmapFontMeta } from '../../loaders';
 import type { TTextStyle } from './types/t_text_style';
 
 /**
@@ -6,7 +6,7 @@ import type { TTextStyle } from './types/t_text_style';
  *
  * @internal
  */
-export type TGlyphPlacement = { x: number; y: number; width: number; height: number; glyph: TFontGlyph };
+export type TGlyphPlacement = { x: number; y: number; width: number; height: number; glyph: TBitmapFontGlyph };
 
 /**
  * Where every character of a text goes, and how big the whole block is.
@@ -21,7 +21,7 @@ const EMPTY: TTextLayout = { width: 0, height: 0, scale: 1, placements: [] };
  * The glyph to draw for a character: its own, or its capital when the font has only capitals (most
  * arcade fonts do). `undefined` when the font has neither.
  */
-const glyphFor = (char: string, glyphs: ReadonlyMap<string, TFontGlyph>): TFontGlyph | undefined => {
+const glyphFor = (char: string, glyphs: ReadonlyMap<string, TBitmapFontGlyph>): TBitmapFontGlyph | undefined => {
     const own = glyphs.get(char);
     if (own !== undefined) {
         return own;
@@ -49,7 +49,7 @@ const glyphFor = (char: string, glyphs: ReadonlyMap<string, TFontGlyph>): TFontG
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const layoutText = (text: string, style: TTextStyle, meta: TFontMeta | null, glyphs: ReadonlyMap<string, TFontGlyph>): TTextLayout => {
+export const layoutText = (text: string, style: TTextStyle, meta: TBitmapFontMeta | null, glyphs: ReadonlyMap<string, TBitmapFontGlyph>): TTextLayout => {
     if (meta === null) {
         return EMPTY;
     }

@@ -1,8 +1,8 @@
 import { rootOf } from '../../box';
-import { loadFont, newFont, trackLoad } from '../../loaders';
+import { loadBitmapFont, newBitmapFont, trackLoad } from '../../loaders';
 import { DEFAULT_FONT_ATLAS } from './default_font_atlas';
 import type { TBox } from '../../box';
-import type { TFont, TFontMeta } from '../../loaders';
+import type { TBitmapFont, TBitmapFontMeta } from '../../loaders';
 import type { TRuntimeStore } from '../../store';
 
 /**
@@ -24,7 +24,7 @@ const CELL = 8;
  * Where each character is, worked out rather than written down: the image is a plain grid of 8 x 8
  * cells, sixteen to a row. One pixel of tracking, the spacing of the arcade fonts it stands in for.
  */
-const DEFAULT_FONT_META: TFontMeta = {
+const DEFAULT_FONT_META: TBitmapFontMeta = {
     name: 'Nacatamal Arcade',
     glyphHeight: CELL,
     tracking: 1,
@@ -38,19 +38,19 @@ const DEFAULT_FONT_META: TFontMeta = {
  * The font a text uses when it is given none: Nacatamal Arcade, carried inside the engine, so
  * `createText({ text: 'SCORE 0' })` shows without loading anything.
  *
- * It goes through the same loader as `useLoadFont`, from `data:` addresses instead of files, so it
+ * It goes through the same loader as `useLoadBitmapFont`, from `data:` addresses instead of files, so it
  * behaves exactly like a loaded font: one per game, ready a moment after the scene starts, and
  * counted by `useLoader()` like any other. Its description is handed over the same way, which is why
  * it is a `data:` address too rather than set directly.
  */
-export const defaultFontOf = (store: TRuntimeStore, box: TBox): TFont => {
-    const { fonts } = store.get('assets');
-    let font = fonts.get(DEFAULT_FONT_KEY);
+export const defaultFontOf = (store: TRuntimeStore, box: TBox): TBitmapFont => {
+    const { bitmapFonts } = store.get('assets');
+    let font = bitmapFonts.get(DEFAULT_FONT_KEY);
     if (font === undefined) {
         const json = `data:application/json,${encodeURIComponent(JSON.stringify(DEFAULT_FONT_META))}`;
-        font = newFont(json, DEFAULT_FONT_ATLAS, DEFAULT_FONT_KEY);
-        fonts.set(DEFAULT_FONT_KEY, font);
-        trackLoad(font, loadFont(store, font));
+        font = newBitmapFont(json, DEFAULT_FONT_ATLAS, DEFAULT_FONT_KEY);
+        bitmapFonts.set(DEFAULT_FONT_KEY, font);
+        trackLoad(font, loadBitmapFont(store, font));
     }
     const { loads } = rootOf(box);
     if (!loads.includes(font)) {

@@ -1,7 +1,7 @@
 export { useLoadTexture } from './use_load_texture';
 export { useLoadAtlas } from './use_load_atlas';
 export { useLoadAudio } from './use_load_audio';
-export { useLoadFont } from './use_load_font';
+export { useLoadBitmapFont } from './use_load_bitmap_font';
 export { useLoadGltf } from './use_load_gltf';
 export { useLoadShader } from './use_load_shader';
 export { useLoadPalette } from './use_load_palette';
@@ -14,7 +14,7 @@ export { useLoader } from './use_loader';
 export type { TUseLoadTextureOptions } from './use_load_texture';
 export type { TUseLoadAtlasOptions } from './use_load_atlas';
 export type { TUseLoadAudioOptions } from './use_load_audio';
-export type { TUseLoadFontOptions } from './use_load_font';
+export type { TUseLoadBitmapFontOptions } from './use_load_bitmap_font';
 export type { TUseLoadGltfOptions } from './use_load_gltf';
 export type { TUseLoadShaderOptions } from './use_load_shader';
 

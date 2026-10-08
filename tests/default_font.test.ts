@@ -9,7 +9,7 @@ import { startScene } from '../src/scene/start_scene';
 import { createTestFont } from './helpers/test_font';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import type { TText } from '../src/gameobjects/text/types/t_text';
-import type { TFontMeta } from '../src/loaders';
+import type { TBitmapFontMeta } from '../src/loaders';
 
 /**
  * The font a text gets when it is given none: Nacatamal Arcade, carried inside the engine, so
@@ -60,7 +60,7 @@ describe('the font itself', () => {
             text = createText({ text: 'x' });
             return createScene();
         });
-        const meta = await (await fetch(text.font.src)).json() as TFontMeta;
+        const meta = await (await fetch(text.font.src)).json() as TBitmapFontMeta;
 
         expect(meta.glyphHeight).toBe(8);
         expect(meta.chars).toHaveLength(122);

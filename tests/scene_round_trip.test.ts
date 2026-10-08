@@ -191,7 +191,7 @@ describe('the manifest', () => {
             createText({ text: 'AB', font: createTestFont(), tint });
         });
 
-        const fonts = doc.assets.filter((asset) => asset.type === 'font');
+        const fonts = doc.assets.filter((asset) => asset.type === 'bitmapFont');
         expect(fonts).toHaveLength(1);
         // A font is its metrics and its sheet. One entry, two paths, and its sheet is not also
         // registered as a texture of its own.

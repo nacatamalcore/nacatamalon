@@ -1,4 +1,4 @@
-import { fontGlyphs } from '../../loaders';
+import { bitmapFontGlyphs } from '../../loaders';
 import { layoutText } from './layout_text';
 import type { TDrawSprite } from '../../render/interface';
 import type { TText } from './types/t_text';
@@ -94,7 +94,7 @@ export const expandText = (text: TText): readonly TDrawSprite[] => {
     const { font, style } = text;
     // Where the block ends up, so a text inside a box that moved takes its characters with it.
     const transform = worldOf(text);
-    const layout = layoutText(text.text, style, font.meta, fontGlyphs(font));
+    const layout = layoutText(text.text, style, font.meta, bitmapFontGlyphs(font));
 
     if (font.meta !== null && !Number.isInteger(layout.scale)) {
         const id = `${font.key}:${style.fontSize}`;

@@ -81,7 +81,7 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   (`'ArrowLeft'`, `'Enter'`, `'Escape'`). The space bar is `'Space'`; `' '` also works.
 - **Text** needs no font: `createText({ text })` uses the built-in 8 px font, which has lowercase,
   accents, ñ, ¿ and ¡. `style.fontSize` is the line height in pixels; multiples of 8 stay crisp. A
-  font of your own: `useLoadFont({ json, atlas })`, passed as `font`.
+  font of your own: `useLoadBitmapFont({ json, atlas })`, passed as `font`.
 - **Colours** are `{ r, g, b, a }`, each 0 to 1. `getColor` takes `'#ff6b1a'`, `0xff6b1a`, a CSS
   name (`'red'`) or any CSS colour (`'rgba(255, 0, 0, 0.5)'`, `'hsl(30 100% 50%)'`).
 - **Angles** are radians.
@@ -138,7 +138,7 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
 - **Game and scenes**: `createGame`, `createScene`, `useScene`, `useGame`, `useSpawn`, `useSelf`, `destroy`, `useSceneUnmount`.
 - **Time**: `useUpdate`, `useTimer`, `useTween`, easings such as `linear` and `easeInOutSine`.
 - **Input**: `useKeyboard`, `usePointer`, `useGamepad`, `useActions`, `useAction`.
-- **2D**: `createSprite`, `useLoadTexture`, `useLoadAtlas`, `useSpriteAnimation`, `createText`, `useLoadFont`, `createNineSlice`, `createTilemap`, `tileAt`, `solidAt`, `createParticles`, `useCamera2d`.
+- **2D**: `createSprite`, `useLoadTexture`, `useLoadAtlas`, `useSpriteAnimation`, `createText`, `useLoadBitmapFont`, `createNineSlice`, `createTilemap`, `tileAt`, `solidAt`, `createParticles`, `useCamera2d`.
 - **3D**: `createMesh`, `useCubeGeometry`, `usePlaneGeometry`, `useUvSphereGeometry`, `createMaterial`, `useLoadGltf`, `createModel`, `useSkeletalAnimation`, `useCamera3d`, `cameraLookAt`, `useLight`, `usePointLight`, `useSpotLight`, `useBlobShadow`, `createParticles3d`.
 - **Material maps** (extra pictures for a model's shader): `createMaterial({ shader: 'mesh3d', texture, maps: { noise, env }, fragment })` carries up to 4 named maps; the shader reads one with `sampleMap_<name>(uv)` (`sampleMap_noise(ctx.uv)`), and `envUv(ctx)` gives the coordinates of a chrome reflection (`sampleMap_env(envUv(ctx))`). A map the material lacks reads white. In the shader composer, `composerMapSample(name, uv)`, `composerEnvUv()` and `composerShine()` (prefer the composer: it writes both shader languages from one graph).
 - **The 1997 look**: material options `vertexSnap` and `affine`, `useFog`, `usePostProcess` with `dither`, `posterize`, `paletteMatch`, `lutGrade`, `crt` (with `CRT_PRESETS`) and `COLOR_LEVELS`.

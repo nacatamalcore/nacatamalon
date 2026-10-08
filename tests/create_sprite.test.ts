@@ -137,7 +137,7 @@ describe('a partial placement', () => {
     it('is the same for a text', async () => {
         const { createText } = await import('../src/gameobjects/text/create_text');
         const { store } = createTestGame();
-        const font = { type: 'font', key: 'f', src: '/f.json', atlasSrc: '/f.png', status: 'loading', meta: null, texture: null } as never;
+        const font = { type: 'bitmapFont', key: 'f', src: '/f.json', atlasSrc: '/f.png', status: 'loading', meta: null, texture: null } as never;
         let text!: { transform: unknown };
         startTestScene(store, 'Level', () => {
             text = createText({ text: 'HI', font, transform: { x: 5 } });

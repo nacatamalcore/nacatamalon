@@ -1,5 +1,5 @@
 import type { TColor } from '../../../color';
-import type { TFont } from '../../../loaders';
+import type { TBitmapFont } from '../../../loaders';
 import type { TTextStyle } from './t_text_style';
 
 /**
@@ -17,7 +17,7 @@ export type TText = {
      * What it says. `\n` starts a new line.
      */
     text: string;
-    font: TFont;
+    font: TBitmapFont;
     /**
      * Size, alignment and spacing. Held by reference, so a shared style changes every text using it.
      */
