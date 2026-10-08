@@ -231,7 +231,7 @@ export type {
 export type { TSceneFromDocOptions } from './scene/document';
 export type { TComposerBinaryOp } from './shader_composer/math';
 export type { TAtlasFrame } from './atlas';
-export type { TLoadable, TBitmapFontMeta, TFontMeta } from './loaders';
+export type { TLoadable, TBitmapFontMeta, TBitmapFontGlyph, TFontMeta } from './loaders';
 export type { TGltfNodeInfo } from './loaders';
 export type { TParticleRange, TParticleColorStop, TParticleScaleStop, TEmissionDoc } from './loaders/particles';
 export type { TShaderTarget } from './loaders/shader/types/t_shader_target';
