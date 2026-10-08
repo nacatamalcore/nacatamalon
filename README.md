@@ -50,6 +50,14 @@ Francisco José Pereira Alvarado
 
 ## Install
 
+Start a new game from the template (Vite, one scene, TypeScript or JavaScript):
+
+```bash
+npm create nacatamalon@latest
+```
+
+Or add it to a project you already have:
+
 ```bash
 npm install nacatamalon
 ```
@@ -134,6 +142,13 @@ match the version you installed:
   the usual mistakes.
 - `node_modules/nacatamalon/llms-full.txt`: every export with its signature and documentation, in
   one file to search.
+
+An assistant can start a project in one go, without questions; the project it makes carries an
+`AGENTS.md` that points at both files:
+
+```bash
+npm create nacatamalon@latest my-game -- --template vite-ts --install
+```
 
 Assistants usually find them through the note at the top of the package's types. To be sure, add a
 line to your project's instructions file (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`):
