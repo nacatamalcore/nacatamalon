@@ -89,6 +89,13 @@ export type TSprite = {
      */
     smooth?: boolean;
     /**
+     * How it lands on what is behind it. `'alpha'` (the default) covers it as far as its alpha says.
+     * `'additive'` adds its colour instead, so it can only brighten: a halo, a flash, a beam of
+     * light, a lamp at night. Two additive sprites over each other are brighter than one. Can be
+     * changed any frame.
+     */
+    blend?: 'alpha' | 'additive';
+    /**
      * An effect of its own, from `createMaterial`. Omitted is the built-in shader, which is what
      * nearly every sprite wants.
      *

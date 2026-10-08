@@ -58,6 +58,16 @@ const asRange = (value: unknown, fallback: TParticleRange, src: string, field: s
  * `#rrggbb`, or whatever else `getColor` understands, refused if it comes out as nonsense.
  */
 const asColor = (value: unknown, src: string): TColor => {
+    // An effect written in code may hand over a colour already worked out. A file never does, and
+    // writes it back as text.
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        const given = value as Partial<TColor>;
+        const color = { r: given.r, g: given.g, b: given.b, a: given.a ?? 1 } as TColor;
+        if (![color.r, color.g, color.b, color.a].every((channel) => typeof channel === 'number' && Number.isFinite(channel))) {
+            return fail(src, `${JSON.stringify(value)} is not a colour this engine can read`);
+        }
+        return color;
+    }
     if (typeof value !== 'string') {
         return fail(src, `a colour has to be written as a string, and one is ${JSON.stringify(value)}`);
     }

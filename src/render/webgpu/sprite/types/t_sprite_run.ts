@@ -22,6 +22,10 @@ export type TSpriteRun = {
      */
     distanceField: boolean;
     /**
+     * Whether these sprites add their light to what is behind them rather than covering it.
+     */
+    additive: boolean;
+    /**
      * The knobs of the one sprite in this run, when it brought its own.
      *
      * Its presence is why the run has one sprite in it: the numbers are written once per run, so

@@ -7,6 +7,7 @@ import { resolveAssetPath } from '../resolve_asset_path';
 import { newParticlesFile } from './new_particles_file';
 import type { TParticlesFile } from './types/t_particles_file';
 import type { TRuntimeStore } from '../../store';
+import type { TTexture } from '../texture/types/t_texture';
 
 /**
  * Said once per file, never per emitter and never per frame.
@@ -32,12 +33,36 @@ const warnUnsupported = (src: string, fields: string[]): void => {
 export const MAX_CHILD_DEPTH = 3;
 
 /**
+ * The picture an effect names, found next to the file that names it, from the game's cache like any
+ * other so two effects sharing one fetch it once.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const particlesTexture = (store: TRuntimeStore, fromSrc: string, src: string): TTexture => {
+    const path = resolveAssetPath(fromSrc, src);
+    const { textures } = store.get('assets');
+    let texture = textures.get(path);
+    if (texture === undefined) {
+        texture = newTexture(path, path);
+        textures.set(path, texture);
+        void loadTexture(store, texture);
+    }
+    return texture;
+};
+
+/**
  * The file of one effect another one sets off, from the game's cache like any other, found next to
  * the file that names it. `null`, said once, for one that would lead back to a file already on the
  * way down, or one past `MAX_CHILD_DEPTH`: either would be a frame that never ends rather than an
  * error anybody could see.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
  */
-const childFileFor = (store: TRuntimeStore, parent: TParticlesFile, src: string, ancestors: readonly string[]): TParticlesFile | null => {
+export const childFileFor = (store: TRuntimeStore, parent: TParticlesFile, src: string, ancestors: readonly string[]): TParticlesFile | null => {
     const path = resolveAssetPath(parent.src, src);
     if (path === parent.src || ancestors.includes(path)) {
         console.warn(`[NacatamalOn] particles "${parent.src}" sets off "${path}", which leads back to itself. That child is left out.`);
@@ -96,15 +121,7 @@ export const loadParticles = async (store: TRuntimeStore, file: TParticlesFile, 
         }
 
         if (doc.texture !== null) {
-            const path = resolveAssetPath(file.src, doc.texture);
-            const { textures } = store.get('assets');
-            let texture = textures.get(path);
-            if (texture === undefined) {
-                texture = newTexture(path, path);
-                textures.set(path, texture);
-                void loadTexture(store, texture);
-            }
-            file.texture = texture;
+            file.texture = particlesTexture(store, file.src, doc.texture);
         }
 
         // Asked for now and not waited on: the effect can start before the ones it sets off have

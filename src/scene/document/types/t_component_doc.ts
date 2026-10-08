@@ -201,6 +201,10 @@ export type TSpriteComponent = {
     flipX?: boolean;
     flipY?: boolean;
     smooth?: boolean;
+    /**
+     * Left out for `'alpha'`, the ordinary way of covering what is behind.
+     */
+    blend?: 'additive';
     visible?: boolean;
     zIndex?: number;
     material?: TMaterialDoc;

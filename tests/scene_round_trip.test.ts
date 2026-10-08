@@ -145,6 +145,18 @@ describe('what the writer leaves out', () => {
         expect(hud.components[0]).toMatchObject({ flipX: true, zIndex: 9 });
     });
 
+    it('keeps an additive sprite additive, and writes nothing for an ordinary one', () => {
+        const { doc } = written(() => {
+            createSprite({ width: 8, height: 8, tint, blend: 'additive' });
+            createSprite({ width: 8, height: 8, tint, blend: 'alpha' });
+        });
+
+        expect(doc.root.components[0]).toMatchObject({ blend: 'additive' });
+        expect(doc.root.components[1]).not.toHaveProperty('blend');
+        expect(parseSceneDoc(doc, '/scenes/level.scene')).toEqual(doc);
+        expect(rebuilt(doc)).toEqual(doc);
+    });
+
     it('leaves out a box born after its scene was built, and keeps one built with it', () => {
         const { store } = createTestGame();
         const Brick = () => { createSprite({ width: 8, height: 8, tint }); };

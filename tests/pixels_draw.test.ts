@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import {
-    blitPixels, createPixels, drawCircle, drawLine, fillChecker, fillCircle, fillGradient, fillNoise, fillRect,
+    blitPixels, createPixels, drawCircle, drawEllipse, drawLine, fillChecker, fillCircle, fillEllipse, fillGradient, fillNoise, fillRect,
     getPixel, mapPixels, setPixel,
 } from '../src/pixels';
 import { BAYER_4X4 } from '../src/pixels/bayer';
@@ -108,6 +108,52 @@ describe('drawing', () => {
             '.#...#.',
             '..###..',
         ]);
+    });
+
+    it('draws an ellipse outline with no gaps', () => {
+        expect(shape(drawEllipse(createPixels(9, 5), 4, 2, 4, 2, RED))).toEqual([
+            '..#####..',
+            '.#.....#.',
+            '#.......#',
+            '.#.....#.',
+            '..#####..',
+        ]);
+    });
+
+    it('fills an ellipse exactly up to the outline of the same radii, and keeps it symmetric', () => {
+        for (const [rx, ry] of [[4, 2], [2, 4], [7, 3], [1, 5], [6, 1], [10, 6]] as const) {
+            const w = rx * 2 + 1;
+            const h = ry * 2 + 1;
+            const filled = shape(fillEllipse(createPixels(w, h), rx, ry, rx, ry, RED));
+            const outline = shape(drawEllipse(createPixels(w, h), rx, ry, rx, ry, RED));
+            filled.forEach((row, y) => {
+                expect(row.indexOf('#')).toBe(outline[y]!.indexOf('#'));
+                expect(row.lastIndexOf('#')).toBe(outline[y]!.lastIndexOf('#'));
+                expect(row).toBe([...row].reverse().join(''));
+                expect(row).toBe(filled[h - 1 - y]);
+            });
+            // Touches all four sides of its box, and no row has a hole.
+            expect(filled[0]).toContain('#');
+            expect(filled.every((row) => row[0] === '#' || row.includes('#'))).toBe(true);
+            expect(filled.some((row) => row[0] === '#')).toBe(true);
+            outline.forEach((row) => expect(row).toContain('#'));
+        }
+    });
+
+    it('is the circle when both radii are equal', () => {
+        for (const radius of [0, 1, 3, 6]) {
+            const size = radius * 2 + 1;
+            expect(shape(fillEllipse(createPixels(size, size), radius, radius, radius, radius, RED)))
+                .toEqual(shape(fillCircle(createPixels(size, size), radius, radius, radius, RED)));
+            expect(shape(drawEllipse(createPixels(size, size), radius, radius, radius, radius, RED)))
+                .toEqual(shape(drawCircle(createPixels(size, size), radius, radius, radius, RED)));
+        }
+    });
+
+    it('turns into a line when one radius is zero, and clips at the edges', () => {
+        expect(shape(fillEllipse(createPixels(5, 3), 2, 1, 2, 0, RED))).toEqual(['.....', '#####', '.....']);
+        expect(shape(fillEllipse(createPixels(3, 5), 1, 2, 0, 2, RED))).toEqual(['.#.', '.#.', '.#.', '.#.', '.#.']);
+        expect(shape(fillEllipse(createPixels(6, 3), 0, 1, 4, 1, RED))).toEqual(['####..', '#####.', '####..']);
     });
 
     it('cuts a hole when painted transparent, which is what a crater is', () => {

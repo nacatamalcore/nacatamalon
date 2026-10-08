@@ -4,6 +4,7 @@ import { createFlatMaterials } from '../material/flat_materials';
 import type { TSpritePipeline } from './types/t_sprite_pipeline';
 import { INITIAL_SPRITE_CAPACITY, SPRITE_FLOATS } from './write_sprite_instance';
 import { FLAT_DEPTH } from '../frame/depth';
+import { ADDITIVE_BLEND, ALPHA_BLEND } from '../frame/blend';
 
 /**
  * How the corners and the per-sprite data are read.
@@ -98,9 +99,9 @@ export const createSpritePipeline = (
         label: 'sprite pipeline layout',
         bindGroupLayouts: [frameLayout, textureLayout],
     });
-    // The plain one and the one for distance fields differ in their ending and in nothing else.
-    const pipelineFor = (label: string, code: string): GPURenderPipeline => {
-        const module = device.createShaderModule({ label: `${label} shader`, code });
+    // The plain one and the one for distance fields differ in their ending and in nothing else, and
+    // each comes covering or adding light: four pipelines from two shaders.
+    const pipelineFor = (label: string, module: GPUShaderModule, blend: GPUBlendState): GPURenderPipeline => {
         return device.createRenderPipeline({
             label: `${label} pipeline`,
             layout: pipelineLayout,
@@ -114,12 +115,7 @@ export const createSpritePipeline = (
                 entryPoint: 'fs',
                 targets: [{
                     format,
-                    // Straight alpha, which is what the loader decodes (`premultiplyAlpha: 'none'`): the
-                    // transparent parts of an image show what was drawn behind them.
-                    blend: {
-                        color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-                        alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-                    },
+                    blend,
                 }],
             },
             primitive: { topology: 'triangle-strip' },
@@ -129,8 +125,12 @@ export const createSpritePipeline = (
             multisample: { count: samples },
         });
     };
-    const pipeline = pipelineFor('sprite', SPRITE_SHADER);
-    const distanceFieldPipeline = pipelineFor('sprite distance field', SPRITE_DISTANCE_FIELD_SHADER);
+    const plain = device.createShaderModule({ label: 'sprite shader', code: SPRITE_SHADER });
+    const field = device.createShaderModule({ label: 'sprite distance field shader', code: SPRITE_DISTANCE_FIELD_SHADER });
+    const pipeline = pipelineFor('sprite', plain, ALPHA_BLEND);
+    const distanceFieldPipeline = pipelineFor('sprite distance field', field, ALPHA_BLEND);
+    const additivePipeline = pipelineFor('sprite additive', plain, ADDITIVE_BLEND);
+    const additiveDistanceFieldPipeline = pipelineFor('sprite distance field additive', field, ADDITIVE_BLEND);
 
 
     // Buffers
@@ -177,6 +177,8 @@ export const createSpritePipeline = (
     return {
         pipeline,
         distanceFieldPipeline,
+        additivePipeline,
+        additiveDistanceFieldPipeline,
         layouts: { frame: frameLayout, texture: textureLayout },
         materials: createFlatMaterials(device, {
             label: 'sprite',

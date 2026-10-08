@@ -55,13 +55,13 @@ const resolveFrame = (options: TSpriteOptions) => {
 };
 
 const cleanSpriteOptions = (options: TSpriteOptions) => {
-    const { width, height, smooth, anchor, zIndex, flipX, flipY, visible, material, uniforms, tint = getColor('white') } = options;
+    const { width, height, smooth, blend, anchor, zIndex, flipX, flipY, visible, material, uniforms, tint = getColor('white') } = options;
     const { uvOffset, uvScale } = resolveFrame(options);
 
     // Default transform
     const transform = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, ...options.transform };
 
-    return { width, height, smooth, anchor, zIndex, flipX, flipY, visible, material, uniforms, uvOffset, uvScale, atlas: options.atlas, texture: resolveTexture(options), transform, tint };
+    return { width, height, smooth, blend, anchor, zIndex, flipX, flipY, visible, material, uniforms, uvOffset, uvScale, atlas: options.atlas, texture: resolveTexture(options), transform, tint };
 };
 
 /**
@@ -120,12 +120,12 @@ export const createSprite = ((options: TSpriteOptions): TSprite => {
         throw new Error('[NacatamalOn] createSprite: call it inside a scene body, or inside something created with useSpawn.');
     }
 
-    const { width, height, smooth, anchor, zIndex, flipX, flipY, visible, material, uniforms, uvOffset, uvScale, atlas, texture, transform, tint } = cleanSpriteOptions(options);
+    const { width, height, smooth, blend, anchor, zIndex, flipX, flipY, visible, material, uniforms, uvOffset, uvScale, atlas, texture, transform, tint } = cleanSpriteOptions(options);
 
     // Create a record
     // The frame only means something with a sheet, and is kept so a saved scene keeps its picture.
     const frame = atlas !== undefined ? options.frame ?? 0 : undefined;
-    const sprite = createRecord('sprite', { width, height, smooth, anchor, zIndex, flipX, flipY, visible, material, uniforms, uvOffset, uvScale, atlas, frame, texture, transform, tint, destroyed: false });
+    const sprite = createRecord('sprite', { width, height, smooth, blend, anchor, zIndex, flipX, flipY, visible, material, uniforms, uvOffset, uvScale, atlas, frame, texture, transform, tint, destroyed: false });
 
     box.drawables.push(sprite);
 

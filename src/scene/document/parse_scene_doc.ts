@@ -390,6 +390,7 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 ...optionalBoolean(raw, 'flipX'),
                 ...optionalBoolean(raw, 'flipY'),
                 ...optionalBoolean(raw, 'smooth'),
+                ...(raw.blend === 'additive' ? { blend: 'additive' as const } : {}),
                 ...optionalBoolean(raw, 'visible'),
                 ...optionalNumber(raw, 'zIndex'),
                 ...(material !== undefined ? { material } : {}),

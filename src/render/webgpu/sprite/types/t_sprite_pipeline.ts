@@ -16,6 +16,12 @@ export type TSpritePipeline = {
      */
     distanceFieldPipeline: GPURenderPipeline;
     /**
+     * The two above again, adding light instead of covering what is behind: for sprites with
+     * `blend: 'additive'`.
+     */
+    additivePipeline: GPURenderPipeline;
+    additiveDistanceFieldPipeline: GPURenderPipeline;
+    /**
      * The first two groups, spelled out rather than taken from the pipeline.
      *
      * Shared with every material pipeline, which is the whole reason they are spelled out: a bind

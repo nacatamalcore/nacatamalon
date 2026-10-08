@@ -1,6 +1,8 @@
 import { rootOf } from '../../box';
 import { loadBitmapFont, newBitmapFont, trackLoad } from '../../loaders';
 import { DEFAULT_FONT_ATLAS } from './default_font_atlas';
+import { setBitmapFontPixels } from '../../loaders/bitmap_font/bitmap_font_pixels';
+import { decodePng } from '../../pixels/decode_png';
 import type { TBox } from '../../box';
 import type { TBitmapFont, TBitmapFontMeta } from '../../loaders';
 import type { TRuntimeStore } from '../../store';
@@ -57,4 +59,34 @@ export const defaultFontOf = (store: TRuntimeStore, box: TBox): TBitmapFont => {
         loads.push(font);
     }
     return font;
+};
+
+/**
+ * The same font for painting into pixels: built from the image already inside the engine, read on
+ * the spot, so `drawText` with no font needs no game and no wait. One for the whole page, since it
+ * is the same picture for every game.
+ */
+let inMemory: TBitmapFont | null = null;
+
+/**
+ * The default font with its picture in memory, ready the moment it is asked for.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const defaultFontInMemory = (): TBitmapFont => {
+    if (inMemory === null) {
+        const font = newBitmapFont(DEFAULT_FONT_KEY, DEFAULT_FONT_ATLAS, DEFAULT_FONT_KEY);
+        const binary = atob(DEFAULT_FONT_ATLAS.slice(DEFAULT_FONT_ATLAS.indexOf(',') + 1));
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        setBitmapFontPixels(font, decodePng(bytes));
+        font.meta = DEFAULT_FONT_META;
+        font.status = 'ready';
+        inMemory = font;
+    }
+    return inMemory;
 };

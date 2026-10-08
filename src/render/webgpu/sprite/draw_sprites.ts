@@ -49,7 +49,7 @@ export const drawSpriteRun = (
     const material = run.material;
     const materials = run.distanceField ? sprites.distanceFieldMaterials : sprites.materials;
     if (material !== null && material.fragment !== null) {
-        const compiled = materials.get(material);
+        const compiled = materials.get(material, run.additive);
         if (!compiled.failed && compiled.pipeline !== null) {
             const parameters = materials.bind(
                 compiled,
@@ -71,10 +71,12 @@ export const drawSpriteRun = (
         }
     }
 
-    if (run.distanceField) {
+    if (run.distanceField || run.additive) {
         // Everything but the pipeline is what the plain sprites use, so only that is swapped, and
         // the next plain batch is told to set it back.
-        gpuPass.setPipeline(sprites.distanceFieldPipeline);
+        gpuPass.setPipeline(run.additive
+            ? (run.distanceField ? sprites.additiveDistanceFieldPipeline : sprites.additivePipeline)
+            : sprites.distanceFieldPipeline);
         gpuPass.setBindGroup(0, sprites.bindGroup);
         gpuPass.setBindGroup(1, run.bindGroup);
         gpuPass.setVertexBuffer(0, sprites.quad);

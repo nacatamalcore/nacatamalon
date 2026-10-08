@@ -27,4 +27,11 @@ export type TModel = {
      * The pieces, in the order the file lists them. Empty until it arrives.
      */
     parts: TMesh[];
+    /**
+     * Whether any of it is drawn. Setting it hides or shows every piece at once, and holds for the
+     * pieces still on the way too: hidden before the file arrives, they arrive hidden.
+     *
+     * A piece can still be hidden on its own through `parts`; this overwrites them all.
+     */
+    visible: boolean;
 };

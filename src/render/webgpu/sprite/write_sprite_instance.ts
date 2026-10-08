@@ -54,8 +54,8 @@ const growInstances = (device: GPUDevice, sprites: TSpritePipeline, count: numbe
 };
 
 /**
- * Adds sprite `index` to the current run if it uses the same sheet and the same effect, or opens a
- * new one. Reuses the run objects of earlier frames, so batching allocates nothing once the game has
+ * Adds sprite `index` to the current run if it uses the same sheet, the same effect and the same
+ * blend, or opens a new one. Reuses the run objects of earlier frames, so batching allocates nothing once the game has
  * settled.
  *
  * A sprite carrying knobs of its own always opens a run and always closes it, because a run writes
@@ -67,6 +67,7 @@ const addToRun = (
     material: TDrawShader | null,
     uniforms: TUniformValues | null,
     distanceField: boolean,
+    additive: boolean,
     index: number,
     drawable: number,
     broken: boolean,
@@ -77,6 +78,7 @@ const addToRun = (
         && last.bindGroup === bindGroup
         && last.material === material
         && last.distanceField === distanceField
+        && last.additive === additive
         && last.uniforms === null
         && uniforms === null;
     if (joins) {
@@ -86,11 +88,12 @@ const addToRun = (
 
     const run = sprites.runs[sprites.runCount];
     if (run === undefined) {
-        sprites.runs.push({ bindGroup, material, uniforms, distanceField, start: index, count: 1, firstDrawable: drawable });
+        sprites.runs.push({ bindGroup, material, uniforms, distanceField, additive, start: index, count: 1, firstDrawable: drawable });
     } else {
         run.bindGroup = bindGroup;
         run.material = material;
         run.distanceField = distanceField;
+        run.additive = additive;
         run.uniforms = uniforms;
         run.start = index;
         run.count = 1;
@@ -185,7 +188,7 @@ export const writeSpriteInstances = (
                 const camera = cameraIndex[i] ?? -1;
                 data[o + 17] = camera >= 0 && camera < MAX_VIEWS - 1 ? camera + 1 : 0;
 
-                addToRun(sprites, bindGroup, item.material ?? null, item.uniforms ?? null, item.distanceField === true, count, i, broken);
+                addToRun(sprites, bindGroup, item.material ?? null, item.uniforms ?? null, item.distanceField === true, item.blend === 'additive', count, i, broken);
                 broken = false;
                 count++;
                 break;

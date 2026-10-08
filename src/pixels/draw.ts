@@ -255,6 +255,150 @@ export const drawCircle = (pixels: TPixels, cx: number, cy: number, radius: numb
 };
 
 /**
+ * Walks one quarter of an ellipse's outline, from the top round to the side, handing over each
+ * pixel of it as an offset from the centre. Stepping is in whole pixels with no gaps: across while
+ * the edge is flatter than diagonal, then down.
+ */
+const ellipseQuarter = (rx: number, ry: number, visit: (x: number, y: number) => void): void => {
+    if (ry === 0) {
+        // Flat: a line, which the stepping below would cut down to its middle pixel.
+        for (let x = 0; x <= rx; x++) {
+            visit(x, 0);
+        }
+        return;
+    }
+    const rx2 = rx * rx;
+    const ry2 = ry * ry;
+    let x = 0;
+    let y = ry;
+    let across = 0;
+    let down = 2 * rx2 * y;
+
+    let error = ry2 - rx2 * ry + rx2 / 4;
+    while (across < down) {
+        visit(x, y);
+        x++;
+        across += 2 * ry2;
+        if (error < 0) {
+            error += ry2 + across;
+        } else {
+            y--;
+            down -= 2 * rx2;
+            error += ry2 + across - down;
+        }
+    }
+
+    error = ry2 * (x + 0.5) * (x + 0.5) + rx2 * (y - 1) * (y - 1) - rx2 * ry2;
+    while (y >= 0) {
+        visit(x, y);
+        y--;
+        down -= 2 * rx2;
+        if (error > 0) {
+            error += rx2 - down;
+        } else {
+            x++;
+            across += 2 * ry2;
+            error += rx2 - down + across;
+        }
+    }
+};
+
+/**
+ * Fills an ellipse: a circle stretched to `rx` across and `ry` down, for bodies, shadows under a
+ * character, a lake seen from above. Its edge is stepped and exactly the one `drawEllipse` draws
+ * for the same radii. With both radii equal it is `fillCircle`, pixel for pixel.
+ *
+ * @param pixels - The picture.
+ * @param cx - Its centre, from the left.
+ * @param cy - Its centre, from the top.
+ * @param rx - Half its width, in pixels. `0` is a vertical line.
+ * @param ry - Half its height, in pixels. `0` is a horizontal line.
+ * @param color - What it is filled with.
+ * @returns The same picture, to go on painting.
+ *
+ * @example
+ * ```ts
+ * const sheep = createPixels(24, 16);
+ * fillEllipse(sheep, 12, 8, 10, 6, getColor('#f4f1e8'));
+ * ```
+ *
+ * @category Pixels
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const fillEllipse = (pixels: TPixels, cx: number, cy: number, rx: number, ry: number, color: TColor): TPixels => {
+    const a = Math.max(0, Math.round(rx));
+    const b = Math.max(0, Math.round(ry));
+    if (a === b) {
+        return fillCircle(pixels, cx, cy, a, color);
+    }
+    const x0 = Math.round(cx);
+    const y0 = Math.round(cy);
+    const [cr, cg, cb, ca] = bytesOf(color);
+
+    // How far each row reaches either side of the centre, read off the outline so the two agree.
+    const reach = new Array<number>(b + 1).fill(0);
+    ellipseQuarter(a, b, (x, y) => {
+        reach[y] = Math.max(reach[y]!, x);
+    });
+
+    for (let dy = -b; dy <= b; dy++) {
+        const py = y0 + dy;
+        if (py < 0 || py >= pixels.height) {
+            continue;
+        }
+        const half = reach[Math.abs(dy)]!;
+        const left = Math.max(0, x0 - half);
+        const right = Math.min(pixels.width - 1, x0 + half);
+        for (let px = left; px <= right; px++) {
+            put(pixels, px, py, cr, cg, cb, ca);
+        }
+    }
+    return pixels;
+};
+
+/**
+ * Draws the outline of an ellipse, one pixel thick and with no gaps. With both radii equal it is
+ * `drawCircle`, pixel for pixel.
+ *
+ * @param pixels - The picture.
+ * @param cx - Its centre, from the left.
+ * @param cy - Its centre, from the top.
+ * @param rx - Half its width, in pixels.
+ * @param ry - Half its height, in pixels.
+ * @param color - Its colour.
+ * @returns The same picture, to go on painting.
+ *
+ * @category Pixels
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const drawEllipse = (pixels: TPixels, cx: number, cy: number, rx: number, ry: number, color: TColor): TPixels => {
+    const a = Math.max(0, Math.round(rx));
+    const b = Math.max(0, Math.round(ry));
+    if (a === b) {
+        return drawCircle(pixels, cx, cy, a, color);
+    }
+    const x0 = Math.round(cx);
+    const y0 = Math.round(cy);
+    const [r, g, bl, al] = bytesOf(color);
+    const plot = (px: number, py: number): void => {
+        if (inside(pixels, px, py)) {
+            put(pixels, px, py, r, g, bl, al);
+        }
+    };
+
+    // One quarter, mirrored into the other three.
+    ellipseQuarter(a, b, (x, y) => {
+        plot(x0 + x, y0 + y);
+        plot(x0 - x, y0 + y);
+        plot(x0 + x, y0 - y);
+        plot(x0 - x, y0 - y);
+    });
+    return pixels;
+};
+
+/**
  * Lays one picture over another, the way a sprite is drawn over a background: a transparent pixel
  * of `source` leaves what was there, an opaque one replaces it, and one in between mixes the two.
  *

@@ -37,6 +37,7 @@ const buildPart = (
     part: TGltfPart,
     transform: TTransform3d,
     options: TModelOptions,
+    visible: boolean,
 ): TMesh => {
     const mesh = createRecord('mesh', {
         geometry: part.geometry,
@@ -65,7 +66,7 @@ const buildPart = (
             null,
         ) as TMeshMaterial,
         zIndex: options.zIndex,
-        visible: options.visible,
+        visible,
         destroyed: false,
     });
 
@@ -88,6 +89,9 @@ const buildPart = (
  * `tint` multiplies, so the colours the model was made with survive: white leaves it exactly as it
  * was made, and a darker colour shades all of it at once. To change one piece, reach into `parts`
  * once the file is here.
+ *
+ * `visible` on what this returns hides or shows the whole model, and can be set straight away: a
+ * model hidden before its file arrives arrives hidden.
  *
  * @param options The model, and anything else about how it looks.
  * @returns The placement and its pieces.
@@ -121,12 +125,24 @@ export const createModel = (options: TModelOptions): TModel => {
     }
 
     const transform: TTransform3d = { ...NOWHERE, ...options.transform };
-    const model: TModel = { id: nanoId(), type: 'model', transform, parts: [] };
+    // Kept here and not on any one piece, because there may be no pieces yet to keep it on.
+    let visible = options.visible ?? true;
+    const model = { id: nanoId(), type: 'model', transform, parts: [] as TMesh[] } as TModel;
+    Object.defineProperty(model, 'visible', {
+        enumerable: true,
+        get: () => visible,
+        set: (value: boolean) => {
+            visible = value;
+            for (const part of model.parts) {
+                part.visible = value;
+            }
+        },
+    });
     const source = options.model;
 
     const build = (): void => {
         for (const part of source.parts) {
-            model.parts.push(buildPart(store, box, part, transform, options));
+            model.parts.push(buildPart(store, box, part, transform, options, visible));
         }
     };
 

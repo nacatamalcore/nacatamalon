@@ -1,5 +1,6 @@
 import { bumpVersion } from '../../store/record_version';
-import { loadTexture } from '../texture/load_texture';
+import { uploadTexture } from '../texture/upload_texture';
+import { keepBitmapFontPixels } from './bitmap_font_pixels';
 import type { TRuntimeStore } from '../../store';
 import type { TBitmapFont, TBitmapFontMeta } from './types/t_bitmap_font';
 
@@ -16,15 +17,22 @@ import type { TBitmapFont, TBitmapFontMeta } from './types/t_bitmap_font';
  */
 export const loadBitmapFont = async (store: TRuntimeStore, font: TBitmapFont): Promise<void> => {
     try {
-        const [meta] = await Promise.all([
+        const [meta, image] = await Promise.all([
             fetch(font.src).then((response) => {
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
                 }
                 return response.json() as Promise<TBitmapFontMeta>;
             }),
-            loadTexture(store, font.texture),
+            fetch(font.texture.src).then((response) => {
+                if (!response.ok) {
+                    throw new Error(`its image '${font.texture.src}' could not be loaded: HTTP ${response.status}`);
+                }
+                return response.blob();
+            }),
         ]);
+        // Downloaded once and used twice: on the card for texts, and in memory for `drawText`.
+        await Promise.all([uploadTexture(store, font.texture, image), keepBitmapFontPixels(font, image)]);
 
         if (font.texture.status !== 'ready') {
             throw new Error(`its image '${font.texture.src}' could not be loaded`);
@@ -37,6 +45,10 @@ export const loadBitmapFont = async (store: TRuntimeStore, font: TBitmapFont): P
         font.status = 'ready';
         bumpVersion(font);
     } catch (error: unknown) {
+        if (font.texture.status !== 'ready') {
+            font.texture.status = 'error';
+            bumpVersion(font.texture);
+        }
         font.status = 'error';
         bumpVersion(font);
         console.warn(`[NacatamalOn] useLoadBitmapFont: '${font.src}' could not be loaded. Texts using it draw nothing.`, error);

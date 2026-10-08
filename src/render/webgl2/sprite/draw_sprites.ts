@@ -79,6 +79,13 @@ export const drawSpriteRun = (
         ordinary = false;
     }
 
+    if (run.additive) {
+        // Adding light, the same as additive particles: the colour is added and the alpha of the
+        // picture left alone. The next batch is told to put straight alpha back.
+        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ZERO, gl.ONE);
+        ordinary = false;
+    }
+
     const base = run.start * SPRITE_STRIDE;
     for (const { location, size, offset } of SPRITE_ATTRIBUTES) {
         gl.vertexAttribPointer(location, size, gl.FLOAT, false, SPRITE_STRIDE, base + offset);

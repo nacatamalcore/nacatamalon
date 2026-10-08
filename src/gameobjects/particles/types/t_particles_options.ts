@@ -1,5 +1,6 @@
 import type { TColor } from '../../../color';
 import type { TParticleOverrides } from './t_particles';
+import type { TParticlesEffect } from '../../../loaders/particles/types/t_particles_effect';
 import type { TParticlesFile } from '../../../loaders/particles/types/t_particles_file';
 import type { TTransform2d } from '../../types/t_transform_2d';
 
@@ -15,9 +16,14 @@ import type { TTransform2d } from '../../types/t_transform_2d';
  */
 export type TParticlesOptions = {
     /**
-     * The effect, from `useLoadParticles`, or the name one was loaded under.
+     * The effect: from `useLoadParticles`, the name one was loaded under, or written right here in
+     * code with the same fields a `.particles` file has.
+     *
+     * One written in code is ready at once. Hand the **same object** to several emitters and they
+     * share it, like emitters naming one file; build a new one when it should change, for instance
+     * dust the colour of the ground underneath.
      */
-    effect: TParticlesFile | string;
+    effect: TParticlesFile | TParticlesEffect | string;
     /**
      * What a warning about it will call it. Defaults to the file.
      */

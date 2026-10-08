@@ -1,4 +1,5 @@
 import { SCENE_FORMAT, SCENE_VERSION } from './types/t_scene_doc';
+import { isEffectFromCode } from '../../loaders/particles/file_from_effect';
 import { DEFAULT_FONT_KEY } from '../../gameobjects/text/default_font';
 import { UNSUPPORTED_COMPONENTS } from './parse_scene_doc';
 import { DEFAULT_FONT_ATLAS_SIZE, isMadeTexture } from '../../loaders';
@@ -229,6 +230,7 @@ const writeSprite = (sprite: TSprite, writing: TWriting): TComponentDoc => {
         ...unless('flipX', sprite.flipX, false),
         ...unless('flipY', sprite.flipY, false),
         ...unless('smooth', sprite.smooth, undefined),
+        ...(sprite.blend === 'additive' ? { blend: 'additive' as const } : {}),
         ...unless('visible', sprite.visible, true),
         ...unless('zIndex', sprite.zIndex, undefined),
         ...(sprite.material !== undefined ? { material: writeMaterial(sprite.material as TSpriteMaterial, writing) } : {}),
@@ -332,7 +334,13 @@ const writeTilemap = (layers: TTilemapLayer[], writing: TWriting): TComponentDoc
     };
 };
 
-const writeParticles = (emitter: TParticles | TParticles3d, writing: TWriting): TComponentDoc => {
+const writeParticles = (emitter: TParticles | TParticles3d, writing: TWriting): TComponentDoc | null => {
+    if (isEffectFromCode(emitter.file)) {
+        // Written in code, so there is no file to name and the game makes it again when it runs.
+        // Left out, like a mesh built from raw vertices, rather than written pointing at nothing.
+        console.warn(`[NacatamalOn] serializeScene: the emitter "${emitter.name}" follows an effect written in code, so it cannot be written down. It is left out of the document.`);
+        return null;
+    }
     writing.assets.set(emitter.file.src, { type: 'particles', key: emitter.file.src, src: emitter.file.src });
     const fields = {
         name: emitter.name,

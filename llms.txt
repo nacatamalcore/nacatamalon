@@ -92,6 +92,15 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   `isLocked()` turns `false` when the player presses Esc.
 - **Colours** are `{ r, g, b, a }`, each 0 to 1. `getColor` takes `'#ff6b1a'`, `0xff6b1a`, a CSS
   name (`'red'`) or any CSS colour (`'rgba(255, 0, 0, 0.5)'`, `'hsl(30 100% 50%)'`).
+  To blend two colours (a sky between dusk and night), `lerpColor(a, b, t)`.
+- **Glows, flashes, beams of light**: `createSprite({ ..., blend: 'additive' })` adds its colour to
+  what is behind instead of covering it, the same as additive particles.
+- **Hiding a model**: `createModel(...)` returns an object with `visible`; set it any time, even
+  before the file arrives (its pieces arrive hidden). No need to walk `parts`.
+- **Particle effects that depend on the game** (dust the colour of the ground, a tint per level):
+  write the effect in code, `createParticles({ effect: { kind: 'particles2d', emission: { rate: 30 },
+  colorOverLife: [{ t: 0, color: lerpColor(a, b, t) }], texture: createPixelTexture(puff) } })`, with
+  the fields of a `.particles` file; it is ready at once. Pass the same object to share one effect.
 - **Angles** are radians.
 - **Types** come from the same imports as the functions, all starting with `T`:
   `import type { TSprite, TText } from 'nacatamalon';`.
@@ -107,8 +116,11 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   is made in a pixel-art editor and loaded with `useLoadTexture`. When a picture has to be *generated*
   instead (procedural variations, a placeholder, noise or a mask for a shader, a picture that changes
   while the game runs, or art made by an agent with no image editor), use `createPixels` and paint it
-  with `fillRect`, `drawLine`, `fillCircle`, `fillGradient`, `fillNoise`, `blitPixels`, `mapPixels`...;
-  then `createPixelTexture(pixels)` in the scene body gives a texture for `createSprite({ texture })`
+  with `fillRect`, `drawLine`, `fillCircle`, `fillEllipse`, `fillGradient`, `fillNoise`, `blitPixels`,
+  `mapPixels`...; write on it with `drawText(pixels, 'MOTEL', x, y, { color, font?, fontSize?, anchor? })`
+  (no font: the built-in one, needing nothing; a loaded font must have arrived, so in the scene that
+  loads it draw inside `useWatch(..., [font])` then `updatePixelTexture`), rather than hand-making a
+  pixel font. Then `createPixelTexture(pixels)` in the scene body gives a texture for `createSprite({ texture })`
   or `createMaterial({ texture })`. **Do not draw on a `<canvas>`** (`document.createElement('canvas')`,
   `getContext('2d')`, `getImageData`): it only exists in a browser, and the native runtime has no page;
   the pixels functions run everywhere. Paint on the picture again and `updatePixelTexture(texture,
@@ -151,7 +163,7 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
 - **Material maps** (extra pictures for a model's shader): `createMaterial({ shader: 'mesh3d', texture, maps: { noise, env }, fragment })` carries up to 4 named maps; the shader reads one with `sampleMap_<name>(uv)` (`sampleMap_noise(ctx.uv)`), and `envUv(ctx)` gives the coordinates of a chrome reflection (`sampleMap_env(envUv(ctx))`). A map the material lacks reads white. In the shader composer, `composerMapSample(name, uv)`, `composerEnvUv()` and `composerShine()` (prefer the composer: it writes both shader languages from one graph).
 - **The 1997 look**: material options `vertexSnap` and `affine`, `useFog`, `usePostProcess` with `dither`, `posterize`, `paletteMatch`, `lutGrade`, `crt` (with `CRT_PRESETS`) and `COLOR_LEVELS`.
 - **Screen effects** (each spread into `usePostProcess`, tuned by writing into `effect.uniforms`): `colorAdjust`, `mosaic`, `wave`, `shockwave`, `distort`, `rgbSplit`, `glitch`, `grain`, `oldFilm`, `halftone`, `blur`, `zoomBlur`, `motionBlur`, `tiltShift`, `bloom`, `godrays`, `phosphor`, `ntsc`, `lcd`. A hand-written effect can read `sampleTextureSmooth`, `sampleInput` and `sampleHistory`, and take `passes` for more than one read of the frame.
-- **Pixels** (pictures painted in code): `createPixels`, `setPixel`, `getPixel`, `fillRect`, `drawLine`, `fillCircle`, `drawCircle`, `fillGradient`, `fillNoise`, `fillChecker`, `blitPixels`, `mapPixels`, `clonePixels`, `swapColors`, `createPixelTexture`, `updatePixelTexture`, `useLoadPixels`.
+- **Pixels** (pictures painted in code): `createPixels`, `setPixel`, `getPixel`, `fillRect`, `drawLine`, `fillCircle`, `drawCircle`, `fillEllipse`, `drawEllipse`, `drawText`, `fillGradient`, `fillNoise`, `fillChecker`, `blitPixels`, `mapPixels`, `clonePixels`, `swapColors`, `createPixelTexture`, `updatePixelTexture`, `useLoadPixels`.
 - **Audio**: `useSound`, `useMusic`, `useLoadAudio`, `useAudio`, `useAudioListener`.
 - **State**: `useData`, `useWatch`, `createGameStore`, `useStore`, `createGameSignal`, `useSignal`.
 - **Maths and random**: `useRandom`, `clamp`, `lerp`, `vec2Add`, `vec3Add` and the other `vec2*`/`vec3*`.

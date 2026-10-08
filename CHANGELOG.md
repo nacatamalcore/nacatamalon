@@ -3,9 +3,7 @@
 What changed in the current release of `nacatamalon`, and what is waiting for the next one. Earlier
 releases are in [changelog/](./changelog/), one file each.
 
-## Unreleased
-
-To be released as 0.1.8.
+## 0.1.8 — 2026-10-08
 
 ### Added
 
@@ -16,37 +14,26 @@ To be released as 0.1.8.
 - **`movementX` and `movementY`** on every pointer event: how far the mouse moved, in pixels of the
   page, added up over the frame. What a mouse-look camera reads, captured or not. Type
   `TPointerLockOptions`.
+- **`drawText(pixels, text, x, y, options?)`** writes text into a picture painted in code: a sign, a
+  number on a door. Laid out exactly as `createText`, with `fontSize`, `align`, spacing, `color` and an
+  `anchor` to centre it. With no font it uses the built-in one and needs no game and no loading; a
+  bitmap font is copied pixel for pixel and a vector font is drawn from its outlines (`smooth: false`
+  for hard edges). Type `TDrawTextOptions`.
+- **`fillEllipse` and `drawEllipse`**, beside `fillCircle` and `drawCircle`, with the same stepped
+  edge; equal radii give exactly the circle.
+- **Additive sprites.** `createSprite({ blend: 'additive' })` adds its colour to what is behind
+  instead of covering it, for halos, flashes and beams of light, on WebGPU and WebGL2, with or without
+  a material. Changeable any frame, and kept in scene documents.
+- **Particle effects written in code.** `createParticles({ effect })` and `createParticles3d` also take
+  the effect itself, with the fields of a `.particles` file, so it can depend on the game. Ready at
+  once; colours can be `TColor` values (`lerpColor`), and `texture` a texture made in code. The same
+  object handed to several emitters is one shared effect. A scene saved with one leaves that emitter
+  out, with a warning, as there is no file to name. Types `TParticlesEffect`, `TParticlesEffect2d`,
+  `TParticlesEffect3d`, `TParticleColorStopInput`.
+- **`visible` on models.** What `createModel` returns has `visible`, which hides or shows every piece,
+  including pieces whose file has not arrived yet.
 
-## 0.1.7 — 2026-10-08
+### Changed
 
-0.1.6 was never published, so this covers everything since 0.1.5.
-
-### Breaking
-
-- **`useLoadFont` is now `useLoadBitmapFont`**: the loader for bitmap fonts (an image of the letters
-  plus a JSON of where each one is). Its types are renamed with it: `TUseLoadBitmapFontOptions`,
-  `TBitmapFont`, `TBitmapFontMeta`, `TBitmapFontGlyph`. The name `useLoadFont` now loads vector fonts
-  (see below), so code calling it with `{ json, atlas }` must switch to `useLoadBitmapFont`.
-- **In scene documents and packs, a bitmap font asset is `"type": "bitmapFont"`.** A file saved with
-  `{ "type": "font", "json": ..., "atlas": ... }` loses that font until its type is changed:
-  `"font"` now means a vector font.
-
-### Added
-
-- **Vector fonts.** `useLoadFont({ src, key?, size?, chars? })` loads a `.ttf` or `.woff` and
-  `createText` draws it sharp at any `fontSize`, and scaled, turned or through a zoomed camera. Each
-  letter is kept as a multi-channel distance field, drawn the first time it is shown, on WebGPU and
-  WebGL2 alike, with the font's own kerning. Accents, ñ and any character the font has work with no
-  list to keep in sync. A material on such a text works as on a sprite. Read in plain TypeScript, so
-  it runs anywhere the engine does.
-  - On a vector font, `style.fontSize` is the size of the font as in CSS (one em, default 16); the
-    line is as tall as the font says.
-  - `size` (default 48) is how finely letters are kept; raise it for very thin strokes. `chars` draws
-    letters while loading instead of the first time they are shown.
-  - Not read yet, and reported as such: `.otf` with cubic (CFF) outlines, `.woff2`, `.ttc`, and
-    scripts whose letters change shape by their neighbours.
-- **A font by its key.** `createText({ text, font: 'title' })` uses the font loaded under that key, by
-  this scene or an earlier one, so a loading scene can load every font once and the rest of the game
-  name them. A key nothing was loaded under throws, naming it.
-- **`"type": "font"` in scene documents and packs**: `{ "type": "font", "key", "src", "size"? }`.
-- Types `TFont`, `TFontMeta` and `TUseLoadFontOptions`.
+- A bitmap font's image is downloaded once and kept in memory as well as on the card, so `drawText`
+  can copy its letters. Only PNG images can be read that way; others still draw as text.

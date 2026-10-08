@@ -38,6 +38,8 @@ const fakeGl = nothing() as WebGL2RenderingContext;
 const webgpuPipeline = (): TWebGPUSpritePipeline => ({
     pipeline: nothing() as GPURenderPipeline,
     distanceFieldPipeline: nothing() as GPURenderPipeline,
+    additivePipeline: nothing() as GPURenderPipeline,
+    additiveDistanceFieldPipeline: nothing() as GPURenderPipeline,
     layouts: nothing() as TWebGPUSpritePipeline['layouts'],
     materials: nothing() as TWebGPUSpritePipeline['materials'],
     distanceFieldMaterials: nothing() as TWebGPUSpritePipeline['materials'],
@@ -161,6 +163,22 @@ describe('grouping sprites once effects exist', () => {
             sprite({ material: crt }),
             sprite({ material: crt }),
         ])).toEqual({ webgpu: 3, webgl2: 3 });
+    });
+
+    it('splits where the blend changes, and keeps additive sprites together', () => {
+        expect(runsFor([sprite({ blend: 'additive' }), sprite({ blend: 'additive' })]))
+            .toEqual({ webgpu: 1, webgl2: 1 });
+        expect(runsFor([sprite(), sprite({ blend: 'additive' }), sprite({ blend: 'alpha' })]))
+            .toEqual({ webgpu: 3, webgl2: 3 });
+        // `'alpha'` written out and left out are the same thing, so they still share a draw.
+        expect(runsFor([sprite(), sprite({ blend: 'alpha' })])).toEqual({ webgpu: 1, webgl2: 1 });
+    });
+
+    it('splits an effect where its blend changes, since that is another pipeline', () => {
+        const crt = effect('crt');
+
+        expect(runsFor([sprite({ material: crt }), sprite({ material: crt, blend: 'additive' })]))
+            .toEqual({ webgpu: 2, webgl2: 2 });
     });
 
     it('agrees with itself across the two backends, whatever the list', () => {

@@ -71,6 +71,49 @@ describe('createModel', () => {
         fake.restore();
     });
 
+    it('hides the whole model, pieces that arrive later included', async () => {
+        const fake = served();
+        const { store } = createTestGame();
+        let placed: TModel | null = null;
+        let source: TGltfModel | null = null;
+        startTestScene(store, 'Level', () => {
+            source = useLoadGltf({ src: 'model.gltf' });
+            placed = createModel({ model: source });
+            return createScene();
+        });
+
+        expect(placed!.visible).toBe(true);
+        placed!.visible = false;
+        await whenLoaded(source as unknown as TGltfModel);
+
+        expect(placed!.parts).toHaveLength(2);
+        expect(placed!.parts.every((part) => part.visible === false)).toBe(true);
+        expect(kinds(store)).toEqual([]);
+
+        placed!.visible = true;
+        expect(kinds(store)).toEqual(['mesh', 'mesh']);
+        placed!.visible = false;
+        expect(kinds(store)).toEqual([]);
+        fake.restore();
+    });
+
+    it('starts hidden when asked to', async () => {
+        const fake = served();
+        const { store } = createTestGame();
+        let placed: TModel | null = null;
+        let source: TGltfModel | null = null;
+        startTestScene(store, 'Level', () => {
+            source = useLoadGltf({ src: 'model.gltf' });
+            placed = createModel({ model: source, visible: false });
+            return createScene();
+        });
+        await whenLoaded(source as unknown as TGltfModel);
+
+        expect(placed!.visible).toBe(false);
+        expect(kinds(store)).toEqual([]);
+        fake.restore();
+    });
+
     it('builds straight away when the file was already here', async () => {
         const fake = served();
         const { store } = createTestGame();

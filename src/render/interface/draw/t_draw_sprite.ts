@@ -88,6 +88,12 @@ export type TDrawSprite = {
      */
     readonly distanceField?: boolean;
     /**
+     * How it lands on what is behind it. `'alpha'` (omitted) covers it as far as its alpha says;
+     * `'additive'` adds its colour, so it can only brighten: glows, flashes, beams of light. Two
+     * additive sprites over each other are brighter than one.
+     */
+    readonly blend?: 'alpha' | 'additive';
+    /**
      * An effect of its own, or nothing for the built-in shader.
      *
      * Only the shader half: a sprite's picture and colour are its own and are already above. Two

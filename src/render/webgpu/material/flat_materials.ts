@@ -1,6 +1,7 @@
 
 import { buildUniformLayout, writeUniformValues } from '../../shared/material_uniforms';
 import { FLAT_DEPTH } from '../frame/depth';
+import { ADDITIVE_BLEND, ALPHA_BLEND } from '../frame/blend';
 import type { TDrawShader } from '../../interface/draw/t_draw_material';
 import type { TUniformLayout } from '../../shared/material_uniforms';
 import type { TUniformSignature, TUniformValues } from '../../../materials';
@@ -105,7 +106,7 @@ export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) 
         capacity = size;
     };
 
-    const build = (material: TDrawShader): TCompiled => {
+    const build = (material: TDrawShader, additive: boolean): TCompiled => {
         const layout = buildUniformLayout(material.uniformSig ?? {});
         const source = material.fragment as string;
 
@@ -148,10 +149,7 @@ export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) 
                 entryPoint: 'fs',
                 targets: [{
                     format: kind.format,
-                    blend: {
-                        color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-                        alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-                    },
+                    blend: additive ? ADDITIVE_BLEND : ALPHA_BLEND,
                 }],
             },
             primitive: { topology: kind.topology },
@@ -192,12 +190,15 @@ export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) 
          *
          * A material with no WGSL of its own never reaches here: the caller checks that first,
          * because that is the ordinary case and it should cost nothing.
+         *
+         * How it blends is fixed in the pipeline, so the same effect adding light is a second compile,
+         * made the first time a sprite asks for it.
          */
-        get: (material: TDrawShader): TCompiled => {
-            const key = `${JSON.stringify(material.uniformSig ?? {})} ${material.fragment ?? ''}`;
+        get: (material: TDrawShader, additive = false): TCompiled => {
+            const key = `${additive ? '+' : ''}${JSON.stringify(material.uniformSig ?? {})} ${material.fragment ?? ''}`;
             let entry = compiled.get(key);
             if (entry === undefined) {
-                entry = build(material);
+                entry = build(material, additive);
                 compiled.set(key, entry);
             }
             return entry;

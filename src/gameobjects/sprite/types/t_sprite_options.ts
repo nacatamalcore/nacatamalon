@@ -90,6 +90,13 @@ export type TSpriteOptions = {
      */
     smooth?: boolean;
     /**
+     * How it lands on what is behind it. `'alpha'` (the default) covers it as far as its alpha says.
+     * `'additive'` adds its colour instead, so it can only brighten: a halo, a flash, a beam of
+     * light, a lamp at night. Two additive sprites over each other are brighter than one. Can be
+     * changed any frame.
+     */
+    blend?: 'alpha' | 'additive';
+    /**
      * Which sprites it is drawn in front of, within its own scene: higher numbers go on top, and
      * negatives are allowed. Sprites with the same number keep the order they were created in.
      * Default `0`. It can be changed at any time and takes effect on the next frame drawn.

@@ -1,3 +1,4 @@
+import { ADDITIVE_BLEND, ALPHA_BLEND } from '../frame/blend';
 import { DEPTH_FORMAT, FLAT_DEPTH } from '../frame/depth';
 import { PARTICLE_3D_OFFSET, PARTICLE_FLOATS } from '../../shared/particle_instance';
 import { PARTICLES_SHADER } from './particles_shader';
@@ -9,28 +10,6 @@ import type { TParticleBlend } from '../../../loaders/particles';
  * How many a frame can hold before the buffer has to grow.
  */
 const INITIAL_CAPACITY = 512;
-
-/**
- * Straight alpha, which is what smoke and dust want: a particle covers what is behind it.
- */
-const ALPHA_BLEND: GPUBlendState = {
-    color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-    alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-};
-
-/**
- * Adding light, which is the only way fire and sparks read as bright: two embers over each other
- * should be brighter than one, and under alpha the second is merely nearer.
- *
- * The **alpha channel is left alone** (`zero / one`) rather than added like the colour. Adding it
- * too would drive the opacity of the picture being drawn into past one, and a screen-wide effect
- * reading that picture afterwards would find it half transparent. With post-processing already in
- * the engine, that is not a hypothetical.
- */
-const ADDITIVE_BLEND: GPUBlendState = {
-    color: { srcFactor: 'src-alpha', dstFactor: 'one', operation: 'add' },
-    alpha: { srcFactor: 'zero', dstFactor: 'one', operation: 'add' },
-};
 
 /**
  * What the card reads per particle: nine numbers in a run of twelve.

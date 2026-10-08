@@ -32,6 +32,8 @@ const fakeGl = nothing() as WebGL2RenderingContext;
 const webgpuPipeline = (): TWebGPUSpritePipeline => ({
     pipeline: nothing() as GPURenderPipeline,
     distanceFieldPipeline: nothing() as GPURenderPipeline,
+    additivePipeline: nothing() as GPURenderPipeline,
+    additiveDistanceFieldPipeline: nothing() as GPURenderPipeline,
     layouts: nothing() as TWebGPUSpritePipeline['layouts'],
     materials: nothing() as TWebGPUSpritePipeline['materials'],
     distanceFieldMaterials: nothing() as TWebGPUSpritePipeline['materials'],

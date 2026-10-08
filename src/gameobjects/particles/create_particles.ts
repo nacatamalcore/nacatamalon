@@ -4,11 +4,14 @@ import { getColor } from '../../color';
 import { openParticleState, wrongDimension } from './particle_state';
 import { trackDrawableOwner } from '../../box';
 import type { TParticles } from './types/t_particles';
+import { fileFromEffect } from '../../loaders/particles/file_from_effect';
+import type { TParticlesEffect } from '../../loaders/particles/types/t_particles_effect';
 import type { TParticlesFile } from '../../loaders/particles/types/t_particles_file';
 import type { TParticlesOptions } from './types/t_particles_options';
 
 /**
- * The effect the options ask for. A name nothing was loaded under is a typo, never "no effect".
+ * The effect the options ask for: a loaded file, the name one was loaded under, or an effect written
+ * in code. A name nothing was loaded under is a typo, never "no effect".
  *
  * Also refuses a file already known to be of the other dimension, while the mistake is still on the
  * line that made it. One that has not landed yet cannot be told apart, and is said when it lands.
@@ -18,13 +21,20 @@ import type { TParticlesOptions } from './types/t_particles_options';
  * @author Francisco Pereira Alvarado
  */
 export const resolveEffect = (
-    effect: TParticlesFile | string,
+    effect: TParticlesFile | TParticlesEffect | string,
     kind: 'particles2d' | 'particles3d',
     caller: string,
 ): TParticlesFile => {
     let found: TParticlesFile | undefined;
-    if (typeof effect !== 'string') {
-        found = effect;
+    if (typeof effect === 'object' && effect !== null && (effect as { type?: unknown }).type === 'particles-file') {
+        found = effect as TParticlesFile;
+    } else if (typeof effect === 'object' && effect !== null) {
+        // Written in code: read on the spot, so a mistake in it is reported on the line that made it.
+        const store = getActiveGame();
+        if (store === null) {
+            throw new Error(`[NacatamalOn] ${caller}: call it inside a scene body.`);
+        }
+        found = fileFromEffect(store, effect as TParticlesEffect);
     } else {
         found = getActiveGame()?.get('assets').particles.get(effect);
         if (found === undefined) {

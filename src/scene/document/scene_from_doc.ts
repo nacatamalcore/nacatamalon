@@ -304,6 +304,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                 ...(component.flipX !== undefined ? { flipX: component.flipX } : {}),
                 ...(component.flipY !== undefined ? { flipY: component.flipY } : {}),
                 ...(component.smooth !== undefined ? { smooth: component.smooth } : {}),
+                ...(component.blend !== undefined ? { blend: component.blend } : {}),
                 ...(component.visible !== undefined ? { visible: component.visible } : {}),
                 ...(component.zIndex !== undefined ? { zIndex: component.zIndex } : {}),
                 ...(component.material !== undefined ? { material: buildMaterial(component.material) } : {}),
