@@ -14,11 +14,13 @@ export type { TSpriteTexture, TSpriteTextureSees, TSpriteTextureOptions } from '
 // with no image files and no page, the same in the browser, on the native runtime and in a test.
 export {
     createPixels, setPixel, getPixel, fillRect, drawLine, fillCircle, drawCircle, blitPixels, mapPixels,
-    fillGradient, fillNoise, fillChecker,
+    fillGradient, fillNoise, fillChecker, clonePixels, swapColors,
 } from './pixels';
 export type { TPixels, TPixelRegion, TFillGradientOptions, TFillNoiseOptions } from './pixels';
 export { createPixelTexture, updatePixelTexture } from './gameobjects/pixel_texture';
-export type { TPixelTextureOptions } from './gameobjects/pixel_texture';
+export type { TPixelTextureOptions, TPixelPaint } from './gameobjects/pixel_texture';
+export type { TLoadedPixels } from './loaders/pixels';
+export type { TUseLoadPixelsOptions } from './hooks';
 export type { TModel, TModelOptions } from './gameobjects/model';
 export { MAX_LIGHTS } from './light';
 export type { TLight, TDirectionalLight, TPointLight, TSpotLight, TAmbientLight, TLightOptionsBase } from './light';
@@ -61,7 +63,7 @@ export { useScript, provide, useApi, useEvent } from './hooks';
 export { registerScript } from './scripts';
 export type { TScriptFn, TScriptProps, TScriptField, TScriptOptions, TScriptRequirement, TScriptAttachment } from './scripts';
 export type { TDataRecord, TDataSetter, TWatchDep } from './hooks';
-export { useUpdate, useLoadTexture, useLoadAtlas, useLoader, useScene, useSceneUnmount, useSpawn, useSelf, useKeyboard, useGame, useSpriteAnimation, getSpriteAnimation, useSkeletalAnimation, useTween, useTimer, useCamera2d, useScreenSpace, usePointer, useGamepad, useActions, useAction, useVector, useInputMap, useRandom, useSignal, useStore, useStoreLink, usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d, useLoadFont, useLoadGltf, useLoadShader, useLoadPalette, useLoadLut, useLoadParticles, useLoadPack, useLoadAudio, useSound, useAudio, useMusic, useAudioListener, usePostProcess, useParticleCollider2d, useParticleCollider3d } from './hooks';
+export { useUpdate, useLoadTexture, useLoadAtlas, useLoader, useScene, useSceneUnmount, useSpawn, useSelf, useKeyboard, useGame, useSpriteAnimation, getSpriteAnimation, useSkeletalAnimation, useTween, useTimer, useCamera2d, useScreenSpace, usePointer, useGamepad, useActions, useAction, useVector, useInputMap, useRandom, useSignal, useStore, useStoreLink, usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d, useLoadFont, useLoadGltf, useLoadShader, useLoadPalette, useLoadLut, useLoadParticles, useLoadPack, useLoadAudio, useLoadPixels, useSound, useAudio, useMusic, useAudioListener, usePostProcess, useParticleCollider2d, useParticleCollider3d } from './hooks';
 export { createMaterial } from './gameobjects/material';
 // Lines in space: the debug helpers (an axis gizmo, a floor grid) and any lines a game wants to draw.
 export { useHelperLines, useHelperAxis, useHelperGrid } from './hooks';

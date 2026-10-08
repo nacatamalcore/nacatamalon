@@ -64,6 +64,7 @@ export { resolveLayerOrder, TILE_LAYER_BANDS } from '../loaders';
 export { serializePaletteDoc, emptyPaletteDoc } from '../loaders/palette';
 // Saving a picture painted in code as a file, for a build script or a tool: no page needed.
 export { encodePng } from '../pixels/encode_png';
+export { decodePng } from '../pixels/decode_png';
 
 // The effects' tooling: saving one and starting one, the footprint and reach a tool draws around an
 // emitter, and the curves its gradient editor has to draw exactly as the particles are baked.

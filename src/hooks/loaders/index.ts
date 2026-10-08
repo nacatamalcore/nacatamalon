@@ -21,3 +21,5 @@ export type { TUseLoadShaderOptions } from './use_load_shader';
 export type { TUseLoadPaletteOptions } from './use_load_palette';
 export type { TUseLoadLutOptions } from './use_load_lut';
 export type { TUseLoadParticlesOptions } from './use_load_particles';
+export { useLoadPixels } from './use_load_pixels';
+export type { TUseLoadPixelsOptions } from './use_load_pixels';

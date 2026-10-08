@@ -7,6 +7,7 @@ import type { TAudioClip, TLoadedAtlas, TFont, TTexture, TGltfModel } from '../.
 import type { TShader } from '../../loaders/shader/types/t_shader';
 import type { TPalette } from '../../loaders/palette/types/t_palette';
 import type { TLut } from '../../loaders/lut/types/t_lut';
+import type { TLoadedPixels } from '../../loaders/pixels/types/t_loaded_pixels';
 import type { TLoadedPack } from '../../loaders/pack/types/t_loaded_pack';
 import type { TPostEffect } from '../../post/types/t_post_effect';
 import type { TTransitionState } from '../../transition/types/t_transition_state';
@@ -267,6 +268,10 @@ export type TRuntimeState = {
          * Packs, so two scenes placing the same one read its manifest and documents once.
          */
         packs: Map<string, TLoadedPack>;
+        /**
+         * Picture files loaded as pixels, so two scenes processing the same one fetch and decode it once.
+         */
+        pixels: Map<string, TLoadedPixels>;
     };
     /**
      * The full-screen effects, in the order they run.
