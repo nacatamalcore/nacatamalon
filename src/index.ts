@@ -174,7 +174,7 @@ export { TILEMAP_FORMAT, parseTilemapDoc } from './loaders';
 export type { TSpriteAtlas, TSpriteAtlasOptions } from './atlas';
 export type { TCamera2d, TCamera2dOptions, TCamera3d, TCamera3dOptions } from './camera';
 export type { TFog, TFogOptions } from './fog';
-export type { TKeyboard, TKeyName, TPointerInfo, TPointerHandle, TPointerListener, TPointerWheelInfo, TPointerWheelListener, TSpriteEvents } from './input';
+export type { TKeyboard, TKeyName, TPointerInfo, TPointerHandle, TPointerListener, TPointerWheelInfo, TPointerWheelListener, TPointerLockOptions, TSpriteEvents } from './input';
 export type { TGamepad, TGamepadAxisName, TGamepadButtonName, TGamepadInfo, TGamepadListener, TGamepadTarget, TRumbleOptions, TUseGamepadOptions } from './input';
 export type { TAction, TActionBinding, TActionCaptureOptions, TActionDef, TActionDevice, TActionMap, TActionName, TActionOverrides, TActionPersist, TActionsHandle, TInputMapHandle } from './input';
 export { GAMEPAD_AXES, GAMEPAD_AXIS_LABELS, GAMEPAD_BUTTONS, GAMEPAD_BUTTON_LABELS, gamepadAxisDirectionLabel, normalizeActionMap, bindingKey, describeBinding, DEFAULT_ACTION_DEADZONE, DEFAULT_ACTION_PRESS } from './input';

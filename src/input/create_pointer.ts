@@ -10,14 +10,29 @@ import type { TText } from '../gameobjects/text/types/t_text';
 import type { TNineSlice } from '../gameobjects/nine_slice/types/t_nine_slice';
 import type { TRuntimeStore } from '../store';
 import type { TListeningSprite, TPointerTarget } from './topmost_listening';
-import type { TPointerInfo, TPointerKind, TPointerListener, TPointerSource, TPointerWheelListener } from './types/t_pointer';
+import type { TPointerInfo, TPointerKind, TPointerListener, TPointerLockOptions, TPointerSource, TPointerWheelListener } from './types/t_pointer';
 import type { TSpriteEvents } from './types/t_sprite_events';
 
 /**
  * One event as the DOM left it, already in the game's pixels. `leave` is the pointer leaving the
- * canvas. The wheel's turn rides along, and is nothing for every other kind.
+ * canvas. The wheel's turn rides along, and is nothing for every other kind; so does how far the
+ * mouse moved, in pixels of the page, which is nothing for anything but a move.
  */
-type TQueuedEvent = { kind: TPointerKind | 'leave'; screenX: number; screenY: number; button: number; deltaX: number; deltaY: number };
+type TQueuedEvent = {
+    kind: TPointerKind | 'leave';
+    screenX: number;
+    screenY: number;
+    button: number;
+    deltaX: number;
+    deltaY: number;
+    movementX: number;
+    movementY: number;
+};
+
+/**
+ * How long a browser that answers a capture with an event rather than a promise is given to answer.
+ */
+const LOCK_ANSWER_MS = 1000;
 
 /**
  * One listener and who registered it.
@@ -84,13 +99,26 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
 
     const enqueue = (kind: TQueuedEvent['kind'], event: PointerEvent): void => {
         const { x, y } = toScreen(event);
-        const queued: TQueuedEvent = { kind, screenX: x, screenY: y, button: event.button ?? 0, deltaX: 0, deltaY: 0 };
+        const moved = kind === 'move';
+        const queued: TQueuedEvent = {
+            kind,
+            screenX: x,
+            screenY: y,
+            button: event.button ?? 0,
+            deltaX: 0,
+            deltaY: 0,
+            movementX: moved ? event.movementX ?? 0 : 0,
+            movementY: moved ? event.movementY ?? 0 : 0,
+        };
 
         // Many moves can arrive between two frames and only the last position matters, so a move
-        // replaces a move right before it. Presses and releases are never merged: a quick click
-        // is a down and an up, and both have to arrive.
+        // replaces a move right before it; how far it moved is added, as the wheel's turns are,
+        // or a quick flick of a captured mouse would lose most of itself. Presses and releases
+        // are never merged: a quick click is a down and an up, and both have to arrive.
         const last = queue[queue.length - 1];
-        if (kind === 'move' && last?.kind === 'move') {
+        if (moved && last?.kind === 'move') {
+            queued.movementX += last.movementX;
+            queued.movementY += last.movementY;
             queue[queue.length - 1] = queued;
             return;
         }
@@ -129,7 +157,7 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
             queue[queue.length - 1] = { ...last, screenX: x, screenY: y, deltaX: last.deltaX + deltaX, deltaY: last.deltaY + deltaY };
             return;
         }
-        queue.push({ kind: 'wheel', screenX: x, screenY: y, button: 0, deltaX, deltaY });
+        queue.push({ kind: 'wheel', screenX: x, screenY: y, button: 0, deltaX, deltaY, movementX: 0, movementY: 0 });
     };
 
     canvas.addEventListener('pointerdown', onDown);
@@ -146,11 +174,91 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
     }
 
     /**
+     * How far the event being handed on moved the mouse, for every listener and sprite that hears it.
+     */
+    const movement = { x: 0, y: 0 };
+
+    /**
      * What a listener belonging to `box` is told: the world through the camera of its own scene.
      */
     const infoFor = (box: TBox, screenX: number, screenY: number, button: number, hits: Array<TSprite | TText | TNineSlice>): TPointerInfo => {
         const world = unapplyView2d(rootOf(box).camera2d, { x: screenX, y: screenY });
-        return { screenX, screenY, worldX: world.x, worldY: world.y, button, target: hits[0] ?? null, hits };
+        return {
+            screenX,
+            screenY,
+            worldX: world.x,
+            worldY: world.y,
+            movementX: movement.x,
+            movementY: movement.y,
+            button,
+            target: hits[0] ?? null,
+            hits,
+        };
+    };
+
+    /**
+     * Whether this canvas has the mouse. No page (a test, the native runtime) is never captured.
+     */
+    const lockedHere = (): boolean => typeof document !== 'undefined' && document.pointerLockElement === canvas;
+
+    /**
+     * Asks for the capture once and waits for the answer: a promise in most browsers, the
+     * `pointerlockchange` or `pointerlockerror` event in the ones that return nothing.
+     */
+    const askForLock = async (raw: boolean): Promise<void> => {
+        const asked = raw
+            ? canvas.requestPointerLock({ unadjustedMovement: true })
+            : canvas.requestPointerLock();
+        if (asked instanceof Promise) {
+            await asked;
+            return;
+        }
+        await new Promise<void>((resolve, reject) => {
+            const done = (granted: boolean): void => {
+                document.removeEventListener('pointerlockchange', onChange);
+                document.removeEventListener('pointerlockerror', onError);
+                clearTimeout(timer);
+                if (granted) resolve();
+                else reject(new Error('refused'));
+            };
+            const onChange = (): void => done(lockedHere());
+            const onError = (): void => done(false);
+            const timer = setTimeout(() => done(lockedHere()), LOCK_ANSWER_MS);
+            document.addEventListener('pointerlockchange', onChange);
+            document.addEventListener('pointerlockerror', onError);
+        });
+    };
+
+    const lock = async (options: TPointerLockOptions = {}): Promise<boolean> => {
+        if (lockedHere()) {
+            return true;
+        }
+        if (typeof document === 'undefined' || typeof canvas.requestPointerLock !== 'function') {
+            // A touch screen, the native runtime, a test: there is no mouse to capture.
+            return false;
+        }
+        try {
+            await askForLock(options.raw === true);
+        } catch {
+            // Refused. Asked for raw movement, that may be all the browser refused, so it is asked
+            // once more without; anything else is the player's or the page's no, and the answer is
+            // `false`, never an exception in the game.
+            if (options.raw !== true) {
+                return false;
+            }
+            try {
+                await askForLock(false);
+            } catch {
+                return false;
+            }
+        }
+        return lockedHere();
+    };
+
+    const unlock = (): void => {
+        if (lockedHere()) {
+            document.exitPointerLock();
+        }
     };
 
     /**
@@ -296,6 +404,8 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
 
             for (const event of events) {
                 const { kind, screenX, screenY, button, deltaX, deltaY } = event;
+                movement.x = event.movementX;
+                movement.y = event.movementY;
 
                 if (kind === 'leave') {
                     lastPosition = null;
@@ -367,10 +477,18 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
                 pressed = null;
             }
 
+            // Hover is worked out with the pointer still, so nothing it fires moved the mouse.
+            movement.x = 0;
+            movement.y = 0;
             refreshHover(store);
         },
 
+        lock,
+        unlock,
+        isLocked: lockedHere,
+
         destroy: () => {
+            unlock();
             canvas.removeEventListener('pointerdown', onDown);
             canvas.removeEventListener('pointerup', onUp);
             canvas.removeEventListener('pointermove', onMove);

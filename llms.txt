@@ -86,6 +86,10 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   or `useLoadBitmapFont({ json, atlas })` for a bitmap font (an image plus a JSON of glyph positions).
   A font loaded with a `key` in an earlier scene is named by it, `createText({ text, font: 'title' })`,
   with no loader in that scene.
+- **Mouse look** (first person): `usePointer().lock()` captures the mouse, but only when called from
+  a click or key press (`pointer.onDown(() => { void pointer.lock(); })`); then turn the camera with
+  `movementX`/`movementY` from `onMove`, which keep changing while `screenX`/`screenY` do not.
+  `isLocked()` turns `false` when the player presses Esc.
 - **Colours** are `{ r, g, b, a }`, each 0 to 1. `getColor` takes `'#ff6b1a'`, `0xff6b1a`, a CSS
   name (`'red'`) or any CSS colour (`'rgba(255, 0, 0, 0.5)'`, `'hsl(30 100% 50%)'`).
 - **Angles** are radians.

@@ -40,3 +40,10 @@ Nothing yet.
   name them. A key nothing was loaded under throws, naming it.
 - **`"type": "font"` in scene documents and packs**: `{ "type": "font", "key", "src", "size"? }`.
 - Types `TFont`, `TFontMeta` and `TUseLoadFontOptions`.
+- **Mouse capture.** `usePointer()` gains `lock({ raw? })`, `unlock()` and `isLocked()`, to capture
+  the mouse for a first-person camera: the cursor hides and the mouse moves without stopping at the
+  game's edge. `lock()` answers `false` instead of throwing when the browser refuses (it must be
+  called from a click or a key press). Esc gives the mouse back, and `isLocked()` follows it.
+- **`movementX` and `movementY`** on every pointer event: how far the mouse moved, in pixels of the
+  page, added up over the frame. What a mouse-look camera reads, captured or not. Type
+  `TPointerLockOptions`.

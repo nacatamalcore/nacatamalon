@@ -27,7 +27,13 @@ import type { TPointerHandle } from '../../input';
  * `deltaY`, and `deltaX` for sideways. While anything listens, the wheel over the game stops
  * scrolling the page.
  *
- * @returns The pointer: `onDown`, `onUp`, `onMove`, `onWheel` and `pick`.
+ * `lock()` captures the mouse, for a first-person camera: the cursor disappears and moving the
+ * mouse only changes `movementX`/`movementY`, as far as the hand goes, never stopping at the edge of
+ * the game. Call it from a click or a key press, which is the only time the browser allows it; Esc
+ * gives the mouse back to the player, and `isLocked()` says whether the game has it.
+ *
+ * @returns The pointer: `onDown`, `onUp`, `onMove`, `onWheel`, `pick`, and `lock`, `unlock` and
+ * `isLocked`.
  *
  * @example
  * ```ts
@@ -45,6 +51,28 @@ import type { TPointerHandle } from '../../input';
  *     const camera = useCamera2d();
  *     pointer.onWheel(({ deltaY }) => {
  *         camera.zoom = Math.min(4, Math.max(0.5, camera.zoom * Math.exp(-deltaY * 0.001)));
+ *     });
+ *
+ *     return createScene();
+ * };
+ * ```
+ *
+ * @example
+ * ```ts
+ * // A first-person camera: click to capture the mouse, move it to look around, Esc to let go.
+ * export const Room: TSceneFn = () => {
+ *     const camera = useCamera3d({ fov: 70, y: 1.6 });
+ *     const pointer = usePointer();
+ *
+ *     pointer.onDown(() => {
+ *         void pointer.lock();
+ *     });
+ *     pointer.onMove(({ movementX, movementY }) => {
+ *         if (!pointer.isLocked()) {
+ *             return;
+ *         }
+ *         camera.transform.rotationY -= movementX * 0.003;
+ *         camera.transform.rotationX = clamp(camera.transform.rotationX - movementY * 0.003, -1.4, 1.4);
  *     });
  *
  *     return createScene();
@@ -70,5 +98,8 @@ export const usePointer = (): TPointerHandle => {
         onMove: (listener) => pointer.on('move', box, listener),
         onWheel: (listener) => pointer.on('wheel', box, listener),
         pick: (screenX, screenY) => pickTargets(store, screenX, screenY),
+        lock: (options) => pointer.lock(options),
+        unlock: () => pointer.unlock(),
+        isLocked: () => pointer.isLocked(),
     };
 };

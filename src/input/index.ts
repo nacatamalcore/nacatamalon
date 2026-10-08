@@ -4,7 +4,7 @@ export { pickTargets } from './pick_targets';
 
 export type { TKeyboard, TKeyboardSource } from './types/t_keyboard';
 export type { TKeyName } from './types/t_key_name';
-export type { TPointerInfo, TPointerListener, TPointerWheelInfo, TPointerWheelListener, TPointerHandle, TPointerSource, TPointerKind } from './types/t_pointer';
+export type { TPointerInfo, TPointerListener, TPointerWheelInfo, TPointerWheelListener, TPointerHandle, TPointerLockOptions, TPointerSource, TPointerKind } from './types/t_pointer';
 export type { TSpriteEvents } from './types/t_sprite_events';
 export { SPRITE_EVENT_NAMES } from './types/t_sprite_events';
 export { createGamepads, deadzoneRadial, deadzoneScalar, GAMEPAD_AXES, GAMEPAD_AXIS_LABELS, GAMEPAD_BUTTONS, GAMEPAD_BUTTON_LABELS, gamepadAxisDirectionLabel, gamepadAxisIndex, gamepadButtonIndex } from './gamepad';
