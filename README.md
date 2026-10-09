@@ -1,9 +1,44 @@
+<p align="center">
+    <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="screenshot/logo-dark.png">
+        <img src="screenshot/logo-light.png" alt="NacatamalOn" width="360">
+    </picture>
+</p>
+
 # nacatamalon
 
 **Make games that look like 1997.**
 
 A 2D and 3D game engine for the web, written in TypeScript, on WebGPU with a
 WebGL2 fallback.
+
+<p align="center">
+    <a href="https://nacatamalon.com/showcase"><img src="screenshot/sunset-drive.jpg" alt="Sunset Drive, an arcade racer made with nacatamalon" width="640"></a>
+    <br>
+    <sub><b>Sunset Drive</b>, an arcade racer made with nacatamalon. Play it at <a href="https://nacatamalon.com/showcase">nacatamalon.com/showcase</a>.</sub>
+</p>
+
+<p align="center">
+<table>
+    <tr>
+        <td align="center"><a href="https://nacatamalon.com/examples/campfire"><img src="screenshot/campfire.webp" alt="Campfire" width="260"></a><br><sub>Campfire</sub></td>
+        <td align="center"><a href="https://nacatamalon.com/examples/storm"><img src="screenshot/storm.webp" alt="Storm" width="260"></a><br><sub>Storm</sub></td>
+        <td align="center"><a href="https://nacatamalon.com/examples/mode-7"><img src="screenshot/mode-7.webp" alt="Mode 7" width="260"></a><br><sub>Mode 7</sub></td>
+    </tr>
+    <tr>
+        <td align="center"><a href="https://nacatamalon.com/examples/painted-textures-3d"><img src="screenshot/painted-textures-3d.webp" alt="Painted textures" width="260"></a><br><sub>Painted textures</sub></td>
+        <td align="center"><a href="https://nacatamalon.com/examples/fog"><img src="screenshot/fog.webp" alt="Fog" width="260"></a><br><sub>Fog</sub></td>
+        <td align="center"><a href="https://nacatamalon.com/examples/game-to-mesh-screen"><img src="screenshot/game-to-mesh-screen.webp" alt="A game on a 3D screen" width="260"></a><br><sub>A game on a 3D screen</sub></td>
+    </tr>
+    <tr>
+        <td align="center"><a href="https://nacatamalon.com/examples/boids"><img src="screenshot/boids.webp" alt="Boids" width="260"></a><br><sub>Boids</sub></td>
+        <td align="center"><a href="https://nacatamalon.com/examples/ripples"><img src="screenshot/ripples.webp" alt="Ripples" width="260"></a><br><sub>Ripples</sub></td>
+        <td align="center"><a href="https://nacatamalon.com/examples/doom-fire"><img src="screenshot/doom-fire.webp" alt="Doom fire" width="260"></a><br><sub>Doom fire</sub></td>
+    </tr>
+</table>
+</p>
+
+<p align="center"><sub>Every one of these runs in the browser, with its code beside it: <a href="https://nacatamalon.com/examples">nacatamalon.com/examples</a>.</sub></p>
 
 ---
 

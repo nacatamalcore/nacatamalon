@@ -3,6 +3,27 @@
 What changed in the current release of `nacatamalon`, and what is waiting for the next one. Earlier
 releases are in [changelog/](./changelog/), one file each.
 
+## Unreleased (0.1.9)
+
+### Added
+
+- **`nacatamalon/react`**, a new door for a game inside a React page, with the HUD and menus written
+  as React components drawn over the canvas. `<Game options scenes>` puts the game in the page and
+  draws its children over it, full screen included; `useGameStore(store, selector)` reads a store and
+  renders again when the selected value changes; `useGame()` hands a component the game's handle
+  (`null` while it starts); `useSignal(signal, handler)` listens from a component. It works under
+  `StrictMode`. `react` (18 or later) is an optional peer dependency: a game that never imports this
+  door never needs it. Type `TGameProps`.
+- `useGameStore` warns once when a selector picks an object out of the state (it never looks
+  changed, because the state is changed in place) or builds a new one on every read.
+- **Browser only for now**: the native runtime shows only what the engine draws, so a React HUD is not
+  on screen in a desktop build. `<Game>` says so in the console when it runs there.
+
+### Changed
+
+- `useGame`, `useSignal` and `useStore` called outside a scene now say, in their error, what to
+  import instead from a React component.
+
 ## 0.1.8 — 2026-10-08
 
 ### Added
