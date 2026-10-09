@@ -80,6 +80,9 @@ const besideIt = (name: string): void => {
     symlinkSync(installed(name), target);
 };
 Object.keys(pkg.dependencies ?? {}).forEach(besideIt);
+// And React with its types, which only `nacatamalon/react` reaches for: a project using that door
+// installs them itself, and the doors check below compiles it the way such a project would.
+['react', '@types/react'].forEach(besideIt);
 
 // 2. A game, in a project that holds nothing but it and the package.
 mkdirSync(join(work, 'src'));

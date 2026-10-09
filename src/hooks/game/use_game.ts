@@ -41,7 +41,7 @@ import { getActiveGame } from '../../store';
 export const useGame = (): TGameHandle => {
     const store = getActiveGame();
     if (store === null) {
-        throw new Error('[NacatamalOn] useGame: call it inside a scene body.');
+        throw new Error('[NacatamalOn] useGame: call it inside a scene body. In a React component, import useGame from \'nacatamalon/react\' instead.');
     }
     return createGameHandle(store);
 };

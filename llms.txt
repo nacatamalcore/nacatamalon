@@ -153,6 +153,38 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   The handle's `setLayers(layer, collidesWith)` changes what it collides with, and its `destroy()`
   removes the body and keeps the object. `destroy(object)` removes the object's body too.
 
+## React
+
+`nacatamalon/react` puts a game in a React page, with the HUD and menus written as React components
+drawn over the canvas. The game itself is still scenes; React never goes inside a scene.
+
+```tsx
+import { Game, useGame, useGameStore, useSignal } from 'nacatamalon/react';
+
+const Hud = () => {
+    const hunger = useGameStore(petStore, (s) => s.hunger); // a value; the component renders again
+    const game = useGame(); // TGameHandle, or null while the renderer starts
+    return <button onClick={() => game?.pause('menu')}>{Math.round(hunger)}</button>;
+};
+
+const App = () => (
+    <Game options={{ width: 320, height: 224 }} scenes={{ Level }}>
+        <Hud /> {/* position it with position: absolute */}
+    </Game>
+);
+```
+
+- **Two sides, two rules.** A scene body runs once: in it, `useStore(store, selector, handler)` from
+  `nacatamalon` runs a handler. A component renders again: in it, `useGameStore(store, selector)`
+  from `nacatamalon/react` returns the value. `useGame` and `useSignal` have the same names on both
+  sides; import them from `nacatamalon` in a scene and from `nacatamalon/react` in a component.
+- **Select values, not objects**: the state is changed in place, so `(s) => s.items` never looks
+  changed. `(s) => s.items.length` does.
+- `<Game>` reads `options` and `scenes` once. Give it a new `key` to start a new game.
+- **Browser only**: the native (desktop) runtime shows only what the engine draws, so a React HUD is
+  not on screen there. A game meant to ship natively builds its HUD with `createText`, sprites and
+  `createNineSlice`.
+
 ## Where things are (search llms-full.txt for each name)
 
 - **Game and scenes**: `createGame`, `createScene`, `useScene`, `useGame`, `useSpawn`, `useSelf`, `destroy`, `useSceneUnmount`.
@@ -170,5 +202,7 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
 - **2D physics**: `installPhysics2d` from `nacatamalon/physics2d`; `usePhysicsWorld2d` and `usePhysicsBody2d` from `nacatamalon`.
 - **3D physics**: `installPhysics3d` and `useCharacterBody` from `nacatamalon/physics3d`; `usePhysicsWorld3d` and `usePhysicsBody3d` from `nacatamalon`.
 - **Saved scenes**: `sceneFromDoc`, `parseSceneDoc`.
+
+- **React**: `Game`, `useGame`, `useGameStore`, `useSignal` from `nacatamalon/react`.
 
 `nacatamalon/authoring` and `nacatamalon/extend` are for tools and engine extensions; a game never needs them.

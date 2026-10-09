@@ -30,7 +30,7 @@ import type { TGameSignal, TSignalHandler } from '../../signal';
 export const useSignal = <T>(signal: TGameSignal<T>, handler: TSignalHandler<T>): void => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useSignal: call it inside a scene body, not from a timer or a callback.');
+        throw new Error('[NacatamalOn] useSignal: call it inside a scene body, not from a timer or a callback. In a React component, import useSignal from \'nacatamalon/react\' instead.');
     }
 
     const off = signal.connect((payload) => {
