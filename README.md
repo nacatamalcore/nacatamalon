@@ -6,7 +6,6 @@
 </p>
 
 # nacatamalon
-en
 
 **Make games that look like 1997.**
 
