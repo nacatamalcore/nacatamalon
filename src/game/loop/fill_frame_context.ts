@@ -245,7 +245,7 @@ type TWorldSeen = { models: Array<TDrawable | TDrawSprite>; camera: TCamera3d | 
  * What a tool asks the world to be seen through: the screen's cameras and kinds, or a capture's, or
  * a preview's. `null` in each is the scene's own.
  */
-type TSeenThrough = Pick<TRuntimeState['viewport'], 'camera3d' | 'camera2d' | 'layers'>;
+type TSeenThrough = Pick<TRuntimeState['viewport'], 'camera3d' | 'camera2d' | 'layers'> & { screen2d?: TCamera2d | null };
 
 const gatherTree = (
     root: TBox,
@@ -268,10 +268,18 @@ const gatherTree = (
         cameras.push(camera2d);
     }
 
+    // What is pinned to the screen goes through the tool's camera for it, when it has one.
+    let screenCamera = -1;
+    const screen2d = viewport?.screen2d ?? null;
+    if (screen2d !== null) {
+        screenCamera = cameras.length;
+        cameras.push(screen2d);
+    }
+
     const start = drawables.length;
     colliders.flat.length = 0;
     colliders.deep.length = 0;
-    collectDrawables(root, drawables as TDrawable[], cameraIndex, sceneCamera, false, null, 0, colliders, pictures);
+    collectDrawables(root, drawables as TDrawable[], cameraIndex, sceneCamera, false, null, 0, colliders, pictures, screenCamera);
     // A tool showing only some kinds: dropped before anything else is worked out for them, so a kind
     // nobody is looking at costs no sorting, no lamps and no particles stepped.
     const layers = viewport?.layers ?? null;

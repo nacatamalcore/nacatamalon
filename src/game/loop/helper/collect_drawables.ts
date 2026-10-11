@@ -150,6 +150,8 @@ const placeCollider = (box: TBox, world: TWorld, colliders: TSceneColliders): vo
  * @param colliders Where to note each particle collider found on the way, or `null` to skip them.
  * @param pictures Where to note each box below this one that is drawn into a picture, or `null` to
  * skip them. The walk stops at such a box: what is under it belongs to the picture, not to this view.
+ * @param screenCamera The index of the camera what is pinned to the screen is drawn through, or `-1`
+ * for screen pixels, which is what a game always has (see `TRuntimeState.viewport.screen2d`).
  *
  * Hidden boxes and hidden drawables are left out here, so nothing further down the frame has to ask
  * again: what comes out is what is drawn. Each drawable is also placed as it is collected, since
@@ -165,6 +167,7 @@ export const collectDrawables = (
     depth = 0,
     colliders: TSceneColliders | null = null,
     pictures: TBox[] | null = null,
+    screenCamera = -1,
 ): void => {
     // Before the check for hidden, because a hidden screen is a screen switched off: its picture is
     // still drawn, with nothing in it. The top of the walk is the picture's own, and is not stopped.
@@ -181,7 +184,7 @@ export const collectDrawables = (
     }
 
     const pinned = onScreen || box.screenSpace;
-    const view = pinned ? -1 : sceneCamera;
+    const view = pinned ? screenCamera : sceneCamera;
     const world = worldOfBox(parent, box, depth);
     if (colliders !== null) {
         placeCollider(box, world, colliders);
@@ -197,6 +200,6 @@ export const collectDrawables = (
         cameraIndex.push(view);
     }
     for (const child of box.children) {
-        collectDrawables(child, out, cameraIndex, sceneCamera, pinned, world, depth + 1, colliders, pictures);
+        collectDrawables(child, out, cameraIndex, sceneCamera, pinned, world, depth + 1, colliders, pictures, screenCamera);
     }
 };

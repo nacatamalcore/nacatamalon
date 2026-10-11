@@ -16,6 +16,8 @@ import type { ITexture } from '../../../render/interface';
 export type TCaptureRequest = {
     camera3d: TCamera3d | null;
     camera2d: TCamera2d | null;
+    /** What is pinned to the screen is drawn through: the tool's, unless the capture names its own camera. */
+    screen2d: TCamera2d | null;
     layers: ReadonlyArray<TDrawable['type']> | null;
     background: TColor;
     target: ITexture;

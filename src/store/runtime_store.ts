@@ -112,7 +112,7 @@ export const createRuntimeStore = (init: TRuntimeStoreInit): TRuntimeStore => {
         // Measured by the loop from its second frame on: see `TRuntimeState.stats`.
         stats: { fps: 0 },
         // Each scene's own cameras until a tool says otherwise: see `TRuntimeState.viewport`.
-        viewport: { camera3d: null, camera2d: null, layers: null, preview: null },
+        viewport: { camera3d: null, camera2d: null, screen2d: null, layers: null, preview: null },
         // Nobody has asked for a picture: see `TRuntimeState.capture`.
         capture: { request: null },
     };

@@ -57,6 +57,30 @@ export type TEditorHandle = TGameHandle & {
      */
     getViewportCamera2d(): TCamera2d | null;
     /**
+     * Draws what is pinned to the screen (a HUD, a box in screen space) through `camera` instead of
+     * in screen pixels, or in screen pixels again with `null`.
+     *
+     * For a view bigger than the game's screen, such as an editor's canvas fitted to its window
+     * (`setCanvasFit`): pinned to that canvas, a HUD would sit in its corner, small and still while
+     * the level pans and zooms under it. Through a camera that puts the game's screen where the
+     * game shows in the view, the HUD is where the player sees it, and moves with the level. Like
+     * the viewport cameras, it reaches the screen and not the pictures a scene draws into.
+     *
+     * The camera maps the screen's pixels the way a 2D camera maps the world: `transform` is the
+     * screen point at the view's top-left corner, and `zoom` how big a screen pixel is.
+     *
+     * @example
+     * ```ts
+     * // The game's screen shown at 3×, its top-left corner 120 pixels into the view.
+     * handle.setScreenCamera2d({ type: 'camera2d', id: 'editor-screen', transform: { x: -40, y: -40, rotation: 0 }, zoom: 3 });
+     * ```
+     */
+    setScreenCamera2d(camera: TCamera2d | null): void;
+    /**
+     * The camera set with `setScreenCamera2d`, or `null`.
+     */
+    getScreenCamera2d(): TCamera2d | null;
+    /**
      * Shows only these kinds of drawing on the screen, or all of them again with `null`. Nothing
      * leaves the scene: a hidden kind is simply not drawn, and comes back as it was. Like the
      * viewport cameras, it reaches the screen and not the pictures a scene draws into.

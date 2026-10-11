@@ -8,6 +8,9 @@ import { useCubeGeometry } from '../src/hooks';
 import { useCamera2d } from '../src/hooks/camera/use_camera_2d';
 import { useCamera3d } from '../src/hooks/camera/use_camera_3d';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
+import { useScreenSpace } from '../src/hooks/camera/use_screen_space';
+import { editorHandleOf, openHost } from '../src/game/handle/editor_handle_of';
+import type { TGameInstance } from '../src/game/types/t_game_instance';
 import { createCamera2d, createCamera3d } from '../src/camera';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import type { TFrameContext, TRenderPass } from '../src/render/interface';
@@ -143,5 +146,49 @@ describe('the viewport cameras', () => {
 
         const picture = frame(store).passes.find((pass) => pass.renderTarget !== undefined)!;
         expect(picture.drawables?.map((d) => d.type)).toEqual(['sprite']);
+    });
+
+    describe('the screen camera', () => {
+        // A level with a HUD pinned to the screen: the level's sprite, then the HUD's.
+        const withHud = (store: ReturnType<typeof createTestGame>['store']) => {
+            startTestScene(store, 'Level', () => {
+                createSprite({ width: 8, height: 8 });
+                useSpawn(() => {
+                    useScreenSpace();
+                    createSprite({ width: 4, height: 4 });
+                })();
+                return createScene();
+            });
+        };
+
+        it('leaves what is pinned to the screen in screen pixels until a tool sets it', () => {
+            const { store } = createTestGame();
+            withHud(store);
+            const panning = createCamera2d({ x: 40, zoom: 2 });
+            store.setState('viewport', { camera2d: panning });
+
+            const screen = screenOf(frame(store));
+            expect(screen.cameraIndex).toEqual([0, -1]);
+        });
+
+        it('draws what is pinned to the screen through it, set through the editor\'s handle', async () => {
+            const { store } = createTestGame();
+            withHud(store);
+            const instance: TGameInstance = { destroy: () => {}, on: () => () => {} };
+            openHost(instance).resolve(store);
+            const handle = await editorHandleOf(instance);
+            const panning = createCamera2d({ x: 40, zoom: 2 });
+            const hud = createCamera2d({ x: -20, y: -10, zoom: 2 });
+            handle.setViewportCamera2d(panning);
+            handle.setScreenCamera2d(hud);
+            expect(handle.getScreenCamera2d()).toBe(hud);
+
+            const screen = screenOf(frame(store));
+            expect(screen.cameras).toEqual([panning, hud]);
+            expect(screen.cameraIndex).toEqual([0, 1]);
+
+            handle.setScreenCamera2d(null);
+            expect(screenOf(frame(store)).cameraIndex).toEqual([0, -1]);
+        });
     });
 });

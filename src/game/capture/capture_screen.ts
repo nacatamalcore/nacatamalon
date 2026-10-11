@@ -42,6 +42,9 @@ export const captureScreen = async (store: TRuntimeStore, options: TCaptureOptio
                     // camera is left to each scene, which is what the frame does with no tool's camera.
                     camera3d: 'camera3d' in options ? options.camera3d ?? null : viewport.camera3d,
                     camera2d: 'camera2d' in options ? options.camera2d ?? null : viewport.camera2d,
+                    // A capture through a camera of its own is the game as that camera sees it,
+                    // its screen in screen pixels; one of the tool's view keeps the tool's screen.
+                    screen2d: 'camera2d' in options ? null : viewport.screen2d,
                     layers: 'layers' in options ? options.layers ?? null : viewport.layers,
                     background: options.background ?? store.get('config').background,
                     target,

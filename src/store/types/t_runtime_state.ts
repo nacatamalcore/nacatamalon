@@ -343,6 +343,13 @@ export type TRuntimeState = {
         camera3d: TCamera3d | null;
         camera2d: TCamera2d | null;
         /**
+         * What is pinned to the screen (a HUD, a box in screen space) is drawn through this camera
+         * instead of in screen pixels, or in screen pixels as always with `null`. For a tool whose
+         * view is bigger than the game's screen: it puts the game's screen, HUD and all, where the
+         * game shows in its view. See `TEditorHandle.setScreenCamera2d`.
+         */
+        screen2d: TCamera2d | null;
+        /**
          * The kinds of drawing the screen shows, or `null` for all of them. An editor working on the
          * flat half of a level hides the models and the other way round, without taking anything
          * out of the scene. Pictures drawn inside the level keep everything, like the cameras.

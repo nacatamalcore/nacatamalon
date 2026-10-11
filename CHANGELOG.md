@@ -12,6 +12,12 @@ releases are in [changelog/](./changelog/), one file each.
   out as a document, could not find its children with `findObject`: inside `useReady` it does. For
   something spawned later, it runs before the spawner's call returns. It runs with its object as the
   one being built, so hooks inside it belong to that object.
+- `TEditorHandle.setScreenCamera2d(camera)`: draws what is pinned to the screen (a HUD, a box in
+  screen space) through a camera instead of in screen pixels, and `setScreenCamera2d(null)` puts
+  it back. For a tool whose view is bigger than the game's screen, such as an editor's canvas fitted
+  to its window: the HUD shows where the player sees it and pans and zooms with the level, instead
+  of sitting in the corner of the view. With it set, particles and lines pinned to the screen are
+  drawn too, which in screen pixels they are not.
 
 ## 0.2.0 — 2026-10-11
 
