@@ -7,6 +7,7 @@ import { watchCanvasFit } from './watch_canvas_fit';
 import type { TCanvasInstance } from './types/t_canvas_instance';
 import type { TCanvasOptions } from './types/t_canvas_options';
 import type { TCanvasScaling } from './types/t_canvas_scaling';
+import type { TCanvasFit } from './types/t_canvas_fit';
 
 /**
  * Puts a canvas on the page for a game to draw into.
@@ -28,22 +29,35 @@ export const createCanvas = (parent: TGameTarget, options: TCanvasOptions): TCan
     // The scaling full screen asks for, laid over the game's own while it lasts and dropped after:
     // the options themselves never change, so leaving full screen cannot lose them.
     let override: TCanvasScaling | null = null;
-    const effective = (): TCanvasOptions => (override === null ? current : { ...current, scaling: override });
+    // A fit a host asks for (an editor's view, see `TCanvasFit`), laid over the game's own the same
+    // way, under full screen's scaling.
+    let fit: TCanvasFit | null = null;
+    const effective = (): TCanvasOptions => {
+        const base = fit === null ? current : { ...current, ...fit };
+        return override === null ? base : { ...base, scaling: override };
+    };
     fitCanvas(canvas, current);
 
-    const reactive =
-        (current.scaling ?? 'none') !== 'none' || (current.keep ?? 'both') !== 'both' || current.pixelRatio === 'device';
-    let unwatch = reactive ? watchCanvasFit(canvas, effective) : null;
-
-    // A game at 1× never needed to watch its container, and full screen is exactly the container
-    // changing size, so it watches for as long as full screen lasts and stops after.
-    const fullscreen = createCanvasFullscreen(canvas, () => current.fullscreenScaling ?? 'integer', (next) => {
-        override = next;
-        if (override !== null && unwatch === null) unwatch = watchCanvasFit(canvas, effective);
-        if (override === null && !reactive && unwatch !== null) {
+    // Watching the container costs an observer, so it is done only while the fit in force can
+    // change with it: a game at 1× with its resolution pinned never needed to.
+    const reacts = (o: TCanvasOptions): boolean =>
+        (o.scaling ?? 'none') !== 'none' || (o.keep ?? 'both') !== 'both' || o.pixelRatio === 'device';
+    let unwatch: (() => void) | null = null;
+    const rewatch = (): void => {
+        const wants = override !== null || reacts(effective());
+        if (wants && unwatch === null) unwatch = watchCanvasFit(canvas, effective);
+        if (!wants && unwatch !== null) {
             unwatch();
             unwatch = null;
         }
+    };
+    rewatch();
+
+    // Full screen is exactly the container changing size, so the canvas watches for as long as it
+    // lasts, whatever the fit.
+    const fullscreen = createCanvasFullscreen(canvas, () => current.fullscreenScaling ?? 'integer', (next) => {
+        override = next;
+        rewatch();
         fitCanvas(canvas, effective());
     });
 
@@ -51,6 +65,11 @@ export const createCanvas = (parent: TGameTarget, options: TCanvasOptions): TCan
         id: id,
         canvas,
         fullscreen,
+        setFit: (next) => {
+            fit = next;
+            rewatch();
+            fitCanvas(canvas, effective());
+        },
         destroy: () => {
             fullscreen.destroy();
             unwatch?.();

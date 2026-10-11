@@ -194,6 +194,7 @@ export const createGame = (target: TGameTarget, game_options: TGameOptions) => {
             const runtime = createRuntimeStore({
                 canvas: screen.canvas,
                 fullscreen: screen.fullscreen,
+                setFit: screen.setFit,
                 renderer: rendererInstance,
                 config: cleanedOptions as TGameConfig,
             });

@@ -86,7 +86,7 @@ export const createRuntimeStore = (init: TRuntimeStoreInit): TRuntimeStore => {
     });
 
     const state: TRuntimeState = {
-        screen: { canvas: init.canvas, renderer: init.renderer, fullscreen: init.fullscreen ?? null },
+        screen: { canvas: init.canvas, renderer: init.renderer, fullscreen: init.fullscreen ?? null, setFit: init.setFit ?? null },
         config: init.config,
         world: { scenes: [], boxStack: [], names: new Map(), pendingDestroy: [], buildScripts: 'run' },
         loop: { destroyed: false, pausedBy: [], timeScale: 1, failure: null, step: null },

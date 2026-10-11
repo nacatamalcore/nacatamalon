@@ -3,7 +3,16 @@
 What changed in the current release of `nacatamalon`, and what is waiting for the next one. Earlier
 releases are in [changelog/](./changelog/), one file each.
 
-## Unreleased (0.1.9)
+## Unreleased (0.2.0)
+
+### Added
+
+- `TEditorHandle.setCanvasFit(fit)`: fits the game's canvas another way while a host asks, and
+  `setCanvasFit(null)` puts the game's own `scaling`, `keep` and `pixelRatio` back. What an editor
+  does to lay a level out through the whole of its window (`{ keep: 'none', pixelRatio: 'device' }`)
+  while the game itself keeps its resolution. Type `TCanvasFit`, on `nacatamalon/authoring`.
+
+## 0.1.9 — 2026-10-09
 
 ### Added
 
@@ -23,38 +32,3 @@ releases are in [changelog/](./changelog/), one file each.
 
 - `useGame`, `useSignal` and `useStore` called outside a scene now say, in their error, what to
   import instead from a React component.
-
-## 0.1.8 — 2026-10-08
-
-### Added
-
-- **Mouse capture.** `usePointer()` gains `lock({ raw? })`, `unlock()` and `isLocked()`, to capture
-  the mouse for a first-person camera: the cursor hides and the mouse moves without stopping at the
-  game's edge. `lock()` answers `false` instead of throwing when the browser refuses (it must be
-  called from a click or a key press). Esc gives the mouse back, and `isLocked()` follows it.
-- **`movementX` and `movementY`** on every pointer event: how far the mouse moved, in pixels of the
-  page, added up over the frame. What a mouse-look camera reads, captured or not. Type
-  `TPointerLockOptions`.
-- **`drawText(pixels, text, x, y, options?)`** writes text into a picture painted in code: a sign, a
-  number on a door. Laid out exactly as `createText`, with `fontSize`, `align`, spacing, `color` and an
-  `anchor` to centre it. With no font it uses the built-in one and needs no game and no loading; a
-  bitmap font is copied pixel for pixel and a vector font is drawn from its outlines (`smooth: false`
-  for hard edges). Type `TDrawTextOptions`.
-- **`fillEllipse` and `drawEllipse`**, beside `fillCircle` and `drawCircle`, with the same stepped
-  edge; equal radii give exactly the circle.
-- **Additive sprites.** `createSprite({ blend: 'additive' })` adds its colour to what is behind
-  instead of covering it, for halos, flashes and beams of light, on WebGPU and WebGL2, with or without
-  a material. Changeable any frame, and kept in scene documents.
-- **Particle effects written in code.** `createParticles({ effect })` and `createParticles3d` also take
-  the effect itself, with the fields of a `.particles` file, so it can depend on the game. Ready at
-  once; colours can be `TColor` values (`lerpColor`), and `texture` a texture made in code. The same
-  object handed to several emitters is one shared effect. A scene saved with one leaves that emitter
-  out, with a warning, as there is no file to name. Types `TParticlesEffect`, `TParticlesEffect2d`,
-  `TParticlesEffect3d`, `TParticleColorStopInput`.
-- **`visible` on models.** What `createModel` returns has `visible`, which hides or shows every piece,
-  including pieces whose file has not arrived yet.
-
-### Changed
-
-- A bitmap font's image is downloaded once and kept in memory as well as on the card, so `drawText`
-  can copy its letters. Only PNG images can be read that way; others still draw as text.

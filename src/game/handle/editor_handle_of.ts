@@ -124,6 +124,7 @@ export const editorHandleOf = async (instance: TGameInstance): Promise<TEditorHa
         getFrameError: () => store.get('loop').failure,
         setCameraPreview: (preview) => setCameraPreview(store, preview),
         getCameraPreview: () => store.get('viewport').preview?.canvas ?? null,
+        setCanvasFit: (fit) => store.get('screen').setFit?.(fit),
         stepFrame: (dt = 1 / 60) => {
             const loop = store.get('loop');
             if (loop.pausedBy.length === 0 || loop.destroyed) {

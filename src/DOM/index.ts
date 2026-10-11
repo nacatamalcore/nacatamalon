@@ -10,6 +10,7 @@ export type { TCanvasLayout } from './types/t_canvas_layout';
 export type { TCanvasScaling } from './types/t_canvas_scaling';
 export type { TCanvasKeep } from './types/t_canvas_keep';
 export type { TCanvasOptions } from './types/t_canvas_options';
+export type { TCanvasFit } from './types/t_canvas_fit';
 export type { TCanvasInstance } from './types/t_canvas_instance';
 export type { TCanvasFullscreen } from './fullscreen';
 export type { TScreenSize } from './screen_size';

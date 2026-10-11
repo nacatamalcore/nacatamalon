@@ -1,4 +1,5 @@
 import type { TCanvasFullscreen } from '../../DOM/fullscreen';
+import type { TCanvasFit } from '../../DOM/types/t_canvas_fit';
 import type { TGameConfig } from '../../game/types/t_game_config';
 import type { IRenderer } from '../../render';
 import type { TRuntimeSectionName, TRuntimeState } from './t_runtime_state';
@@ -17,6 +18,10 @@ export type TRuntimeStoreInit = {
      * Full screen for that canvas. Absent where there is no page to fill (a test, a capture).
      */
     fullscreen?: TCanvasFullscreen;
+    /**
+     * How a host fits the canvas another way (see `TCanvasFit`). Absent where there is no page.
+     */
+    setFit?: (fit: TCanvasFit | null) => void;
     renderer: IRenderer;
     config: TGameConfig;
 };

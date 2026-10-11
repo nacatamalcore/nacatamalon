@@ -81,6 +81,7 @@ export { readGltfNodes } from '../loaders';
 // changes. A published game never does that; it changes scene from inside, by name.
 export { editorHandleOf } from '../game/handle';
 export type { TEditorHandle } from '../game/handle';
+export type { TCanvasFit } from '../DOM/types/t_canvas_fit';
 export type { TCameraPreview } from '../game/preview';
 
 // The post-processing effects the engine ships, as a list a tool offers, and the cleanup a chain

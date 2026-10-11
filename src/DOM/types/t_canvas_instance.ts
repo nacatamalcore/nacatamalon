@@ -1,4 +1,5 @@
 import type { TCanvasFullscreen } from '../fullscreen';
+import type { TCanvasFit } from './t_canvas_fit';
 
 /**
  * What `createCanvas` returns.
@@ -19,6 +20,11 @@ export type TCanvasInstance = {
      * Full screen for this canvas: entering, leaving, and whether it is.
      */
     fullscreen: TCanvasFullscreen;
+    /**
+     * Fits the canvas another way until called with `null`, which puts the game's own fit back.
+     * See {@link TCanvasFit}.
+     */
+    setFit(fit: TCanvasFit | null): void;
     /**
      * Stops the observer, and removes the canvas only if we created it.
      */

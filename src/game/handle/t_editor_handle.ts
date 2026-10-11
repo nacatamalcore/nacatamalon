@@ -9,6 +9,7 @@ import type { TCaptureOptions } from '../capture/types/t_capture_options';
 import type { TPostChain, TPostEffect } from '../../post';
 import type { TCameraPreview } from '../preview/types/t_camera_preview';
 import type { TActionsHandle } from '../../input';
+import type { TCanvasFit } from '../../DOM/types/t_canvas_fit';
 
 /**
  * What a tool may do with a running game on top of what the game may do with itself.
@@ -123,6 +124,25 @@ export type TEditorHandle = TGameHandle & {
      * The canvas a preview is being drawn on, or `null` when there is none.
      */
     getCameraPreview(): HTMLCanvasElement | null;
+    /**
+     * Fits the game's canvas another way until called with `null`, which puts the game's own
+     * `scaling`, `keep` and `pixelRatio` back: what an editor does to lay a level out through the
+     * whole of its window (`{ keep: 'none', pixelRatio: 'device' }`) while the game itself keeps its
+     * resolution. A shipped game never changes how it fits once started: it chose that in
+     * `createGame`.
+     *
+     * The game's size follows (`getWidth`, `getHeight`, and every camera's view of the world), as it
+     * does when its container is resized.
+     *
+     * @example
+     * ```ts
+     * declare const handle: TEditorHandle;
+     *
+     * handle.setCanvasFit({ keep: 'none', pixelRatio: 'device' }); // editing
+     * handle.setCanvasFit(null); // playing again, as the game asked
+     * ```
+     */
+    setCanvasFit(fit: TCanvasFit | null): void;
     /**
      * Forgets the error `getFrameError` holds, so the next one is reported again, and says whether
      * there was one. What a tool calls once it has replaced what threw.
