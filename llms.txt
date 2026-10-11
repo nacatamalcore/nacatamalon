@@ -142,6 +142,10 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
 - A hook called inside `useUpdate`, an event handler, a timeout or after `await` throws
   `[NacatamalOn] <hook>: call it inside a scene body...`. Create everything up front and change
   `visible`, or spawn things with `useSpawn`.
+- An object is built before the objects inside it: a body (or a script on a scene document's root)
+  that looks for a child with `findObject` finds `null`. Look it up inside
+  `useReady(() => { ... })`, which runs once everything being built with it exists, before the
+  first frame.
 - Movement without `* delta` runs faster on screens with a higher refresh rate.
 - `createGame` with no matching element throws: the page needs the element before the script runs.
 - Physics is behind its own imports and is switched on once: `installPhysics2d()` from
@@ -187,7 +191,7 @@ const App = () => (
 
 ## Where things are (search llms-full.txt for each name)
 
-- **Game and scenes**: `createGame`, `createScene`, `useScene`, `useGame`, `useSpawn`, `useSelf`, `destroy`, `useSceneUnmount`.
+- **Game and scenes**: `createGame`, `createScene`, `useScene`, `useGame`, `useSpawn`, `useSelf`, `destroy`, `useReady`, `useSceneUnmount`.
 - **Time**: `useUpdate`, `useTimer`, `useTween`, easings such as `linear` and `easeInOutSine`.
 - **Input**: `useKeyboard`, `usePointer`, `useGamepad`, `useActions`, `useAction`.
 - **2D**: `createSprite`, `useLoadTexture`, `useLoadAtlas`, `useSpriteAnimation`, `createText`, `useLoadFont`, `useLoadBitmapFont`, `createNineSlice`, `createTilemap`, `tileAt`, `solidAt`, `createParticles`, `useCamera2d`.

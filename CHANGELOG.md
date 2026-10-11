@@ -3,7 +3,17 @@
 What changed in the current release of `nacatamalon`, and what is waiting for the next one. Earlier
 releases are in [changelog/](./changelog/), one file each.
 
-## Unreleased (0.2.0)
+## Unreleased (0.2.1)
+
+### Added
+
+- `useReady(callback)`: runs once everything being built with it exists, before the first frame. An
+  object is built before the ones inside it, so a body, or a behaviour on the root of a scene laid
+  out as a document, could not find its children with `findObject`: inside `useReady` it does. For
+  something spawned later, it runs before the spawner's call returns. It runs with its object as the
+  one being built, so hooks inside it belong to that object.
+
+## 0.2.0 — 2026-10-11
 
 ### Added
 
@@ -11,24 +21,3 @@ releases are in [changelog/](./changelog/), one file each.
   `setCanvasFit(null)` puts the game's own `scaling`, `keep` and `pixelRatio` back. What an editor
   does to lay a level out through the whole of its window (`{ keep: 'none', pixelRatio: 'device' }`)
   while the game itself keeps its resolution. Type `TCanvasFit`, on `nacatamalon/authoring`.
-
-## 0.1.9 — 2026-10-09
-
-### Added
-
-- **`nacatamalon/react`**, a new door for a game inside a React page, with the HUD and menus written
-  as React components drawn over the canvas. `<Game options scenes>` puts the game in the page and
-  draws its children over it, full screen included; `useGameStore(store, selector)` reads a store and
-  renders again when the selected value changes; `useGame()` hands a component the game's handle
-  (`null` while it starts); `useSignal(signal, handler)` listens from a component. It works under
-  `StrictMode`. `react` (18 or later) is an optional peer dependency: a game that never imports this
-  door never needs it. Type `TGameProps`.
-- `useGameStore` warns once when a selector picks an object out of the state (it never looks
-  changed, because the state is changed in place) or builds a new one on every read.
-- **Browser only for now**: the native runtime shows only what the engine draws, so a React HUD is not
-  on screen in a desktop build. `<Game>` says so in the console when it runs there.
-
-### Changed
-
-- `useGame`, `useSignal` and `useStore` called outside a scene now say, in their error, what to
-  import instead from a React component.

@@ -3,6 +3,7 @@ import { withActiveGame } from '../store/active_game';
 import type { TRuntimeStore } from '../store';
 import { trackBoxGame } from './box_game';
 import { newBox } from './new_box';
+import { flushReady } from '../scene/flush_ready';
 import type { TBox } from './types/t_box';
 
 /**
@@ -42,6 +43,10 @@ export const spawnBox = <TArgs extends unknown[]>(
     parent.children.push(box);
 
     withActiveGame(store, () => withActiveBox(store, box, () => body(...args)));
+    // Spawned from outside any build (a bullet from a useUpdate): built whole now, so what it
+    // set aside with `useReady` runs before the spawner gets it back. Inside a build, the build's
+    // end runs it.
+    if (box.spawned) flushReady(store);
 
     return box;
 };

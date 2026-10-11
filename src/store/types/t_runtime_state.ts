@@ -118,6 +118,15 @@ export type TRuntimeState = {
          * nothing subscribes to it.
          */
         pendingDestroy: Array<TDrawable | TBox>;
+        /**
+         * What `useReady` set aside until the build it was called in is over, with the box it
+         * belongs to. Emptied by `flushReady` when a scene has started whole, or when a box
+         * spawned from outside any build is done.
+         *
+         * Mutated in place like `boxStack`: filled and emptied within one build, and nothing
+         * subscribes to it.
+         */
+        ready: Array<{ box: TBox; run: () => void }>;
     };
 
     /**

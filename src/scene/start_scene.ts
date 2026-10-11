@@ -1,6 +1,7 @@
 import { newBox, trackBoxGame } from '../box';
 import type { TBox } from '../box';
 import { withActiveBox, withActiveGame } from '../store';
+import { flushReady } from './flush_ready';
 import type { TRuntimeStore } from '../store';
 
 /**
@@ -54,5 +55,8 @@ export const startScene = (store: TRuntimeStore, name: string): TBox => {
     // Read again rather than reusing `scenes` from the top: the body may have started another
     // scene, and appending to the old array would drop it.
     store.setState('world', { scenes: [...store.get('world').scenes, root] });
+    // Whole now, children attached and listed: what `useReady` waited for. Unless this start is
+    // itself part of a build (a body launching another scene), whose end runs them all.
+    if (store.get('world').boxStack.length === 0) flushReady(store);
     return root;
 };
