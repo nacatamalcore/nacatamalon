@@ -1,5 +1,6 @@
 import { getActiveBox, getActiveGame } from '../../store';
 import { applyDucking, clipFromSamples, DEFAULT_CHANNEL, getAudioManager, logVoice, placeVoice, rampTo, wrapPosition } from '../../audio';
+import { setAttachmentPlayer } from '../../audio/attachment_players';
 import { renderSfx } from '../../audio/synth';
 import { nanoId } from '../../utils';
 import { whenLoaded } from '../../loaders';
@@ -345,6 +346,8 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
 
     // Leaves with whatever asked for it: a scene that stops takes its music along.
     box.cleanups.push(() => stop());
+
+    setAttachmentPlayer(attachment, () => handle.play());
 
     return handle;
 };

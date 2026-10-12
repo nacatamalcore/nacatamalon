@@ -597,6 +597,19 @@ const writeBox = (box: TBox, writing: TWriting): TBoxNode => {
         if (sound.type === 'sound' && sound.clip.src === '') continue;
         components.push(sound.type === 'music' ? writeMusic(sound, writing) : writeSound(sound, writing));
     }
+    for (const motion of box.motions) {
+        // Like a song, a motion written in code has no file to name, so it is not written down.
+        if (motion.file.src === '') continue;
+        writing.assets.set(motion.file.key, { type: 'motion', key: motion.file.key, src: motion.file.src });
+        components.push({
+            type: 'motion',
+            id: motion.id,
+            motion: motion.file.key,
+            ...unless('autoplay', motion.autoplay, false),
+            ...(motion.loop !== null ? { loop: motion.loop } : {}),
+            ...unless('speed', motion.speed, 1),
+        });
+    }
     if (box.audioListener !== null) {
         components.push({
             type: 'audio-listener',

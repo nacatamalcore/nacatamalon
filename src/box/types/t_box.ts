@@ -11,6 +11,7 @@ import type { TLoadable } from '../../loaders';
 import type { TCamera2d } from '../../camera';
 import type { TCamera3d } from '../../camera/types/t_camera_3d';
 import type { TSpriteTexture } from '../../gameobjects/sprite_texture/types/t_sprite_texture';
+import type { TMotionAttachment } from '../../motion/types/t_motion';
 
 /**
  * One box at runtime: the engine's single composition primitive, a node in the tree. A scene
@@ -95,6 +96,11 @@ export type TBox = {
      * scene saved mid-tune comes back ready to start it rather than halfway through.
      */
     sounds: Array<TSoundAttachment | TMusicAttachment | TSongAttachment>;
+    /**
+     * The motions it plays: which file, and how each was asked to play. Like a sound, never where it
+     * had got to.
+     */
+    motions: TMotionAttachment[];
     /**
      * The stores this object uses, by name.
      *

@@ -9,6 +9,7 @@ export { useSound, useAudio, useMusic, useSong, useAudioListener } from './audio
 export { useGame } from './game';
 export { useSpriteAnimation, getSpriteAnimation, useSkeletalAnimation } from './animation';
 export { useTween } from './tween';
+export { useMotion } from './motion';
 export { useTimer } from './timer';
 export { useCamera2d, useCamera3d, useScreenSpace } from './camera';
 export { useFog } from './fog';
@@ -16,7 +17,7 @@ export { useTransform } from './transform';
 export { useLight, usePointLight, useSpotLight, useAmbientLight, useBlobShadow } from './light';
 export { useParticleCollider2d, useParticleCollider3d } from './particles';
 export { useCubeGeometry, usePlaneGeometry, useCircleGeometry, useUvSphereGeometry, useIcoSphereGeometry, useCylinderGeometry, useConeGeometry, useTorusGeometry } from './geometry';
-export { useLoadTexture, useLoadAtlas, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadShader, useLoadPalette, useLoadLut, useLoadParticles, useLoadPack, useLoadAudio, useLoader, useLoadPixels, useLoadSong } from './loaders';
+export { useLoadTexture, useLoadAtlas, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadShader, useLoadPalette, useLoadLut, useLoadParticles, useLoadPack, useLoadAudio, useLoader, useLoadPixels, useLoadSong, useLoadMotion } from './loaders';
 export type { TUseLoadPackOptions } from './loaders';
 export { usePostProcess } from './post/use_post_process';
 export { useScene, useSceneUnmount, useReady } from './scene';

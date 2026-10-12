@@ -1,5 +1,6 @@
 import { getActiveBox, getActiveGame } from '../../store';
 import { clipFromSamples, createBeatClock, createLayeredPlayer, getAudioManager } from '../../audio';
+import { setAttachmentPlayer } from '../../audio/attachment_players';
 import { renderSong, SONG_VOICES } from '../../audio/synth';
 import { nanoId } from '../../utils';
 import { whenLoaded } from '../../loaders';
@@ -217,6 +218,8 @@ export const useSong = (song: TSongFile | TSongDoc, options: TSongOptions = {}):
         player.stop(0);
         beats.dispose();
     });
+
+    setAttachmentPlayer(attachment, () => handle.play());
 
     return handle;
 };

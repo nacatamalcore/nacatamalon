@@ -16,6 +16,7 @@ import type { TCamera2d } from '../../camera/types/t_camera_2d';
 import type { TCamera3d } from '../../camera/types/t_camera_3d';
 import type { TParticlesFile } from '../../loaders/particles/types/t_particles_file';
 import type { TSongFile } from '../../loaders/song/types/t_song_file';
+import type { TMotionFile } from '../../loaders/motion/types/t_motion_file';
 import type { TTilemap } from '../../gameobjects/tilemap';
 import type { TGeometry } from '../../geometry';
 import type { TDrawable } from '../../gameobjects/types';
@@ -282,6 +283,10 @@ export type TRuntimeState = {
          * Songs written as notes, so two scenes playing the same tune read it once.
          */
         songs: Map<string, TSongFile>;
+        /**
+         * Motions, so two scenes playing the same one read it once.
+         */
+        motions: Map<string, TMotionFile>;
         /**
          * Palettes, so two effects reducing to the same one fetch and upload it once.
          */

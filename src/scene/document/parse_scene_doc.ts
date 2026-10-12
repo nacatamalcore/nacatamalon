@@ -729,6 +729,21 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 ...optionalNumber(raw, 'transpose'),
             };
         }
+        case 'motion': {
+            // Like a song, a motion naming no file is one nothing could ever play.
+            const motion = asString(raw.motion, '');
+            if (motion === '') {
+                return null;
+            }
+            return {
+                type: 'motion',
+                id,
+                motion,
+                ...optionalBoolean(raw, 'autoplay'),
+                ...optionalBoolean(raw, 'loop'),
+                ...optionalNumber(raw, 'speed'),
+            };
+        }
         case 'audio-listener':
             return { type: 'audio-listener', id, ...optionalBoolean(raw, 'enabled') };
         case 'script': {
@@ -792,7 +807,7 @@ const parseAsset = (value: unknown): TAssetEntry | null => {
     if (raw.type === 'bitmapFont') {
         return { type: 'bitmapFont', key, json: asString(raw.json, ''), atlas: asString(raw.atlas, '') };
     }
-    if (raw.type === 'texture' || raw.type === 'atlas' || raw.type === 'shader' || raw.type === 'particles' || raw.type === 'tilemap' || raw.type === 'audio' || raw.type === 'song') {
+    if (raw.type === 'texture' || raw.type === 'atlas' || raw.type === 'shader' || raw.type === 'particles' || raw.type === 'tilemap' || raw.type === 'audio' || raw.type === 'song' || raw.type === 'motion') {
         // `src` defaults to the key, because for most of these they are the same string and a file
         // that only said it once meant both.
         return { type: raw.type, key, src: asString(raw.src, key) };

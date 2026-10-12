@@ -1,5 +1,6 @@
 import { getActiveBox, getActiveGame } from '../../store';
 import { createBeatClock, createLayeredPlayer, getAudioManager } from '../../audio';
+import { setAttachmentPlayer } from '../../audio/attachment_players';
 import { nanoId } from '../../utils';
 import { whenLoaded } from '../../loaders';
 import { useLoadAudio } from '../loaders/use_load_audio';
@@ -145,6 +146,8 @@ export const useMusic = (options: TMusicOptions): TMusicHandle => {
         player.stop(0);
         beats.dispose();
     });
+
+    setAttachmentPlayer(attachment, () => handle.play());
 
     return handle;
 };

@@ -12,6 +12,8 @@ import type { TActionsHandle } from '../../input';
 import type { TCanvasFit } from '../../DOM/types/t_canvas_fit';
 import type { TSongDoc } from '../../audio/synth';
 import type { TSoundLog } from '../../audio/sound_log';
+import type { TMotionDoc } from '../../motion/types/t_motion_doc';
+import type { TMotionPreview } from '../../motion/preview_motion';
 
 /**
  * What a tool may do with a running game on top of what the game may do with itself.
@@ -139,6 +141,23 @@ export type TEditorHandle = TGameHandle & {
      * carries on from the same beat. Says how many it changed: none when the game has not loaded it.
      */
     updateSong(src: string, doc: TSongDoc): number;
+    /**
+     * Puts a motion's new tracks into the game as it plays: every loaded `.motion` from this `src` (or
+     * kept under this key) takes the new document, and every `useMotion` playing it finds its fields
+     * again and carries on from the same moment. Says how many it changed.
+     */
+    updateMotion(src: string, doc: TMotionDoc): number;
+    /**
+     * Puts the running scenes where a motion has them at `seconds`, without playing it: no events
+     * happen and nothing moves on by itself. What an editor does while its time cursor is dragged.
+     * The first time a field is touched, what it had is kept for `endMotionPreview`. Says how many
+     * tracks moved something, and why each of the others did not.
+     */
+    previewMotion(doc: TMotionDoc, seconds: number): TMotionPreview;
+    /**
+     * Puts back every field `previewMotion` touched, as it was, and says how many.
+     */
+    endMotionPreview(): number;
     /**
      * The first error a scene's update threw, or `null`. The game goes on running after one, so this
      * is how a tool finds out that a scene has been skipping its update since.

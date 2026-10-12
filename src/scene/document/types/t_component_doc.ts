@@ -144,6 +144,7 @@ export type TComponentDoc =
     | TSoundComponent
     | TMusicComponent
     | TSongComponent
+    | TMotionComponent
     | TAudioListenerComponent
     | TStoreComponent
     | TPhysicsBody2dComponent
@@ -726,6 +727,32 @@ export type TSongComponent = {
      * Semitones from how it is written, absent for none.
      */
     transpose?: number;
+};
+
+/**
+ * A motion this object plays: the `.motion` file by asset key, and how it was asked to play. Like a
+ * song, never where it had got to.
+ *
+ * @category Scenes
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TMotionComponent = {
+    type: 'motion';
+    id: string;
+    /**
+     * The `.motion` file, by asset key.
+     */
+    motion: string;
+    autoplay?: boolean;
+    /**
+     * Absent for what the file says.
+     */
+    loop?: boolean;
+    /**
+     * Absent for `1`.
+     */
+    speed?: number;
 };
 
 /**

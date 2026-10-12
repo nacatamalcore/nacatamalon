@@ -39,6 +39,22 @@ releases are in [changelog/](./changelog/), one file each.
   clapping over it), `whistle` (a referee's, warbling) and `bat` (a wooden bat on a ball: a crack
   over a hollow knock). Through `renderSfx` and `useSound({ sfx })` like the others.
 - `SFX_PRESETS`: the presets `renderSfx` makes, in order, for a tool that offers them.
+- Motions: values of a scene moved over time by keys, in a `.motion` file (a camera sweeping a field,
+  a title coming in, a menu opening). Each track names a box by its id (and by its name when no box
+  has that id), optionally one of its components, and a field (`x`, `zoom`, `tint.a`, `visible`),
+  with keys that move along any of the easing curves by name. Events on the way play a sound the
+  scene carries, change the scene under a transition, or call a mark a behaviour listens for.
+  - `useLoadMotion({ src })` and `useMotion(motion, { autoplay, loop, speed })`, whose handle has
+    `play`, `pause`, `resume`, `stop`, `seek`, `on(mark, …)` and `onEnd`. It moves on the scene's
+    clock, so it stops with the scene's pause and steps with the editor's frames.
+  - A `motion` component in scene documents, and a `motion` asset, so a scene plays one with no
+    code. A scene shown rather than played (`scripts: 'attach'`) keeps it still.
+  - `parseMotionDoc`, `MOTION_FORMAT` and `MOTION_VERSION`.
+  - `serializeMotionDoc(doc)`, on `nacatamalon/authoring`: a motion as the text of its file, a key a
+    line, for a tool that saves one.
+  - `TEditorHandle.previewMotion(doc, seconds)` puts the running scenes where a motion has them at a
+    moment without playing it, `endMotionPreview()` puts back what it touched, and
+    `updateMotion(src, doc)` hands a saved `.motion` to what plays it, from the same moment.
 
 ### Changed
 

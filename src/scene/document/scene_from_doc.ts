@@ -27,7 +27,8 @@ import {
     useCircleGeometry, useConeGeometry, useCubeGeometry, useCylinderGeometry,
     useIcoSphereGeometry, usePlaneGeometry, useTorusGeometry, useUvSphereGeometry,
 } from '../../hooks/geometry';
-import { useLoadAtlas, useLoadAudio, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadParticles, useLoadShader, useLoadSong, useLoadTexture } from '../../hooks/loaders';
+import { useLoadAtlas, useLoadAudio, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadParticles, useLoadShader, useLoadSong, useLoadMotion, useLoadTexture } from '../../hooks/loaders';
+import { useMotion } from '../../hooks/motion';
 import { useScreenSpace } from '../../hooks/camera/use_screen_space';
 import { useTransform } from '../../hooks/transform/use_transform';
 import { whenLoaded } from '../../loaders';
@@ -60,6 +61,7 @@ const loadAssets = (assets: readonly TAssetEntry[], src: string): void => {
             case 'particles': useLoadParticles({ src: asset.src, key: asset.key }); break;
             case 'audio': useLoadAudio({ src: asset.src, key: asset.key }); break;
             case 'song': useLoadSong({ src: asset.src, key: asset.key }); break;
+            case 'motion': useLoadMotion({ src: asset.src, key: asset.key }); break;
             case 'bitmapFont': useLoadBitmapFont({ json: asset.json, atlas: asset.atlas, key: asset.key }); break;
             case 'font': useLoadFont({ src: asset.src, key: asset.key, ...(asset.size !== undefined ? { size: asset.size } : {}) }); break;
             // A map is asked for by the thing that shows it, because `createTilemap` is what puts
@@ -570,6 +572,19 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                 ...(component.voices !== undefined ? { voices: { ...component.voices } } : {}),
                 ...(component.tempo !== undefined ? { tempo: component.tempo } : {}),
                 ...(component.transpose !== undefined ? { transpose: component.transpose } : {}),
+            });
+            break;
+        }
+        case 'motion': {
+            const file = found(assets.motions, component.motion, 'motion', src);
+            if (file === undefined) {
+                break;
+            }
+            useMotion(file, {
+                id: component.id,
+                ...(component.autoplay !== undefined ? { autoplay: component.autoplay } : {}),
+                ...(component.loop !== undefined ? { loop: component.loop } : {}),
+                ...(component.speed !== undefined ? { speed: component.speed } : {}),
             });
             break;
         }

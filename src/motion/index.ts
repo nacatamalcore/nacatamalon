@@ -1,0 +1,10 @@
+export { parseMotionDoc } from './parse_motion_doc';
+export { serializeMotionDoc } from './serialize_motion_doc';
+export { MOTION_FORMAT, MOTION_VERSION } from './types/t_motion_doc';
+export { MOTION_EASES, isMotionEase } from './motion_eases';
+export { bindMotionTracks, applyMotionTracks } from './motion_tracks';
+export { sampleTrack, newTrackCursor } from './sample_track';
+export { previewMotion, endMotionPreview } from './preview_motion';
+export type { TMotionDoc, TMotionTrack, TMotionKey, TMotionEvent, TMotionEase, TMotionTransition } from './types/t_motion_doc';
+export type { TMotionOptions, TMotionHandle, TMotionAttachment } from './types/t_motion';
+export type { TMotionPreview } from './preview_motion';

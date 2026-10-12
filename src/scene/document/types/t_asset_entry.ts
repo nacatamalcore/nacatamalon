@@ -45,4 +45,8 @@ export type TAssetEntry =
      * A song written as notes, a `.song` file.
      */
     | { type: 'song'; key: string; src: string }
+    /**
+     * Values moved over time by keys, a `.motion` file.
+     */
+    | { type: 'motion'; key: string; src: string }
     | { type: 'tilemap'; key: string; src: string };

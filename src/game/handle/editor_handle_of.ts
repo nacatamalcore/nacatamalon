@@ -9,6 +9,8 @@ import { replaceProjectPostChain } from '../../post/install_post_chain';
 import { setCameraPreview } from '../preview';
 import { MAX_FRAME_DELTA } from '../../CONFIG';
 import { replaceSongDoc } from '../../loaders/song';
+import { replaceMotionDoc } from '../../loaders/motion';
+import { endMotionPreview, previewMotion } from '../../motion/preview_motion';
 
 /**
  * Each game's running state, reachable from the instance `createGame` handed back.
@@ -126,6 +128,9 @@ export const editorHandleOf = async (instance: TGameInstance): Promise<TEditorHa
             return dropped;
         },
         updateSong: (src, doc) => replaceSongDoc(store, src, doc),
+        updateMotion: (src, doc) => replaceMotionDoc(store, src, doc),
+        previewMotion: (doc, seconds) => previewMotion(store, doc, seconds),
+        endMotionPreview: () => endMotionPreview(store),
         getFrameError: () => store.get('loop').failure,
         setCameraPreview: (preview) => setCameraPreview(store, preview),
         getCameraPreview: () => store.get('viewport').preview?.canvas ?? null,
