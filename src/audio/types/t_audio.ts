@@ -1,5 +1,6 @@
 import type { TBox } from '../../box/types/t_box';
 import type { TSoundAttachment } from './t_sound';
+import type { TSoundLogger } from '../sound_log';
 
 /**
  * One sounding voice: the node playing the sound and everything wired after it.
@@ -38,7 +39,22 @@ export type TVoice = {
      * `null` for a voice that holds nothing down, like a layer of music.
      */
     from: TSoundAttachment | null;
+    /**
+     * What a log of the game's sound (`startSoundLog`) needs of it: where in its sound it is now, in
+     * seconds, and the volumes it goes through after its node. Left out by a voice nobody logs.
+     */
+    track?: { position(): number; gains: AudioParam[] };
 };
+
+/**
+ * What a game's music counts time by: `'audio'`, the audio engine's own clock, what the ears hear
+ * (always, in a game as shipped); or `'frames'`, the game's frames, for a host that runs the game a
+ * frame at a time (an editor stepping it), where the music has to move with the frames and not with
+ * the wall clock. On `'frames'` the audio engine is held still, so nothing is heard.
+ *
+ * @internal
+ */
+export type TAudioClock = 'audio' | 'frames';
 
 /**
  * Everything one game's sound runs through: the browser's audio engine, the master volume, a volume
@@ -89,6 +105,36 @@ export type TAudioManager = {
      * The sounds whose area has a shape of the other dimension, reported once each.
      */
     warnedZones: WeakSet<TSoundAttachment>;
+    /**
+     * The time the music counts by, in seconds: the audio engine's clock, or the frames' (see
+     * {@link TAudioClock}). What a tune's position and its beats are measured on. Scheduling a node
+     * or a ramp still goes by `context.currentTime`, which is what the audio engine understands.
+     */
+    now(): number;
+    /**
+     * The clock `now` counts by right now.
+     */
+    readonly clock: TAudioClock;
+    /**
+     * Counts by the other clock. Going to `'frames'` holds the audio engine still, and the frames'
+     * time carries on from where the engine's was; coming back lets it go, and every tune playing
+     * starts again from where the frames had got it to.
+     */
+    setClock(clock: TAudioClock): void;
+    /**
+     * Moves the frames' clock on by one frame's game time. Nothing on the audio clock.
+     */
+    advance(dt: number): void;
+    /**
+     * The log of what the game sounds like being kept, or `null`: what a clip made a frame at a time
+     * gets its sound from. See `startSoundLog`.
+     */
+    log: TSoundLogger | null;
+    /**
+     * What has to be put right when the clock goes back to the audio engine: each one reads where it
+     * is first (on the frames' clock), and is handed back what to do once the clock has changed.
+     */
+    resyncs: Set<() => () => void>;
     /**
      * The channel's volume, made on the spot if this is the first time it is asked for.
      */

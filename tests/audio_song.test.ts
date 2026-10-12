@@ -183,6 +183,61 @@ describe('following the beat', () => {
         expect(heard).toEqual([[1, 1], [2, 1], [3, 1], [4, 1], [1, 2]]);
     });
 
+    it('counts by the frames when a host steps the game, and plays on from there after', async () => {
+        const { store, song, context } = await withSong({ autoplay: true });
+        const heard: Array<[number, number]> = [];
+        song.onBeat((beat, bar) => heard.push([beat, bar]));
+        const manager = store.get('audio').manager!;
+
+        manager.setClock('frames');
+        expect(context.suspends).toBe(1);
+        // The wall clock goes on; the music does not care.
+        context.currentTime = 30;
+        updateAudio(store, 0);
+        for (let i = 0; i < 4; i += 1) {
+            updateAudio(store, 0.5);
+        }
+        // Paused: frames of no game time.
+        updateAudio(store, 0);
+        updateAudio(store, 0);
+        expect(heard).toEqual([[1, 1], [2, 1], [3, 1], [4, 1], [1, 2]]);
+
+        // Heard again from where the frames got it to, and counted by the audio clock from there.
+        manager.setClock('audio');
+        expect(started(context).map((voice) => voice.startOffset)).toEqual([2, 2, 2]);
+        context.currentTime += 0.5;
+        updateAudio(store);
+        expect(heard.at(-1)).toEqual([2, 2]);
+    });
+
+    it('counts every beat once over a long stretch of frames, going round its loop', async () => {
+        const { store, song } = await withSong({ autoplay: true }, {
+            format: SONG_FORMAT, tempo: 120, meter: [4, 4], voices: { pulse1: { notes: 'c4 e g e |' } },
+        });
+        const heard: number[] = [];
+        song.onBeat((beat) => heard.push(beat));
+        store.get('audio').manager!.setClock('frames');
+        // 45 seconds a sixtieth at a time: the time added up lands a hair short of each loop's end.
+        for (let i = 0; i < 2700; i += 1) {
+            updateAudio(store, 1 / 60);
+        }
+        // Two a second, from the one at 0 to the one at 45 s.
+        expect(heard).toHaveLength(91);
+        expect(heard.slice(0, 9)).toEqual([1, 2, 3, 4, 1, 2, 3, 4, 1]);
+    });
+
+    it('starts on the frames when a host asked before there was any sound', async () => {
+        const { store } = createTestGame();
+        store.setState('audio', { clock: 'frames' });
+        startTestScene(store, 'Ballpark', () => {
+            useSong(SONG, { autoplay: true });
+            return createScene();
+        });
+        await settle();
+        expect(store.get('audio').manager!.clock).toBe('frames');
+        expect(contextOf(store).suspends).toBe(1);
+    });
+
     it('goes back to the bar the loop starts on when it goes round', async () => {
         const { store, song, context } = await withSong({ autoplay: true });
         const heard: Array<[number, number]> = [];

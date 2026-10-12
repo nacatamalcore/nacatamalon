@@ -1,3 +1,5 @@
+import { noteRamp } from './sound_log';
+
 /**
  * Takes a volume to `target`, in a straight line over `seconds`, or at once when there is no time.
  *
@@ -10,6 +12,8 @@
  * @author Francisco Pereira Alvarado
  */
 export const rampTo = (param: AudioParam, target: number, now: number, seconds = 0): void => {
+    // Kept in the log of the game's sound, when one is kept and this volume is in it.
+    noteRamp(param, target, seconds);
     const from = param.value;
     param.cancelScheduledValues(now);
     if (seconds <= 0) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { renderSfx } from '../src';
+import { renderSfx, SFX_PRESETS } from '../src';
 import { analyzeAudio } from '../src/authoring';
 import type { TSfxPreset } from '../src';
 
@@ -10,7 +10,7 @@ import type { TSfxPreset } from '../src';
  */
 
 const RATE = 44100;
-const PRESETS: TSfxPreset[] = ['coin', 'jump', 'hit', 'explosion'];
+const PRESETS: TSfxPreset[] = ['coin', 'jump', 'hit', 'explosion', 'crowd', 'cheer', 'whistle', 'bat'];
 
 /**
  * Times a track crosses zero going up, per second: rough, but enough to tell higher from lower.
@@ -58,6 +58,32 @@ describe('a sound effect', () => {
     });
 
     it('says which presets there are when asked for one that is not', () => {
-        expect(() => renderSfx({ preset: 'laser' as TSfxPreset })).toThrow("'coin', 'jump', 'hit', 'explosion'");
+        expect(() => renderSfx({ preset: 'laser' as TSfxPreset })).toThrow("'coin', 'jump', 'hit', 'explosion', 'crowd', 'cheer', 'whistle', 'bat'");
+    });
+
+    it('lists its presets for a tool to offer', () => {
+        expect(SFX_PRESETS).toEqual(PRESETS);
+    });
+
+    it('makes a crowd as long as asked, and it murmurs rather than holding one level', () => {
+        const crowd = renderSfx({ preset: 'crowd', length: 6 });
+        expect(crowd.length).toBe(6 * RATE);
+        // Louder and quieter stretches, a tenth of a second each, in the middle of it.
+        const levels: number[] = [];
+        for (let at = 1; at < 5; at += 0.1) {
+            const from = Math.round(at * RATE);
+            levels.push(analyzeAudio(crowd.slice(from, from + Math.round(0.1 * RATE)), RATE).rms);
+        }
+        expect(Math.max(...levels) / Math.min(...levels)).toBeGreaterThan(1.3);
+    });
+
+    it('whistles high, and cracks a bat short', () => {
+        const whistle = renderSfx({ preset: 'whistle' });
+        expect(rises(whistle.slice(Math.round(0.1 * RATE), Math.round(0.4 * RATE)))).toBeGreaterThan(2000);
+        const bat = renderSfx({ preset: 'bat' });
+        // Most of it in the first twentieth of a second.
+        const head = analyzeAudio(bat.slice(0, Math.round(0.05 * RATE)), RATE).rms;
+        const tail = analyzeAudio(bat.slice(Math.round(0.15 * RATE)), RATE).rms;
+        expect(head).toBeGreaterThan(tail * 5);
     });
 });

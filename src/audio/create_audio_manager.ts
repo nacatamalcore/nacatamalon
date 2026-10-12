@@ -1,5 +1,5 @@
 import type { TRuntimeStore } from '../store';
-import type { TAudioManager, TVoice } from './types/t_audio';
+import type { TAudioClock, TAudioManager, TVoice } from './types/t_audio';
 
 /**
  * The channel a sound belongs to when it does not say.
@@ -77,8 +77,19 @@ export const createAudioManager = (): TAudioManager => {
         channelGain(name);
     }
 
+    let clock: TAudioClock = 'audio';
+    // The frames' clock, moved on by `advance` while it is the one counted by.
+    let frameTime = 0;
+    // Whether the person has touched the page, so the audio engine may run.
+    let unlocked = false;
+    const resyncs = new Set<() => () => void>();
+
     const unlock = (): void => {
-        void context.resume();
+        unlocked = true;
+        // Held still while the frames count: it runs when the clock goes back to it.
+        if (clock === 'audio') {
+            void context.resume();
+        }
         removeUnlock();
     };
     // Guarded because a test has no page: everything else about sound can be checked without one.
@@ -108,6 +119,37 @@ export const createAudioManager = (): TAudioManager => {
         listeners: [],
         warnedListeners: false,
         warnedZones: new WeakSet(),
+        now: () => (clock === 'frames' ? frameTime : context.currentTime),
+        get clock() {
+            return clock;
+        },
+        setClock: (next) => {
+            if (next === clock) {
+                return;
+            }
+            if (next === 'frames') {
+                frameTime = context.currentTime;
+                clock = 'frames';
+                void context.suspend();
+                return;
+            }
+            // Where every tune is, read on the frames' clock before it stops counting.
+            const after = [...resyncs].map((resync) => resync());
+            clock = 'audio';
+            if (unlocked) {
+                void context.resume();
+            }
+            for (const put of after) {
+                put();
+            }
+        },
+        advance: (dt) => {
+            if (clock === 'frames') {
+                frameTime += dt;
+            }
+        },
+        resyncs,
+        log: null,
         channelGain,
         duckGain,
         destroy: () => {
@@ -138,6 +180,7 @@ export const getAudioManager = (store: TRuntimeStore): TAudioManager => {
         return current;
     }
     const manager = createAudioManager();
+    manager.setClock(store.get('audio').clock);
     store.setState('audio', { manager });
     return manager;
 };

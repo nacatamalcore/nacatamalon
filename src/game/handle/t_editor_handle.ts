@@ -11,6 +11,7 @@ import type { TCameraPreview } from '../preview/types/t_camera_preview';
 import type { TActionsHandle } from '../../input';
 import type { TCanvasFit } from '../../DOM/types/t_canvas_fit';
 import type { TSongDoc } from '../../audio/synth';
+import type { TSoundLog } from '../../audio/sound_log';
 
 /**
  * What a tool may do with a running game on top of what the game may do with itself.
@@ -192,6 +193,57 @@ export type TEditorHandle = TGameHandle & {
      * like an ordinary frame's, so a step cannot smuggle in a jump the loop itself would refuse.
      */
     stepFrame(dt?: number): boolean;
+    /**
+     * Runs `count` frames of a paused game, each by `dt`, all in the next frame the page draws, and
+     * draws only the last: a minute of game in a moment, to get to a later point of it (a song that
+     * changes at 45 seconds) without waiting for it. Then leaves it paused again.
+     *
+     * Every frame runs as an ordinary one does (input, updates, sound, what was destroyed); only the
+     * drawing is skipped, and with it what moves while drawing: particles advance one frame, not
+     * `count`. A host runs a long stretch as several calls, so the page is not held for long.
+     *
+     * Returns `false` and does nothing if the game is not paused or is destroyed.
+     *
+     * @example
+     * ```ts
+     * import type { TEditorHandle } from 'nacatamalon/authoring';
+     * declare const handle: TEditorHandle;
+     *
+     * handle.pause('editor');
+     * handle.stepFrames(600); // ten seconds of game
+     * ```
+     */
+    stepFrames(count: number, dt?: number): boolean;
+    /**
+     * What the game's music counts time by: `'frames'` while a host runs the game a frame at a
+     * time, so its position and its beats (`useSong().onBeat`) move with the steps and stand still
+     * with a pause, as the rest of the game does; `'audio'`, the audio engine's clock, to play it
+     * for the ears again. On `'frames'` the audio engine is held still, so nothing is heard; back on
+     * `'audio'` every tune carries on from where the frames got it to.
+     *
+     * A shipped game is always on `'audio'`. Can be asked before the game has any sound.
+     */
+    setAudioClock(clock: 'audio' | 'frames'): void;
+    /**
+     * Starts keeping a log of what the game sounds like, from what sounds now: every sound, when it
+     * began and stopped on the clock the music counts by, from where in it, and its fades. Gives back
+     * the way to stop it, which hands the log over: what a clip made a frame at a time (the audio
+     * engine silent, on `'frames'`) gets its sound from, mixed offline afterwards.
+     *
+     * Where a sound was placed in the world, ducking, and changes of speed along the way are not
+     * kept: the mix as heard in the middle of the room. Opens the game's sound if it had none.
+     *
+     * @example
+     * ```ts
+     * import type { TEditorHandle } from 'nacatamalon/authoring';
+     * declare const handle: TEditorHandle;
+     *
+     * const stop = handle.startSoundLog();
+     * // …the game stepped through the clip…
+     * const { seconds, sounds } = stop();
+     * ```
+     */
+    startSoundLog(): () => TSoundLog;
     /**
      * The game's named actions as the game reads them this frame: what a host shows live while
      * somebody plays, like a controls panel lighting up an action as it fires.

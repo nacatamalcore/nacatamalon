@@ -139,13 +139,14 @@ export type TRenderedSong = {
 };
 
 /**
- * The kinds of sound effect `renderSfx` makes.
+ * The kinds of sound effect `renderSfx` makes: `coin`, `jump`, `hit`, `explosion`; `crowd` (people
+ * murmuring), `cheer` (an ovation with clapping), `whistle` (a referee's) and `bat` (wood on a ball).
  *
  * @category Audio
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TSfxPreset = 'coin' | 'jump' | 'hit' | 'explosion';
+export type TSfxPreset = 'coin' | 'jump' | 'hit' | 'explosion' | 'crowd' | 'cheer' | 'whistle' | 'bat';
 
 /**
  * What sound effect to make, and how it differs from the preset as it comes.

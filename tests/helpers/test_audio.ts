@@ -124,11 +124,13 @@ export type TFakeContext = {
     gains: TFakeGain[];
     panners: TFakePanner[];
     resumes: number;
+    suspends: number;
     createGain(): TFakeGain;
     createBufferSource(): TFakeSource;
     createPanner(): TFakePanner;
     decodeAudioData(data: ArrayBuffer): Promise<unknown>;
     resume(): Promise<void>;
+    suspend(): Promise<void>;
     close(): Promise<void>;
 };
 
@@ -172,6 +174,7 @@ export const createFakeAudioContext = (): TFakeContext => {
         gains: [],
         panners: [],
         resumes: 0,
+        suspends: 0,
         createGain: () => {
             const gain = { ...node('gain'), gain: param(1) } as TFakeGain;
             context.gains.push(gain);
@@ -225,6 +228,7 @@ export const createFakeAudioContext = (): TFakeContext => {
         },
         decodeAudioData: async () => ({ duration: FAKE_DURATION }),
         resume: async () => { context.resumes += 1; context.state = 'running'; },
+        suspend: async () => { context.suspends += 1; context.state = 'suspended'; },
         close: async () => { context.closed = true; },
     };
     return context;

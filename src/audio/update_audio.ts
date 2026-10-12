@@ -6,6 +6,7 @@ import {
 } from './create_audio_manager';
 import { zoneVolume2d, zoneVolume3d } from './zone_volume';
 import { applyDucking } from './duck';
+import { closeEndedVoices } from './sound_log';
 import type { TBox } from '../box';
 import type { TQuat } from '../math/quat';
 import type { TRuntimeStore } from '../store';
@@ -325,11 +326,15 @@ export const placeVoice = (store: TRuntimeStore, audio: TAudioManager, voice: TV
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const updateAudio = (store: TRuntimeStore): void => {
+export const updateAudio = (store: TRuntimeStore, dt = 0): void => {
     const audio = store.get('audio').manager;
     if (audio === null) {
         return;
     }
+    // This frame's game time, for music counted by the frames (an editor stepping the game).
+    audio.advance(dt);
+    // A sound stopped this frame stops in the log of the game's sound, when one is kept.
+    closeEndedVoices(audio);
 
     const ear = findEar(store, audio);
     placeIn(audio.context.listener, ear.space, ear.position);

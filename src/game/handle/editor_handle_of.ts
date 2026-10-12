@@ -1,4 +1,5 @@
 import { createGameHandle } from './create_game_handle';
+import { getAudioManager, startSoundLog } from '../../audio';
 import { loadHostScene } from '../../scene/load_host_scene';
 import type { TEditorHandle } from './t_editor_handle';
 import type { TGameInstance } from '../types/t_game_instance';
@@ -136,6 +137,19 @@ export const editorHandleOf = async (instance: TGameInstance): Promise<TEditorHa
             }
             store.setState('loop', { step: Math.min(Math.max(0, dt), MAX_FRAME_DELTA) });
             return true;
+        },
+        stepFrames: (count, dt = 1 / 60) => {
+            const loop = store.get('loop');
+            if (loop.pausedBy.length === 0 || loop.destroyed) {
+                return false;
+            }
+            store.setState('loop', { step: Math.min(Math.max(0, dt), MAX_FRAME_DELTA), stepCount: Math.max(1, Math.floor(count)) });
+            return true;
+        },
+        startSoundLog: () => startSoundLog(getAudioManager(store)),
+        setAudioClock: (clock) => {
+            store.setState('audio', { clock });
+            store.get('audio').manager?.setClock(clock);
         },
         getActions: () => store.get('input').actions.handle(),
         getScenes: () => store.get('world').scenes,

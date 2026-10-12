@@ -26,7 +26,9 @@ export type TBeatSource = () => {
 
 /**
  * Calls its listeners each time a tune crosses into a new beat, going by the **audio engine's clock**
- * rather than the frames: what the ears hear, even when a frame is late.
+ * rather than the frames: what the ears hear, even when a frame is late. Unless a host runs the game
+ * a frame at a time and the music counts by the frames (`TAudioClock`): then the beats come with
+ * them, a step at a time.
  *
  * Checked once a frame by `updateAudio`, so a listener runs on the first frame of its beat. When the
  * tune goes round its loop the count goes back to the bar the loop starts on, the bar the tune is

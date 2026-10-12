@@ -4,6 +4,8 @@ export {
 } from './create_audio_manager';
 export { updateAudio, placeVoice } from './update_audio';
 export { rampTo } from './ramp';
+export { logVoice, startSoundLog } from './sound_log';
+export type { TLoggedSound, TSoundLog, TSoundLogPoint } from './sound_log';
 export { applyDucking, DEFAULT_DUCK_FADE } from './duck';
 export { wrapPosition } from './loop_position';
 export { createLayeredPlayer } from './layered_player';
@@ -13,7 +15,7 @@ export { clipFromSamples } from './clip_from_samples';
 export type { TBeatListener } from './beat_clock';
 export { zoneVolume2d, zoneVolume3d } from './zone_volume';
 
-export type { TAudioHandle, TAudioManager, TVoice } from './types/t_audio';
+export type { TAudioClock, TAudioHandle, TAudioManager, TVoice } from './types/t_audio';
 export type {
     TSoundAttachment, TSoundCone, TSoundDuck, TSoundFade, TSoundHandle, TSoundOptions, TSoundSource, TSoundZone, TSoundZoneShape,
 } from './types/t_sound';

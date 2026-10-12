@@ -8,7 +8,8 @@ import { createTestGame, startTestScene } from './helpers/test_game';
 import type { TGameInstance } from '../src/game/types/t_game_instance';
 
 /**
- * Running a paused game one frame at a time, which is what a Play window's "step" button does.
+ * Running a paused game one frame at a time, which is what a Play window's "step" button does, or
+ * several at once, drawn once (an editor getting to a later point of the game).
  *
  * Pinned: a step runs exactly one frame, by the time it was told and not by the clock, the game is
  * paused again afterwards, and a game that is running cannot be stepped.
@@ -35,7 +36,15 @@ const stepped = async () => {
         now += 1000;
         tick(store, ctx, now, now - 1000);
     };
-    return { handle, deltas, frame };
+    // How many times the game was drawn.
+    const renderer = store.get('screen').renderer;
+    let drawn = 0;
+    const draw = renderer.frame.bind(renderer);
+    renderer.frame = (frameCtx) => {
+        drawn += 1;
+        draw(frameCtx);
+    };
+    return { handle, deltas, frame, draws: () => drawn };
 };
 
 describe('stepping a paused game', () => {
@@ -52,6 +61,29 @@ describe('stepping a paused game', () => {
         frame();
         expect(deltas).toEqual([1 / 60]);
         expect(handle.isPaused()).toBe(true);
+    });
+
+    it('runs several frames at once, each by the time it was told, and draws once', async () => {
+        const { handle, deltas, frame, draws } = await stepped();
+        handle.pause('editor');
+        frame();
+        const drawnBefore = draws();
+
+        expect(handle.stepFrames(5, 1 / 60)).toBe(true);
+        frame();
+        expect(deltas).toEqual([1 / 60, 1 / 60, 1 / 60, 1 / 60, 1 / 60]);
+        expect(draws() - drawnBefore).toBe(1);
+
+        // Then one at a time again, and paused.
+        handle.stepFrame(1 / 60);
+        frame();
+        expect(deltas).toHaveLength(6);
+        frame();
+        expect(deltas).toHaveLength(6);
+        expect(handle.isPaused()).toBe(true);
+        expect(handle.stepFrames(3)).toBe(true);
+        handle.resume('editor');
+        expect(handle.stepFrames(3)).toBe(false);
     });
 
     it('refuses a game that is running, which would be two frames in one', async () => {

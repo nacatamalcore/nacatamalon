@@ -21,7 +21,7 @@ import type { TGeometry } from '../../geometry';
 import type { TDrawable } from '../../gameobjects/types';
 import type { TActionSource, TGamepadSource, TInputMapHandle, TKeyboardSource, TPointerSource } from '../../input';
 import type { TRandomHandle } from '../../math/random';
-import type { TAudioManager } from '../../audio';
+import type { TAudioClock, TAudioManager } from '../../audio';
 import type { TPreviewRequest } from '../../game/preview/types/t_camera_preview';
 import type { TCaptureRequest } from '../../game/capture/types/t_capture_request';
 
@@ -201,6 +201,11 @@ export type TRuntimeState = {
          * and the game at double speed from then on.
          */
         step: number | null;
+        /**
+         * How many frames of `step` to run in that one frame (`stepFrames`): all but the last
+         * without drawing. `1` for a plain step.
+         */
+        stepCount: number;
     };
 
     /**
@@ -398,6 +403,11 @@ export type TRuntimeState = {
      */
     audio: {
         manager: TAudioManager | null;
+        /**
+         * What the music counts by, kept here so a host can ask before the game has any sound: the
+         * manager made later starts on it. See `TEditorHandle.setAudioClock`.
+         */
+        clock: TAudioClock;
     };
 };
 

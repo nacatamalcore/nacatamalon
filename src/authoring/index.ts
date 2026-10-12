@@ -90,6 +90,7 @@ export { readGltfNodes } from '../loaders';
 // changes. A published game never does that; it changes scene from inside, by name.
 export { editorHandleOf } from '../game/handle';
 export type { TEditorHandle } from '../game/handle';
+export type { TLoggedSound, TSoundLog, TSoundLogPoint } from '../audio';
 export type { TCanvasFit } from '../DOM/types/t_canvas_fit';
 export type { TCameraPreview } from '../game/preview';
 

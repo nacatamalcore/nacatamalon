@@ -89,7 +89,7 @@ export const createRuntimeStore = (init: TRuntimeStoreInit): TRuntimeStore => {
         screen: { canvas: init.canvas, renderer: init.renderer, fullscreen: init.fullscreen ?? null, setFit: init.setFit ?? null },
         config: init.config,
         world: { scenes: [], boxStack: [], names: new Map(), pendingDestroy: [], ready: [], buildScripts: 'run' },
-        loop: { destroyed: false, pausedBy: [], timeScale: 1, failure: null, step: null },
+        loop: { destroyed: false, pausedBy: [], timeScale: 1, failure: null, step: null, stepCount: 1 },
         input: {
             keyboard: keyboard,
             pointer: createPointer(init.canvas),
@@ -108,7 +108,7 @@ export const createRuntimeStore = (init: TRuntimeStoreInit): TRuntimeStore => {
         // life. See `TRuntimeState.transition`.
         transition: { active: null },
         // Opened by the first sound, never before: see `TRuntimeState.audio`.
-        audio: { manager: null },
+        audio: { manager: null, clock: 'audio' },
         // Measured by the loop from its second frame on: see `TRuntimeState.stats`.
         stats: { fps: 0 },
         // Each scene's own cameras until a tool says otherwise: see `TRuntimeState.viewport`.

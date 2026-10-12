@@ -1,5 +1,6 @@
 import { rampTo } from './ramp';
 import { wrapPosition } from './loop_position';
+import { logVoice } from './sound_log';
 import type { TAudioManager, TVoice } from './types/t_audio';
 import type { TMusicLayer } from './types/t_music';
 
@@ -30,7 +31,7 @@ type TRunning = {
     parts: TPart[];
     piece: GainNode;
     /**
-     * When it started, on the audio engine's clock.
+     * When it started, on the clock the music counts by (`audio.now()`).
      */
     startedAt: number;
     /**
@@ -81,6 +82,29 @@ export const createLayeredPlayer = (audio: TAudioManager, piece: TLayeredPiece):
     const duration = (): number => piece.layers[0]?.clip.duration ?? 0;
 
     /**
+     * The clock going back to the audio engine (after an editor ran the game a frame at a time): the
+     * tune starts again from where the frames had got it to, so what is heard is where the game is.
+     */
+    const resync = (): (() => void) => {
+        const current = running;
+        if (current === null) {
+            audio.resyncs.delete(resync);
+            return () => {};
+        }
+        if (current.paused) {
+            return () => {};
+        }
+        const played = current.offset + audio.now() - current.startedAt;
+        return () => {
+            if (running === current) {
+                halt(current);
+                running = null;
+                start(played, 0);
+            }
+        };
+    };
+
+    /**
      * Starts every layer at the **same moment of the audio clock**. Started one after another they
      * would drift apart by however long the code between the two took, which is enough to hear.
      */
@@ -88,13 +112,12 @@ export const createLayeredPlayer = (audio: TAudioManager, piece: TLayeredPiece):
         if (piece.layers.length === 0 || piece.layers.some((layer) => layer.clip.status !== 'ready' || layer.clip.buffer === null)) {
             return false;
         }
+        // Nodes and ramps are scheduled on the audio engine's clock; where the tune is is counted on
+        // the clock the music goes by, which an editor stepping the game sets to its frames.
         const now = audio.context.currentTime;
         const gain = audio.context.createGain();
         gain.gain.value = fade > 0 ? 0 : piece.volume;
         gain.connect(audio.channelGain(piece.channel));
-        if (fade > 0) {
-            rampTo(gain.gain, piece.volume, now, fade);
-        }
 
         const parts = piece.layers.map((layer): TPart => {
             const node = audio.context.createBufferSource();
@@ -109,8 +132,9 @@ export const createLayeredPlayer = (audio: TAudioManager, piece: TLayeredPiece):
             return { voice: { node, gain: layerGain, channel: piece.channel, panner: null, area: null, box: null, sound: null, from: null }, layer };
         });
 
-        const current: TRunning = { parts, piece: gain, startedAt: now, offset, paused: false };
+        const current: TRunning = { parts, piece: gain, startedAt: audio.now(), offset, paused: false };
         running = current;
+        audio.resyncs.add(resync);
         for (const part of parts) {
             audio.voices.add(part.voice);
             // Stopped from outside (every sound of its channel, say): once the last layer has gone
@@ -122,6 +146,15 @@ export const createLayeredPlayer = (audio: TAudioManager, piece: TLayeredPiece):
                 }
             };
             part.voice.node.start(now, wrapPosition(offset, part.layer.clip.duration, piece.loopStart, piece.loopEnd));
+            part.voice.track = {
+                position: () => wrapPosition(current.offset + audio.now() - current.startedAt, part.layer.clip.duration, piece.loopStart, piece.loopEnd),
+                gains: [gain.gain, part.voice.gain.gain],
+            };
+            logVoice(audio, part.voice);
+        }
+        // Faded in once every layer has started, so a log of the game's sound hears the fade.
+        if (fade > 0) {
+            rampTo(gain.gain, piece.volume, now, fade);
         }
         return true;
     };
@@ -162,7 +195,7 @@ export const createLayeredPlayer = (audio: TAudioManager, piece: TLayeredPiece):
         if (current === null) {
             return null;
         }
-        const played = current.paused ? current.offset : current.offset + audio.context.currentTime - current.startedAt;
+        const played = current.paused ? current.offset : current.offset + audio.now() - current.startedAt;
         return wrapPosition(played, duration(), piece.loopStart, piece.loopEnd);
     };
 
@@ -174,7 +207,7 @@ export const createLayeredPlayer = (audio: TAudioManager, piece: TLayeredPiece):
             if (current === null || current.paused) {
                 return;
             }
-            current.offset += audio.context.currentTime - current.startedAt;
+            current.offset += audio.now() - current.startedAt;
             halt(current);
             current.paused = true;
         },

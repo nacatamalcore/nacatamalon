@@ -44,16 +44,16 @@ const measureFps = (store: TRuntimeStore, elapsedMs: number): void => {
     store.setState('stats', { fps: fps === 0 ? now : fps + (now - fps) * FPS_WEIGHT });
 };
 
-export const tick = (store: TRuntimeStore, ctx: TFrameContext, now: number, prev: number): void => {
-
-    // Prevent to continue if the game has been destroyed.
-    if (store.get('loop').destroyed) {
-        return;
-    }
-
-    // Schedule the next frame first, so an error below does not stop the loop.
-    requestAnimationFrame((next) => tick(store, ctx, next, now));
-
+/**
+ * Everything one frame does to the game before it is drawn: input, the updates, what was destroyed,
+ * the sound and the shaders' clock. Its own function so a host stepping several frames at once
+ * (`TEditorHandle.stepFrames`) runs exactly what a frame runs, as many times as it asked, and draws
+ * once.
+ *
+ * `dt` is this frame's game time (scaled, `0` when paused); `unscaled` the frame as it really was,
+ * which only the transition reads.
+ */
+const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled: number, paused: boolean): void => {
     // Clicks and touches that arrived since the last frame, handed to their listeners now, before
     // any update: at a moment the game chose, not whenever the DOM fired. Outside the pause check,
     // because a pause menu has to be clickable; a paused scene's own listeners are skipped inside.
@@ -66,24 +66,6 @@ export const tick = (store: TRuntimeStore, ctx: TFrameContext, now: number, prev
     const input = store.get('input');
     input.gamepads.beginFrame();
     input.actions.sample();
-
-    const { pausedBy, timeScale, step } = store.get('loop');
-    // A host stepping a paused game one frame at a time: this frame runs, by exactly the time it
-    // asked for, and the game stays paused. See `TEditorHandle.stepFrame`.
-    const stepping = pausedBy.length > 0 && step !== null;
-    if (step !== null) {
-        store.setState('loop', { step: null });
-    }
-    const paused = pausedBy.length > 0 && !stepping;
-    // The frame as it really was, before the game got to slow it down or stop it. Only the
-    // transition reads this one, and it is the whole reason it exists: a hit-stop at a tenth of
-    // speed must not stretch a 300ms cut into three seconds, and at a standstill the screen would
-    // stay covered for good.
-    const unscaled = Math.min(Math.max(0, now - prev) / 1000, MAX_FRAME_DELTA);
-    // Measured once and shared with the drawing half, because particles are moved there: they are
-    // born where their emitter ended up, which is only known after the tree has been walked.
-    const dt = paused ? 0 : (stepping ? step! : unscaled) * timeScale;
-    measureFps(store, now - prev);
 
     // Before the updates, so the cover is sized for the frame about to be drawn and not for the
     // one before it. Outside the pause check, and deliberately: the invariant worth keeping is
@@ -125,15 +107,16 @@ export const tick = (store: TRuntimeStore, ctx: TFrameContext, now: number, prev
     // Outside the pause check on purpose: a destroy can come from a timer or a click while the
     // game is paused, and it should not sit in the queue until the game resumes.
     flushDestroyed(store);
-    
+
     // An update may have destroyed the game: the renderer would already be gone.
     if (store.get('loop').destroyed) {
         return;
     }
 
     // The listener and the sounds placed in the world follow what is on screen, paused or not:
-    // moving them is not simulating anything. Returns at once in a game with no sound.
-    updateAudio(store);
+    // moving them is not simulating anything. Returns at once in a game with no sound. The frame's
+    // game time goes with it, for music an editor has counting by the frames.
+    updateAudio(store, dt);
 
     // The clock every shader that animates reads. Kept on the frame context and nowhere else, which
     // is what `TRuntimeState.loop` says: it changes sixty times a second and nothing subscribes to
@@ -143,6 +126,45 @@ export const tick = (store: TRuntimeStore, ctx: TFrameContext, now: number, prev
     // lava went on boiling would be a game only half paused. The one clock that is not this one is
     // the transition's, which has to come off the screen whatever the rest of the game is doing.
     ctx.time += dt;
+};
+
+export const tick = (store: TRuntimeStore, ctx: TFrameContext, now: number, prev: number): void => {
+
+    // Prevent to continue if the game has been destroyed.
+    if (store.get('loop').destroyed) {
+        return;
+    }
+
+    // Schedule the next frame first, so an error below does not stop the loop.
+    requestAnimationFrame((next) => tick(store, ctx, next, now));
+
+    const { pausedBy, timeScale, step, stepCount } = store.get('loop');
+    // A host stepping a paused game one frame at a time: this frame runs, by exactly the time it
+    // asked for, and the game stays paused. See `TEditorHandle.stepFrame`. Or several frames at
+    // once (`stepFrames`): all of them run here, and only the last is drawn.
+    const stepping = pausedBy.length > 0 && step !== null;
+    if (step !== null) {
+        store.setState('loop', { step: null, stepCount: 1 });
+    }
+    const paused = pausedBy.length > 0 && !stepping;
+    // The frame as it really was, before the game got to slow it down or stop it. Only the
+    // transition reads this one, and it is the whole reason it exists: a hit-stop at a tenth of
+    // speed must not stretch a 300ms cut into three seconds, and at a standstill the screen would
+    // stay covered for good.
+    const unscaled = Math.min(Math.max(0, now - prev) / 1000, MAX_FRAME_DELTA);
+    // Measured once and shared with the drawing half, because particles are moved there: they are
+    // born where their emitter ended up, which is only known after the tree has been walked.
+    const dt = paused ? 0 : (stepping ? step! : unscaled) * timeScale;
+    measureFps(store, now - prev);
+
+    const frames = stepping ? Math.max(1, stepCount) : 1;
+    for (let i = 0; i < frames; i++) {
+        runFrame(store, ctx, dt, stepping ? step! : unscaled, paused);
+        // An update may have destroyed the game: the renderer would already be gone.
+        if (store.get('loop').destroyed) {
+            return;
+        }
+    }
 
     // Draw even when paused.
     try {

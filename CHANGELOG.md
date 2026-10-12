@@ -20,6 +20,25 @@ releases are in [changelog/](./changelog/), one file each.
   Every loaded song from that `src` (or kept under that key) takes the new notes, and each `useSong`
   playing it makes its tracks again and carries on from the same beat. Says how many it changed:
   none when the game has not loaded the file.
+- `TEditorHandle.stepFrames(count, dt?)`: runs several frames of a paused game in one go and draws
+  only the last, so a host gets to a later point of the game (a song that changes at 45 seconds)
+  without waiting for it. Each frame runs as an ordinary one; particles, which move while drawing,
+  advance one frame.
+- `TEditorHandle.setAudioClock('audio' | 'frames')`: what the music counts time by. On `'frames'` a
+  song's position and its beats (`onBeat`) move with the game's frames, stepped or paused with it,
+  and the audio engine is held still; back on `'audio'` every tune plays on from where the frames
+  got it to.
+- `TEditorHandle.startSoundLog()`: keeps a log of what the game sounds like (every sound, when it
+  began and stopped on the clock the music counts by, from where in it, its fades, its channel's
+  volume) until the function it gives back is called, which hands the log over (`TSoundLog`, on
+  `nacatamalon/authoring`). What a clip made a frame at a time, with the audio engine silent, gets
+  its sound from, mixed offline afterwards. Placing in the world, ducking and changes of speed along
+  the way are not kept.
+- Four sound-effect presets for games with people in them: `crowd` (a stand murmuring, rising and
+  falling on its own; as long as `length` asks), `cheer` (an ovation, the crowd roaring up with
+  clapping over it), `whistle` (a referee's, warbling) and `bat` (a wooden bat on a ball: a crack
+  over a hollow knock). Through `renderSfx` and `useSound({ sfx })` like the others.
+- `SFX_PRESETS`: the presets `renderSfx` makes, in order, for a tool that offers them.
 
 ### Changed
 
@@ -30,3 +49,14 @@ releases are in [changelog/](./changelog/), one file each.
   (`import "./chunk-….js";`). A game's bundler dropped them anyway, since the package says it has no
   side effects, and warned about each one (`ignored-bare-import`) on every build of every game: now
   there is nothing to warn about.
+- A sound effect playing while a host steps the game (music on `'frames'`) carries on from where the
+  frames got it to when the game plays again, or is gone if it ran out meanwhile, instead of picking
+  up where the frozen audio engine left it.
+- A transition stepped by a host (`stepFrame`) moves by the step's time, not by however long the
+  page took between two frames.
+
+### Fixed
+
+- A looping song or piece of music no longer calls `onBeat` twice for the first beat of its loop when
+  its position lands a hair short of the loop's end (time added up a frame at a time does): that is
+  the start of the loop, counted once.

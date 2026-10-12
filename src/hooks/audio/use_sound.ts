@@ -1,5 +1,5 @@
 import { getActiveBox, getActiveGame } from '../../store';
-import { applyDucking, clipFromSamples, DEFAULT_CHANNEL, getAudioManager, placeVoice, rampTo, wrapPosition } from '../../audio';
+import { applyDucking, clipFromSamples, DEFAULT_CHANNEL, getAudioManager, logVoice, placeVoice, rampTo, wrapPosition } from '../../audio';
 import { renderSfx } from '../../audio/synth';
 import { nanoId } from '../../utils';
 import { whenLoaded } from '../../loaders';
@@ -15,7 +15,7 @@ import type { TAudioManager, TSoundAttachment, TSoundHandle, TSoundOptions, TSou
 type TPlaying = {
     voice: TVoice;
     /**
-     * When it started, on the audio engine's clock.
+     * When it started, on the clock the music counts by (`audio.now()`).
      */
     startedAt: number;
     /**
@@ -23,6 +23,14 @@ type TPlaying = {
      */
     offset: number;
     paused: boolean;
+    /**
+     * Stopping with a fade: going, whatever else happens to it.
+     */
+    fading: boolean;
+    /**
+     * Puts it right when an editor that ran the game a frame at a time lets it play again.
+     */
+    resync: () => () => void;
 };
 
 /**
@@ -131,6 +139,7 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
     const forget = (entry: TPlaying): void => {
         playing = playing.filter((existing) => existing !== entry);
         audio.voices.delete(entry.voice);
+        audio.resyncs.delete(entry.resync);
     };
 
     /**
@@ -150,12 +159,9 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
         node.playbackRate.value = rate;
 
         const gain = audio.context.createGain();
-        gain.gain.value = volume;
+        // Faded in once it has started (below), so a log of the game's sound hears the fade.
+        gain.gain.value = fade > 0 ? 0 : volume;
         gain.connect(audio.channelGain(channel));
-        if (fade > 0) {
-            gain.gain.value = 0;
-            rampTo(gain.gain, volume, audio.context.currentTime, fade);
-        }
 
         // An area wins over a point: a sound is heard from one place or all around, never both.
         const zoned = attachment.zone !== null;
@@ -190,7 +196,31 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
             from: attachment,
         };
         placeVoice(store, audio, voice);
-        const entry: TPlaying = { voice, startedAt: audio.context.currentTime, offset, paused: false };
+        // On the clock the music counts by, so where it had got to is right when an editor steps it.
+        const entry: TPlaying = { voice, startedAt: audio.now(), offset, paused: false, fading: false, resync: () => () => {} };
+        const position = (): number => {
+            const at = entry.offset + (audio.now() - entry.startedAt) * node.playbackRate.value;
+            return node.loop ? wrapPosition(at, clip.duration, attachment.loopStart, attachment.loopEnd) : at;
+        };
+        voice.track = { position, gains: [gain.gain] };
+        // Heard again after an editor ran the game a frame at a time: from where the frames got it
+        // to, or not at all if it ran out (or was fading out) meanwhile.
+        entry.resync = () => {
+            if (entry.paused) {
+                return () => {};
+            }
+            const at = position();
+            return () => {
+                if (!playing.includes(entry)) {
+                    return;
+                }
+                stopVoice(entry);
+                if (!entry.fading && (node.loop || at < clip.duration)) {
+                    start(at);
+                }
+            };
+        };
+        audio.resyncs.add(entry.resync);
 
         // A one-off clears itself up when it finishes; a looping one never finishes on its own.
         node.onended = () => {
@@ -202,6 +232,10 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
         audio.voices.add(voice);
         playing.push(entry);
         node.start(0, offset);
+        logVoice(audio, voice);
+        if (fade > 0) {
+            rampTo(gain.gain, volume, audio.context.currentTime, fade);
+        }
         // On the same moment as the sound, not a frame later.
         applyDucking(audio);
     };
@@ -229,6 +263,7 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
                 forget(entry);
                 continue;
             }
+            entry.fading = true;
             rampTo(entry.voice.gain.gain, 0, now, fade);
             entry.voice.node.stop(now + fade);
         }
@@ -250,7 +285,7 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
                 }
                 // Where it had got to: a sound node cannot be paused, so it is stopped and started
                 // again from here.
-                const played = (audio.context.currentTime - entry.startedAt) * entry.voice.node.playbackRate.value;
+                const played = (audio.now() - entry.startedAt) * entry.voice.node.playbackRate.value;
                 const position = entry.offset + played;
                 entry.offset = loop ? wrapPosition(position, clip.duration, attachment.loopStart, attachment.loopEnd) : position;
                 entry.paused = true;
@@ -265,6 +300,7 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
             const paused = playing.filter((entry) => entry.paused);
             for (const entry of paused) {
                 playing = playing.filter((existing) => existing !== entry);
+                audio.resyncs.delete(entry.resync);
                 start(entry.offset);
             }
         },

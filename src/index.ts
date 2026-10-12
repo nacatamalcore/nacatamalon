@@ -193,7 +193,7 @@ export type {
 export type { TRandomHandle } from './math/random';
 // Sound made from text rather than recorded: a song's tracks and an effect's samples, the same in a
 // game, in an editor and on the desktop runtime.
-export { renderSong, renderSfx, parseSongDoc, SONG_FORMAT } from './audio/synth';
+export { renderSong, renderSfx, SFX_PRESETS, parseSongDoc, SONG_FORMAT } from './audio/synth';
 export type {
     TRenderedSong, TSfxOptions, TSfxPreset, TSongDoc, TSongError, TSongNote, TSongVoice, TSongVoiceName, TAudioMeasure,
 } from './audio/synth';
