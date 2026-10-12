@@ -14,7 +14,7 @@ import { useAmbientLight, useLight, usePointLight, useSpotLight } from '../../ho
 import { useCamera2d } from '../../hooks/camera/use_camera_2d';
 import { useData } from '../../hooks/state';
 import { useScript } from '../../hooks/script';
-import { useAudioListener, useMusic, useSound } from '../../hooks/audio';
+import { useAudioListener, useMusic, useSong, useSound } from '../../hooks/audio';
 import { useStoreLink } from '../../hooks/store';
 import { usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d } from '../../hooks/physics';
 import { useCamera3d } from '../../hooks/camera/use_camera_3d';
@@ -27,7 +27,7 @@ import {
     useCircleGeometry, useConeGeometry, useCubeGeometry, useCylinderGeometry,
     useIcoSphereGeometry, usePlaneGeometry, useTorusGeometry, useUvSphereGeometry,
 } from '../../hooks/geometry';
-import { useLoadAtlas, useLoadAudio, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadParticles, useLoadShader, useLoadTexture } from '../../hooks/loaders';
+import { useLoadAtlas, useLoadAudio, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadParticles, useLoadShader, useLoadSong, useLoadTexture } from '../../hooks/loaders';
 import { useScreenSpace } from '../../hooks/camera/use_screen_space';
 import { useTransform } from '../../hooks/transform/use_transform';
 import { whenLoaded } from '../../loaders';
@@ -59,6 +59,7 @@ const loadAssets = (assets: readonly TAssetEntry[], src: string): void => {
             case 'shader': useLoadShader({ src: asset.src, key: asset.key }); break;
             case 'particles': useLoadParticles({ src: asset.src, key: asset.key }); break;
             case 'audio': useLoadAudio({ src: asset.src, key: asset.key }); break;
+            case 'song': useLoadSong({ src: asset.src, key: asset.key }); break;
             case 'bitmapFont': useLoadBitmapFont({ json: asset.json, atlas: asset.atlas, key: asset.key }); break;
             case 'font': useLoadFont({ src: asset.src, key: asset.key, ...(asset.size !== undefined ? { size: asset.size } : {}) }); break;
             // A map is asked for by the thing that shows it, because `createTilemap` is what puts
@@ -516,6 +517,8 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                 id: component.id,
                 ...(component.volume !== undefined ? { volume: component.volume } : {}),
                 ...(component.loop !== undefined ? { loop: component.loop } : {}),
+                ...(component.loopStart !== undefined ? { loopStart: component.loopStart } : {}),
+                ...(component.loopEnd !== undefined ? { loopEnd: component.loopEnd } : {}),
                 ...(component.rate !== undefined ? { rate: component.rate } : {}),
                 ...(component.channel !== undefined ? { channel: component.channel } : {}),
                 ...(component.autoplay !== undefined ? { autoplay: component.autoplay } : {}),
@@ -524,6 +527,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                 ...(component.maxDistance !== undefined ? { maxDistance: component.maxDistance } : {}),
                 ...(component.cone !== undefined ? { cone: { ...component.cone } } : {}),
                 ...(component.zone !== undefined ? { zone: structuredClone(component.zone) } : {}),
+                ...(component.duck !== undefined ? { duck: { ...component.duck } } : {}),
             });
             break;
         }
@@ -545,6 +549,27 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                 ...(component.volume !== undefined ? { volume: component.volume } : {}),
                 ...(component.channel !== undefined ? { channel: component.channel } : {}),
                 ...(component.autoplay !== undefined ? { autoplay: component.autoplay } : {}),
+                ...(component.loopStart !== undefined ? { loopStart: component.loopStart } : {}),
+                ...(component.loopEnd !== undefined ? { loopEnd: component.loopEnd } : {}),
+                ...(component.bpm !== undefined ? { bpm: component.bpm } : {}),
+                ...(component.beatsPerBar !== undefined ? { beatsPerBar: component.beatsPerBar } : {}),
+                ...(component.firstBeat !== undefined ? { firstBeat: component.firstBeat } : {}),
+            });
+            break;
+        }
+        case 'song': {
+            const file = found(assets.songs, component.song, 'song', src);
+            if (file === undefined) {
+                break;
+            }
+            useSong(file, {
+                id: component.id,
+                ...(component.volume !== undefined ? { volume: component.volume } : {}),
+                ...(component.channel !== undefined ? { channel: component.channel } : {}),
+                ...(component.autoplay !== undefined ? { autoplay: component.autoplay } : {}),
+                ...(component.voices !== undefined ? { voices: { ...component.voices } } : {}),
+                ...(component.tempo !== undefined ? { tempo: component.tempo } : {}),
+                ...(component.transpose !== undefined ? { transpose: component.transpose } : {}),
             });
             break;
         }

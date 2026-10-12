@@ -2,7 +2,7 @@ import type { TFog } from '../../fog/types/t_fog';
 import type { TDrawable } from '../../gameobjects/types';
 import type { TDataRecord } from '../../hooks/state';
 import type { TScriptAttachment } from '../../scripts';
-import type { TAudioListener, TMusicAttachment, TSoundAttachment } from '../../audio';
+import type { TAudioListener, TMusicAttachment, TSongAttachment, TSoundAttachment } from '../../audio';
 import type { TPhysicsBody, TPhysicsWorld } from '../../physics';
 import type { TTransform3d } from '../../gameobjects/types/t_transform_3d';
 import type { TLight } from '../../light';
@@ -94,7 +94,7 @@ export type TBox = {
      * and written down. What is kept is how it was asked to play and never what is playing, so a
      * scene saved mid-tune comes back ready to start it rather than halfway through.
      */
-    sounds: Array<TSoundAttachment | TMusicAttachment>;
+    sounds: Array<TSoundAttachment | TMusicAttachment | TSongAttachment>;
     /**
      * The stores this object uses, by name.
      *

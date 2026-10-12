@@ -41,4 +41,8 @@ export type TAssetEntry =
     | { type: 'shader'; key: string; src: string }
     | { type: 'particles'; key: string; src: string }
     | { type: 'audio'; key: string; src: string }
+    /**
+     * A song written as notes, a `.song` file.
+     */
+    | { type: 'song'; key: string; src: string }
     | { type: 'tilemap'; key: string; src: string };

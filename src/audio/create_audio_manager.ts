@@ -46,6 +46,7 @@ export const createAudioManager = (): TAudioManager => {
     master.connect(context.destination);
 
     const channels = new Map<string, GainNode>();
+    const duckGains = new Map<string, GainNode>();
     const voices = new Set<TVoice>();
 
     const channelGain = (name: string): GainNode => {
@@ -56,6 +57,21 @@ export const createAudioManager = (): TAudioManager => {
             channels.set(name, gain);
         }
         return gain;
+    };
+
+    // Put in the first time a sound holds the channel down, between the channel and the master, so
+    // a game that never ducks carries no extra node.
+    const duckGain = (name: string): GainNode => {
+        let duck = duckGains.get(name);
+        if (duck === undefined) {
+            const channel = channelGain(name);
+            duck = context.createGain();
+            duck.connect(master);
+            channel.disconnect();
+            channel.connect(duck);
+            duckGains.set(name, duck);
+        }
+        return duck;
     };
     for (const name of BUILT_IN_CHANNELS) {
         channelGain(name);
@@ -85,11 +101,15 @@ export const createAudioManager = (): TAudioManager => {
         context,
         master,
         channels,
+        duckGains,
+        duckTargets: new Map(),
         voices,
+        tickers: new Set(),
         listeners: [],
         warnedListeners: false,
         warnedZones: new WeakSet(),
         channelGain,
+        duckGain,
         destroy: () => {
             removeUnlock();
             for (const voice of voices) {

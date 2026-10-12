@@ -4,11 +4,19 @@ export {
 } from './create_audio_manager';
 export { updateAudio, placeVoice } from './update_audio';
 export { rampTo } from './ramp';
+export { applyDucking, DEFAULT_DUCK_FADE } from './duck';
+export { wrapPosition } from './loop_position';
+export { createLayeredPlayer } from './layered_player';
+export type { TLayeredPiece, TLayeredPlayer } from './layered_player';
+export { createBeatClock } from './beat_clock';
+export { clipFromSamples } from './clip_from_samples';
+export type { TBeatListener } from './beat_clock';
 export { zoneVolume2d, zoneVolume3d } from './zone_volume';
 
 export type { TAudioHandle, TAudioManager, TVoice } from './types/t_audio';
 export type {
-    TSoundAttachment, TSoundCone, TSoundFade, TSoundHandle, TSoundOptions, TSoundSource, TSoundZone, TSoundZoneShape,
+    TSoundAttachment, TSoundCone, TSoundDuck, TSoundFade, TSoundHandle, TSoundOptions, TSoundSource, TSoundZone, TSoundZoneShape,
 } from './types/t_sound';
 export type { TMusicAttachment, TMusicHandle, TMusicLayer, TMusicLayerOptions, TMusicOptions } from './types/t_music';
 export type { TAudioListener } from './types/t_audio_listener';
+export type { TSongAttachment, TSongHandle, TSongOptions } from './types/t_song_player';

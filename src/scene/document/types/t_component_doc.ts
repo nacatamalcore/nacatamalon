@@ -8,7 +8,8 @@ import type { TUniformValues } from '../../../materials/types/t_uniforms';
 import type { TTextureWrap } from '../../../materials/types/t_material';
 import type { TParticleOverrides } from '../../../gameobjects/particles/types/t_particles';
 import type { TParticleColliderShape2d, TParticleColliderShape3d } from '../../../gameobjects/particles/colliders/t_particle_collider';
-import type { TSoundCone, TSoundZone } from '../../../audio';
+import type { TSoundCone, TSoundDuck, TSoundZone } from '../../../audio';
+import type { TSongVoiceName } from '../../../audio/synth';
 
 /**
  * What a material is, written down.
@@ -142,6 +143,7 @@ export type TComponentDoc =
     | TScriptComponent
     | TSoundComponent
     | TMusicComponent
+    | TSongComponent
     | TAudioListenerComponent
     | TStoreComponent
     | TPhysicsBody2dComponent
@@ -605,6 +607,12 @@ export type TSoundComponent = {
     volume?: number;
     loop?: boolean;
     /**
+     * Where the loop goes back to and turns back, in seconds into the file. Absent for the whole
+     * file.
+     */
+    loopStart?: number;
+    loopEnd?: number;
+    /**
      * How fast it plays, which also changes the pitch.
      */
     rate?: number;
@@ -641,6 +649,10 @@ export type TSoundComponent = {
      * Fills an area around the object instead of coming from a point. Wins over `spatial`.
      */
     zone?: TSoundZone;
+    /**
+     * Another channel made quieter while this plays.
+     */
+    duck?: TSoundDuck;
 };
 
 /**
@@ -667,6 +679,53 @@ export type TMusicComponent = {
      */
     channel?: string;
     autoplay?: boolean;
+    /**
+     * Where the loop goes back to and turns back, in seconds into the tune. Absent for the whole
+     * tune.
+     */
+    loopStart?: number;
+    loopEnd?: number;
+    /**
+     * The tune's tempo, its bar and where its first beat falls, for whatever follows its beat.
+     */
+    bpm?: number;
+    beatsPerBar?: number;
+    firstBeat?: number;
+};
+
+/**
+ * A song written as notes this object carries: the `.song` file by asset key, and how it was asked to
+ * play. Like music, never where it had got to.
+ *
+ * @category Scenes
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TSongComponent = {
+    type: 'song';
+    id: string;
+    /**
+     * The `.song` file, by asset key.
+     */
+    song: string;
+    volume?: number;
+    /**
+     * Absent for `'music'`.
+     */
+    channel?: string;
+    autoplay?: boolean;
+    /**
+     * How loud each voice is, only those not at `1`.
+     */
+    voices?: Partial<Record<TSongVoiceName, number>>;
+    /**
+     * Beats per minute, absent for what the file says.
+     */
+    tempo?: number;
+    /**
+     * Semitones from how it is written, absent for none.
+     */
+    transpose?: number;
 };
 
 /**

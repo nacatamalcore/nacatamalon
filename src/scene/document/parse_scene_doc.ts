@@ -19,7 +19,9 @@ import type { TScriptProps } from '../../scripts';
 import { createPhysicsBody2d, createPhysicsBody3d } from '../../physics';
 import type { TCollider2d, TCollider3d, TPhysicsSurface } from '../../physics';
 import type { TParticleColliderShape2d, TParticleColliderShape3d } from '../../gameobjects/particles/colliders/t_particle_collider';
-import type { TSoundCone, TSoundZone } from '../../audio';
+import type { TSoundCone, TSoundDuck, TSoundZone } from '../../audio';
+import { SONG_VOICES } from '../../audio/synth';
+import type { TSongVoiceName } from '../../audio/synth';
 import type { TTextureWrap } from '../../materials/types/t_material';
 
 const WHITE: TColor = { r: 1, g: 1, b: 1, a: 1 };
@@ -291,6 +293,24 @@ const parseSoundCone = (value: unknown): TSoundCone | undefined => {
         inner: asNumber(raw.inner, 360),
         outer: asNumber(raw.outer, 360),
         outerVolume: Math.min(1, Math.max(0, asNumber(raw.outerVolume, 0))),
+    };
+};
+
+/**
+ * The channel a sound holds down while it plays, or `undefined` when the file gives none or one with
+ * no channel to hold down.
+ */
+const parseSoundDuck = (value: unknown): TSoundDuck | undefined => {
+    const raw = asRecord(value);
+    const channel = asString(raw?.channel, '');
+    if (raw === null || channel === '') {
+        return undefined;
+    }
+    return {
+        channel,
+        to: Math.min(1, Math.max(0, asNumber(raw.to, 0.3))),
+        ...optionalNumber(raw, 'fade'),
+        ...optionalNumber(raw, 'release'),
     };
 };
 
@@ -642,6 +662,8 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 audio,
                 ...optionalNumber(raw, 'volume'),
                 ...optionalBoolean(raw, 'loop'),
+                ...optionalNumber(raw, 'loopStart'),
+                ...optionalNumber(raw, 'loopEnd'),
                 ...optionalNumber(raw, 'rate'),
                 ...optionalString(raw, 'channel'),
                 ...optionalBoolean(raw, 'autoplay'),
@@ -650,6 +672,7 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 ...optionalNumber(raw, 'maxDistance'),
                 ...(parseSoundCone(raw.cone) !== undefined ? { cone: parseSoundCone(raw.cone) } : {}),
                 ...(parseSoundZone(raw.zone) !== undefined ? { zone: parseSoundZone(raw.zone) } : {}),
+                ...(parseSoundDuck(raw.duck) !== undefined ? { duck: parseSoundDuck(raw.duck) } : {}),
             };
         }
         case 'music': {
@@ -672,6 +695,38 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 ...optionalNumber(raw, 'volume'),
                 ...optionalString(raw, 'channel'),
                 ...optionalBoolean(raw, 'autoplay'),
+                ...optionalNumber(raw, 'loopStart'),
+                ...optionalNumber(raw, 'loopEnd'),
+                ...optionalNumber(raw, 'bpm'),
+                ...optionalNumber(raw, 'beatsPerBar'),
+                ...optionalNumber(raw, 'firstBeat'),
+            };
+        }
+        case 'song': {
+            // A song naming no file is one nothing could ever play, so it goes to the hole with the
+            // rest of what this version cannot read.
+            const song = asString(raw.song, '');
+            if (song === '') {
+                return null;
+            }
+            const voicesRaw = asRecord(raw.voices);
+            const voices: Partial<Record<TSongVoiceName, number>> = {};
+            for (const name of SONG_VOICES) {
+                const volume = voicesRaw?.[name];
+                if (typeof volume === 'number' && Number.isFinite(volume)) {
+                    voices[name] = volume;
+                }
+            }
+            return {
+                type: 'song',
+                id,
+                song,
+                ...optionalNumber(raw, 'volume'),
+                ...optionalString(raw, 'channel'),
+                ...optionalBoolean(raw, 'autoplay'),
+                ...(Object.keys(voices).length > 0 ? { voices } : {}),
+                ...optionalNumber(raw, 'tempo'),
+                ...optionalNumber(raw, 'transpose'),
             };
         }
         case 'audio-listener':
@@ -737,7 +792,7 @@ const parseAsset = (value: unknown): TAssetEntry | null => {
     if (raw.type === 'bitmapFont') {
         return { type: 'bitmapFont', key, json: asString(raw.json, ''), atlas: asString(raw.atlas, '') };
     }
-    if (raw.type === 'texture' || raw.type === 'atlas' || raw.type === 'shader' || raw.type === 'particles' || raw.type === 'tilemap' || raw.type === 'audio') {
+    if (raw.type === 'texture' || raw.type === 'atlas' || raw.type === 'shader' || raw.type === 'particles' || raw.type === 'tilemap' || raw.type === 'audio' || raw.type === 'song') {
         // `src` defaults to the key, because for most of these they are the same string and a file
         // that only said it once meant both.
         return { type: raw.type, key, src: asString(raw.src, key) };

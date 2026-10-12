@@ -56,9 +56,13 @@ const TOP_LEFT = { x: 0, y: 0 };
 export const textOfGlyph = (drawable: object): TText | undefined => glyphOwners.get(drawable);
 
 /**
- * How big a text's block was the last time it was drawn. Zero before it has been drawn once.
+ * How big a text's block was the last time it was drawn, in the text's own pixels, before its
+ * scale: what a tool outlines and lets you pick it by. Zero before it has been drawn once.
  *
- * @internal
+ * @param text - The text.
+ * @returns Its width and height.
+ *
+ * @category Game objects
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */

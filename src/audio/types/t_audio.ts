@@ -33,6 +33,11 @@ export type TVoice = {
      */
     box: TBox | null;
     sound: TSoundAttachment | null;
+    /**
+     * The sound this voice came from, read every frame for the channel it holds down while it plays.
+     * `null` for a voice that holds nothing down, like a layer of music.
+     */
+    from: TSoundAttachment | null;
 };
 
 /**
@@ -55,9 +60,23 @@ export type TAudioManager = {
      */
     channels: Map<string, GainNode>;
     /**
+     * A second volume behind a channel, the one sounds that hold the channel down move. Kept apart
+     * so it never touches what an options screen set, and made only for channels that get held down.
+     */
+    duckGains: Map<string, GainNode>;
+    /**
+     * The channels held down right now: how low, so a ramp is only asked for when that changes, and
+     * how long they take to come back up once let go.
+     */
+    duckTargets: Map<string, { to: number; release: number }>;
+    /**
      * Every voice sounding right now, so they can be followed, silenced and stopped.
      */
     voices: Set<TVoice>;
+    /**
+     * What has to look at the audio clock once a frame: the tunes somebody is counting beats of.
+     */
+    tickers: Set<() => void>;
     /**
      * The objects that carry ears, in the order they got them. The first one switched on is used.
      */
@@ -74,6 +93,10 @@ export type TAudioManager = {
      * The channel's volume, made on the spot if this is the first time it is asked for.
      */
     channelGain(name: string): GainNode;
+    /**
+     * The channel's second volume, put in behind it the first time it is asked for.
+     */
+    duckGain(name: string): GainNode;
     /**
      * Stops everything and closes the audio engine.
      */

@@ -73,6 +73,13 @@ export {
     particlesShapeExtent, sampleParticleColor, sampleParticleScale, measureParticlesBounds, applyParticlesDoc,
 } from '../gameobjects/particles/tools';
 
+// Sound made rather than recorded: a song or an effect mixed into one track, written as a file,
+// and measured by whoever cannot hear it. A game plays the tracks; it never writes a file.
+export { serializeSongDoc, mixSong, encodeWav, analyzeAudio } from '../audio/synth';
+
+// How big a text came out, for a tool to outline it and pick it by.
+export { textBlockSize } from '../gameobjects/text';
+
 // Bringing a model in: its tree of pieces, to be written down as boxes. A running game draws the
 // scene's structure and never the file's.
 export { readGltfNodes } from '../loaders';

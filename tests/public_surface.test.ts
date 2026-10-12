@@ -133,6 +133,11 @@ describe('the tools door', () => {
             'DEFAULT_PROJECT_SETTINGS', 'eulerAim',
             // Saving a picture painted in code as a file, and reading one: a build script's, never a running game's.
             'encodePng', 'decodePng',
+            // The same for sound made from text: saving a song, mixing it and writing it as a file, and
+            // measuring it for whoever cannot listen.
+            'serializeSongDoc', 'mixSong', 'encodeWav', 'analyzeAudio',
+            // How big a text came out: an editor outlines it and picks it by it, a game never asks.
+            'textBlockSize',
         ].sort());
     });
 

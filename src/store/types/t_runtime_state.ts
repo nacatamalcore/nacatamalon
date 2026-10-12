@@ -15,6 +15,7 @@ import type { TTransitionState } from '../../transition/types/t_transition_state
 import type { TCamera2d } from '../../camera/types/t_camera_2d';
 import type { TCamera3d } from '../../camera/types/t_camera_3d';
 import type { TParticlesFile } from '../../loaders/particles/types/t_particles_file';
+import type { TSongFile } from '../../loaders/song/types/t_song_file';
 import type { TTilemap } from '../../gameobjects/tilemap';
 import type { TGeometry } from '../../geometry';
 import type { TDrawable } from '../../gameobjects/types';
@@ -272,6 +273,10 @@ export type TRuntimeState = {
          * Effects read from a file, so three torches share one document and one picture.
          */
         particles: Map<string, TParticlesFile>;
+        /**
+         * Songs written as notes, so two scenes playing the same tune read it once.
+         */
+        songs: Map<string, TSongFile>;
         /**
          * Palettes, so two effects reducing to the same one fetch and upload it once.
          */

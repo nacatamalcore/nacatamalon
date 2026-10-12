@@ -8,7 +8,7 @@ import type { TTexture } from '../../loaders';
 import type { TColor } from '../../color';
 import { DEFAULT_CHANNEL } from '../../audio';
 import type { TAssetEntry } from './types/t_asset_entry';
-import type { TMusicAttachment, TSoundAttachment } from '../../audio';
+import type { TMusicAttachment, TSongAttachment, TSoundAttachment } from '../../audio';
 import type { TBox } from '../../box';
 import type { TBoxNode, TSceneDoc } from './types/t_scene_doc';
 import type { TCamera2d } from '../../camera';
@@ -382,6 +382,8 @@ const writeSound = (sound: TSoundAttachment, writing: TWriting): TComponentDoc =
         audio: sound.clip.key,
         ...unless('volume', sound.volume, 1),
         ...unless('loop', sound.loop, false),
+        ...unless('loopStart', sound.loopStart, 0),
+        ...unless('loopEnd', sound.loopEnd, 0),
         ...unless('rate', sound.rate, 1),
         ...unless('channel', sound.channel, DEFAULT_CHANNEL),
         ...unless('autoplay', sound.autoplay, false),
@@ -391,6 +393,7 @@ const writeSound = (sound: TSoundAttachment, writing: TWriting): TComponentDoc =
         ...(sound.spatial && sound.maxDistance !== null ? { maxDistance: sound.maxDistance } : {}),
         ...(sound.cone !== null ? { cone: { ...sound.cone } } : {}),
         ...(sound.zone !== null ? { zone: structuredClone(sound.zone) } : {}),
+        ...(sound.duck !== null ? { duck: { ...sound.duck } } : {}),
     };
 };
 
@@ -408,7 +411,35 @@ const writeMusic = (music: TMusicAttachment, writing: TWriting): TComponentDoc =
     ...unless('volume', music.volume, 1),
     ...unless('channel', music.channel, 'music'),
     ...unless('autoplay', music.autoplay, false),
+    ...unless('loopStart', music.loopStart, 0),
+    ...unless('loopEnd', music.loopEnd, 0),
+    ...(music.bpm !== null ? { bpm: music.bpm } : {}),
+    ...unless('beatsPerBar', music.beatsPerBar, 4),
+    ...unless('firstBeat', music.firstBeat, 0),
 });
+
+/**
+ * A song as the document keeps it: its file by name, registered in the manifest, and how it was
+ * asked to play. A song written in code has no file to name, so it is not written down at all.
+ */
+const writeSong = (song: TSongAttachment, writing: TWriting): TComponentDoc | null => {
+    if (song.file.src === '') {
+        return null;
+    }
+    writing.assets.set(song.file.key, { type: 'song', key: song.file.key, src: song.file.src });
+    const voices = Object.fromEntries(Object.entries(song.voices).filter(([, volume]) => volume !== 1));
+    return {
+        type: 'song',
+        id: song.id,
+        song: song.file.key,
+        ...unless('volume', song.volume, 1),
+        ...unless('channel', song.channel, 'music'),
+        ...unless('autoplay', song.autoplay, false),
+        ...(Object.keys(voices).length > 0 ? { voices } : {}),
+        ...(song.tempo !== null ? { tempo: song.tempo } : {}),
+        ...unless('transpose', song.transpose, 0),
+    };
+};
 
 const writeCamera2d = (camera: TCamera2d): TComponentDoc => ({
     type: 'camera2d',
@@ -557,6 +588,13 @@ const writeBox = (box: TBox, writing: TWriting): TBoxNode => {
     }
 
     for (const sound of box.sounds) {
+        if (sound.type === 'song') {
+            const song = writeSong(sound, writing);
+            if (song !== null) components.push(song);
+            continue;
+        }
+        // A sound made in code has no file to name, so it is not written down.
+        if (sound.type === 'sound' && sound.clip.src === '') continue;
         components.push(sound.type === 'music' ? writeMusic(sound, writing) : writeSound(sound, writing));
     }
     if (box.audioListener !== null) {

@@ -1,15 +1,16 @@
 import type { TAudioClip } from '../../loaders/audio/types/t_audio_clip';
+import type { TSfxOptions } from '../synth/types/t_song';
 import type { TParticleColliderShape2d, TParticleColliderShape3d } from '../../gameobjects/particles/colliders/t_particle_collider';
 
 /**
- * What to play: a clip from `useLoadAudio`, or just where the file is and let `useSound` load it.
- * The same two doors `createSprite` offers for an image.
+ * What to play: a clip from `useLoadAudio`, just where the file is and let `useSound` load it, or an
+ * effect made on the spot from a preset (`{ sfx: { preset: 'coin' } }`, see `renderSfx`).
  *
  * @category Audio
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TSoundSource = TAudioClip | { src: string; key?: string };
+export type TSoundSource = TAudioClip | { src: string; key?: string } | { sfx: TSfxOptions };
 
 /**
  * Where a sound is heard loudest: a speaker, a siren, a radio on a shelf. Straight ahead of its
@@ -68,6 +69,37 @@ export type TSoundZone = {
 };
 
 /**
+ * Another channel made quieter while a sound plays: the music going down under a cheer, a voice, an
+ * alarm, and coming back up on its own once it is over.
+ *
+ * It moves a volume of its own behind the channel, never the channel's: the one an options screen
+ * set is still there when the music comes back.
+ *
+ * @category Audio
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TSoundDuck = {
+    /**
+     * The channel that goes down, usually `'music'`.
+     */
+    channel: string;
+    /**
+     * How loud it is kept while this sounds, from `0` (silent) to `1` (untouched). When several
+     * sounds hold the same channel down, the quietest one wins.
+     */
+    to: number;
+    /**
+     * How long it takes to go down, in seconds. Default `0.15`.
+     */
+    fade?: number;
+    /**
+     * How long it takes to come back up once nothing holds it down. Default, the same as `fade`.
+     */
+    release?: number;
+};
+
+/**
  * How a sound plays.
  *
  * @category Audio
@@ -93,6 +125,15 @@ export type TSoundOptions = {
      * act on: music, rain, an engine.
      */
     loop?: boolean;
+    /**
+     * Where the loop goes back to, in seconds into the file. Everything before it is an intro that
+     * plays once. Looping sounds only. Default `0`, the whole file.
+     */
+    loopStart?: number;
+    /**
+     * Where the loop turns back, in seconds into the file. Default `0`, the end of the file.
+     */
+    loopEnd?: number;
     /**
      * How fast it plays, which also changes the pitch: `2` is twice as fast, an octave up. Default `1`.
      */
@@ -136,6 +177,10 @@ export type TSoundOptions = {
      * from one side, because an ambience is all around. Wins over `spatial`.
      */
     zone?: TSoundZone;
+    /**
+     * Makes another channel quieter while this sounds: the music under a cheer.
+     */
+    duck?: TSoundDuck;
 };
 
 /**
@@ -172,6 +217,11 @@ export type TSoundAttachment = {
     clip: TAudioClip;
     volume: number;
     loop: boolean;
+    /**
+     * `0` for both is the whole file.
+     */
+    loopStart: number;
+    loopEnd: number;
     rate: number;
     channel: string;
     autoplay: boolean;
@@ -183,6 +233,7 @@ export type TSoundAttachment = {
     maxDistance: number | null;
     cone: TSoundCone | null;
     zone: TSoundZone | null;
+    duck: TSoundDuck | null;
 };
 
 /**

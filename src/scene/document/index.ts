@@ -22,7 +22,7 @@ export type {
     TParticleCollider2dComponent,
     TParticleCollider3dComponent,
     TSpriteTextureComponent,
-    TMusicComponent,
+    TMusicComponent, TSongComponent,
     TAudioListenerComponent,
     TCamera2dComponent,
     TCamera3dComponent,

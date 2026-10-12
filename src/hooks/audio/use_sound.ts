@@ -1,5 +1,6 @@
 import { getActiveBox, getActiveGame } from '../../store';
-import { DEFAULT_CHANNEL, getAudioManager, placeVoice, rampTo } from '../../audio';
+import { applyDucking, clipFromSamples, DEFAULT_CHANNEL, getAudioManager, placeVoice, rampTo, wrapPosition } from '../../audio';
+import { renderSfx } from '../../audio/synth';
 import { nanoId } from '../../utils';
 import { whenLoaded } from '../../loaders';
 import { useLoadAudio } from '../loaders/use_load_audio';
@@ -25,9 +26,18 @@ type TPlaying = {
 };
 
 /**
- * A clip, whether it was loaded beforehand or asked for right here.
+ * A clip, whether it was loaded beforehand, asked for right here, or made from a preset.
  */
-const resolveSource = (source: TSoundSource): TAudioClip => ('status' in source ? source : useLoadAudio(source));
+const resolveSource = (audio: TAudioManager, source: TSoundSource): TAudioClip => {
+    if ('status' in source) {
+        return source;
+    }
+    if ('sfx' in source) {
+        const sampleRate = audio.context.sampleRate;
+        return clipFromSamples(audio, renderSfx(source.sfx, sampleRate), sampleRate, `sfx:${source.sfx.preset}:${source.sfx.seed ?? 1}`);
+    }
+    return useLoadAudio(source);
+};
 
 /**
  * Plays a sound, and hands back the controls for it.
@@ -48,7 +58,8 @@ const resolveSource = (source: TSoundSource): TAudioClip => ('status' in source 
  * wants the music to carry on. To silence something on pause, listen to `scenePaused`/`gamePaused`
  * and decide for each sound.
  *
- * @param source A clip from `useLoadAudio`, or `{ src }` to load it here.
+ * @param source A clip from `useLoadAudio`, `{ src }` to load it here, or `{ sfx }` to make an
+ * effect from a preset.
  * @param options Volume, looping, speed, channel, and placing it in the world: at a point, facing a
  * way, or filling an area.
  *
@@ -81,8 +92,8 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
         throw new Error('[NacatamalOn] useSound: call it inside a scene body.');
     }
 
-    const clip = resolveSource(source);
     const audio: TAudioManager = getAudioManager(store);
+    const clip = resolveSource(audio, source);
     const channel = options.channel ?? DEFAULT_CHANNEL;
 
     let volume = options.volume ?? 1;
@@ -98,6 +109,8 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
         clip,
         volume,
         loop,
+        loopStart: options.loopStart ?? 0,
+        loopEnd: options.loopEnd ?? 0,
         rate,
         channel,
         autoplay: options.autoplay ?? false,
@@ -106,6 +119,7 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
         maxDistance: options.maxDistance ?? null,
         cone: options.cone ?? null,
         zone: options.zone ?? null,
+        duck: options.duck ?? null,
     };
     box.sounds.push(attachment);
 
@@ -131,6 +145,8 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
         const node = audio.context.createBufferSource();
         node.buffer = clip.buffer;
         node.loop = loop;
+        node.loopStart = attachment.loopStart;
+        node.loopEnd = attachment.loopEnd;
         node.playbackRate.value = rate;
 
         const gain = audio.context.createGain();
@@ -171,6 +187,7 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
             area,
             box: placed ? box : null,
             sound: placed ? attachment : null,
+            from: attachment,
         };
         placeVoice(store, audio, voice);
         const entry: TPlaying = { voice, startedAt: audio.context.currentTime, offset, paused: false };
@@ -185,6 +202,8 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
         audio.voices.add(voice);
         playing.push(entry);
         node.start(0, offset);
+        // On the same moment as the sound, not a frame later.
+        applyDucking(audio);
     };
 
     const stopVoice = (entry: TPlaying): void => {
@@ -199,6 +218,7 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
             for (const entry of [...playing]) {
                 stopVoice(entry);
             }
+            applyDucking(audio);
             return;
         }
         // Faded out and then stopped by the browser, which clears it up the way it clears up a
@@ -232,13 +252,14 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
                 // again from here.
                 const played = (audio.context.currentTime - entry.startedAt) * entry.voice.node.playbackRate.value;
                 const position = entry.offset + played;
-                entry.offset = clip.duration > 0 && loop ? position % clip.duration : position;
+                entry.offset = loop ? wrapPosition(position, clip.duration, attachment.loopStart, attachment.loopEnd) : position;
                 entry.paused = true;
                 entry.voice.node.onended = null;
                 try { entry.voice.node.stop(); } catch { /* never started */ }
                 entry.voice.node.disconnect();
                 audio.voices.delete(entry.voice);
             }
+            applyDucking(audio);
         },
         resume: () => {
             const paused = playing.filter((entry) => entry.paused);

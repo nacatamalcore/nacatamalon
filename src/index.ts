@@ -63,7 +63,7 @@ export { useScript, provide, useApi, useEvent } from './hooks';
 export { registerScript } from './scripts';
 export type { TScriptFn, TScriptProps, TScriptField, TScriptOptions, TScriptRequirement, TScriptAttachment } from './scripts';
 export type { TDataRecord, TDataSetter, TWatchDep } from './hooks';
-export { useUpdate, useLoadTexture, useLoadAtlas, useLoader, useScene, useSceneUnmount, useReady, useSpawn, useSelf, useKeyboard, useGame, useSpriteAnimation, getSpriteAnimation, useSkeletalAnimation, useTween, useTimer, useCamera2d, useScreenSpace, usePointer, useGamepad, useActions, useAction, useVector, useInputMap, useRandom, useSignal, useStore, useStoreLink, usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadShader, useLoadPalette, useLoadLut, useLoadParticles, useLoadPack, useLoadAudio, useLoadPixels, useSound, useAudio, useMusic, useAudioListener, usePostProcess, useParticleCollider2d, useParticleCollider3d } from './hooks';
+export { useUpdate, useLoadTexture, useLoadAtlas, useLoader, useScene, useSceneUnmount, useReady, useSpawn, useSelf, useKeyboard, useGame, useSpriteAnimation, getSpriteAnimation, useSkeletalAnimation, useTween, useTimer, useCamera2d, useScreenSpace, usePointer, useGamepad, useActions, useAction, useVector, useInputMap, useRandom, useSignal, useStore, useStoreLink, usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadShader, useLoadPalette, useLoadLut, useLoadParticles, useLoadPack, useLoadAudio, useLoadPixels, useSound, useAudio, useMusic, useSong, useLoadSong, useAudioListener, usePostProcess, useParticleCollider2d, useParticleCollider3d } from './hooks';
 export { createMaterial } from './gameobjects/material';
 // Lines in space: the debug helpers (an axis gizmo, a floor grid) and any lines a game wants to draw.
 export { useHelperLines, useHelperAxis, useHelperGrid } from './hooks';
@@ -187,14 +187,21 @@ export type { TProjectSettings } from './project';
 export { parseSceneDoc, sceneFromDoc, SCENE_FORMAT, SCENE_VERSION } from './scene';
 export type {
     TSceneDoc, TBoxNode, TDataEntry, TAssetEntry, TGeometrySource, TComponentDoc, TMaterialDoc, TMeshMaterialDoc, TMaterialMapDoc,
-    TSpriteComponent, TTextComponent, TMeshComponent, TTilemapComponent, TTilemapLayerOverride, TParticlesComponent, TParticles3dComponent, TParticleCollider2dComponent, TParticleCollider3dComponent, TSpriteTextureComponent, TMusicComponent, TAudioListenerComponent, TCamera2dComponent,
+    TSpriteComponent, TTextComponent, TMeshComponent, TTilemapComponent, TTilemapLayerOverride, TParticlesComponent, TParticles3dComponent, TParticleCollider2dComponent, TParticleCollider3dComponent, TSpriteTextureComponent, TMusicComponent, TSongComponent, TAudioListenerComponent, TCamera2dComponent,
     TCamera3dComponent, TFogComponent, TLightComponent, TSpriteAnimationDoc,
 } from './scene';
 export type { TRandomHandle } from './math/random';
+// Sound made from text rather than recorded: a song's tracks and an effect's samples, the same in a
+// game, in an editor and on the desktop runtime.
+export { renderSong, renderSfx, parseSongDoc, SONG_FORMAT } from './audio/synth';
+export type {
+    TRenderedSong, TSfxOptions, TSfxPreset, TSongDoc, TSongError, TSongNote, TSongVoice, TSongVoiceName, TAudioMeasure,
+} from './audio/synth';
 export type { TGameSignal, TSignalHandler, TScenePauseEvent, TGamePauseEvent } from './signal';
 export type {
-    TSoundAttachment, TSoundHandle, TSoundOptions, TSoundSource, TAudioHandle, TSoundCone, TSoundFade, TSoundZone,
+    TSoundAttachment, TSoundHandle, TSoundOptions, TSoundSource, TAudioHandle, TSoundCone, TSoundDuck, TSoundFade, TSoundZone,
     TSoundZoneShape, TMusicAttachment, TMusicHandle, TMusicLayer, TMusicLayerOptions, TMusicOptions, TAudioListener,
+    TSongAttachment, TSongHandle, TSongOptions, TBeatListener,
 } from './audio';
 export type { TGameStore, TGameStoreConfig, TStoreActionsFactory, TStoreGet, TStoreListener, TStoreSelector, TStoreSet, TStorePersistence, TStorePersist } from './game_store';
 // The format's vocabulary, which stays on the root the way `TSceneDoc` does: it describes a file,
@@ -239,7 +246,8 @@ export type { TShaderTarget } from './loaders/shader/types/t_shader_target';
 export type { TRendererType } from './render';
 export type { TCanvasScaling, TCanvasKeep } from './DOM';
 export type { TUseActionsOptions } from './hooks';
-export type { TUseLoadAudioOptions, TUseLoadBitmapFontOptions, TUseLoadFontOptions, TUseLoadLutOptions, TUseLoadPaletteOptions, TUseLoadParticlesOptions, TUseLoadPackOptions } from './hooks/loaders';
+export type { TUseLoadAudioOptions, TUseLoadBitmapFontOptions, TUseLoadFontOptions, TUseLoadLutOptions, TUseLoadPaletteOptions, TUseLoadParticlesOptions, TUseLoadPackOptions, TUseLoadSongOptions } from './hooks/loaders';
+export type { TSongFile } from './loaders/song';
 export type { TLoadedPack } from './loaders/pack';
 export type { TPhysicsBody2dOptions, TPhysicsBody3dOptions } from './hooks/physics/use_physics_body';
 

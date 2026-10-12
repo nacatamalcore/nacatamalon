@@ -44,6 +44,8 @@ export type TFakeGain = TFakeNode & { gain: TFakeParam };
 export type TFakeSource = TFakeNode & {
     buffer: unknown;
     loop: boolean;
+    loopStart: number;
+    loopEnd: number;
     playbackRate: TFakeParam;
     onended: (() => void) | null;
     started: boolean;
@@ -92,8 +94,25 @@ export type TFakeListener = {
     upZ: TFakeParam;
 };
 
+/**
+ * A sound made in code: how long it is, and the samples written into it.
+ */
+export type TFakeBuffer = {
+    duration: number;
+    length: number;
+    sampleRate: number;
+    data: Float32Array;
+    copyToChannel(source: Float32Array, channel: number): void;
+};
+
 export type TFakeContext = {
     currentTime: number;
+    /**
+     * Low, so a song made in a test is quick to make.
+     */
+    sampleRate: number;
+    buffers: TFakeBuffer[];
+    createBuffer(channels: number, length: number, sampleRate: number): TFakeBuffer;
     destination: TFakeNode;
     listener: TFakeListener;
     state: string;
@@ -128,6 +147,19 @@ export const FAKE_DURATION = 4;
 export const createFakeAudioContext = (): TFakeContext => {
     const context: TFakeContext = {
         currentTime: 0,
+        sampleRate: 8000,
+        buffers: [],
+        createBuffer: (_channels: number, length: number, sampleRate: number) => {
+            const buffer: TFakeBuffer = {
+                duration: length / sampleRate,
+                length,
+                sampleRate,
+                data: new Float32Array(length),
+                copyToChannel(source: Float32Array) { this.data.set(source); },
+            };
+            context.buffers.push(buffer);
+            return buffer;
+        },
         destination: node('destination'),
         listener: {
             positionX: param(0), positionY: param(0), positionZ: param(0),
@@ -150,6 +182,8 @@ export const createFakeAudioContext = (): TFakeContext => {
                 ...node('source'),
                 buffer: null,
                 loop: false,
+                loopStart: 0,
+                loopEnd: 0,
                 playbackRate: param(1),
                 onended: null,
                 started: false,

@@ -269,6 +269,36 @@ describe('the rest of a sound scene, written down', () => {
         expect(rebuilt(doc)).toEqual(doc);
     });
 
+    it('keeps the channel a sound holds down and where its loop goes round', () => {
+        const { doc } = written(() => {
+            useSound({ src: '/audio/ovation.ogg' }, { id: 'ovation', channel: 'crowd', duck: { channel: 'music', to: 0.3, fade: 0.2 } });
+            useSound({ src: '/audio/rain.ogg' }, { id: 'rain', loop: true, loopStart: 1.5, loopEnd: 3 });
+            useMusic({ id: 'theme', layers: { main: { src: '/audio/theme.ogg' } }, loopStart: 2 });
+        });
+
+        expect(doc.root.components).toEqual([
+            { type: 'sound', id: 'ovation', audio: '/audio/ovation.ogg', channel: 'crowd', duck: { channel: 'music', to: 0.3, fade: 0.2 } },
+            { type: 'sound', id: 'rain', audio: '/audio/rain.ogg', loop: true, loopStart: 1.5, loopEnd: 3 },
+            { type: 'music', id: 'theme', layers: [{ name: 'main', audio: '/audio/theme.ogg' }], loopStart: 2 },
+        ]);
+        expect(parseSceneDoc(doc, '/scenes/level.scene')).toEqual(doc);
+        expect(rebuilt(doc)).toEqual(doc);
+    });
+
+    it('drops a duck that names no channel to hold down', () => {
+        const doc = parseSceneDoc({
+            format: 'nacatamalon-scene',
+            version: 1,
+            name: 'Level',
+            assets: [{ type: 'audio', key: '/audio/a.ogg', src: '/audio/a.ogg' }],
+            root: { id: 'root', name: 'Level', transform: null, children: [], components: [
+                { type: 'sound', id: 's', audio: '/audio/a.ogg', duck: { to: 0.2 } },
+            ] },
+        }, '/scenes/level.scene');
+
+        expect(doc.root.components[0]).toEqual({ type: 'sound', id: 's', audio: '/audio/a.ogg' });
+    });
+
     it('keeps the distances somebody did choose, even the ones that match a default', () => {
         const { doc } = written(() => {
             useSound({ src: '/audio/fire.mp3' }, { id: 'fire', spatial: true, refDistance: 100, maxDistance: 20 });

@@ -5,6 +5,7 @@ import {
     DEFAULT_MAX_DISTANCE, DEFAULT_MAX_DISTANCE_3D, DEFAULT_REF_DISTANCE, DEFAULT_REF_DISTANCE_3D,
 } from './create_audio_manager';
 import { zoneVolume2d, zoneVolume3d } from './zone_volume';
+import { applyDucking } from './duck';
 import type { TBox } from '../box';
 import type { TQuat } from '../math/quat';
 import type { TRuntimeStore } from '../store';
@@ -336,5 +337,9 @@ export const updateAudio = (store: TRuntimeStore): void => {
 
     for (const voice of audio.voices) {
         placeVoiceFor(audio, ear, voice);
+    }
+    applyDucking(audio);
+    for (const tick of [...audio.tickers]) {
+        tick();
     }
 };
