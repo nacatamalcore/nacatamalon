@@ -138,6 +138,8 @@ describe('the tools door', () => {
             'serializeSongDoc', 'mixSong', 'encodeWav', 'analyzeAudio',
             // How big a text came out: an editor outlines it and picks it by it, a game never asks.
             'textBlockSize',
+            // A piano roll's: a voice's notes read, and written back as text after a click changed them.
+            'parseSongNotes', 'writeSongNotes',
         ].sort());
     });
 

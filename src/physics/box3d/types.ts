@@ -177,8 +177,8 @@ export type TPhysicsWorldHandle3d = {
      * shoot. All four are the same call.
      *
      * `direction` need not be normalized: its length is ignored and `maxDistance` is what
-     * decides how far the ray reaches. That is Unity's shape rather than Box3D's (which takes a
-     * single translation vector meaning both at once), because "which way" and "how far" are
+     * decides how far the ray reaches. That is not Box3D's shape (which takes a single translation
+     * vector meaning both at once), because "which way" and "how far" are
      * separate thoughts and combining them is how a ray silently ends up 0.3 m long.
      *
      * Returns `null` while the WASM runtime is still loading, exactly as every other call here

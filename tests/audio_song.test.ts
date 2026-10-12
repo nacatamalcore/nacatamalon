@@ -9,6 +9,7 @@ import { parseSceneDoc, sceneFromDoc, serializeScene } from '../src/scene/docume
 import { registerScene } from '../src/scene/register_scene';
 import { startScene } from '../src/scene/start_scene';
 import { whenLoaded } from '../src/loaders';
+import { replaceSongDoc } from '../src/loaders/song';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { installFakeAudio } from './helpers/test_audio';
 import type { TFakeBuffer, TFakeContext, TFakeGain, TFakeParam, TFakeSource } from './helpers/test_audio';
@@ -254,6 +255,37 @@ describe('a song in a scene document', () => {
         const again = createTestGame().store;
         registerScene(again, doc.name, sceneFromDoc(doc as TSceneDoc));
         expect(serializeScene(startScene(again, doc.name))).toEqual(doc);
+    });
+
+    it('takes its file saved again while it plays, carrying on from the same beat', async () => {
+        const { store } = createTestGame();
+        let song!: TSongHandle;
+        const root = startTestScene(store, 'Ballpark', () => {
+            song = useSong(useLoadSong({ src: '/music/minuet.song' }), { autoplay: true });
+            return createScene();
+        });
+        await whenLoaded(store.get('assets').songs.get('/music/minuet.song')!);
+        await settle();
+        const context = contextOf(store);
+        // The fourth beat, a second and a half in.
+        context.currentTime = 1.5;
+
+        // Saved again in the editor: twice as fast, and the noise left out.
+        const faster: TSongDoc = { ...SONG, tempo: 240, voices: { pulse1: SONG.voices.pulse1, triangle: SONG.voices.triangle } };
+        expect(replaceSongDoc(store, 'music/minuet.song', faster)).toBe(1);
+        expect(replaceSongDoc(store, '/music/other.song', faster)).toBe(0);
+        for (const update of root.updateCallbacks) update(1 / 60, 0);
+
+        const voices = started(context);
+        expect(voices).toHaveLength(2);
+        // The same fourth beat, at the new tempo.
+        expect(voices.map((voice) => voice.startOffset)).toEqual([0.75, 0.75]);
+        expect(song.tempo).toBe(240);
+
+        // Nothing new: nothing made again.
+        const before = context.sources.length;
+        for (const update of root.updateCallbacks) update(1 / 60, 0);
+        expect(context.sources.length).toBe(before);
     });
 
     it('is not written down when it was written in code, since there is no file to name', async () => {

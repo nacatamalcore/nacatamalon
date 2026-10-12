@@ -1,6 +1,7 @@
 export { renderSong, mixSong, SONG_VOICES } from './render_song';
 export { renderSfx } from './render_sfx';
 export { parseSongNotes } from './parse_song_notes';
+export { writeSongNotes } from './write_song_notes';
 export { parseSongDoc, SONG_FORMAT } from './parse_song_doc';
 export { serializeSongDoc } from './serialize_song_doc';
 export { analyzeAudio } from './analyze_audio';

@@ -61,6 +61,8 @@ const tsc = join(installed('typescript'), 'bin', 'tsc');
 const [, ...buildArgs] = (pkg.scripts['build:js'] as string).replace('--outdir=dist', `--outdir=${join(work, 'dist')}`).split(' ');
 const js = run([esbuild, ...buildArgs], root);
 check(js.code === 0, 'the JavaScript builds', js.out);
+const strip = run(['bun', 'scripts/strip_bare_imports.ts', join(work, 'dist')], root);
+check(strip.code === 0, 'the imports that bring nothing in are left out', strip.out);
 const types = run([tsc, '-p', 'tsconfig.build.json', '--outDir', join(work, 'dist', 'types')], root);
 check(types.code === 0, 'the types build', types.out);
 

@@ -76,6 +76,8 @@ export {
 // Sound made rather than recorded: a song or an effect mixed into one track, written as a file,
 // and measured by whoever cannot hear it. A game plays the tracks; it never writes a file.
 export { serializeSongDoc, mixSong, encodeWav, analyzeAudio } from '../audio/synth';
+// A voice's notes read, and written back as text, for a tool that changes them by hand (a piano roll).
+export { parseSongNotes, writeSongNotes } from '../audio/synth';
 
 // How big a text came out, for a tool to outline it and pick it by.
 export { textBlockSize } from '../gameobjects/text';

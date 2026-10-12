@@ -3,6 +3,7 @@ import { clipFromSamples, createBeatClock, createLayeredPlayer, getAudioManager 
 import { renderSong, SONG_VOICES } from '../../audio/synth';
 import { nanoId } from '../../utils';
 import { whenLoaded } from '../../loaders';
+import { getVersion } from '../../store/record_version';
 import { songFileOf } from '../../loaders/song';
 import type { TLayeredPiece, TMusicLayer, TSongAttachment, TSongHandle, TSongOptions } from '../../audio';
 import type { TSongDoc, TSongError, TSongVoiceName } from '../../audio/synth';
@@ -82,6 +83,11 @@ export const useSong = (song: TSongFile | TSongDoc, options: TSongOptions = {}):
      * The tempo the tracks were last made at, to carry a change on from the same beat.
      */
     let madeAt = 0;
+    /**
+     * Which version of the file the tracks were made from: a newer one is the file changed (saved
+     * again in the editor), and is made again from the same beat.
+     */
+    let madeFrom = -1;
 
     const tempoNow = (): number => attachment.tempo ?? file.doc?.tempo ?? 120;
 
@@ -110,6 +116,7 @@ export const useSong = (song: TSongFile | TSongDoc, options: TSongOptions = {}):
         });
         piece.loopStart = rendered.loopStart;
         madeAt = tempoNow();
+        madeFrom = getVersion(file);
         return true;
     };
 
@@ -196,6 +203,13 @@ export const useSong = (song: TSongFile | TSongDoc, options: TSongOptions = {}):
         }
         if (attachment.autoplay) {
             handle.play();
+        }
+    });
+
+    // The file changed after the tracks were made: made again, carrying on from the same beat.
+    box.updateCallbacks.push(() => {
+        if (piece.layers.length > 0 && file.status === 'ready' && getVersion(file) !== madeFrom) {
+            remake();
         }
     });
 

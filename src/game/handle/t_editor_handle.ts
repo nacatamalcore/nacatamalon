@@ -10,6 +10,7 @@ import type { TPostChain, TPostEffect } from '../../post';
 import type { TCameraPreview } from '../preview/types/t_camera_preview';
 import type { TActionsHandle } from '../../input';
 import type { TCanvasFit } from '../../DOM/types/t_canvas_fit';
+import type { TSongDoc } from '../../audio/synth';
 
 /**
  * What a tool may do with a running game on top of what the game may do with itself.
@@ -131,6 +132,12 @@ export type TEditorHandle = TGameHandle & {
      * never needs it. What is already on screen keeps what it had until its scene is built again.
      */
     evictAsset(key: string): boolean;
+    /**
+     * Puts a song's new notes into the game as it plays: every loaded `.song` from this `src` (or kept
+     * under this key) takes the new document, and every `useSong` playing it makes its tracks again and
+     * carries on from the same beat. Says how many it changed: none when the game has not loaded it.
+     */
+    updateSong(src: string, doc: TSongDoc): number;
     /**
      * The first error a scene's update threw, or `null`. The game goes on running after one, so this
      * is how a tool finds out that a scene has been skipping its update since.
