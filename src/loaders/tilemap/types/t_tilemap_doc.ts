@@ -116,6 +116,36 @@ export type TTilemapLayerDoc = {
 };
 
 /**
+ * A ground painted as a whole (grass, water, a wall) whose edges and corners are chosen by what is
+ * around each cell, instead of placed one by one.
+ *
+ * Each of the sixteen tiles is the one to draw when the terrain covers a certain set of a cell's
+ * **corners**: its place in `tiles` is that set, counted as the top-left corner 1, the top-right 2,
+ * the bottom-left 4 and the bottom-right 8. So `tiles[15]` is the middle of the ground, `tiles[3]`
+ * its top half (a cell along the bottom edge of a lake of it), `tiles[8]` the inside of a corner.
+ * Sixteen tiles cover every way the ground can meet a cell, which is what makes painting it a
+ * single gesture.
+ *
+ * It is how the map is **authored**: an editor reads it to choose the tiles it writes into the
+ * layers, and a game drawing the map never looks at it.
+ *
+ * @category Tilemaps
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TTerrainDoc = {
+    /**
+     * What it is called, which is how it is chosen. Unique in the map.
+     */
+    name: string;
+    /**
+     * Sixteen tile ids, one for each set of corners the terrain can cover. `0` where the sheet has
+     * no tile for that set: an editor falls back to the middle one.
+     */
+    tiles: number[];
+};
+
+/**
  * What a `.tilemap` file holds: which sheet, how big the cells and the grid are, what the numbers
  * mean, and the layers.
  *
@@ -152,4 +182,8 @@ export type TTilemapDoc = {
      */
     tiles: Record<number, TTileDoc>;
     layers: TTilemapLayerDoc[];
+    /**
+     * The grounds painted as a whole, for an editor. Left out when there are none.
+     */
+    terrains?: TTerrainDoc[];
 };

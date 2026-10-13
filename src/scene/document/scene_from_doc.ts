@@ -33,6 +33,7 @@ import { useScreenSpace } from '../../hooks/camera/use_screen_space';
 import { useTransform } from '../../hooks/transform/use_transform';
 import { whenLoaded } from '../../loaders';
 import { createRecord } from '../../gameobjects/create_record';
+import { nanoId } from '../../utils/nano_id';
 import type { TGltfModel } from '../../loaders';
 import type { TGeometry } from '../../geometry';
 import type { TAssetEntry } from './types/t_asset_entry';
@@ -751,6 +752,71 @@ export const sceneFromDoc = (doc: TSceneDoc, src = doc.name, options: TSceneFrom
     }
 
     return createScene();
+};
+
+/**
+ * A node and everything under it, with ids of their own: a copy must not answer to the ids of the
+ * box it was copied from, or a tool remembering one would find two.
+ */
+const withNewIds = (node: TBoxNode): TBoxNode => {
+    const copy = structuredClone(node);
+    const renew = (box: TBoxNode): void => {
+        box.id = nanoId();
+        box.children.forEach(renew);
+    };
+    renew(copy);
+    return copy;
+};
+
+/**
+ * Builds the box a document describes, while the game runs: a reusable box (a `.box` file, whose
+ * document holds the one box) made again and again, a coin a level drops, an enemy a door lets out.
+ * Give it to `useSpawn`, which says where it goes and builds it at the moment it is called.
+ *
+ * Built exactly as a scene builds its boxes: its pictures and sounds loaded, its components and its
+ * children made, and its behaviours running. Each copy gets ids of its own, and `place` puts it
+ * somewhere other than where the document says.
+ *
+ * @example
+ * ```ts
+ * registerScript('coin-shower', () => {
+ *     const spawn = useSpawn(boxFromDoc, { parent: 'scene' });
+ *     const timer = useTimer();
+ *     void fetch('boxes/Coin.box').then(async (response) => {
+ *         const coin = parseSceneDoc(await response.json(), 'boxes/Coin.box');
+ *         timer.every(1, () => spawn(coin, { x: Math.random() * 320, y: 0 }));
+ *     });
+ * });
+ * ```
+ *
+ * @param doc The document, as `parseSceneDoc` gave it back: of a reusable box (its root holding
+ * the one box), or any whose root is the box to make.
+ * @param place Where it goes instead (`x`, `y`, `z`), each one left out staying as the document says.
+ * @param src Where the document came from, named in any warning it causes.
+ *
+ * @category Scenes
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const boxFromDoc = (doc: TSceneDoc, place: { x?: number; y?: number; z?: number } = {}, src = doc.name): void => {
+    const store = getActiveGame();
+    if (store === null || getActiveBox() === null) {
+        throw new Error('[NacatamalOn] boxFromDoc: hand it to useSpawn, which builds what it describes: useSpawn(boxFromDoc)(doc).');
+    }
+    // A reusable box's document holds the box as the only thing in its root.
+    const node = withNewIds(doc.root.children.length === 1 ? doc.root.children[0]! : doc.root);
+    if (place.x !== undefined || place.y !== undefined || place.z !== undefined) {
+        node.transform = {
+            x: 0, y: 0, z: 0, rotation: 0, rotationX: 0, rotationY: 0, scaleX: 1, scaleY: 1, scaleZ: 1,
+            ...node.transform,
+            ...(place.x !== undefined ? { x: place.x } : {}),
+            ...(place.y !== undefined ? { y: place.y } : {}),
+            ...(place.z !== undefined ? { z: place.z } : {}),
+        };
+    }
+    loadAssets(doc.assets, src);
+    makePictures(node, store);
+    buildBox(node, store, src);
 };
 
 export type { TBox };

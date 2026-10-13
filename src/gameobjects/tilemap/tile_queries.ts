@@ -1,6 +1,9 @@
 import { openLayerState } from './layer_state';
+import { holderOfTilemap } from './get_tilemap';
+import { composeTransform2d } from '../../render/shared/compose_transform_2d';
 import type { TTileDoc } from '../../loaders/tilemap/types/t_tilemap_doc';
 import type { TTilemap, TTilemapLayer } from './types/t_tilemap';
+import type { TTransform2d } from '../types/t_transform_2d';
 
 /**
  * Whether a column and a row are inside the map at all.
@@ -9,7 +12,25 @@ const inside = (map: TTilemap, column: number, row: number): boolean =>
     column >= 0 && row >= 0 && column < map.width && row < map.height;
 
 /**
- * Which cell of the map a point of the world falls in.
+ * Where the map really is in the world: its own placement, inside the object that draws it and every
+ * object above that one (a map laid out in a scene document has its place on its box, not on itself).
+ * The same placements, composed the same way, as the frame draws it with; worked out when asked, so
+ * it is right in the same frame something moved it.
+ */
+const placed = (map: TTilemap): TTransform2d => {
+    const chain = [];
+    for (let at = holderOfTilemap(map); at !== null; at = at.parent) {
+        if (at.transform !== null) chain.push(at.transform);
+    }
+    if (chain.length === 0) return map.transform;
+    const frame: TTransform2d = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 };
+    for (let i = chain.length - 1; i >= 0; i--) composeTransform2d({ ...frame }, chain[i]!, frame);
+    return composeTransform2d(frame, map.transform, { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 });
+};
+
+/**
+ * Which cell of the map a point of the world falls in, wherever the map is: moved, scaled or turned,
+ * by itself or by the objects it is in.
  *
  * It answers for points outside the map too, with numbers below zero or past the edge: "off the
  * map to the left" is something a game needs to be able to tell, and clamping would say "the first
@@ -31,14 +52,21 @@ const inside = (map: TTilemap, column: number, row: number): boolean =>
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const cellAt = (map: TTilemap, x: number, y: number): { column: number; row: number } => ({
-    column: Math.floor((x - map.transform.x) / (map.cell || 1)),
-    row: Math.floor((y - map.transform.y) / (map.cell || 1)),
-});
+export const cellAt = (map: TTilemap, x: number, y: number): { column: number; row: number } => {
+    const at = placed(map);
+    const dx = x - at.x;
+    const dy = y - at.y;
+    const cos = Math.cos(at.rotation);
+    const sin = Math.sin(at.rotation);
+    // The point in the map's own terms: turned back, then unscaled.
+    const lx = (dx * cos + dy * sin) / (at.scaleX || 1);
+    const ly = (-dx * sin + dy * cos) / (at.scaleY || 1);
+    return { column: Math.floor(lx / (map.cell || 1)), row: Math.floor(ly / (map.cell || 1)) };
+};
 
 /**
  * Where the top-left corner of a cell sits in the world, which is what a game needs to line
- * something up with the grid.
+ * something up with the grid. Wherever the map is, as `cellAt` counts.
  * @param map - The map, as `createTilemap` or `getTilemap` gave it back.
  * @param column - The cell's column, counting from 0.
  * @param row - The cell's row, counting from 0.
@@ -48,10 +76,14 @@ export const cellAt = (map: TTilemap, x: number, y: number): { column: number; r
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const cellCorner = (map: TTilemap, column: number, row: number): { x: number; y: number } => ({
-    x: map.transform.x + column * map.cell,
-    y: map.transform.y + row * map.cell,
-});
+export const cellCorner = (map: TTilemap, column: number, row: number): { x: number; y: number } => {
+    const at = placed(map);
+    const lx = column * map.cell * at.scaleX;
+    const ly = row * map.cell * at.scaleY;
+    const cos = Math.cos(at.rotation);
+    const sin = Math.sin(at.rotation);
+    return { x: at.x + lx * cos - ly * sin, y: at.y + lx * sin + ly * cos };
+};
 
 /**
  * The id in a cell of one layer. `0` for empty, and also for anything outside the map.

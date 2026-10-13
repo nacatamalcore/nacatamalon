@@ -7,11 +7,18 @@ import type { TTilemap } from './types/t_tilemap';
 const maps = new WeakMap<TBox, TTilemap>();
 
 /**
+ * The object each map is drawn by: the last one to make it, which is the one its layers were added
+ * to. What places the map in the world, for the questions asked of it by a point.
+ */
+const holders = new WeakMap<TTilemap, TBox>();
+
+/**
  * Remembers that `map` was made in `box`, unless the object already has one.
  *
  * @internal
  */
 export const rememberTilemap = (box: TBox, map: TTilemap): void => {
+    holders.set(map, box);
     if (!maps.has(box)) {
         maps.set(box, map);
     }
@@ -47,3 +54,12 @@ export const rememberTilemap = (box: TBox, map: TTilemap): void => {
  * @author Francisco Pereira Alvarado
  */
 export const getTilemap = (box: TBox): TTilemap | null => maps.get(box) ?? null;
+
+/**
+ * The object a map is drawn by, or `null` for one made outside any.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const holderOfTilemap = (map: TTilemap): TBox | null => holders.get(map) ?? null;

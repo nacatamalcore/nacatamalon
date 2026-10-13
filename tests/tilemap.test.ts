@@ -12,6 +12,8 @@ import { whenLoaded } from '../src/loaders';
 import { useLoadAtlas } from '../src/hooks/loaders';
 import { TILE_LAYER_BANDS } from '../src/loaders/tilemap/types/t_tilemap_doc';
 import { createTestGame, startTestScene } from './helpers/test_game';
+import { useSpawn } from '../src/hooks/spawn';
+import { useTransform } from '../src/hooks/transform';
 import { serveTilemap, TEST_MAP } from './helpers/test_tilemap';
 import type { TFrameContext } from '../src/render';
 import type { TRuntimeStore } from '../src/store';
@@ -265,6 +267,41 @@ describe('the cells of a map', () => {
         // The wall next to it says nothing about becoming, which is not the same as becoming
         // nothing: it cannot be broken at all.
         expect(tileInfoAt(map, 0, 0, 0)?.becomes).toBeUndefined();
+    });
+
+    it('counts from where its box puts it, and every box above, as it is drawn', async () => {
+        served = serveTilemap(TEST_MAP);
+        const { store } = createTestGame();
+        let map!: TTilemap;
+        // A map laid out in a scene: its place is its box's (x 100, y 20, twice as big), and the
+        // box is inside a group moved 10 across.
+        const Ground = () => {
+            useTransform({ x: 100, y: 20, scaleX: 2, scaleY: 2 });
+            map = createTilemap({ src: '/maps/level.tilemap' });
+        };
+        const Level = () => {
+            useTransform({ x: 10 });
+            useSpawn(Ground)();
+        };
+        const scene = startTestScene(store, 'Level', () => { useSpawn(Level)(); return createScene(); });
+        await whenLoaded(map);
+        runHookUpdates(scene, 1 / 60);
+
+        // Cells of 8, twice as big: 16 a cell, from x 110, y 20.
+        expect(cellAt(map, 110, 20)).toEqual({ column: 0, row: 0 });
+        expect(cellAt(map, 127, 37)).toEqual({ column: 1, row: 1 });
+        expect(cellAt(map, 108, 20)).toEqual({ column: -1, row: 0 });
+        expect(cellCorner(map, 1, 1)).toEqual({ x: 126, y: 36 });
+        expect(solidAtPoint(map, 112, 22)).toBe(true);
+        expect(solidAtPoint(map, 4, 4)).toBe(false);
+
+        // Where the frame draws its layers is where it is asked.
+        drawn(store);
+        const layer = map.layers[0]!;
+        expect(layer.worldTransform).toMatchObject({ x: 110, y: 20, scaleX: 2, scaleY: 2 });
+        // Moved, it is asked where it is now, before it is drawn again.
+        scene.children[0]!.transform!.x = 50;
+        expect(cellCorner(map, 0, 0)).toEqual({ x: 150, y: 20 });
     });
 
     it('answers what is solid, in any layer, and by point too', async () => {

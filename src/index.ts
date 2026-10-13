@@ -170,7 +170,7 @@ export type { TTransform2d } from './gameobjects/types/t_transform_2d';
 export type { TText, TTextStyle, TTextOptions } from './gameobjects/text';
 export type { TNineSlice, TNineSliceBorders, TNineSliceMode, TNineSliceOptions } from './gameobjects/nine_slice/types';
 export type { TTilemap, TTilemapLayer, TTilemapOptions } from './gameobjects/tilemap';
-export type { TTileDoc, TTilemapDoc, TTilemapLayerDoc, TTileLayerOrder } from './loaders';
+export type { TTerrainDoc, TTileDoc, TTilemapDoc, TTilemapLayerDoc, TTileLayerOrder } from './loaders';
 export { TILEMAP_FORMAT, parseTilemapDoc } from './loaders';
 export type { TSpriteAtlas, TSpriteAtlasOptions } from './atlas';
 export type { TCamera2d, TCamera2dOptions, TCamera3d, TCamera3dOptions } from './camera';
@@ -184,7 +184,7 @@ export type { TProjectSettings } from './project';
 
 // The scene document: the format, reading one, writing one down, and turning one into a scene.
 // Writing one down is `serializeScene`, in `nacatamalon/authoring`: reading is not authoring.
-export { parseSceneDoc, sceneFromDoc, SCENE_FORMAT, SCENE_VERSION } from './scene';
+export { boxFromDoc, parseSceneDoc, sceneFromDoc, SCENE_FORMAT, SCENE_VERSION } from './scene';
 export type {
     TSceneDoc, TBoxNode, TDataEntry, TAssetEntry, TGeometrySource, TComponentDoc, TMaterialDoc, TMeshMaterialDoc, TMaterialMapDoc,
     TSpriteComponent, TTextComponent, TMeshComponent, TTilemapComponent, TTilemapLayerOverride, TParticlesComponent, TParticles3dComponent, TParticleCollider2dComponent, TParticleCollider3dComponent, TSpriteTextureComponent, TMusicComponent, TSongComponent, TMotionComponent, TAudioListenerComponent, TCamera2dComponent,

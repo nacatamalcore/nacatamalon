@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { parseTilemapDoc } from '../src/loaders/tilemap/parse_tilemap_doc';
+import { serializeTilemapDoc } from '../src/loaders/tilemap/serialize_tilemap_doc';
 import { resolveLayerOrder, TILE_LAYER_BANDS } from '../src/loaders/tilemap/types/t_tilemap_doc';
 
 /**
@@ -95,5 +96,32 @@ describe('parseTilemapDoc', () => {
     it('refuses zero as a tile id, because zero is always empty', () => {
         expect(() => parseTilemapDoc({ ...doc(), tiles: { 0: { frame: 1 } }, layers: [{ name: 'g', order: 0, data: [0, 0, 0, 0] }] }, '/m.tilemap'))
             .toThrow('0 is always empty');
+    });
+});
+
+describe('terrains', () => {
+    // A ground of grass: the middle (all four corners) is tile 1, a top-left corner alone is tile 2.
+    const grass = () => ({ name: 'grass', tiles: [0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1] });
+
+    it('reads the grounds a map is painted with, and leaves them out when there are none', () => {
+        const map = parseTilemapDoc({ ...doc(), terrains: [grass()] }, '/m.tilemap');
+
+        expect(map.terrains).toEqual([grass()]);
+        expect('terrains' in parseTilemapDoc(doc(), '/m.tilemap')).toBe(false);
+    });
+
+    it('refuses one without sixteen tiles, with a tile it does not describe, or named twice', () => {
+        expect(() => parseTilemapDoc({ ...doc(), terrains: [{ name: 'grass', tiles: [1, 2] }] }, '/m.tilemap')).toThrow('has to give 16 tiles');
+        expect(() => parseTilemapDoc({ ...doc(), terrains: [{ ...grass(), tiles: [...grass().tiles.slice(0, 15), 9] }] }, '/m.tilemap')).toThrow('uses tile 9');
+        expect(() => parseTilemapDoc({ ...doc(), terrains: [grass(), grass()] }, '/m.tilemap')).toThrow("two terrains are called 'grass'");
+    });
+
+    it('is written after the layers, and a map without them is written as before', () => {
+        const map = parseTilemapDoc({ ...doc(), terrains: [grass()] }, '/m.tilemap');
+        const text = serializeTilemapDoc(map);
+
+        expect(text).toContain('"terrains": [\n        { "name": "grass", "tiles": [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,1] }\n    ]\n}');
+        expect(parseTilemapDoc(JSON.parse(text), '/m.tilemap')).toEqual(map);
+        expect(serializeTilemapDoc(parseTilemapDoc(doc(), '/m.tilemap'))).not.toContain('terrains');
     });
 });

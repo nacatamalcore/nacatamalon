@@ -1,5 +1,5 @@
 import { TILEMAP_FORMAT } from './types/t_tilemap_doc';
-import type { TTileDoc, TTilemapDoc, TTilemapLayerDoc, TTileLayerOrder } from './types/t_tilemap_doc';
+import type { TTerrainDoc, TTileDoc, TTilemapDoc, TTilemapLayerDoc, TTileLayerOrder } from './types/t_tilemap_doc';
 
 /**
  * Reads a `.tilemap` file and says what is wrong with it, naming the file.
@@ -99,5 +99,37 @@ export const parseTilemapDoc = (value: unknown, src: string): TTilemapDoc => {
         return { name: layer.name ?? `layer ${at}`, order, data: [...layer.data] };
     });
 
-    return { format: TILEMAP_FORMAT, kind: 'tilemap', atlas: raw.atlas, cell, width, height, tiles, layers };
+    let terrains: TTerrainDoc[] | undefined;
+    if (raw.terrains !== undefined) {
+        if (!Array.isArray(raw.terrains)) {
+            return fail('its terrains are not a list.');
+        }
+        terrains = raw.terrains.map((entry, at) => {
+            const terrain = (typeof entry === 'object' && entry !== null ? entry : {}) as Partial<TTerrainDoc>;
+            if (typeof terrain.name !== 'string' || terrain.name.length === 0) {
+                return fail(`terrain ${at} has no name.`);
+            }
+            if (!Array.isArray(terrain.tiles) || terrain.tiles.length !== 16) {
+                return fail(`terrain '${terrain.name}' has to give 16 tiles, one for each set of corners, and gives ${Array.isArray(terrain.tiles) ? terrain.tiles.length : 'none'}.`);
+            }
+            for (const id of terrain.tiles) {
+                if (id !== 0 && tiles[id] === undefined) {
+                    return fail(`terrain '${terrain.name}' uses tile ${String(id)}, which its table does not describe.`);
+                }
+            }
+            return { name: terrain.name, tiles: [...terrain.tiles] };
+        });
+        const names = new Set<string>();
+        for (const terrain of terrains) {
+            if (names.has(terrain.name)) {
+                return fail(`two terrains are called '${terrain.name}'.`);
+            }
+            names.add(terrain.name);
+        }
+    }
+
+    return {
+        format: TILEMAP_FORMAT, kind: 'tilemap', atlas: raw.atlas, cell, width, height, tiles, layers,
+        ...(terrains !== undefined ? { terrains } : {}),
+    };
 };

@@ -29,7 +29,7 @@ export type { TLoadable } from './types/t_loadable';
 export type { TLoader } from './types/t_loader';
 export type { TTexture } from './texture/types/t_texture';
 export type { TAudioClip } from './audio/types/t_audio_clip';
-export type { TTileDoc, TTilemapDoc, TTilemapLayerDoc, TTileLayerOrder } from './tilemap/types/t_tilemap_doc';
+export type { TTerrainDoc, TTileDoc, TTilemapDoc, TTilemapLayerDoc, TTileLayerOrder } from './tilemap/types/t_tilemap_doc';
 export type { TLoadedAtlas } from './atlas/types/t_loaded_atlas';
 export type { TBitmapFont, TBitmapFontMeta, TBitmapFontGlyph } from './bitmap_font/types/t_bitmap_font';
 export type { TFont, TFontMeta } from './font/types/t_font';

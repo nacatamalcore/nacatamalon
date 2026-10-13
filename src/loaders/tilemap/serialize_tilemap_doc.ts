@@ -31,5 +31,10 @@ export const serializeTilemapDoc = (doc: TTilemapDoc): string => {
 
     // The layers go in by hand where the head closes: its last brace comes off, the layers go on,
     // and it closes again.
-    return `${head.slice(0, -2)},\n    "layers": [\n${layers.join(',\n')}\n    ]\n}\n`;
+    // The terrains after the layers, one to a line, and only when there are some: a map without
+    // them is written as it always was.
+    const terrains = doc.terrains !== undefined && doc.terrains.length > 0
+        ? `,\n    "terrains": [\n${doc.terrains.map((terrain) => `        { "name": ${JSON.stringify(terrain.name)}, "tiles": [${terrain.tiles.join(',')}] }`).join(',\n')}\n    ]`
+        : '';
+    return `${head.slice(0, -2)},\n    "layers": [\n${layers.join(',\n')}\n    ]${terrains}\n}\n`;
 };

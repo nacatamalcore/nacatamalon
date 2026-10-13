@@ -55,6 +55,15 @@ releases are in [changelog/](./changelog/), one file each.
   - `TEditorHandle.previewMotion(doc, seconds)` puts the running scenes where a motion has them at a
     moment without playing it, `endMotionPreview()` puts back what it touched, and
     `updateMotion(src, doc)` hands a saved `.motion` to what plays it, from the same moment.
+- `boxFromDoc(doc, place?)`: the box a document describes, built while the game runs, given to
+  `useSpawn` (`useSpawn(boxFromDoc)(doc, { x, y })`). A reusable box (a `.box` file, whose root holds
+  the one box) made again and again: a coin a level drops, an enemy a door lets out. Built as a scene
+  builds its boxes, assets, components, children and behaviours, each copy with ids of its own.
+- Terrains in `.tilemap` files (`terrains`, `TTerrainDoc`): a ground painted as a whole (grass, water,
+  a wall), sixteen tiles, one for each set of a cell's corners it covers (top-left 1, top-right 2,
+  bottom-left 4, bottom-right 8), so an editor chooses the edges and the corners from what is around
+  each cell. Optional: a map without them reads and is written as before. A game drawing the map does
+  not use them.
 
 ### Changed
 
@@ -73,6 +82,12 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- `cellAt`, `cellCorner` and `solidAtPoint` count from where a map really is in the world. They read
+  only the map's own placement, which is (0, 0) for a map laid out in a scene document (its place is
+  its box's), so for such a map moved off the origin, scaled, or inside a moved group, they answered
+  for the wrong cell: a character walked into the air and through the ground. They now take the map
+  inside the object that draws it and every object above that one, the way the frame draws it, at the
+  moment they are asked. A map made in code and placed with its own `transform` answers as before.
 - Emitters without a `seed` started in the same frame no longer throw the same particles. Every
   generator made without a seed (`createRandom()`, and so each emitter's own) took it from the clock
   alone, so those made in the same millisecond shared one stream: four confetti emitters lit together
