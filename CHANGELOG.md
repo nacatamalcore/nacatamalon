@@ -73,6 +73,11 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- Emitters without a `seed` started in the same frame no longer throw the same particles. Every
+  generator made without a seed (`createRandom()`, and so each emitter's own) took it from the clock
+  alone, so those made in the same millisecond shared one stream: four confetti emitters lit together
+  put the same particles in the same places, and only the one drawn last could be seen. Each now gets
+  a seed of its own.
 - A looping song or piece of music no longer calls `onBeat` twice for the first beat of its loop when
   its position lands a hair short of the loop's end (time added up a frame at a time does): that is
   the start of the loop, counted once.

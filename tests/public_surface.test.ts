@@ -140,6 +140,8 @@ describe('the tools door', () => {
             'textBlockSize',
             // A piano roll's: a voice's notes read, and written back as text after a click changed them.
             'parseSongNotes', 'writeSongNotes',
+            // A timeline's: saving a motion after a key was moved by hand.
+            'serializeMotionDoc',
         ].sort());
     });
 
