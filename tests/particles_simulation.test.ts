@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { effectDoc, effectState, noTint, somewhere } from './helpers/particles';
 import { PARTICLE_FLOATS, PARTICLE_OFFSET } from '../src/render/shared/particle_instance';
 import { simulateParticles } from '../src/gameobjects/particles/simulate_particles';
+import { createParticleState } from '../src/gameobjects/particles/particle_pool';
 import type { TParticlesDoc2d } from '../src/loaders/particles/types/t_particles_doc';
 import type { TParticleState } from '../src/gameobjects/particles/types/t_particle_pool';
 
@@ -220,5 +221,22 @@ describe('what the card is handed', () => {
         expect(state.instances[PARTICLE_OFFSET.g]!).toBeCloseTo(0.5, 5);
         expect(state.instances[PARTICLE_OFFSET.b]!).toBeCloseTo(0, 5);
         expect(state.instances[PARTICLE_OFFSET.a]!).toBeCloseTo(0.5, 5);
+    });
+});
+
+describe('emitters without a seed', () => {
+    it('scatter differently when started together from the same effect', () => {
+        // Four of these lit in the same frame used to share one stream, so each drew its particles
+        // exactly over the last one's and only the emitter drawn last could be seen.
+        const doc = effectDoc({ emission: { rate: 0 }, shape: { kind: 'line', length: 256 }, speed: [20, 70] });
+        const first = createParticleState(doc, null);
+        const second = createParticleState(doc, null);
+        first.pending = 10;
+        second.pending = 10;
+        run(first, doc, FRAME);
+        run(second, doc, FRAME);
+        expect(first.instanceCount).toBe(10);
+        expect(Array.from(first.instances.slice(0, 10 * PARTICLE_FLOATS)))
+            .not.toEqual(Array.from(second.instances.slice(0, 10 * PARTICLE_FLOATS)));
     });
 });

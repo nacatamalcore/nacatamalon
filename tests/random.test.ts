@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
 import { useRandom } from '../src/hooks/random/use_random';
+import { createRandom } from '../src/math/random/create_random';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import type { TRandomHandle } from '../src/math/random';
 
@@ -38,5 +39,13 @@ describe('useRandom', () => {
         startTestScene(store, 'B', () => { second = useRandom(); return createScene(); });
 
         expect(first).toBe(second);
+    });
+});
+
+describe('createRandom', () => {
+    it('gives generators made together without a seed streams of their own', () => {
+        const a = createRandom();
+        const b = createRandom();
+        expect(Array.from({ length: 10 }, () => a.rand())).not.toEqual(Array.from({ length: 10 }, () => b.rand()));
     });
 });

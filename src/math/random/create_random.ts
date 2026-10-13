@@ -41,6 +41,21 @@ export type TRandomHandle = {
 };
 
 /**
+ * How many generators have been made without a seed, so two made in the same millisecond still get
+ * different ones. The clock alone gave four emitters started together the same stream: the same
+ * particles in the same places, and only the last one drawn was ever seen.
+ */
+let unseeded = 0;
+
+/**
+ * A seed from the clock, different for every generator that asks for one.
+ *
+ * The count is spread by the golden ratio rather than added: Mulberry32 walks its state by a fixed
+ * step, so two seeds a whole number of steps apart would be the same stream shifted by a few draws.
+ */
+const clockSeed = (): number => ((Date.now() ^ Math.imul(++unseeded, 0x9e3779b9)) >>> 0) || 1;
+
+/**
  * Creates a **standalone** seeded random generator (Mulberry32) that you own, usable
  * anywhere, no game required. Each call returns an independent generator with its own
  * closed-over state (no shared global stream), so seeding or draining one never affects
@@ -52,14 +67,14 @@ export type TRandomHandle = {
  * and reproducible through its `seed` option. (`createGame` builds each game's generator
  * with this same factory.)
  *
- * Defaults to a clock-derived seed (different each run); pass `seed` or call `.seed()`
- * for a reproducible sequence.
+ * Defaults to a clock-derived seed, different each run and for each generator made in the
+ * same run; pass `seed` or call `.seed()` for a reproducible sequence.
  *
  * @category Math
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const createRandom = (initialSeed: number = (Date.now() >>> 0) || 1): TRandomHandle => {
+export const createRandom = (initialSeed: number = clockSeed()): TRandomHandle => {
     let state = initialSeed >>> 0;
 
     // Mulberry32: small, fast, well-distributed, and seedable (unlike Math.random).
