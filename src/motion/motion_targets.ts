@@ -1,6 +1,7 @@
 import { findObject } from '../box/find_object';
 import type { TBox } from '../box';
 import type { TMotionTrack } from './types/t_motion_doc';
+import type { TPostEffect } from '../post/types/t_post_effect';
 
 /**
  * The field a track moves, found on the running scene: the object that holds it and its name there.
@@ -11,9 +12,10 @@ import type { TMotionTrack } from './types/t_motion_doc';
  */
 export type TMotionTarget = {
     /**
-     * The box it belongs to, to stop writing once that box is gone.
+     * The box it belongs to, to stop writing once that box is gone. `null` for a screen effect,
+     * which belongs to the game.
      */
-    box: TBox;
+    box: TBox | null;
     holder: Record<string, unknown>;
     field: string;
     kind: 'number' | 'boolean';
@@ -90,7 +92,10 @@ const isObject = (value: unknown): value is Record<string, unknown> => typeof va
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const resolveMotionTrack = (roots: readonly TBox[], track: TMotionTrack): TMotionTarget | string => {
+export const resolveMotionTrack = (roots: readonly TBox[], track: TMotionTrack, effects: readonly TPostEffect[] = []): TMotionTarget | string => {
+    if (track.post !== undefined) {
+        return resolvePostTrack(effects, track);
+    }
     const box = findMotionBox(roots, track.box, track.name);
     if (box === null) {
         return `there is no box ${track.name !== undefined ? `"${track.name}" ` : ''}with the id "${track.box}"`;
@@ -111,6 +116,14 @@ export const resolveMotionTrack = (roots: readonly TBox[], track: TMotionTrack):
     const parts = track.path.split('.');
     const field = parts.pop()!;
     let holder: Record<string, unknown> = record;
+    // A picture's own knob that it has not been given yet is its material's: given its own, from the
+    // material's value, the moment a track moves it.
+    if (track.component !== undefined && parts.length === 1 && parts[0] === 'uniforms' && record.uniforms === undefined) {
+        const material = isObject(record.material) && isObject(record.material.uniforms) ? record.material.uniforms : null;
+        if (material !== null && typeof material[field] === 'number') {
+            record.uniforms = { [field]: material[field] };
+        }
+    }
     for (const part of parts) {
         const next = holder[part];
         if (!isObject(next)) {
@@ -127,6 +140,32 @@ export const resolveMotionTrack = (roots: readonly TBox[], track: TMotionTrack):
 };
 
 /**
+ * A track of one of the game's screen effects, found by the effect's name.
+ */
+const resolvePostTrack = (effects: readonly TPostEffect[], track: TMotionTrack): TMotionTarget | string => {
+    const effect = effects.find((one) => one.name === track.post);
+    if (effect === undefined) {
+        return `the game has no screen effect called "${track.post}"`;
+    }
+    const parts = track.path.split('.');
+    const field = parts.pop()!;
+    let holder = effect as unknown as Record<string, unknown>;
+    for (const part of parts) {
+        const next = holder[part];
+        if (!isObject(next)) {
+            return `"${track.path}" is not a field of the screen effect "${track.post}"`;
+        }
+        holder = next;
+    }
+    const value = holder[field];
+    const kind = typeof value === 'number' ? 'number' : typeof value === 'boolean' ? 'boolean' : undefined;
+    if (kind === undefined) {
+        return `"${track.path}" of the screen effect "${track.post}" is not a number or a yes/no, so it cannot be moved`;
+    }
+    return { box: null, holder, field, kind };
+};
+
+/**
  * Writes a track's value into the field it moves, as the field's own kind.
  *
  * @internal
@@ -134,6 +173,6 @@ export const resolveMotionTrack = (roots: readonly TBox[], track: TMotionTrack):
  * @author Francisco Pereira Alvarado
  */
 export const writeMotionTarget = (target: TMotionTarget, value: number | boolean): void => {
-    if (target.box.destroyed) return;
+    if (target.box?.destroyed) return;
     target.holder[target.field] = target.kind === 'boolean' ? (typeof value === 'boolean' ? value : value !== 0) : (typeof value === 'number' ? value : value ? 1 : 0);
 };

@@ -38,8 +38,9 @@ const readKey = (raw: unknown, src: string, where: string): TMotionKey => {
 const readTrack = (raw: unknown, src: string, index: number): TMotionTrack => {
     const where = `track ${index + 1}`;
     const track = asRecord(raw) ?? fail(src, `${where} has to be an object with its "box", "path" and "keys".`);
-    if (typeof track.box !== 'string' || track.box === '') {
-        fail(src, `${where} has to name its "box", by the id the scene gives it.`);
+    const post = typeof track.post === 'string' && track.post !== '' ? track.post : undefined;
+    if (post === undefined && (typeof track.box !== 'string' || track.box === '')) {
+        fail(src, `${where} has to name its "box", by the id the scene gives it, or the screen effect it moves as "post".`);
     }
     if (typeof track.path !== 'string' || track.path === '') {
         fail(src, `${where} has to say which field it moves, as "path" ("x", "zoom", "tint.a").`);
@@ -51,9 +52,10 @@ const readTrack = (raw: unknown, src: string, index: number): TMotionTrack => {
     // first: sorting is stable.
     const keys = (track.keys as unknown[]).map((key, k) => readKey(key, src, `${where}, key ${k + 1}`)).sort((a, b) => a.t - b.t);
     return {
-        box: track.box as string,
+        box: typeof track.box === 'string' ? track.box : '',
         ...(typeof track.name === 'string' ? { name: track.name } : {}),
         ...(typeof track.component === 'string' && track.component !== '' ? { component: track.component } : {}),
+        ...(post !== undefined ? { post } : {}),
         path: track.path as string,
         keys,
     };

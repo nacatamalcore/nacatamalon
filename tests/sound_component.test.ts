@@ -10,7 +10,7 @@ import { useMusic } from '../src/hooks/audio/use_music';
 import { useAudioListener } from '../src/hooks/audio/use_audio_listener';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useTransform } from '../src/hooks/transform/use_transform';
-import { updateAudio } from '../src/audio';
+import { soundOf, updateAudio } from '../src/audio';
 import { whenLoaded } from '../src/loaders';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { installFakeAudio } from './helpers/test_audio';
@@ -376,5 +376,48 @@ describe('the rest of a sound scene, written down', () => {
         }, 'test');
 
         expect(doc.root.components).toHaveLength(0);
+    });
+});
+
+describe('a sound laid out in the scene, played by a behaviour', () => {
+    it('is found on its box by the component\'s id or by its file, and plays from there', () => {
+        const { doc } = written(() => {
+            useSound({ src: '/sfx/crowd.wav' }, { id: 'stands', loop: true });
+            useSound({ src: '/sfx/hit.wav' }, { id: 'sound-2' });
+        });
+        const { store } = createTestGame();
+        registerScene(store, doc.name, sceneFromDoc(doc));
+        const root = startScene(store, doc.name);
+
+        const stands = soundOf(root, 'stands');
+        expect(stands).not.toBeNull();
+        // By its file: the address, or its name alone.
+        expect(soundOf(root, '/sfx/hit.wav')).toBe(soundOf(root, 'hit'));
+        expect(soundOf(root, 'hit')).not.toBe(stands);
+        expect(soundOf(root, 'crowd')).toBe(stands);
+        expect(soundOf(root, 'cheer')).toBeNull();
+        expect(typeof stands!.play).toBe('function');
+    });
+});
+
+describe('a scene shown rather than played', () => {
+    it('keeps a sound that starts on its own quiet, and still says it starts on its own', async () => {
+        const { doc } = written(() => {
+            useSound({ src: '/audio/theme.mp3' }, { id: 'music', channel: 'music', loop: true, autoplay: true });
+        });
+        const started = async (scripts: 'run' | 'attach') => {
+            const { store } = createTestGame();
+            registerScene(store, doc.name, sceneFromDoc(doc, undefined, { scripts }));
+            const root = startScene(store, doc.name);
+            await whenLoaded(store.get('assets').sounds.get('/audio/theme.mp3')!);
+            const context = store.get('audio').manager!.context as unknown as TFakeContext;
+            return { playing: context.sources.filter((source) => source.started).length, saved: serializeScene(root).root.components[0] };
+        };
+        // An editor's viewport: nothing sounds, and the scene saves exactly as it was.
+        const shown = await started('attach');
+        expect(shown.playing).toBe(0);
+        expect(shown.saved).toMatchObject({ type: 'sound', autoplay: true });
+        // Played, it starts.
+        expect((await started('run')).playing).toBe(1);
     });
 });

@@ -14,6 +14,7 @@ export { createBeatClock } from './beat_clock';
 export { clipFromSamples } from './clip_from_samples';
 export type { TBeatListener } from './beat_clock';
 export { zoneVolume2d, zoneVolume3d } from './zone_volume';
+export { soundOf } from './attachment_players';
 
 export type { TAudioClock, TAudioHandle, TAudioManager, TVoice } from './types/t_audio';
 export type {

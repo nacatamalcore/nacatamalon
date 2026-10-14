@@ -55,10 +55,28 @@ releases are in [changelog/](./changelog/), one file each.
   - `TEditorHandle.previewMotion(doc, seconds)` puts the running scenes where a motion has them at a
     moment without playing it, `endMotionPreview()` puts back what it touched, and
     `updateMotion(src, doc)` hands a saved `.motion` to what plays it, from the same moment.
+- A motion moves the game's screen effects too: a track with `post` (the effect's name) and no box
+  moves `uniforms.<knob>` or `enabled` of that effect of the post chain. And a track of a picture's
+  `uniforms.<knob>` that only its material has gives the picture its own value, starting from the
+  material's, instead of saying the field is not there.
 - `boxFromDoc(doc, place?)`: the box a document describes, built while the game runs, given to
   `useSpawn` (`useSpawn(boxFromDoc)(doc, { x, y })`). A reusable box (a `.box` file, whose root holds
   the one box) made again and again: a coin a level drops, an enemy a door lets out. Built as a scene
   builds its boxes, assets, components, children and behaviours, each copy with ids of its own.
+- `copyBox(box, place?)`: another of a box a scene document built, made while the game runs and given
+  to `useSpawn` (`useSpawn(copyBox)(enemy)`): the same components, children and behaviours as the
+  document wrote them, with ids of its own. A box made in code says it cannot be copied this way.
+- A behaviour setting of type `'box'`: a string naming another box of the scene, for a form to offer
+  the scene's boxes rather than a name to type.
+- Behaviour settings of type `'sound'` and `'song'`: a string naming a sound file (`/sfx/hit.wav`) or a
+  `.song` of the game, for a form to offer the game's sounds or songs, and to play one, rather than an
+  address to type. Empty is no sound.
+- `soundOf(box, name)`: the handle of a sound, music or song a box carries, found by its component's
+  id or by its file (`crowd`, `/sfx/crowd.wav`). A behaviour plays a sound laid out in the scene, where
+  a person chooses its file, volume and loop, instead of naming the file in code. `null` when the box
+  carries none by that name.
+- Flipped tiles in `.tilemap` files: a tile says `flipX` and `flipY` to be drawn turned left for right or
+  upside down, so one picture serves both sides of a wall or the four corners of a frame.
 - Terrains in `.tilemap` files (`terrains`, `TTerrainDoc`): a ground painted as a whole (grass, water,
   a wall), sixteen tiles, one for each set of a cell's corners it covers (top-left 1, top-right 2,
   bottom-left 4, bottom-right 8), so an editor chooses the edges and the corners from what is around
@@ -82,6 +100,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- A scene shown rather than played (`sceneFromDoc` with `scripts: 'attach'`, an editor's viewport) no
+  longer starts its sounds, music and songs that start on their own (`autoplay`): going from playing to
+  editing played the title's music again. They still say they start on their own, and save so, the way
+  a motion in such a scene already stayed still.
 - `cellAt`, `cellCorner` and `solidAtPoint` count from where a map really is in the world. They read
   only the map's own placement, which is (0, 0) for a map laid out in a scene document (its place is
   its box's), so for such a map moved off the origin, scaled, or inside a moved group, they answered

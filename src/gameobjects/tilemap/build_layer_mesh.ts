@@ -22,6 +22,7 @@ const writeCell = (
     cell: number,
     frame: TAtlasFrame,
     inset: { u: number; v: number },
+    flip: { x: boolean; y: boolean },
 ): number => {
     const x0 = column * cell;
     const y0 = row * cell;
@@ -36,11 +37,17 @@ const writeCell = (
     // Done here rather than in the shader, which is where the sprites do it, because a tile's
     // square is known when the corners are built and a sprite's is not: this costs nothing per
     // frame, and the shader would have needed four more numbers on every corner.
-    const u0 = frame.uvOffset.x + inset.u;
-    const v0 = frame.uvOffset.y + inset.v;
+    const left = frame.uvOffset.x + inset.u;
+    const top = frame.uvOffset.y + inset.v;
     // Guarded against crossing over for a sheet so small that a tile is thinner than one texel.
-    const u1 = Math.max(u0, frame.uvOffset.x + frame.uvScale.x - inset.u);
-    const v1 = Math.max(v0, frame.uvOffset.y + frame.uvScale.y - inset.v);
+    const right = Math.max(left, frame.uvOffset.x + frame.uvScale.x - inset.u);
+    const bottom = Math.max(top, frame.uvOffset.y + frame.uvScale.y - inset.v);
+    // A flipped tile reads its piece of the sheet from the other side: the same corners, the
+    // picture the other way round.
+    const u0 = flip.x ? right : left;
+    const u1 = flip.x ? left : right;
+    const v0 = flip.y ? bottom : top;
+    const v1 = flip.y ? top : bottom;
 
     // A list of triangles and not a strip: a strip cannot start a new cell without wasted corners,
     // and at a few thousand cells two more each are cheaper than the bookkeeping. Which way round
@@ -147,10 +154,11 @@ export const buildLayerMesh = (map: TTilemap, layer: TTilemapLayer): { still: Fl
         const column = i % map.width;
         const row = Math.floor(i / map.width);
         const frame = atlasFrame(atlas, index);
+        const flip = { x: tile.flipX === true, y: tile.flipY === true };
         if (tile.anim !== undefined) {
-            movingAt = writeCell(moving, movingAt, column, row, map.cell, frame, inset);
+            movingAt = writeCell(moving, movingAt, column, row, map.cell, frame, inset, flip);
         } else {
-            stillAt = writeCell(still, stillAt, column, row, map.cell, frame, inset);
+            stillAt = writeCell(still, stillAt, column, row, map.cell, frame, inset, flip);
         }
     }
 

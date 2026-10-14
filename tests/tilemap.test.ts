@@ -342,6 +342,18 @@ describe('the corners of a layer', () => {
         expect(Array.from(still.slice(16, 20))).toEqual([8, 8, 0.25 - inU, 1 - inV]);
     });
 
+    it('reads a flipped tile\'s piece of the sheet the other way round', async () => {
+        const { map } = await withMap();
+        map.tiles[1] = { ...map.tiles[1]!, flipX: true, flipY: true };
+        const { still } = buildLayerMesh(map, map.layers[0]);
+        const inU = 0.5 / 32;
+        const inV = 0.5 / 8;
+
+        // The same corners on screen, each reading the opposite corner of its piece.
+        expect(Array.from(still.slice(0, 4))).toEqual([0, 0, 0.25 - inU, 1 - inV]);
+        expect(Array.from(still.slice(16, 20))).toEqual([8, 8, inU, inV]);
+    });
+
     it('leaves a hole where a cell is empty rather than drawing anything', async () => {
         const { map } = await withMap();
         setTile(map, 0, 0, 0, 0);

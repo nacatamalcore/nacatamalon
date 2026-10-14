@@ -1,6 +1,7 @@
 import { getActiveBox, getActiveGame } from '../../store';
 import { applyDucking, clipFromSamples, DEFAULT_CHANNEL, getAudioManager, logVoice, placeVoice, rampTo, wrapPosition } from '../../audio';
-import { setAttachmentPlayer } from '../../audio/attachment_players';
+import { setAttachmentHandle } from '../../audio/attachment_players';
+import { isShowingOnly } from '../physics/is_showing_only';
 import { renderSfx } from '../../audio/synth';
 import { nanoId } from '../../utils';
 import { whenLoaded } from '../../loaders';
@@ -49,7 +50,15 @@ const resolveSource = (audio: TAudioManager, source: TSoundSource): TAudioClip =
 };
 
 /**
- * Plays a sound, and hands back the controls for it.
+ * Plays **one audio file** (`.wav`, `.mp3`, `.ogg`), or an effect made from a preset, and hands back
+ * the controls for it.
+ *
+ * **What it is for:** sound effects (a jump, a coin, a bat hitting the ball), an ambience that loops
+ * (rain, a crowd, an engine), and music that is a single recording. **Not for:** music in layers that
+ * come in and out (that is `useMusic`), or a tune written as notes in a `.song` (that is `useSong`).
+ *
+ * It loads the file itself when given `{ src }`, so one line is enough:
+ * `useSound({ src: '/sfx/jump.wav' })`.
  *
  * Called in the body of a scene, like every hook; the controls are used whenever, from an update, a
  * click, a signal. When the scene stops or the object that asked for it is destroyed, its sound
@@ -66,6 +75,10 @@ const resolveSource = (audio: TAudioManager, source: TSoundSource): TAudioClip =
  * Pausing the game or the scene does **not** stop a sound, because a menu over a frozen level often
  * wants the music to carry on. To silence something on pause, listen to `scenePaused`/`gamePaused`
  * and decide for each sound.
+ *
+ * A sound laid out in a scene document (a `sound` component, chosen in an editor) is made by this same
+ * hook; a behaviour gets its controls with `soundOf(box, name)`. In a scene shown rather than played
+ * (an editor's viewport), `autoplay` waits for the game to play.
  *
  * @param source A clip from `useLoadAudio`, `{ src }` to load it here, or `{ sfx }` to make an
  * effect from a preset.
@@ -334,7 +347,10 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
         },
     };
 
-    if (options.autoplay === true) {
+    // A scene shown rather than played (an editor's viewport) keeps it quiet: it still says it starts on
+    // its own, and saves so, but nothing sounds until the game plays.
+    const showingOnly = isShowingOnly();
+    if (options.autoplay === true && !showingOnly) {
         // The file may already be there (a loading scene did it) or be on its way: either way this
         // starts it the moment it can, and never if the file failed.
         void whenLoaded(clip).then(() => {
@@ -347,7 +363,7 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
     // Leaves with whatever asked for it: a scene that stops takes its music along.
     box.cleanups.push(() => stop());
 
-    setAttachmentPlayer(attachment, () => handle.play());
+    setAttachmentHandle(attachment, handle);
 
     return handle;
 };

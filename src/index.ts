@@ -184,7 +184,7 @@ export type { TProjectSettings } from './project';
 
 // The scene document: the format, reading one, writing one down, and turning one into a scene.
 // Writing one down is `serializeScene`, in `nacatamalon/authoring`: reading is not authoring.
-export { boxFromDoc, parseSceneDoc, sceneFromDoc, SCENE_FORMAT, SCENE_VERSION } from './scene';
+export { boxFromDoc, copyBox, parseSceneDoc, sceneFromDoc, SCENE_FORMAT, SCENE_VERSION } from './scene';
 export type {
     TSceneDoc, TBoxNode, TDataEntry, TAssetEntry, TGeometrySource, TComponentDoc, TMaterialDoc, TMeshMaterialDoc, TMaterialMapDoc,
     TSpriteComponent, TTextComponent, TMeshComponent, TTilemapComponent, TTilemapLayerOverride, TParticlesComponent, TParticles3dComponent, TParticleCollider2dComponent, TParticleCollider3dComponent, TSpriteTextureComponent, TMusicComponent, TSongComponent, TMotionComponent, TAudioListenerComponent, TCamera2dComponent,
@@ -201,6 +201,8 @@ export type {
 export { parseMotionDoc, MOTION_FORMAT, MOTION_VERSION } from './motion';
 export type { TMotionDoc, TMotionTrack, TMotionKey, TMotionEvent, TMotionEase, TMotionTransition, TMotionOptions, TMotionHandle, TMotionAttachment } from './motion';
 export type { TGameSignal, TSignalHandler, TScenePauseEvent, TGamePauseEvent } from './signal';
+// A sound laid out in the scene, played by a behaviour.
+export { soundOf } from './audio';
 export type {
     TSoundAttachment, TSoundHandle, TSoundOptions, TSoundSource, TAudioHandle, TSoundCone, TSoundDuck, TSoundFade, TSoundZone,
     TSoundZoneShape, TMusicAttachment, TMusicHandle, TMusicLayer, TMusicLayerOptions, TMusicOptions, TAudioListener,

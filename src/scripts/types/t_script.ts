@@ -63,8 +63,17 @@ export type TScriptField = {
      * nobody filled in. A form shows `'key'` as "press the key you want" instead, which is both
      * easier and the only way to write down the keys with nothing to print. Saved exactly like a
      * string; nothing further down needs to know the difference.
+     *
+     * `'box'` is a `'string'` that names another box of the scene (the one to follow, the one that
+     * picks it up), for a form to offer the scene's boxes to choose from rather than a name to type
+     * and mistype. Saved exactly like a string too; the behaviour finds the box by that name.
+     *
+     * `'sound'` and `'song'` are `'string'`s that name a file of the game, a sound (`/sfx/hit.wav`)
+     * or a `.song` (`/music/title.song`), for a form to offer the game's sounds or songs, and to
+     * play one, rather than an address to type. Saved exactly like a string; the behaviour hands it
+     * to `useSound({ src })` or `useLoadSong({ src })`. Empty is no sound.
      */
-    type: 'number' | 'boolean' | 'string' | 'select' | 'key';
+    type: 'number' | 'boolean' | 'string' | 'select' | 'key' | 'box' | 'sound' | 'song';
     default: string | number | boolean;
     min?: number;
     max?: number;

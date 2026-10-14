@@ -99,6 +99,17 @@ describe('parseTilemapDoc', () => {
     });
 });
 
+describe('flipped tiles', () => {
+    it('keeps a tile turned left for right or upside down, and nothing when it is not', () => {
+        const map = parseTilemapDoc({ ...doc(), tiles: { ...doc().tiles, 1: { frame: 0, flipX: true }, 2: { frame: 7, flipY: true, flipX: false } } }, '/m.tilemap');
+
+        expect(map.tiles[1]).toMatchObject({ frame: 0, flipX: true });
+        expect(map.tiles[2]!.flipY).toBe(true);
+        expect('flipX' in map.tiles[2]!).toBe(false);
+        expect(parseTilemapDoc(JSON.parse(serializeTilemapDoc(map)), '/m.tilemap').tiles[1]).toMatchObject({ flipX: true });
+    });
+});
+
 describe('terrains', () => {
     // A ground of grass: the middle (all four corners) is tile 1, a top-left corner alone is tile 2.
     const grass = () => ({ name: 'grass', tiles: [0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1] });

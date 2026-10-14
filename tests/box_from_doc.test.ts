@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
-import { boxFromDoc, parseSceneDoc, SCENE_FORMAT } from '../src/scene/document';
+import { boxFromDoc, copyBox, parseSceneDoc, sceneFromDoc, SCENE_FORMAT } from '../src/scene/document';
+import { getScriptFields } from '../src/scripts';
+import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { useSpawn } from '../src/hooks/spawn';
 import { clearScripts, registerScript } from '../src/scripts';
 import { createTestGame, startTestScene } from './helpers/test_game';
@@ -65,5 +67,52 @@ describe('boxFromDoc', () => {
 
     it('says how it is meant to be used when called by itself', () => {
         expect(() => boxFromDoc(coin())).toThrow('useSpawn(boxFromDoc)(doc)');
+    });
+});
+
+describe('copyBox', () => {
+    it('makes another of a box a scene document built, as the document wrote it', () => {
+        const shone: string[] = [];
+        registerScript('test-shiny', (self) => { shone.push(self.id); });
+        const { store } = createTestGame();
+        // The coin's document as a whole scene: the coin is built from it like any other box.
+        const level = coin();
+        let spawn!: (box: TGameObject, place?: { x?: number; y?: number }) => TGameObject;
+        const scene = startTestScene(store, 'Level', () => {
+            sceneFromDoc(level, 'scenes/level.scene.json')();
+            spawn = useSpawn(copyBox, { parent: 'scene' });
+            return createScene();
+        });
+        const first = scene.children.flatMap((c) => [c, ...c.children]).find((b) => b.name === 'Coin' && b.drawables.length > 0)!;
+        // Moved since it was built: the copy starts where the document put it, not here.
+        first.transform!.x = 999;
+
+        const copy = spawn(first);
+        const there = spawn(first, { y: 80 });
+        expect(copy.name).toBe('Coin');
+        expect(copy.id).not.toBe(first.id);
+        expect(copy.transform).toMatchObject({ x: 10, y: 20 });
+        expect(there.transform).toMatchObject({ x: 10, y: 80 });
+        expect(copy.children.map((c) => c.name)).toEqual(['Shine']);
+        expect(copy.children[0]!.id).not.toBe(first.children[0]!.id);
+        expect(shone).toEqual([first.id, copy.id, there.id]);
+    });
+
+    it('says why a box made in code cannot be copied this way', () => {
+        const { store } = createTestGame();
+        let spawn!: (box: TGameObject) => TGameObject;
+        const scene = startTestScene(store, 'Level', () => {
+            createSprite({ width: 4, height: 4 });
+            spawn = useSpawn(copyBox);
+            return createScene();
+        });
+        expect(() => spawn(scene)).toThrow('was not built from a scene document');
+    });
+});
+
+describe('a setting that names a box', () => {
+    it('is kept as written, for a form to offer the scene\'s boxes', () => {
+        registerScript('test-follower', () => {}, [{ key: 'target', label: 'Follows', type: 'box', default: 'Player' }]);
+        expect(getScriptFields('test-follower')).toEqual([{ key: 'target', label: 'Follows', type: 'box', default: 'Player' }]);
     });
 });

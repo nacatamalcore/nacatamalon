@@ -1,6 +1,7 @@
 import { getActiveBox, getActiveGame } from '../../store';
 import { clipFromSamples, createBeatClock, createLayeredPlayer, getAudioManager } from '../../audio';
-import { setAttachmentPlayer } from '../../audio/attachment_players';
+import { setAttachmentHandle } from '../../audio/attachment_players';
+import { isShowingOnly } from '../physics/is_showing_only';
 import { renderSong, SONG_VOICES } from '../../audio/synth';
 import { nanoId } from '../../utils';
 import { whenLoaded } from '../../loaders';
@@ -11,7 +12,15 @@ import type { TSongDoc, TSongError, TSongVoiceName } from '../../audio/synth';
 import type { TSongFile } from '../../loaders/song';
 
 /**
- * Plays a song written as notes, a `.song` file or one written in code, and hands back the controls.
+ * Plays **a song written as notes** (a `.song` file, or one written in code) with the engine's 8-bit
+ * synthesizer, and hands back the controls.
+ *
+ * **What it is for:** chiptune music the game can change while it plays: faster for the last inning,
+ * in another key, with a voice dropped. **Not for:** a recorded file (that is `useSound`, or
+ * `useMusic` for one recorded in layers).
+ *
+ * It does not load the file: `useLoadSong({ src })` does, and its result is given here,
+ * `useSong(useLoadSong({ src: '/music/title.song' }))`.
  *
  * The song is turned into sound here, in the game, one track per voice of an 8-bit console, and the
  * tracks play together like the layers of `useMusic`. So a whole tune weighs a few kilobytes instead
@@ -22,6 +31,10 @@ import type { TSongFile } from '../../loaders/song';
  * The file says where the loop goes back to, so a song can have an intro that plays once. It is in
  * the channel `'music'` unless it says otherwise, and it stops with the scene or the object that
  * asked for it.
+ *
+ * A song laid out in a scene document (a `song` component, chosen in an editor) is made by this same
+ * hook; a behaviour gets its controls with `soundOf(box, name)`. In a scene shown rather than played
+ * (an editor's viewport), `autoplay` waits for the game to play.
  *
  * @param song A song from `useLoadSong`, or a `TSongDoc` written in code.
  * @param options Its volume, channel, each voice's volume, tempo and key, and whether it starts on
@@ -195,6 +208,9 @@ export const useSong = (song: TSongFile | TSongDoc, options: TSongOptions = {}):
         },
     };
 
+    // A scene shown rather than played (an editor's viewport) keeps it quiet: it still says it starts on
+    // its own, and saves so, but nothing sounds until the game plays.
+    const showingOnly = isShowingOnly();
     void whenLoaded(file).then(() => {
         if (box.destroyed || file.status !== 'ready') {
             return;
@@ -202,7 +218,7 @@ export const useSong = (song: TSongFile | TSongDoc, options: TSongOptions = {}):
         if (piece.layers.length === 0) {
             make();
         }
-        if (attachment.autoplay) {
+        if (attachment.autoplay && !showingOnly) {
             handle.play();
         }
     });
@@ -219,7 +235,7 @@ export const useSong = (song: TSongFile | TSongDoc, options: TSongOptions = {}):
         beats.dispose();
     });
 
-    setAttachmentPlayer(attachment, () => handle.play());
+    setAttachmentHandle(attachment, handle);
 
     return handle;
 };

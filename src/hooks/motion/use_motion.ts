@@ -115,7 +115,7 @@ export const useMotion = (motion: TMotionFile | TMotionDoc, options: TMotionOpti
     const tracks = (): TBoundTracks | null => {
         if (file.doc === null) return null;
         if (bound === null || boundFrom !== getVersion(file)) {
-            bound = bindMotionTracks([rootOf(box)], file.doc);
+            bound = bindMotionTracks([rootOf(box)], file.doc, store.get('post').effects);
             boundFrom = getVersion(file);
             for (const problem of bound.problems) warnOnce(`${problem}, so it moves nothing`);
         }

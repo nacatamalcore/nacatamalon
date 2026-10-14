@@ -4,16 +4,18 @@ import { runHookUpdates } from '../src/game/loop/runHookUpdates';
 import { parseMotionDoc, MOTION_FORMAT } from '../src/motion';
 import { sampleTrack, newTrackCursor } from '../src/motion/sample_track';
 import { previewMotion, endMotionPreview } from '../src/motion/preview_motion';
-import { setAttachmentPlayer } from '../src/audio/attachment_players';
+import { setAttachmentHandle } from '../src/audio/attachment_players';
 import { replaceMotionDoc } from '../src/loaders/motion';
 import { serializeMotionDoc } from '../src/motion/serialize_motion_doc';
 import { useMotion } from '../src/hooks/motion';
 import { createScene } from '../src/scene/create_scene';
 import { getActiveBox } from '../src/store';
 import { createTestGame, startTestScene } from './helpers/test_game';
+import { newPostEffect } from '../src/post/new_post_effect';
+import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import type { TBox } from '../src/box';
 import type { TMotionDoc, TMotionHandle } from '../src/motion';
-import type { TSoundAttachment } from '../src/audio';
+import type { TSoundAttachment, TSoundHandle } from '../src/audio';
 
 /**
  * A motion: values of a scene moved over time by keys, and what happens on the way. Read from its
@@ -267,7 +269,7 @@ describe('useMotion', () => {
             self.id = 'crowd';
             const sound = { type: 'sound', id: 'roar' } as unknown as TSoundAttachment;
             self.sounds.push(sound);
-            setAttachmentPlayer(sound, () => { played += 1; });
+            setAttachmentHandle(sound, { play: () => { played += 1; } } as unknown as TSoundHandle);
             handle = useMotion(doc);
             return createScene();
         });
@@ -359,5 +361,38 @@ describe('a motion shown at a moment by an editor', () => {
         expect(crate.transform!.x).toBe(0);
         expect(root.camera2d!.zoom).toBe(1);
         expect(endMotionPreview(store)).toBe(0);
+    });
+
+    it('moves a screen effect by its name, and a picture\'s knob that only its material had', () => {
+        const { store } = createTestGame();
+        const vignette = newPostEffect({ name: 'vignette', uniforms: { strength: 0.2 } }, null, 'project');
+        store.get('post').effects.push(vignette);
+        const root = startTestScene(store, 'Level', () => {
+            const art = createSprite({ width: 8, height: 8 });
+            art.id = 'art';
+            // A material that has the knob; the picture has no value of its own for it yet.
+            art.material = { uniforms: { amount: 0.5 } } as never;
+            return createScene();
+        });
+        root.id = 'level';
+        const picture = root.drawables[0] as unknown as { uniforms?: Record<string, number> };
+        const doc = motion({
+            tracks: [
+                { post: 'vignette', path: 'uniforms.strength', keys: [{ t: 0, v: 0 }, { t: 1, v: 1 }] },
+                { box: 'level', component: 'art', path: 'uniforms.amount', keys: [{ t: 0, v: 0 }, { t: 1, v: 1 }] },
+                { post: 'nowhere', path: 'enabled', keys: [{ t: 0, v: true }] },
+            ],
+        });
+
+        const shown = previewMotion(store, doc, 0.25);
+        expect(shown.moved).toBe(2);
+        expect(shown.problems).toEqual(['track 3 (screen effect nowhere enabled): the game has no screen effect called "nowhere"']);
+        expect(vignette.uniforms.strength).toBe(0.25);
+        expect(picture.uniforms?.amount).toBe(0.25);
+
+        endMotionPreview(store);
+        expect(vignette.uniforms.strength).toBe(0.2);
+        // Written down and read again, a screen effect's track keeps naming it.
+        expect(parseMotionDoc(JSON.parse(serializeMotionDoc(doc)), 'again.motion').tracks[0]).toMatchObject({ box: '', post: 'vignette', path: 'uniforms.strength' });
     });
 });

@@ -637,11 +637,18 @@ const makePictures = (node: TBoxNode, store: TRuntimeStore): void => {
  * one of them: the placement has to exist before anything is created on the box, because a drawable
  * made on a box with no place would be put at the origin and stay there.
  */
+/**
+ * The node of the document each box was built from, and where that document came from: what
+ * `copyBox` makes another of. Weak, so a box that goes away takes its entry with it.
+ */
+const builtFrom = new WeakMap<TBox, { node: TBoxNode; src: string }>();
+
 const buildBox = (node: TBoxNode, store: TRuntimeStore, src: string): void => {
     const box = getActiveBox();
     if (box === null) {
         return;
     }
+    builtFrom.set(box, { node, src });
 
     // Kept, so a tool that remembers a selection or a link still finds what it remembered.
     box.id = node.id;
@@ -754,6 +761,18 @@ export const sceneFromDoc = (doc: TSceneDoc, src = doc.name, options: TSceneFrom
     return createScene();
 };
 
+/** A node put somewhere other than its document says, on the axes given. */
+const placeNode = (node: TBoxNode, place: { x?: number; y?: number; z?: number }): void => {
+    if (place.x === undefined && place.y === undefined && place.z === undefined) return;
+    node.transform = {
+        x: 0, y: 0, z: 0, rotation: 0, rotationX: 0, rotationY: 0, scaleX: 1, scaleY: 1, scaleZ: 1,
+        ...node.transform,
+        ...(place.x !== undefined ? { x: place.x } : {}),
+        ...(place.y !== undefined ? { y: place.y } : {}),
+        ...(place.z !== undefined ? { z: place.z } : {}),
+    };
+};
+
 /**
  * A node and everything under it, with ids of their own: a copy must not answer to the ids of the
  * box it was copied from, or a tool remembering one would find two.
@@ -805,18 +824,50 @@ export const boxFromDoc = (doc: TSceneDoc, place: { x?: number; y?: number; z?: 
     }
     // A reusable box's document holds the box as the only thing in its root.
     const node = withNewIds(doc.root.children.length === 1 ? doc.root.children[0]! : doc.root);
-    if (place.x !== undefined || place.y !== undefined || place.z !== undefined) {
-        node.transform = {
-            x: 0, y: 0, z: 0, rotation: 0, rotationX: 0, rotationY: 0, scaleX: 1, scaleY: 1, scaleZ: 1,
-            ...node.transform,
-            ...(place.x !== undefined ? { x: place.x } : {}),
-            ...(place.y !== undefined ? { y: place.y } : {}),
-            ...(place.z !== undefined ? { z: place.z } : {}),
-        };
-    }
+    placeNode(node, place);
     loadAssets(doc.assets, src);
     makePictures(node, store);
     buildBox(node, store, src);
+};
+
+/**
+ * Builds another of a box of the scene while the game runs, as the document described it: the same
+ * components, children and behaviours, with ids of its own, where `place` says (or where the
+ * document put the first). Give it to `useSpawn`, as `boxFromDoc`: `useSpawn(copyBox)(enemy)`. What
+ * the first has done since (moved, been hit) is not copied: the copy starts as it was written.
+ *
+ * Only a box a scene document built can be copied this way; a box made in code is made again by
+ * calling what made it.
+ *
+ * @example
+ * ```ts
+ * registerScript('door', (self) => {
+ *     const spawn = useSpawn(copyBox, { parent: 'scene' });
+ *     const enemy = findObject(self.parent!, 'Enemy');
+ *     useTimer().every(3, () => { if (enemy !== null) spawn(enemy, { x: self.transform!.x }); });
+ * });
+ * ```
+ *
+ * @param box The box to make another of.
+ * @param place Where it goes instead (`x`, `y`, `z`), each one left out staying as the document says.
+ *
+ * @category Scenes
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const copyBox = (box: TBox, place: { x?: number; y?: number; z?: number } = {}): void => {
+    const from = builtFrom.get(box);
+    if (from === undefined) {
+        throw new Error(`[NacatamalOn] copyBox: '${box.name}' was not built from a scene document, so there is nothing to make another of. Call again what made it.`);
+    }
+    const store = getActiveGame();
+    if (store === null || getActiveBox() === null) {
+        throw new Error('[NacatamalOn] copyBox: hand it to useSpawn, which builds the copy: useSpawn(copyBox)(box).');
+    }
+    const node = withNewIds(from.node);
+    placeNode(node, place);
+    makePictures(node, store);
+    buildBox(node, store, from.src);
 };
 
 export type { TBox };

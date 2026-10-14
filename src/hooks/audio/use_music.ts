@@ -1,13 +1,20 @@
 import { getActiveBox, getActiveGame } from '../../store';
 import { createBeatClock, createLayeredPlayer, getAudioManager } from '../../audio';
-import { setAttachmentPlayer } from '../../audio/attachment_players';
+import { setAttachmentHandle } from '../../audio/attachment_players';
+import { isShowingOnly } from '../physics/is_showing_only';
 import { nanoId } from '../../utils';
 import { whenLoaded } from '../../loaders';
 import { useLoadAudio } from '../loaders/use_load_audio';
 import type { TMusicAttachment, TMusicHandle, TMusicLayer, TMusicOptions } from '../../audio';
 
 /**
- * Plays a piece of music made of layers, and hands back the controls for it.
+ * Plays **one piece of music recorded in several files** (its layers, or stems) that sound together,
+ * and hands back the controls for it.
+ *
+ * **What it is for:** music that changes with the game without starting over: the drums come in for
+ * a fight, the tune goes muffled under water. **Not for:** a single recording (that is `useSound`), or
+ * a tune written as notes in a `.song` (that is `useSong`, which can also drop a voice, change key and
+ * speed up).
  *
  * The layers are the same tune played by different instruments, one file each and all the same
  * length. They always play **together and in time**; what the game changes is how loud each one is.
@@ -18,6 +25,10 @@ import type { TMusicAttachment, TMusicHandle, TMusicLayer, TMusicOptions } from 
  * the rest. Like every sound, it stops with the scene or the object that asked for it.
  *
  * With `loopStart` it has an intro that plays once, and with `bpm` the game can follow its beat.
+ *
+ * Music laid out in a scene document (a `music` component) is made by this same hook; a behaviour
+ * gets its controls with `soundOf(box, name)`. In a scene shown rather than played (an editor's
+ * viewport), `autoplay` waits for the game to play.
  *
  * @param options The layers by name, each with the volume it starts at, and the piece's volume,
  * channel and whether it starts on its own.
@@ -134,7 +145,10 @@ export const useMusic = (options: TMusicOptions): TMusicHandle => {
         },
     };
 
-    if (attachment.autoplay) {
+    // A scene shown rather than played (an editor's viewport) keeps it quiet: it still says it starts on
+    // its own, and saves so, but nothing sounds until the game plays.
+    const showingOnly = isShowingOnly();
+    if (attachment.autoplay && !showingOnly) {
         void Promise.all(layers.map((layer) => whenLoaded(layer.clip))).then(() => {
             if (!box.destroyed) {
                 handle.play();
@@ -147,7 +161,7 @@ export const useMusic = (options: TMusicOptions): TMusicHandle => {
         beats.dispose();
     });
 
-    setAttachmentPlayer(attachment, () => handle.play());
+    setAttachmentHandle(attachment, handle);
 
     return handle;
 };

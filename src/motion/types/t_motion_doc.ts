@@ -47,7 +47,7 @@ export type TMotionKey = {
  */
 export type TMotionTrack = {
     /**
-     * The box, by its id in the scene document.
+     * The box, by its id in the scene document. Empty for a track of a screen effect (`post`).
      */
     box: string;
     /**
@@ -60,8 +60,15 @@ export type TMotionTrack = {
      */
     component?: string;
     /**
+     * One of the game's screen effects (its post chain), by its name, when the field is the
+     * effect's: `uniforms.strength`, or `enabled`. A screen effect belongs to the game and not to a
+     * box, so such a track names no box.
+     */
+    post?: string;
+    /**
      * The field, as a path of dots: `x`, `scaleY`, `rotation` on the box; `zoom` or `transform.x` on
-     * a camera; `tint.a`, `visible`, `width` on a picture or a text.
+     * a camera; `tint.a`, `visible`, `width` on a picture or a text; `uniforms.amount` on a picture
+     * with a material (its own value, or its material's until it has one).
      */
     path: string;
     /**

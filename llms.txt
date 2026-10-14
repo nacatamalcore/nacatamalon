@@ -200,12 +200,12 @@ const App = () => (
 - **The 1997 look**: material options `vertexSnap` and `affine`, `useFog`, `usePostProcess` with `dither`, `posterize`, `paletteMatch`, `lutGrade`, `crt` (with `CRT_PRESETS`) and `COLOR_LEVELS`.
 - **Screen effects** (each spread into `usePostProcess`, tuned by writing into `effect.uniforms`): `colorAdjust`, `mosaic`, `wave`, `shockwave`, `distort`, `rgbSplit`, `glitch`, `grain`, `oldFilm`, `halftone`, `blur`, `zoomBlur`, `motionBlur`, `tiltShift`, `bloom`, `godrays`, `phosphor`, `ntsc`, `lcd`. A hand-written effect can read `sampleTextureSmooth`, `sampleInput` and `sampleHistory`, and take `passes` for more than one read of the frame.
 - **Pixels** (pictures painted in code): `createPixels`, `setPixel`, `getPixel`, `fillRect`, `drawLine`, `fillCircle`, `drawCircle`, `fillEllipse`, `drawEllipse`, `drawText`, `fillGradient`, `fillNoise`, `fillChecker`, `blitPixels`, `mapPixels`, `clonePixels`, `swapColors`, `createPixelTexture`, `updatePixelTexture`, `useLoadPixels`.
-- **Audio**: `useSound`, `useMusic`, `useLoadAudio`, `useAudio`, `useAudioListener`.
+- **Audio**: `useSound` (one file: effects, an ambience, a single recording; `{ src }` loads it), `useMusic` (one piece recorded in several files, its layers faded in and out with `setLayer`), `useSong` (a tune written as notes, `useSong(useLoadSong({ src: '/music/x.song' }))`, made into sound by the engine's 8-bit synth), `useLoadAudio`, `useAudio` (volumes per channel), `useAudioListener`. A sound laid out in a scene document: `soundOf(box, name)` gives its controls.
 - **State**: `useData`, `useWatch`, `createGameStore`, `useStore`, `createGameSignal`, `useSignal`.
 - **Maths and random**: `useRandom`, `clamp`, `lerp`, `vec2Add`, `vec3Add` and the other `vec2*`/`vec3*`.
 - **2D physics**: `installPhysics2d` from `nacatamalon/physics2d`; `usePhysicsWorld2d` and `usePhysicsBody2d` from `nacatamalon`.
 - **3D physics**: `installPhysics3d` and `useCharacterBody` from `nacatamalon/physics3d`; `usePhysicsWorld3d` and `usePhysicsBody3d` from `nacatamalon`.
-- **Saved scenes**: `sceneFromDoc`, `parseSceneDoc`.
+- **Saved scenes**: `sceneFromDoc`, `parseSceneDoc`; a box made again while the game runs: `useSpawn(boxFromDoc)(doc, place)` from a document, `useSpawn(copyBox)(box, place)` from a box a scene built.
 
 - **React**: `Game`, `useGame`, `useGameStore`, `useSignal` from `nacatamalon/react`.
 

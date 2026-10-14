@@ -71,6 +71,8 @@ export const parseTilemapDoc = (value: unknown, src: string): TTilemapDoc => {
             // Follows `solid` unless it says otherwise: water is the exception that earns the field.
             blocksBullets: tile.blocksBullets ?? tile.solid === true,
             ...(typeof tile.becomes === 'number' ? { becomes: Math.floor(tile.becomes) } : {}),
+            ...(tile.flipX === true ? { flipX: true } : {}),
+            ...(tile.flipY === true ? { flipY: true } : {}),
         };
     }
 

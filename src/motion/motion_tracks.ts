@@ -1,6 +1,7 @@
 import { newTrackCursor, sampleTrack } from './sample_track';
 import { resolveMotionTrack, writeMotionTarget } from './motion_targets';
 import type { TBox } from '../box';
+import type { TPostEffect } from '../post/types/t_post_effect';
 import type { TMotionDoc, TMotionTrack } from './types/t_motion_doc';
 import type { TMotionTarget } from './motion_targets';
 import type { TTrackCursor } from './sample_track';
@@ -29,12 +30,12 @@ export type TBoundTracks = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const bindMotionTracks = (roots: readonly TBox[], doc: TMotionDoc): TBoundTracks => {
+export const bindMotionTracks = (roots: readonly TBox[], doc: TMotionDoc, effects: readonly TPostEffect[] = []): TBoundTracks => {
     const problems: string[] = [];
     const tracks = doc.tracks.map((track, i) => {
-        const found = resolveMotionTrack(roots, track);
+        const found = resolveMotionTrack(roots, track, effects);
         if (typeof found === 'string') {
-            problems.push(`track ${i + 1} (${track.name ?? track.box} ${track.path}): ${found}`);
+            problems.push(`track ${i + 1} (${track.post !== undefined ? `screen effect ${track.post}` : track.name ?? track.box} ${track.path}): ${found}`);
         }
         return { track, target: typeof found === 'string' ? null : found, cursor: newTrackCursor() };
     });

@@ -50,6 +50,12 @@ export type TTileDoc = {
      * that is why it has no default.
      */
     becomes?: number;
+    /**
+     * Drawn turned left for right, or upside down: one picture serving both sides of a wall, or the
+     * corners of a frame, as old games did to save room in their sheets. Default `false`.
+     */
+    flipX?: boolean;
+    flipY?: boolean;
 };
 
 /**

@@ -34,7 +34,7 @@ const before = new WeakMap<TRuntimeStore, Map<Record<string, unknown>, Map<strin
  * @author Francisco Pereira Alvarado
  */
 export const previewMotion = (store: TRuntimeStore, doc: TMotionDoc, t: number): TMotionPreview => {
-    const bound = bindMotionTracks(store.get('world').scenes, doc);
+    const bound = bindMotionTracks(store.get('world').scenes, doc, store.get('post').effects);
     let kept = before.get(store);
     if (kept === undefined) {
         kept = new Map();

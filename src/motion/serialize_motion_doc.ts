@@ -19,7 +19,7 @@ const line = (value: unknown): string => JSON.stringify(value);
 export const serializeMotionDoc = (doc: TMotionDoc): string => {
     const key = (k: TMotionKey): string => line({ t: k.t, v: k.v, ...(k.ease !== undefined && k.ease !== 'linear' ? { ease: k.ease } : {}) });
     const track = (t: TMotionTrack): string => {
-        const head = line({ box: t.box, ...(t.name !== undefined ? { name: t.name } : {}), ...(t.component !== undefined ? { component: t.component } : {}), path: t.path });
+        const head = line({ box: t.box, ...(t.name !== undefined ? { name: t.name } : {}), ...(t.component !== undefined ? { component: t.component } : {}), ...(t.post !== undefined ? { post: t.post } : {}), path: t.path });
         return `        ${head.slice(0, -1)}, "keys": [\n${t.keys.map((k) => `            ${key(k)}`).join(',\n')}\n        ]}`;
     };
     const event = (e: TMotionEvent): string => `        ${line(e)}`;
