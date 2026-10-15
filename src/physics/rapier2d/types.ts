@@ -1,3 +1,4 @@
+import type { TCharacterBody2d, TCharacterOptions2d } from './character_body_2d';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
 import type { TGameSignal } from '../../signal';
 // How a body moves is the engine's own word for it, the same one a scene writes down.
@@ -227,4 +228,10 @@ export type TPhysicsWorldHandle2d = {
      * Look it up in `useUpdate` rather than caching it at init.
      */
     bodyOf: (box: TGameObject) => TPhysicsBodyHandle2d | null;
+
+    /**
+     * Makes `box` a platformer's character in this world: what `useCharacterBody2d` does for the
+     * object being built.
+     */
+    addCharacter: (box: TGameObject, options: TCharacterOptions2d) => TCharacterBody2d;
 };

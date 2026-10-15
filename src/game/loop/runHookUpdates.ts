@@ -9,7 +9,7 @@ import type { TBox } from "../../box";
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const runHookUpdates = (box: TBox, dt: number, time?: number, late?: TBox[], touching?: TBox[]) => {
+export const runHookUpdates = (box: TBox, dt: number, time?: number, late?: TBox[], touching?: TBox[], moving?: TBox[]) => {
 
     // Destroyed this frame and not swept yet: it stops now, so a bullet cannot report a second
     // hit after the one that killed it.
@@ -37,6 +37,10 @@ export const runHookUpdates = (box: TBox, dt: number, time?: number, late?: TBox
     if (late !== undefined && box.lateCallbacks.length > 0) {
         late.push(box);
     }
+    // And the bodies moved against the world once the updates have set their speed.
+    if (moving !== undefined && box.moveCallbacks.length > 0) {
+        moving.push(box);
+    }
     // And the boxes with something to compare once the updates are over: see `useOverlap`.
     if (touching !== undefined && (box.hitboxes.length > 0 || box.overlapCallbacks.length > 0)) {
         touching.push(box);
@@ -47,7 +51,7 @@ export const runHookUpdates = (box: TBox, dt: number, time?: number, late?: TBox
     }
 
     for (const child of children) {
-        runHookUpdates(child, dt, time, late, touching);
+        runHookUpdates(child, dt, time, late, touching, moving);
     }
     // Implementation for running hook updates goes here
 };
@@ -83,6 +87,25 @@ export const isGone = (box: TBox): boolean => {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
+/**
+ * Moves every body the walk noted against the world, once the updates that set their speed are over
+ * and before anything compares or reads where they are. Skips a box that is gone, like the late pass.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const runMoves = (moving: readonly TBox[], dt: number, time: number) => {
+    for (const box of moving) {
+        if (isGone(box)) {
+            continue;
+        }
+        for (const callback of box.moveCallbacks) {
+            callback(dt, time);
+        }
+    }
+};
+
 export const runLateUpdates = (late: readonly TBox[], dt: number, time: number) => {
     for (const box of late) {
         if (isGone(box)) {

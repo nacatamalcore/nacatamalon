@@ -9,8 +9,20 @@ import { loadRapier2D } from './load_rapier';
 import type { TRapierModule } from './load_rapier';
 import type { ColliderDesc, EventQueue, RigidBodyDesc, World } from '@dimforge/rapier2d-compat';
 import type { TBodyOptions, TPhysicsBodyHandle2d, TPhysicsWorldHandle2d, TPhysicsWorldOptions2d } from './types';
+import type { TCharacterBody2d, TCharacterOptions2d } from './character_body_2d';
 import { worldPose2d, writeWorldPose2d } from './world_pose';
 import { physicsStepOf } from '../step_length';
+import { getActiveBox, getActiveGame } from '../../store';
+import { rootOf } from '../../box/root_of';
+import { isGone } from '../../game/loop/runHookUpdates';
+import { holderOfTilemap } from '../../gameobjects/tilemap/get_tilemap';
+import { tilemapPlacement } from '../../gameobjects/tilemap/tile_queries';
+import { tileRevisionOf } from '../../gameobjects/tilemap/tile_revision';
+import { tileShapes } from './tile_shapes';
+import { createCharacter2d } from './character_body_2d';
+import type { TLedge } from './character_body_2d';
+import type { TTilemap } from '../../gameobjects/tilemap/types/t_tilemap';
+import type { Collider, PhysicsHooks } from '@dimforge/rapier2d-compat';
 
 type TBodyEntry = {
     box: TGameObject;
@@ -68,6 +80,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
     let world: World | null = null;
     let events: EventQueue | null = null;
     let accumulator = 0;
+    const gravityY = options.gravity?.y ?? 900;
     // 1/60, or exactly the game's own step when it has one: see `physicsStepOf`.
     const stepLength = physicsStepOf();
     const bodies = new Map<string, TBodyEntry>();
@@ -78,13 +91,29 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
      */
     const byCollider = new Map<number, TBodyEntry>();
 
+    // Where the scene is, so its maps can be found: every map an object of this scene draws is part
+    // of its world.
+    const game = getActiveGame();
+    const active = getActiveBox();
+    const scene = active === null ? null : rootOf(active);
+    /**
+     * Each map in the world: the one fixed body holding its colliders, and what it was built from,
+     * so it is built again when a cell changes or the map moves.
+     */
+    const maps = new Map<TTilemap, { body: number; revision: number; place: string; ledges: number[] }>();
+    /**
+     * Collider handle → the ledge it is. What decides whether something passes through it.
+     */
+    const ledges = new Map<number, TLedge>();
+    let warnedTurnedMap = false;
+
     // Start WASM load, but don't block.
     const readyPromise = loadRapier2D().then((r) => {
         rapier = r;
         // Pixels per second squared with +y DOWN, which is the way a placement's y grows here, so
         // earth-ish is a positive nine hundred. The scene always says, since the engine hands the
         // world's record over; this is only what a world with nothing said would fall at.
-        world = new r.World({ x: options.gravity?.x ?? 0, y: options.gravity?.y ?? 900 });
+        world = new r.World({ x: options.gravity?.x ?? 0, y: gravityY });
         // `autoDrain: true` clears the queue before each `world.step`, which is exactly why
         // `stepWorld` drains after every substep rather than once per frame.
         events = new r.EventQueue(true);
@@ -185,8 +214,158 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         }
     };
 
+    const dropMap = (map: TTilemap): void => {
+        const entry = maps.get(map);
+        if (entry === undefined) return;
+        maps.delete(map);
+        for (const handle of entry.ledges) ledges.delete(handle);
+        const body = world?.getRigidBody(entry.body);
+        // Removing the body removes its colliders with it.
+        if (body) world?.removeRigidBody(body);
+    };
+
+    /**
+     * Builds one map into the world: one fixed body where the map is, its walls as boxes, its ledges
+     * as boxes that only hold what lands on them, its slopes as their outlines.
+     */
+    const buildMap = (map: TTilemap, place: ReturnType<typeof tilemapPlacement>, key: string): void => {
+        if (!rapier || !world) return;
+        const r = rapier;
+        const body = world.createRigidBody(r.RigidBodyDesc.fixed().setTranslation(place.x, place.y));
+        const { scaleX: sx, scaleY: sy } = place;
+        const shapes = tileShapes(map);
+        const boxOf = (rect: { x: number; y: number; width: number; height: number }) =>
+            r.ColliderDesc.cuboid(Math.abs(rect.width * sx) / 2, Math.abs(rect.height * sy) / 2)
+                .setTranslation((rect.x + rect.width / 2) * sx, (rect.y + rect.height / 2) * sy);
+        for (const rect of shapes.solids) world.createCollider(boxOf(rect), body);
+        const own: number[] = [];
+        for (const rect of shapes.oneWays) {
+            const collider = world.createCollider(boxOf(rect).setActiveHooks(r.ActiveHooks.FILTER_CONTACT_PAIRS), body);
+            ledges.set(collider.handle, {
+                top: place.y + rect.y * sy,
+                bottom: place.y + (rect.y + rect.height) * sy,
+                left: place.x + rect.x * sx,
+                right: place.x + (rect.x + rect.width) * sx,
+            });
+            own.push(collider.handle);
+        }
+        for (const outline of shapes.slopes) {
+            const desc = r.ColliderDesc.convexHull(new Float32Array(outline.flatMap(([x, y]) => [x * sx, y * sy])));
+            if (desc !== null) world.createCollider(desc, body);
+        }
+        maps.set(map, { body: body.handle, revision: tileRevisionOf(map), place: key, ledges: own });
+    };
+
+    /**
+     * Keeps the world's maps the scene's maps: one that appears is built, one whose cells changed (a
+     * brick broken with `setTile`) or that moved is built again, one that went is taken out.
+     */
+    const syncTilemaps = (): void => {
+        if (!rapier || !world || game === null || scene === null) return;
+        const seen = new Set<TTilemap>();
+        for (const map of game.get('assets').tilemaps.values()) {
+            const holder = holderOfTilemap(map);
+            if (map.status !== 'ready' || map.destroyed || holder === null || isGone(holder) || rootOf(holder) !== scene) continue;
+            const place = tilemapPlacement(map);
+            if (place.rotation !== 0) {
+                // A turned map has no floor to stand on in any sense a platformer means.
+                if (!warnedTurnedMap) {
+                    warnedTurnedMap = true;
+                    console.warn(`[NacatamalOn] The map '${map.src}' is turned, so it has no colliders: a map in a 2D world can be moved and scaled, not turned.`);
+                }
+                continue;
+            }
+            seen.add(map);
+            const key = `${place.x},${place.y},${place.scaleX},${place.scaleY}`;
+            const entry = maps.get(map);
+            if (entry !== undefined && entry.revision === tileRevisionOf(map) && entry.place === key) continue;
+            dropMap(map);
+            buildMap(map, place, key);
+        }
+        for (const map of [...maps.keys()]) {
+            if (!seen.has(map)) dropMap(map);
+        }
+    };
+
+    /**
+     * The lowest point of a collider, wherever it is turned: how far down its feet reach.
+     */
+    const bottomOf = (collider: Collider): number => {
+        const at = collider.translation();
+        const angle = collider.rotation();
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        const shape = collider.shape as { halfExtents?: { x: number; y: number }; radius?: number; vertices?: Float32Array };
+        if (shape.halfExtents !== undefined) {
+            return at.y + Math.abs(shape.halfExtents.x * sin) + Math.abs(shape.halfExtents.y * cos);
+        }
+        if (shape.vertices !== undefined) {
+            let lowest = -Infinity;
+            for (let i = 0; i < shape.vertices.length; i += 2) {
+                lowest = Math.max(lowest, shape.vertices[i] * sin + shape.vertices[i + 1] * cos);
+            }
+            return at.y + lowest;
+        }
+        return at.y + (shape.radius ?? 0);
+    };
+
+    /**
+     * Where the feet of everything the simulation moves are, and how fast it falls, as each step
+     * begins. The filter below reads this and never the world: Rapier asks it in the middle of its
+     * step, and reaching back into the world from there fails, quietly, as no contact at all.
+     */
+    const feet = new Map<number, { bottom: number; vy: number }>();
+    /**
+     * The pairs a ledge held in the last step, and those it holds in this one. A pair that stopped
+     * touching is not asked about, so it is gone from the next step's set: landing on the ledge again
+     * is judged afresh, and from below it is not a landing.
+     */
+    let holding = new Set<string>();
+    let held = new Set<string>();
+    const measureFeet = (): void => {
+        feet.clear();
+        if (!world || ledges.size === 0) return;
+        for (const entry of bodies.values()) {
+            const collider = world.getCollider(entry.rapierColliderHandle);
+            const body = collider?.parent();
+            if (!collider || !body || !body.isDynamic()) continue;
+            feet.set(collider.handle, { bottom: bottomOf(collider), vy: body.linvel().y });
+        }
+    };
+
+    /**
+     * What a ledge does to what the simulation moves: holds what lands on it from above, lets through
+     * what comes from below or from the side. Asked of every contact with a ledge, every step.
+     */
+    const hooks: PhysicsHooks = {
+        filterContactPair: (colliderA, colliderB) => {
+            if (!rapier) return null;
+            const ledgeA = ledges.get(colliderA);
+            const ledge = ledgeA ?? ledges.get(colliderB);
+            if (ledge === undefined) return rapier.SolverFlags.COMPUTE_IMPULSE;
+            const other = feet.get(ledgeA !== undefined ? colliderB : colliderA);
+            // Not something the simulation moves: a character, which decides for itself, or another
+            // piece of the level.
+            if (other === undefined) return rapier.SolverFlags.EMPTY;
+            const pair = `${colliderA}:${colliderB}`;
+            // Already standing on it: held while it has not sunk past half the ledge, since a body at
+            // rest sits a little into what holds it.
+            const resting = holding.has(pair) && other.bottom <= ledge.top + (ledge.bottom - ledge.top) / 2;
+            // Landing: going down, with its bottom above the top as this step began (or within what
+            // one step of falling covers). Going up passes.
+            const landing = other.vy >= 0 && other.bottom <= ledge.top + 1 + other.vy * stepLength();
+            if (resting || landing) {
+                held.add(pair);
+                return rapier.SolverFlags.COMPUTE_IMPULSE;
+            }
+            return rapier.SolverFlags.EMPTY;
+        },
+        filterIntersectionPair: () => true,
+    };
+
     const stepWorld = (dt: number) => {
         if (!rapier || !world) return;
+        syncTilemaps();
 
         accumulator += dt;
         const length = stepLength();
@@ -194,7 +373,10 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         const steps = Math.min(Math.floor(accumulator / length), MAX_FRAMES_PER_STEP);
 
         for (let i = 0; i < steps; i++) {
-            world.step(events ?? undefined);
+            measureFeet();
+            held = new Set();
+            world.step(events ?? undefined, hooks);
+            holding = held;
             // Drained per substep, not once after the loop: the queue auto-clears on the next
             // `step`, so batching would silently discard every contact but the last substep's,
             // and a fast bullet's entire hit can live in an earlier one.
@@ -400,6 +582,31 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         stepWorld(dt);
     });
 
+    const addCharacter = (box: TGameObject, options: TCharacterOptions2d): TCharacterBody2d => {
+        if (placementOf(box) === null) {
+            throw new Error(`[NacatamalOn] useCharacterBody2d: '${box.name}' is nowhere: give it a placement, or something to draw, so the character has somewhere to be.`);
+        }
+        const character = createCharacter2d({
+            rapier: () => rapier,
+            world: () => world,
+            ledgeOf: (handle) => ledges.get(handle),
+            ledges: () => ledges.entries(),
+            tilemaps: () => [...maps.keys()],
+            worldGravity: options.gravity ?? gravityY,
+            box,
+            options,
+        });
+        // Moved once the updates that set its speed are over: see `runMoves`.
+        box.moveCallbacks.push((dt) => {
+            // The world builds its maps when it steps; a character that moves before the first step
+            // (a game whose frames are shorter than a step) still finds them.
+            syncTilemaps();
+            character.move(dt);
+        });
+        box.cleanups.push(character.remove);
+        return character.body;
+    };
+
     // Cleanup on scene unmount.
     useSceneUnmount(() => {
         bodies.clear();
@@ -421,6 +628,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         addRect: (box, opts) => createBody(box, { ...opts, shape: 'rect' }),
         addPolygon: (box, opts) => createBody(box, { ...opts, shape: 'polygon' }),
         bodyOf: (box) => bodies.get(box.id)?.handle ?? null,
+        addCharacter,
     };
 };
 

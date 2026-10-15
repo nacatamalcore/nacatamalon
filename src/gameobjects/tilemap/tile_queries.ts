@@ -1,5 +1,6 @@
 import { openLayerState } from './layer_state';
 import { holderOfTilemap } from './get_tilemap';
+import { bumpTileRevision } from './tile_revision';
 import { composeTransform2d } from '../../render/shared/compose_transform_2d';
 import type { TTileDoc } from '../../loaders/tilemap/types/t_tilemap_doc';
 import type { TTilemap, TTilemapLayer } from './types/t_tilemap';
@@ -16,8 +17,12 @@ const inside = (map: TTilemap, column: number, row: number): boolean =>
  * object above that one (a map laid out in a scene document has its place on its box, not on itself).
  * The same placements, composed the same way, as the frame draws it with; worked out when asked, so
  * it is right in the same frame something moved it.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
  */
-const placed = (map: TTilemap): TTransform2d => {
+export const tilemapPlacement = (map: TTilemap): TTransform2d => {
     const chain = [];
     for (let at = holderOfTilemap(map); at !== null; at = at.parent) {
         if (at.transform !== null) chain.push(at.transform);
@@ -53,7 +58,7 @@ const placed = (map: TTilemap): TTransform2d => {
  * @author Francisco Pereira Alvarado
  */
 export const cellAt = (map: TTilemap, x: number, y: number): { column: number; row: number } => {
-    const at = placed(map);
+    const at = tilemapPlacement(map);
     const dx = x - at.x;
     const dy = y - at.y;
     const cos = Math.cos(at.rotation);
@@ -77,7 +82,7 @@ export const cellAt = (map: TTilemap, x: number, y: number): { column: number; r
  * @author Francisco Pereira Alvarado
  */
 export const cellCorner = (map: TTilemap, column: number, row: number): { x: number; y: number } => {
-    const at = placed(map);
+    const at = tilemapPlacement(map);
     const lx = column * map.cell * at.scaleX;
     const ly = row * map.cell * at.scaleY;
     const cos = Math.cos(at.rotation);
@@ -196,6 +201,7 @@ export const setTile = (map: TTilemap, layer: number, column: number, row: numbe
     target.data[at] = id;
     // Built again once, on the next frame: twenty cells cleared in one update cost one rebuild.
     openLayerState(target).dirty = true;
+    bumpTileRevision(map);
     return true;
 };
 
@@ -276,4 +282,5 @@ export const solidAtPoint = (map: TTilemap, x: number, y: number): boolean => {
  */
 export const markLayerChanged = (layer: TTilemapLayer): void => {
     openLayerState(layer).dirty = true;
+    bumpTileRevision(layer.map);
 };

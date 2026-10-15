@@ -18,6 +18,7 @@ export const newBox = (name: string): TBox => ({
     children: [],
     updateCallbacks: [],
     lateCallbacks: [],
+    moveCallbacks: [],
     cleanups: [],
     drawables: [],
     data: [],

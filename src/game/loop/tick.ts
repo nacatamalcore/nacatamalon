@@ -3,7 +3,7 @@ import type { TFrameContext } from "../../render";
 import type { TBox } from "../../box";
 import { fillFrameContext } from "./fill_frame_context";
 import { MAX_FRAME_DELTA, MAX_STEPS_PER_FRAME } from "../../CONFIG";
-import { runHookUpdates as runUpdates, runLateUpdates } from "./runHookUpdates";
+import { runHookUpdates as runUpdates, runLateUpdates, runMoves } from "./runHookUpdates";
 import { stepGameTransition } from "./helper/step_game_transition";
 import { flushDestroyed } from "../../destroy";
 import { runOverlaps } from "../../hitbox/run_overlaps";
@@ -93,7 +93,10 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
                 try {
                     const late: TBox[] = [];
                     const touching: TBox[] = [];
-                    runUpdates(scene, dt, undefined, late, touching);
+                    const moving: TBox[] = [];
+                    runUpdates(scene, dt, undefined, late, touching, moving);
+                    // The bodies the updates gave a speed, moved against the world.
+                    runMoves(moving, dt, scene.time);
                     // Where every update left things, before anything reads it late: see `useOverlap`.
                     runOverlaps(touching);
                     // Once every update of the scene is over, so what is read there is where things

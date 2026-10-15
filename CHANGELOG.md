@@ -73,9 +73,24 @@ releases are in [changelog/](./changelog/), one file each.
   enemy) => ...)` calls for every pair of the two groups touching, every frame they touch, once the
   scene's updates are over and before `useLateUpdate`; something destroyed by an earlier call is not
   passed again, so a bullet hits one enemy and not the three behind it.
+- `useCharacterBody2d({ width, height })` from `nacatamalon/physics2d` (`TCharacterBody2d`,
+  `TCharacterOptions2d`): a platformer's character in the 2D world. The game writes its speed into
+  `velocity` (pixels per second) and it goes exactly that fast, with no sliding or bouncing, while the
+  world stops it at walls, holds it on ledges and slopes, and lets it push crates. It falls with the
+  world's gravity up to `maxFall` (420 by default, seven pixels a frame at `step: 60`), and reports
+  `onGround`, `onCeiling`, `onWall`, `onOneWay` (with `dropThrough()`), `onLadder` (the game sets
+  `climbing`, which turns gravity off and goes back to `false` off the ladder), `ground` (the tile
+  underfoot) and `damage`; belts and currents (`push`) carry it. It moves once the scene's updates are
+  over, so what the game decides this frame is seen this frame, and before hitboxes and `useLateUpdate`.
+  Where nothing simulates, as in a tool showing the scene, it never moves.
 
 ### Changed
 
+- A scene with a 2D world (`usePhysicsWorld2d`) puts its maps in it: `solid` tiles are walls,
+  `oneWay` tiles are ledges that hold what lands on them from above and let through what comes from
+  below, and `slope` tiles are ramps. A crate falls onto a map's floor, and breaking a tile with
+  `setTile` opens the floor under it. Walls side by side are joined, so nothing catches on the seams
+  of a floor. A map can be moved and scaled; a turned one is said once and left out.
 - `createMaterial` given `uniforms` (which `compileShader` always gives) returns a material whose
   `uniforms` is typed as there, so a parameter is animated with `material.uniforms.glow = 1` and no
   `?? {}`. To keep that true, a material handed `uniforms` with no shader of its own gives the same

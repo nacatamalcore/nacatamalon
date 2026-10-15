@@ -54,6 +54,12 @@ export type TBox = {
      */
     lateCallbacks: Array<(dt: number, time: number) => void>;
     /**
+     * Registered by what moves a body against the world (a character body), called every frame
+     * once every `updateCallbacks` of the scene has run, where the game set its speed, and before
+     * hitboxes are compared and `lateCallbacks` run, with the same delta and time.
+     */
+    moveCallbacks: Array<(dt: number, time: number) => void>;
+    /**
      * Run once, children first, when the box leaves the tree.
      */
     cleanups: Array<() => void>;
