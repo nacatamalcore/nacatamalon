@@ -1,4 +1,5 @@
-import type { TCharacterBody2d, TCharacterOptions2d } from './character_body_2d';
+import type { TCharacterOptions2d } from './character_body_2d';
+import type { TCharacterBody2d } from '../character/t_character_body_2d';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
 import type { TGameSignal } from '../../signal';
 // How a body moves is the engine's own word for it, the same one a scene writes down.

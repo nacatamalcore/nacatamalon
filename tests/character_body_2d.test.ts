@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, describe, expect, it, spyOn } from 'bun:test';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, spyOn } from 'bun:test';
 import { createFrameContext } from '../src/game/loop/create_frame_context';
 import { tick } from '../src/game/loop/tick';
 import { createScene } from '../src/scene/create_scene';
@@ -17,20 +17,23 @@ import { useSelf } from '../src/hooks/spawn/use_self';
 import { destroy } from '../src/destroy/destroy';
 import { loadRapier2D } from '../src/physics/rapier2d/load_rapier';
 import { useCharacterBody2d } from '../src/physics/rapier2d/use_character_body_2d';
+import { useTileBody2d } from '../src/physics/character/use_tile_body_2d';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { serveTilemap } from './helpers/test_tilemap';
 import type { TSprite } from '../src/gameobjects/sprite/types/t_sprite';
 import type { TTilemap } from '../src/gameobjects/tilemap/types/t_tilemap';
-import type { TCharacterBody2d } from '../src/physics/rapier2d/character_body_2d';
+import type { TCharacterBody2d, TCharacterShape2d } from '../src/physics/character/t_character_body_2d';
 import type { TGameObject } from '../src/hooks/spawn/use_spawn';
 
 /**
- * A platformer's character in the 2D world, and the map it walks on: the map's tiles become the
- * world's walls, ledges and slopes, the character is moved by the game and stopped by them, and what
- * the simulation moves (a crate) lands on the map and is pushed by the character.
+ * A platformer's character and the map it walks on. Both characters, the one in the 2D world and
+ * the one on the maps alone, pass the same tests: moved by the game, stopped by walls, held by ledges
+ * and slopes, climbing ladders. In the world, the map's tiles are its walls too, and what the
+ * simulation moves (a crate) lands on the map and is pushed by the character.
  *
  * Every map here is drawn as text, a character a cell of 16 pixels: `#` a wall, `-` a ledge, `/` a
- * slope up to the right, `d` one down to the right, `H` a ladder, `^` spikes, `>` a belt, `i` ice.
+ * slope up to the right, `d` one down to the right, `H` a ladder, `T` a ladder's top (a ladder and a
+ * ledge), `^` spikes, `>` a belt, `i` ice.
  */
 
 (globalThis as { requestAnimationFrame?: (cb: FrameRequestCallback) => number }).requestAnimationFrame = () => 0;
@@ -48,8 +51,9 @@ const TILES = {
     6: { frame: 0, solid: true, push: { x: 60, y: 0 } },
     7: { frame: 0, solid: true, props: { ice: true } },
     8: { frame: 0, slope: [1, 0] },
+    9: { frame: 0, ladder: true, oneWay: true },
 };
-const IDS: Record<string, number> = { ' ': 0, '#': 1, '-': 2, '/': 3, 'H': 4, '^': 5, '>': 6, 'i': 7, 'd': 8 };
+const IDS: Record<string, number> = { ' ': 0, '#': 1, '-': 2, '/': 3, 'H': 4, '^': 5, '>': 6, 'i': 7, 'd': 8, 'T': 9 };
 
 const docOf = (rows: string[]) => ({
     format: 1, kind: 'tilemap', atlas: 'tiles.atlas', cell: CELL, width: rows[0].length, height: rows.length,
@@ -70,18 +74,28 @@ afterEach(() => {
 });
 
 /**
+ * The two characters a platformer can have, which have to pass the same tests: one in the 2D world,
+ * one on the maps alone.
+ */
+const KINDS = [
+    { name: 'useCharacterBody2d', make: useCharacterBody2d, physics: true },
+    { name: 'useTileBody2d', make: useTileBody2d, physics: false },
+];
+let body: (typeof KINDS)[number] = KINDS[0];
+
+/**
  * A level: the map drawn by `rows`, a 2D world, whatever `body` adds, and frames of exactly 1/60.
  */
-const level = async (rows: string[], body: () => void) => {
+const level = async (rows: string[], build: () => void) => {
     served = serveTilemap(docOf(rows));
-    registerPhysicsProvider(rapier2dProvider);
+    if (body.physics) registerPhysicsProvider(rapier2dProvider);
     const { store } = createTestGame({ step: 60 });
     const ctx = createFrameContext();
     let map!: TTilemap;
     registerScene(store, 'Level', () => {
-        usePhysicsWorld2d();
+        if (body.physics) usePhysicsWorld2d();
         map = createTilemap({ src: '/maps/level.tilemap' });
-        body();
+        build();
         return createScene();
     });
     startScene(store, 'Level');
@@ -101,11 +115,11 @@ const level = async (rows: string[], body: () => void) => {
 /**
  * A hero 12 wide and 24 tall at a point, driven every frame by `drive`.
  */
-const hero = (x: number, y: number, drive: (body: TCharacterBody2d) => void = () => {}) => {
+const hero = (x: number, y: number, drive: (body: TCharacterBody2d) => void = () => {}, options: Partial<TCharacterShape2d> = {}) => {
     const out = { sprite: null as unknown as TSprite, body: null as unknown as TCharacterBody2d, object: null as unknown as TGameObject };
     out.object = useSpawn(function Hero() {
         out.sprite = createSprite({ width: 12, height: 24, tint, transform: at(x, y) });
-        out.body = useCharacterBody2d({ width: 12, height: 24 });
+        out.body = body.make({ width: 12, height: 24, ...options });
         useUpdate(() => drive(out.body));
     })();
     return out;
@@ -130,192 +144,359 @@ const ROOM = [
     '##########',
 ];
 
-describe('a character on a map', () => {
-    it('falls and stands on the floor', async () => {
-        let h!: ReturnType<typeof hero>;
-        const { frames } = await level(ROOM, () => { h = hero(40, 20); });
+const LEDGE = [
+    '          ',
+    '          ',
+    '          ',
+    '----------',
+    '          ',
+    '##########',
+];
 
-        frames(90);
+for (const kind of KINDS) {
+    describe(kind.name, () => {
+        beforeEach(() => { body = kind; });
 
-        expect(h.body.onGround).toBe(true);
-        expect(h.sprite.transform.y).toBeCloseTo(80 - 12, 0);
-        expect(h.body.velocity.y).toBe(0);
-    });
+        describe('a character on a map', () => {
+            it('falls and stands on the floor', async () => {
+                let h!: ReturnType<typeof hero>;
+                const { frames } = await level(ROOM, () => { h = hero(40, 20); });
 
-    it('moves the frame its speed is set, not the one after', async () => {
-        let h!: ReturnType<typeof hero>;
-        const { frames } = await level(ROOM, () => { h = hero(40, 68, (b) => { b.velocity.x = 60; }); });
-        frames(30);
-        const before = h.sprite.transform.x;
+                frames(90);
 
-        frames(1);
+                expect(h.body.onGround).toBe(true);
+                expect(h.sprite.transform.y).toBeCloseTo(80 - 12, 0);
+                expect(h.body.velocity.y).toBe(0);
+            });
 
-        expect(h.sprite.transform.x - before).toBeCloseTo(1, 3);
-    });
+            it('moves the frame its speed is set, not the one after', async () => {
+                let h!: ReturnType<typeof hero>;
+                const { frames } = await level(ROOM, () => { h = hero(40, 68, (b) => { b.velocity.x = 60; }); });
+                frames(30);
+                const before = h.sprite.transform.x;
 
-    it('walks the same distance every frame, standing on the floor', async () => {
-        let h!: ReturnType<typeof hero>;
-        const { frames } = await level(ROOM, () => { h = hero(24, 68, (b) => { b.velocity.x = 60; }); });
-        frames(20);
-        const steps: number[] = [];
-        for (let i = 0; i < 60; i++) {
-            const x = h.sprite.transform.x;
-            frames(1);
-            steps.push(Math.round((h.sprite.transform.x - x) * 100) / 100);
-        }
+                frames(1);
 
-        expect(new Set(steps)).toEqual(new Set([1]));
-    });
+                expect(h.sprite.transform.x - before).toBeCloseTo(1, 3);
+            });
 
-    it('walks off an edge and falls, rather than staying stuck to the floor it left', async () => {
-        let h!: ReturnType<typeof hero>;
-        const air: boolean[] = [];
-        const { frames } = await level([
-            '          ',
-            '          ',
-            '          ',
-            '####      ',
-            '          ',
-            '##########',
-        ], () => { h = hero(40, 36, (b) => { b.velocity.x = 60; air.push(!b.onGround); }); });
+            it('walks the same distance every frame, standing on the floor', async () => {
+                let h!: ReturnType<typeof hero>;
+                const { frames } = await level(ROOM, () => { h = hero(24, 68, (b) => { b.velocity.x = 60; }); });
+                frames(20);
+                const steps: number[] = [];
+                for (let i = 0; i < 60; i++) {
+                    const x = h.sprite.transform.x;
+                    frames(1);
+                    steps.push(Math.round((h.sprite.transform.x - x) * 100) / 100);
+                }
 
-        frames(120);
+                expect(new Set(steps)).toEqual(new Set([1]));
+            });
 
-        expect(air).toContain(true);
-        expect(h.sprite.transform.y).toBeCloseTo(80 - 12, 0);
-        expect(h.body.onGround).toBe(true);
-    });
+            it('walks off an edge and falls, rather than staying stuck to the floor it left', async () => {
+                let h!: ReturnType<typeof hero>;
+                const air: boolean[] = [];
+                const { frames } = await level([
+                    '          ',
+                    '          ',
+                    '          ',
+                    '####      ',
+                    '          ',
+                    '##########',
+                ], () => { h = hero(40, 36, (b) => { b.velocity.x = 60; air.push(!b.onGround); }); });
 
-    it('stays on a slope walking down it', async () => {
-        let h!: ReturnType<typeof hero>;
-        const grounded: boolean[] = [];
-        let watching = false;
-        const { frames } = await level([
-            '          ',
-            '          ',
-            '          ',
-            '          ',
-            '####d     ',
-            '##########',
-        ], () => {
-            h = hero(40, 52, (b) => { b.velocity.x = watching ? 40 : 0; grounded.push(b.onGround); });
-        });
-        frames(20);
-        watching = true;
-        grounded.length = 0;
-        frames(90);
+                frames(120);
 
-        // Past the slope (64 to 80) and on the floor below it, without leaving the ground once.
-        expect(h.sprite.transform.x).toBeGreaterThan(90);
-        expect(h.sprite.transform.y).toBeCloseTo(80 - 12, 0);
-        expect(grounded.slice(1).every(Boolean)).toBe(true);
-    });
+                expect(air).toContain(true);
+                expect(h.sprite.transform.y).toBeCloseTo(80 - 12, 0);
+                expect(h.body.onGround).toBe(true);
+            });
 
-    it('stops at a wall, and says which side it is on', async () => {
-        let h!: ReturnType<typeof hero>;
-        const { frames } = await level([
-            '          ',
-            '          ',
-            '          ',
-            '       #  ',
-            '       #  ',
-            '##########',
-        ], () => { h = hero(40, 68, (b) => { b.velocity.x = 120; }); });
+            it('stays on a slope walking down it', async () => {
+                let h!: ReturnType<typeof hero>;
+                const grounded: boolean[] = [];
+                let watching = false;
+                const { frames } = await level([
+                    '          ',
+                    '          ',
+                    '          ',
+                    '          ',
+                    '####d     ',
+                    '##########',
+                ], () => {
+                    h = hero(40, 52, (b) => { b.velocity.x = watching ? 40 : 0; grounded.push(b.onGround); });
+                });
+                frames(20);
+                watching = true;
+                grounded.length = 0;
+                frames(90);
 
-        frames(90);
+                // Past the slope (64 to 80) and on the floor below it, without leaving the ground once.
+                expect(h.sprite.transform.x).toBeGreaterThan(90);
+                expect(h.sprite.transform.y).toBeCloseTo(80 - 12, 0);
+                expect(grounded.slice(1).every(Boolean)).toBe(true);
+            });
 
-        expect(h.body.onWall).toBe('right');
-        expect(h.sprite.transform.x).toBeCloseTo(112 - 6, 0);
-    });
+            it('falls faster than a tile a frame onto a floor one tile thick, and stands on it', async () => {
+                let h!: ReturnType<typeof hero>;
+                const { frames } = await level([
+                    '          ',
+                    '          ',
+                    '          ',
+                    '          ',
+                    '          ',
+                    '          ',
+                    '          ',
+                    '          ',
+                    '##########',
+                    '          ',
+                ], () => { h = hero(40, -400, () => {}, { gravity: 20000, maxFall: 2400 }); });
 
-    it('hits its head on a ceiling and comes back down', async () => {
-        const ceilings: boolean[] = [];
-        let h!: ReturnType<typeof hero>;
-        let jumped = false;
-        const { frames } = await level([
-            '          ',
-            '##########',
-            '          ',
-            '          ',
-            '          ',
-            '##########',
-        ], () => {
-            h = hero(40, 68, (b) => {
-                if (b.onGround && !jumped) { b.velocity.y = -400; jumped = true; }
-                ceilings.push(b.onCeiling);
+                frames(60);
+
+                expect(h.sprite.transform.y).toBeCloseTo(128 - 12, 0);
+                expect(h.body.onGround).toBe(true);
+            });
+
+            it('runs faster than a tile a frame into a wall one tile thick, and stops at it', async () => {
+                let h!: ReturnType<typeof hero>;
+                const { frames } = await level([
+                    '          ',
+                    '          ',
+                    '          ',
+                    '      #   ',
+                    '      #   ',
+                    '##########',
+                ], () => { h = hero(24, 68, (b) => { b.velocity.x = 2400; }); });
+
+                frames(10);
+
+                expect(h.sprite.transform.x).toBeCloseTo(96 - 6, 0);
+                expect(h.body.onWall).toBe('right');
+            });
+
+            it('stops at a wall, and says which side it is on', async () => {
+                let h!: ReturnType<typeof hero>;
+                const { frames } = await level([
+                    '          ',
+                    '          ',
+                    '          ',
+                    '       #  ',
+                    '       #  ',
+                    '##########',
+                ], () => { h = hero(40, 68, (b) => { b.velocity.x = 120; }); });
+
+                frames(90);
+
+                expect(h.body.onWall).toBe('right');
+                expect(h.sprite.transform.x).toBeCloseTo(112 - 6, 0);
+            });
+
+            it('hits its head on a ceiling and comes back down', async () => {
+                const ceilings: boolean[] = [];
+                let h!: ReturnType<typeof hero>;
+                let jumped = false;
+                const { frames } = await level([
+                    '          ',
+                    '##########',
+                    '          ',
+                    '          ',
+                    '          ',
+                    '##########',
+                ], () => {
+                    h = hero(40, 68, (b) => {
+                        if (b.onGround && !jumped) { b.velocity.y = -400; jumped = true; }
+                        ceilings.push(b.onCeiling);
+                    });
+                });
+
+                frames(120);
+
+                expect(ceilings).toContain(true);
+                expect(h.body.onGround).toBe(true);
+                // The ceiling's underside is at 32: the head never went past it.
+                expect(h.sprite.transform.y).toBeCloseTo(68, 0);
+            });
+
+            it('walks up a slope onto the higher floor', async () => {
+                let h!: ReturnType<typeof hero>;
+                const { frames } = await level([
+                    '          ',
+                    '          ',
+                    '          ',
+                    '          ',
+                    '     /####',
+                    '##########',
+                ], () => { h = hero(24, 68, (b) => { b.velocity.x = 60; }); });
+
+                // About a hundred pixels: up the slope and onto the higher floor, short of the map's end.
+                frames(110);
+
+                expect(h.sprite.transform.x).toBeGreaterThan(110);
+                expect(h.sprite.transform.y).toBeCloseTo(64 - 12, 0);
+                expect(h.body.onGround).toBe(true);
             });
         });
 
-        frames(120);
+        describe('a ledge', () => {
 
-        expect(ceilings).toContain(true);
-        expect(h.body.onGround).toBe(true);
-        // The ceiling's underside is at 32: the head never went past it.
-        expect(h.sprite.transform.y).toBeCloseTo(68, 0);
-    });
+            it('holds what lands on it, and lets it drop through when asked', async () => {
+                let h!: ReturnType<typeof hero>;
+                const { frames } = await level(LEDGE, () => { h = hero(40, 10); });
 
-    it('walks up a slope onto the higher floor', async () => {
-        let h!: ReturnType<typeof hero>;
-        const { frames } = await level([
-            '          ',
-            '          ',
-            '          ',
-            '          ',
-            '     /####',
-            '##########',
-        ], () => { h = hero(24, 68, (b) => { b.velocity.x = 60; }); });
+                frames(60);
+                expect(h.body.onOneWay).toBe(true);
+                expect(h.sprite.transform.y).toBeCloseTo(48 - 12, 0);
 
-        frames(150);
+                h.body.dropThrough();
+                frames(60);
+                expect(h.body.onOneWay).toBe(false);
+                expect(h.sprite.transform.y).toBeCloseTo(80 - 12, 0);
+            });
 
-        expect(h.sprite.transform.x).toBeGreaterThan(110);
-        expect(h.sprite.transform.y).toBeCloseTo(64 - 12, 0);
-        expect(h.body.onGround).toBe(true);
-    });
-});
+            it('is jumped through from below, and landed on from above', async () => {
+                let h!: ReturnType<typeof hero>;
+                let jumped = false;
+                let highest = Infinity;
+                const { frames } = await level(LEDGE, () => {
+                    h = hero(40, 68, (b) => {
+                        if (b.onGround && !jumped) { b.velocity.y = -380; jumped = true; }
+                    });
+                });
 
-describe('a ledge', () => {
-    const LEDGE = [
-        '          ',
-        '          ',
-        '          ',
-        '----------',
-        '          ',
-        '##########',
-    ];
+                for (let i = 0; i < 120; i++) {
+                    frames(1);
+                    highest = Math.min(highest, h.sprite.transform.y);
+                }
 
-    it('holds what lands on it, and lets it drop through when asked', async () => {
-        let h!: ReturnType<typeof hero>;
-        const { frames } = await level(LEDGE, () => { h = hero(40, 10); });
+                expect(highest).toBeLessThan(36);
+                expect(h.body.onOneWay).toBe(true);
+                expect(h.sprite.transform.y).toBeCloseTo(36, 0);
+            });
 
-        frames(60);
-        expect(h.body.onOneWay).toBe(true);
-        expect(h.sprite.transform.y).toBeCloseTo(48 - 12, 0);
+        });
 
-        h.body.dropThrough();
-        frames(60);
-        expect(h.body.onOneWay).toBe(false);
-        expect(h.sprite.transform.y).toBeCloseTo(80 - 12, 0);
-    });
+        describe('a ladder', () => {
+            it('is climbed with no gravity, and let go of at its top', async () => {
+                let h!: ReturnType<typeof hero>;
+                let climb = false;
+                const { frames } = await level([
+                    '          ',
+                    '    H     ',
+                    '    H     ',
+                    '    H     ',
+                    '    H     ',
+                    '##########',
+                ], () => {
+                    h = hero(72, 68, (b) => {
+                        if (climb && b.onLadder) { b.climbing = true; }
+                        if (b.climbing) b.velocity.y = -60;
+                    });
+                });
 
-    it('is jumped through from below, and landed on from above', async () => {
-        let h!: ReturnType<typeof hero>;
-        let jumped = false;
-        let highest = Infinity;
-        const { frames } = await level(LEDGE, () => {
-            h = hero(40, 68, (b) => {
-                if (b.onGround && !jumped) { b.velocity.y = -380; jumped = true; }
+                frames(10);
+                expect(h.body.onLadder).toBe(true);
+                expect(h.body.climbing).toBe(false);
+
+                climb = true;
+                frames(30);
+                expect(h.body.climbing).toBe(true);
+                expect(h.sprite.transform.y).toBeLessThan(68 - 25);
+
+                climb = false;
+                frames(120);
+                // Past the top it is off the ladder, not climbing, and has fallen back to the floor.
+                expect(h.body.climbing).toBe(false);
             });
         });
 
-        for (let i = 0; i < 120; i++) {
-            frames(1);
-            highest = Math.min(highest, h.sprite.transform.y);
-        }
+        describe('the top of a ladder', () => {
+            it('is stood on, and climbed down through', async () => {
+                let h!: ReturnType<typeof hero>;
+                let down = false;
+                const { frames } = await level([
+                    '          ',
+                    '          ',
+                    '    T     ',
+                    '    H     ',
+                    '    H     ',
+                    '##########',
+                ], () => {
+                    h = hero(72, 10, (b) => {
+                        if (down && b.onLadder) b.climbing = true;
+                        if (b.climbing) b.velocity.y = 60;
+                    });
+                });
 
-        expect(highest).toBeLessThan(36);
-        expect(h.body.onOneWay).toBe(true);
-        expect(h.sprite.transform.y).toBeCloseTo(36, 0);
+                frames(60);
+                expect(h.body.onOneWay).toBe(true);
+                expect(h.body.onLadder).toBe(true);
+                expect(h.sprite.transform.y).toBeCloseTo(32 - 12, 0);
+
+                down = true;
+                frames(20);
+                expect(h.body.climbing).toBe(true);
+                expect(h.sprite.transform.y).toBeGreaterThan(32);
+            });
+        });
+
+        describe('what the tiles say', () => {
+            it('reports harm from spikes underfoot, and the tile it stands on', async () => {
+                let h!: ReturnType<typeof hero>;
+                const { frames } = await level([
+                    '          ',
+                    '          ',
+                    '          ',
+                    '          ',
+                    '          ',
+                    '##^^iiii##',
+                ], () => { h = hero(40, 60); });
+
+                frames(60);
+                expect(h.body.damage).toBe(3);
+                expect(h.body.ground?.damage).toBe(3);
+            });
+
+            it('reads the props of the tile underfoot', async () => {
+                let h!: ReturnType<typeof hero>;
+                const { frames } = await level([
+                    '          ',
+                    '          ',
+                    '          ',
+                    '          ',
+                    '          ',
+                    'iiiiiiiiii',
+                ], () => { h = hero(40, 60); });
+
+                frames(60);
+                expect(h.body.ground?.props).toEqual({ ice: true });
+                expect(h.body.damage).toBe(0);
+            });
+
+            it('is carried along by a belt', async () => {
+                let h!: ReturnType<typeof hero>;
+                const { frames } = await level([
+                    '          ',
+                    '          ',
+                    '          ',
+                    '          ',
+                    '          ',
+                    '>>>>>>>>>>',
+                ], () => { h = hero(24, 60); });
+
+                frames(30);
+                const before = h.sprite.transform.x;
+                frames(60);
+
+                expect(h.sprite.transform.x - before).toBeCloseTo(60, -1);
+            });
+        });
     });
+}
+
+describe('the map in the world', () => {
+    beforeEach(() => { body = KINDS[0]; });
 
     it('holds a crate falling onto it', async () => {
         let falling!: ReturnType<typeof crate>;
@@ -339,95 +520,7 @@ describe('a ledge', () => {
         expect(highest).toBeLessThan(40);
         expect(thrown.sprite.transform.y).toBeCloseTo(48 - 8, 0);
     });
-});
 
-describe('a ladder', () => {
-    it('is climbed with no gravity, and let go of at its top', async () => {
-        let h!: ReturnType<typeof hero>;
-        let climb = false;
-        const { frames } = await level([
-            '          ',
-            '    H     ',
-            '    H     ',
-            '    H     ',
-            '    H     ',
-            '##########',
-        ], () => {
-            h = hero(72, 68, (b) => {
-                if (climb && b.onLadder) { b.climbing = true; }
-                if (b.climbing) b.velocity.y = -60;
-            });
-        });
-
-        frames(10);
-        expect(h.body.onLadder).toBe(true);
-        expect(h.body.climbing).toBe(false);
-
-        climb = true;
-        frames(30);
-        expect(h.body.climbing).toBe(true);
-        expect(h.sprite.transform.y).toBeLessThan(68 - 25);
-
-        climb = false;
-        frames(120);
-        // Past the top it is off the ladder, not climbing, and has fallen back to the floor.
-        expect(h.body.climbing).toBe(false);
-    });
-});
-
-describe('what the tiles say', () => {
-    it('reports harm from spikes underfoot, and the tile it stands on', async () => {
-        let h!: ReturnType<typeof hero>;
-        const { frames } = await level([
-            '          ',
-            '          ',
-            '          ',
-            '          ',
-            '          ',
-            '##^^iiii##',
-        ], () => { h = hero(40, 60); });
-
-        frames(60);
-        expect(h.body.damage).toBe(3);
-        expect(h.body.ground?.damage).toBe(3);
-    });
-
-    it('reads the props of the tile underfoot', async () => {
-        let h!: ReturnType<typeof hero>;
-        const { frames } = await level([
-            '          ',
-            '          ',
-            '          ',
-            '          ',
-            '          ',
-            'iiiiiiiiii',
-        ], () => { h = hero(40, 60); });
-
-        frames(60);
-        expect(h.body.ground?.props).toEqual({ ice: true });
-        expect(h.body.damage).toBe(0);
-    });
-
-    it('is carried along by a belt', async () => {
-        let h!: ReturnType<typeof hero>;
-        const { frames } = await level([
-            '          ',
-            '          ',
-            '          ',
-            '          ',
-            '          ',
-            '>>>>>>>>>>',
-        ], () => { h = hero(24, 60); });
-
-        frames(30);
-        const before = h.sprite.transform.x;
-        frames(60);
-
-        expect(h.sprite.transform.x - before).toBeCloseTo(60, -1);
-    });
-});
-
-describe('the map in the world', () => {
     it('holds a crate on its floor, and lets it fall once the floor is broken', async () => {
         let box!: ReturnType<typeof crate>;
         const { map, frames } = await level(ROOM, () => { box = crate(40, 20); });
@@ -454,6 +547,8 @@ describe('the map in the world', () => {
 });
 
 describe('the map and the character, placed and taken away', () => {
+    beforeEach(() => { body = KINDS[0]; });
+
     it('builds the map where it is drawn, moved', async () => {
         served = serveTilemap(docOf(ROOM));
         registerPhysicsProvider(rapier2dProvider);

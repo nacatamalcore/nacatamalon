@@ -83,6 +83,14 @@ releases are in [changelog/](./changelog/), one file each.
   underfoot) and `damage`; belts and currents (`push`) carry it. It moves once the scene's updates are
   over, so what the game decides this frame is seen this frame, and before hitboxes and `useLateUpdate`.
   Where nothing simulates, as in a tool showing the scene, it never moves.
+- `useTileBody2d({ width, height })`: the same character with no physics engine, walking on the
+  scene's maps the classic way, in pixels: across and against walls, then up or down against floors
+  and ceilings, in pieces no longer than half a tile so nothing is passed through at any speed. Same
+  fields as `useCharacterBody2d` (both return `TCharacterBody2d`), so a game moves between the two by
+  changing one line; it knows only the maps, and pushes nothing. Slopes are measured under the middle
+  of the feet, and a block of any height on flat ground is a wall.
+- Both characters report `onLadder` standing on a ladder's top too, so down there starts climbing
+  down through it.
 
 ### Changed
 

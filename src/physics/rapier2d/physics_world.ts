@@ -9,13 +9,13 @@ import { loadRapier2D } from './load_rapier';
 import type { TRapierModule } from './load_rapier';
 import type { ColliderDesc, EventQueue, RigidBodyDesc, World } from '@dimforge/rapier2d-compat';
 import type { TBodyOptions, TPhysicsBodyHandle2d, TPhysicsWorldHandle2d, TPhysicsWorldOptions2d } from './types';
-import type { TCharacterBody2d, TCharacterOptions2d } from './character_body_2d';
+import type { TCharacterOptions2d } from './character_body_2d';
+import type { TCharacterBody2d } from '../character/t_character_body_2d';
 import { worldPose2d, writeWorldPose2d } from './world_pose';
 import { physicsStepOf } from '../step_length';
 import { getActiveBox, getActiveGame } from '../../store';
 import { rootOf } from '../../box/root_of';
-import { isGone } from '../../game/loop/runHookUpdates';
-import { holderOfTilemap } from '../../gameobjects/tilemap/get_tilemap';
+import { sceneTilemaps } from '../../gameobjects/tilemap/scene_tilemaps';
 import { tilemapPlacement } from '../../gameobjects/tilemap/tile_queries';
 import { tileRevisionOf } from '../../gameobjects/tilemap/tile_revision';
 import { tileShapes } from './tile_shapes';
@@ -263,9 +263,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
     const syncTilemaps = (): void => {
         if (!rapier || !world || game === null || scene === null) return;
         const seen = new Set<TTilemap>();
-        for (const map of game.get('assets').tilemaps.values()) {
-            const holder = holderOfTilemap(map);
-            if (map.status !== 'ready' || map.destroyed || holder === null || isGone(holder) || rootOf(holder) !== scene) continue;
+        for (const map of sceneTilemaps(game, scene)) {
             const place = tilemapPlacement(map);
             if (place.rotation !== 0) {
                 // A turned map has no floor to stand on in any sense a platformer means.

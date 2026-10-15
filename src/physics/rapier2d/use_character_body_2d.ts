@@ -1,7 +1,8 @@
 import { getActiveBox } from '../../store';
 import { getPhysicsProviders } from '../physics_provider';
 import { getPhysicsWorld2d } from './provider';
-import type { TCharacterBody2d, TCharacterOptions2d } from './character_body_2d';
+import type { TCharacterOptions2d } from './character_body_2d';
+import type { TCharacterBody2d } from '../character/t_character_body_2d';
 
 let warnedNoWorld = false;
 

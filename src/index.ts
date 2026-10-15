@@ -121,6 +121,10 @@ export { worldToLocal, localToWorld, worldToLocal3d, localToWorld3d } from './bo
 export { overlaps } from './hitbox';
 export type { TRect, TOverlapTarget, THitbox } from './hitbox';
 export { useHitbox, useOverlap } from './hooks';
+// A platformer's character on the scene's maps, with no physics engine. The same character in the 2D
+// world, pushing crates, is `useCharacterBody2d` in `nacatamalon/physics2d`.
+export { useTileBody2d } from './physics/character/use_tile_body_2d';
+export type { TCharacterBody2d, TCharacterShape2d } from './physics/character/t_character_body_2d';
 export type { THitboxOptions } from './hooks';
 // Where the pointer is in the world, and where a point of the world is on the screen; and turning a
 // camera to look at something.

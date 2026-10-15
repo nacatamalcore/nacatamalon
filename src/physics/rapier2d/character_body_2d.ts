@@ -1,105 +1,20 @@
 import { worldPose2d, writeWorldPose2d } from './world_pose';
-import { tileInfoAt, cellAt } from '../../gameobjects/tilemap/tile_queries';
 import type { Collider, KinematicCharacterController, RigidBody, World } from '@dimforge/rapier2d-compat';
 import type { TRapierModule } from './load_rapier';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
 import type { TTilemap } from '../../gameobjects/tilemap/types/t_tilemap';
 import type { TTileDoc } from '../../loaders/tilemap/types/t_tilemap_doc';
+import type { TCharacterBody2d, TCharacterShape2d } from '../character/t_character_body_2d';
+import { readCharacterTiles, tilesUnder } from '../character/character_tiles';
 
 /**
- * A character of a platformer, moved by the game and stopped by the world: by the map's walls,
- * ledges and slopes, and by everything else in the simulation, which it can push.
- *
- * Every field but `velocity` and `climbing` is read only, and each says what happened in the last
- * move, the one after the updates of the previous frame.
+ * What a character in the simulation is: its size and how it falls, and how it climbs and pushes.
  *
  * @category Physics
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TCharacterBody2d = {
-    /**
-     * Pixels per second, written by the game from a `useUpdate`: `x` walks, a negative `y` jumps, and
-     * gravity pulls `y` down between moves. Standing on the ground or hitting a ceiling sets `y` back
-     * to nothing; `x` is left as the game wrote it.
-     */
-    velocity: { x: number; y: number };
-    /**
-     * On a ladder, climbing: no gravity, ledges passed through, moved only by `velocity`. The game
-     * sets it, when up is pressed on a ladder (`onLadder`); it goes back to `false` by itself once the
-     * character has left the ladder.
-     */
-    climbing: boolean;
-    /**
-     * Standing on something: a floor, a ledge, a slope, a crate.
-     */
-    readonly onGround: boolean;
-    /**
-     * Its head hit something on the way up.
-     */
-    readonly onCeiling: boolean;
-    /**
-     * Pressed against a wall, and on which side.
-     */
-    readonly onWall: 'left' | 'right' | null;
-    /**
-     * Standing on a ledge (`oneWay`), which `dropThrough()` falls through.
-     */
-    readonly onOneWay: boolean;
-    /**
-     * In front of a ladder tile, which is when the game may set `climbing`.
-     */
-    readonly onLadder: boolean;
-    /**
-     * The tile underfoot, for what the game wrote on it (`ground?.props?.ice`), or `undefined` in the
-     * air and on anything that is not a map.
-     */
-    readonly ground: TTileDoc | undefined;
-    /**
-     * The largest `damage` of the tiles it is touching, `0` for none. The game decides what it means.
-     */
-    readonly damage: number;
-    /**
-     * Falls through the ledge it is standing on. Nothing happens anywhere else.
-     */
-    dropThrough: () => void;
-    /**
-     * Puts it somewhere without asking the world: spawning, respawning. It can put it inside a wall.
-     */
-    setPosition: (x: number, y: number) => void;
-    /**
-     * Stops moving the object and takes the character out of the simulation.
-     */
-    destroy: () => void;
-};
-
-/**
- * What a character is: its size, where that sits on the object, and how it falls, climbs and pushes.
- *
- * @category Physics
- * @since 1.0.0
- * @author Francisco Pereira Alvarado
- */
-export type TCharacterOptions2d = {
-    /**
-     * The box it collides with, in the object's own pixels: usually narrower than its picture, as
-     * the old games did, so it fits through a gap one tile wide.
-     */
-    width: number;
-    height: number;
-    /**
-     * Where the box's centre is from the object's position, in its own pixels. `[0, 0]` by default.
-     */
-    offset?: [number, number];
-    /**
-     * Pixels per second squared, pulling down. The world's gravity by default (900 unless the scene
-     * says), which with `step: 60` is a quarter of a pixel a frame, a classic platformer's.
-     */
-    gravity?: number;
-    /**
-     * The fastest it falls, in pixels per second. `420` by default: seven pixels a frame at `step: 60`.
-     */
-    maxFall?: number;
+export type TCharacterOptions2d = TCharacterShape2d & {
     /**
      * The steepest slope it walks up, in radians. About 50° by default; steeper ones it slides down.
      */
@@ -224,48 +139,11 @@ export const createCharacter2d = (deps: {
     };
 
     /**
-     * The tiles of every map under a rectangle of the world, in every layer.
-     */
-    const tilesUnder = (left: number, top: number, right: number, bottom: number): TTileDoc[] => {
-        const found: TTileDoc[] = [];
-        for (const map of deps.tilemaps()) {
-            const from = cellAt(map, left, top);
-            const to = cellAt(map, right, bottom);
-            for (let row = Math.min(from.row, to.row); row <= Math.max(from.row, to.row); row++) {
-                for (let column = Math.min(from.column, to.column); column <= Math.max(from.column, to.column); column++) {
-                    for (let layer = 0; layer < map.layers.length; layer++) {
-                        const tile = tileInfoAt(map, layer, column, row);
-                        if (tile !== undefined) found.push(tile);
-                    }
-                }
-            }
-        }
-        return found;
-    };
-
-    /**
      * What the tiles around it say, once it has moved: a ladder in front of it, harm, and the tile
      * under its feet.
      */
     const readTiles = (): void => {
-        // A hair inside its edges, so a wall it is merely touching is not a tile it is in.
-        const inset = 0.5;
-        const touching = tilesUnder(centre.x - halfWidth + inset, centre.y - halfHeight + inset, centre.x + halfWidth - inset, centre.y + halfHeight - inset);
-        state.onLadder = touching.some((tile) => tile.ladder === true);
-        // Harm counts from what it stands on too: spikes are walked on, not walked into.
-        const underfoot = tilesUnder(centre.x - halfWidth + inset, centre.y + halfHeight + 1, centre.x + halfWidth - inset, centre.y + halfHeight + 1);
-        state.damage = [...touching, ...underfoot].reduce((most, tile) => Math.max(most, tile.damage ?? 0), 0);
-        // Under the middle of its feet first, and failing that under either edge: a character half
-        // over a gap still stands on the tile it is standing on.
-        if (!state.onGround) {
-            state.ground = undefined;
-            return;
-        }
-        const probe = (x: number): TTileDoc | undefined => tilesUnder(x, centre.y + halfHeight + 1, x, centre.y + halfHeight + 1)
-            .find((tile) => tile.solid === true || tile.oneWay === true || tile.slope !== undefined)
-            // Walking on a slope, the feet are inside the slope's own cell.
-            ?? tilesUnder(x, centre.y + halfHeight - 1, x, centre.y + halfHeight - 1).find((tile) => tile.slope !== undefined);
-        state.ground = probe(centre.x) ?? probe(centre.x - halfWidth + inset) ?? probe(centre.x + halfWidth - inset);
+        Object.assign(state, readCharacterTiles(deps.tilemaps(), centre, halfWidth, halfHeight, state.onGround));
     };
 
     const move = (dt: number): void => {
@@ -279,7 +157,7 @@ export const createCharacter2d = (deps: {
             velocity.y = Math.min(velocity.y + gravity * dt, maxFall);
         }
         // A belt carries what stands on it; a current or the wind, what is in it.
-        const push = state.onGround ? state.ground?.push : tilesUnder(centre.x, centre.y, centre.x, centre.y).find((tile) => tile.push !== undefined)?.push;
+        const push = state.onGround ? state.ground?.push : tilesUnder(deps.tilemaps(), centre.x, centre.y, centre.x, centre.y).find((tile) => tile.push !== undefined)?.push;
         const desired = { x: (velocity.x + (push?.x ?? 0)) * dt, y: (velocity.y + (push?.y ?? 0)) * dt };
         // Standing, gravity is not pressed into the floor: asked to walk and sink at once, the
         // controller now and then walks nowhere. Staying on a floor that drops away (a slope going
