@@ -11,6 +11,7 @@ import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { usePhysicsBody2d, usePhysicsWorld2d } from '../src/hooks/physics';
 import { useSelf } from '../src/hooks/spawn/use_self';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
+import { useUpdate } from '../src/hooks/loop/use_update';
 import { useSignal } from '../src/hooks/signal/use_signal';
 import { stopScene } from '../src/scene/stop_scene';
 import { destroy } from '../src/destroy/destroy';
@@ -333,5 +334,56 @@ describe('a kinematic body', () => {
         // About a second at 60 pixels a second, and gravity has no say over it.
         expect(platform.transform.x).toBeCloseTo(60, -1);
         expect(platform.transform.y).toBeCloseTo(100, 3);
+    });
+});
+
+describe('a force asked for every frame', () => {
+    /**
+     * A box of mass 100 in no gravity, pushed with 100 every frame while `pushing` says so: one pixel
+     * per second squared. Frames of `dt` for `seconds`, then as long again with no push.
+     */
+    const pushed = async (dt: number, seconds: number) => {
+        const { store } = createTestGame();
+        let sprite!: { transform: { x: number } };
+        let pushing = true;
+        const root = startTestScene(store, 'Level', () => {
+            usePhysicsWorld2d({ gravity: { x: 0, y: 0 } });
+            const world = getPhysicsWorld2d();
+            useSpawn(function Puck() {
+                sprite = createSprite({ width: 10, height: 10, tint, transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 } });
+                usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'rect', width: 10, height: 10 }, density: 1 });
+                const self = useSelf();
+                useUpdate(() => {
+                    if (pushing) world?.bodyOf(self)?.applyForce(100, 0);
+                });
+            })();
+            return createScene();
+        });
+        await loadRapier2D();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        const frames = Math.round(seconds / dt);
+        for (let i = 0; i < frames; i++) runHookUpdates(root, dt);
+        const afterPush = sprite.transform.x;
+        pushing = false;
+        for (let i = 0; i < frames; i++) runHookUpdates(root, dt);
+        return { afterPush, coasted: sprite.transform.x - afterPush };
+    };
+
+    it('pushes as hard as it says, rather than harder every frame', async () => {
+        const { afterPush } = await pushed(FRAME, 2);
+        // Half of one pixel per second squared times two seconds squared.
+        expect(afterPush).toBeCloseTo(2, 0);
+    });
+
+    it('stops pushing when the game stops asking: the body carries on at the speed it reached', async () => {
+        const { coasted } = await pushed(FRAME, 2);
+        // Two pixels a second, for two seconds.
+        expect(coasted).toBeCloseTo(4, 0);
+    });
+
+    it('pushes alike on a screen of any refresh rate', async () => {
+        const at60 = (await pushed(1 / 60, 2)).afterPush;
+        const at144 = (await pushed(1 / 144, 2)).afterPush;
+        expect(at144).toBeCloseTo(at60, 0);
     });
 });

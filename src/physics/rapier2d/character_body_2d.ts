@@ -115,6 +115,8 @@ export const createCharacter2d = (deps: {
     let collider: Collider | null = null;
     let controller: KinematicCharacterController | null = null;
     let removed = false;
+    // Whether it is touching a ladder, which is what keeps it climbing.
+    let inLadder = false;
 
     const build = (rapier: TRapierModule, world: World): void => {
         rigid = world.createRigidBody(rapier.RigidBodyDesc.kinematicPositionBased().setTranslation(centre.x, centre.y));
@@ -143,7 +145,11 @@ export const createCharacter2d = (deps: {
      * under its feet.
      */
     const readTiles = (): void => {
-        Object.assign(state, readCharacterTiles(deps.tilemaps(), centre, halfWidth, halfHeight, state.onGround));
+        const tiles = readCharacterTiles(deps.tilemaps(), centre, halfWidth, halfHeight, state.onGround);
+        state.onLadder = tiles.onLadder;
+        state.damage = tiles.damage;
+        state.ground = tiles.ground;
+        inLadder = tiles.inLadder;
     };
 
     const move = (dt: number): void => {
@@ -235,7 +241,8 @@ export const createCharacter2d = (deps: {
         }
 
         readTiles();
-        if (state.climbing && !state.onLadder) state.climbing = false;
+        // Climbed out of the ladder, by its top or its side: no longer climbing.
+        if (state.climbing && !inLadder) state.climbing = false;
 
         rigid.setNextKinematicTranslation(centre);
         collider.setTranslation(centre);

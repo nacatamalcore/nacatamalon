@@ -62,9 +62,12 @@ const inert = (): TCharacterBody2d => ({
  *         const walk = (keys.isDown('ArrowRight') ? 1 : 0) - (keys.isDown('ArrowLeft') ? 1 : 0);
  *         body.velocity.x = walk * 90;
  *         if (keys.justPressed('x') && body.onGround) body.velocity.y = -300;
- *         if (keys.justPressed('ArrowDown') && body.onOneWay) body.dropThrough();
+ *         if (keys.justPressed('ArrowDown') && body.onOneWay && !body.onLadder) body.dropThrough();
  *
- *         if (body.onLadder && keys.isDown('ArrowUp')) body.climbing = true;
+ *         // Onto a ladder with up in front of it, or with down standing on its top.
+ *         const up = keys.isDown('ArrowUp') && !body.onOneWay;
+ *         const down = keys.isDown('ArrowDown') && body.onOneWay;
+ *         if (body.onLadder && (up || down)) body.climbing = true;
  *         if (body.climbing) body.velocity.y = keys.isDown('ArrowUp') ? -60 : keys.isDown('ArrowDown') ? 60 : 0;
  *     });
  * };

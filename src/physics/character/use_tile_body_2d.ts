@@ -37,7 +37,9 @@ import type { TCharacterBody2d, TCharacterShape2d } from './t_character_body_2d'
  *         if (keys.justPressed('ArrowDown') && body.onOneWay && !body.onLadder) body.dropThrough();
  *
  *         // Onto a ladder with up in front of it, or with down standing on its top.
- *         if (body.onLadder && (keys.isDown('ArrowUp') || keys.isDown('ArrowDown'))) body.climbing = true;
+ *         const up = keys.isDown('ArrowUp') && !body.onOneWay;
+ *         const down = keys.isDown('ArrowDown') && body.onOneWay;
+ *         if (body.onLadder && (up || down)) body.climbing = true;
  *         if (body.climbing) body.velocity.y = keys.isDown('ArrowUp') ? -60 : keys.isDown('ArrowDown') ? 60 : 0;
  *     });
  * };

@@ -36,6 +36,7 @@ const fakeWorld = () => {
         addPolygon: (box, options) => { calls.push({ kind: 'polygon', box, options }); return body; },
         bodyOf: () => null,
         addCharacter: () => { throw new Error('not asked of a provider'); },
+        addJoint: () => { throw new Error('not asked of a provider'); },
     };
     return { calls, world };
 };

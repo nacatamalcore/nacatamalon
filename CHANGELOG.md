@@ -89,8 +89,17 @@ releases are in [changelog/](./changelog/), one file each.
   fields as `useCharacterBody2d` (both return `TCharacterBody2d`), so a game moves between the two by
   changing one line; it knows only the maps, and pushes nothing. Slopes are measured under the middle
   of the feet, and a block of any height on flat ground is a wall.
-- Both characters report `onLadder` standing on a ladder's top too, so down there starts climbing
-  down through it.
+- Both characters report `onLadder` standing on a ladder's top too (standing, not in the air above
+  it), so down there starts climbing down through it. Climbing ends once the character no longer
+  touches the ladder, so one that climbs out of a top that is a ledge stands on it.
+- Joints in the 2D world: `useJoint2d(a, b, joint)` from `nacatamalon/physics2d` (`TJoint2d`,
+  `TJointHandle2d`), or `getPhysicsWorld2d().addJoint` to join things in the middle of the game.
+  `'hinge'` (bridge planks, pendulums, doors; `limits`, and a `motor` for a windmill), `'rope'` (never
+  further than its length), `'spring'` (said as `frequency` and `damping`, so a heavy weight bounces
+  like a light one), `'slider'` (along an axis, with `limits` and a `motor`) and `'weld'`. Points are
+  given in the world, where the pin is; `b` as `null` ties to a fixed point. Joined bodies do not
+  collide with each other unless `collide: true`. A joint goes with either of its objects, or with
+  `destroy()`. A character (`useCharacterBody2d`) walks on a bridge of hinged planks.
 
 ### Changed
 
@@ -105,6 +114,12 @@ releases are in [changelog/](./changelog/), one file each.
   bag back instead of `null`.
 
 ### Fixed
+
+- `applyForce` on a 2D body pushes as hard as it says. Rapier keeps a force on a body from one step
+  to the next until it is reset, so a force asked for every frame, as its comment invited, grew every
+  frame: a push of 100 on a body of mass 100 for two seconds moved it 79 pixels instead of 2. The
+  world now hands Rapier only the last frame's push (several calls in one frame add up), takes it off
+  when the game stops asking, and pushes alike at any refresh rate.
 
 - A touch the system took back (a browser gesture, a call coming in) was never released: the pointer
   ignored `pointercancel`, so what it pressed stayed pressed. It now ends like a release, with no click.

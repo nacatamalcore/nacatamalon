@@ -1,3 +1,4 @@
+import type { TJoint2d, TJointHandle2d } from './t_joint_2d';
 import type { TCharacterOptions2d } from './character_body_2d';
 import type { TCharacterBody2d } from '../character/t_character_body_2d';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
@@ -154,7 +155,9 @@ export type TPhysicsBodyHandle2d = {
     applyImpulse: (x: number, y: number) => void;
 
     /**
-     * Apply a continuous force (acceleration) each frame.
+     * Pushes it steadily for this frame: ask every frame for as long as it should push (a fan, a
+     * thruster, wind), and it stops when the game stops asking. Several calls in one frame add up.
+     * For one shove all at once, `applyImpulse`.
      */
     applyForce: (x: number, y: number) => void;
 
@@ -235,4 +238,11 @@ export type TPhysicsWorldHandle2d = {
      * object being built.
      */
     addCharacter: (box: TGameObject, options: TCharacterOptions2d) => TCharacterBody2d;
+
+    /**
+     * Joins two objects' bodies, or one to a point of the world when `b` is `null`, at any moment:
+     * a hook thrown in the middle of a jump. `useJoint2d` does it while the scene is built. The
+     * joint is made as soon as both bodies are in the world, and let go of when either object is.
+     */
+    addJoint: (a: TGameObject, b: TGameObject | null, joint: TJoint2d) => TJointHandle2d;
 };

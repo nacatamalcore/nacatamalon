@@ -250,8 +250,12 @@ export const createTileBody2d = (deps: {
             if (head > dropping[i]) dropping.splice(i, 1);
         }
 
-        Object.assign(state, readCharacterTiles(maps, centre, hw, hh, state.onGround));
-        if (state.climbing && !state.onLadder) state.climbing = false;
+        const tiles = readCharacterTiles(maps, centre, hw, hh, state.onGround);
+        state.onLadder = tiles.onLadder;
+        state.damage = tiles.damage;
+        state.ground = tiles.ground;
+        // Climbed out of the ladder, by its top or its side: no longer climbing.
+        if (state.climbing && !tiles.inLadder) state.climbing = false;
 
         writeWorldPose2d(box, centre.x - shift.x, centre.y - shift.y, 0);
     };

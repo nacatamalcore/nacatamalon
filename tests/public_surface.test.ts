@@ -180,7 +180,7 @@ describe('the extension door', () => {
 
 describe('the physics doors', () => {
     it('are where a game installs what moves its colliders, and reaches the world', () => {
-        expect(physics2d.sort()).toEqual(['getPhysicsWorld2d', 'installPhysics2d', 'loadRapier2D', 'rapier2dProvider', 'useCharacterBody2d'].sort());
+        expect(physics2d.sort()).toEqual(['getPhysicsWorld2d', 'installPhysics2d', 'loadRapier2D', 'rapier2dProvider', 'useCharacterBody2d', 'useJoint2d'].sort());
         expect(physics3d.sort()).toEqual([
             'getPhysicsWorld3d', 'installPhysics3d', 'loadBox3D', 'box3dProvider', 'useCharacterBody', 'DEFAULT_RAY_DISTANCE',
         ].sort());

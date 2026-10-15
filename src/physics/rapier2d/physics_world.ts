@@ -22,13 +22,26 @@ import { tileShapes } from './tile_shapes';
 import { createCharacter2d } from './character_body_2d';
 import type { TLedge } from './character_body_2d';
 import type { TTilemap } from '../../gameobjects/tilemap/types/t_tilemap';
-import type { Collider, PhysicsHooks } from '@dimforge/rapier2d-compat';
+import type { Collider, ImpulseJoint, PhysicsHooks, RevoluteImpulseJoint, PrismaticImpulseJoint, RigidBody } from '@dimforge/rapier2d-compat';
+import type { TJoint2d, TJointHandle2d } from './t_joint_2d';
 
 type TBodyEntry = {
     box: TGameObject;
     rapierBodyHandle: number;
     rapierColliderHandle: number;
-    impulseQueue: Array<{ x: number; y: number; type: 'impulse' | 'force' | 'linear' | 'angular' }>;
+    impulseQueue: Array<{ x: number; y: number; type: 'impulse' | 'linear' | 'angular' }>;
+    /**
+     * The push asked for with `applyForce` in one frame, all its calls added up, and which frame.
+     * Rapier keeps a force on a body from one step to the next until told otherwise, so asking for
+     * one every frame would pile them up: the world hands it this frame's alone. See `stepWorld`.
+     */
+    force: { x: number; y: number };
+    forceFrame: number;
+    /**
+     * Whether Rapier is holding a force of ours on the body, which has to be taken off once the game
+     * stops asking.
+     */
+    pushing: boolean;
     /**
      * Whether this collider asked Rapier to report its contacts. False until someone reads
      * `onEnter`/`onExit` (or the collider is a sensor, which is pointless without them),
@@ -80,6 +93,8 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
     let world: World | null = null;
     let events: EventQueue | null = null;
     let accumulator = 0;
+    // Which frame this is, for the pushes asked for in it: see `applyForces`.
+    let frame = 0;
     const gravityY = options.gravity?.y ?? 900;
     // 1/60, or exactly the game's own step when it has one: see `physicsStepOf`.
     const stepLength = physicsStepOf();
@@ -136,9 +151,6 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         for (const q of entry.impulseQueue) {
             if (q.type === 'impulse') {
                 body.applyImpulse({ x: q.x, y: q.y }, true);
-            } else if (q.type === 'force') {
-                // `true` wakes it: a force on a sleeping body does nothing otherwise.
-                body.addForce({ x: q.x, y: q.y }, true);
             } else if (q.type === 'linear') {
                 body.setLinvel({ x: q.x, y: q.y }, true);
             } else {
@@ -361,9 +373,178 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         filterIntersectionPair: () => true,
     };
 
+    type TJointEntry = {
+        a: TGameObject;
+        b: TGameObject | null;
+        spec: TJoint2d;
+        joint: ImpulseJoint | null;
+        // The fixed point a joint to the world is tied to: a body of its own, since Rapier joins bodies.
+        pin: RigidBody | null;
+        removed: boolean;
+    };
+    const joints = new Set<TJointEntry>();
+
+    const liveBody = (box: TGameObject): RigidBody | null => {
+        const entry = bodies.get(box.id);
+        if (!world || entry === undefined || entry.removed || entry.rapierBodyHandle < 0) return null;
+        return world.getRigidBody(entry.rapierBodyHandle) ?? null;
+    };
+
+    /**
+     * A point of the world, measured on a body: where the body has it, whichever way it is turned.
+     */
+    const localOf = (body: RigidBody, point: { x: number; y: number }): { x: number; y: number } => {
+        const at = body.translation();
+        const angle = -body.rotation();
+        const dx = point.x - at.x;
+        const dy = point.y - at.y;
+        return { x: dx * Math.cos(angle) - dy * Math.sin(angle), y: dx * Math.sin(angle) + dy * Math.cos(angle) };
+    };
+
+    /**
+     * Makes a joint once both its bodies are in the world, which is not before Rapier has loaded,
+     * and not before an object built after the joint has its body. Asked again every step until then.
+     */
+    const makeJoint = (entry: TJointEntry): void => {
+        if (!rapier || !world || entry.joint !== null || entry.removed) return;
+        const r = rapier;
+        const w = world;
+        const bodyA = liveBody(entry.a);
+        const ownB = entry.b === null ? null : liveBody(entry.b);
+        if (bodyA === null || (entry.b !== null && ownB === null)) return;
+        const spec = entry.spec;
+        const centreA = bodyA.translation();
+        // The point a joint to the world is tied to.
+        const fixedAt = (point: { x: number; y: number }): RigidBody => {
+            entry.pin = w.createRigidBody(r.RigidBodyDesc.fixed().setTranslation(point.x, point.y));
+            return entry.pin;
+        };
+
+        let data;
+        let bodyB: RigidBody;
+        let first = bodyA;
+        let second: RigidBody;
+        switch (spec.type) {
+            case 'hinge': {
+                bodyB = ownB ?? fixedAt(spec.at);
+                // `b` first: the solver measures the second body's turn against the first, and a
+                // motor and limits are about how `a` turns.
+                data = r.JointData.revolute(localOf(bodyB, spec.at), localOf(bodyA, spec.at));
+                first = bodyB;
+                second = bodyA;
+                break;
+            }
+            case 'rope':
+            case 'spring': {
+                const atA = spec.atA ?? centreA;
+                const atB = spec.atB ?? (ownB !== null ? ownB.translation() : null);
+                if (atB === null) {
+                    console.warn(`[NacatamalOn] A ${spec.type} from '${entry.a.name}' to the world needs \`atB\`, the point of the world it is tied to. It was not made.`);
+                    entry.removed = true;
+                    return;
+                }
+                bodyB = ownB ?? fixedAt(atB);
+                const length = spec.length ?? Math.hypot(atB.x - atA.x, atB.y - atA.y);
+                if (spec.type === 'rope') {
+                    data = r.JointData.rope(length, localOf(bodyA, atA), localOf(bodyB, atB));
+                } else {
+                    // Said as how often it bounces and how soon it settles, which a game can tune by eye,
+                    // and turned into the force the solver wants by the mass it moves: the two masses
+                    // together, as one moving against the other, or the one that moves when the other
+                    // cannot. So a heavy crate bounces like a light one.
+                    const massOf = (body: RigidBody): number => (body.isDynamic() ? body.mass() : Infinity);
+                    const ma = massOf(bodyA);
+                    const mb = massOf(bodyB);
+                    const mass = !Number.isFinite(ma) ? mb : !Number.isFinite(mb) ? ma : (ma * mb) / (ma + mb);
+                    const omega = 2 * Math.PI * (spec.frequency ?? 2);
+                    const moved = Number.isFinite(mass) ? mass : 1;
+                    data = r.JointData.spring(length, moved * omega * omega, moved * 2 * (spec.damping ?? 0.3) * omega, localOf(bodyA, atA), localOf(bodyB, atB));
+                }
+                second = bodyB;
+                break;
+            }
+            case 'slider': {
+                const at = spec.at ?? (ownB !== null ? ownB.translation() : centreA);
+                bodyB = ownB ?? fixedAt(at);
+                const length = Math.hypot(spec.axis.x, spec.axis.y) || 1;
+                const axis = { x: spec.axis.x / length, y: spec.axis.y / length };
+                // Measured on the rail, which is `b` (or the world), with `a` sliding along it.
+                const turn = -bodyB.rotation();
+                const local = { x: axis.x * Math.cos(turn) - axis.y * Math.sin(turn), y: axis.x * Math.sin(turn) + axis.y * Math.cos(turn) };
+                data = r.JointData.prismatic(localOf(bodyB, at), localOf(bodyA, at), local);
+                first = bodyB;
+                second = bodyA;
+                break;
+            }
+            case 'weld': {
+                bodyB = ownB ?? fixedAt(centreA);
+                data = r.JointData.fixed(localOf(bodyA, bodyB.translation()), bodyB.rotation() - bodyA.rotation(), { x: 0, y: 0 }, 0);
+                second = bodyB;
+                break;
+            }
+        }
+
+        const joint = w.createImpulseJoint(data, first, second, true);
+        joint.setContactsEnabled(spec.collide === true);
+        if ((spec.type === 'hinge' || spec.type === 'slider') && spec.limits !== undefined) {
+            // Either side of where it started: a hinge between two bodies already turned apart
+            // starts at that difference.
+            const start = spec.type === 'hinge' ? bodyA.rotation() - first.rotation() : 0;
+            (joint as RevoluteImpulseJoint | PrismaticImpulseJoint).setLimits(start + spec.limits[0], start + spec.limits[1]);
+        }
+        if ((spec.type === 'hinge' || spec.type === 'slider') && spec.motor !== undefined) {
+            (joint as RevoluteImpulseJoint | PrismaticImpulseJoint).configureMotorVelocity(spec.motor.speed, spec.motor.strength ?? 1);
+        }
+        entry.joint = joint;
+    };
+
+    const removeJoint = (entry: TJointEntry): void => {
+        if (entry.removed) return;
+        entry.removed = true;
+        joints.delete(entry);
+        if (!world) return;
+        // Gone already when a body it joined was taken out of the world: Rapier takes its joints along.
+        if (entry.joint !== null && entry.joint.isValid()) world.removeImpulseJoint(entry.joint, true);
+        if (entry.pin !== null) world.removeRigidBody(entry.pin);
+    };
+
+    const addJoint = (a: TGameObject, b: TGameObject | null, spec: TJoint2d): TJointHandle2d => {
+        const entry: TJointEntry = { a, b, spec, joint: null, pin: null, removed: false };
+        joints.add(entry);
+        makeJoint(entry);
+        const destroy = (): void => removeJoint(entry);
+        // Let go of when either of them is destroyed.
+        a.cleanups.push(destroy);
+        b?.cleanups.push(destroy);
+        return { destroy };
+    };
+
+    /**
+     * Hands Rapier the pushes the game asked for in the frame just gone, and takes off those it has
+     * stopped asking for. Rapier keeps a force on until it is reset, so without this a push asked for
+     * every frame would grow every frame.
+     */
+    const applyForces = (): void => {
+        if (!world) return;
+        for (const entry of bodies.values()) {
+            const asked = entry.forceFrame === frame - 1;
+            if (!asked && !entry.pushing) continue;
+            const body = world.getRigidBody(entry.rapierBodyHandle);
+            if (!body) continue;
+            body.resetForces(false);
+            // `true` wakes it: a force on a sleeping body does nothing otherwise.
+            if (asked) body.addForce(entry.force, true);
+            entry.pushing = asked;
+        }
+    };
+
     const stepWorld = (dt: number) => {
+        // Counted whether or not Rapier has loaded, so a push asked for meanwhile is the last frame's.
+        frame++;
         if (!rapier || !world) return;
         syncTilemaps();
+        applyForces();
+        for (const entry of joints) makeJoint(entry);
 
         accumulator += dt;
         const length = stepLength();
@@ -413,6 +594,9 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
             rapierBodyHandle: -1,
             rapierColliderHandle: -1,
             impulseQueue: [],
+            force: { x: 0, y: 0 },
+            forceFrame: -1,
+            pushing: false,
             // A sensor exists only to report overlaps, so it never waits to be asked.
             wantsEvents: options.sensor === true,
             onEnter: null,
@@ -520,14 +704,16 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
                 }
             },
 
+            // Added to this frame's push, which the world hands Rapier when it next steps: asked for
+            // every frame, it pushes steadily at any refresh rate, and stops when the game stops.
             applyForce: (x: number, y: number) => {
                 if (bodyEntry.removed) return;
-                if (rapier && world) {
-                    const body = world.getRigidBody(bodyEntry.rapierBodyHandle);
-                    if (body) body.addForce({ x, y }, true);
-                } else {
-                    bodyEntry.impulseQueue.push({ x, y, type: 'force' });
+                if (bodyEntry.forceFrame !== frame) {
+                    bodyEntry.force = { x: 0, y: 0 };
+                    bodyEntry.forceFrame = frame;
                 }
+                bodyEntry.force.x += x;
+                bodyEntry.force.y += y;
             },
 
             setLinearVelocity: (vx: number, vy: number) => {
@@ -607,6 +793,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
 
     // Cleanup on scene unmount.
     useSceneUnmount(() => {
+        joints.clear();
         bodies.clear();
         byCollider.clear();
         // The event queue holds WASM memory of its own and is not owned by the world, so
@@ -627,6 +814,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         addPolygon: (box, opts) => createBody(box, { ...opts, shape: 'polygon' }),
         bodyOf: (box) => bodies.get(box.id)?.handle ?? null,
         addCharacter,
+        addJoint,
     };
 };
 

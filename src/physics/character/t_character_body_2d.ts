@@ -22,8 +22,9 @@ export type TCharacterBody2d = {
     velocity: { x: number; y: number };
     /**
      * On a ladder, climbing: no gravity, ledges passed through, moved only by `velocity`. The game
-     * sets it, when up is pressed on a ladder (`onLadder`); it goes back to `false` by itself once the
-     * character has left the ladder.
+     * sets it, when up is pressed on a ladder (`onLadder`) or down on its top; it goes back to `false`
+     * by itself once the character is off the ladder, out of its top (where it then stands, on a top that
+     * is a ledge) or its side.
      */
     climbing: boolean;
     /**
@@ -43,7 +44,8 @@ export type TCharacterBody2d = {
      */
     readonly onOneWay: boolean;
     /**
-     * In front of a ladder tile, which is when the game may set `climbing`.
+     * In front of a ladder tile, or standing on top of one, which is when the game may set `climbing`:
+     * up in front of it climbs it, down on its top climbs down it.
      */
     readonly onLadder: boolean;
     /**

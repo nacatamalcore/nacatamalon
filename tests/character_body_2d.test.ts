@@ -412,6 +412,30 @@ for (const kind of KINDS) {
         });
 
         describe('the top of a ladder', () => {
+            it('is climbed out of, and stood on', async () => {
+                let h!: ReturnType<typeof hero>;
+                const { frames } = await level([
+                    '          ',
+                    '          ',
+                    '    T     ',
+                    '    H     ',
+                    '    H     ',
+                    '##########',
+                ], () => {
+                    h = hero(72, 68, (b) => {
+                        // Up, held the whole time, the way a player holds it, but only from below.
+                        if (b.onLadder && !b.onOneWay) b.climbing = true;
+                        if (b.climbing) b.velocity.y = -60;
+                    });
+                });
+
+                frames(120);
+
+                expect(h.body.climbing).toBe(false);
+                expect(h.body.onOneWay).toBe(true);
+                expect(h.sprite.transform.y).toBeCloseTo(32 - 12, 0);
+            });
+
             it('is stood on, and climbed down through', async () => {
                 let h!: ReturnType<typeof hero>;
                 let down = false;

@@ -228,6 +228,7 @@ const App = () => (
 - **Maths and random**: `useRandom`, `clamp`, `lerp`, `vec2Add`, `vec3Add` and the other `vec2*`/`vec3*`.
 - **Platformer character with no physics**: `useTileBody2d({ width, height })`, walking on the scene's maps; same fields as `useCharacterBody2d` (`TCharacterBody2d`), which is the one that also pushes crates in a 2D world.
 - **2D physics**: `installPhysics2d` and `useCharacterBody2d` from `nacatamalon/physics2d`; `usePhysicsWorld2d` and `usePhysicsBody2d` from `nacatamalon`. A scene's maps are in its world (walls, ledges, slopes). `useCharacterBody2d({ width, height })` is a platformer's character: write `velocity` (px/s) every frame; read `onGround`, `onWall`, `onCeiling`, `onOneWay` (`dropThrough()`), `onLadder` (set `climbing`), `ground`, `damage`.
+- **Joints (2D)**: `useJoint2d(a, b, { type: 'hinge', at: { x, y } })` from `nacatamalon/physics2d`; types `hinge`, `rope`, `spring` (`frequency`, `damping`), `slider` (`axis`), `weld`; `b = null` pins to the world; points are world points.
 - **3D physics**: `installPhysics3d` and `useCharacterBody` from `nacatamalon/physics3d`; `usePhysicsWorld3d` and `usePhysicsBody3d` from `nacatamalon`.
 - **Saved scenes**: `sceneFromDoc`, `parseSceneDoc`; a box made again while the game runs: `useSpawn(boxFromDoc)(doc, place)` from a document, `useSpawn(copyBox)(box, place)` from a box a scene built.
 
