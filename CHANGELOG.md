@@ -99,7 +99,13 @@ releases are in [changelog/](./changelog/), one file each.
   like a light one), `'slider'` (along an axis, with `limits` and a `motor`) and `'weld'`. Points are
   given in the world, where the pin is; `b` as `null` ties to a fixed point. Joined bodies do not
   collide with each other unless `collide: true`. A joint goes with either of its objects, or with
-  `destroy()`. A character (`useCharacterBody2d`) walks on a bridge of hinged planks.
+  `destroy()`. A character (`useCharacterBody2d`) walks on a bridge of hinged planks. A hinge or a
+  slider takes `friction`, how much of its turning or sliding it loses a second whatever the bodies
+  weigh (`2` calms a swing in a few seconds), since nothing else in the world slows a joint down.
+- `useCharacterBody2d` stands still on what the simulation moves. It puts its weight on what it
+  stands on (`mass`, or its size at a crate's density), the solver leaves that pair alone, and it
+  pushes what it walks into sideways only. Before, a character standing on a bridge and the bridge
+  bounced off each other by several pixels for as long as the game ran.
 
 ### Changed
 

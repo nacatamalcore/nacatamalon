@@ -14,6 +14,10 @@ let warnedNoWorld = false;
  * scene lays things out, in the world, so a bridge's planks are pinned where they meet. The two
  * joined bodies do not collide with each other unless the joint says `collide: true`.
  *
+ * A bridge wants three things to hang still: a little slack (planks a touch longer than the gap, so it
+ * sags), a little `friction` in its hinges, and its ends pinned a pixel or two off the banks, since a
+ * plank flush against a wall rubs on it and never settles.
+ *
  * The joint goes with whichever of its objects is destroyed first, and earlier with `destroy()`.
  * Call it while the scene is built; to join things later (a hook thrown mid-jump), keep the world
  * from `getPhysicsWorld2d()` and call its `addJoint`. Where nothing simulates, it joins nothing.

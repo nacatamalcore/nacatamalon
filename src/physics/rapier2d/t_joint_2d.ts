@@ -37,6 +37,11 @@ type TJointMotor = {
  *   started.
  * - `'weld'`: held as they are now, as one: pieces that move together and still collide apart.
  *
+ * A hinge or a slider with `friction` slows down: its turning (or sliding) loses that much of itself
+ * a second, whatever the bodies weigh, so it settles rather than swinging or rolling on for ever. `2`
+ * calms a swing in a few seconds, `5` in about one. Nothing else in the world slows a joint down, so
+ * without it a bridge sways as long as the game runs.
+ *
  * `collide` says whether the two bodies collide with each other; `false` by default, since joined
  * pieces usually touch, and two planks of a bridge pushing each other apart is not a bridge.
  *
@@ -45,10 +50,10 @@ type TJointMotor = {
  * @author Francisco Pereira Alvarado
  */
 export type TJoint2d = (
-    | { type: 'hinge'; at: TPoint; limits?: [number, number]; motor?: TJointMotor }
+    | { type: 'hinge'; at: TPoint; limits?: [number, number]; motor?: TJointMotor; friction?: number }
     | { type: 'rope'; length?: number; atA?: TPoint; atB?: TPoint }
     | { type: 'spring'; length?: number; frequency?: number; damping?: number; atA?: TPoint; atB?: TPoint }
-    | { type: 'slider'; axis: TPoint; at?: TPoint; limits?: [number, number]; motor?: TJointMotor }
+    | { type: 'slider'; axis: TPoint; at?: TPoint; limits?: [number, number]; motor?: TJointMotor; friction?: number }
     | { type: 'weld' }
 ) & { collide?: boolean };
 

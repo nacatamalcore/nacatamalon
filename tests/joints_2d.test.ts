@@ -12,6 +12,7 @@ import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { usePhysicsBody2d, usePhysicsWorld2d } from '../src/hooks/physics';
 import { useSelf } from '../src/hooks/spawn/use_self';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
+import { useUpdate } from '../src/hooks/loop/use_update';
 import { destroy } from '../src/destroy/destroy';
 import { flushDestroyed } from '../src/destroy/flush_destroyed';
 import type { TGameObject } from '../src/hooks/spawn/use_spawn';
@@ -175,6 +176,204 @@ describe('a bridge of planks', () => {
 
         expect(body.onGround).toBe(true);
         expect(spriteOf(hero).transform.y).toBeLessThan(140);
+    });
+});
+
+describe('a character standing on a bridge', () => {
+    it('stays still on it, and the bridge under it, rather than the two bouncing off each other', async () => {
+        const { store } = createTestGame();
+        let hero!: TGameObject;
+        let planks!: TGameObject[];
+        const root = startTestScene(store, 'Level', () => {
+            usePhysicsWorld2d();
+            planks = bridge();
+            hero = useSpawn(function Hero() {
+                createSprite({ width: 12, height: 22, tint, transform: { x: 128, y: 90, rotation: 0, scaleX: 1, scaleY: 1 } });
+                useCharacterBody2d({ width: 12, height: 22 });
+            })();
+            return createScene();
+        });
+
+        await run(store, root, 300);
+        const heroYs: number[] = [];
+        const plankYs: number[] = [];
+        for (let i = 0; i < 120; i++) {
+            await run(store, root, 1);
+            heroYs.push(spriteOf(hero).transform.y);
+            plankYs.push(spriteOf(planks[4]).transform.y);
+        }
+        const range = (values: number[]) => Math.max(...values) - Math.min(...values);
+
+        // Under a pixel: still, to the eye.
+        expect(range(heroYs)).toBeLessThan(1);
+        expect(range(plankYs)).toBeLessThan(1);
+    });
+});
+
+describe('a character that walks onto a bridge and stops', () => {
+    it('leaves it still, the way a bridge with a little friction in its hinges settles', async () => {
+        // A bridge between two banks that hangs a little in the middle, as the example builds it, its
+        // ends pinned two pixels off the banks so they do not rub against them.
+        const hingeAt = (i: number, n: number) => {
+            const t = i / n;
+            return { x: 98 + t * 140, y: 226 + 24 * t * (1 - t) };
+        };
+        const { store } = createTestGame();
+        const planks: TGameObject[] = [];
+        let walking = false;
+        const root = startTestScene(store, 'Level', () => {
+            usePhysicsWorld2d();
+            const bank = useSpawn((x: number) => {
+                createSprite({ width: 96, height: 80, tint, transform: { x, y: 264, rotation: 0, scaleX: 1, scaleY: 1 } });
+                usePhysicsBody2d({ body: 'static', collider: { shape: 'rect', width: 96, height: 80 } });
+            });
+            bank(48);
+            bank(288);
+            const n = 9;
+            const spawnPlank = useSpawn((a: { x: number; y: number }, b: { x: number; y: number }) => {
+                const length = Math.hypot(b.x - a.x, b.y - a.y);
+                createSprite({ width: length, height: 4, tint, transform: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, rotation: Math.atan2(b.y - a.y, b.x - a.x), scaleX: 1, scaleY: 1 } });
+                usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'rect', width: length, height: 4 }, density: 2, friction: 1 });
+            });
+            for (let i = 0; i < n; i++) planks.push(spawnPlank(hingeAt(i, n), hingeAt(i + 1, n)));
+            useJoint2d(planks[0], null, { type: 'hinge', at: hingeAt(0, n), friction: 2 });
+            for (let i = 1; i < n; i++) useJoint2d(planks[i - 1], planks[i], { type: 'hinge', at: hingeAt(i, n), friction: 2 });
+            useJoint2d(planks[n - 1], null, { type: 'hinge', at: hingeAt(n, n), friction: 2 });
+            useSpawn(function Hero() {
+                createSprite({ width: 24, height: 24, tint, transform: { x: 40, y: 200, rotation: 0, scaleX: 1, scaleY: 1 } });
+                const body = useCharacterBody2d({ width: 12, height: 22, offset: [0, 1] });
+                useUpdate(() => { body.velocity.x = walking ? 100 : 0; });
+            })();
+            return createScene();
+        });
+
+        // A second standing on the bank; then onto the bridge, a little short of its middle, and stop,
+        // and give it time to settle.
+        await run(store, root, 60);
+        walking = true;
+        await run(store, root, 69);
+        walking = false;
+        await run(store, root, 360);
+        const first = planks.map((plank) => ({ ...spriteOf(plank).transform }));
+        let moved = 0;
+        for (let k = 0; k < 60; k++) {
+            await run(store, root, 1);
+            planks.forEach((plank, i) => {
+                const at = spriteOf(plank).transform;
+                // How far its ends move: its turn over half its length, and its rise and fall.
+                moved = Math.max(moved, Math.abs(at.rotation - first[i].rotation) * 8 + Math.abs(at.y - first[i].y));
+            });
+        }
+
+        // A fraction of a pixel no edge shows.
+        expect(moved).toBeLessThan(0.08);
+    });
+});
+
+describe('a bridge with friction in its hinges, broken in the middle', () => {
+    it('hangs still from both banks, against their walls', async () => {
+        const hingeAt = (i: number, n: number) => {
+            const t = i / n;
+            return { x: 98 + t * 140, y: 226 + 24 * t * (1 - t) };
+        };
+        const { store } = createTestGame();
+        const planks: TGameObject[] = [];
+        const joints: TJointHandle2d[] = [];
+        const root = startTestScene(store, 'Level', () => {
+            usePhysicsWorld2d();
+            const bank = useSpawn((x: number) => {
+                createSprite({ width: 96, height: 160, tint, transform: { x, y: 304, rotation: 0, scaleX: 1, scaleY: 1 } });
+                usePhysicsBody2d({ body: 'static', collider: { shape: 'rect', width: 96, height: 160 } });
+            });
+            bank(48);
+            bank(288);
+            const n = 9;
+            const spawnPlank = useSpawn((a: { x: number; y: number }, b: { x: number; y: number }) => {
+                const length = Math.hypot(b.x - a.x, b.y - a.y);
+                createSprite({ width: length, height: 4, tint, transform: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, rotation: Math.atan2(b.y - a.y, b.x - a.x), scaleX: 1, scaleY: 1 } });
+                usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'rect', width: length, height: 4 }, density: 2, friction: 1 });
+            });
+            for (let i = 0; i < n; i++) planks.push(spawnPlank(hingeAt(i, n), hingeAt(i + 1, n)));
+            joints.push(useJoint2d(planks[0], null, { type: 'hinge', at: hingeAt(0, n), friction: 2 }));
+            for (let i = 1; i < n; i++) joints.push(useJoint2d(planks[i - 1], planks[i], { type: 'hinge', at: hingeAt(i, n), friction: 2 }));
+            joints.push(useJoint2d(planks[n - 1], null, { type: 'hinge', at: hingeAt(n, n), friction: 2 }));
+            return createScene();
+        });
+
+        await run(store, root, 120);
+        joints[5].destroy();
+        // Ten seconds to fall, swing and come to rest against the banks.
+        await run(store, root, 600);
+        const first = planks.map((plank) => ({ ...spriteOf(plank).transform }));
+        let moved = 0;
+        for (let k = 0; k < 120; k++) {
+            await run(store, root, 1);
+            planks.forEach((plank, i) => {
+                const at = spriteOf(plank).transform;
+                moved = Math.max(moved, Math.abs(at.rotation - first[i].rotation) * 8 + Math.abs(at.x - first[i].x) + Math.abs(at.y - first[i].y));
+            });
+        }
+
+        // The friction slows the hinges where they are now, far below where they were laid: measured
+        // from where they were, it overshot, and the planks shook against the walls for ever.
+        expect(moved).toBeLessThan(0.05);
+    });
+});
+
+describe('a character\'s weight', () => {
+    const sag = async (withHero: boolean) => {
+        const { store } = createTestGame();
+        let planks!: TGameObject[];
+        const root = startTestScene(store, 'Level', () => {
+            usePhysicsWorld2d();
+            planks = bridge();
+            if (withHero) {
+                useSpawn(function Hero() {
+                    createSprite({ width: 12, height: 22, tint, transform: { x: 128, y: 90, rotation: 0, scaleX: 1, scaleY: 1 } });
+                    useCharacterBody2d({ width: 12, height: 22 });
+                })();
+            }
+            return createScene();
+        });
+        await run(store, root, 300);
+        return spriteOf(planks[4]).transform.y;
+    };
+
+    it('bends the bridge it stands on further than the bridge hangs alone', async () => {
+        expect(await sag(true)).toBeGreaterThan((await sag(false)) + 0.5);
+    });
+});
+
+describe('friction on a hinge', () => {
+    const swing = async (friction: number | undefined) => {
+        const { store } = createTestGame();
+        let bob!: TGameObject;
+        const root = startTestScene(store, 'Level', () => {
+            usePhysicsWorld2d();
+            bob = useSpawn(Block)(160, 40, 8, 8);
+            useJoint2d(bob, null, friction === undefined ? { type: 'hinge', at: { x: 100, y: 40 } } : { type: 'hinge', at: { x: 100, y: 40 }, friction });
+            return createScene();
+        });
+        // Three seconds of swinging, then two of looking.
+        await run(store, root, 180);
+        const xs: number[] = [];
+        for (let i = 0; i < 120; i++) {
+            await run(store, root, 1);
+            xs.push(spriteOf(bob).transform.x);
+        }
+        return Math.max(...xs) - Math.min(...xs);
+    };
+
+    it('lets a pendulum come to rest, sooner the more there is', async () => {
+        const some = await swing(1);
+        const more = await swing(5);
+        expect(more).toBeLessThan(1);
+        expect(some).toBeGreaterThan(more);
+        expect(some).toBeLessThan(60);
+    });
+
+    it('is nothing by default: a pendulum swings on', async () => {
+        expect(await swing(undefined)).toBeGreaterThan(50);
     });
 });
 

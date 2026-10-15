@@ -24,7 +24,8 @@ export type TCharacterOptions2d = TCharacterShape2d & {
      */
     pushes?: boolean;
     /**
-     * How heavy it counts as when it pushes. Left out, it pushes as if nothing could stop it.
+     * How heavy it is: what it weighs on a bridge or a crate it stands on, and how heavy a thing it can
+     * push at full pace. Left out, its size at the density of a crate (width times height).
      */
     mass?: number;
     /**
@@ -83,6 +84,7 @@ export const createCharacter2d = (deps: {
     world: () => World | null;
     ledgeOf: (collider: number) => TLedge | undefined;
     ledges: () => Iterable<[number, TLedge]>;
+    standOn: (character: number, under: ReadonlySet<number>) => void;
     tilemaps: () => readonly TTilemap[];
     worldGravity: number;
     box: TGameObject;
@@ -96,6 +98,8 @@ export const createCharacter2d = (deps: {
     const gravity = options.gravity ?? deps.worldGravity;
     const maxFall = options.maxFall ?? DEFAULT_MAX_FALL;
     const maxSlope = options.maxSlope ?? DEFAULT_MAX_SLOPE;
+    // How heavy it is on what it stands on: its mass if it says, or its size at the density of a crate.
+    const weight = options.mass ?? (halfWidth * 2) * (halfHeight * 2);
 
     const centre = { x: pose.x + shift.x, y: pose.y + shift.y };
     const velocity = { x: 0, y: 0 };
@@ -128,6 +132,8 @@ export const createCharacter2d = (deps: {
         if (options.layer !== undefined || options.collidesWith !== undefined) {
             desc.setCollisionGroups(((((1 << (options.layer ?? 0)) << 16) | (options.collidesWith ?? 0xffff)) >>> 0));
         }
+        // Asked about every contact, so the solver can be told to leave what it stands on alone.
+        desc.setActiveHooks(rapier.ActiveHooks.FILTER_CONTACT_PAIRS);
         collider = world.createCollider(desc, rigid);
         controller = world.createCharacterController(SKIN);
         // Up is towards the top of the screen, which is negative y here.
@@ -136,8 +142,10 @@ export const createCharacter2d = (deps: {
         controller.setMaxSlopeClimbAngle(maxSlope);
         controller.setMinSlopeSlideAngle(maxSlope);
         controller.enableSnapToGround(SNAP);
-        controller.setApplyImpulsesToDynamicBodies(options.pushes ?? true);
-        controller.setCharacterMass(options.mass ?? null);
+        // It pushes what it walks into itself, sideways only (see `push`): the controller's own pushing
+        // also shoves down on whatever it stands on, every frame, which sets a bridge bouncing under
+        // it for ever.
+        controller.setApplyImpulsesToDynamicBodies(false);
     };
 
     /**
@@ -198,7 +206,7 @@ export const createCharacter2d = (deps: {
         const hits = [];
         for (let i = 0; i < controller.numComputedCollisions(); i++) {
             const hit = controller.computedCollision(i);
-            if (hit !== null) hits.push({ x: hit.normal1.x, y: hit.normal1.y, ledge: hit.collider !== null && deps.ledgeOf(hit.collider.handle) !== undefined });
+            if (hit !== null) hits.push({ x: hit.normal1.x, y: hit.normal1.y, ledge: hit.collider !== null && deps.ledgeOf(hit.collider.handle) !== undefined, body: hit.collider?.parent() ?? null });
         }
 
         // Walking over the point where two pieces of the level meet (a floor and the top of a slope)
@@ -240,6 +248,41 @@ export const createCharacter2d = (deps: {
             velocity.y = 0;
         }
 
+        // What it walks into that the simulation moves is pushed along at its pace, as hard as its weight
+        // allows: a crate lighter than it goes as fast as it walks.
+        if (options.pushes ?? true) {
+            for (const { x, body } of hits) {
+                if (body === null || !body.isDynamic() || Math.abs(x) < FACING) continue;
+                // The normal points back at the character, so the push is the other way.
+                const ahead = -Math.sign(x);
+                const gap = (velocity.x - body.linvel().x) * ahead;
+                if (velocity.x * ahead > 0 && gap > 0) {
+                    body.applyImpulse({ x: gap * ahead * Math.min(body.mass(), weight), y: 0 }, true);
+                }
+            }
+        }
+
+        // What it stands on that the simulation moves (a plank of a bridge, a crate): its weight goes
+        // on it, under each foot, and the solver is told not to push the two apart, which it would do
+        // as if the character weighed nothing short of infinity. Standing, it does not press into the
+        // floor (see above), so without this a bridge would not feel it, would come up under it, be
+        // shoved back down, and the two would bounce off each other for ever.
+        const under = new Set<number>();
+        if (state.onGround && !state.climbing) {
+            const feet = centre.y + halfHeight - SKIN;
+            const sides = [centre.x - halfWidth + CORNER, centre.x, centre.x + halfWidth - CORNER];
+            for (const x of sides) {
+                const hit = world.castRay(new rapier.Ray({ x, y: feet }, { x: 0, y: 1 }), SNAP, true, rapier.QueryFilterFlags.EXCLUDE_SENSORS, undefined, collider, rigid);
+                const body = hit?.collider.parent();
+                if (!hit || !body || !body.isDynamic()) continue;
+                under.add(hit.collider.handle);
+                if (gravity > 0) {
+                    body.applyImpulseAtPoint({ x: 0, y: (weight * gravity * dt) / sides.length }, { x, y: feet + hit.timeOfImpact }, true);
+                }
+            }
+        }
+        deps.standOn(collider.handle, under);
+
         readTiles();
         // Climbed out of the ladder, by its top or its side: no longer climbing.
         if (state.climbing && !inLadder) state.climbing = false;
@@ -252,6 +295,7 @@ export const createCharacter2d = (deps: {
     const remove = (): void => {
         if (removed) return;
         removed = true;
+        if (collider !== null) deps.standOn(collider.handle, new Set());
         const world = deps.world();
         if (world !== null) {
             if (controller !== null) world.removeCharacterController(controller);

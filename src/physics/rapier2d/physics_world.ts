@@ -120,6 +120,11 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
      * Collider handle → the ledge it is. What decides whether something passes through it.
      */
     const ledges = new Map<number, TLedge>();
+    /**
+     * Character collider handle → what it is standing on that the simulation moves. The solver leaves
+     * those pairs alone: the character puts its own weight on them. See the character's move.
+     */
+    const standing = new Map<number, ReadonlySet<number>>();
     let warnedTurnedMap = false;
 
     // Start WASM load, but don't block.
@@ -350,6 +355,9 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
     const hooks: PhysicsHooks = {
         filterContactPair: (colliderA, colliderB) => {
             if (!rapier) return null;
+            if (standing.get(colliderA)?.has(colliderB) === true || standing.get(colliderB)?.has(colliderA) === true) {
+                return rapier.SolverFlags.EMPTY;
+            }
             const ledgeA = ledges.get(colliderA);
             const ledge = ledgeA ?? ledges.get(colliderB);
             if (ledge === undefined) return rapier.SolverFlags.COMPUTE_IMPULSE;
@@ -380,6 +388,10 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         joint: ImpulseJoint | null;
         // The fixed point a joint to the world is tied to: a body of its own, since Rapier joins bodies.
         pin: RigidBody | null;
+        // The two bodies as the solver joins them: the second turns or slides against the first.
+        bodies: [RigidBody, RigidBody] | null;
+        // A slider's rail, measured on the body it is on.
+        axis: { x: number; y: number } | null;
         removed: boolean;
     };
     const joints = new Set<TJointEntry>();
@@ -472,6 +484,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
                 const turn = -bodyB.rotation();
                 const local = { x: axis.x * Math.cos(turn) - axis.y * Math.sin(turn), y: axis.x * Math.sin(turn) + axis.y * Math.cos(turn) };
                 data = r.JointData.prismatic(localOf(bodyB, at), localOf(bodyA, at), local);
+                entry.axis = local;
                 first = bodyB;
                 second = bodyA;
                 break;
@@ -495,6 +508,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         if ((spec.type === 'hinge' || spec.type === 'slider') && spec.motor !== undefined) {
             (joint as RevoluteImpulseJoint | PrismaticImpulseJoint).configureMotorVelocity(spec.motor.speed, spec.motor.strength ?? 1);
         }
+        entry.bodies = [first, second];
         entry.joint = joint;
     };
 
@@ -509,7 +523,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
     };
 
     const addJoint = (a: TGameObject, b: TGameObject | null, spec: TJoint2d): TJointHandle2d => {
-        const entry: TJointEntry = { a, b, spec, joint: null, pin: null, removed: false };
+        const entry: TJointEntry = { a, b, spec, joint: null, pin: null, bodies: null, axis: null, removed: false };
         joints.add(entry);
         makeJoint(entry);
         const destroy = (): void => removeJoint(entry);
@@ -538,6 +552,61 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         }
     };
 
+    /**
+     * Slows what turns on a hinge, or slides on a slider, with `friction`: the two bodies' turning (or
+     * sliding) against each other loses that much of itself a second. Done here rather than by the
+     * solver, so the number means what it says whatever the bodies weigh. It never wakes anything up:
+     * slowing down is what lets a body come to rest and sleep.
+     */
+    const brakeJoints = (step: number): void => {
+        for (const entry of joints) {
+            const spec = entry.spec;
+            if (entry.bodies === null || entry.joint === null || !entry.joint.isValid()) continue;
+            if ((spec.type !== 'hinge' && spec.type !== 'slider') || spec.friction === undefined || spec.friction <= 0) continue;
+            const [first, second] = entry.bodies;
+            const share = Math.min(1, spec.friction * step);
+            if (spec.type === 'hinge') {
+                // About the pin, where the joint holds them now: how hard each is to turn there. Read from
+                // the joint and not from where it was made, since a pin between two bodies goes where
+                // they go: a bridge's hinges hang far from where they were laid once it has broken.
+                const local = entry.joint.anchor1();
+                const angle = first.rotation();
+                const origin = first.translation();
+                const pin = {
+                    x: origin.x + local.x * Math.cos(angle) - local.y * Math.sin(angle),
+                    y: origin.y + local.x * Math.sin(angle) + local.y * Math.cos(angle),
+                };
+                const about = (body: RigidBody): number => {
+                    if (!body.isDynamic()) return Infinity;
+                    const at = body.translation();
+                    return body.principalInertia() + body.mass() * ((at.x - pin.x) ** 2 + (at.y - pin.y) ** 2);
+                };
+                const i1 = about(first);
+                const i2 = about(second);
+                const both = !Number.isFinite(i1) ? i2 : !Number.isFinite(i2) ? i1 : (i1 * i2) / (i1 + i2);
+                if (!Number.isFinite(both)) continue;
+                const turn = (second.angvel() - first.angvel()) * share * both;
+                if (second.isDynamic()) second.applyTorqueImpulse(-turn, false);
+                if (first.isDynamic()) first.applyTorqueImpulse(turn, false);
+            } else {
+                if (entry.axis === null) continue;
+                const angle = first.rotation();
+                const { x: ux, y: uy } = entry.axis;
+                // The rail turns with the body it is on.
+                const axis = { x: ux * Math.cos(angle) - uy * Math.sin(angle), y: ux * Math.sin(angle) + uy * Math.cos(angle) };
+                const m1 = first.isDynamic() ? first.mass() : Infinity;
+                const m2 = second.isDynamic() ? second.mass() : Infinity;
+                const both = !Number.isFinite(m1) ? m2 : !Number.isFinite(m2) ? m1 : (m1 * m2) / (m1 + m2);
+                if (!Number.isFinite(both)) continue;
+                const v1 = first.linvel();
+                const v2 = second.linvel();
+                const along = ((v2.x - v1.x) * axis.x + (v2.y - v1.y) * axis.y) * share * both;
+                if (second.isDynamic()) second.applyImpulse({ x: -axis.x * along, y: -axis.y * along }, false);
+                if (first.isDynamic()) first.applyImpulse({ x: axis.x * along, y: axis.y * along }, false);
+            }
+        }
+    };
+
     const stepWorld = (dt: number) => {
         // Counted whether or not Rapier has loaded, so a push asked for meanwhile is the last frame's.
         frame++;
@@ -552,6 +621,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         const steps = Math.min(Math.floor(accumulator / length), MAX_FRAMES_PER_STEP);
 
         for (let i = 0; i < steps; i++) {
+            brakeJoints(length);
             measureFeet();
             held = new Set();
             world.step(events ?? undefined, hooks);
@@ -775,6 +845,10 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
             world: () => world,
             ledgeOf: (handle) => ledges.get(handle),
             ledges: () => ledges.entries(),
+            standOn: (character, under) => {
+                if (under.size === 0) standing.delete(character);
+                else standing.set(character, under);
+            },
             tilemaps: () => [...maps.keys()],
             worldGravity: options.gravity ?? gravityY,
             box,
@@ -794,6 +868,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
     // Cleanup on scene unmount.
     useSceneUnmount(() => {
         joints.clear();
+        standing.clear();
         bodies.clear();
         byCollider.clear();
         // The event queue holds WASM memory of its own and is not owned by the world, so
