@@ -147,6 +147,9 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   `useReady(() => { ... })`, which runs once everything being built with it exists, before the
   first frame.
 - Movement without `* delta` runs faster on screens with a higher refresh rate.
+- `useUpdate` runs a scene before the objects inside it, so a camera (or a marker, a shadow) that
+  copies another object's position there reads it one frame late and shakes. Follow things in
+  `useLateUpdate`, which runs after every `useUpdate`; move them in `useUpdate`.
 - `createGame` with no matching element throws: the page needs the element before the script runs.
 - Physics is behind its own imports and is switched on once: `installPhysics2d()` from
   `nacatamalon/physics2d`, or `installPhysics3d()` from `nacatamalon/physics3d`. The physics engines

@@ -1,8 +1,9 @@
 import { type TRuntimeStore, withSceneUpdates } from "../../store";
 import type { TFrameContext } from "../../render";
+import type { TBox } from "../../box";
 import { fillFrameContext } from "./fill_frame_context";
 import { MAX_FRAME_DELTA } from "../../CONFIG";
-import { runHookUpdates as runUpdates } from "./runHookUpdates";
+import { runHookUpdates as runUpdates, runLateUpdates } from "./runHookUpdates";
 import { stepGameTransition } from "./helper/step_game_transition";
 import { flushDestroyed } from "../../destroy";
 import { updateAudio } from "../../audio";
@@ -89,7 +90,11 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
                 // One scene at a time, so a script that throws costs its own scene and not the
                 // others, nor the picture: see `TRuntimeState.loop.failure`.
                 try {
-                    runUpdates(scene, dt);
+                    const late: TBox[] = [];
+                    runUpdates(scene, dt, undefined, late);
+                    // Once every update of the scene is over, so what is read there is where things
+                    // ended up this frame: see `useLateUpdate`.
+                    runLateUpdates(late, dt, scene.time);
                 } catch (error) {
                     reportFrameError(store, error);
                 }

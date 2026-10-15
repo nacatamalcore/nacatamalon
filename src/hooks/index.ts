@@ -1,4 +1,4 @@
-export { useUpdate } from './loop';
+export { useUpdate, useLateUpdate } from './loop';
 export { useColor } from './color';
 export { useKeyboard, usePointer, useGamepad, useActions, useAction, useVector, useInputMap } from './input';
 export { useRandom } from './random';

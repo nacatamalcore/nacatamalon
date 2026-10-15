@@ -21,9 +21,9 @@ import type { TMotionAttachment } from '../../motion/types/t_motion';
  * what it registered while being built. Components (transform, drawables, camera...) arrive
  * with the features that read them.
  *
- * `parent`, `updateCallbacks` and `cleanups` are runtime-only and never serialized: `parent`
- * points back up the tree, so a naive `JSON.stringify` would throw, and the other two hold
- * functions.
+ * `parent`, `updateCallbacks`, `lateCallbacks` and `cleanups` are runtime-only and never
+ * serialized: `parent` points back up the tree, so a naive `JSON.stringify` would throw, and the
+ * other three hold functions.
  *
  * @category Boxes
  * @since 1.0.0
@@ -47,6 +47,11 @@ export type TBox = {
      * Registered by `useUpdate`, called every frame with the delta and the scene's time, in seconds.
      */
     updateCallbacks: Array<(dt: number, time: number) => void>;
+    /**
+     * Registered by `useLateUpdate`, called every frame once every `updateCallbacks` of the scene
+     * has run, with the same delta and time.
+     */
+    lateCallbacks: Array<(dt: number, time: number) => void>;
     /**
      * Run once, children first, when the box leaves the tree.
      */
