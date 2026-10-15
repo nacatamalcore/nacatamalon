@@ -92,7 +92,7 @@ export { createSprite } from './gameobjects/sprite/create_sprite';
 export type { TCreateSprite } from './gameobjects/sprite/create_sprite';
 export { createText } from './gameobjects/text/create_text';
 export { createNineSlice } from './gameobjects/nine_slice/create_nine_slice';
-export { createTilemap, getTilemap, blocksBulletsAt, cellAt, cellCorner, markLayerChanged, setTile, solidAt, solidAtPoint, tileAt, tileInfoAt } from './gameobjects/tilemap';
+export { createTilemap, getTilemap, blocksBulletsAt, cellAt, cellCorner, markLayerChanged, setTile, solidAt, solidAtPoint, tileAt, tileInfoAt, tileInfoAtPoint } from './gameobjects/tilemap';
 export { createSpriteAtlas, setSpriteFrame } from './atlas';
 // The `.atlas` format: reading one is how a game loads its sheets, so it stays here. Writing one,
 // starting one and cutting one to draw over the image are a tool's, in `nacatamalon/authoring`.

@@ -56,6 +56,41 @@ export type TTileDoc = {
      */
     flipX?: boolean;
     flipY?: boolean;
+    /**
+     * A platform stood on from above and passed through from below and from the sides: the
+     * branches, clouds and ledges of a platformer, and the top of a ladder. Leave `solid` off, since
+     * that would stop everything. Default `false`.
+     */
+    oneWay?: boolean;
+    /**
+     * Climbed with up and down. Combined with `oneWay` on the top rung, a character stands on the
+     * ladder's top and climbs down through it, as the old platformers did. Default `false`.
+     */
+    ladder?: boolean;
+    /**
+     * A floor that rises or falls across the cell: its height at the left edge and at the right
+     * one, from `0` (the bottom of the cell) to `1` (the top). `[0, 1]` climbs to the right at 45°;
+     * a gentler one is two cells, `[0, 0.5]` and then `[0.5, 1]`. Leave `solid` off: the slope is
+     * the shape.
+     */
+    slope?: [number, number];
+    /**
+     * How much harm touching it does, for spikes and lava. A value for the game, which decides what
+     * it means (taken from a life bar, multiplied by the difficulty, or any value at all being a
+     * death): the engine reports it and never applies it.
+     */
+    damage?: number;
+    /**
+     * Carries whatever stands on or in it along, in pixels per second: a conveyor belt, a current,
+     * the wind. Like every speed in the engine, it is per second, so at `step: 60` a push of 60 is one
+     * pixel a frame.
+     */
+    push?: { x: number; y: number };
+    /**
+     * Anything else this game wants to know about the tile, which the engine carries and never reads:
+     * `{ water: true }`, `{ friction: 0.1 }`, `{ pickup: 'coin' }`.
+     */
+    props?: Record<string, string | number | boolean>;
 };
 
 /**

@@ -58,6 +58,13 @@ releases are in [changelog/](./changelog/), one file each.
   `localToWorld3d`: a point of the world measured on an object, along its own turned and resized
   axes, and the way back, through everything above it. They take a whole object, or a sprite, text,
   nine-slice or model it draws. For where a hit landed on something and where a shot leaves it from.
+- Platformer tiles: a tile in a `.tilemap` can say `oneWay` (a ledge stood on from above and passed
+  through from below), `ladder`, `slope: [left, right]` (the floor's height at each edge, 0 to 1),
+  `damage` (a value for the game, which the engine reports and never applies), `push: { x, y }` (a
+  belt or a current, in pixels per second) and `props`, words, numbers and true or false the engine
+  carries for the game. They combine: the top of a ladder is `ladder` and `oneWay`. A field written
+  wrong is refused with the tile's number rather than dropped. `tileInfoAtPoint(map, layer, x, y)`
+  reads the tile under a point of the world. The editor keeps them when it saves a map.
 
 ### Changed
 

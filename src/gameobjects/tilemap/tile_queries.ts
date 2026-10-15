@@ -122,6 +122,37 @@ export const tileInfoAt = (map: TTilemap, layer: number, column: number, row: nu
     map.tiles[tileAt(map, layer, column, row)];
 
 /**
+ * What the tile under a point of the world means, in one layer: the short way to ask, for a game
+ * reading its own tiles. Whether a ladder is under the player, how hard a belt pushes, what a tile's
+ * `props` say.
+ *
+ * @example
+ * ```ts
+ * declare const map: TTilemap;
+ * declare const player: TSprite;
+ *
+ * const under = tileInfoAtPoint(map, 0, player.transform.x, player.transform.y + 8);
+ * if (under?.ladder === true) {
+ *     // the player can climb
+ * }
+ * ```
+ * @param map - The map, as `createTilemap` or `getTilemap` gave it back.
+ * @param layer - Which of its layers, counting from 0.
+ * @param x - A point in the world.
+ * @param y - A point in the world.
+ * @returns What the file says about the tile under that point, or `undefined` over an empty cell or
+ *   off the map.
+ *
+ * @category Tilemaps
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const tileInfoAtPoint = (map: TTilemap, layer: number, x: number, y: number): TTileDoc | undefined => {
+    const { column, row } = cellAt(map, x, y);
+    return tileInfoAt(map, layer, column, row);
+};
+
+/**
  * Puts an id into a cell, and says whether anything changed.
  *
  * This is how a tile is destroyed: a cell is a number, so a brick turning to rubble is writing

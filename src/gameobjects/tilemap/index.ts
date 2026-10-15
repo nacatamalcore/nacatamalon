@@ -11,6 +11,7 @@ export {
     solidAtPoint,
     tileAt,
     tileInfoAt,
+    tileInfoAtPoint,
 } from './tile_queries';
 
 export type { TTilemap, TTilemapLayer, TTilemapOptions } from './types/t_tilemap';

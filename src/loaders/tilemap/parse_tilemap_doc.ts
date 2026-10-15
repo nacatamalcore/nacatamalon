@@ -49,6 +49,45 @@ export const parseTilemapDoc = (value: unknown, src: string): TTilemapDoc => {
     const width = size('width');
     const height = size('height');
 
+    // What a platformer's tiles say. Wrong is refused rather than dropped: a ladder that silently is
+    // not one is found by a player falling through it, long after the file was written.
+    const numberOf = (id: number, field: string, value: unknown): number => {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return fail(`tile ${id} has a ${field} of '${String(value)}', and it has to be a number.`);
+        }
+        return value;
+    };
+    const slopeOf = (id: number, value: unknown): [number, number] => {
+        if (!Array.isArray(value) || value.length !== 2) {
+            return fail(`tile ${id} has to give its slope as two heights, [left, right], from 0 to 1.`);
+        }
+        const [left, right] = value.map((height) => numberOf(id, 'slope height', height));
+        if (left < 0 || left > 1 || right < 0 || right > 1) {
+            return fail(`tile ${id} has a slope of [${left}, ${right}]: its heights go from 0, the bottom of the cell, to 1, the top.`);
+        }
+        return [left, right];
+    };
+    const pushOf = (id: number, value: unknown): { x: number; y: number } => {
+        if (typeof value !== 'object' || value === null) {
+            return fail(`tile ${id} has to give its push as { x, y }, in pixels per second.`);
+        }
+        const push = value as Record<string, unknown>;
+        return { x: numberOf(id, 'push x', push.x ?? 0), y: numberOf(id, 'push y', push.y ?? 0) };
+    };
+    const propsOf = (id: number, value: unknown): Record<string, string | number | boolean> => {
+        if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+            return fail(`tile ${id} has props that are not an object.`);
+        }
+        const props: Record<string, string | number | boolean> = {};
+        for (const [key, prop] of Object.entries(value)) {
+            if (typeof prop !== 'string' && typeof prop !== 'boolean' && (typeof prop !== 'number' || !Number.isFinite(prop))) {
+                return fail(`tile ${id} has a prop '${key}' of '${String(prop)}': a prop is a word, a number or true and false.`);
+            }
+            props[key] = prop;
+        }
+        return props;
+    };
+
     const tiles: Record<number, TTileDoc> = {};
     const rawTiles = typeof raw.tiles === 'object' && raw.tiles !== null ? raw.tiles as Record<string, unknown> : {};
     for (const [key, entry] of Object.entries(rawTiles)) {
@@ -73,6 +112,12 @@ export const parseTilemapDoc = (value: unknown, src: string): TTilemapDoc => {
             ...(typeof tile.becomes === 'number' ? { becomes: Math.floor(tile.becomes) } : {}),
             ...(tile.flipX === true ? { flipX: true } : {}),
             ...(tile.flipY === true ? { flipY: true } : {}),
+            ...(tile.oneWay === true ? { oneWay: true } : {}),
+            ...(tile.ladder === true ? { ladder: true } : {}),
+            ...(tile.slope !== undefined ? { slope: slopeOf(id, tile.slope) } : {}),
+            ...(tile.damage !== undefined ? { damage: numberOf(id, 'damage', tile.damage) } : {}),
+            ...(tile.push !== undefined ? { push: pushOf(id, tile.push) } : {}),
+            ...(tile.props !== undefined ? { props: propsOf(id, tile.props) } : {}),
         };
     }
 
