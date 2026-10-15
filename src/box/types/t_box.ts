@@ -12,6 +12,7 @@ import type { TCamera2d } from '../../camera';
 import type { TCamera3d } from '../../camera/types/t_camera_3d';
 import type { TSpriteTexture } from '../../gameobjects/sprite_texture/types/t_sprite_texture';
 import type { TMotionAttachment } from '../../motion/types/t_motion';
+import type { THitbox, TOverlapListener } from '../../hitbox/types/t_hitbox';
 
 /**
  * One box at runtime: the engine's single composition primitive, a node in the tree. A scene
@@ -141,6 +142,16 @@ export type TBox = {
      * only the root's is read.
      */
     physicsWorld: TPhysicsWorld | null;
+    /**
+     * The parts of it that can be touched, each on one side: `useHitbox`. Empty on almost every
+     * object. Runtime only for now.
+     */
+    hitboxes: THitbox[];
+    /**
+     * Registered by `useOverlap`: two groups to compare once every update of the scene has run, and
+     * what to call for each pair touching.
+     */
+    overlapCallbacks: TOverlapListener[];
     /**
      * Only meaningful on a scene root: while `true` the tick skips this scene's updates and still
      * draws it. Lives on the root so it goes away with the scene and cannot be left behind.

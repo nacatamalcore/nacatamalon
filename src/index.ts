@@ -117,6 +117,11 @@ export { findObject, findObjects } from './box';
 // A point of the world measured on an object, and a point of an object found in the world: where a
 // hit landed on it, where a shot leaves it from.
 export { worldToLocal, localToWorld, worldToLocal3d, localToWorld3d } from './box';
+// Whether two things touch, with no physics: a bullet and a brick, the player and the coins.
+export { overlaps } from './hitbox';
+export type { TRect, TOverlapTarget, THitbox } from './hitbox';
+export { useHitbox, useOverlap } from './hooks';
+export type { THitboxOptions } from './hooks';
 // Where the pointer is in the world, and where a point of the world is on the screen; and turning a
 // camera to look at something.
 export { screenToRay, worldToScreen, cameraLookAt } from './camera';

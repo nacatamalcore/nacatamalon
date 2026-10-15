@@ -9,7 +9,7 @@ import type { TBox } from "../../box";
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const runHookUpdates = (box: TBox, dt: number, time?: number, late?: TBox[]) => {
+export const runHookUpdates = (box: TBox, dt: number, time?: number, late?: TBox[], touching?: TBox[]) => {
 
     // Destroyed this frame and not swept yet: it stops now, so a bullet cannot report a second
     // hit after the one that killed it.
@@ -37,13 +37,17 @@ export const runHookUpdates = (box: TBox, dt: number, time?: number, late?: TBox
     if (late !== undefined && box.lateCallbacks.length > 0) {
         late.push(box);
     }
+    // And the boxes with something to compare once the updates are over: see `useOverlap`.
+    if (touching !== undefined && (box.hitboxes.length > 0 || box.overlapCallbacks.length > 0)) {
+        touching.push(box);
+    }
 
     for (const callback of box.updateCallbacks) {
         callback(dt, time);
     }
 
     for (const child of children) {
-        runHookUpdates(child, dt, time, late);
+        runHookUpdates(child, dt, time, late, touching);
     }
     // Implementation for running hook updates goes here
 };
@@ -52,8 +56,12 @@ export const runHookUpdates = (box: TBox, dt: number, time?: number, late?: TBox
  * Whether the box, or anything it hangs from, was destroyed since the walk noted it. A child is
  * only marked when its parent is swept, so asking the box alone would let the child of something
  * killed in this frame's updates follow it one last time.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
  */
-const isGone = (box: TBox): boolean => {
+export const isGone = (box: TBox): boolean => {
     for (let at: TBox | null = box; at !== null; at = at.parent) {
         if (at.destroyed) {
             return true;

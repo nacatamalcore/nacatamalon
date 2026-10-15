@@ -26,6 +26,8 @@ export const newBox = (name: string): TBox => ({
     stores: [],
     physics: null,
     physicsWorld: null,
+    hitboxes: [],
+    overlapCallbacks: [],
     scripts: [],
     provided: new Map(),
     api: undefined,

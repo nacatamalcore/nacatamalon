@@ -65,6 +65,14 @@ releases are in [changelog/](./changelog/), one file each.
   carries for the game. They combine: the top of a ladder is `ladder` and `oneWay`. A field written
   wrong is refused with the tile's number rather than dropped. `tileInfoAtPoint(map, layer, x, y)`
   reads the tile under a point of the world. The editor keeps them when it saves a map.
+- Hitboxes, for what touches what with no physics. `overlaps(a, b)` says whether two things share any
+  area right now: objects, sprites, texts, panels or a rectangle of the world, measured where they are
+  drawn and turned as they are drawn (edges that only meet do not count). `useHitbox({ group })` gives
+  an object a part that can be touched, the size of its picture until given one, moved with `x`/`y`
+  and switched off with `enabled`, all changeable at any time. `useOverlap('shot', 'enemy', (shot,
+  enemy) => ...)` calls for every pair of the two groups touching, every frame they touch, once the
+  scene's updates are over and before `useLateUpdate`; something destroyed by an earlier call is not
+  passed again, so a bullet hits one enemy and not the three behind it.
 
 ### Changed
 

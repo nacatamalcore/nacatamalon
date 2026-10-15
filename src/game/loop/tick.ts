@@ -6,6 +6,7 @@ import { MAX_FRAME_DELTA, MAX_STEPS_PER_FRAME } from "../../CONFIG";
 import { runHookUpdates as runUpdates, runLateUpdates } from "./runHookUpdates";
 import { stepGameTransition } from "./helper/step_game_transition";
 import { flushDestroyed } from "../../destroy";
+import { runOverlaps } from "../../hitbox/run_overlaps";
 import { updateAudio } from "../../audio";
 import { settleCapture } from "../capture";
 import { reportFrameError } from "./report_frame_error";
@@ -91,7 +92,10 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
                 // others, nor the picture: see `TRuntimeState.loop.failure`.
                 try {
                     const late: TBox[] = [];
-                    runUpdates(scene, dt, undefined, late);
+                    const touching: TBox[] = [];
+                    runUpdates(scene, dt, undefined, late, touching);
+                    // Where every update left things, before anything reads it late: see `useOverlap`.
+                    runOverlaps(touching);
                     // Once every update of the scene is over, so what is read there is where things
                     // ended up this frame: see `useLateUpdate`.
                     runLateUpdates(late, dt, scene.time);

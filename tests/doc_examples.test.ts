@@ -15,7 +15,7 @@ import { join } from 'node:path';
  * quietly go wrong again.
  */
 
-const CHECKED = new Set<string>(['Game', 'Scenes', 'Hooks', 'Sprites', 'Game objects', 'Input', 'Assets & loading', 'Camera', 'Scripts', 'Post-processing', 'Tilemaps', 'Signals', 'Store', 'Color & palettes', 'Project', 'Physics']);
+const CHECKED = new Set<string>(['Game', 'Scenes', 'Hooks', 'Sprites', 'Game objects', 'Input', 'Assets & loading', 'Camera', 'Scripts', 'Post-processing', 'Tilemaps', 'Signals', 'Store', 'Color & palettes', 'Project', 'Physics', 'Hitboxes']);
 
 const ROOT = join(import.meta.dir, '..', 'src');
 const DOORS = {
