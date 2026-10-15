@@ -1,4 +1,4 @@
-import { DEFAULT_GAME_OPTIONS } from "../../CONFIG";
+import { DEFAULT_GAME_OPTIONS, MAX_STEP_RATE, MIN_STEP_RATE } from "../../CONFIG";
 import type { TGameOptions } from "../types/t_game_options";
 
 /**
@@ -37,6 +37,10 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
     const banner = game_options.banner ?? true;
     // Nor for the splash: off unless the game asks for it.
     const splash = game_options.splash ?? false;
+    const step = game_options.step ?? DEFAULT_GAME_OPTIONS.step!;
+    if (step !== 'display' && !(Number.isFinite(step) && step >= MIN_STEP_RATE && step <= MAX_STEP_RATE)) {
+        throw new Error(`[NacatamalOn] createGame: step must be 'display' or a number of steps a second from ${MIN_STEP_RATE} to ${MAX_STEP_RATE} (60, or 50 for PAL), got ${String(step)}.`);
+    }
 
     return {
         width,
@@ -55,7 +59,8 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
         actionsPersist,
         post,
         banner,
-        splash
+        splash,
+        step
     };
 
 }

@@ -1,6 +1,7 @@
 import type { TColor } from '../../color';
 import type { TCanvasKeep } from '../../DOM/types/t_canvas_keep';
 import type { TCanvasScaling } from '../../DOM/types/t_canvas_scaling';
+import type { TGameStep } from '../../game/types/t_game_options';
 import type { TRendererType } from '../../render';
 import type { TActionMap } from '../../input';
 import type { TPostChain } from '../../post';
@@ -70,6 +71,11 @@ export type TProjectSettings = {
      * Whether the game pauses itself when the page loses focus.
      */
     pauseOnBlur: boolean;
+    /**
+     * How the game's time moves forward: `'display'`, one update per picture the screen shows, or
+     * that many fixed steps a second (`60`, `50` for PAL). See `TGameOptions.step`.
+     */
+    step: TGameStep;
     /**
      * The seed of the game's random numbers, or absent for a different run every time.
      */

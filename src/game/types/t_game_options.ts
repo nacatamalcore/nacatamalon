@@ -6,6 +6,16 @@ import type { TRendererType } from '../../render';
 import type { TActionMap, TActionPersist } from '../../input';
 
 /**
+ * How a game's time moves forward: `'display'`, one update per picture the screen shows, or a
+ * number of fixed steps a second (`60`, `50`). See `TGameOptions.step`.
+ *
+ * @category Game
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TGameStep = 'display' | number;
+
+/**
  * How a game's window is set up, for `createGame`: its resolution, the colour behind everything,
  * how it scales to the page and which renderer draws it. Only `width` and `height` are required.
  *
@@ -139,6 +149,25 @@ export type TGameOptions = {
      * the browser, which stops sending frames to a hidden tab anyway.
      */
     pauseOnBlur?: boolean;
+    /**
+     * How the game's time moves forward. Default `'display'`.
+     *
+     * - `'display'`: one update per picture the screen shows, by however long it really took. A
+     *   144 Hz monitor runs 144 updates a second and a 60 Hz one runs 60; `* delta` keeps the speed
+     *   the same, but not the result: a jump worked out with gravity reaches a slightly different
+     *   height on each, and a move written without `delta` is faster on the better screen.
+     * - A number, `60` (NTSC) or `50` (PAL): the game moves in steps of exactly `1 / step`
+     *   seconds, as the consoles of the era did, whatever the screen. `delta` is always that, so
+     *   `x += 2` is two pixels a frame on every machine, a jump is the same height everywhere, and
+     *   the same keys on the same steps play the same game. A faster screen shows some steps
+     *   twice; a machine that falls behind runs up to four steps before drawing, and past that the
+     *   game slows down rather than jumping ahead, the way an overloaded console did.
+     *
+     * With a number, `timeScale` changes how many steps a second are run, never how long each one
+     * is: slow motion moves in whole steps, and stays exact. The input of a picture with no step in
+     * it waits for the next step, so a press is never lost nor seen twice.
+     */
+    step?: TGameStep;
     /**
      * Print the startup line in the console: the engine, its version and which backend started.
      * `true` by default.

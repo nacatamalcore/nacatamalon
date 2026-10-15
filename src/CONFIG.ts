@@ -18,7 +18,8 @@ export const DEFAULT_GAME_OPTIONS: TGameOptions = {
     msaa: 1,
     scaling: 'none',
     keep: 'both',
-    pauseOnBlur: true
+    pauseOnBlur: true,
+    step: 'display'
 };
 
 /**
@@ -27,3 +28,20 @@ export const DEFAULT_GAME_OPTIONS: TGameOptions = {
  * @since 1.0.0
  */
 export const MAX_FRAME_DELTA = 0.25;
+
+/**
+ * The most fixed steps run before one picture is drawn, for a game with a `step`. A machine that
+ * needs more to catch up drops the rest and the game slows down, which is what an overloaded
+ * console did, rather than spending ever longer catching up and falling further behind.
+ * @internal
+ * @since 1.0.0
+ */
+export const MAX_STEPS_PER_FRAME = 4;
+
+/**
+ * The range a `step` may take, in steps a second: fewer is a slideshow, more is past any screen.
+ * @internal
+ * @since 1.0.0
+ */
+export const MIN_STEP_RATE = 10;
+export const MAX_STEP_RATE = 240;

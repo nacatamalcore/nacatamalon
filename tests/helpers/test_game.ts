@@ -123,6 +123,7 @@ const TEST_CONFIG: TGameConfig = {
     actions: [],
     banner: false,
     splash: false,
+    step: 'display',
 };
 
 /**

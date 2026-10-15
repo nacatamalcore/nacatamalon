@@ -2,6 +2,7 @@ import { normalizeActionMap } from '../input';
 import { normalizePostChain } from '../post/post_chain';
 import { asBoolean, asColor, asInt, asOneOf } from '../utils';
 import { DEFAULT_PROJECT_SETTINGS } from './default_project';
+import { MAX_STEP_RATE, MIN_STEP_RATE } from '../CONFIG';
 import type { TProjectSettings } from './types/t_project_settings';
 
 /**
@@ -71,6 +72,10 @@ export const parseProject = (value: unknown): TProjectSettings => {
             ? raw.pixelRatio
             : DEFAULT_PROJECT_SETTINGS.pixelRatio,
         pauseOnBlur: asBoolean(raw.pauseOnBlur, DEFAULT_PROJECT_SETTINGS.pauseOnBlur),
+        // The range `createGame` takes; outside it a file falls back, like every other field here.
+        step: typeof raw.step === 'number' && Number.isFinite(raw.step) && raw.step >= MIN_STEP_RATE && raw.step <= MAX_STEP_RATE
+            ? raw.step
+            : DEFAULT_PROJECT_SETTINGS.step,
         seed: typeof raw.seed === 'number' && Number.isFinite(raw.seed) ? raw.seed : undefined,
         mainScene: typeof raw.mainScene === 'string' ? raw.mainScene : DEFAULT_PROJECT_SETTINGS.mainScene,
         actions: normalizeActionMap(raw.actions),

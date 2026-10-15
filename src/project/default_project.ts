@@ -30,6 +30,7 @@ export const DEFAULT_PROJECT_SETTINGS: TProjectSettings = {
     keep: 'both',
     pixelRatio: 1,
     pauseOnBlur: true,
+    step: 'display',
     mainScene: '',
     actions: [],
     actionsPersist: 'none',

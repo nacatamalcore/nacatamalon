@@ -19,7 +19,10 @@ them by topic, each with an id, and `https://nacatamalon.com/llms/examples/<id>.
 - **`create*` returns plain data.** Change its fields and the next frame shows it:
   `sprite.transform.x += 1`, `sprite.tint = getColor('red')`, `text.text = 'SCORE 10'`.
 - **`useUpdate((delta, time) => { ... })`** runs every frame. `delta` is seconds since the last frame,
-  capped at 0.25; `time` is seconds since the scene started.
+  capped at 0.25; `time` is seconds since the scene started. With `createGame({ step: 60 })` (`50`
+  for PAL) a frame is a fixed step instead: `delta` is always `1/60`, whatever the screen's rate, so a
+  jump is the same height everywhere and `x += 2` is two pixels a frame. Use it for anything tuned
+  frame by frame (platformers, shooters); without it, frames follow the screen.
 - What acts on a thing is a function that takes it first: `destroy(sprite)`. What a hook returns is a
   handle with methods: `keys.isDown('ArrowLeft')`, `useScene().change('Level')`.
 - Files load in the background. `useLoadTexture` and the other loaders return at once, and what uses
@@ -152,7 +155,8 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   that looks for a child with `findObject` finds `null`. Look it up inside
   `useReady(() => { ... })`, which runs once everything being built with it exists, before the
   first frame.
-- Movement without `* delta` runs faster on screens with a higher refresh rate.
+- Movement without `* delta` runs faster on screens with a higher refresh rate, unless the game has a
+  `step`.
 - `useUpdate` runs a scene before the objects inside it, so a camera (or a marker, a shadow) that
   copies another object's position there reads it one frame late and shakes. Follow things in
   `useLateUpdate`, which runs after every `useUpdate`; move them in `useUpdate`.

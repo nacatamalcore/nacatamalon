@@ -2,7 +2,7 @@ import { type TRuntimeStore, withSceneUpdates } from "../../store";
 import type { TFrameContext } from "../../render";
 import type { TBox } from "../../box";
 import { fillFrameContext } from "./fill_frame_context";
-import { MAX_FRAME_DELTA } from "../../CONFIG";
+import { MAX_FRAME_DELTA, MAX_STEPS_PER_FRAME } from "../../CONFIG";
 import { runHookUpdates as runUpdates, runLateUpdates } from "./runHookUpdates";
 import { stepGameTransition } from "./helper/step_game_transition";
 import { flushDestroyed } from "../../destroy";
@@ -133,6 +133,37 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
     ctx.time += dt;
 };
 
+/**
+ * The game time each game with a `step` has been owed and not run yet: less than one step, carried
+ * to the next picture. Kept beside the frame context it belongs to rather than in the store, for
+ * the reason `ctx.time` is: it changes every frame and nothing listens to it.
+ */
+const owedTime = new WeakMap<TFrameContext, number>();
+
+/**
+ * How close to a whole step the owed time has to come to count as one, as a share of a step. A
+ * 60 Hz screen hands frames a hair either side of 1/60 s, and without this a game stepping at 60
+ * would run none on one picture and two on the next, a stutter on exactly the screen it was made
+ * for. What is taken early is paid back from the next picture, so nothing drifts.
+ */
+const STEP_SLACK = 0.1;
+
+/**
+ * How many fixed steps this picture runs: the owed time plus this picture's share of game time, in
+ * whole steps, the rest carried over. Past `MAX_STEPS_PER_FRAME` the rest is dropped, and the game
+ * slows down rather than spending ever longer catching up.
+ */
+const stepsOwed = (ctx: TFrameContext, gameTime: number, length: number): number => {
+    const owed = (owedTime.get(ctx) ?? 0) + gameTime;
+    const steps = Math.max(0, Math.floor(owed / length + STEP_SLACK));
+    if (steps > MAX_STEPS_PER_FRAME) {
+        owedTime.set(ctx, 0);
+        return MAX_STEPS_PER_FRAME;
+    }
+    owedTime.set(ctx, owed - steps * length);
+    return steps;
+};
+
 export const tick = (store: TRuntimeStore, ctx: TFrameContext, now: number, prev: number): void => {
 
     // Prevent to continue if the game has been destroyed.
@@ -162,18 +193,45 @@ export const tick = (store: TRuntimeStore, ctx: TFrameContext, now: number, prev
     const dt = paused ? 0 : (stepping ? step! : unscaled) * timeScale;
     measureFps(store, now - prev);
 
-    const frames = stepping ? Math.max(1, stepCount) : 1;
-    for (let i = 0; i < frames; i++) {
-        runFrame(store, ctx, dt, stepping ? step! : unscaled, paused);
-        // An update may have destroyed the game: the renderer would already be gone.
-        if (store.get('loop').destroyed) {
-            return;
+    // The game time this picture moved the world by, which the particles move by while drawing.
+    let advanced = dt;
+    const rate = store.get('config').step;
+
+    // Fixed steps, unless a host is stepping the game by hand (that runs exactly what it asked for)
+    // or nothing would move anyway: paused, or time stopped. Those two run one frame with nothing
+    // to move by, as a game on the screen's time does, so a pause menu still hears its keys, its
+    // clicks and its pad.
+    if (rate !== 'display' && !stepping && !paused && timeScale > 0) {
+        const length = 1 / rate;
+        // Slow motion runs fewer steps, each one still exactly `length`: the game stays exact.
+        const steps = stepsOwed(ctx, unscaled * timeScale, length);
+        if (steps === 0) {
+            // No step this picture, so nothing reads the input and it waits for the next one. The
+            // transition is on real time and moves anyway, or a cut would wait for the game.
+            stepGameTransition(store, unscaled);
+        }
+        for (let i = 0; i < steps; i++) {
+            // The transition moves by the whole picture once, on the first step.
+            runFrame(store, ctx, length, i === 0 ? unscaled : 0, false);
+            if (store.get('loop').destroyed) {
+                return;
+            }
+        }
+        advanced = steps * length;
+    } else {
+        const frames = stepping ? Math.max(1, stepCount) : 1;
+        for (let i = 0; i < frames; i++) {
+            runFrame(store, ctx, dt, stepping ? step! : unscaled, paused);
+            // An update may have destroyed the game: the renderer would already be gone.
+            if (store.get('loop').destroyed) {
+                return;
+            }
         }
     }
 
     // Draw even when paused.
     try {
-        fillFrameContext(store, ctx, dt);
+        fillFrameContext(store, ctx, advanced);
         store.get('screen').renderer.frame(ctx);
     } catch (error) {
         // A capture drawn in this frame was not drawn, and has to hear so.

@@ -22,6 +22,17 @@ releases are in [changelog/](./changelog/), one file each.
   point around the origin, lane by lane, for swirls, rays, rings and patterns wrapped round a centre.
   One helper spelled `atan2` in WGSL and `atan` in GLSL, so it works in either hook on both backends.
 
+- `createGame({ step })` (`TGameStep`, also `step` in the project file): `60`, or `50` for PAL, moves
+  the game in steps of exactly `1 / step` seconds whatever the screen, the way the consoles did. A
+  144 Hz screen and a 60 Hz one play the same game: `delta` is always the step, a jump is the same
+  height, `x += 2` is two pixels a frame, and the same keys on the same steps give the same result. A
+  press made on a picture with no step waits for the next one, and two steps in one picture hand it
+  to the first only. A machine that falls behind runs up to four steps before drawing and then slows
+  down rather than jumping ahead. With `timeScale` below 1 fewer steps run, each still exact; the
+  scene-change transition stays on real time. Absent or `'display'`, the default, it is one update per
+  picture as before. The 2D and 3D physics worlds step by exactly the game's step, once per step, so
+  at `step: 50` bodies move as evenly as at 60; on the screen's time they keep their own 1/60.
+
 ### Changed
 
 - `createMaterial` given `uniforms` (which `compileShader` always gives) returns a material whose

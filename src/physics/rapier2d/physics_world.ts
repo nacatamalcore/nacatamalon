@@ -10,6 +10,7 @@ import type { TRapierModule } from './load_rapier';
 import type { ColliderDesc, EventQueue, RigidBodyDesc, World } from '@dimforge/rapier2d-compat';
 import type { TBodyOptions, TPhysicsBodyHandle2d, TPhysicsWorldHandle2d, TPhysicsWorldOptions2d } from './types';
 import { worldPose2d, writeWorldPose2d } from './world_pose';
+import { physicsStepOf } from '../step_length';
 
 type TBodyEntry = {
     box: TGameObject;
@@ -44,7 +45,6 @@ type TBodyEntry = {
     removed: boolean;
 };
 
-const FIXED_TIMESTEP = 1 / 60;
 const MAX_FRAMES_PER_STEP = 5;
 
 /**
@@ -68,6 +68,8 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
     let world: World | null = null;
     let events: EventQueue | null = null;
     let accumulator = 0;
+    // 1/60, or exactly the game's own step when it has one: see `physicsStepOf`.
+    const stepLength = physicsStepOf();
     const bodies = new Map<string, TBodyEntry>();
     /**
      * Collider handle → the body that owns it. Rapier reports a contact as a pair of *collider*
@@ -187,7 +189,9 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         if (!rapier || !world) return;
 
         accumulator += dt;
-        const steps = Math.min(Math.floor(accumulator / FIXED_TIMESTEP), MAX_FRAMES_PER_STEP);
+        const length = stepLength();
+        world.timestep = length;
+        const steps = Math.min(Math.floor(accumulator / length), MAX_FRAMES_PER_STEP);
 
         for (let i = 0; i < steps; i++) {
             world.step(events ?? undefined);
@@ -199,7 +203,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
             if (!world) return;
         }
 
-        accumulator -= steps * FIXED_TIMESTEP;
+        accumulator -= steps * length;
 
         // Writeback all bodies to their box transforms.
         for (const entry of bodies.values()) {

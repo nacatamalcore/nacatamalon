@@ -7,6 +7,7 @@ import type { TGameSignal } from '../../signal';
 import { fromB3, loadBox3D, toB3 } from './load_box3d';
 import type { TB3Quat } from './load_box3d';
 import { createCharacter, MOVER_CATEGORY } from './character_body';
+import { physicsStepOf } from '../step_length';
 import type { TBox3dModule } from './load_box3d';
 import { worldPoseOf, writeWorldPose } from './world_pose';
 import { DEFAULT_RAY_DISTANCE } from './types';
@@ -107,7 +108,6 @@ type TBodyEntry = {
  */
 const IDENTITY_ROTATION: TB3Quat = [0, 0, 0, 1];
 
-const FIXED_STEP = 1 / 60;
 const MAX_FRAME = 0.25;             // clamp dt so a stall can't spiral the accumulator
 
 const bodyTypeOf = (b3: TBox3dModule, type: TPhysicsBodyType) =>
@@ -415,11 +415,14 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
         console.error('[NacatamalOn] Box3D failed to initialize, so physics is inert.', error);
     });
 
+    // 1/60, or exactly the game's own step when it has one: see `physicsStepOf`.
+    const stepLength = physicsStepOf();
     useUpdate((dt) => {
         if (!b3 || world === null) return;
         accumulator = Math.min(accumulator + dt, MAX_FRAME);
-        while (accumulator >= FIXED_STEP) {
-            b3.b3World_Step(world, FIXED_STEP, 4);
+        const length = stepLength();
+        while (accumulator >= length) {
+            b3.b3World_Step(world, length, 4);
             // Drained per substep, not once after the loop: `getEvents` reports the step that
             // just ran, so batching would silently discard every contact but the last one, and
             // a fast projectile's entire hit can live in an earlier substep.
@@ -428,12 +431,12 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
             if (disposed) return;
             // After the solver, before the writeback: a character reads the world's *settled*
             // positions, which is the only moment its query answers the question it is asking.
-            for (const advance of characters) advance(FIXED_STEP);
+            for (const advance of characters) advance(length);
             // Per substep like the contact events, and for the same reason: `getEvents` reports
             // the step that just ran, so a body that moved in an earlier substep and settled in
             // a later one would otherwise never have its motion written anywhere.
             drainMoves();
-            accumulator -= FIXED_STEP;
+            accumulator -= length;
         }
     });
 

@@ -57,6 +57,15 @@ describe('parseProject', () => {
         expect(settings.pixelRatio).toBe(1);
     });
 
+    it('reads a fixed step, and falls back to the screen\'s time from one createGame would refuse', () => {
+        expect(parseProject({}).step).toBe('display');
+        expect(parseProject({ step: 60 }).step).toBe(60);
+        expect(parseProject({ step: 50 }).step).toBe(50);
+        for (const bad of [0, 5, 1000, 'fast', null, 'display']) {
+            expect(parseProject({ step: bad }).step).toBe('display');
+        }
+    });
+
     it('reads a numeric pixel ratio, and falls back from one that could not draw', () => {
         expect(parseProject({ pixelRatio: 1.5 }).pixelRatio).toBe(1.5);
         for (const bad of [0, -2, 'retina', null]) {
@@ -154,6 +163,7 @@ describe('gameOptionsFromProject', () => {
             keep: settings.keep,
             pixelRatio: settings.pixelRatio,
             pauseOnBlur: settings.pauseOnBlur,
+            step: settings.step,
             actions: settings.actions,
             actionsPersist: undefined,
             post: settings.post,

@@ -40,6 +40,7 @@ export const gameOptionsFromProject = (settings: TProjectSettings): TGameOptions
     keep: settings.keep,
     pixelRatio: settings.pixelRatio,
     pauseOnBlur: settings.pauseOnBlur,
+    step: settings.step,
     actions: settings.actions,
     // The project says where to keep the player's controls; the engine picks the adapter, so a
     // project file never has to name one and can be read anywhere.

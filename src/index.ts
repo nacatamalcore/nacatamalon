@@ -218,7 +218,7 @@ export type { TCaptureOptions } from './game/capture';
 export type { TCaptureResult } from './render/interface';
 export type { TGameInstance } from './game/types/t_game_instance';
 export type { TGameEvents, TGameEventName } from './game/types/t_game_events';
-export type { TGameOptions } from './game/types/t_game_options';
+export type { TGameOptions, TGameStep } from './game/types/t_game_options';
 export type { TGameTarget } from './game/bootstrap/create_game';
 export type { TRendererBackend } from './render/interface';
 // The running engine's version: what the boot banner announces, and what a bug report should
