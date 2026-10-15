@@ -36,7 +36,7 @@ type TPlaying = {
 };
 
 /**
- * A clip, whether it was loaded beforehand, asked for right here, or made from a preset.
+ * A clip, whether it was loaded beforehand, asked for right here, made from a preset or made in code.
  */
 const resolveSource = (audio: TAudioManager, source: TSoundSource): TAudioClip => {
     if ('status' in source) {
@@ -45,6 +45,14 @@ const resolveSource = (audio: TAudioManager, source: TSoundSource): TAudioClip =
     if ('sfx' in source) {
         const sampleRate = audio.context.sampleRate;
         return clipFromSamples(audio, renderSfx(source.sfx, sampleRate), sampleRate, `sfx:${source.sfx.preset}:${source.sfx.seed ?? 1}`);
+    }
+    if ('samples' in source) {
+        // The range every browser's audio engine takes; outside it the browser throws something
+        // that does not say which sound or why.
+        if (!(source.sampleRate >= 3000 && source.sampleRate <= 768000)) {
+            throw new Error(`[NacatamalOn] useSound: a sampleRate of ${source.sampleRate} cannot be played. Use one from 3000 to 768000, such as 22050 or 44100.`);
+        }
+        return clipFromSamples(audio, source.samples, source.sampleRate, source.key ?? 'samples');
     }
     return useLoadAudio(source);
 };
@@ -80,8 +88,8 @@ const resolveSource = (audio: TAudioManager, source: TSoundSource): TAudioClip =
  * hook; a behaviour gets its controls with `soundOf(box, name)`. In a scene shown rather than played
  * (an editor's viewport), `autoplay` waits for the game to play.
  *
- * @param source A clip from `useLoadAudio`, `{ src }` to load it here, or `{ sfx }` to make an
- * effect from a preset.
+ * @param source A clip from `useLoadAudio`, `{ src }` to load it here, `{ sfx }` to make an
+ * effect from a preset, or `{ samples, sampleRate }` for a sound worked out in code.
  * @param options Volume, looping, speed, channel, and placing it in the world: at a point, facing a
  * way, or filling an area.
  *

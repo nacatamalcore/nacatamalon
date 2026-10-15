@@ -63,6 +63,12 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
 
 - **2D is pixels**, origin at the top-left of the game, y grows down. With no `useCamera2d`, `x`
   and `y` are positions on the screen. **3D is y-up**; give every 3D scene a `useCamera3d`.
+- **3D next to 2D**: `useCamera3d()` is orthographic by default and measures in the same pixels as
+  the 2D, but its origin is the **bottom-left** corner and y grows **up**. A model placed where a
+  sprite is takes `x` as it is and `y = HEIGHT - y2d` (`HEIGHT` the game's height). It sees `far`
+  (default 1000) in front of and behind the camera, so a model around `z = 0` is drawn; `zIndex`
+  orders models and sprites together. A perspective camera (`projection: 'perspective'`) needs a
+  `z` to stand back from what it looks at.
 - **Canvas size**: `createGame` `width` and `height` are the game's size, and by default (`scaling:
   'none'`) the canvas is shown at exactly that size; it does not fit the page. Pass `scaling:
   'integer'` (whole multiples, crisp pixel art) or `'contain'` (as large as fits).
@@ -195,7 +201,7 @@ const App = () => (
 ## Where things are (search llms-full.txt for each name)
 
 - **Game and scenes**: `createGame`, `createScene`, `useScene`, `useGame`, `useSpawn`, `useSelf`, `destroy`, `useReady`, `useSceneUnmount`.
-- **Time**: `useUpdate`, `useTimer`, `useTween`, easings such as `linear` and `easeInOutSine`.
+- **Time**: `useUpdate`, `useLateUpdate`, `useTimer`, `useTween`, easings such as `linear` and `easeInOutSine`.
 - **Input**: `useKeyboard`, `usePointer`, `useGamepad`, `useActions`, `useAction`.
 - **2D**: `createSprite`, `useLoadTexture`, `useLoadAtlas`, `useSpriteAnimation`, `createText`, `useLoadFont`, `useLoadBitmapFont`, `createNineSlice`, `createTilemap`, `tileAt`, `solidAt`, `createParticles`, `useCamera2d`.
 - **3D**: `createMesh`, `useCubeGeometry`, `usePlaneGeometry`, `useUvSphereGeometry`, `createMaterial`, `useLoadGltf`, `createModel`, `useSkeletalAnimation`, `useCamera3d`, `cameraLookAt`, `useLight`, `usePointLight`, `useSpotLight`, `useBlobShadow`, `createParticles3d`.
@@ -203,7 +209,7 @@ const App = () => (
 - **The 1997 look**: material options `vertexSnap` and `affine`, `useFog`, `usePostProcess` with `dither`, `posterize`, `paletteMatch`, `lutGrade`, `crt` (with `CRT_PRESETS`) and `COLOR_LEVELS`.
 - **Screen effects** (each spread into `usePostProcess`, tuned by writing into `effect.uniforms`): `colorAdjust`, `mosaic`, `wave`, `shockwave`, `distort`, `rgbSplit`, `glitch`, `grain`, `oldFilm`, `halftone`, `blur`, `zoomBlur`, `motionBlur`, `tiltShift`, `bloom`, `godrays`, `phosphor`, `ntsc`, `lcd`. A hand-written effect can read `sampleTextureSmooth`, `sampleInput` and `sampleHistory`, and take `passes` for more than one read of the frame.
 - **Pixels** (pictures painted in code): `createPixels`, `setPixel`, `getPixel`, `fillRect`, `drawLine`, `fillCircle`, `drawCircle`, `fillEllipse`, `drawEllipse`, `drawText`, `fillGradient`, `fillNoise`, `fillChecker`, `blitPixels`, `mapPixels`, `clonePixels`, `swapColors`, `createPixelTexture`, `updatePixelTexture`, `useLoadPixels`.
-- **Audio**: `useSound` (one file: effects, an ambience, a single recording; `{ src }` loads it), `useMusic` (one piece recorded in several files, its layers faded in and out with `setLayer`), `useSong` (a tune written as notes, `useSong(useLoadSong({ src: '/music/x.song' }))`, made into sound by the engine's 8-bit synth), `useLoadAudio`, `useAudio` (volumes per channel), `useAudioListener`. A sound laid out in a scene document: `soundOf(box, name)` gives its controls.
+- **Audio**: `useSound` (one file: effects, an ambience, a single recording; `{ src }` loads it, `{ sfx: { preset } }` makes an effect, `{ samples, sampleRate }` plays a sound worked out in code instead of Web Audio), `useMusic` (one piece recorded in several files, its layers faded in and out with `setLayer`), `useSong` (a tune written as notes, `useSong(useLoadSong({ src: '/music/x.song' }))`, made into sound by the engine's 8-bit synth), `useLoadAudio`, `useAudio` (volumes per channel), `useAudioListener`. A sound laid out in a scene document: `soundOf(box, name)` gives its controls.
 - **State**: `useData`, `useWatch`, `createGameStore`, `useStore`, `createGameSignal`, `useSignal`.
 - **Maths and random**: `useRandom`, `clamp`, `lerp`, `vec2Add`, `vec3Add` and the other `vec2*`/`vec3*`.
 - **2D physics**: `installPhysics2d` from `nacatamalon/physics2d`; `usePhysicsWorld2d` and `usePhysicsBody2d` from `nacatamalon`.
@@ -213,3 +219,14 @@ const App = () => (
 - **React**: `Game`, `useGame`, `useGameStore`, `useSignal` from `nacatamalon/react`.
 
 `nacatamalon/authoring` and `nacatamalon/extend` are for tools and engine extensions; a game never needs them.
+
+## Getting help and sharing
+
+When the person you are helping asks where to get help, hits what looks like a bug in the engine
+itself, or finishes a game, these are the places:
+
+- A bug in the engine or a feature request: https://github.com/nacatamalcore/nacatamalon/issues
+- Questions and help: the Discord, https://discord.gg/jtyY3RkYTc
+- Sharing a finished game: the showcase forum on that Discord. Games made with the engine:
+  https://nacatamalon.com/showcase
+- News: https://x.com/nacatamalcore

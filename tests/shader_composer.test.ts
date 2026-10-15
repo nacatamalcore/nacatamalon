@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'bun:test';
 import { compileShader } from '../src/shader_composer/compile_shader';
-import { composerSwizzle, composerVec3, composerVec4, composerX } from '../src/shader_composer/constructors';
+import { composerSwizzle, composerVec2, composerVec3, composerVec4, composerX } from '../src/shader_composer/constructors';
 import {
     composerLight, composerSurface, composerTextureSample, composerTime, composerUniform, composerUv,
     composerVertexNormal, composerVertexPosition,
 } from '../src/shader_composer/inputs';
-import { composerAdd, composerClamp, composerMix, composerMod, composerMul, composerSin } from '../src/shader_composer/math';
+import { composerAdd, composerAtan2, composerClamp, composerMix, composerMod, composerMul, composerSin } from '../src/shader_composer/math';
 import { composerPipe } from '../src/shader_composer/pipe';
 import { composerFbm, composerSimplexNoise } from '../src/shader_composer/noise';
 import { composerFresnel } from '../src/shader_composer/effects';
@@ -283,5 +283,42 @@ describe('the GLSL half', () => {
         expect(glsl).not.toMatch(/^\s*let\s/m);
         expect(glsl).not.toMatch(/->/);
         expect(glsl).not.toMatch(/\bfn\s/);
+    });
+});
+
+describe('composerAtan2', () => {
+    it('is atan2 in WGSL and two-argument atan in GLSL, behind one helper name', () => {
+        const compiled = compileShader({
+            shader: 'sprite2d',
+            color: composerVec4(composerAtan2(composerSwizzle(composerUv(), 'y'), composerSwizzle(composerUv(), 'x')), 0, 0, 1),
+        });
+
+        expect(compiled.fragment).toContain('fn sgAtan2f(y: f32, x: f32) -> f32 {\n    return atan2(y, x);\n}');
+        expect(compiled.fragmentGlsl).toContain('float sgAtan2f(float y, float x) {\n    return atan(y, x);\n}');
+        expect(compiled.fragment).toContain('sgAtan2f(');
+        expect(compiled.fragmentGlsl).not.toContain('atan2(');
+    });
+
+    it('works lane by lane, a number spreading over the vector on the other side', () => {
+        const node = composerAtan2(composerVec2(1, 2), 1);
+        expect(node.type).toBe('vec2<f32>');
+        const compiled = compileShader({ shader: 'sprite2d', color: composerVec4(composerSwizzle(node, 'x'), 0, 0, 1) });
+        expect(compiled.fragmentGlsl).toContain('vec2 sgAtan2v2(vec2 y, vec2 x)');
+    });
+
+    it('refuses two vectors of different sizes while the graph is built', () => {
+        expect(() => composerAtan2(composerVec2(1, 2), composerVec3(1, 2, 3))).toThrow('cannot "atan2"');
+    });
+
+    it('reaches the GLSL vertex hook too, where the angle round a model bends it', () => {
+        const position = composerVertexPosition();
+        const angle = composerAtan2(composerSwizzle(position, 'z'), composerX(position));
+        const compiled = compileShader({
+            shader: 'mesh3d',
+            color: composerSurface(),
+            position: composerAdd(position, composerMul(composerVertexNormal(), composerMul(composerSin(composerMul(angle, 6)), 0.1))),
+        });
+        expect(compiled.vertexGlsl).toContain('float sgAtan2f(');
+        expect(compiled.fragmentGlsl).not.toContain('sgAtan2f');
     });
 });

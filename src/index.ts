@@ -157,7 +157,7 @@ export {
     composerAdd, composerSub, composerMul, composerDiv, composerAbs, composerFloor, composerFract, composerSin,
     composerCos, composerSqrt, composerSign, composerNormalize, composerLength, composerDistance, composerDot,
     composerCross, composerPow, composerMin, composerMax, composerClamp, composerMix, composerStep,
-    composerSmoothstep, composerReflect, composerMod, composerOneMinus, composerSaturate,
+    composerSmoothstep, composerReflect, composerMod, composerAtan2, composerOneMinus, composerSaturate,
     composerPipe, composerSimplexNoise, composerFbm, composerCellularNoise, composerFresnel, composerCelShade,
     parseShaderGraph, compileShaderGraph, SHADER_GRAPH_FORMAT,
 } from './shader_composer';
@@ -204,7 +204,7 @@ export type { TGameSignal, TSignalHandler, TScenePauseEvent, TGamePauseEvent } f
 // A sound laid out in the scene, played by a behaviour.
 export { soundOf } from './audio';
 export type {
-    TSoundAttachment, TSoundHandle, TSoundOptions, TSoundSource, TAudioHandle, TSoundCone, TSoundDuck, TSoundFade, TSoundZone,
+    TSoundAttachment, TSoundHandle, TSoundOptions, TSoundSource, TSampledSound, TAudioHandle, TSoundCone, TSoundDuck, TSoundFade, TSoundZone,
     TSoundZoneShape, TMusicAttachment, TMusicHandle, TMusicLayer, TMusicLayerOptions, TMusicOptions, TAudioListener,
     TSongAttachment, TSongHandle, TSongOptions, TBeatListener,
 } from './audio';

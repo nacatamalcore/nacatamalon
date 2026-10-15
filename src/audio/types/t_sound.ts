@@ -3,14 +3,54 @@ import type { TSfxOptions } from '../synth/types/t_song';
 import type { TParticleColliderShape2d, TParticleColliderShape3d } from '../../gameobjects/particles/colliders/t_particle_collider';
 
 /**
- * What to play: a clip from `useLoadAudio`, just where the file is and let `useSound` load it, or an
- * effect made on the spot from a preset (`{ sfx: { preset: 'coin' } }`, see `renderSfx`).
+ * What to play: a clip from `useLoadAudio`, just where the file is and let `useSound` load it, an
+ * effect made on the spot from a preset (`{ sfx: { preset: 'coin' } }`, see `renderSfx`), or a sound
+ * the game worked out itself, sample by sample (`{ samples, sampleRate }`).
  *
  * @category Audio
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TSoundSource = TAudioClip | { src: string; key?: string } | { sfx: TSfxOptions };
+export type TSoundSource = TAudioClip | { src: string; key?: string } | { sfx: TSfxOptions } | TSampledSound;
+
+/**
+ * A sound made in code: one channel of samples from -1 to 1, and how many of them make a second.
+ *
+ * For what no preset makes and no file holds: an engine whose note is worked out from the
+ * revolutions, a tone built from the level's seed. The samples are copied when the sound is made, so
+ * changing the array afterwards changes nothing; make another sound for another tone. Any rate works,
+ * the audio engine converts it, and the era's own were low: 22050 or 11025 is plenty for a buzz.
+ *
+ * Nothing is written to a saved scene for it, since there is no file to name, the same as `{ sfx }`.
+ *
+ * @example
+ * ```ts
+ * const Level = () => {
+ *     // a second of a square wave at 110 Hz, the low hum of a motor
+ *     const rate = 22050;
+ *     const samples = new Float32Array(rate);
+ *     for (let i = 0; i < samples.length; i++) {
+ *         samples[i] = Math.sin((i / rate) * 110 * Math.PI * 2) > 0 ? 0.3 : -0.3;
+ *     }
+ *     const motor = useSound({ samples, sampleRate: rate }, { loop: true, autoplay: true });
+ *
+ *     return createScene();
+ * };
+ * ```
+ *
+ * @category Audio
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TSampledSound = {
+    samples: Float32Array;
+    sampleRate: number;
+    /**
+     * What it is called where sounds are listed (an editor, a log of what the game played). Default
+     * `'samples'`.
+     */
+    key?: string;
+};
 
 /**
  * Where a sound is heard loudest: a speaker, a siren, a radio on a shelf. Straight ahead of its

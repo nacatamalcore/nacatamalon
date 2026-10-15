@@ -14,6 +14,20 @@ releases are in [changelog/](./changelog/), one file each.
   step behind, and the character shook against the screen whenever its speed changed. It stops while
   the scene is paused, starts on the frame after its object is spawned, and is skipped by an object
   destroyed during the updates (and by everything beneath it).
+- `useSound({ samples, sampleRate, key? })` (`TSampledSound`): a sound worked out in code, sample by
+  sample, played like any other (an engine whose note follows the revolutions, a tone made from a
+  seed). The samples are copied when it is made; any rate from 3000 to 768000 works. Like `{ sfx }`,
+  nothing is written to a saved scene for it, since there is no file to name.
+- `composerAtan2(y, x)`, in the composer and in the shader-graph catalogue (`atan2`): the angle of a
+  point around the origin, lane by lane, for swirls, rays, rings and patterns wrapped round a centre.
+  One helper spelled `atan2` in WGSL and `atan` in GLSL, so it works in either hook on both backends.
+
+### Changed
+
+- `createMaterial` given `uniforms` (which `compileShader` always gives) returns a material whose
+  `uniforms` is typed as there, so a parameter is animated with `material.uniforms.glow = 1` and no
+  `?? {}`. To keep that true, a material handed `uniforms` with no shader of its own gives the same
+  bag back instead of `null`.
 
 ### Fixed
 

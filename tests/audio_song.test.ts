@@ -373,3 +373,36 @@ describe('a sound effect made from a preset', () => {
         expect(serializeScene(root).root.components).toEqual([]);
     });
 });
+
+describe('a sound made in code, sample by sample', () => {
+    it('plays the samples at their own rate, copied, and is not written down', async () => {
+        const { useSound } = await import('../src/hooks/audio/use_sound');
+        const { store } = createTestGame();
+        const samples = new Float32Array([0, 0.5, -0.5, 0.25]);
+        let motor!: ReturnType<typeof useSound>;
+        const root = startTestScene(store, 'Level', () => {
+            motor = useSound({ samples, sampleRate: 22050, key: 'motor' }, { loop: true });
+            return createScene();
+        });
+        const context = contextOf(store);
+
+        // Changed after the sound was made: what plays is what it was made from.
+        samples[1] = 1;
+        motor.play();
+
+        const buffer = started(context)[0]!.buffer as TFakeBuffer;
+        expect(Array.from(buffer.data)).toEqual([0, 0.5, -0.5, 0.25]);
+        expect(buffer.sampleRate).toBe(22050);
+        expect((root.sounds[0] as { clip: { key: string } }).clip.key).toBe('motor');
+        expect(serializeScene(root).root.components).toEqual([]);
+    });
+
+    it('refuses a rate no audio engine plays, saying which', async () => {
+        const { useSound } = await import('../src/hooks/audio/use_sound');
+        const { store } = createTestGame();
+        expect(() => startTestScene(store, 'Level', () => {
+            useSound({ samples: new Float32Array(8), sampleRate: 100 });
+            return createScene();
+        })).toThrow('[NacatamalOn] useSound: a sampleRate of 100');
+    });
+});

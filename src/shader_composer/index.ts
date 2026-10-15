@@ -10,7 +10,7 @@ export {
     composerAdd, composerSub, composerMul, composerDiv, composerAbs, composerFloor, composerFract, composerSin,
     composerCos, composerSqrt, composerSign, composerNormalize, composerLength, composerDistance, composerDot,
     composerCross, composerPow, composerMin, composerMax, composerClamp, composerMix, composerStep,
-    composerSmoothstep, composerReflect, composerMod, composerOneMinus, composerSaturate,
+    composerSmoothstep, composerReflect, composerMod, composerAtan2, composerOneMinus, composerSaturate,
 } from './math';
 export { composerPipe } from './pipe';
 export { composerSimplexNoise, composerFbm, composerCellularNoise } from './noise';

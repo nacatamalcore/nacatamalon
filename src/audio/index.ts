@@ -18,7 +18,7 @@ export { soundOf } from './attachment_players';
 
 export type { TAudioClock, TAudioHandle, TAudioManager, TVoice } from './types/t_audio';
 export type {
-    TSoundAttachment, TSoundCone, TSoundDuck, TSoundFade, TSoundHandle, TSoundOptions, TSoundSource, TSoundZone, TSoundZoneShape,
+    TSoundAttachment, TSoundCone, TSoundDuck, TSoundFade, TSoundHandle, TSoundOptions, TSoundSource, TSampledSound, TSoundZone, TSoundZoneShape,
 } from './types/t_sound';
 export type { TMusicAttachment, TMusicHandle, TMusicLayer, TMusicLayerOptions, TMusicOptions } from './types/t_music';
 export type { TAudioListener } from './types/t_audio_listener';

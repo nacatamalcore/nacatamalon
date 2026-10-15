@@ -6,7 +6,7 @@ import {
 } from './inputs';
 import {
     composerAbs, composerAdd, composerClamp, composerCos, composerCross, composerDistance, composerDiv, composerDot,
-    composerFloor, composerFract, composerLength, composerMax, composerMin, composerMix, composerMod, composerMul,
+    composerFloor, composerFract, composerLength, composerMax, composerMin, composerMix, composerMod, composerAtan2, composerMul,
     composerNormalize, composerOneMinus, composerPow, composerReflect, composerSaturate, composerSign, composerSin,
     composerSmoothstep, composerSqrt, composerStep, composerSub,
 } from './math';
@@ -304,6 +304,7 @@ const DEFS: TNodeDef[] = [
     binaryNode('min', 'Min', 'The smaller of two values, component-wise.', composerMin, [0, 1]),
     binaryNode('max', 'Max', 'The larger of two values, component-wise.', composerMax, [0, 1]),
     binaryNode('mod', 'Modulo', 'GLSL-style remainder, which always takes the sign of the divisor.', composerMod, [0, 1], ['x', 'y']),
+    binaryNode('atan2', 'Atan2', 'The angle of (x, y) around the origin, in radians from -π to π: how far round a point is.', composerAtan2, [0, 1], ['y', 'x']),
 
     unaryNode('abs', 'Absolute', 'Drops the sign, component-wise.', composerAbs, 0),
     unaryNode('floor', 'Floor', 'Rounds down to the nearest integer, component-wise.', composerFloor, 0),

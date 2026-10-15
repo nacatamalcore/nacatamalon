@@ -72,7 +72,9 @@ export const newMaterial = (
         fragmentGlsl: written ? options.fragmentGlsl ?? null : null,
         vertex: written ? options.vertex ?? null : null,
         vertexGlsl: written ? options.vertexGlsl ?? null : null,
-        uniforms: shaded ? asked : null,
+        // Handed back when it was handed in, even with no shader to read it yet: whoever passed a
+        // bag holds on to it to write into, and `createMaterial`'s type promises it is there.
+        uniforms: shaded ? asked : options.uniforms ?? null,
         uniformSig: shaded ? deriveSignature(asked) : null,
         effect,
     };

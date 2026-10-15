@@ -1,7 +1,7 @@
 import { getActiveGame } from '../../store';
 import { newMaterial } from '../../materials';
 import type {
-    TMaterial, TMaterialOptions, TMeshMaterial, TMeshMaterialOptions, TSpriteMaterial, TSpriteMaterialOptions,
+    TMaterial, TMaterialOptions, TMeshMaterial, TMeshMaterialOptions, TSpriteMaterial, TSpriteMaterialOptions, TUniformValues,
 } from '../../materials';
 import type { TShader } from '../../loaders/shader';
 import type { TTexture } from '../../loaders';
@@ -60,12 +60,17 @@ const resolveEffect = (options: TMaterialOptions): TShader | null => {
  * The two ways to call `createMaterial`: which kind of material comes back follows from `shader`,
  * so a model's material can only be handed to a model and a sprite's only to a sprite.
  *
+ * Given `uniforms` (which `compileShader` always gives), the material's `uniforms` is typed as
+ * there, so a parameter is animated with `material.uniforms.glow = 1` and no `?? {}`.
+ *
  * @category Materials
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
 export type TCreateMaterial = {
+    (options: TMeshMaterialOptions & { uniforms: TUniformValues }): TMeshMaterial & { uniforms: TUniformValues };
     (options: TMeshMaterialOptions): TMeshMaterial;
+    (options: TSpriteMaterialOptions & { uniforms: TUniformValues }): TSpriteMaterial & { uniforms: TUniformValues };
     (options?: TSpriteMaterialOptions): TSpriteMaterial;
 };
 

@@ -1,7 +1,7 @@
 import { newNode } from './new_node';
 import { asNode, composerVec2, composerVec3, composerVec4 } from './constructors';
 import type { TUniformType } from '../materials/types/t_uniforms';
-import type { TComposerInput, TComposerNode, TComposerStep } from './types/t_composer_node';
+import type { TComposerInput, TComposerNode, TComposerStep, THelperDef } from './types/t_composer_node';
 
 // Arithmetic and the built-in functions, with the result types the shader languages give them.
 // Every operation checks its operands and fails while the graph is being built, because a mistake
@@ -428,6 +428,67 @@ export const composerMod = binary((x, y) => {
     const ny = asNode(y);
     return composerSub(nx, composerMul(ny, composerFloor(composerDiv(nx, ny))));
 });
+
+/**
+ * How each language spells one of the composer's types, for the helpers written in both.
+ */
+const SPELLED: Record<TUniformType, { wgsl: string; glsl: string; suffix: string }> = {
+    'f32': { wgsl: 'f32', glsl: 'float', suffix: 'f' },
+    'vec2<f32>': { wgsl: 'vec2<f32>', glsl: 'vec2', suffix: 'v2' },
+    'vec3<f32>': { wgsl: 'vec3<f32>', glsl: 'vec3', suffix: 'v3' },
+    'vec4<f32>': { wgsl: 'vec4<f32>', glsl: 'vec4', suffix: 'v4' },
+};
+
+/**
+ * The one built-in the two languages spell differently, `atan2` in WGSL and `atan` with two
+ * arguments in GLSL. Wrapped in a helper of the same name in both, one per type, so the rule that a
+ * call needs no translation holds.
+ */
+const atan2Helper = (type: TUniformType): THelperDef => {
+    const t = SPELLED[type];
+    const name = `sgAtan2${t.suffix}`;
+    return {
+        name,
+        wgsl: /* wgsl */ `fn ${name}(y: ${t.wgsl}, x: ${t.wgsl}) -> ${t.wgsl} {
+    return atan2(y, x);
+}`,
+        glsl: /* glsl */ `${t.glsl} ${name}(${t.glsl} y, ${t.glsl} x) {
+    return atan(y, x);
+}`,
+    };
+};
+
+/**
+ * The angle of the point `(x, y)` around the origin, in radians from -π to π, lane by lane: `0`
+ * pointing along +x, growing towards +y. `y` comes first, as in every language that has it.
+ *
+ * It is what turns a place into "how far round": a swirl, rays from a sun, a ring that fills like a
+ * clock, a pattern wrapped around a centre. Taken around the middle of a sprite,
+ * `composerAtan2(uv.y - 0.5, uv.x - 0.5)`; around a model's axis, from the corner's own position.
+ * Divide by `2π` and add `0.5` for a turn from 0 to 1.
+ * @param y - The second coordinate. A number spreads over a vector given as `x`.
+ * @param x - The first coordinate.
+ * @returns The node, to use as the input of another.
+ *
+ * @example
+ * ```ts
+ * // eight rays turning around the middle of a sprite
+ * const centred = composerSub(composerUv(), 0.5);
+ * const angle = composerAtan2(composerY(centred), composerX(centred));
+ * const rays = composerStep(0.5, composerFract(composerAdd(composerMul(angle, 8 / (Math.PI * 2)), composerTime())));
+ * const shader = compileShader({ shader: 'sprite2d', color: composerVec4(rays, rays, rays, 1) });
+ * ```
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const composerAtan2 = (y: TComposerInput, x: TComposerInput): TComposerNode => {
+    const ny = asNode(y);
+    const nx = asNode(x);
+    const type = combine('atan2', ny.type, nx.type);
+    return newNode('call', type, [splat(ny, type), splat(nx, type)], { params: [`sgAtan2${SPELLED[type].suffix}`], helpers: [atan2Helper(type)] });
+};
 
 /**
  * `1 - x`, lane by lane: the opposite of a mask or of a falloff, in one step of a pipe.

@@ -200,3 +200,40 @@ describe('which kind of material comes back', () => {
         expect(typeof typeOnly).toBe('function');
     });
 });
+
+describe('uniforms, when they were handed in', () => {
+    it('are typed as there, so a parameter is animated with no `?? {}`', () => {
+        const { store } = createTestGame();
+        const [mesh, sprite] = inScene(store, 'Level', () => [
+            createMaterial(compileShader({ shader: 'mesh3d', color: composerSurface() })),
+            createMaterial({ fragment: 'fn effect(c: vec4<f32>, uv: vec2<f32>) -> vec4<f32> { return c; }', uniforms: { glow: 0 } }),
+        ] as const);
+
+        // These two lines are the test as much as the expects: they do not compile with `| null`.
+        mesh.uniforms.swell = 0.3;
+        sprite.uniforms.glow = 1;
+        expect(mesh.uniforms.swell).toBe(0.3);
+        expect(sprite.uniforms.glow).toBe(1);
+    });
+
+    it('are still possibly null when none were handed in, since then there may be no shader to read them', () => {
+        const { store } = createTestGame();
+        const plain = inScene(store, 'Level', () => createMaterial({ shader: 'mesh3d' }));
+
+        expect(plain.uniforms).toBeNull();
+        // Never called: only here to be compiled.
+        const _typed = () => {
+            // @ts-expect-error: a material made without uniforms may have none.
+            plain.uniforms.glow = 1;
+        };
+        void _typed;
+    });
+
+    it('come back as the same bag, even with no shader yet to read them', () => {
+        const { store } = createTestGame();
+        const bag = { glow: 0.5 };
+        const material = inScene(store, 'Level', () => createMaterial({ shader: 'mesh3d', uniforms: bag }));
+
+        expect(material.uniforms).toBe(bag);
+    });
+});
