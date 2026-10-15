@@ -41,6 +41,10 @@ struct Instance {
     @location(8) anchor: vec2f,
     // which of u.views this sprite is drawn through, stored as a float like everything else here
     @location(9) view: f32,
+    // A repeated sprite: how many times its picture is laid across and down, and where the pattern
+    // starts, in pictures. 1, 1 and 0, 0 for one that does not repeat.
+    @location(10) tiles: vec2f,
+    @location(11) shift: vec2f,
 };
 
 // Keeping the read inside the sprite's own window in the sheet.
@@ -66,17 +70,27 @@ struct VertexOut {
     @location(1) uv: vec2f,
     // xy the lowest corner of this sprite's window into the sheet, zw the highest.
     @location(2) @interpolate(flat) window: vec4f,
+    // 1 for a sprite whose read wraps round inside its window, laying its picture again and again.
+    @location(3) @interpolate(flat) repeat: f32,
 };
 
 // The read, kept inside the window so a pixel that landed on the boundary between two columns of
 // the sheet cannot come back with the frame next door. Half a texel in is the middle of the
 // outermost texel, so nothing visible is lost.
-fn insideWindow(uv: vec2f, window: vec4f) -> vec2f {
+//
+// A repeated sprite's read runs on past its window, once for each time the picture is laid, and is
+// wrapped back into it first.
+fn insideWindow(uv: vec2f, window: vec4f, repeat: f32) -> vec2f {
     let texel = 0.5 / vec2f(textureDimensions(spriteTexture, 0));
+    let size = window.zw - window.xy;
+    var read = uv;
+    if (repeat > 0.5) {
+        read = window.xy + (uv - window.xy) - floor((uv - window.xy) / size) * size;
+    }
     let lowest = window.xy + texel;
     // Guarded for a window thinner than one texel, where the two would cross over.
     let highest = max(lowest, window.zw - texel);
-    return clamp(uv, lowest, highest);
+    return clamp(read, lowest, highest);
 }
 
 @vertex
@@ -111,9 +125,13 @@ fn vs(@location(0) corner: vec2f, inst: Instance) -> VertexOut {
     // uvScale and uvOffset crop that: a full texture is scale 1 and offset 0, and half a
     // texture starting at its middle is scale (0.5, 1) and offset (0.5, 0). This is what lets
     // one image hold many frames.
-    out.uv = (corner + 0.5) * inst.uvScale + inst.uvOffset;
+    //
+    // A repeated sprite runs across its picture as many times as tiles says, starting shift pictures in; the
+    // fragment wraps the read back into the window.
+    out.uv = ((corner + 0.5) * inst.tiles + inst.shift) * inst.uvScale + inst.uvOffset;
     let far = inst.uvOffset + inst.uvScale;
     out.window = vec4f(min(inst.uvOffset, far), max(inst.uvOffset, far));
+    out.repeat = select(0.0, 1.0, any(inst.tiles != vec2f(1.0)) || any(inst.shift != vec2f(0.0)));
     return out;
 }
 
@@ -128,7 +146,7 @@ fn vs(@location(0) corner: vec2f, inst: Instance) -> VertexOut {
  */
 export const SPRITE_SHADER_FRAGMENT = /* wgsl */ `@fragment
 fn fs(in: VertexOut) -> @location(0) vec4f {
-    return textureSample(spriteTexture, spriteSampler, insideWindow(in.uv, in.window)) * in.tint;
+    return textureSample(spriteTexture, spriteSampler, insideWindow(in.uv, in.window, in.repeat)) * in.tint;
 }
 `;
 
@@ -177,7 +195,7 @@ fn distanceFieldCoverage(sample: vec4f, uv: vec2f) -> f32 {
  */
 export const SPRITE_DISTANCE_FIELD_FRAGMENT = /* wgsl */ `@fragment
 fn fs(in: VertexOut) -> @location(0) vec4f {
-    let sample = textureSample(spriteTexture, spriteSampler, insideWindow(in.uv, in.window));
+    let sample = textureSample(spriteTexture, spriteSampler, insideWindow(in.uv, in.window, in.repeat));
     return vec4f(in.tint.rgb, in.tint.a * distanceFieldCoverage(sample, in.uv));
 }
 `;

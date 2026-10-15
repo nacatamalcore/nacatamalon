@@ -89,6 +89,9 @@ export type { TPalette, TPaletteDoc } from './loaders/palette';
 export { parsePaletteDoc, PALETTE_FORMAT, MAX_PALETTE_COLORS } from './loaders/palette';
 export type { TLut } from './loaders/lut';
 export { createSprite } from './gameobjects/sprite/create_sprite';
+// The far layers of a level: a picture repeated endlessly across, moving with the camera only so much.
+export { createBackdrop } from './gameobjects/sprite/create_backdrop';
+export type { TBackdropOptions } from './gameobjects/sprite/create_backdrop';
 export type { TCreateSprite } from './gameobjects/sprite/create_sprite';
 export { createText } from './gameobjects/text/create_text';
 export { createNineSlice } from './gameobjects/nine_slice/create_nine_slice';
@@ -121,6 +124,9 @@ export { worldToLocal, localToWorld, worldToLocal3d, localToWorld3d } from './bo
 export { overlaps } from './hitbox';
 export type { TRect, TOverlapTarget, THitbox } from './hitbox';
 export { useHitbox, useOverlap } from './hooks';
+// A platformer's camera: a dead zone, the level's edges, looking ahead, and a shake.
+export { useCameraFollow, useParallax } from './hooks';
+export type { TCameraFollow, TCameraFollowOptions, TCameraTarget } from './hooks';
 // A platformer's character on the scene's maps, with no physics engine. The same character in the 2D
 // world, pushing crates, is `useCharacterBody2d` in `nacatamalon/physics2d`.
 export { useTileBody2d } from './physics/character/use_tile_body_2d';

@@ -15,6 +15,8 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
     // `??` and not `||`: 0 is a seed like any other, and `||` turned it into a different run every time.
     const seed = game_options.seed ?? DEFAULT_GAME_OPTIONS.seed;
     const smooth = game_options.smooth ?? DEFAULT_GAME_OPTIONS.smooth;
+    // Follows `smooth` unless it says: pixel art is drawn on whole pixels, smooth pictures between them.
+    const pixelSnap = game_options.pixelSnap ?? !smooth;
     const msaa = game_options.msaa || DEFAULT_GAME_OPTIONS.msaa;
     const scaling = game_options.scaling ?? DEFAULT_GAME_OPTIONS.scaling;
     const keep = game_options.keep ?? DEFAULT_GAME_OPTIONS.keep;
@@ -49,6 +51,7 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
         renderer,
         seed,
         smooth,
+        pixelSnap,
         msaa,
         scaling,
         keep,

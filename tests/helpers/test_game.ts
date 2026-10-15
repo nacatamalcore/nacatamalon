@@ -114,6 +114,9 @@ const TEST_CONFIG: TGameConfig = {
     background: { r: 0, g: 0, b: 0, a: 1 },
     renderer: 'WEBGPU',
     smooth: false,
+    // Off here, where checks read where things are drawn to the fraction; tests of the rounding
+    // turn it on.
+    pixelSnap: false,
     msaa: 1,
     scaling: 'contain',
     keep: 'none',

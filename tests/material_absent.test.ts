@@ -75,7 +75,7 @@ const sprite: TDrawSprite = {
 };
 
 describe('a scene that never asks for an effect', () => {
-    it('writes the same eighteen numbers per sprite it always did', () => {
+    it('writes the numbers per sprite it always did, and a picture laid once', () => {
         const gpu = webgpuPipeline();
         webgpuInstances.writeSpriteInstances(fakeDevice, gpu, [sprite], [-1]);
 
@@ -86,7 +86,9 @@ describe('a scene that never asks for an effect', () => {
         expect(written.slice(0, 4)).toEqual([11, 22, 16, 32]);
         expect(written.slice(4, 7)).toEqual([0.5, 2, 3]);
         expect(written.slice(7, 11)).toEqual([0.25, 0.5, 0.75, 0.5]);
-        expect(webgpuInstances.SPRITE_FLOATS).toBe(18);
+        // Laid once, from its start: a sprite that does not repeat.
+        expect(written.slice(18, 22)).toEqual([1, 1, 0, 0]);
+        expect(webgpuInstances.SPRITE_FLOATS).toBe(22);
     });
 
     it('writes the very same numbers on the other card, to the last float', () => {

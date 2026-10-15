@@ -26,7 +26,7 @@ export const VERTEX_BUFFERS: GPUVertexBufferLayout[] = [
     },
     // buffer 1: one entry per sprite, 18 floats = 72 bytes
     {
-        arrayStride: 72,
+        arrayStride: 88,
         stepMode: 'instance',
         attributes: [
             { shaderLocation: 1, offset: 0, format: 'float32x2' },   // x, y
@@ -38,6 +38,8 @@ export const VERTEX_BUFFERS: GPUVertexBufferLayout[] = [
             { shaderLocation: 7, offset: 52, format: 'float32x2' },  // uvScale x, y
             { shaderLocation: 8, offset: 60, format: 'float32x2' },  // anchor x, y
             { shaderLocation: 9, offset: 68, format: 'float32' },    // view
+            { shaderLocation: 10, offset: 72, format: 'float32x2' }, // pictures across, down
+            { shaderLocation: 11, offset: 80, format: 'float32x2' }, // where the pattern starts
         ],
     },
 ];

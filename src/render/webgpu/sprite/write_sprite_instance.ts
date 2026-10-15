@@ -4,6 +4,7 @@ import { toGpuTexture } from '../texture';
 import { getTextureBindGroup } from './get_texture_bind_group';
 import { spriteSize } from '../../shared/sprite_size';
 import { spriteUvWindow } from '../../shared/sprite_uv';
+import { spriteRepeat } from '../../shared/sprite_repeat';
 import type { TSpritePipeline } from './types/t_sprite_pipeline';
 import type { TDrawShader } from '../../interface/draw/t_draw_material';
 import type { TUniformValues } from '../../../materials/types/t_uniforms';
@@ -11,12 +12,13 @@ import { worldOf } from '../../shared/world_of';
 
 /**
  * Floats per sprite in the instance buffer: x, y, width, height, rotation, scaleX, scaleY,
- * r, g, b, a, uvOffset x, y, uvScale x, y, anchor x, y, view. Must match the 72-byte stride of
- * the pipeline.
+ * r, g, b, a, uvOffset x, y, uvScale x, y, anchor x, y, view, then how many times the picture is laid
+ * across and down and where its pattern starts, for a sprite that repeats. Must match the 88-byte
+ * stride of the pipeline.
  *
  * @internal
  */
-export const SPRITE_FLOATS = 18;
+export const SPRITE_FLOATS = 22;
 
 /**
  * Views the shader holds: the screen in slot 0 and up to this many minus one cameras. Must match
@@ -187,6 +189,11 @@ export const writeSpriteInstances = (
                 // shader holds falls back to the screen, and `writeFrameUniforms` has said so.
                 const camera = cameraIndex[i] ?? -1;
                 data[o + 17] = camera >= 0 && camera < MAX_VIEWS - 1 ? camera + 1 : 0;
+                const repeat = spriteRepeat(item);
+                data[o + 18] = repeat.tilesX;
+                data[o + 19] = repeat.tilesY;
+                data[o + 20] = repeat.shiftX;
+                data[o + 21] = repeat.shiftY;
 
                 addToRun(sprites, bindGroup, item.material ?? null, item.uniforms ?? null, item.distanceField === true, item.blend === 'additive', count, i, broken);
                 broken = false;

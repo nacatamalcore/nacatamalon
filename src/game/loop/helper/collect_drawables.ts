@@ -6,6 +6,7 @@ import type { TBox } from '../../../box';
 import type { TPlacedCollider2d, TPlacedCollider3d, TSceneColliders } from '../../../gameobjects/particles/collide';
 import type { TDrawable } from '../../../gameobjects/types';
 import type { TTransform2d } from '../../../gameobjects/types/t_transform_2d';
+import type { TCamera2d } from '../../../camera';
 
 /**
  * A placement to put children inside, or `null` for "nothing above has moved anything".
@@ -109,6 +110,56 @@ const placeDrawable = (drawable: TDrawable, world: TWorld): void => {
 /**
  * Where each collider was placed last frame, written over rather than made again.
  */
+/**
+ * Moves a flat drawable by its parallax: by the part of the camera's travel it does not follow, so on
+ * screen it goes by more slowly. Written into where it is drawn and touched, never into its placement.
+ */
+const applyParallax = (drawable: TDrawable, factor: { x: number; y: number }, camera: TCamera2d): void => {
+    if (drawable.type === 'mesh' || drawable.type === 'particles3d' || drawable.type === 'lines' || drawable.type === 'particles') {
+        return;
+    }
+    const base = drawable.worldTransform ?? drawable.transform;
+    const out = drawable.worldTransform ?? { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 };
+    // On whole pixels, as the layers of the old consoles scrolled: a layer moving at another pace from
+    // the camera would otherwise sit between two pixels and shimmer.
+    out.x = base.x + Math.round(camera.transform.x * (1 - factor.x));
+    out.y = base.y + Math.round(camera.transform.y * (1 - factor.y));
+    out.rotation = base.rotation;
+    out.scaleX = base.scaleX;
+    out.scaleY = base.scaleY;
+    drawable.worldTransform = out;
+};
+
+/**
+ * Where a flat drawable that has no frame of its own above it is drawn on whole pixels: kept per
+ * drawable, so rounding allocates nothing frame after frame.
+ */
+const snappedPlaces = new WeakMap<object, TTransform2d>();
+
+/**
+ * Puts a flat drawable on whole pixels of the game where it is drawn: the game's `pixelSnap`. Where it
+ * is stays as it was, fractions and all, so it moves as fast as it says; only the picture lands on the
+ * grid, as the consoles drew it. With the camera on whole pixels too, something it follows stays on
+ * the same pixel of the screen.
+ */
+const snapToPixels = (drawable: TDrawable): void => {
+    if (drawable.type !== 'sprite' && drawable.type !== 'text' && drawable.type !== 'nine-slice' && drawable.type !== 'tilemap') {
+        return;
+    }
+    const base = drawable.worldTransform ?? drawable.transform;
+    let out = drawable.worldTransform;
+    if (out === undefined) {
+        out = snappedPlaces.get(drawable) ?? { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 };
+        snappedPlaces.set(drawable, out);
+    }
+    out.x = Math.round(base.x);
+    out.y = Math.round(base.y);
+    out.rotation = base.rotation;
+    out.scaleX = base.scaleX;
+    out.scaleY = base.scaleY;
+    drawable.worldTransform = out;
+};
+
 const placedFlat = new WeakMap<object, TPlacedCollider2d>();
 const placedDeep = new WeakMap<object, TPlacedCollider3d>();
 
@@ -168,6 +219,9 @@ export const collectDrawables = (
     colliders: TSceneColliders | null = null,
     pictures: TBox[] | null = null,
     screenCamera = -1,
+    camera: TCamera2d | null = null,
+    inherited: { x: number; y: number } | null = null,
+    snap = false,
 ): void => {
     // Before the check for hidden, because a hidden screen is a screen switched off: its picture is
     // still drawn, with nothing in it. The top of the walk is the picture's own, and is not stopped.
@@ -189,8 +243,17 @@ export const collectDrawables = (
     if (colliders !== null) {
         placeCollider(box, world, colliders);
     }
+    // What is pinned to the screen does not see the camera, so it has no parallax either.
+    const parallax = pinned ? null : box.parallax ?? inherited;
     for (const drawable of box.drawables) {
         placeDrawable(drawable, world);
+        const factor = pinned ? null : (drawable as { parallax?: { x: number; y: number } }).parallax ?? parallax;
+        if (factor !== null && camera !== null) {
+            applyParallax(drawable, factor, camera);
+        }
+        if (snap) {
+            snapToPixels(drawable);
+        }
         // `undefined` is drawn: a drawable that never mentions it is the ordinary case, and the
         // ordinary case should not have to say anything.
         if (drawable.visible === false) {
@@ -200,6 +263,6 @@ export const collectDrawables = (
         cameraIndex.push(view);
     }
     for (const child of box.children) {
-        collectDrawables(child, out, cameraIndex, sceneCamera, pinned, world, depth + 1, colliders, pictures, screenCamera);
+        collectDrawables(child, out, cameraIndex, sceneCamera, pinned, world, depth + 1, colliders, pictures, screenCamera, camera, parallax, snap);
     }
 };

@@ -75,7 +75,7 @@ describe('the two sprite material shaders', () => {
         const wgsl = buildSpriteMaterialShader(HOOK, SIG);
         const glsl = buildSpriteMaterialShaderGlsl(HOOK_GLSL, SIG).fragment;
 
-        expect(wgsl).toContain('effect(sampleTexture(insideWindow(in.uv, in.window)) * in.tint, in.uv)');
+        expect(wgsl).toContain('effect(sampleTexture(insideWindow(in.uv, in.window, in.repeat)) * in.tint, in.uv)');
         expect(glsl).toContain('effect(sampleTexture(insideWindow(vUv, vWindow)) * vTint, vUv)');
         // Which is the same read the built-in ending does on its own, kept inside the sprite's own
         // window in the sheet exactly the same way. If only one of the two clamped, a sprite would

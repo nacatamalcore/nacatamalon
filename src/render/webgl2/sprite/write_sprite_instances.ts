@@ -2,6 +2,7 @@
 import type { TDrawItem } from '../../interface';
 import { spriteSize } from '../../shared/sprite_size';
 import { spriteUvWindow } from '../../shared/sprite_uv';
+import { spriteRepeat } from '../../shared/sprite_repeat';
 import { toGlTexture } from '../texture';
 import type { TSpritePipeline } from './types/t_sprite_pipeline';
 import type { TDrawShader } from '../../interface/draw/t_draw_material';
@@ -10,7 +11,8 @@ import { worldOf } from '../../shared/world_of';
 
 /**
  * Floats per sprite in the instance buffer: x, y, width, height, rotation, scaleX, scaleY,
- * r, g, b, a, uvOffset x, y, uvScale x, y, anchor x, y, view.
+ * r, g, b, a, uvOffset x, y, uvScale x, y, anchor x, y, view, then how many times the picture is laid
+ * across and down and where its pattern starts, for a sprite that repeats.
  *
  * A copy of the WebGPU backend's layout, kept on purpose instead of shared. The test
  * `webgl2_layout.test.ts` writes the same drawables through both and compares the floats, so the
@@ -18,7 +20,7 @@ import { worldOf } from '../../shared/world_of';
  *
  * @internal
  */
-export const SPRITE_FLOATS = 18;
+export const SPRITE_FLOATS = 22;
 
 /**
  * Bytes per sprite in the instance buffer: the stride every per-sprite attribute steps by.
@@ -196,6 +198,11 @@ export const writeSpriteInstances = (
                 // shader holds falls back to the screen, and `writeFrameUniforms` has said so.
                 const camera = cameraIndex[i] ?? -1;
                 data[o + 17] = camera >= 0 && camera < MAX_VIEWS - 1 ? camera + 1 : 0;
+                const repeat = spriteRepeat(item);
+                data[o + 18] = repeat.tilesX;
+                data[o + 19] = repeat.tilesY;
+                data[o + 20] = repeat.shiftX;
+                data[o + 21] = repeat.shiftY;
 
                 addToRun(sprites, glTexture, sampler, item.material ?? null, item.uniforms ?? null, item.distanceField === true, item.blend === 'additive', count, i, broken);
                 broken = false;

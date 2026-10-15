@@ -47,7 +47,7 @@ export type TSpritePipeline = {
      */
     bindGroup: GPUBindGroup;
     /**
-     * One 72-byte entry per sprite. Replaced by a bigger one when a frame has more sprites than fit.
+     * One 88-byte entry per sprite. Replaced by a bigger one when a frame has more sprites than fit.
      */
     instances: GPUBuffer;
     /**

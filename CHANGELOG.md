@@ -102,6 +102,27 @@ releases are in [changelog/](./changelog/), one file each.
   `destroy()`. A character (`useCharacterBody2d`) walks on a bridge of hinged planks. A hinge or a
   slider takes `friction`, how much of its turning or sliding it loses a second whatever the bodies
   weigh (`2` calms a swing in a few seconds), since nothing else in the world slows a joint down.
+- `useCameraFollow(target, { deadzone, bounds, lead, smooth, round })` (`TCameraFollow`): a
+  platformer's camera. The target moves inside a dead zone without the camera moving, the camera never
+  shows past `bounds` (a map, which is its own rectangle, or a rectangle of the world), looks ahead by
+  `lead`, follows at once or glides with `smooth` (seconds, alike at any refresh rate), and stays on
+  whole pixels. It moves in `useLateUpdate`, once every update and every body's move is over, at any
+  `zoom`. `shake(strength, seconds)` shakes the view and dies away; `snap()` jumps to the target; the
+  target and every setting can be changed at any time.
+- `createGame({ pixelSnap })`: draws sprites, texts, panels and maps on whole pixels of the game,
+  rounding where they are drawn and never where they are, so they move as fast as they say. With the
+  camera on whole pixels (`useCameraFollow`), a character it follows stays on the same pixel of the
+  screen instead of shaking back and forth by one. On by default unless the game is `smooth`. Something
+  slower than a pixel a frame now steps a pixel at a time, as on the consoles.
+- Sprites that repeat: `repeat: true` lays the picture (or its frame of a sheet) across the sprite's
+  size instead of stretching it, on both backends, and `repeatOffset` scrolls the pattern inside it.
+- Parallax: `parallax: { x, y }` on a sprite, `useParallax(factor)` on an object and everything under
+  it, and `parallax` on a map's layer (in the `.tilemap` file too): how much each moves with the camera,
+  `1` as everything, `0` not at all. Only how it is drawn and touched by the pointer; its placement
+  stays as written. It moves in whole pixels, and is nothing to what is pinned to the screen.
+- `createBackdrop({ key, parallax, y })` (`TBackdropOptions`): a picture repeated endlessly across the
+  world behind everything, moving with the camera only so much: the far layers of a 16-bit level, one
+  sprite and nothing to move every frame. `repeatY` fills everything.
 - `useCharacterBody2d` stands still on what the simulation moves. It puts its weight on what it
   stands on (`mass`, or its size at a crate's density), the solver leaves that pair alone, and it
   pushes what it walks into sideways only. Before, a character standing on a bridge and the bridge

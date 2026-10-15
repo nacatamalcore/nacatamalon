@@ -17,7 +17,7 @@ import type { TTilemapDoc } from './types/t_tilemap_doc';
  */
 export const serializeTilemapDoc = (doc: TTilemapDoc): string => {
     const layers = doc.layers.map((layer) =>
-        `        { "name": ${JSON.stringify(layer.name)}, "order": ${JSON.stringify(layer.order)}, "data": [${layer.data.join(',')}] }`);
+        `        { "name": ${JSON.stringify(layer.name)}, "order": ${JSON.stringify(layer.order)}, ${layer.parallax !== undefined ? `"parallax": ${JSON.stringify(layer.parallax)}, ` : ''}"data": [${layer.data.join(',')}] }`);
 
     const head = JSON.stringify({
         format: TILEMAP_FORMAT,

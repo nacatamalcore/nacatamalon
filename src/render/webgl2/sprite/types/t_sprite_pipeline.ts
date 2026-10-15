@@ -36,7 +36,7 @@ export type TSpritePipeline = {
      */
     quad: WebGLBuffer;
     /**
-     * One 72-byte entry per sprite. Grown in place with `bufferData` when a frame has more sprites than fit.
+     * One 88-byte entry per sprite. Grown in place with `bufferData` when a frame has more sprites than fit.
      */
     instances: WebGLBuffer;
     /**

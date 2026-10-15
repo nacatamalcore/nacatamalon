@@ -13,7 +13,8 @@ export { useSpriteAnimation, getSpriteAnimation, useSkeletalAnimation } from './
 export { useTween } from './tween';
 export { useMotion } from './motion';
 export { useTimer } from './timer';
-export { useCamera2d, useCamera3d, useScreenSpace } from './camera';
+export { useCamera2d, useCamera3d, useScreenSpace, useCameraFollow, useParallax } from './camera';
+export type { TCameraFollow, TCameraFollowOptions, TCameraTarget } from './camera';
 export { useFog } from './fog';
 export { useTransform } from './transform';
 export { useLight, usePointLight, useSpotLight, useAmbientLight, useBlobShadow } from './light';

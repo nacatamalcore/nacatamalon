@@ -80,6 +80,24 @@ export type TSpriteOptions = {
      */
     flipY?: boolean;
     /**
+     * Repeats its picture across its size instead of stretching it: a wall of bricks, a strip of
+     * grass, clouds. Set `width` and `height` to the size to cover; the picture (or its frame, from an
+     * atlas) is laid as many times as fits. Omitted is stretched.
+     */
+    repeat?: boolean;
+    /**
+     * With `repeat`, where the pattern starts inside the sprite, in its picture's pixels: moving it
+     * every frame scrolls the pattern while the sprite stays put. `{ x: 0, y: 0 }` by default.
+     */
+    repeatOffset?: { x: number; y: number };
+    /**
+     * How much it moves with the camera: `1` (the default) as everything else, `0` not at all, as if
+     * pinned to the screen, and in between further away: `{ x: 0.3, y: 0 }` is a far range of
+     * mountains that slides slowly by and keeps its height. Only how it is drawn and touched by the
+     * pointer: its placement stays what it says.
+     */
+    parallax?: { x: number; y: number };
+    /**
      * Whether it is drawn. Default `true`. `false` makes it straight away hidden, which is how a
      * set of them is prepared in advance and shown one at a time.
      */

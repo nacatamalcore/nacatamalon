@@ -40,7 +40,7 @@ fn sampleTexture(uv: vec2f) -> vec4f {
 const TAIL = /* wgsl */ `
 @fragment
 fn fs(in: VertexOut) -> @location(0) vec4f {
-    return effect(sampleTexture(insideWindow(in.uv, in.window)) * in.tint, in.uv);
+    return effect(sampleTexture(insideWindow(in.uv, in.window, in.repeat)) * in.tint, in.uv);
 }
 `;
 
@@ -53,7 +53,7 @@ fn fs(in: VertexOut) -> @location(0) vec4f {
 const DISTANCE_FIELD_TAIL = /* wgsl */ `
 @fragment
 fn fs(in: VertexOut) -> @location(0) vec4f {
-    let sample = sampleTexture(insideWindow(in.uv, in.window));
+    let sample = sampleTexture(insideWindow(in.uv, in.window, in.repeat));
     let coverage = distanceFieldCoverage(sample, in.uv);
     return effect(vec4f(in.tint.rgb, in.tint.a * coverage), in.uv);
 }

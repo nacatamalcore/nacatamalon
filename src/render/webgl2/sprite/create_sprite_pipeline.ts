@@ -8,7 +8,7 @@ import type { TSpritePipeline } from './types/t_sprite_pipeline';
 import { FRAME_UNIFORMS_BINDING } from '../bindings';
 
 /**
- * The per-sprite attributes: location, floats and byte offset inside one 72-byte entry. The same
+ * The per-sprite attributes: location, floats and byte offset inside one 88-byte entry. The same
  * table as the WebGPU pipeline's second buffer. `drawSprites` walks it again to move every
  * attribute to the start of each run.
  *
@@ -24,6 +24,8 @@ export const SPRITE_ATTRIBUTES: ReadonlyArray<{ location: number; size: number; 
     { location: 7, size: 2, offset: 52 },   // uvScale x, y
     { location: 8, size: 2, offset: 60 },   // anchor x, y
     { location: 9, size: 1, offset: 68 },   // view
+    { location: 10, size: 2, offset: 72 },  // pictures across, down
+    { location: 11, size: 2, offset: 80 },  // where the pattern starts
 ];
 
 /**

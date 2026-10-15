@@ -143,7 +143,17 @@ export const parseTilemapDoc = (value: unknown, src: string): TTilemapDoc => {
         const order: TTileLayerOrder = layer.order === 'under' || layer.order === 'over' || typeof layer.order === 'number'
             ? layer.order
             : 0;
-        return { name: layer.name ?? `layer ${at}`, order, data: [...layer.data] };
+        let parallax: { x: number; y: number } | undefined;
+        if (layer.parallax !== undefined) {
+            const raw = layer.parallax as { x?: unknown; y?: unknown } | null;
+            const x = raw?.x ?? 1;
+            const y = raw?.y ?? 1;
+            if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) {
+                return fail(`layer '${layer.name ?? at}' has to give its parallax as { x, y }, numbers: 1 moves with the camera, 0 not at all.`);
+            }
+            parallax = { x, y };
+        }
+        return { name: layer.name ?? `layer ${at}`, order, data: [...layer.data], ...(parallax !== undefined ? { parallax } : {}) };
     });
 
     let terrains: TTerrainDoc[] | undefined;

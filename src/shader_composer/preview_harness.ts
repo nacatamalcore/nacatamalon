@@ -117,6 +117,8 @@ export const PREVIEW_INSTANCE: Float32Array = new Float32Array([
     1, 1, // uvScale
     0.5, 0.5, // anchor
     0, // view: the screen
+    1, 1, // laid once: it does not repeat
+    0, 0, // where its pattern starts
 ]);
 
 /**

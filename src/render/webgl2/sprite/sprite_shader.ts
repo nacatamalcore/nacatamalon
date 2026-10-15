@@ -40,12 +40,18 @@ layout(location = 7) in vec2 uvScale;
 layout(location = 8) in vec2 anchor;
 // which of u.views this sprite is drawn through, stored as a float like everything else here
 layout(location = 9) in float view;
+// A repeated sprite: how many times its picture is laid across and down, and where the pattern
+// starts, in pictures. 1, 1 and 0, 0 for one that does not repeat.
+layout(location = 10) in vec2 tiles;
+layout(location = 11) in vec2 shift;
 
 out vec4 vTint;
 out vec2 vUv;
 // xy the lowest corner of this sprite's window into the sheet, zw the highest. Flat: it belongs to
 // the sprite and not to the corner. See its twin in webgpu/sprite/sprite_shader.ts for why.
 flat out vec4 vWindow;
+// 1 for a sprite whose read wraps round inside its window, laying its picture again and again.
+flat out float vRepeat;
 
 void main() {
     // corner goes from -0.5 to 0.5, and the anchor says which point of the quad sits on the position.
@@ -68,10 +74,12 @@ void main() {
     gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
     vTint = tint;
     // the corner moved to 0..1 and cropped to the frame, exactly as in the WGSL
-    vUv = (corner + 0.5) * uvScale + uvOffset;
+    // A repeated sprite runs across its picture as many times as tiles says, starting shift pictures in.
+    vUv = ((corner + 0.5) * tiles + shift) * uvScale + uvOffset;
     vec2 far = uvOffset + uvScale;
     // Lowest and highest rather than start and width, because a mirrored sprite has a negative one.
     vWindow = vec4(min(uvOffset, far), max(uvOffset, far));
+    vRepeat = (tiles != vec2(1.0) || shift != vec2(0.0)) ? 1.0 : 0.0;
 }
 `;
 
@@ -91,16 +99,20 @@ uniform sampler2D spriteTexture;
 in vec4 vTint;
 in vec2 vUv;
 flat in vec4 vWindow;
+flat in float vRepeat;
 out vec4 fragColor;
 
 // The read, kept inside the window so a pixel that landed on the boundary between two columns of
 // the sheet cannot come back with the frame next door. Half a texel in is the middle of the
-// outermost texel, so nothing visible is lost.
+// outermost texel, so nothing visible is lost. A repeated sprite's read runs on past its window,
+// once for each time the picture is laid, and is wrapped back into it first.
 vec2 insideWindow(vec2 uv, vec4 window) {
     vec2 texel = 0.5 / vec2(textureSize(spriteTexture, 0));
+    vec2 size = window.zw - window.xy;
+    vec2 read = vRepeat > 0.5 ? window.xy + (uv - window.xy) - floor((uv - window.xy) / size) * size : uv;
     vec2 lowest = window.xy + texel;
     vec2 highest = max(lowest, window.zw - texel);
-    return clamp(uv, lowest, highest);
+    return clamp(read, lowest, highest);
 }
 `;
 

@@ -79,6 +79,7 @@ export const loadTilemap = async (store: TRuntimeStore, map: TTilemap): Promise<
                 data: layer.data,
                 order: layer.order,
                 zIndex: resolveLayerOrder(layer.order),
+                ...(layer.parallax !== undefined ? { parallax: { ...layer.parallax } } : {}),
                 destroyed: false,
             };
         });

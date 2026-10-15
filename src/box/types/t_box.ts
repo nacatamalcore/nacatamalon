@@ -267,6 +267,11 @@ export type TBox = {
      */
     screenSpace: boolean;
     /**
+     * How much this box, and everything under it, moves with the camera: `useParallax`. `null` moves
+     * as everything does. A drawable's own `parallax` wins over it.
+     */
+    parallax: { x: number; y: number } | null;
+    /**
      * Whether this box and everything under it is drawn. Inherited downwards, so turning off a
      * turret takes its barrel, its flash and its shadow with it.
      *

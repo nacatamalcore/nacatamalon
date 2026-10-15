@@ -66,6 +66,17 @@ export type TGameOptions = {
      */
     smooth?: boolean;
     /**
+     * Draws everything flat on whole pixels of the game: where each sprite, text, panel and map is
+     * drawn is rounded, never where it is. A character at 1.83 is drawn at 2, and moves at 1.83 a
+     * frame all the same; with the camera on whole pixels too (`useCameraFollow`), it stays on the
+     * same pixel of the screen while the camera follows it, instead of shaking by one.
+     *
+     * The way the consoles drew, and right for pixel art: something moving slower than a pixel a
+     * frame steps a pixel at a time. On by default unless the game is `smooth`, where drawing
+     * between pixels is the point.
+     */
+    pixelSnap?: boolean;
+    /**
      * MSAA (multisample anti-aliasing) sample count. `1` (default) disables it: the
      * raw, aliased look that suits a PS1/N64 aesthetic. `4` enables 4× MSAA, smoothing
      * jagged geometry silhouettes (e.g. a 3D model's edges). Only `1` and `4` are

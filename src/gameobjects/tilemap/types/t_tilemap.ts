@@ -82,6 +82,12 @@ export type TTilemapLayer = {
      */
     zIndex: number;
     /**
+     * How much this layer moves with the camera: `1` as everything else, less for a layer further
+     * away. `{ x: 0.5, y: 1 }` is a backdrop of hills that slides by at half the pace. Read from the
+     * file's layer, and changeable any time.
+     */
+    parallax?: { x: number; y: number };
+    /**
      * Set by `destroy` and never cleared.
      */
     destroyed: boolean;

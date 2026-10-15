@@ -247,6 +247,11 @@ type TWorldSeen = { models: Array<TDrawable | TDrawSprite>; camera: TCamera3d | 
  */
 type TSeenThrough = Pick<TRuntimeState['viewport'], 'camera3d' | 'camera2d' | 'layers'> & { screen2d?: TCamera2d | null };
 
+/**
+ * Whether this frame draws flat things on whole pixels: the game's `pixelSnap`, read once a frame.
+ */
+let snapping = false;
+
 const gatherTree = (
     root: TBox,
     lists: TPassLists,
@@ -279,7 +284,7 @@ const gatherTree = (
     const start = drawables.length;
     colliders.flat.length = 0;
     colliders.deep.length = 0;
-    collectDrawables(root, drawables as TDrawable[], cameraIndex, sceneCamera, false, null, 0, colliders, pictures, screenCamera);
+    collectDrawables(root, drawables as TDrawable[], cameraIndex, sceneCamera, false, null, 0, colliders, pictures, screenCamera, camera2d, null, snapping);
     // A tool showing only some kinds: dropped before anything else is worked out for them, so a kind
     // nobody is looking at costs no sorting, no lamps and no particles stepped.
     const layers = viewport?.layers ?? null;
@@ -475,6 +480,7 @@ const secondPass = (store: TRuntimeStore, seenThrough: TSeenThrough, clearColor:
 
 export const fillFrameContext = (store: TRuntimeStore, ctx: TFrameContext, delta = 0): void => {
     pass++;
+    snapping = store.get('config').pixelSnap;
 
     // Game objects while collecting and sorting; only sprites once texts are expanded.
     const lists = newLists();

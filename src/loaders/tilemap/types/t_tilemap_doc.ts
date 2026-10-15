@@ -154,6 +154,11 @@ export type TTilemapLayerDoc = {
      * `width × height` ids, row by row from the top-left. `0` is empty.
      */
     data: number[];
+    /**
+     * How much the layer moves with the camera: `1` (left out) as everything else, less for a layer
+     * further away, such as `{ x: 0.5, y: 1 }` for hills behind the level.
+     */
+    parallax?: { x: number; y: number };
 };
 
 /**
