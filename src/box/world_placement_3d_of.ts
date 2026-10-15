@@ -171,3 +171,22 @@ export const localPosition3dFrom = (box: TBox, world: { x: number; y: number; z:
  */
 export const localQuaternionFrom = (box: TBox, world: TQuat): TQuat =>
     multiply(conjugate(parentFrame(box).quaternion), world);
+
+/**
+ * Where a model an object draws ends up in space: its own placement, inside the object's frame and
+ * everything above it. The flat twin of `placementInside`.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const pose3dInside = (box: TBox | null, place: TTransform3d): TPose3d => {
+    if (box === null) {
+        return poseOf(place);
+    }
+    let frame = parentFrame(box);
+    if (box.transform !== null) {
+        frame = compose(frame, poseOf(box.transform));
+    }
+    return compose(frame, poseOf(place));
+};

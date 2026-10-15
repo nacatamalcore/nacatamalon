@@ -211,7 +211,8 @@ const App = () => (
 
 ## Where things are (search llms-full.txt for each name)
 
-- **Game and scenes**: `createGame`, `createScene`, `useScene`, `useGame`, `useSpawn`, `useSelf`, `destroy`, `useReady`, `useSceneUnmount`.
+- **Game and scenes**: `createGame`, `createScene`, `useScene`, `useGame`, `useSpawn` (what the component returns is the object's `api`: `useSpawn(Bat)(200).api.hurt(1)`), `useSelf`, `destroy`, `useReady`, `useSceneUnmount`.
+- **Points on an object**: `worldToLocal(object, point)` and `localToWorld(object, point)` (a sprite works too), `worldToLocal3d` and `localToWorld3d`; the pointer's `worldX`/`worldY` are the world they mean.
 - **Time**: `useUpdate`, `useLateUpdate`, `useTimer`, `useTween`, easings such as `linear` and `easeInOutSine`.
 - **Input**: `useKeyboard`, `usePointer`, `useGamepad`, `useActions`, `useAction`.
 - **2D**: `createSprite`, `useLoadTexture`, `useLoadAtlas`, `useSpriteAnimation`, `createText`, `useLoadFont`, `useLoadBitmapFont`, `createNineSlice`, `createTilemap`, `tileAt`, `solidAt`, `createParticles`, `useCamera2d`.

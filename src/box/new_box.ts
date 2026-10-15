@@ -28,6 +28,7 @@ export const newBox = (name: string): TBox => ({
     physicsWorld: null,
     scripts: [],
     provided: new Map(),
+    api: undefined,
     paused: false,
     held: false,
     time: 0,

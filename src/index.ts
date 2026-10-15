@@ -114,6 +114,9 @@ export type {
 } from './physics';
 // Reaching a named part of something, the turret of a tank or the wheels of a car, from a behaviour.
 export { findObject, findObjects } from './box';
+// A point of the world measured on an object, and a point of an object found in the world: where a
+// hit landed on it, where a shot leaves it from.
+export { worldToLocal, localToWorld, worldToLocal3d, localToWorld3d } from './box';
 // Where the pointer is in the world, and where a point of the world is on the screen; and turning a
 // camera to look at something.
 export { screenToRay, worldToScreen, cameraLookAt } from './camera';

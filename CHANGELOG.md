@@ -50,6 +50,15 @@ releases are in [changelog/](./changelog/), one file each.
 - The built-in font has `← → ↑ ↓ ▲ ▼ ◀ ▶ Ⓐ Ⓑ Ⓧ Ⓨ ★ ♥ ● ■`, drawn for Nacatamal Arcade, for on-screen
   prompts. Its image is better compressed too, half the size it was.
 
+- `useSpawn`: what the component returns is the new object's `api`, typed (`TGameObject<TApi>`). An
+  enemy that returns `{ hurt }` is hurt by the level that made it with `bat.api.hurt(1)`, with no
+  signal and no lookup. It is set once the maker returns, `undefined` for a component that returns
+  nothing, and never written to a saved scene.
+- `worldToLocal(object, point)` and `localToWorld(object, point)`, with `worldToLocal3d` and
+  `localToWorld3d`: a point of the world measured on an object, along its own turned and resized
+  axes, and the way back, through everything above it. They take a whole object, or a sprite, text,
+  nine-slice or model it draws. For where a hit landed on something and where a shot leaves it from.
+
 ### Changed
 
 - `createMaterial` given `uniforms` (which `compileShader` always gives) returns a material whose

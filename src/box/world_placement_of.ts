@@ -80,3 +80,22 @@ export const localPositionFrom = (box: TBox, world: { x: number; y: number }): {
         y: (dx * sin + dy * cos) / (frame.scaleY === 0 ? 1 : frame.scaleY),
     };
 };
+
+/**
+ * Where something an object draws ends up in the world: its own placement, inside the object's
+ * frame and everything above it. What the renderer does to a sprite, asked outside the renderer.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const placementInside = (box: TBox | null, place: TTransform2d): TTransform2d => {
+    if (box === null) {
+        return { ...place };
+    }
+    const frame = parentFrame(box);
+    if (box.transform !== null) {
+        composeTransform2d({ ...frame }, box.transform, frame);
+    }
+    return composeTransform2d({ ...frame }, place, frame);
+};

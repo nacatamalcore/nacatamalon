@@ -83,6 +83,15 @@ export type TBox = {
      */
     provided: Map<string, unknown>;
     /**
+     * What its component gave back when `useSpawn` made it: usually a few functions for whoever
+     * made it to call, such as `hurt`. `undefined` for anything else, and for a component that
+     * gives back nothing.
+     *
+     * **Runtime only, and never written to a file**, like `provided`, and for the same reason: the
+     * component is run again when the scene is opened and gives it back again.
+     */
+    api: unknown;
+    /**
      * The state its own body asked for with `useData`, in the order it asked.
      *
      * A port like the others, and the reason it is one rather than a closure variable: this is what
