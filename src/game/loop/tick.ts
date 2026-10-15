@@ -66,7 +66,7 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
     // frame it resumes, and the pause menu could never be a pad away from unpausing.
     const input = store.get('input');
     input.gamepads.beginFrame();
-    input.actions.sample();
+    input.actions.sample(dt);
 
     // Before the updates, so the cover is sized for the frame about to be drawn and not for the
     // one before it. Outside the pause check, and deliberately: the invariant worth keeping is

@@ -89,7 +89,7 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
 - **Keys** are `KeyboardEvent.key` names: letters lowercase (`'a'`), named keys as they are
   (`'ArrowLeft'`, `'Enter'`, `'Escape'`). The space bar is `'Space'`; `' '` also works.
 - **Text** needs no font: `createText({ text })` uses the built-in 8 px font, which has lowercase,
-  accents, ñ, ¿ and ¡. `style.fontSize` is the line height in pixels; multiples of 8 stay crisp. A
+  accents, ñ, ¿ and ¡, and for prompts `← → ↑ ↓ ▲ ▼ ◀ ▶ Ⓐ Ⓑ Ⓧ Ⓨ ★ ♥ ● ■` (`'PRESS ▶'`). `style.fontSize` is the line height in pixels; multiples of 8 stay crisp. A
   font of your own, passed as `font`: `useLoadFont({ src: '/fonts/x.ttf' })` for a `.ttf`/`.woff`
   (sharp at any size; `fontSize` is the em size as in CSS; no `.otf` with cubic outlines or `.woff2`),
   or `useLoadBitmapFont({ json, atlas })` for a bitmap font (an image plus a JSON of glyph positions).
@@ -99,6 +99,13 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   a click or key press (`pointer.onDown(() => { void pointer.lock(); })`); then turn the camera with
   `movementX`/`movementY` from `onMove`, which keep changing while `screenX`/`screenY` do not.
   `isLocked()` turns `false` when the player presses Esc.
+- **Touch** (phones): an on-screen button is an ordinary object (`useSpawn(function Jump() {
+  createSprite(...) })()` names it `Jump`) and an action bound to it with `{ type: 'touch', box: 'Jump' }`
+  is held while a finger is on it, so the game still reads `actions.isDown('jump')`; draw it with the
+  engine, never as HTML over the canvas (the native runtime has no page). `usePointer()` also answers
+  `isDown()`, `position()`, `touches()` (each finger, by `pointerId`) and `isPressing(sprite)`. How long
+  an action has been held, for a charged shot: `actions.heldFor('fire')`, still set on its
+  `justReleased` frame.
 - **Colours** are `{ r, g, b, a }`, each 0 to 1. `getColor` takes `'#ff6b1a'`, `0xff6b1a`, a CSS
   name (`'red'`) or any CSS colour (`'rgba(255, 0, 0, 0.5)'`, `'hsl(30 100% 50%)'`).
   To blend two colours (a sky between dusk and night), `lerpColor(a, b, t)`.

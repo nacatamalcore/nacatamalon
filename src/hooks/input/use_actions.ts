@@ -101,6 +101,7 @@ export const useAction = (name: TActionName, options: TUseActionsOptions = {}): 
         isDown: () => handle.isDown(name),
         justPressed: () => handle.justPressed(name),
         justReleased: () => handle.justReleased(name),
+        heldFor: () => handle.heldFor(name),
         value: () => handle.value(name),
     };
 };

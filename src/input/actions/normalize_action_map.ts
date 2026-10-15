@@ -42,6 +42,9 @@ export const bindingKey = (binding: TActionBinding): string => {
     if (binding.type === 'button') {
         return `button:${binding.button}`;
     }
+    if (binding.type === 'touch') {
+        return `touch:${binding.box}`;
+    }
     return `axis:${binding.axis}:${binding.dir}`;
 };
 
@@ -59,6 +62,10 @@ const isBinding = (value: unknown): value is TActionBinding => {
     if (binding.type === 'axis') {
         const axis = binding as { axis?: never; dir?: unknown };
         return GAMEPAD_AXES.includes(axis.axis as never) && (axis.dir === 1 || axis.dir === -1);
+    }
+    if (binding.type === 'touch') {
+        const box = (binding as { box?: unknown }).box;
+        return typeof box === 'string' && box.length > 0;
     }
     return false;
 };

@@ -53,7 +53,7 @@ describe('a text given no font', () => {
 });
 
 describe('the font itself', () => {
-    it('describes a grid of 8 by 8 that matches its image, 122 characters with the Spanish ones', async () => {
+    it('describes a grid of 8 by 8 that matches its image, 138 characters with the Spanish ones and the prompts', async () => {
         const { store } = createTestGame();
         let text!: TText;
         startTestScene(store, 'Level', () => {
@@ -63,8 +63,8 @@ describe('the font itself', () => {
         const meta = await (await fetch(text.font.src)).json() as TBitmapFontMeta;
 
         expect(meta.glyphHeight).toBe(8);
-        expect(meta.chars).toHaveLength(122);
-        for (const char of 'ñÑ¿¡áéíóúü') {
+        expect(meta.chars).toHaveLength(138);
+        for (const char of 'ñÑ¿¡áéíóúü←→↑↓▲▼◀▶ⒶⒷⓍⓎ★♥●■') {
             expect(meta.chars.some((glyph) => glyph.char === char)).toBe(true);
         }
         // The last character sits inside the image it is cut from.
@@ -78,7 +78,32 @@ describe('the font itself', () => {
         const bytes = Buffer.from(DEFAULT_FONT_ATLAS.split(',')[1], 'base64');
         expect(bytes.subarray(1, 4).toString()).toBe('PNG');
         expect(bytes.readUInt32BE(16)).toBe(128);
-        expect(bytes.readUInt32BE(20)).toBe(64);
+        expect(bytes.readUInt32BE(20)).toBe(72);
+    });
+});
+
+describe('the prompts drawn for Nacatamal Arcade', () => {
+    it('are each something to draw, not an empty cell', async () => {
+        const { decodePng } = await import('../src/pixels/decode_png');
+        const image = await decodePng(Buffer.from(DEFAULT_FONT_ATLAS.split(',')[1], 'base64'));
+        const { store } = createTestGame();
+        let text!: TText;
+        startTestScene(store, 'Level', () => {
+            text = createText({ text: 'x' });
+            return createScene();
+        });
+        const meta = await (await fetch(text.font.src)).json() as TBitmapFontMeta;
+
+        for (const char of '←→↑↓▲▼◀▶ⒶⒷⓍⓎ★♥●■') {
+            const glyph = meta.chars.find((g) => g.char === char)!;
+            let ink = 0;
+            for (let y = 0; y < 8; y++) {
+                for (let x = 0; x < 8; x++) {
+                    ink += image.data[((glyph.y + y) * image.width + glyph.x + x) * 4 + 3] > 127 ? 1 : 0;
+                }
+            }
+            expect(ink).toBeGreaterThan(6);
+        }
     });
 });
 

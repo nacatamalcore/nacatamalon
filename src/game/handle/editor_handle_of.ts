@@ -30,6 +30,16 @@ const hosts = new WeakMap<TGameInstance, Promise<TRuntimeStore>>();
 const claimed = new WeakSet<TGameInstance>();
 
 /**
+ * One frame of the game, for a step that does not say how long: its own `step` when it has one, so
+ * a step of a game at 50 is one of its steps and not five sixths of one, and 1/60 on the screen's
+ * time.
+ */
+const frameOf = (store: TRuntimeStore): number => {
+    const rate = store.get('config').step;
+    return typeof rate === 'number' ? 1 / rate : 1 / 60;
+};
+
+/**
  * Whether a tool has asked for this game's handle.
  *
  * @internal
@@ -135,7 +145,7 @@ export const editorHandleOf = async (instance: TGameInstance): Promise<TEditorHa
         setCameraPreview: (preview) => setCameraPreview(store, preview),
         getCameraPreview: () => store.get('viewport').preview?.canvas ?? null,
         setCanvasFit: (fit) => store.get('screen').setFit?.(fit),
-        stepFrame: (dt = 1 / 60) => {
+        stepFrame: (dt = frameOf(store)) => {
             const loop = store.get('loop');
             if (loop.pausedBy.length === 0 || loop.destroyed) {
                 return false;
@@ -143,7 +153,7 @@ export const editorHandleOf = async (instance: TGameInstance): Promise<TEditorHa
             store.setState('loop', { step: Math.min(Math.max(0, dt), MAX_FRAME_DELTA) });
             return true;
         },
-        stepFrames: (count, dt = 1 / 60) => {
+        stepFrames: (count, dt = frameOf(store)) => {
             const loop = store.get('loop');
             if (loop.pausedBy.length === 0 || loop.destroyed) {
                 return false;

@@ -32,6 +32,23 @@ releases are in [changelog/](./changelog/), one file each.
   scene-change transition stays on real time. Absent or `'display'`, the default, it is one update per
   picture as before. The 2D and 3D physics worlds step by exactly the game's step, once per step, so
   at `step: 50` bodies move as evenly as at 60; on the screen's time they keep their own 1/60.
+  `TEditorHandle.stepFrame()` and `stepFrames(n)` with no `dt` step by one frame of the game, its
+  `step` (1/50 at `step: 50`), instead of always 1/60.
+
+- Touch, one finger apart from another: `TPointerInfo` carries `pointerId` and `pointerType`
+  (`'mouse' | 'touch' | 'pen'`); two fingers moving in one frame keep two positions, each has its own
+  click, and lifting one leaves the other pressing.
+- The pointer can be asked, like the keyboard, from an update: `usePointer().isDown()`,
+  `position()`, `touches()` (`TPointerTouch`, every finger pressing) and `isPressing(target)`, whether
+  a finger is on a sprite, text, nine-slice or whole object right now. It follows the finger, so a
+  thumb sliding from one on-screen button to the next presses the next.
+- Actions bound to touch: `{ type: 'touch', box: 'Jump' }` holds the action while a finger is on the
+  object named `Jump`, for an on-screen pad drawn by the engine; it counts for a handle on every
+  device. Written to and read from the project file like the other bindings.
+- `actions.heldFor(name)` and `useAction(name).heldFor()`: how long an action has been held, in
+  seconds of game time, still set on the frame it is let go, for charged shots.
+- The built-in font has `← → ↑ ↓ ▲ ▼ ◀ ▶ Ⓐ Ⓑ Ⓧ Ⓨ ★ ♥ ● ■`, drawn for Nacatamal Arcade, for on-screen
+  prompts. Its image is better compressed too, half the size it was.
 
 ### Changed
 
@@ -42,6 +59,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- A touch the system took back (a browser gesture, a call coming in) was never released: the pointer
+  ignored `pointercancel`, so what it pressed stayed pressed. It now ends like a release, with no click.
+- Two fingers on the screen were one pointer: their moves were folded into one position, which jumped
+  between them, and lifting either released both.
 - A shader composed with noise (`composerSimplexNoise`, `composerFbm`, `composerCellularNoise`) in
   `position` and anything in `color` did not compile on WebGL2 (`'sgNoise3' : no matching overloaded
   function found`): the material fell back to the built-in shader with a warning, and the dent

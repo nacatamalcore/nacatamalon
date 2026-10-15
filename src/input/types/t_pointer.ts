@@ -39,6 +39,17 @@ export type TPointerInfo = {
      */
     readonly button: number;
     /**
+     * Which pointer this is: each finger on a touch screen has its own, the same from the moment it
+     * touches until it lifts, so two thumbs (one on the throttle, one steering) are told apart. The
+     * mouse keeps one for good.
+     */
+    readonly pointerId: number;
+    /**
+     * What it is: `'mouse'`, `'touch'` (a finger) or `'pen'`. A game can show its on-screen buttons
+     * only once the player has touched.
+     */
+    readonly pointerType: TPointerType;
+    /**
      * The sprite, text or nine-slice on top under the pointer, or `null` over empty space.
      */
     readonly target: TSprite | TText | TNineSlice | null;
@@ -46,6 +57,38 @@ export type TPointerInfo = {
      * Every sprite, text and nine-slice under the pointer, the one on top first.
      */
     readonly hits: ReadonlyArray<TSprite | TText | TNineSlice>;
+};
+
+/**
+ * What a pointer is: a mouse, a finger on a touch screen, or a pen.
+ *
+ * @category Input
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TPointerType = 'mouse' | 'touch' | 'pen';
+
+/**
+ * A pointer that is pressing right now, a finger on the screen or a mouse button held, as
+ * `usePointer().touches()` lists them.
+ *
+ * @category Input
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TPointerTouch = {
+    readonly pointerId: number;
+    readonly pointerType: TPointerType;
+    /**
+     * Where it is now, in the game's pixels from the top-left corner, ignoring any camera.
+     */
+    readonly screenX: number;
+    readonly screenY: number;
+    /**
+     * The same point through the camera of the scene that asked.
+     */
+    readonly worldX: number;
+    readonly worldY: number;
 };
 
 /**
@@ -120,6 +163,33 @@ export type TPointerHandle = {
      * Every sprite and text under a point of the screen, the one on top first.
      */
     pick(screenX: number, screenY: number): Array<TSprite | TText | TNineSlice>;
+    /**
+     * Whether anything is pressing right now: a finger on the screen, or a mouse button held. The
+     * pointer's answer to the keyboard's `isDown`, for what continues while it is held (charging,
+     * dragging, a thumb on the throttle).
+     *
+     * Read in an update, like the keyboard: it changes when the frame starts, not while it runs.
+     */
+    isDown(): boolean;
+    /**
+     * Where the pointer was last seen over the game, or `null` once it left (or before it came).
+     * For the mouse that is where it hovers, pressed or not; for touch, the last finger that moved.
+     */
+    position(): { screenX: number; screenY: number; worldX: number; worldY: number } | null;
+    /**
+     * Every pointer pressing right now, in the order they started: each finger on the screen, and the
+     * mouse while a button is held. Two thumbs are two entries, each with its own `pointerId`.
+     */
+    touches(): readonly TPointerTouch[];
+    /**
+     * Whether a finger (or a held mouse button) is on `target` right now: a sprite, a text, a
+     * nine-slice, or a whole object, which counts a finger on any of its pieces.
+     *
+     * What an on-screen button needs. It follows the finger, not the press: a thumb that slides from
+     * one button to the next without lifting moves from pressing one to pressing the other, the way
+     * the pads of touch-screen games work. Something drawn over the button does not stop it.
+     */
+    isPressing(target: TSprite | TText | TNineSlice | TBox): boolean;
     /**
      * Captures the mouse for the game: the cursor disappears and the mouse moves nothing but
      * `movementX`/`movementY`, however far it goes, which is what a first-person camera needs. The
@@ -196,6 +266,23 @@ export type TPointerSource = {
      * of a frame, which is what keeps a click from landing half way through the updates.
      */
     dispatch(store: TRuntimeStore): void;
+    /**
+     * Every pointer pressing, as of the last `dispatch`, in screen pixels: the state a frame reads.
+     */
+    touches(): ReadonlyArray<{ pointerId: number; pointerType: TPointerType; screenX: number; screenY: number }>;
+    /**
+     * Where the pointer was last seen over the canvas, as of the last `dispatch`, or `null`.
+     */
+    position(): { x: number; y: number } | null;
+    /**
+     * Whether a pressing pointer is on `target`. See `TPointerHandle.isPressing`.
+     */
+    isPressing(store: TRuntimeStore, target: TSprite | TText | TNineSlice | TBox): boolean;
+    /**
+     * The name of every object a pressing pointer is on, its own and those of everything it sits in:
+     * what an action bound to a touch (`{ type: 'touch', box }`) asks.
+     */
+    pressedNames(store: TRuntimeStore): ReadonlySet<string>;
     /**
      * Captures the mouse on this canvas. See `TPointerHandle.lock`.
      */

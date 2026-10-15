@@ -31,10 +31,25 @@ type TCompiled = {
 type TRow = {
     device: TActionDevice;
     keyboard: boolean;
+    /**
+     * Whether a finger on an on-screen button counts: only for a handle on every device, since a
+     * touch belongs to no pad and is not the keyboard.
+     */
+    touch: boolean;
     pads: TGamepad[];
     cur: Float32Array;
     prev: Float32Array;
+    /**
+     * How long each action has been held, in seconds of game time. See `heldFor`. Doubles, as it is
+     * a sum: in singles a long charge would drift off the steps it was made of.
+     */
+    held: Float64Array;
 };
+
+/**
+ * Nothing under any finger.
+ */
+const NO_TOUCH: ReadonlySet<string> = new Set();
 
 /**
  * Someone waiting for the player to press anything.
@@ -66,6 +81,11 @@ export type TActionSourceOptions = {
      */
     gamepad: (index: number) => TGamepad;
     actions?: TActionMap;
+    /**
+     * The names of the objects a finger is on, asked once per sample, for touch bindings. A game
+     * with no pointer (a test) has none.
+     */
+    touch?: () => ReadonlySet<string>;
 };
 
 /**
@@ -81,9 +101,10 @@ export type TActionSource = {
      */
     handle(device?: TActionDevice): TActionsHandle;
     /**
-     * Works out every row again. Called by the loop, after the pads have been sampled.
+     * Works out every row again. Called by the loop, after the pads have been sampled, with the
+     * frame's game time, which is what `heldFor` grows by.
      */
-    sample(): void;
+    sample(dt?: number): void;
     /**
      * The game's map, as installed.
      */
@@ -120,6 +141,15 @@ export type TActionSource = {
 
 export const createActions = (options: TActionSourceOptions): TActionSource => {
     const { keyboard, gamepad } = options;
+    /**
+     * What fingers are on this sample, asked once for every row and binding.
+     */
+    let touched: ReadonlySet<string> = NO_TOUCH;
+    /**
+     * Whether any action listens to a touch. Without one nothing asks what the fingers are on, which
+     * would lay the scene out every frame a finger is down for no one.
+     */
+    let anyTouch = false;
 
     let defs: TActionDef[] = [...(options.actions ?? [])];
     const overrideMap = new Map<TActionName, TActionBinding[]>();
@@ -137,10 +167,12 @@ export const createActions = (options: TActionSourceOptions): TActionSource => {
             press: def.press ?? DEFAULT_ACTION_PRESS,
         }));
         slots = new Map(plan.map((action, i) => [action.name, i]));
+        anyTouch = plan.some((action) => action.bindings.some((binding) => binding.type === 'touch'));
         for (const row of rows.values()) {
             if (row.cur.length < plan.length) {
                 row.cur = new Float32Array(plan.length);
                 row.prev = new Float32Array(plan.length);
+                row.held = new Float64Array(plan.length);
             }
         }
         dirty = false;
@@ -164,6 +196,9 @@ export const createActions = (options: TActionSourceOptions): TActionSource => {
     const strengthOf = (binding: TActionBinding, row: TRow): number => {
         if (binding.type === 'key') {
             return row.keyboard && keyboard.isDown(binding.key) ? 1 : 0;
+        }
+        if (binding.type === 'touch') {
+            return row.touch && touched.has(binding.box) ? 1 : 0;
         }
         if (binding.type === 'button') {
             let best = 0;
@@ -202,6 +237,23 @@ export const createActions = (options: TActionSourceOptions): TActionSource => {
         }
     };
 
+    /**
+     * Moves every action's held time on by a frame: on while it is down, from nothing on the frame
+     * it went down, and left as it was on the frame it is let go, so the release can still read how
+     * long the press lasted. Back to nothing the frame after.
+     */
+    const timeHeld = (row: TRow, dt: number): void => {
+        for (let i = 0; i < plan.length; i++) {
+            const down = row.cur[i] >= plan[i].press;
+            const wasDown = row.prev[i] >= plan[i].press;
+            if (down) {
+                row.held[i] = wasDown ? row.held[i] + dt : 0;
+            } else if (!wasDown) {
+                row.held[i] = 0;
+            }
+        }
+    };
+
     const rowFor = (device: TActionDevice): TRow => {
         const key = String(device);
         const existing = rows.get(key);
@@ -224,9 +276,11 @@ export const createActions = (options: TActionSourceOptions): TActionSource => {
             // A keyboard is not a port, so naming a port means pad only, which is exactly what
             // player two wants while player one is on the keys.
             keyboard: device === 'any' || device === 'keyboard',
+            touch: device === 'any',
             pads,
             cur: new Float32Array(plan.length),
             prev: new Float32Array(plan.length),
+            held: new Float64Array(plan.length),
         };
         rows.set(key, row);
         // Read the moment it exists, and seeded so its first frame reports nothing as just pressed.
@@ -312,6 +366,10 @@ export const createActions = (options: TActionSourceOptions): TActionSource => {
                 const fell = row.cur[at] < action.press && row.prev[at] >= action.press;
                 return fell || keyEdge(action, row, true);
             },
+            heldFor: (name) => {
+                const at = slotOf(name);
+                return at === -1 ? 0 : row.held[at];
+            },
             value: (name) => {
                 const at = slotOf(name);
                 return at === -1 ? 0 : deadzoneScalar(row.cur[at], plan[at].deadzone);
@@ -392,10 +450,12 @@ export const createActions = (options: TActionSourceOptions): TActionSource => {
 
     return {
         handle: (device = 'any') => buildHandle(device),
-        sample: () => {
+        sample: (dt = 0) => {
             ensureCompiled();
+            touched = anyTouch ? options.touch?.() ?? NO_TOUCH : NO_TOUCH;
             for (const row of rows.values()) {
                 sampleRow(row);
+                timeHeld(row, dt);
             }
             for (const capture of [...captures]) {
                 pollCapture(capture);

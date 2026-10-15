@@ -374,3 +374,27 @@ describe('physics stepped by a game at 50 (PAL)', () => {
         expect(evenly(heights)).toBeLessThan(0.05);
     });
 });
+
+describe('a host stepping a game at 50 without saying by how much', () => {
+    it('runs one step of the game, 1/50, and on the screen\'s time 1/60', async () => {
+        for (const [step, want] of [[50, 1 / 50], ['display', 1 / 60]] as const) {
+            const deltas: number[] = [];
+            const { store, picture } = onScreen(step, () => {
+                useUpdate((dt) => deltas.push(dt));
+                return createScene();
+            });
+            const instance = { destroy: () => {} } as unknown as TGameInstance;
+            openHost(instance).resolve(store);
+            const handle = await editorHandleOf(instance);
+            handle.pause('editor');
+            deltas.length = 0;
+
+            handle.stepFrame();
+            picture(1000);
+            handle.stepFrames(2);
+            picture(1000);
+
+            expect(deltas).toEqual([want, want, want]);
+        }
+    });
+});

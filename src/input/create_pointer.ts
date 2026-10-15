@@ -2,7 +2,8 @@
 import { rootOf } from '../box/root_of';
 import { screenSizeOf } from '../DOM/screen_size';
 import { unapplyView2d } from '../render/shared';
-import { pickTargets } from './pick_targets';
+import { pickTargets, pickTargetsAt } from './pick_targets';
+import { ownerOfDrawable } from '../box/drawable_owner';
 import { topmostListening } from './topmost_listening';
 import type { TBox } from '../box';
 import type { TSprite } from '../gameobjects/sprite/types/t_sprite';
@@ -10,7 +11,7 @@ import type { TText } from '../gameobjects/text/types/t_text';
 import type { TNineSlice } from '../gameobjects/nine_slice/types/t_nine_slice';
 import type { TRuntimeStore } from '../store';
 import type { TListeningSprite, TPointerTarget } from './topmost_listening';
-import type { TPointerInfo, TPointerKind, TPointerListener, TPointerLockOptions, TPointerSource, TPointerWheelListener } from './types/t_pointer';
+import type { TPointerInfo, TPointerKind, TPointerListener, TPointerLockOptions, TPointerSource, TPointerType, TPointerWheelListener } from './types/t_pointer';
 import type { TSpriteEvents } from './types/t_sprite_events';
 
 /**
@@ -19,7 +20,13 @@ import type { TSpriteEvents } from './types/t_sprite_events';
  * mouse moved, in pixels of the page, which is nothing for anything but a move.
  */
 type TQueuedEvent = {
-    kind: TPointerKind | 'leave';
+    /**
+     * `cancel` is a press the system took back (a gesture of the browser's, a call coming in): it
+     * ends like a release, so nothing stays held, but it is never a click.
+     */
+    kind: TPointerKind | 'leave' | 'cancel';
+    pointerId: number;
+    pointerType: TPointerType;
     screenX: number;
     screenY: number;
     button: number;
@@ -28,6 +35,18 @@ type TQueuedEvent = {
     movementX: number;
     movementY: number;
 };
+
+/**
+ * The id the mouse goes by where the browser gives none (the wheel's events carry no pointer), the
+ * one browsers give the mouse anyway.
+ */
+const MOUSE_ID = 1;
+
+/**
+ * What the browser calls a pointer, as one of ours: anything it does not name is a mouse.
+ */
+const typeOf = (event: PointerEvent): TPointerType =>
+    event.pointerType === 'touch' || event.pointerType === 'pen' ? event.pointerType : 'mouse';
 
 /**
  * How long a browser that answers a capture with an event rather than a promise is given to answer.
@@ -77,9 +96,22 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
      */
     let hovered: TPointerTarget | null = null;
     /**
-     * What listening a press started on, so a click can be told from a drag off it.
+     * What listening each pointer's press started on, so a click can be told from a drag off it.
+     * One per pointer: a second finger landing does not take the first one's click away.
      */
-    let pressed: TPointerTarget | null = null;
+    const pressed = new Map<number, TPointerTarget | null>();
+    /**
+     * Every pointer pressing, as of the last frame that handed events on, in the order they started:
+     * the state `isDown`, `touches` and `isPressing` read. Kept by the frame and not by the DOM, so
+     * every update of a frame sees the same answer.
+     */
+    const active = new Map<number, { pointerId: number; pointerType: TPointerType; screenX: number; screenY: number }>();
+    /**
+     * What is under each pressing pointer, worked out once per frame on the first question and kept
+     * until the next frame's events: several buttons asking about the same fingers lay the scene out
+     * once. Same order as `active`.
+     */
+    let underActive: Array<Array<TSprite | TText | TNineSlice>> | null = null;
 
     /**
      * From a position on the page to the game's pixels. The canvas is shown at a CSS size that may
@@ -102,6 +134,8 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
         const moved = kind === 'move';
         const queued: TQueuedEvent = {
             kind,
+            pointerId: event.pointerId ?? MOUSE_ID,
+            pointerType: typeOf(event),
             screenX: x,
             screenY: y,
             button: event.button ?? 0,
@@ -115,8 +149,10 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
         // replaces a move right before it; how far it moved is added, as the wheel's turns are,
         // or a quick flick of a captured mouse would lose most of itself. Presses and releases
         // are never merged: a quick click is a down and an up, and both have to arrive.
+        // Only a move of the same pointer: two fingers moving in one frame are two positions, and
+        // folding one into the other would make the first jump to where the second is.
         const last = queue[queue.length - 1];
-        if (moved && last?.kind === 'move') {
+        if (moved && last?.kind === 'move' && last.pointerId === queued.pointerId) {
             queued.movementX += last.movementX;
             queued.movementY += last.movementY;
             queue[queue.length - 1] = queued;
@@ -133,6 +169,7 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
         enqueue('down', pointerEvent);
     };
     const onUp = (event: Event): void => enqueue('up', event as PointerEvent);
+    const onCancel = (event: Event): void => enqueue('cancel', event as PointerEvent);
     const onMove = (event: Event): void => enqueue('move', event as PointerEvent);
     const onLeave = (event: Event): void => enqueue('leave', event as PointerEvent);
 
@@ -157,11 +194,12 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
             queue[queue.length - 1] = { ...last, screenX: x, screenY: y, deltaX: last.deltaX + deltaX, deltaY: last.deltaY + deltaY };
             return;
         }
-        queue.push({ kind: 'wheel', screenX: x, screenY: y, button: 0, deltaX, deltaY, movementX: 0, movementY: 0 });
+        queue.push({ kind: 'wheel', pointerId: MOUSE_ID, pointerType: 'mouse', screenX: x, screenY: y, button: 0, deltaX, deltaY, movementX: 0, movementY: 0 });
     };
 
     canvas.addEventListener('pointerdown', onDown);
     canvas.addEventListener('pointerup', onUp);
+    canvas.addEventListener('pointercancel', onCancel);
     canvas.addEventListener('pointermove', onMove);
     canvas.addEventListener('pointerleave', onLeave);
     // Not passive, or the page could not be kept from scrolling while the game uses the wheel.
@@ -177,6 +215,10 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
      * How far the event being handed on moved the mouse, for every listener and sprite that hears it.
      */
     const movement = { x: 0, y: 0 };
+    /**
+     * Which pointer the event being handed on came from, for every listener and sprite that hears it.
+     */
+    const current: { pointerId: number; pointerType: TPointerType } = { pointerId: MOUSE_ID, pointerType: 'mouse' };
 
     /**
      * What a listener belonging to `box` is told: the world through the camera of its own scene.
@@ -191,6 +233,8 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
             movementX: movement.x,
             movementY: movement.y,
             button,
+            pointerId: current.pointerId,
+            pointerType: current.pointerType,
             target: hits[0] ?? null,
             hits,
         };
@@ -356,13 +400,40 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
         entry.connections = entry.connections.filter((existing) => existing !== connection);
         if (entry.connections.length === 0) {
             listening.delete(sprite);
-            if (pressed === sprite) {
-                pressed = null;
+            for (const [id, target] of pressed) {
+                if (target === sprite) {
+                    pressed.set(id, null);
+                }
             }
         } else if (hovered === sprite) {
             // Still listening, but maybe no longer clickable.
             setCursor();
         }
+    };
+
+    /**
+     * What is under each pressing pointer this frame, laid out once and kept until the next.
+     */
+    const heldHits = (store: TRuntimeStore): Array<Array<TSprite | TText | TNineSlice>> => {
+        if (underActive === null) {
+            underActive = pickTargetsAt(store, [...active.values()].map((finger) => ({ x: finger.screenX, y: finger.screenY })));
+        }
+        return underActive;
+    };
+
+    /**
+     * Whether a drawable belongs to an object, by itself or through anything above it.
+     */
+    const sitsIn = (hit: TSprite | TText | TNineSlice, target: TPointerTarget): boolean => {
+        if (!('children' in target)) {
+            return false;
+        }
+        for (let box = ownerOfDrawable(hit)?.box ?? null; box !== null; box = box.parent) {
+            if (box === target) {
+                return true;
+            }
+        }
+        return false;
     };
 
     const remove = (registration: TRegistration): void => {
@@ -401,17 +472,37 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
             // instead of being handled inside this one.
             const events = queue;
             queue = [];
+            // A new frame: what is under the fingers is asked again.
+            underActive = null;
 
             for (const event of events) {
-                const { kind, screenX, screenY, button, deltaX, deltaY } = event;
+                const { screenX, screenY, button, deltaX, deltaY, pointerId } = event;
+                // Taken back by the system: everything a release does but the click.
+                const cancelled = event.kind === 'cancel';
+                const kind = (cancelled ? 'up' : event.kind) as TPointerKind | 'leave';
                 movement.x = event.movementX;
                 movement.y = event.movementY;
+                current.pointerId = pointerId;
+                current.pointerType = event.pointerType;
 
                 if (kind === 'leave') {
                     lastPosition = null;
                     continue;
                 }
                 lastPosition = { x: screenX, y: screenY };
+
+                // What is pressing, kept before anyone is told, so a listener that asks `isDown`
+                // hears the same as the event it is handling.
+                if (kind === 'down') {
+                    active.set(pointerId, { pointerId, pointerType: event.pointerType, screenX, screenY });
+                } else if (kind === 'up') {
+                    active.delete(pointerId);
+                } else if (kind === 'move') {
+                    const finger = active.get(pointerId);
+                    if (finger !== undefined) {
+                        active.set(pointerId, { ...finger, screenX, screenY });
+                    }
+                }
 
                 const listeners = registrations.filter((registration) => registration.kind === kind);
                 if (listeners.length === 0 && listening.size === 0) {
@@ -463,24 +554,49 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
                 }
 
                 if (kind === 'down') {
-                    pressed = topmost;
+                    pressed.set(pointerId, topmost);
                     fireSprite(topmost, 'onPointerDown', screenX, screenY, button, hits);
                     continue;
                 }
 
-                // A release: tell whatever is under it, and it is a click only if the press started
-                // on that same sprite.
+                // A release: tell whatever is under it, and it is a click only if this same pointer's
+                // press started on that same sprite, and the system did not take the press back.
                 fireSprite(topmost, 'onPointerUp', screenX, screenY, button, hits);
-                if (topmost !== null && topmost === pressed) {
+                if (!cancelled && topmost !== null && topmost === pressed.get(pointerId)) {
                     fireSprite(topmost, 'onClick', screenX, screenY, button, hits);
                 }
-                pressed = null;
+                pressed.delete(pointerId);
             }
+            current.pointerId = MOUSE_ID;
+            current.pointerType = 'mouse';
 
             // Hover is worked out with the pointer still, so nothing it fires moved the mouse.
             movement.x = 0;
             movement.y = 0;
             refreshHover(store);
+        },
+
+        touches: () => [...active.values()],
+        position: () => lastPosition,
+        isPressing: (store, target) => {
+            if (active.size === 0) {
+                return false;
+            }
+            return heldHits(store).some((hits) => hits.some((hit) => hit === target || sitsIn(hit, target)));
+        },
+        pressedNames: (store) => {
+            const names = new Set<string>();
+            if (active.size === 0) {
+                return names;
+            }
+            for (const hits of heldHits(store)) {
+                for (const hit of hits) {
+                    for (let box = ownerOfDrawable(hit)?.box ?? null; box !== null; box = box.parent) {
+                        names.add(box.name);
+                    }
+                }
+            }
+            return names;
         },
 
         lock,
@@ -491,6 +607,7 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
             unlock();
             canvas.removeEventListener('pointerdown', onDown);
             canvas.removeEventListener('pointerup', onUp);
+            canvas.removeEventListener('pointercancel', onCancel);
             canvas.removeEventListener('pointermove', onMove);
             canvas.removeEventListener('pointerleave', onLeave);
             canvas.removeEventListener('wheel', onWheel);
@@ -498,7 +615,9 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
             registrations = [];
             listening.clear();
             hovered = null;
-            pressed = null;
+            pressed.clear();
+            active.clear();
+            underActive = null;
             setCursor();
         },
     };

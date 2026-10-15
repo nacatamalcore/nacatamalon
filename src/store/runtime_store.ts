@@ -77,12 +77,16 @@ export const createRuntimeStore = (init: TRuntimeStoreInit): TRuntimeStore => {
     // Built before the state so the actions can be given them.
     const keyboard = createKeyboard(init.canvas);
     const gamepads = createGamepads(init.canvas);
+    const pointer = createPointer(init.canvas);
+    // Filled in at the end: what a finger is on is worked out from the scenes, which the store holds.
+    let self: TRuntimeStore | null = null;
     // The actions take their pads from the game's own, never around them: a port is only asked about
     // once somebody holds a handle for it.
     const actions = createActions({
         keyboard,
         gamepad: (index) => gamepads.handle(index),
         actions: init.config.actions,
+        touch: () => (self === null ? new Set<string>() : pointer.pressedNames(self)),
     });
 
     const state: TRuntimeState = {
@@ -92,7 +96,7 @@ export const createRuntimeStore = (init: TRuntimeStoreInit): TRuntimeStore => {
         loop: { destroyed: false, pausedBy: [], timeScale: 1, failure: null, step: null, stepCount: 1 },
         input: {
             keyboard: keyboard,
-            pointer: createPointer(init.canvas),
+            pointer,
             gamepads: gamepads,
             // The actions take their pads from the game's own, never around them: a port is only
             // asked about once somebody holds a handle for it.
@@ -235,5 +239,6 @@ export const createRuntimeStore = (init: TRuntimeStoreInit): TRuntimeStore => {
         listeners.clear();
     };
 
-    return { id: nanoId(), get, getState, setState, subscribe, version, destroy };
+    self = { id: nanoId(), get, getState, setState, subscribe, version, destroy };
+    return self;
 };

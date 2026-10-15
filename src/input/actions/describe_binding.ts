@@ -29,5 +29,8 @@ export const describeBinding = (binding: TActionBinding): string => {
     if (binding.type === 'button') {
         return GAMEPAD_BUTTON_LABELS[binding.button];
     }
+    if (binding.type === 'touch') {
+        return `Touch ${binding.box}`;
+    }
     return gamepadAxisDirectionLabel(binding.axis, binding.dir);
 };

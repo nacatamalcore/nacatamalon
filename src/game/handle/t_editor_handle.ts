@@ -210,6 +210,8 @@ export type TEditorHandle = TGameHandle & {
      *
      * Returns `false` and does nothing if the game is not paused or is destroyed. `dt` is clamped
      * like an ordinary frame's, so a step cannot smuggle in a jump the loop itself would refuse.
+     * Left out, it is one frame of the game: its `step` (1/50 for `step: 50`), or 1/60 on the
+     * screen's time.
      */
     stepFrame(dt?: number): boolean;
     /**
@@ -221,7 +223,8 @@ export type TEditorHandle = TGameHandle & {
      * drawing is skipped, and with it what moves while drawing: particles advance one frame, not
      * `count`. A host runs a long stretch as several calls, so the page is not held for long.
      *
-     * Returns `false` and does nothing if the game is not paused or is destroyed.
+     * Returns `false` and does nothing if the game is not paused or is destroyed. `dt` left out is
+     * one frame of the game, as for `stepFrame`.
      *
      * @example
      * ```ts
@@ -229,7 +232,7 @@ export type TEditorHandle = TGameHandle & {
      * declare const handle: TEditorHandle;
      *
      * handle.pause('editor');
-     * handle.stepFrames(600); // ten seconds of game
+     * handle.stepFrames(600); // ten seconds of a game at 60
      * ```
      */
     stepFrames(count: number, dt?: number): boolean;

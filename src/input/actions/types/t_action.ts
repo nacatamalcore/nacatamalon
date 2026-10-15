@@ -14,9 +14,15 @@ export type TActionName = string;
 /**
  * One physical thing an action listens to.
  *
- * Three kinds, and the reason there is no fourth: a gamepad **button** covers the digital and the
- * analogue ones alike, because a trigger already reports how far it is pressed. A separate kind for
- * triggers would be a second name for one fact.
+ * Three kinds of key and pad, and the reason there is no fourth: a gamepad **button** covers the
+ * digital and the analogue ones alike, because a trigger already reports how far it is pressed. A
+ * separate kind for triggers would be a second name for one fact.
+ *
+ * And **touch**, for an on-screen button: `{ type: 'touch', box: 'Jump' }` holds the action while a
+ * finger is on the object named `Jump` (or on anything inside it). The button is an ordinary object
+ * of the scene, drawn by the engine and placed like any other, so a pad on a phone is a few sprites
+ * and the game still reads `isDown('jump')`, whatever pressed it. A finger sliding from one button to
+ * the next moves from one action to the other. It counts for a handle on every device (`'any'`).
  *
  * `dir` on an axis is not a threshold and is not optional: it is part of **which** input this is. An
  * axis goes both ways and an action does not, so "the horizontal axis of the left stick" does not
@@ -35,7 +41,8 @@ export type TActionName = string;
 export type TActionBinding =
     | { type: 'key'; key: string }
     | { type: 'button'; button: TGamepadButtonName }
-    | { type: 'axis'; axis: TGamepadAxisName; dir: -1 | 1 };
+    | { type: 'axis'; axis: TGamepadAxisName; dir: -1 | 1 }
+    | { type: 'touch'; box: string };
 
 /**
  * One named action and everything it listens to.
@@ -125,6 +132,13 @@ export type TActionsHandle = {
      */
     justPressed(name: TActionName): boolean;
     /**
+     * How long it has been held, in seconds of game time, `0` while it is not. On the frame it is
+     * let go it still says how long it was held, so a charged shot reads its charge right there:
+     * `if (actions.justReleased('fire')) shoot(actions.heldFor('fire'))`. It stops with the game
+     * when it is paused, and with a `step` it grows in whole steps.
+     */
+    heldFor(name: TActionName): number;
+    /**
      * Whether it stopped this frame.
      */
     justReleased(name: TActionName): boolean;
@@ -169,6 +183,10 @@ export type TAction = {
     justPressed(): boolean;
     justReleased(): boolean;
     value(): number;
+    /**
+     * How long it has been held, in seconds. See `TActionsHandle.heldFor`.
+     */
+    heldFor(): number;
 };
 
 /**

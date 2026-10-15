@@ -60,15 +60,41 @@ const TOP_LEFT = { x: 0, y: 0 };
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const pickTargets = (store: TRuntimeStore, screenX: number, screenY: number): Array<TSprite | TText | TNineSlice> => {
+export const pickTargets = (store: TRuntimeStore, screenX: number, screenY: number): Array<TSprite | TText | TNineSlice> =>
+    pickTargetsAt(store, [{ x: screenX, y: screenY }])[0];
+
+/**
+ * `pickTargets` for several screen points at once, from one frame: each finger on the screen asks
+ * what is under it every frame, and laying the scene out once per finger would be that many times
+ * the work for the same answer.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const pickTargetsAt = (store: TRuntimeStore, points: ReadonlyArray<{ x: number; y: number }>): Array<Array<TSprite | TText | TNineSlice>> => {
+    if (points.length === 0) {
+        return [];
+    }
     const ctx: TFrameContext = createFrameContext();
     fillFrameContext(store, ctx);
 
     // The screen's pass, which is the last one: pictures drawn inside the game go before it.
     const { drawables = [], cameras = [], cameraIndex = [] } = ctx.passes[ctx.passes.length - 1];
+    return points.map((screen) => hitsAt(drawables, cameras, cameraIndex, screen));
+};
+
+/**
+ * What one screen point falls on, from a frame already laid out.
+ */
+const hitsAt = (
+    drawables: NonNullable<TFrameContext['passes'][number]['drawables']>,
+    cameras: NonNullable<TFrameContext['passes'][number]['cameras']>,
+    cameraIndex: NonNullable<TFrameContext['passes'][number]['cameraIndex']>,
+    screen: { x: number; y: number },
+): Array<TSprite | TText | TNineSlice> => {
     const hits: Array<TSprite | TText | TNineSlice> = [];
     const tested = new Set<TText | TNineSlice>();
-    const screen = { x: screenX, y: screenY };
 
     // Back to front: what was painted last is on top.
     for (let i = drawables.length - 1; i >= 0; i--) {

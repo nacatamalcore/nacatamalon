@@ -15,9 +15,9 @@ export const DEFAULT_FONT_KEY = 'nacatamalon:arcade';
 
 /**
  * Every character the default font has, in the order its image holds them: printable ASCII, then
- * the Spanish letters and marks and a few more.
+ * the Spanish letters and marks and a few more, then arrows and buttons for on-screen prompts.
  */
-const DEFAULT_FONT_CHARS = ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~¡¿ÁÉÍÓÚÜÑáéíóúüñÀÈÒàèòÇç·€©';
+const DEFAULT_FONT_CHARS = ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~¡¿ÁÉÍÓÚÜÑáéíóúüñÀÈÒàèòÇç·€©←→↑↓▲▼◀▶ⒶⒷⓍⓎ★♥●■';
 
 const COLUMNS = 16;
 const CELL = 8;
