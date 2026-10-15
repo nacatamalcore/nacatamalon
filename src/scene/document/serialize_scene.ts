@@ -522,6 +522,9 @@ const writeDrawable = (drawable: TDrawable, writing: TWriting): TComponentDoc | 
         // A debug drawing made by a helper in code: it is not part of what the scene is, and a
         // document that kept its corners would keep a picture of one moment of it.
         case 'lines': return null;
+        // Its corners are wherever the game's code moved them this frame, and that code makes it again
+        // when the scene is opened.
+        case 'polygon': return null;
         default: {
             const never: never = drawable;
             return never;

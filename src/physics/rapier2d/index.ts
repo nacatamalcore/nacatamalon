@@ -21,6 +21,8 @@ export { installPhysics2d, rapier2dProvider, getPhysicsWorld2d } from './provide
 export { loadRapier2D } from './load_rapier';
 export { useCharacterBody2d } from './use_character_body_2d';
 export { useJoint2d } from './use_joint_2d';
+export { useSoftBody2d } from './use_soft_body_2d';
+export type { TSoftBody2d, TSoftBodyOptions2d, TSoftBodyShape2d } from './t_soft_body_2d';
 export type { TJoint2d, TJointHandle2d } from './t_joint_2d';
 export type { TCharacterOptions2d } from './character_body_2d';
 export type { TCharacterBody2d, TCharacterShape2d } from '../character/t_character_body_2d';

@@ -4,6 +4,8 @@ import { screenSizeOf } from '../../DOM/screen_size';
 import { collectDrawables } from './helper/collect_drawables';
 import { lookAgainAtParticles, stepSceneParticles } from './helper/step_scene_particles';
 import { stepSceneTilemaps } from './helper/step_scene_tilemaps';
+import type { IRenderer } from '../../render';
+import { stepScenePolygons } from './helper/step_scene_polygons';
 import { stepSceneLines } from './helper/step_scene_lines';
 import type { TFrameContext } from '../../render';
 import type { TDrawSprite } from '../../render/interface';
@@ -252,6 +254,11 @@ type TSeenThrough = Pick<TRuntimeState['viewport'], 'camera3d' | 'camera2d' | 'l
  */
 let snapping = false;
 
+/**
+ * The renderer of the game being filled in, for the shapes whose corners go up every frame.
+ */
+let drawingWith: IRenderer | null = null;
+
 const gatherTree = (
     root: TBox,
     lists: TPassLists,
@@ -343,6 +350,8 @@ const gatherTree = (
     // After the walk too, and for the same reason an emitter needs it: a layer's corners live
     // beside the record, so something has to hand the backend both halves at once.
     stepSceneTilemaps(drawables as TDrawable[], start);
+    // And a shape, drawn as a map layer of its own triangles, rebuilt as its corners are now.
+    stepScenePolygons(drawables as TDrawable[], start, drawingWith!);
 
     // After the walk as well: a set of lines follows its object, and is placed in the world here.
     stepSceneLines(drawables as TDrawable[], start);
@@ -481,6 +490,7 @@ const secondPass = (store: TRuntimeStore, seenThrough: TSeenThrough, clearColor:
 export const fillFrameContext = (store: TRuntimeStore, ctx: TFrameContext, delta = 0): void => {
     pass++;
     snapping = store.get('config').pixelSnap;
+    drawingWith = store.get('screen').renderer;
 
     // Game objects while collecting and sorting; only sprites once texts are expanded.
     const lists = newLists();

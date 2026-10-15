@@ -1,3 +1,4 @@
+import type { TSoftBody2d, TSoftBodyOptions2d } from './t_soft_body_2d';
 import type { TJoint2d, TJointHandle2d } from './t_joint_2d';
 import type { TCharacterOptions2d } from './character_body_2d';
 import type { TCharacterBody2d } from '../character/t_character_body_2d';
@@ -238,6 +239,11 @@ export type TPhysicsWorldHandle2d = {
      * object being built.
      */
     addCharacter: (box: TGameObject, options: TCharacterOptions2d) => TCharacterBody2d;
+
+    /**
+     * Makes `box` a soft body in this world: what `useSoftBody2d` does for the object being built.
+     */
+    addSoftBody: (box: TGameObject, options: TSoftBodyOptions2d) => TSoftBody2d;
 
     /**
      * Joins two objects' bodies, or one to a point of the world when `b` is `null`, at any moment:

@@ -57,6 +57,25 @@ export type TCameraFollowOptions = {
      * default.
      */
     round?: boolean;
+    /**
+     * The level cut into rooms, as the action games of the consoles did: the camera keeps inside the
+     * room the target is in, and when the target walks into another it scrolls across to it. A list of
+     * rectangles of the world (rooms of any size, which may leave gaps), or one size for a grid of
+     * equal rooms laid from the corner of `bounds` (or of the world, without it), screen by screen; the
+     * last of a row that does not fit `bounds` is cut to it.
+     * Nothing by default.
+     */
+    rooms?: TRect[] | { width: number; height: number } | null;
+    /**
+     * How long the scroll from one room to the next takes, in seconds. `0` cuts straight to it.
+     * `0.6` by default.
+     */
+    scroll?: number;
+    /**
+     * Called when the target walks into another room, as the scroll starts: to bring back the
+     * enemies of a room, to change the music. `from` is `null` for the first room.
+     */
+    onRoom?: (room: TRect, from: TRect | null) => void;
 };
 
 /**
@@ -80,6 +99,18 @@ export type TCameraFollow = {
     lead: { x: number; y: number };
     smooth: number;
     round: boolean;
+    rooms: TRect[] | { width: number; height: number } | null;
+    scroll: number;
+    /**
+     * The room the camera is in, or scrolling into. `null` without rooms, or before the target has
+     * been in one.
+     */
+    readonly room: TRect | null;
+    /**
+     * `true` while the camera scrolls from one room to the next. Many games stop their characters
+     * while it does, as the consoles did: that is for the game to do, reading this.
+     */
+    readonly scrolling: boolean;
     /**
      * Shakes the view, up to `strength` pixels either way, dying away over `seconds`: a hit, an
      * explosion, a boss landing. A stronger shake replaces a weaker one still going.
@@ -132,6 +163,54 @@ const rectOf = (bounds: TTilemap | TRect | null): TRect | null => {
     return bounds as TRect;
 };
 
+const contains = (rect: TRect, at: { x: number; y: number }): boolean =>
+    at.x >= rect.x && at.x < rect.x + rect.width && at.y >= rect.y && at.y < rect.y + rect.height;
+
+/**
+ * The room a point is in: the one it was in while it still is, so two rooms that overlap do not
+ * swap back and forth, and the one it was in when it is in none, so a gap between rooms changes
+ * nothing.
+ */
+const roomAt = (
+    rooms: TRect[] | { width: number; height: number },
+    at: { x: number; y: number },
+    current: TRect | null,
+    level: TRect | null,
+): TRect | null => {
+    if (current !== null && contains(current, at)) {
+        return current;
+    }
+    if (Array.isArray(rooms)) {
+        return rooms.find((room) => contains(room, at)) ?? current;
+    }
+    if (rooms.width <= 0 || rooms.height <= 0) {
+        return current;
+    }
+    const origin = level ?? { x: 0, y: 0 };
+    const x = origin.x + Math.floor((at.x - origin.x) / rooms.width) * rooms.width;
+    const y = origin.y + Math.floor((at.y - origin.y) / rooms.height) * rooms.height;
+    if (level === null) {
+        return { x, y, width: rooms.width, height: rooms.height };
+    }
+    // The last room of a row or a column that does not fit the level is cut to it.
+    return {
+        x,
+        y,
+        width: Math.max(0, Math.min(x + rooms.width, level.x + level.width) - x),
+        height: Math.max(0, Math.min(y + rooms.height, level.y + level.height) - y),
+    };
+};
+
+const sameRect = (a: TRect, b: TRect): boolean =>
+    a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+
+const between = (a: TRect, b: TRect, t: number): TRect => ({
+    x: a.x + (b.x - a.x) * t,
+    y: a.y + (b.y - a.y) * t,
+    width: a.width + (b.width - a.width) * t,
+    height: a.height + (b.height - a.height) * t,
+});
+
 /**
  * Keeps a value of the middle of the view inside a stretch of the world, or in the middle of a
  * stretch smaller than the view.
@@ -148,6 +227,10 @@ const keepInside = (centre: number, half: number, from: number, size: number): n
  * reads where the character ended up and the two never shake against each other. It follows at once
  * and on whole pixels by default, as the consoles did; `smooth` makes it glide. It works at any
  * `zoom`; a camera turned with `rotation` is not one it can keep a level's edges out of.
+ *
+ * With `rooms` the level is cut into rooms, as the action games of the consoles did: the camera stays
+ * in the target's room and scrolls across when the target walks into the next. The scroll is the
+ * bounds moving from one room to the other, so the dead zone and the rest keep working through it.
  *
  * It uses the scene's camera from `useCamera2d`, or makes it. Everything it was told can be changed
  * on what it returns, at any time: another target for a cutscene, other bounds for another room.
@@ -174,6 +257,22 @@ const keepInside = (centre: number, half: number, from: number, size: number): n
  * };
  * ```
  *
+ * @example
+ * ```ts
+ * declare const Hero: () => void;
+ *
+ * // Screen by screen, 256 by 224 each, scrolling across in half a second.
+ * export const Castle: TSceneFn = () => {
+ *     const hero = useSpawn(Hero)();
+ *     const follow = useCameraFollow(hero, { rooms: { width: 256, height: 224 }, scroll: 0.5 });
+ *
+ *     useUpdate(() => {
+ *         if (follow.scrolling) return; // the hero waits for the screen
+ *     });
+ *     return createScene();
+ * };
+ * ```
+ *
  * @category Camera
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -195,6 +294,13 @@ export const useCameraFollow = (target: TCameraTarget | null, options: TCameraFo
     // following from a rounded place would lose a fraction every frame.
     let centre: { x: number; y: number } | null = null;
     let tremor = { strength: 0, seconds: 0, left: 0 };
+    // The room it is in, and the one it scrolls from while it does: the scroll is the bounds moving
+    // from one room to the other, and the camera kept inside them as always.
+    let room: TRect | null = null;
+    let leaving: { from: TRect; time: number } | null = null;
+    // Where the bounds were last frame, which is where a scroll starts, even from halfway through
+    // another one.
+    let shown: TRect | null = null;
 
     const follow: TCameraFollow = {
         camera,
@@ -204,6 +310,14 @@ export const useCameraFollow = (target: TCameraTarget | null, options: TCameraFo
         lead: { x: options.lead?.x ?? 0, y: options.lead?.y ?? 0 },
         smooth: options.smooth ?? 0,
         round: options.round ?? true,
+        rooms: options.rooms ?? null,
+        scroll: options.scroll ?? 0.6,
+        get room() {
+            return room;
+        },
+        get scrolling() {
+            return leaving !== null;
+        },
         shake: (strength, seconds) => {
             if (seconds <= 0 || strength <= 0) return;
             const now = tremor.left > 0 ? tremor.strength * (tremor.left / tremor.seconds) : 0;
@@ -218,6 +332,22 @@ export const useCameraFollow = (target: TCameraTarget | null, options: TCameraFo
         const screen = screenSizeOf(store.get('screen').canvas);
         const zoom = camera.zoom > 0 ? camera.zoom : 1;
         const half = { x: screen.width / zoom / 2, y: screen.height / zoom / 2 };
+
+        if (follow.target !== null && follow.rooms !== null) {
+            const level = rectOf(follow.bounds);
+            const next = roomAt(follow.rooms, positionOf(follow.target), room, level);
+            if (next !== null && (room === null || !sameRect(next, room))) {
+                const from = room;
+                leaving = from !== null && follow.scroll > 0 ? { from: shown ?? from, time: 0 } : null;
+                room = next;
+                options.onRoom?.(next, from);
+            }
+        }
+        if (follow.rooms === null) {
+            room = null;
+            leaving = null;
+            shown = null;
+        }
 
         if (follow.target !== null) {
             const at = positionOf(follow.target);
@@ -241,11 +371,29 @@ export const useCameraFollow = (target: TCameraTarget | null, options: TCameraFo
             return;
         }
 
-        const rect = rectOf(follow.bounds);
+        let rect = room ?? rectOf(follow.bounds);
+        if (room !== null && leaving !== null) {
+            leaving.time += delta;
+            const t = Math.min(1, leaving.time / follow.scroll);
+            rect = between(leaving.from, room, t);
+            if (t >= 1) {
+                leaving = null;
+            }
+        }
+        shown = room !== null ? rect : null;
         if (rect !== null) {
             centre = {
                 x: keepInside(centre.x, half.x, rect.x, rect.width),
                 y: keepInside(centre.y, half.y, rect.y, rect.height),
+            };
+        }
+        // A room smaller than the screen is shown in the middle of it, which must still not show past
+        // the level.
+        const level = room !== null ? rectOf(follow.bounds) : null;
+        if (level !== null) {
+            centre = {
+                x: keepInside(centre.x, half.x, level.x, level.width),
+                y: keepInside(centre.y, half.y, level.y, level.height),
             };
         }
 

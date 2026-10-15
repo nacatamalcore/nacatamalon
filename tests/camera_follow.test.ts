@@ -208,3 +208,84 @@ describe('useCameraFollow', () => {
         }
     });
 });
+
+describe('useCameraFollow with rooms', () => {
+    const A = { x: 0, y: 0, width: W, height: H };
+    const B = { x: W, y: 0, width: W, height: H };
+
+    it('keeps the camera inside the room the target is in', () => {
+        const { frames, camera, follow } = level({ rooms: [A, B] }, { x: 300, y: 100 });
+        frames();
+        expect([camera().x, camera().y]).toEqual([0, 0]);
+        expect(follow.room).toEqual(A);
+        expect(follow.scrolling).toBe(false);
+    });
+
+    it('scrolls across to the next room when the target walks into it, over `scroll` seconds', () => {
+        const entered: Array<[number, number | null]> = [];
+        const { frames, camera, follow } = level(
+            { rooms: [A, B], scroll: 0.5, onRoom: (room, from) => entered.push([room.x, from?.x ?? null]) },
+            { x: 316, y: 100 },
+            (at) => { at.x += 2; },
+        );
+        frames(2);
+        expect(follow.room).toEqual(B);
+        expect(follow.scrolling).toBe(true);
+        expect(entered).toEqual([[0, null], [W, 0]]);
+        const start = camera().x;
+        frames(14);
+        expect(camera().x).toBeGreaterThan(start);
+        expect(camera().x).toBeLessThan(W);
+        frames(20);
+        expect(camera().x).toBe(W);
+        expect(follow.scrolling).toBe(false);
+    });
+
+    it('cuts straight to the next room with `scroll: 0`', () => {
+        const { frames, camera } = level({ rooms: [A, B], scroll: 0 }, { x: 318, y: 100 }, (at) => { at.x += 2; });
+        frames(3);
+        expect(camera().x).toBe(W);
+    });
+
+    it('stays in the room it was in while the target is between rooms', () => {
+        let gap = false;
+        const { frames, camera, follow } = level({ rooms: [A, { x: W + 64, y: 0, width: W, height: H }] }, { x: 300, y: 100 }, (at) => { if (gap) at.x = 340; });
+        frames();
+        gap = true;
+        frames(5);
+        expect(follow.room).toEqual(A);
+        expect(camera().x).toBe(0);
+    });
+
+    it('lays a grid of equal rooms from one size', () => {
+        const { frames, camera, follow } = level({ rooms: { width: W, height: H } }, { x: 700, y: 300 });
+        frames();
+        expect(follow.room).toEqual({ x: 2 * W, y: H, width: W, height: H });
+        expect([camera().x, camera().y]).toEqual([2 * W, H]);
+    });
+
+    it('turns back from halfway through a scroll without jumping', () => {
+        let dx = 2;
+        const { frames, camera, follow } = level({ rooms: [A, B], scroll: 0.5 }, { x: 316, y: 100 }, (at) => { at.x += dx; });
+        frames(10);
+        const halfway = camera().x;
+        dx = -40;
+        frames();
+        expect(follow.room).toEqual(A);
+        expect(Math.abs(camera().x - halfway)).toBeLessThan(W / 10);
+        dx = 0;
+        frames(40);
+        expect(camera().x).toBe(0);
+    });
+});
+
+describe('useCameraFollow with a grid of rooms and bounds', () => {
+    it('cuts the last room of a row to the level, so the camera never shows past it', () => {
+        const bounds = { x: 0, y: 0, width: W * 2.5, height: H };
+        const { frames, camera, follow } = level({ rooms: { width: W, height: H }, bounds, scroll: 0 }, { x: W * 2.2, y: 100 });
+        frames();
+        expect(follow.room).toEqual({ x: 2 * W, y: 0, width: W / 2, height: H });
+        // The room is half a screen wide: the camera keeps to the level's edge rather than the room's.
+        expect(camera().x + W).toBeLessThanOrEqual(bounds.width);
+    });
+});

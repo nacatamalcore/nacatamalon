@@ -95,6 +95,8 @@ export type { TBackdropOptions } from './gameobjects/sprite/create_backdrop';
 export type { TCreateSprite } from './gameobjects/sprite/create_sprite';
 export { createText } from './gameobjects/text/create_text';
 export { createNineSlice } from './gameobjects/nine_slice/create_nine_slice';
+export { createPolygon } from './gameobjects/polygon';
+export type { TPolygon, TPolygonOptions } from './gameobjects/polygon';
 export { createTilemap, getTilemap, blocksBulletsAt, cellAt, cellCorner, markLayerChanged, setTile, solidAt, solidAtPoint, tileAt, tileInfoAt, tileInfoAtPoint } from './gameobjects/tilemap';
 export { createSpriteAtlas, setSpriteFrame } from './atlas';
 // The `.atlas` format: reading one is how a game loads its sheets, so it stays here. Writing one,

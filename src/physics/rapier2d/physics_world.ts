@@ -20,6 +20,7 @@ import { tilemapPlacement } from '../../gameobjects/tilemap/tile_queries';
 import { tileRevisionOf } from '../../gameobjects/tilemap/tile_revision';
 import { tileShapes } from './tile_shapes';
 import { createCharacter2d } from './character_body_2d';
+import { createSoftBodies } from './soft_body_2d';
 import type { TLedge } from './character_body_2d';
 import type { TTilemap } from '../../gameobjects/tilemap/types/t_tilemap';
 import type { Collider, ImpulseJoint, PhysicsHooks, RevoluteImpulseJoint, PrismaticImpulseJoint, RigidBody } from '@dimforge/rapier2d-compat';
@@ -395,6 +396,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         removed: boolean;
     };
     const joints = new Set<TJointEntry>();
+    const softBodies = createSoftBodies({ rapier: () => rapier, world: () => world, frame: () => frame });
 
     const liveBody = (box: TGameObject): RigidBody | null => {
         const entry = bodies.get(box.id);
@@ -614,6 +616,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         syncTilemaps();
         applyForces();
         for (const entry of joints) makeJoint(entry);
+        softBodies.beforeStep(frame);
 
         accumulator += dt;
         const length = stepLength();
@@ -640,6 +643,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         for (const entry of bodies.values()) {
             writebackBody(entry);
         }
+        softBodies.afterStep();
     };
 
     const createBody = (box: TGameObject, options: TBodyOptions): TPhysicsBodyHandle2d => {
@@ -868,6 +872,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
     // Cleanup on scene unmount.
     useSceneUnmount(() => {
         joints.clear();
+        softBodies.clear();
         standing.clear();
         bodies.clear();
         byCollider.clear();
@@ -890,6 +895,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         bodyOf: (box) => bodies.get(box.id)?.handle ?? null,
         addCharacter,
         addJoint,
+        addSoftBody: softBodies.add,
     };
 };
 

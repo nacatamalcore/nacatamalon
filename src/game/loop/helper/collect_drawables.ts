@@ -143,7 +143,7 @@ const snappedPlaces = new WeakMap<object, TTransform2d>();
  * the same pixel of the screen.
  */
 const snapToPixels = (drawable: TDrawable): void => {
-    if (drawable.type !== 'sprite' && drawable.type !== 'text' && drawable.type !== 'nine-slice' && drawable.type !== 'tilemap') {
+    if (drawable.type !== 'sprite' && drawable.type !== 'text' && drawable.type !== 'nine-slice' && drawable.type !== 'tilemap' && drawable.type !== 'polygon') {
         return;
     }
     const base = drawable.worldTransform ?? drawable.transform;

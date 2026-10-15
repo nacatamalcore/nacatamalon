@@ -109,6 +109,12 @@ releases are in [changelog/](./changelog/), one file each.
   whole pixels. It moves in `useLateUpdate`, once every update and every body's move is over, at any
   `zoom`. `shake(strength, seconds)` shakes the view and dies away; `snap()` jumps to the target; the
   target and every setting can be changed at any time.
+- Rooms on `useCameraFollow`: `rooms` (a list of rectangles of the world, or one size for a grid of
+  equal rooms) keeps the camera inside the room the target is in, and when the target walks into
+  another it scrolls across over `scroll` seconds (`0.6`; `0` cuts), from wherever it was, even
+  halfway through another scroll. A gap between rooms keeps the one it was in. `onRoom(room, from)` is
+  called as each room is entered, and `room` and `scrolling` say where it is, for a game that stops
+  its characters while the screen scrolls.
 - `createGame({ pixelSnap })`: draws sprites, texts, panels and maps on whole pixels of the game,
   rounding where they are drawn and never where they are, so they move as fast as they say. With the
   camera on whole pixels (`useCameraFollow`), a character it follows stays on the same pixel of the
@@ -127,6 +133,22 @@ releases are in [changelog/](./changelog/), one file each.
   stands on (`mass`, or its size at a crate's density), the solver leaves that pair alone, and it
   pushes what it walks into sideways only. Before, a character standing on a bridge and the bridge
   bounced off each other by several pixels for as long as the game ran.
+- `createPolygon({ points, texture | atlas, uvs, tint })` (`TPolygon`, `TPolygonOptions`): a shape
+  whose corners the game moves, its picture stretched over them. `points` are plain numbers on the
+  record, changed every frame and drawn the next; each corner keeps its point of the picture (the
+  box the first outline fits in, unless `uvs` says), so moving it stretches the picture under it.
+  Drawn from its middle out, in the scene's order, through the 2D camera, on whole pixels with
+  `pixelSnap`, in both backends. Without a picture it is its `tint`. Not written to a saved scene.
+- `useSoftBody2d({ shape, ... })` (`TSoftBody2d`, `TSoftBodyOptions2d`, `TSoftBodyShape2d`), from
+  `nacatamalon/physics2d`: the object being built becomes a soft body in the scene's 2D world, a
+  ring of corners held together by springs that falls, squashes, wobbles and rolls, on the map and
+  against the other bodies. `'disk'` (`radius`, `corners`), `'polygon'` (`points`) or `'rope'` (`to`,
+  `corners`); `softness` (how quickly it springs back, `5` a second), `damping`, `keepShape` (on by default:
+  without it, a ring under a weight gives way),
+  `mass`, `friction`, `bounce`, `pinned` corners, and `polygon` to move the corners of a
+  `createPolygon` shape with it. The object is kept at its middle and `outline` says where the
+  corners are; `push(x, y)` pushes it this frame and `kick(x, y)` adds to its speed at once.
+  `useCharacterBody2d` does not stand on soft bodies.
 
 ### Changed
 

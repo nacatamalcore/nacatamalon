@@ -1,5 +1,6 @@
 import { closeParticleState } from '../gameobjects/particles/particle_state';
 import { releaseLayer } from '../gameobjects/tilemap/release_layer';
+import { releasePolygon } from '../gameobjects/polygon/polygon_state';
 import type { TDrawable } from '../gameobjects/types';
 import type { TRuntimeStore } from '../store';
 
@@ -54,6 +55,11 @@ export const disposeDrawable = (store: TRuntimeStore, drawable: TDrawable): void
             // emitter writes into one buffer the pipeline owns, at an offset of its own. There is no
             // per-emitter buffer that could be forgotten here.
             closeParticleState(drawable);
+            return;
+        }
+        case 'polygon': {
+            // Its corners on the card are its own, rewritten every frame. The picture is the cache's.
+            releasePolygon(store.get('screen').renderer, drawable);
             return;
         }
         case 'lines': {
