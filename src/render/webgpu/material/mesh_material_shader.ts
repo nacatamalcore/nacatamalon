@@ -184,7 +184,7 @@ ${normal}
 
     let worldPos = (uniforms.model * vec4<f32>(local, 1.0)).xyz;
     let worldNormal = normalize((uniforms.normalMatrix * vec4<f32>(shaped, 0.0)).xyz);
-    let viewDir = normalize(uniforms.cameraPosition.xyz - worldPos);
+    let viewDir = viewDirOf(worldPos);
 
     let surface = litBy(worldPos, worldNormal, viewDir);
     out.light = surface.diffuse;

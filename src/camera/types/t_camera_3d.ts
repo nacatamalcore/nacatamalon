@@ -33,6 +33,9 @@ export type TCamera3d = {
     fov: number;
     /**
      * Nothing closer than this is drawn, and nothing further than `far`.
+     *
+     * An orthographic camera reads only `far`, and sees that far behind it as well as in front, so
+     * whatever sits around its `z` is drawn, as a sprite would be.
      */
     near: number;
     far: number;
@@ -74,7 +77,8 @@ export type TCamera3dOptions = {
      */
     fov?: number;
     /**
-     * Default `0.1` and `1000`.
+     * Default `0.1` and `1000`. An orthographic camera reads only `far`, and sees that far either
+     * side of it.
      */
     near?: number;
     far?: number;

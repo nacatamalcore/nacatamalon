@@ -85,7 +85,7 @@ export const writeMeshLights = (
 ): void => {
     // Only the scene the shadow was drawn for is told about it. Another scene stacked over it has
     // its own lights and its own numbering, so the index would point at a different lamp.
-    fillLightUniforms(meshes.lightData, view.lights, view.ambient, shadow !== null && shadow.view === view ? shadow : null, view.fog ?? null);
+    fillLightUniforms(meshes.lightData, view.lights, view.ambient, shadow !== null && shadow.view === view ? shadow : null, view.fog ?? null, view.camera);
     gl.bindBuffer(gl.UNIFORM_BUFFER, meshes.lights);
     gl.bufferSubData(gl.UNIFORM_BUFFER, 0, meshes.lightData);
     gl.bindBuffer(gl.UNIFORM_BUFFER, null);

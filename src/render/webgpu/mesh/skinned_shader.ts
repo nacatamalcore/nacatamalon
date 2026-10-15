@@ -52,7 +52,7 @@ fn vs(
 
     let worldPos = (uniforms.model * bent).xyz;
     let worldNormal = normalize((uniforms.normalMatrix * vec4<f32>(bentNormal, 0.0)).xyz);
-    let viewDir = normalize(uniforms.cameraPosition.xyz - worldPos);
+    let viewDir = viewDirOf(worldPos);
 
     let surface = litBy(worldPos, worldNormal, viewDir);
     out.light = surface.diffuse;

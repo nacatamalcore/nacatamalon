@@ -3,6 +3,7 @@ import { transformForward } from './transform_basis';
 import type { TColor } from '../../color';
 import type { TDrawLight } from '../interface/draw/t_draw_light';
 import type { TDrawFog, TDrawView3d } from '../interface/draw/t_draw_view_3d';
+import type { TDrawCamera3d } from '../interface/draw/t_draw_camera_3d';
 
 /**
  * What a backend hands over about the shadow it drew, or `null` for a frame that drew none.
@@ -74,7 +75,20 @@ export const SHADOW_FLOATS = 20;
  */
 export const FOG_FLOATS = 8;
 
-export const LIGHT_UNIFORM_FLOATS = 4 + MAX_LIGHTS * LIGHT_FLOATS_PER_ITEM + SHADOW_FLOATS + FOG_FLOATS;
+/**
+ * The way the view looks, for the shine and the fresnel: the way back towards the viewer, then `1`
+ * for a view that is orthographic, where that way is the same for every point.
+ *
+ * From the camera's place to the point is right for a perspective camera, whose rays all leave one
+ * eye. An orthographic one has no such eye, its rays are parallel, and measuring from its place
+ * (the corner of the screen, for one that measures in pixels) lit one side of every edge more than
+ * the other.
+ *
+ * @internal
+ */
+export const VIEW_FLOATS = 4;
+
+export const LIGHT_UNIFORM_FLOATS = 4 + MAX_LIGHTS * LIGHT_FLOATS_PER_ITEM + SHADOW_FLOATS + FOG_FLOATS + VIEW_FLOATS;
 
 /**
  * Where the shadow's share starts, just past the lights.
@@ -85,6 +99,11 @@ const SHADOW_AT = 4 + MAX_LIGHTS * LIGHT_FLOATS_PER_ITEM;
  * Where the fog's share starts, just past the shadow's.
  */
 const FOG_AT = SHADOW_AT + SHADOW_FLOATS;
+
+/**
+ * Where the way the view looks starts, just past the fog's.
+ */
+const VIEW_AT = FOG_AT + FOG_FLOATS;
 
 /**
  * What `castShadow` on a light is worth when it does not say how far off the surface to test.
@@ -119,6 +138,7 @@ export const fillLightUniforms = (
     ambient: TColor,
     shadow: TShadowUniforms | null = null,
     fog: TDrawFog | null = null,
+    camera: TDrawCamera3d | null = null,
 ): number => {
     out.fill(0);
     out[0] = ambient.r;
@@ -186,6 +206,17 @@ export const fillLightUniforms = (
         out[FOG_AT + 4] = fog.near;
         // Never at or before the start: the shader divides by the distance between the two.
         out[FOG_AT + 5] = Math.max(fog.far, fog.near + 0.0001);
+    }
+
+    // Zero, which `fill(0)` already left, is a perspective view. No camera at all is drawn
+    // orthographic, looking down -Z like a camera that never turned.
+    if (camera === null || camera.projection !== 'perspective') {
+        const forward = camera === null ? { x: 0, y: 0, z: -1 } : transformForward({ ...camera.transform, quaternion: null });
+        const length = Math.hypot(forward.x, forward.y, forward.z) || 1;
+        out[VIEW_AT] = -forward.x / length;
+        out[VIEW_AT + 1] = -forward.y / length;
+        out[VIEW_AT + 2] = -forward.z / length;
+        out[VIEW_AT + 3] = 1;
     }
 
     return lights.length;

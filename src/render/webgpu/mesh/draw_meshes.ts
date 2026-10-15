@@ -95,7 +95,7 @@ export const writeMeshLights = (
         // Only the scene the shadow was drawn for is told about it. Another scene stacked over it
         // has its own lights and its own numbering, so the index would point at a different lamp.
         const its = shadow !== null && shadow.view === view ? shadow : null;
-        fillLightUniforms(floats.subarray(at, at + LIGHT_UNIFORM_FLOATS), view.lights, view.ambient, its, view.fog ?? null);
+        fillLightUniforms(floats.subarray(at, at + LIGHT_UNIFORM_FLOATS), view.lights, view.ambient, its, view.fog ?? null, view.camera);
 
         if (meshes.lights.bindGroups[index] === undefined) {
             meshes.lights.bindGroups[index] = device.createBindGroup({

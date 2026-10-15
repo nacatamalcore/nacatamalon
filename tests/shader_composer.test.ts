@@ -105,6 +105,36 @@ describe('what it writes', () => {
         expect(compiled.vertexGlsl).toContain('float sgNoise3(');
     });
 
+    // GLSL compiles the two hooks as two programs, so a helper written only before the colour hook
+    // is missing from the vertex: the material fell back to the built-in shader and the dent vanished.
+    it('gives each GLSL hook the helpers its own half calls, with a colour hook present too', () => {
+        const compiled = compileShader({
+            shader: 'mesh3d',
+            color: composerVec4(composerFbm(composerUv(), 3), 0, 0, 1),
+            position: composerAdd(composerVertexPosition(), composerMul(composerVertexNormal(), composerSimplexNoise(composerVertexPosition()))),
+        });
+
+        expect(compiled.vertexGlsl).toContain('float sgNoise3(');
+        expect(compiled.vertexGlsl!.indexOf('float sgNoise3(')).toBeLessThan(compiled.vertexGlsl!.indexOf('vec3 vertex('));
+        expect(compiled.fragmentGlsl).toContain('float sgFbm3o3(');
+        // Only what each half calls: the vertex has no use for the colour's fractal noise.
+        expect(compiled.vertexGlsl).not.toContain('sgFbm3o3');
+        // WGSL is one module, so the helpers still go in once, before the colour hook.
+        expect(compiled.fragment!.match(/fn sgNoise3\(/g)).toHaveLength(1);
+        expect(compiled.vertex).not.toContain('fn sgNoise3(');
+    });
+
+    it('leaves a GLSL hook that calls no helper as it was', () => {
+        const compiled = compileShader({
+            shader: 'mesh3d',
+            color: composerVec4(composerSimplexNoise(composerUv()), 0, 0, 1),
+            position: composerVertexPosition(),
+        });
+
+        expect(compiled.vertexGlsl).not.toContain('sgNoise3');
+        expect(compiled.fragmentGlsl).toContain('float sgNoise3(');
+    });
+
     it('gathers every parameter with the value it starts at', () => {
         const compiled = compileShader({
             shader: 'mesh3d',

@@ -7,6 +7,7 @@ import { useCamera3d } from '../src/hooks/camera/use_camera_3d';
 import { parseSceneDoc, serializeScene } from '../src/scene/document';
 import { fillFrameContext } from '../src/game/loop/fill_frame_context';
 import { fillLightUniforms, LIGHT_UNIFORM_FLOATS } from '../src/render/shared';
+import { VIEW_FLOATS } from '../src/render/shared/fill_light_uniforms';
 import { MESH_SHADER } from '../src/render/webgpu/mesh/mesh_shader';
 import { SKINNED_SHADER } from '../src/render/webgpu/mesh/skinned_shader';
 import { MESH_VERTEX_GLSL, MESH_FRAGMENT_GLSL } from '../src/render/webgl2/mesh/mesh_shader';
@@ -30,9 +31,10 @@ afterEach(() => {
 });
 
 /**
- * Where the fog's eight numbers start in the lights block: past the ambient, the lights and the shadow.
+ * Where the fog's eight numbers start in the lights block: past the ambient, the lights and the
+ * shadow, and before the way the view looks.
  */
-const FOG_AT = LIGHT_UNIFORM_FLOATS - 8;
+const FOG_AT = LIGHT_UNIFORM_FLOATS - VIEW_FLOATS - 8;
 
 describe('useFog', () => {
     it('refuses to be called outside a scene body', () => {

@@ -60,9 +60,20 @@ const emitShader = (graph: TShaderGraph, target: TShaderTarget): TEmitted => {
     const positionBody = position === undefined ? null : emitBody(position, 'mesh3d.vert', target);
     let vertex = positionBody === null ? null : target.fn('mesh3d.vert', positionBody.lines, positionBody.result);
 
+    const roots = [color, position].filter((root): root is TComposerNode => root !== undefined);
+
+    // In GLSL the two hooks are two programs, compiled apart, and the vertex cannot see a function
+    // written in the fragment: each hook takes the helpers its own half of the graph calls.
+    if (target.language === 'glsl') {
+        const prepend = (root: TComposerNode | undefined, hook: string | null): string | null => {
+            const text = root === undefined || hook === null ? '' : collectHelpers([root], target).join('\n\n');
+            return text.length > 0 ? `${text}\n\n${hook}` : hook;
+        };
+        return { fragment: prepend(color, fragment), vertex: prepend(position, vertex), uniforms: collectUniforms(roots) };
+    }
+
     // The helpers go in once. Both hooks end up in one shader, and a function at the top of it can
     // be called from anywhere below, so one written before the colour hook serves the vertex too.
-    const roots = [color, position].filter((root): root is TComposerNode => root !== undefined);
     const helperText = collectHelpers(roots, target).join('\n\n');
     if (helperText.length > 0) {
         if (fragment !== null) {

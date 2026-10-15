@@ -55,7 +55,19 @@ layout(std140) uniform Lights {
     // is complete.
     vec4 fog;
     vec4 fogRange;
+    // xyz = the way back towards the viewer, w = 1 when the view is orthographic and that way is
+    // the same everywhere; 0 for a perspective one, whose way is from the point to its eye.
+    vec4 look;
 } lights;
+
+// The way from a point towards whoever is looking, which the shine and the fresnel need. An
+// orthographic camera has no eye for it to point at: its rays are parallel, so the way is one.
+vec3 viewDirOf(vec3 worldPos) {
+    if (lights.look.w > 0.5) {
+        return lights.look.xyz;
+    }
+    return normalize(uniforms.cameraPosition.xyz - worldPos);
+}
 `;
 
 /**
@@ -189,7 +201,7 @@ export const MESH_VERTEX_HEAD_GLSL = MESH_VERTEX_ATTRIBUTES_GLSL + MESH_VERTEX_V
  * @author Francisco Pereira Alvarado
  */
 export const MESH_VERTEX_LIGHT_GLSL = /* glsl */ `
-    vec3 viewDir = normalize(uniforms.cameraPosition.xyz - worldPos);
+    vec3 viewDir = viewDirOf(worldPos);
 
     vec3 diffuse = vec3(0.0);
     vec3 shine = vec3(0.0);

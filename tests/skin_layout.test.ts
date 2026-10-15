@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { MESH_FRAGMENT_GLSL, MESH_VERTEX_GLSL, MESH_VERTEX_LIGHT_GLSL } from '../src/render/webgl2/mesh/mesh_shader';
+import { MESH_FRAGMENT_GLSL, MESH_UNIFORMS_GLSL, MESH_VERTEX_GLSL, MESH_VERTEX_LIGHT_GLSL } from '../src/render/webgl2/mesh/mesh_shader';
 import { MESH_SHADER, MESH_SHADER_FRAGMENT } from '../src/render/webgpu/mesh/mesh_shader';
 import { SKINNED_SHADER } from '../src/render/webgpu/mesh/skinned_shader';
 import { SKINNED_VERTEX_GLSL } from '../src/render/webgl2/mesh/skinned_shader';
@@ -59,12 +59,14 @@ describe('what the two shaders share with the ones that do not bend', () => {
 
     it('works out the light from the same two things, however the corner got there', () => {
         for (const shader of [SKINNED_SHADER, MESH_SHADER]) {
-            expect(shader).toContain('let viewDir = normalize(uniforms.cameraPosition.xyz - worldPos);');
+            expect(shader).toContain('let viewDir = viewDirOf(worldPos);');
         }
         // And by the same name in both languages, which is not a detail: a material is written
         // once and compiled on either card, so a block called `u` here and `uniforms` there would
         // be a shader that works on one machine and fails on the other for no visible reason.
-        expect(MESH_VERTEX_LIGHT_GLSL).toContain('vec3 viewDir = normalize(uniforms.cameraPosition.xyz - worldPos);');
+        expect(MESH_VERTEX_LIGHT_GLSL).toContain('vec3 viewDir = viewDirOf(worldPos);');
+        expect(MESH_UNIFORMS_GLSL).toContain('normalize(uniforms.cameraPosition.xyz - worldPos)');
+        expect(MESH_SHADER).toContain('normalize(uniforms.cameraPosition.xyz - worldPos)');
     });
 
     it('reads the same block of numbers per model, so one packer fills both', () => {

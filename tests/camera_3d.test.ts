@@ -90,6 +90,29 @@ describe('an orthographic camera measures in pixels', () => {
         const ndc = project(projection, 200, 150, 0);
         expect(ndc.x).toBeCloseTo(0, 3);
     });
+
+    // A sphere of radius 60 at z = 0, seen from a camera at z = 0 (or from none): the near plane at
+    // 0.1 in front cut its front half away, and its back half faced away, so nothing was drawn.
+    it('sees as far behind the camera as in front, so a model around its z is drawn', () => {
+        const depthOf = (cam: TDrawCamera3d | null, z: number): number => {
+            const m = computeProjection(cam, 400, 300);
+            const view = computeView(cam);
+            const v = view[2] * 0 + view[6] * 0 + view[10] * z + view[14];
+            return m[10] * v + m[14];
+        };
+        for (const cam of [null, camera(), camera({ transform: at(0, 0, 300) })]) {
+            const base = cam?.transform.z ?? 0;
+            for (const z of [base + 60, base, base - 60, base + 999, base - 999]) {
+                const depth = depthOf(cam, z);
+                expect(depth).toBeGreaterThanOrEqual(0);
+                expect(depth).toBeLessThanOrEqual(1);
+            }
+            expect(depthOf(cam, base + 1001)).toBeLessThan(0);
+            expect(depthOf(cam, base - 1001)).toBeGreaterThan(1);
+        }
+        // Still in order: nearer the viewer is nearer in the depth buffer.
+        expect(depthOf(camera(), 60)).toBeLessThan(depthOf(camera(), -60));
+    });
 });
 
 describe('a perspective camera', () => {

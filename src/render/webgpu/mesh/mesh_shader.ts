@@ -61,6 +61,9 @@ struct Lights {
     // is complete. Same place and order as its twin in GLSL, because one packer fills both.
     fog: vec4<f32>,
     fogRange: vec4<f32>,
+    // xyz = the way back towards the viewer, w = 1 when the view is orthographic and that way is
+    // the same everywhere; 0 for a perspective one, whose way is from the point to its eye.
+    look: vec4<f32>,
 };
 
 // All three in group 0, which already means "how this view is lit". A shadow is one map, one light
@@ -72,6 +75,15 @@ struct Lights {
 @group(1) @binding(0) var meshSampler: sampler;
 @group(1) @binding(1) var meshTexture: texture_2d<f32>;
 @group(2) @binding(0) var<uniform> uniforms: Uniforms;
+
+// The way from a point towards whoever is looking, which the shine and the fresnel need. An
+// orthographic camera has no eye for it to point at: its rays are parallel, so the way is one.
+fn viewDirOf(worldPos: vec3<f32>) -> vec3<f32> {
+    if (lights.look.w > 0.5) {
+        return lights.look.xyz;
+    }
+    return normalize(uniforms.cameraPosition.xyz - worldPos);
+}
 
 // A corner put on a coarse grid of the screen, the way the PlayStation drew: models shivered as
 // they moved. The grid rides in the two spare fourth numbers (its columns and rows, see
@@ -311,7 +323,7 @@ fn vs(
 
     let worldPos = (uniforms.model * vec4<f32>(position, 1.0)).xyz;
     let worldNormal = normalize((uniforms.normalMatrix * vec4<f32>(normal, 0.0)).xyz);
-    let viewDir = normalize(uniforms.cameraPosition.xyz - worldPos);
+    let viewDir = viewDirOf(worldPos);
 
     let surface = litBy(worldPos, worldNormal, viewDir);
     out.light = surface.diffuse;

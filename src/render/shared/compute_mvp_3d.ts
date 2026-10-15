@@ -150,7 +150,12 @@ export const computeProjection = (camera: TDrawCamera3d | null, viewportWidth: n
     const shift = 2 * (camera?.transform.y ?? 0);
     const height = Math.max(viewportHeight, 1);
 
-    return mat.ortho(0, w, height - h - shift, height - shift, camera?.near ?? 0.1, camera?.far ?? 1000, dst);
+    // As deep behind the camera as in front of it. An orthographic camera is placed like the 2D one,
+    // by x and y, and a model sits around z = 0 as a sprite does: from a camera at z = 0, a near plane
+    // in front of it cut away the half of every model nearer than that, and a sphere showed only its
+    // back faces, culled, so nothing at all. `near` is the perspective's.
+    const depth = camera?.far ?? 1000;
+    return mat.ortho(0, w, height - h - shift, height - shift, -depth, depth, dst);
 };
 
 /**

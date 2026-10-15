@@ -142,7 +142,7 @@ ${normal}
 
     vec3 worldPos = (uniforms.model * vec4(local, 1.0)).xyz;
     vec3 worldNormal = normalize((uniforms.normalMatrix * vec4(shaped, 0.0)).xyz);
-    vec3 viewDir = normalize(uniforms.cameraPosition.xyz - worldPos);
+    vec3 viewDir = viewDirOf(worldPos);
 
     vec3 diffuse = vec3(0.0);
     vec3 shine = vec3(0.0);
