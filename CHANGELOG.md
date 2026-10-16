@@ -3,7 +3,7 @@
 What changed in the current release of `nacatamalon`, and what is waiting for the next one. Earlier
 releases are in [changelog/](./changelog/), one file each.
 
-## Unreleased (0.2.3)
+## 0.2.3 — 2026-10-16
 
 ### Added
 
