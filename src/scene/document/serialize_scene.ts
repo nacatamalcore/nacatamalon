@@ -231,6 +231,11 @@ const writeSprite = (sprite: TSprite, writing: TWriting): TComponentDoc => {
         ...unless('flipY', sprite.flipY, false),
         ...unless('smooth', sprite.smooth, undefined),
         ...(sprite.blend === 'additive' ? { blend: 'additive' as const } : {}),
+        ...(sprite.repeat === true ? { repeat: true } : {}),
+        ...(sprite.repeat === true && sprite.repeatOffset !== undefined && (sprite.repeatOffset.x !== 0 || sprite.repeatOffset.y !== 0)
+            ? { repeatOffset: point(sprite.repeatOffset) }
+            : {}),
+        ...(sprite.parallax !== undefined && (sprite.parallax.x !== 1 || sprite.parallax.y !== 1) ? { parallax: point(sprite.parallax) } : {}),
         ...unless('visible', sprite.visible, true),
         ...unless('zIndex', sprite.zIndex, undefined),
         ...(sprite.material !== undefined ? { material: writeMaterial(sprite.material as TSpriteMaterial, writing) } : {}),

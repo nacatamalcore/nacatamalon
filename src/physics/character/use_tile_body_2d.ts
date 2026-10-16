@@ -3,6 +3,7 @@ import { rootOf } from '../../box/root_of';
 import { placementOf } from '../../box/placement_of';
 import { sceneTilemaps } from '../../gameobjects/tilemap/scene_tilemaps';
 import { createTileBody2d } from './tile_body_2d';
+import { stillColliders2d } from './still_colliders';
 import type { TCharacterBody2d, TCharacterShape2d } from './t_character_body_2d';
 
 /**
@@ -12,8 +13,10 @@ import type { TCharacterBody2d, TCharacterShape2d } from './t_character_body_2d'
  *
  * **The classic way, in pixels.** It moves across, settles against walls, then up or down, settles
  * against the floor or the ceiling, the way the old platformers did, with nothing to load and the same
- * result on every machine at a fixed `step`. It knows only the maps: for crates to push, bridges that
- * sag or anything else simulated, `useCharacterBody2d` from `nacatamalon/physics2d` gives the same
+ * result on every machine at a fixed `step`. It knows the maps, and the objects laid out with a 2D
+ * collider that never moves (a `'static'` body that is not a sensor: a floor, a wall, a platform made
+ * of an object rather than of tiles), measured as the rectangle around them. For crates to push,
+ * bridges that sag or anything else simulated, `useCharacterBody2d` from `nacatamalon/physics2d` gives the same
  * character in the 2D world, and changing between the two is changing this one line.
  *
  * It is moved once every `useUpdate` of the scene is over, where the game set its speed, and before
@@ -63,6 +66,8 @@ export const useTileBody2d = (options: TCharacterShape2d): TCharacterBody2d => {
         options,
         // The scene asked when it moves, not now: a map loads after the scene is built.
         tilemaps: () => sceneTilemaps(store, rootOf(box)),
+        // And the floors and walls laid out as objects with a collider that never moves.
+        blocks: () => stillColliders2d(rootOf(box), box),
     });
     // Moved once the updates that set its speed are over: see `runMoves`.
     box.moveCallbacks.push((dt) => character.move(dt));

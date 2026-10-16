@@ -3,6 +3,23 @@
 What changed in the current release of `nacatamalon`, and what is waiting for the next one. Earlier
 releases are in [changelog/](./changelog/), one file each.
 
+## Unreleased
+
+### Added
+
+- A sprite in a scene document keeps `repeat`, `repeatOffset` and `parallax` (`TSpriteComponent`):
+  read from the file, given to the sprite the scene builds, and written back by `serializeScene`
+  only when they say something (`repeat: true`, an offset other than none, a parallax other than
+  `{ x: 1, y: 1 }`). A tool laying out a level can make a wall of bricks or a far range of hills
+  without code. A value written wrong is left out, as the other fields of a sprite are.
+
+### Changed
+
+- `useTileBody2d` stands on, and is stopped by, the objects laid out with a 2D collider that never
+  moves (a `'static'` body that is not a sensor), besides the maps: a floor, a wall, a platform made
+  of an object rather than of tiles, measured as the rectangle around its collider, unturned. Still
+  with no physics engine: it reads the objects' own data, so a game that uses no physics loads none.
+
 ## 0.2.3 — 2026-10-16
 
 ### Added

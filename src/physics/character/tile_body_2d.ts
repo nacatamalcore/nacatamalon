@@ -1,6 +1,7 @@
 import { tileInfoAt, tilemapPlacement } from '../../gameobjects/tilemap/tile_queries';
 import { worldPose2d, writeWorldPose2d } from '../rapier2d/world_pose';
 import { readCharacterTiles, tilesUnder } from './character_tiles';
+import type { TBlock } from './still_colliders';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
 import type { TTilemap } from '../../gameobjects/tilemap/types/t_tilemap';
 import type { TTileDoc } from '../../loaders/tilemap/types/t_tilemap_doc';
@@ -64,7 +65,8 @@ const eachCell = (
 };
 
 /**
- * Builds one character that walks on the maps alone: what `useTileBody2d` asks for.
+ * Builds one character that walks on the maps, and on the still colliders laid out as objects: what
+ * `useTileBody2d` asks for.
  *
  * @internal
  * @since 1.0.0
@@ -74,6 +76,8 @@ export const createTileBody2d = (deps: {
     box: TGameObject;
     options: TCharacterShape2d;
     tilemaps: () => readonly TTilemap[];
+    /** The rectangles of the world it stands on and is stopped by besides the maps' cells. */
+    blocks?: () => readonly TBlock[];
 }): { body: TCharacterBody2d; move: (dt: number) => void; remove: () => void } => {
     const { box, options } = deps;
     const pose = worldPose2d(box);
@@ -126,7 +130,7 @@ export const createTileBody2d = (deps: {
      * top of a wall or a ledge under any part of its feet. `from` is where its feet were before the
      * move, which a ledge needs to have been above.
      */
-    const floorAt = (grids: readonly TGrid[], feet: number, from: number, up: number, down: number): { y: number; kind: 'solid' | 'oneWay' | 'slope' } | null => {
+    const floorAt = (grids: readonly TGrid[], blocks: readonly TBlock[], feet: number, from: number, up: number, down: number): { y: number; kind: 'solid' | 'oneWay' | 'slope' } | null => {
         let slope: number | null = null;
         eachCell(grids, centre.x, feet - up, centre.x + EPS, feet + down + EPS, (grid, column, row, cellLeft, cellTop) => {
             const cell = cellOf(grid.map, column, row);
@@ -149,16 +153,22 @@ export const createTileBody2d = (deps: {
                 if (best === null || cellTop < best.y) best = { y: cellTop, kind: 'oneWay' };
             }
         });
+        // The top of a still collider under its feet is a floor like the top of a wall.
+        for (const block of blocks) {
+            if (block.top < feet - up - EPS || block.top > feet + down + EPS) continue;
+            if (block.right <= centre.x - hw + INSET || block.left >= centre.x + hw - INSET) continue;
+            if (best === null || block.top < best.y) best = { y: block.top, kind: 'solid' };
+        }
         return best;
     };
 
-    const moveX = (grids: readonly TGrid[], dx: number): void => {
+    const moveX = (grids: readonly TGrid[], blocks: readonly TBlock[], dx: number): void => {
         if (dx === 0) return;
         centre.x += dx;
         const feet = centre.y + hh;
         // On the ground, the floor is followed: up a slope, and down one.
         if (state.onGround) {
-            const floor = floorAt(grids, feet, feet, Math.abs(dx) + INSET, Math.abs(dx) + SNAP);
+            const floor = floorAt(grids, blocks, feet, feet, Math.abs(dx) + INSET, Math.abs(dx) + SNAP);
             if (floor !== null) {
                 centre.y = floor.y - hh;
                 onSlope = floor.kind === 'slope';
@@ -174,13 +184,19 @@ export const createTileBody2d = (deps: {
             const edge = dx > 0 ? cellLeft - hw : cellLeft + grid.w + hw;
             if (stop === null || (dx > 0 ? edge < stop : edge > stop)) stop = edge;
         });
+        for (const block of blocks) {
+            if (block.bottom <= centre.y - hh + EPS || block.top >= bottom || block.top >= low) continue;
+            if (block.right <= centre.x - hw || block.left >= centre.x + hw) continue;
+            const edge = dx > 0 ? block.left - hw : block.right + hw;
+            if (stop === null || (dx > 0 ? edge < stop : edge > stop)) stop = edge;
+        }
         if (stop !== null) {
             centre.x = stop;
             state.onWall = dx > 0 ? 'right' : 'left';
         }
     };
 
-    const moveY = (grids: readonly TGrid[], dy: number): void => {
+    const moveY = (grids: readonly TGrid[], blocks: readonly TBlock[], dy: number): void => {
         const feet = centre.y + hh;
         if (dy < 0) {
             state.onGround = false;
@@ -192,6 +208,11 @@ export const createTileBody2d = (deps: {
                 const under = cellTop + grid.h;
                 if (under <= head + EPS && (stop === null || under > stop)) stop = under;
             });
+            for (const block of blocks) {
+                if (block.right <= centre.x - hw + INSET || block.left >= centre.x + hw - INSET) continue;
+                if (block.bottom > head + EPS || block.bottom < head + dy) continue;
+                if (stop === null || block.bottom > stop) stop = block.bottom;
+            }
             if (stop !== null) {
                 centre.y = stop + hh;
                 state.onCeiling = true;
@@ -203,8 +224,8 @@ export const createTileBody2d = (deps: {
         // Standing, the floor is looked for a little below too, which keeps it on a slope going down;
         // falling, only as far as it falls.
         const floor = state.onGround
-            ? floorAt(grids, feet, feet, INSET, dy + SNAP)
-            : floorAt(grids, feet + dy, feet, dy + INSET, 0);
+            ? floorAt(grids, blocks, feet, feet, INSET, dy + SNAP)
+            : floorAt(grids, blocks, feet + dy, feet, dy + INSET, 0);
         if (floor !== null) {
             centre.y = floor.y - hh;
             state.onGround = true;
@@ -221,6 +242,7 @@ export const createTileBody2d = (deps: {
     const move = (dt: number): void => {
         if (removed || dt <= 0) return;
         const grids = gridsOf();
+        const blocks = deps.blocks?.() ?? [];
         const maps = grids.map((grid) => grid.map);
 
         if (!state.climbing) {
@@ -234,11 +256,14 @@ export const createTileBody2d = (deps: {
         state.onWall = null;
         state.onCeiling = false;
         // In pieces no longer than half the smallest cell, so nothing is passed through between two.
-        const smallest = grids.reduce((least, grid) => Math.min(least, grid.w, grid.h), Infinity);
+        const smallest = blocks.reduce(
+            (least, block) => Math.min(least, Math.max(2, block.right - block.left), Math.max(2, block.bottom - block.top)),
+            grids.reduce((least, grid) => Math.min(least, grid.w, grid.h), Infinity),
+        );
         const pieces = Number.isFinite(smallest) ? Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / (smallest / 2))) : 1;
         for (let i = 0; i < pieces; i++) {
-            moveX(grids, dx / pieces);
-            moveY(grids, dy / pieces);
+            moveX(grids, blocks, dx / pieces);
+            moveY(grids, blocks, dy / pieces);
         }
 
         if ((state.onGround && velocity.y > 0) || (state.onCeiling && velocity.y < 0)) {

@@ -208,6 +208,21 @@ export type TSpriteComponent = {
      * Left out for `'alpha'`, the ordinary way of covering what is behind.
      */
     blend?: 'additive';
+    /**
+     * Repeats the picture across the sprite's `width` and `height` instead of stretching it: a wall
+     * of bricks, a strip of grass. Absent, stretched.
+     */
+    repeat?: boolean;
+    /**
+     * With `repeat`, where the pattern starts inside the sprite, in its picture's pixels. Absent,
+     * `{ x: 0, y: 0 }`.
+     */
+    repeatOffset?: { x: number; y: number };
+    /**
+     * How much it moves with the camera: `1` as everything else, `0` not at all, between them further
+     * away. Absent, `{ x: 1, y: 1 }`.
+     */
+    parallax?: { x: number; y: number };
     visible?: boolean;
     zIndex?: number;
     material?: TMaterialDoc;

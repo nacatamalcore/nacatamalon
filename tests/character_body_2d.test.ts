@@ -621,3 +621,72 @@ describe('the map and the character, placed and taken away', () => {
         expect(box.sprite.transform.y).toBeCloseTo(80 - 8, 0);
     });
 });
+
+/**
+ * The floors, walls and ceilings a level lays out as objects with a collider that never moves, which
+ * the character on the maps alone stands on and is stopped by too, with no physics engine.
+ */
+describe('useTileBody2d on objects with a still collider', () => {
+    beforeEach(() => { body = KINDS[1]; });
+
+    const EMPTY = ['          ', '          ', '          ', '          ', '          ', '          '];
+
+    /** An object at a point with a collider of that size; `still` false makes it move, `sensor` lets things through. */
+    const block = (x: number, y: number, width: number, height: number, how: { body?: 'static' | 'dynamic'; sensor?: boolean } = {}) => {
+        useSpawn(function Block() {
+            createSprite({ width, height, tint, transform: at(x, y) });
+            usePhysicsBody2d({ body: how.body ?? 'static', collider: { shape: 'rect', width, height }, ...(how.sensor ? { sensor: true } : {}) });
+        })();
+    };
+
+    it('falls onto one and stands on it', async () => {
+        let h!: ReturnType<typeof hero>;
+        const { frames } = await level(EMPTY, () => {
+            block(80, 100, 160, 16);
+            h = hero(40, 20);
+        });
+        frames(90);
+        expect(h.body.onGround).toBe(true);
+        expect(h.sprite.transform.y).toBeCloseTo(92 - 12, 0);
+    });
+
+    it('runs into one and stops at it, saying which side', async () => {
+        let h!: ReturnType<typeof hero>;
+        const { frames } = await level(EMPTY, () => {
+            block(80, 100, 160, 16);
+            block(100, 76, 16, 32);
+            h = hero(40, 80, (b) => { b.velocity.x = 120; });
+        });
+        frames(90);
+        expect(h.sprite.transform.x).toBeCloseTo(92 - 6, 1);
+        expect(h.body.onWall).toBe('right');
+    });
+
+    it('hits its head on one above and comes back down', async () => {
+        let h!: ReturnType<typeof hero>;
+        let highest = Infinity;
+        let jumped = false;
+        const { frames } = await level(EMPTY, () => {
+            block(80, 100, 160, 16);
+            block(40, 30, 64, 8);
+            h = hero(40, 80, (b) => {
+                if (!jumped && b.onGround) { b.velocity.y = -400; jumped = true; }
+                highest = Math.min(highest, h.sprite.transform.y);
+            });
+        });
+        frames(120);
+        expect(highest).toBeGreaterThanOrEqual(34 + 12 - 0.01);
+        expect(h.sprite.transform.y).toBeCloseTo(92 - 12, 0);
+    });
+
+    it('falls through a sensor and through what moves', async () => {
+        let h!: ReturnType<typeof hero>;
+        const { frames } = await level(ROOM, () => {
+            block(40, 40, 64, 8, { sensor: true });
+            block(40, 56, 64, 8, { body: 'dynamic' });
+            h = hero(40, 10);
+        });
+        frames(90);
+        expect(h.sprite.transform.y).toBeCloseTo(80 - 12, 0);
+    });
+});
