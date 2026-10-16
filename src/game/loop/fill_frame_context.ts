@@ -19,6 +19,7 @@ import { computeJointMatrices } from '../../math/skinning';
 import { buildPostChain } from '../../post/build_post_chain';
 import type { TCamera2d } from '../../camera';
 import type { TDrawView3d } from '../../render/interface/draw/t_draw_view_3d';
+import type { TDrawCamera3d } from '../../render/interface/draw/t_draw_camera_3d';
 import type { TSceneColliders } from '../../gameobjects/particles/collide';
 import type { TSceneLighting } from './helper/collect_lights';
 import type { TCamera3d } from '../../camera/types/t_camera_3d';
@@ -247,6 +248,38 @@ type TWorldSeen = { models: Array<TDrawable | TDrawSprite>; camera: TCamera3d | 
  * What a tool asks the world to be seen through: the screen's cameras and kinds, or a capture's, or
  * a preview's. `null` in each is the scene's own.
  */
+/** A 3D camera as it is drawn when it follows the 2D one, kept per camera between frames. */
+type TFollowing = { -readonly [K in keyof TDrawCamera3d]: TDrawCamera3d[K] } & { flat: { x: number; y: number; rotation: number; zoom: number } };
+const following = new WeakMap<TCamera3d, TFollowing>();
+
+/**
+ * The camera a scene's models are drawn through: its 3D camera, or, for one that follows the 2D
+ * camera (`TCamera3d.follow2d`), that camera seen as the 2D one the sprites are drawn through, a
+ * tool's included, so a tool panning the flat world pans the models with it. With no 2D camera, the
+ * screen's pixels, as the sprites have them.
+ */
+const drawnThrough = (camera3d: TCamera3d | null, camera2d: TCamera2d | null): TDrawCamera3d | null => {
+    if (camera3d === null || camera3d.follow2d !== true || camera3d.projection !== 'orthographic') {
+        return camera3d;
+    }
+    let drawn = following.get(camera3d);
+    if (drawn === undefined) {
+        drawn = { ...camera3d, flat: { x: 0, y: 0, rotation: 0, zoom: 1 } };
+        following.set(camera3d, drawn);
+    }
+    drawn.projection = camera3d.projection;
+    drawn.transform = camera3d.transform;
+    drawn.fov = camera3d.fov;
+    drawn.near = camera3d.near;
+    drawn.far = camera3d.far;
+    drawn.zoom = camera3d.zoom;
+    drawn.flat.x = camera2d?.transform.x ?? 0;
+    drawn.flat.y = camera2d?.transform.y ?? 0;
+    drawn.flat.rotation = camera2d?.transform.rotation ?? 0;
+    drawn.flat.zoom = camera2d?.zoom || 1;
+    return drawn;
+};
+
 type TSeenThrough = Pick<TRuntimeState['viewport'], 'camera3d' | 'camera2d' | 'layers'> & { screen2d?: TCamera2d | null };
 
 /**
@@ -291,7 +324,10 @@ const gatherTree = (
     const start = drawables.length;
     colliders.flat.length = 0;
     colliders.deep.length = 0;
-    collectDrawables(root, drawables as TDrawable[], cameraIndex, sceneCamera, false, null, 0, colliders, pictures, screenCamera, camera2d, null, snapping);
+    // Parallax is measured against the scene's own camera, where the game has it, even when a tool
+    // looks through one of its own: a far layer is where the game would draw it, and panning the
+    // tool's view moves it with everything else rather than sliding it away by most of the pan.
+    collectDrawables(root, drawables as TDrawable[], cameraIndex, sceneCamera, false, null, 0, colliders, pictures, screenCamera, root.camera2d, null, snapping);
     // A tool showing only some kinds: dropped before anything else is worked out for them, so a kind
     // nobody is looking at costs no sorting, no lamps and no particles stepped.
     const layers = viewport?.layers ?? null;
@@ -329,7 +365,7 @@ const gatherTree = (
     let lighting: TSceneLighting | null = null;
     if (view >= 0) {
         lighting = collectLighting(root);
-        views3d.push({ camera: viewport?.camera3d ?? root.camera3d, lights: lighting.lights, ambient: lighting.ambient, fog: root.fog });
+        views3d.push({ camera: drawnThrough(viewport?.camera3d ?? root.camera3d, camera2d), lights: lighting.lights, ambient: lighting.ambient, fog: root.fog });
     }
     for (let i = start; i < drawables.length; i++) {
         viewIndex[i] = inDepth(drawables[i]) ? view : -1;
@@ -419,7 +455,7 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
         const view = lists.views3d.length;
         const lighting = seen.lighting ?? collectLighting(rootOf(box));
         // The world's fog, unless the picture asked for one of its own: it is looking at that world.
-        lists.views3d.push({ camera: box.camera3d ?? seen.camera, lights: lighting.lights, ambient: lighting.ambient, fog: box.fog ?? seen.fog });
+        lists.views3d.push({ camera: drawnThrough(box.camera3d ?? seen.camera, box.camera2d), lights: lighting.lights, ambient: lighting.ambient, fog: box.fog ?? seen.fog });
         for (const model of seen.models) {
             if (shows(model, picture.texture)) {
                 continue;

@@ -462,6 +462,7 @@ const writeCamera3d = (camera: TCamera3d): TComponentDoc => ({
     near: camera.near,
     far: camera.far,
     zoom: camera.zoom,
+    ...(camera.follow2d === true ? { follow2d: true } : {}),
 });
 
 const writeFog = (fog: TFog): TComponentDoc => ({

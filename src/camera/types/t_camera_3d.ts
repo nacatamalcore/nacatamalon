@@ -13,7 +13,8 @@ import type { TTransform3d } from '../../gameobjects/types/t_transform_3d';
  *   and zoom with it, which is how the consoles of the era mixed the two.
  *
  * Y points up here, the opposite of the 2D camera, because every model is built that way and
- * mirroring the axis would turn each one inside out.
+ * mirroring the axis would turn each one inside out. Unless it follows the 2D camera (`follow2d`):
+ * then the 3D pieces live in the 2D world, y down, among the sprites.
  *
  * @category Camera
  * @since 1.0.0
@@ -43,6 +44,15 @@ export type TCamera3d = {
      * Magnification. Orthographic only: `2` shows everything twice as big.
      */
     zoom: number;
+    /**
+     * Orthographic only: the 3D pieces are placed in the 2D world, as sprites are, and seen through
+     * the scene's 2D camera. A model at `(x, y)` is drawn where a sprite at `(x, y)` is, `y` going
+     * down; the 2D camera's pan, turn and zoom move both alike, and this camera's own `x`, `y` and
+     * `zoom` are not read (its `z` and `far` still are). For a 2D game with pieces drawn in 3D: a
+     * cell's membrane that wobbles, a coin that turns in depth. The models stay upright and lit as
+     * they were built: only where they are is measured the 2D way. Default `false`.
+     */
+    follow2d?: boolean;
 };
 
 /**
@@ -76,6 +86,11 @@ export type TCamera3dOptions = {
      * In degrees. Default `60`. Perspective only.
      */
     fov?: number;
+    /**
+     * Orthographic only: the models placed in the 2D world and seen through the 2D camera. See
+     * `TCamera3d.follow2d`. Default `false`.
+     */
+    follow2d?: boolean;
     /**
      * Default `0.1` and `1000`. An orthographic camera reads only `far`, and sees that far either
      * side of it.

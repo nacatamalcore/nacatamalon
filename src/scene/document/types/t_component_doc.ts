@@ -480,6 +480,11 @@ export type TCamera3dComponent = {
     near: number;
     far: number;
     zoom: number;
+    /**
+     * Orthographic only: the models placed in the 2D world, seen through the 2D camera. See
+     * `TCamera3d.follow2d`. Absent, `false`.
+     */
+    follow2d?: boolean;
 };
 
 /**

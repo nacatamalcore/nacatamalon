@@ -28,4 +28,11 @@ export type TDrawCamera3d = {
      * Orthographic only, where one unit is one pixel.
      */
     readonly zoom: number;
+    /**
+     * The 2D camera the models are seen through instead, as sprites are, `y` going down: set by the
+     * frame for a camera that follows the 2D one (`TCamera3d.follow2d`). Its `x`, `y`, turn and zoom
+     * replace this camera's; `z` and `far` are still this camera's. `null` or absent: a 3D camera of
+     * its own.
+     */
+    readonly flat?: { readonly x: number; readonly y: number; readonly rotation: number; readonly zoom: number } | null;
 };

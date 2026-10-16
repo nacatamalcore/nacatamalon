@@ -102,6 +102,16 @@ export const computeView = (camera: TDrawCamera3d | null, dst?: Mat4): Mat4 => {
     if (camera === null) {
         return mat.identity(out);
     }
+    // Following the 2D camera: what it does to a sprite, done to the world, `y` down. Magnify, turn
+    // against it, move to it (`applyView2d`), and back from this camera's own depth.
+    const flat = camera.flat ?? null;
+    if (flat !== null) {
+        mat.identity(out);
+        mat.scale(out, { x: flat.zoom, y: flat.zoom, z: 1 }, out);
+        mat.rotateZ(out, -flat.rotation, out);
+        mat.translate(out, { x: -flat.x, y: -flat.y, z: -camera.transform.z }, out);
+        return out;
+    }
     mat.identity(out);
     mat.translate(out, { x: camera.transform.x, y: camera.transform.y, z: camera.transform.z }, out);
     mat.multiply(out, rotationMatrix(camera.transform, viewTurn), out);
@@ -140,6 +150,12 @@ export const computeView = (camera: TDrawCamera3d | null, dst?: Mat4): Mat4 => {
 export const computeProjection = (camera: TDrawCamera3d | null, viewportWidth: number, viewportHeight: number, dst?: Mat4): Mat4 => {
     if (camera?.projection === 'perspective') {
         return mat.perspective(degToRad(camera.fov), viewportWidth / viewportHeight, camera.near, camera.far, dst);
+    }
+    // Following the 2D camera: the screen's pixels as the sprites have them, from the top-left
+    // corner, `y` going down. The view has put the camera's turn and zoom in already.
+    if (camera !== null && (camera.flat ?? null) !== null) {
+        const depth = camera.far;
+        return mat.ortho(0, Math.max(viewportWidth, 1), Math.max(viewportHeight, 1), 0, -depth, depth, dst);
     }
 
     // Guarded: a zoom of 0 collapses the frustum to nothing, and a canvas can measure zero for a
@@ -193,6 +209,11 @@ export type TCameraSpace = {
      */
     width: number;
     height: number;
+    /**
+     * Seen through the 2D camera (`TCamera3d.follow2d`): the world is the 2D one, `y` down, and each
+     * model is turned upright in it (`fillMeshUniforms`).
+     */
+    flat: boolean;
 };
 
 /**
@@ -202,7 +223,7 @@ export type TCameraSpace = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const newCameraSpace = (): TCameraSpace => ({ viewProjection: mat.create(), x: 0, y: 0, z: 0, right: [1, 0, 0], up: [0, 1, 0], width: 1, height: 1 });
+export const newCameraSpace = (): TCameraSpace => ({ viewProjection: mat.create(), x: 0, y: 0, z: 0, right: [1, 0, 0], up: [0, 1, 0], width: 1, height: 1, flat: false });
 
 /**
  * Where the two halves are built before they are multiplied together. Never handed out.
@@ -239,6 +260,13 @@ export const fillCameraSpace = (
     out.z = camera?.transform.z ?? 0;
     out.width = Math.max(viewportWidth, 1);
     out.height = Math.max(viewportHeight, 1);
+    out.flat = (camera?.flat ?? null) !== null;
+    if (out.flat) {
+        // The screen's up is the world's -y here: a particle's square is built standing the right way.
+        out.up[0] = -out.up[0];
+        out.up[1] = -out.up[1];
+        out.up[2] = -out.up[2];
+    }
     return out;
 };
 

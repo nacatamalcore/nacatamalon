@@ -12,6 +12,13 @@ releases are in [changelog/](./changelog/), one file each.
   only when they say something (`repeat: true`, an offset other than none, a parallax other than
   `{ x: 1, y: 1 }`). A tool laying out a level can make a wall of bricks or a far range of hills
   without code. A value written wrong is left out, as the other fields of a sprite are.
+- `follow2d` on an orthographic 3D camera (`TCamera3d`, `TCamera3dOptions`, and in a scene document):
+  its models are placed in the 2D world, as sprites are, and seen through the scene's 2D camera. A
+  model at `(1600, 1600)` is drawn where a sprite at `(1600, 1600)` is, `y` going down, and the 2D
+  camera's pan, turn and zoom move both alike (a tool's camera too); the 3D camera's own `x`, `y`
+  and `zoom` are not read, its `z` and `far` are. The models stay upright, facing and culled as they
+  were built, and a light aimed down still lights them from above. For a 2D game with pieces drawn in
+  3D, which before had to place each model by hand every frame, in the 3D camera's `y` going up.
 
 ### Changed
 
@@ -19,6 +26,13 @@ releases are in [changelog/](./changelog/), one file each.
   moves (a `'static'` body that is not a sensor), besides the maps: a floor, a wall, a platform made
   of an object rather than of tiles, measured as the rectangle around its collider, unturned. Still
   with no physics engine: it reads the objects' own data, so a game that uses no physics loads none.
+
+### Fixed
+
+- Parallax (`parallax` on a sprite, `useParallax`, a map layer's, a backdrop) is measured against the
+  scene's own 2D camera, also while a tool looks through one of its own (`setViewportCamera2d`): an
+  editor panned away from where the game's camera is no longer slid a far layer off by most of the
+  pan. In a game, where nothing looks through another camera, nothing changes.
 
 ## 0.2.3 — 2026-10-16
 

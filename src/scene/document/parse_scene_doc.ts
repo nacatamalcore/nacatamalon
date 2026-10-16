@@ -522,6 +522,7 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 near: asNumber(raw.near, 0.1),
                 far: asNumber(raw.far, 1000),
                 zoom: asNumber(raw.zoom, 1),
+                ...(raw.follow2d === true ? { follow2d: true } : {}),
             };
         }
         case 'fog': {

@@ -145,6 +145,9 @@ export const fillLightUniforms = (
     out[1] = ambient.g;
     out[2] = ambient.b;
     out[3] = lights.length;
+    // Seen through the 2D camera, the world's `y` goes down: a light aimed down when it was set up
+    // still comes from above on the screen. Where a lamp is, it is in the 2D world like the models.
+    const turn = (camera?.flat ?? null) !== null ? -1 : 1;
 
     lights.forEach((light, index) => {
         const base = 4 + index * LIGHT_FLOATS_PER_ITEM;
@@ -158,7 +161,7 @@ export const fillLightUniforms = (
             // forward, so towards it is the other way.
             const forward = transformForward(light.transform);
             out[base] = -forward.x;
-            out[base + 1] = -forward.y;
+            out[base + 1] = -forward.y * turn;
             out[base + 2] = -forward.z;
             return;
         }
@@ -171,7 +174,7 @@ export const fillLightUniforms = (
         if (light.type === 'spot') {
             const forward = transformForward(light.transform);
             out[base + 8] = forward.x;
-            out[base + 9] = forward.y;
+            out[base + 9] = forward.y * turn;
             out[base + 10] = forward.z;
             const angle = light.angle ?? 0;
             out[base + 11] = Math.cos(angle);
@@ -211,7 +214,9 @@ export const fillLightUniforms = (
     // Zero, which `fill(0)` already left, is a perspective view. No camera at all is drawn
     // orthographic, looking down -Z like a camera that never turned.
     if (camera === null || camera.projection !== 'perspective') {
-        const forward = camera === null ? { x: 0, y: 0, z: -1 } : transformForward({ ...camera.transform, quaternion: null });
+        const forward = camera === null || (camera.flat ?? null) !== null
+            ? { x: 0, y: 0, z: -1 }
+            : transformForward({ ...camera.transform, quaternion: null });
         const length = Math.hypot(forward.x, forward.y, forward.z) || 1;
         out[VIEW_AT] = -forward.x / length;
         out[VIEW_AT + 1] = -forward.y / length;

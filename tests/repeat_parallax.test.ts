@@ -129,6 +129,21 @@ describe('parallax', () => {
         expect(drawnAt(far)[0]).toBe(51);
     });
 
+    it('is measured against the scene\'s camera, not a tool\'s looking at it from elsewhere', () => {
+        let far!: TSprite;
+        const { store } = createTestGame();
+        startTestScene(store, 'Level', () => {
+            const camera = useCamera2d();
+            camera.transform.x = 100;
+            far = createSprite({ width: 8, height: 8, tint, transform: at(0, 0), parallax: { x: 0.5, y: 1 } });
+            return createScene();
+        });
+        // An editor panned far away and zoomed out: the far layer is where the game draws it.
+        store.setState('viewport', { camera2d: { type: 'camera2d', id: 'tool', transform: { x: -2000, y: -1400, rotation: 0 }, zoom: 0.25 } });
+        frame(store);
+        expect(drawnAt(far)[0]).toBe(50);
+    });
+
     it('is where the pointer touches it', () => {
         let far!: TSprite;
         const store = scene(() => {

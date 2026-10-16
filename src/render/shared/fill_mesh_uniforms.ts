@@ -18,6 +18,9 @@ export const MESH_UNIFORM_FLOATS = 64;
 const modelScratch = mat.create();
 const mvpScratch = mat.create();
 const normalScratch = mat.create();
+const uprightScratch = mat.create();
+/** A model's own `y` turned over: what stands it upright in a world whose `y` goes down. */
+const UPRIGHT = { x: 1, y: -1, z: 1 };
 
 /**
  * Writes everything a backend needs about one model: where it ends up on screen, where it is in the
@@ -43,7 +46,11 @@ export const fillMeshUniforms = (out: Float32Array, at: number, mesh: TDrawMesh,
     const surface = mesh.material;
     // Its own placement, worked out here only when nothing above it did: a model inside a box that
     // moved already had this done while the tree was walked.
-    const model = mesh.worldMatrix ?? computeModelMatrix(mesh.transform, modelScratch);
+    let model = mesh.worldMatrix ?? computeModelMatrix(mesh.transform, modelScratch);
+    // Seen through the 2D camera, the world is the 2D one, `y` down, and a model built `y` up would
+    // stand on its head: turned upright in its own frame first. Two mirrorings (this one and the
+    // screen's) make none, so its faces still face the way they were built and none is culled.
+    if (space.flat) model = mat.scale(model, UPRIGHT, uprightScratch);
 
     mat.multiply(space.viewProjection, model, mvpScratch);
     out.set(mvpScratch, at);

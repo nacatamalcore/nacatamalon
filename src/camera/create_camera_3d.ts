@@ -26,4 +26,5 @@ export const createCamera3d = (options: TCamera3dOptions = {}): TCamera3d => cre
     near: options.near ?? 0.1,
     far: options.far ?? 1000,
     zoom: options.zoom ?? 1,
+    ...(options.follow2d === true ? { follow2d: true } : {}),
 });

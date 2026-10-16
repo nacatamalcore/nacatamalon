@@ -48,6 +48,9 @@ const space = newCameraSpace();
  * });
  * ```
  *
+ * A camera that follows the 2D one (`follow2d`) puts a model where a sprite at the same place is:
+ * ask the 2D camera instead.
+ *
  * @category Camera
  * @since 1.0.0
  * @author Francisco Pereira Alvarado

@@ -447,6 +447,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                 x: place.x, y: place.y, z: place.z,
                 rotation: place.rotation, rotationX: place.rotationX, rotationY: place.rotationY,
                 fov: component.fov, near: component.near, far: component.far, zoom: component.zoom,
+                ...(component.follow2d === true ? { follow2d: true } : {}),
             }).id = component.id;
             break;
         }
