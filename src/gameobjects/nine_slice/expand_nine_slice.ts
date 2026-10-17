@@ -1,7 +1,13 @@
 import { atlasFrame } from '../../atlas';
 import { worldOf } from '../../render/shared/world_of';
+import { pivotPlace } from '../../render/shared/pivot_place';
 import type { TDrawSprite } from '../../render/interface';
 import type { TNineSlice, TNineSliceMode } from './types/t_nine_slice';
+
+/** Its middle: where a panel that names no anchor is held. */
+const CENTRE = { x: 0.5, y: 0.5 };
+/** Where a panel with a pivot is laid out from, written over panel by panel. */
+const pivoted = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 };
 
 /**
  * One stretch of a nine-slice along one direction: where it is drawn and how long, in pixels of the
@@ -191,9 +197,12 @@ export const expandNineSlice = (slice: TNineSlice): readonly TDrawSprite[] => {
     pool.length = count;
 
     // Where it ends up, so a panel inside a box that moved takes its parts with it.
-    const transform = worldOf(slice);
-    const anchorX = (slice.anchor?.x ?? 0.5) * width;
-    const anchorY = (slice.anchor?.y ?? 0.5) * height;
+    const world = worldOf(slice);
+    // Turned about its pivot when it has one, held by it; about its anchor otherwise.
+    const transform = pivotPlace(world, slice, slice.anchor ?? CENTRE, width, height, pivoted);
+    const held = slice.pivot ?? slice.anchor ?? CENTRE;
+    const anchorX = held.x * width;
+    const anchorY = held.y * height;
     const cos = Math.cos(transform.rotation);
     const sin = Math.sin(transform.rotation);
 

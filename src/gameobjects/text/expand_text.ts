@@ -4,6 +4,10 @@ import { layoutFontText } from './layout_font_text';
 import type { TDrawSprite } from '../../render/interface';
 import type { TText } from './types/t_text';
 import { worldOf } from '../../render/shared/world_of';
+import { pivotPlace } from '../../render/shared/pivot_place';
+
+/** Where a text with a pivot is laid out from, written over text by text. */
+const pivoted = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 };
 
 /**
  * A character of a text, shaped like a sprite so the renderer draws it like one. Never a record.
@@ -140,23 +144,26 @@ export const expandText = (text: TText): readonly TDrawSprite[] => {
         size.height = layout.height;
     }
 
-    const anchorX = (text.anchor?.x ?? 0) * layout.width;
-    const anchorY = (text.anchor?.y ?? 0) * layout.height;
-    const cos = Math.cos(transform.rotation);
-    const sin = Math.sin(transform.rotation);
+    // Turned about its pivot when it has one, held by it; about its anchor otherwise.
+    const place = pivotPlace(transform, text, text.anchor ?? TOP_LEFT, layout.width, layout.height, pivoted);
+    const held = text.pivot ?? text.anchor ?? TOP_LEFT;
+    const anchorX = held.x * layout.width;
+    const anchorY = held.y * layout.height;
+    const cos = Math.cos(place.rotation);
+    const sin = Math.sin(place.rotation);
     const { atlasWidth, atlasHeight } = font.meta ?? { atlasWidth: 1, atlasHeight: 1 };
 
     for (let i = 0; i < layout.placements.length; i++) {
         const placement = layout.placements[i];
         const sprite = pool[i];
 
-        const localX = (placement.x - anchorX) * transform.scaleX;
-        const localY = (placement.y - anchorY) * transform.scaleY;
-        sprite.transform.x = transform.x + localX * cos - localY * sin;
-        sprite.transform.y = transform.y + localX * sin + localY * cos;
-        sprite.transform.rotation = transform.rotation;
-        sprite.transform.scaleX = transform.scaleX;
-        sprite.transform.scaleY = transform.scaleY;
+        const localX = (placement.x - anchorX) * place.scaleX;
+        const localY = (placement.y - anchorY) * place.scaleY;
+        sprite.transform.x = place.x + localX * cos - localY * sin;
+        sprite.transform.y = place.y + localX * sin + localY * cos;
+        sprite.transform.rotation = place.rotation;
+        sprite.transform.scaleX = place.scaleX;
+        sprite.transform.scaleY = place.scaleY;
 
         sprite.width = placement.width;
         sprite.height = placement.height;

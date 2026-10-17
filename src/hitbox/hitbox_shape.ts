@@ -2,6 +2,7 @@ import { placementInside, worldPlacementOf } from '../box/world_placement_of';
 import { ownerOfDrawable } from '../box/drawable_owner';
 import { spriteSize } from '../render/shared/sprite_size';
 import { textBlockSize } from '../gameobjects/text/expand_text';
+import { pivotPlace } from '../render/shared/pivot_place';
 import type { TBox } from '../box/types/t_box';
 import type { TTransform2d } from '../gameobjects/types/t_transform_2d';
 import type { TSprite } from '../gameobjects/sprite/types/t_sprite';
@@ -77,10 +78,14 @@ const turned = (place: TTransform2d, localX: number, localY: number, width: numb
  */
 export const pictureRect = (picture: TPicture, owner: TBox | null, offsetX = 0, offsetY = 0, width?: number, height?: number): TTurnedRect => {
     const size = measure(picture);
-    const place = placementInside(owner, picture.transform);
+    // Turned about its pivot when it has one, as it is drawn: held by the pivot then.
+    const place = pivotPlace(placementInside(owner, picture.transform), picture, size.anchor, size.width, size.height, {
+        x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1,
+    });
+    const held = picture.pivot ?? size.anchor;
     // The anchor says which point of the picture its placement is at; its centre is this far away.
-    const centreX = (0.5 - size.anchor.x) * size.width + offsetX;
-    const centreY = (0.5 - size.anchor.y) * size.height + offsetY;
+    const centreX = (0.5 - held.x) * size.width + offsetX;
+    const centreY = (0.5 - held.y) * size.height + offsetY;
     return turned(place, centreX, centreY, width ?? size.width, height ?? size.height);
 };
 

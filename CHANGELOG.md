@@ -19,6 +19,15 @@ releases are in [changelog/](./changelog/), one file each.
   and `zoom` are not read, its `z` and `far` are. The models stay upright, facing and culled as they
   were built, and a light aimed down still lights them from above. For a 2D game with pieces drawn in
   3D, which before had to place each model by hand every frame, in the 3D camera's `y` going up.
+- `pivot` on a sprite, a text and a panel (`createSprite`, `createText`, `createNineSlice`, and on a
+  sprite or a text in a scene document): the point it turns and grows about, in 0-1 like `anchor`,
+  when that is not its anchor. The anchor still says where it sits unturned and ungrown; turned, it
+  turns about its pivot, and is touched (`usePointer`) and measured (`overlaps`, `useHitbox`) where it
+  is drawn. Can change at any moment: a bike anchored under its back wheel that spins about its middle
+  when it crashes, with no sine, cosine or offset worked out by hand. It turns about it whether its own
+  placement turns or its box's (the box is the thing, the picture how it looks: a behaviour turning
+  `self` turns it about its pivot); boxes further up carry it as one, with everything else in them.
+  Without a pivot nothing changes.
 - `fillPolygon(pixels, points, color)`: a polygon filled in a picture painted in code, a ramp, a
   slope of ground, a roof. A pixel is painted when its middle is inside or on the outline, so the
   edge is stepped, a ramp up and a ramp down are mirror images, and two polygons sharing a side leave

@@ -57,9 +57,14 @@ export type TDrawSprite = {
     /**
      * Which point of the sprite sits on `transform`, in 0-1 of its own size: `0.5, 0.5` is its
      * middle, `0, 0` its top-left corner, `0.5, 1` the middle of its bottom edge. Rotation and
-     * scale happen around it. Omitted is the middle.
+     * scale happen around it, unless `pivot` says another point. Omitted is the middle.
      */
     readonly anchor?: { x: number; y: number };
+    /**
+     * The point it turns and grows about, in 0-1 like `anchor`, when that is not its anchor (see
+     * `pivotPlace`). Omitted is its anchor.
+     */
+    readonly pivot?: { x: number; y: number };
     /**
      * Which part of the texture to show, in 0-1: where the window starts. Omitted is `0, 0`.
      */

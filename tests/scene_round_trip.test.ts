@@ -80,6 +80,21 @@ describe('a document the writer produced', () => {
         expect(parseSceneDoc(doc, '/scenes/level.scene')).toEqual(doc);
     });
 
+    it('keeps a pivot apart from the anchor, on a sprite and a text, and only when there is one', () => {
+        const { doc } = written(() => {
+            createSprite({ width: 24, height: 18, tint, anchor: { x: 0.25, y: 1 }, pivot: { x: 0.5, y: 0.5 }, transform: at(40, 60) });
+            createText({ text: 'AB', font: createTestFont(), tint, pivot: { x: 0.5, y: 0.5 }, transform: at(8, 8) });
+            createSprite({ width: 8, height: 8, tint });
+        });
+        const [sprite, text, plain] = doc.root.components;
+        expect(sprite).toMatchObject({ type: 'sprite', anchor: { x: 0.25, y: 1 }, pivot: { x: 0.5, y: 0.5 } });
+        expect(text).toMatchObject({ type: 'text', pivot: { x: 0.5, y: 0.5 } });
+        expect('pivot' in (plain as object)).toBe(false);
+        expect(parseSceneDoc(doc, '/scenes/level.scene')).toEqual(doc);
+        // Built from the file, the sprite and the text have it, and are written back the same.
+        expect(rebuilt(doc).root.components.map((c) => (c as { pivot?: unknown }).pivot)).toEqual([{ x: 0.5, y: 0.5 }, { x: 0.5, y: 0.5 }, undefined]);
+    });
+
     it('says what it is, and what the scene is called', () => {
         const { doc } = written(() => {});
 

@@ -95,6 +95,7 @@ export const createText = (options: TTextOptions): TText => {
         tint: options.tint ?? getColor('white'),
         transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, ...options.transform },
         anchor: options.anchor,
+        ...(options.pivot !== undefined ? { pivot: options.pivot } : {}),
         zIndex: options.zIndex,
         smooth: options.smooth,
         visible: options.visible,

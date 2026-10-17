@@ -48,9 +48,17 @@ export type TSpriteOptions = {
      * Which point of the sprite sits on its transform, in 0-1 of its own size: `{ x: 0.5, y: 0.5 }`
      * is its middle and the default, `{ x: 0.5, y: 1 }` the middle of its bottom edge (a character
      * standing on a floor), `{ x: 0, y: 0.5 }` its left edge (a bar that grows to the right).
-     * Rotation and scale happen around it.
+     * Rotation and scale happen around it, unless `pivot` says another point.
      */
     anchor?: { x: number; y: number };
+    /**
+     * The point it turns and grows about, in 0-1 of its own size, when it is not the anchor: the
+     * anchor decides where the sprite sits, the pivot what it spins on. A door anchored at its
+     * corner turns on its hinge (`{ x: 0, y: 0.5 }`); a character anchored at its feet somersaults
+     * about its middle (`{ x: 0.5, y: 0.5 }`). Unturned and ungrown it sits as its anchor says.
+     * Default: its anchor.
+     */
+    pivot?: { x: number; y: number };
     /**
      * A sheet from `createSpriteAtlas`. It supplies the image and, with `frame`, which part of it
      * to show. Anything given explicitly (`texture`, `uvOffset`, `uvScale`) wins over it.

@@ -45,6 +45,13 @@ export type TText = {
      */
     anchor?: { x: number; y: number };
     /**
+     * The point of the block it turns and grows about, in 0-1 like `anchor`, when that is not its
+     * anchor: a score placed by its left edge that pops bigger from its middle. Unturned and ungrown
+     * it sits as its anchor says; turned, it turns about this point, anchor and all. Omitted is its
+     * anchor. Can be changed at any moment, and taken away (`undefined`).
+     */
+    pivot?: { x: number; y: number };
+    /**
      * Draw order within its scene, as for a sprite. The whole text moves as one.
      */
     zIndex?: number;

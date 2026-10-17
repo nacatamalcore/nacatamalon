@@ -103,6 +103,7 @@ export const createNineSlice = (options: TNineSliceOptions): TNineSlice => {
         uvOffset: options.uvOffset,
         uvScale: options.uvScale,
         anchor: options.anchor,
+        ...(options.pivot !== undefined ? { pivot: options.pivot } : {}),
         zIndex: options.zIndex,
         smooth: options.smooth,
         visible: options.visible,

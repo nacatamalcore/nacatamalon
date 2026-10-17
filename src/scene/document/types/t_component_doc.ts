@@ -197,6 +197,10 @@ export type TSpriteComponent = {
     tint: TColor;
     anchor?: { x: number; y: number };
     /**
+     * The point it turns and grows about, in 0-1, when it is not `anchor` (see `TSprite.pivot`).
+     */
+    pivot?: { x: number; y: number };
+    /**
      * Which part of the sheet to show, when it is not cut by an atlas.
      */
     uvOffset?: { x: number; y: number };
@@ -273,6 +277,10 @@ export type TTextComponent = {
     style: TTextStyle;
     tint: TColor;
     anchor?: { x: number; y: number };
+    /**
+     * The point it turns and grows about, in 0-1, when it is not `anchor` (see `TSprite.pivot`).
+     */
+    pivot?: { x: number; y: number };
     smooth?: boolean;
     visible?: boolean;
     zIndex?: number;

@@ -72,6 +72,11 @@ export type TNineSliceOptions = {
      */
     anchor?: { x: number; y: number };
     /**
+     * The point it turns and grows about, in 0-1, when it is not the anchor: a panel placed by its
+     * corner that pops open from its middle (`{ x: 0.5, y: 0.5 }`). Default: its anchor.
+     */
+    pivot?: { x: number; y: number };
+    /**
      * Draw order within its scene, as for a sprite.
      */
     zIndex?: number;

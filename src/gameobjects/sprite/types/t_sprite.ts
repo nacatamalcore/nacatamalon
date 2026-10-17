@@ -53,6 +53,13 @@ export type TSprite = {
      */
     anchor?: { x: number; y: number };
     /**
+     * The point it turns and grows about, in 0-1 like `anchor`, when that is not its anchor: a
+     * motorbike anchored under its back wheel that spins about its middle when it crashes. Unturned
+     * and ungrown it sits as its anchor says; turned, it turns about this point, anchor and all.
+     * Omitted is its anchor. Can be changed at any moment, and taken away (`undefined`).
+     */
+    pivot?: { x: number; y: number };
+    /**
      * Where the window into the texture starts, in 0-1. Omitted is the top-left corner.
      */
     uvOffset?: { x: number; y: number };

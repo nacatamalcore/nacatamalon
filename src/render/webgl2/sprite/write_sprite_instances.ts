@@ -8,6 +8,12 @@ import type { TSpritePipeline } from './types/t_sprite_pipeline';
 import type { TDrawShader } from '../../interface/draw/t_draw_material';
 import type { TUniformValues } from '../../../materials/types/t_uniforms';
 import { worldOf } from '../../shared/world_of';
+import { pivotPlace } from '../../shared/pivot_place';
+
+/** The middle: where a sprite that names no anchor is held, as every sprite before anchors was. */
+const CENTRE = { x: 0.5, y: 0.5 };
+/** Where a sprite with a pivot is drawn from, written over sprite by sprite. */
+const pivoted = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 };
 
 /**
  * Floats per sprite in the instance buffer: x, y, width, height, rotation, scaleX, scaleY,
@@ -171,15 +177,18 @@ export const writeSpriteInstances = (
                 }
                 const sampler = smooth ? sprites.samplers.linear : sprites.samplers.nearest;
 
-                const o = count * SPRITE_FLOATS;
-                data[o] = transform.x;
-                data[o + 1] = transform.y;
                 const size = spriteSize(item);
+                // Turned about its pivot when it has one, held by it; about its anchor otherwise.
+                const place = pivotPlace(transform, item, item.anchor ?? CENTRE, size.width, size.height, pivoted);
+                const anchor = item.pivot ?? item.anchor ?? CENTRE;
+                const o = count * SPRITE_FLOATS;
+                data[o] = place.x;
+                data[o + 1] = place.y;
                 data[o + 2] = size.width;
                 data[o + 3] = size.height;
-                data[o + 4] = transform.rotation;
-                data[o + 5] = transform.scaleX;
-                data[o + 6] = transform.scaleY;
+                data[o + 4] = place.rotation;
+                data[o + 5] = place.scaleX;
+                data[o + 6] = place.scaleY;
                 data[o + 7] = tint.r;
                 data[o + 8] = tint.g;
                 data[o + 9] = tint.b;
@@ -192,8 +201,8 @@ export const writeSpriteInstances = (
                 data[o + 12] = window.offsetY;
                 data[o + 13] = window.scaleX;
                 data[o + 14] = window.scaleY;
-                data[o + 15] = item.anchor?.x ?? 0.5;
-                data[o + 16] = item.anchor?.y ?? 0.5;
+                data[o + 15] = anchor.x;
+                data[o + 16] = anchor.y;
                 // Slot 0 is the screen, so camera `c` lives in slot `c + 1`. A camera past what the
                 // shader holds falls back to the screen, and `writeFrameUniforms` has said so.
                 const camera = cameraIndex[i] ?? -1;

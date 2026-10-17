@@ -9,6 +9,7 @@ import type { TText } from '../gameobjects/text/types/t_text';
 import type { TNineSlice } from '../gameobjects/nine_slice/types/t_nine_slice';
 import type { TRuntimeStore } from '../store';
 import { worldOf } from '../render/shared/world_of';
+import { pivotPlace } from '../render/shared/pivot_place';
 
 type TQuadTransform = { x: number; y: number; rotation: number; scaleX: number; scaleY: number };
 
@@ -42,6 +43,26 @@ const isInsideQuad = (transform: TQuadTransform, width: number, height: number, 
 
 const CENTRE = { x: 0.5, y: 0.5 };
 const TOP_LEFT = { x: 0, y: 0 };
+
+/** Where a picture with a pivot is tested from, written over picture by picture. */
+const pivoted = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 };
+
+/**
+ * Whether a point is on a picture where it is drawn: turned about its pivot when it has one
+ * (`pivotPlace`), as the renderer turns it, so it is touched where it is seen.
+ */
+const isOnPicture = (
+    picture: TSprite | TText | TNineSlice,
+    width: number,
+    height: number,
+    fallback: { x: number; y: number },
+    x: number,
+    y: number,
+): boolean => {
+    const anchor = picture.anchor ?? fallback;
+    const place = pivotPlace(worldOf(picture), picture, anchor, width, height, pivoted);
+    return isInsideQuad(place, width, height, picture.pivot ?? anchor, x, y);
+};
 
 /**
  * Every sprite, text and nine-slice under a screen point, the one on top first.
@@ -111,7 +132,7 @@ const hitsAt = (
                 continue;
             }
             const { width, height } = textBlockSize(text);
-            if (isInsideQuad(worldOf(text), width, height, text.anchor ?? TOP_LEFT, world.x, world.y)) {
+            if (isOnPicture(text, width, height, TOP_LEFT, world.x, world.y)) {
                 hits.push(text);
             }
             continue;
@@ -126,7 +147,7 @@ const hitsAt = (
             if (panel.destroyed) {
                 continue;
             }
-            if (isInsideQuad(worldOf(panel), panel.width, panel.height, panel.anchor ?? CENTRE, world.x, world.y)) {
+            if (isOnPicture(panel, panel.width, panel.height, CENTRE, world.x, world.y)) {
                 hits.push(panel);
             }
             continue;
@@ -145,7 +166,7 @@ const hitsAt = (
             continue;
         }
         const { width, height } = spriteSize(sprite);
-        if (isInsideQuad(worldOf(sprite), width, height, sprite.anchor ?? CENTRE, world.x, world.y)) {
+        if (isOnPicture(sprite, width, height, CENTRE, world.x, world.y)) {
             hits.push(sprite);
         }
     }

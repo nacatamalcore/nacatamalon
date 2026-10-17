@@ -117,6 +117,8 @@ describe('WebGL2 and WebGPU write the same numbers', () => {
         const drawables = [
             sprite(),
             sprite({ width: 30, height: 40, anchor: { x: 0, y: 1 } }),
+            // Turned about a point that is not its anchor: both move it there alike.
+            sprite({ width: 30, height: 40, anchor: { x: 0, y: 1 }, pivot: { x: 0.5, y: 0.5 } }),
             sprite({ texture: atlas, uvOffset: { x: 0.25, y: 0.5 }, uvScale: { x: 0.25, y: 0.5 } }),
             sprite({ texture: atlas, smooth: true }),
             // Mirrored, which lives in the window into the sheet and not in the placement.
@@ -124,9 +126,9 @@ describe('WebGL2 and WebGPU write the same numbers', () => {
             sprite({ texture: atlas, flipX: true, flipY: true }),
             sprite({ texture: texture('error') }),
         ];
-        const result = writeBoth(drawables, [-1, 0, 3, 14, 20, 0, 1]);
+        const result = writeBoth(drawables, [-1, 0, 0, 3, 14, 20, 0, 1]);
 
-        expect(result.glCount).toBe(7);
+        expect(result.glCount).toBe(8);
         expect(result.gl).toEqual(result.gpu);
     });
 
