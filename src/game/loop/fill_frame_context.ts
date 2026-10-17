@@ -27,6 +27,7 @@ import type { TRenderPass } from '../../render/interface';
 import type { TTexture } from '../../loaders';
 import { rootOf } from '../../box';
 import type { TBox } from '../../box';
+import { ownerOfDrawable } from '../../box/drawable_owner';
 import type { TColor } from '../../color';
 import { isTransparentMesh } from '../../render/shared/is_transparent_mesh';
 import { computeView } from '../../render/shared/compute_mvp_3d';
@@ -280,7 +281,32 @@ const drawnThrough = (camera3d: TCamera3d | null, camera2d: TCamera2d | null): T
     return drawn;
 };
 
-type TSeenThrough = Pick<TRuntimeState['viewport'], 'camera3d' | 'camera2d' | 'layers'> & { screen2d?: TCamera2d | null };
+type TSeenThrough = Pick<TRuntimeState['viewport'], 'camera3d' | 'camera2d' | 'layers'> & {
+    screen2d?: TCamera2d | null;
+    /** Boxes and drawables a capture leaves out, and the only ones it keeps (`TCaptureRequest`). */
+    hide?: ReadonlySet<TBox | TDrawable> | null;
+    only?: ReadonlySet<TBox | TDrawable> | null;
+};
+
+/**
+ * Whether a capture that leaves out `hide` and keeps only `only` draws `drawable`: by itself, by the
+ * box it is in, or by any box above that one.
+ */
+const keptByBoxes = (drawable: TDrawable, hide: ReadonlySet<TBox | TDrawable> | null, only: ReadonlySet<TBox | TDrawable> | null): boolean => {
+    if (hide?.has(drawable)) {
+        return false;
+    }
+    let kept = only === null || only.has(drawable);
+    for (let box: TBox | null = ownerOfDrawable(drawable)?.box ?? null; box !== null; box = box.parent) {
+        if (hide?.has(box)) {
+            return false;
+        }
+        if (only?.has(box)) {
+            kept = true;
+        }
+    }
+    return kept;
+};
 
 /**
  * Whether this frame draws flat things on whole pixels: the game's `pixelSnap`, read once a frame.
@@ -356,6 +382,22 @@ const gatherTree = (
         if (hidden.length > 0 && !again) {
             stepSceneParticles(hidden, hiddenCameras, 0, rootOf(root).paused ? 0 : delta, colliders);
         }
+    }
+    // A capture leaving some boxes out, or keeping some alone: only on its own pass, never the screen's.
+    const hide = viewport?.hide ?? null;
+    const only = viewport?.only ?? null;
+    if (hide !== null || only !== null) {
+        let kept = start;
+        for (let i = start; i < drawables.length; i++) {
+            if (!keptByBoxes(drawables[i] as TDrawable, hide, only)) {
+                continue;
+            }
+            drawables[kept] = drawables[i];
+            cameraIndex[kept] = cameraIndex[i];
+            kept++;
+        }
+        drawables.length = kept;
+        cameraIndex.length = kept;
     }
     sortSceneByZIndex(drawables as TDrawable[], cameraIndex, start, viewport?.camera3d ?? root.camera3d);
 
@@ -504,7 +546,7 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
  * Walking the tree a second time leaves the screen's pass as it was. Particles are not stepped
  * again: see `lookAgainAtParticles` for why that matters.
  */
-const secondPass = (store: TRuntimeStore, seenThrough: TSeenThrough, clearColor: TColor): TRenderPass => {
+const secondPass = (store: TRuntimeStore, seenThrough: TSeenThrough, clearColor: TColor, effects = true): TRenderPass => {
     const lists = newLists();
     for (const scene of store.get('world').scenes) {
         if (!scene.held) {
@@ -513,8 +555,9 @@ const secondPass = (store: TRuntimeStore, seenThrough: TSeenThrough, clearColor:
     }
     return {
         clearColor,
-        // A picture of the game stands in for looking at the screen, so it wants the screen's look.
-        postProcess: true,
+        // A picture of the game stands in for looking at the screen, so it wants the screen's look,
+        // unless the game asked for it without (`useCapture`'s `effects: false`).
+        postProcess: effects,
         drawables: lists.drawables as TDrawSprite[],
         cameras: lists.cameras,
         cameraIndex: lists.cameraIndex,
@@ -573,7 +616,7 @@ export const fillFrameContext = (store: TRuntimeStore, ctx: TFrameContext, delta
     // After the pictures, like the screen, so they show them as they are this frame.
     const capture = store.get('capture').request;
     if (capture !== null) {
-        const pass = secondPass(store, capture, capture.background);
+        const pass = secondPass(store, capture, capture.background, capture.effects);
         pass.renderTarget = capture.target;
         ctx.passes.push(pass);
     }

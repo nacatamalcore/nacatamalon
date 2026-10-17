@@ -2,6 +2,8 @@ import { screenSizeOf } from '../../DOM/screen_size';
 import type { TRuntimeStore } from '../../store';
 import type { TCaptureResult } from '../../render/interface';
 import type { TCaptureOptions } from './types/t_capture_options';
+import type { TBox } from '../../box/types/t_box';
+import type { TDrawable } from '../../gameobjects/types';
 
 /**
  * Draws the running scenes once more, into a picture of their own, and brings its pixels back.
@@ -17,7 +19,11 @@ import type { TCaptureOptions } from './types/t_capture_options';
  *
  * @internal
  */
-export const captureScreen = async (store: TRuntimeStore, options: TCaptureOptions = {}): Promise<TCaptureResult> => {
+export const captureScreen = async (
+    store: TRuntimeStore,
+    options: TCaptureOptions = {},
+    boxes: { hide?: ReadonlySet<TBox | TDrawable> | null; only?: ReadonlySet<TBox | TDrawable> | null; effects?: boolean } = {},
+): Promise<TCaptureResult> => {
     if (store.get('loop').destroyed) {
         throw new Error('[NacatamalOn] capture: the game has been destroyed.');
     }
@@ -47,6 +53,10 @@ export const captureScreen = async (store: TRuntimeStore, options: TCaptureOptio
                     screen2d: 'camera2d' in options ? null : viewport.screen2d,
                     layers: 'layers' in options ? options.layers ?? null : viewport.layers,
                     background: options.background ?? store.get('config').background,
+                    // What a game's photo leaves out or keeps alone (`useCapture`); a tool's has neither.
+                    hide: boxes.hide ?? null,
+                    only: boxes.only ?? null,
+                    effects: boxes.effects ?? true,
                     target,
                     settle: (error) => (error === undefined ? resolve() : reject(error)),
                 },

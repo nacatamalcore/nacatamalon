@@ -28,6 +28,7 @@ export { useSpawn, useSelf } from './spawn';
 export { useData, useWatch } from './state';
 export { useScript, provide, useApi } from './script';
 export { useEvent } from './events';
+export { useCapture } from './capture';
 
 export type { TUseLoadTextureOptions, TUseLoadAtlasOptions, TUseLoadBitmapFontOptions, TUseLoadFontOptions, TUseLoadGltfOptions, TUseLoadShaderOptions } from './loaders';
 export type { TSceneHandle } from './scene';

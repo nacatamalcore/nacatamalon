@@ -154,6 +154,16 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   image), `useLoadPixels({ src })`, decoded with no canvas; hand it to `createPixelTexture(loaded,
   (p) => swapColors(p, [[from, to]]))`, which returns at once and fills in when the file lands, painting
   on a copy. The loaded `pixels` are shared: read them (`getPixel`), never paint on them directly.
+- **Photos taken by the game** (a photography game, an album, a sticker of the boss): `const capture =
+  useCapture()` in the body, then at any moment `const photo = await capture({ region, hide, only,
+  width, height, effects })`. `region` is a rectangle of the screen in game pixels or a box (by name
+  too), the part of the screen it covers even hidden (a viewfinder); `hide` leaves boxes out (the
+  HUD); `only` keeps some alone on transparent; `width`/`height` scale by whole pixels; `effects:
+  false` is under the screen effects. `photo` is pixels plus `photo.boxes`: each sprite, text or
+  panel shown in the frame (its `box`, `picture` and `name`) with `seen` (0 to 1) and where, for
+  scoring; a box with hitboxes counts once, by them. To show it, make the print in the body
+  (`createPixels`, `createPixelTexture`, a sprite) and later `film.data.set(photo.data);
+  updatePixelTexture(print)`. Do not read the canvas yourself.
 - **Data that outlives a scene** goes in a store, created once at module level:
   `const session = createGameStore({ key: 'session', state: { score: 0 } });`, then
   `session.set((s) => { s.score += 10; })` in one scene and `session.state.score` in the next.
@@ -230,6 +240,7 @@ const App = () => (
 - **The 1997 look**: material options `vertexSnap` and `affine`, `useFog`, `usePostProcess` with `dither`, `posterize`, `paletteMatch`, `lutGrade`, `crt` (with `CRT_PRESETS`) and `COLOR_LEVELS`.
 - **Screen effects** (each spread into `usePostProcess`, tuned by writing into `effect.uniforms`): `colorAdjust`, `mosaic`, `wave`, `shockwave`, `distort`, `rgbSplit`, `glitch`, `grain`, `oldFilm`, `halftone`, `blur`, `zoomBlur`, `motionBlur`, `tiltShift`, `bloom`, `godrays`, `phosphor`, `ntsc`, `lcd`. A hand-written effect can read `sampleTextureSmooth`, `sampleInput` and `sampleHistory`, and take `passes` for more than one read of the frame.
 - **Pixels** (pictures painted in code): `createPixels`, `setPixel`, `getPixel`, `fillRect`, `drawLine`, `fillCircle`, `drawCircle`, `fillEllipse`, `drawEllipse`, `fillPolygon`, `drawText`, `fillGradient`, `fillNoise`, `fillChecker`, `blitPixels`, `mapPixels`, `clonePixels`, `swapColors`, `createPixelTexture`, `updatePixelTexture`, `useLoadPixels`.
+- **Photos**: `useCapture` (`TPhoto`, `TPhotoOptions`, `TPhotoBox`).
 - **Audio**: `useSound` (one file: effects, an ambience, a single recording; `{ src }` loads it, `{ sfx: { preset } }` makes an effect, `{ samples, sampleRate }` plays a sound worked out in code instead of Web Audio), `useMusic` (one piece recorded in several files, its layers faded in and out with `setLayer`), `useSong` (a tune written as notes, `useSong(useLoadSong({ src: '/music/x.song' }))`, made into sound by the engine's 8-bit synth), `useLoadAudio`, `useAudio` (volumes per channel), `useAudioListener`. A sound laid out in a scene document: `soundOf(box, name)` gives its controls.
 - **State**: `useData`, `useWatch`, `createGameStore`, `useStore`, `createGameSignal`, `useSignal`.
 - **Maths and random**: `useRandom`, `clamp`, `lerp`, `vec2Add`, `vec3Add` and the other `vec2*`/`vec3*`.

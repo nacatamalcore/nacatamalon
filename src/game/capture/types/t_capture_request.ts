@@ -3,6 +3,7 @@ import type { TCamera2d } from '../../../camera/types/t_camera_2d';
 import type { TCamera3d } from '../../../camera/types/t_camera_3d';
 import type { TDrawable } from '../../../gameobjects/types';
 import type { ITexture } from '../../../render/interface';
+import type { TBox } from '../../../box/types/t_box';
 
 /**
  * A capture waiting for its frame: the options already worked out against the screen, the picture
@@ -20,6 +21,18 @@ export type TCaptureRequest = {
     screen2d: TCamera2d | null;
     layers: ReadonlyArray<TDrawable['type']> | null;
     background: TColor;
+    /**
+     * Boxes left out of the picture, with everything in them, and drawables left out on their own (a
+     * game's photo without its HUD), or `null` for none.
+     */
+    hide: ReadonlySet<TBox | TDrawable> | null;
+    /**
+     * The only boxes drawn, with everything in them, and drawables (a photo of one thing alone), or
+     * `null` for all.
+     */
+    only: ReadonlySet<TBox | TDrawable> | null;
+    /** Whether the screen effects are run over it, as they are over the screen. */
+    effects: boolean;
     target: ITexture;
     /**
      * With nothing when the frame drew it, with the error when the frame did not. Called once.

@@ -25,9 +25,12 @@ export type TOverlapTarget = TBox | TSprite | TText | TNineSlice | TRect;
 
 /**
  * The rectangles a target is touched by. An object with hitboxes is touched by those that are on,
- * and by nothing when all are off; one without is touched by its picture.
+ * and by nothing when all are off; one without is touched by its picture. What a photo measures a
+ * box by too (`useCapture`), so what a game calls touching and what it calls in the picture agree.
+ *
+ * @internal
  */
-const rectsOf = (target: TOverlapTarget): TTurnedRect[] => {
+export const rectsOf = (target: TOverlapTarget): TTurnedRect[] => {
     if ('children' in target) {
         if (target.hitboxes.length > 0) {
             return target.hitboxes.filter((hitbox) => hitbox.enabled).map((hitbox) => hitboxRect(target, hitbox));

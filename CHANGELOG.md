@@ -19,6 +19,15 @@ releases are in [changelog/](./changelog/), one file each.
   and `zoom` are not read, its `z` and `far` are. The models stay upright, facing and culled as they
   were built, and a light aimed down still lights them from above. For a 2D game with pieces drawn in
   3D, which before had to place each model by hand every frame, in the 3D camera's `y` going up.
+- `useCapture()`: photos of the game taken by the game, for a photography game, an album or a
+  sticker. `capture({ region, hide, only, width, height, effects })` resolves the next frame with the
+  game as the player sees it (screen effects included, `effects: false` for under them), cut to a
+  rectangle of the screen or to the part a box covers (hidden too: a viewfinder), without some boxes
+  or with only some on transparent, scaled by whole pixels; and `photo.boxes`, each sprite, text or
+  panel shown in the frame (a box with hitboxes once, by them) with how much of it is in (`seen`) and
+  where, for scoring what the player took. Boxes are
+  named by box, by what they draw or by name. Works paused; two at once are taken one after the
+  other.
 - `pivot` on a sprite, a text and a panel (`createSprite`, `createText`, `createNineSlice`, and on a
   sprite or a text in a scene document): the point it turns and grows about, in 0-1 like `anchor`,
   when that is not its anchor. The anchor still says where it sits unturned and ungrown; turned, it

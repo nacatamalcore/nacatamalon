@@ -126,6 +126,9 @@ export { worldToLocal, localToWorld, worldToLocal3d, localToWorld3d } from './bo
 export { overlaps } from './hitbox';
 export type { TRect, TOverlapTarget, THitbox } from './hitbox';
 export { useHitbox, useOverlap } from './hooks';
+// Photos of the game taken by the game: a photography game, an album, a sticker.
+export { useCapture } from './hooks';
+export type { TCapture, TPhoto, TPhotoBox, TPhotoBoxRef, TPhotoOptions } from './capture';
 // A platformer's camera: a dead zone, the level's edges, looking ahead, and a shake.
 export { useCameraFollow, useParallax } from './hooks';
 export type { TCameraFollow, TCameraFollowOptions, TCameraTarget } from './hooks';
