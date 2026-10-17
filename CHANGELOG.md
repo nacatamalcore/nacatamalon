@@ -19,6 +19,10 @@ releases are in [changelog/](./changelog/), one file each.
   and `zoom` are not read, its `z` and `far` are. The models stay upright, facing and culled as they
   were built, and a light aimed down still lights them from above. For a 2D game with pieces drawn in
   3D, which before had to place each model by hand every frame, in the 3D camera's `y` going up.
+- `fillPolygon(pixels, points, color)`: a polygon filled in a picture painted in code, a ramp, a
+  slope of ground, a roof. A pixel is painted when its middle is inside or on the outline, so the
+  edge is stepped, a ramp up and a ramp down are mirror images, and two polygons sharing a side leave
+  no gap; the same pixels everywhere.
 
 ### Changed
 

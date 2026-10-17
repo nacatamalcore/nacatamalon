@@ -13,7 +13,7 @@ export type { TSpriteTexture, TSpriteTextureSees, TSpriteTextureOptions } from '
 // Pictures painted in code, in plain JavaScript, and the textures made from them: a game's own art
 // with no image files and no page, the same in the browser, on the native runtime and in a test.
 export {
-    createPixels, setPixel, getPixel, fillRect, drawLine, fillCircle, drawCircle, fillEllipse, drawEllipse, blitPixels, mapPixels,
+    createPixels, setPixel, getPixel, fillRect, drawLine, fillCircle, drawCircle, fillEllipse, drawEllipse, fillPolygon, blitPixels, mapPixels,
     fillGradient, fillNoise, fillChecker, clonePixels, swapColors, drawText,
 } from './pixels';
 export type { TPixels, TPixelRegion, TFillGradientOptions, TFillNoiseOptions, TDrawTextOptions } from './pixels';

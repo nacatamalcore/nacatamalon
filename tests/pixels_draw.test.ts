@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import {
-    blitPixels, createPixels, drawCircle, drawEllipse, drawLine, fillChecker, fillCircle, fillEllipse, fillGradient, fillNoise, fillRect,
+    blitPixels, createPixels, drawCircle, drawEllipse, drawLine, fillChecker, fillCircle, fillEllipse, fillGradient, fillNoise, fillPolygon, fillRect,
     getPixel, mapPixels, setPixel,
 } from '../src/pixels';
 import { BAYER_4X4 } from '../src/pixels/bayer';
@@ -259,5 +259,46 @@ describe('the dither pattern', () => {
     it('is one table, shared by a painted gradient and the screen effect', () => {
         const fromShader = [...BAYER_WGSL.matchAll(/(\d+)\.0/g)].map((found) => Number(found[1])).slice(0, 16);
         expect(fromShader).toEqual([...BAYER_4X4]);
+    });
+});
+
+describe('a polygon', () => {
+    it('fills the pixels whose middles are inside: a ramp rising to the right', () => {
+        const ramp = fillPolygon(createPixels(4, 4), [{ x: 0, y: 4 }, { x: 4, y: 0 }, { x: 4, y: 4 }], RED);
+        expect(shape(ramp)).toEqual([
+            '...#',
+            '..##',
+            '.###',
+            '####',
+        ]);
+        expect(bytes(ramp, 3, 3)).toEqual([255, 0, 0, 255]);
+    });
+
+    it('is the same whichever way round its corners go', () => {
+        const corners = [{ x: 1, y: 0 }, { x: 5, y: 2 }, { x: 3, y: 6 }, { x: 0, y: 4 }];
+        const one = fillPolygon(createPixels(6, 6), corners, RED);
+        const other = fillPolygon(createPixels(6, 6), [...corners].reverse(), RED);
+        expect(shape(one)).toEqual(shape(other));
+    });
+
+    it('a ramp down is the mirror image of a ramp up', () => {
+        const up = shape(fillPolygon(createPixels(8, 4), [{ x: 0, y: 4 }, { x: 8, y: 0 }, { x: 8, y: 4 }], RED));
+        const down = shape(fillPolygon(createPixels(8, 4), [{ x: 0, y: 0 }, { x: 8, y: 4 }, { x: 0, y: 4 }], RED));
+        expect(down).toEqual(up.map((row) => [...row].reverse().join('')));
+    });
+
+    it('two sharing a side leave no gap along it', () => {
+        const left = [{ x: 0, y: 0 }, { x: 5, y: 0 }, { x: 2, y: 6 }, { x: 0, y: 6 }];
+        const right = [{ x: 5, y: 0 }, { x: 6, y: 0 }, { x: 6, y: 6 }, { x: 2, y: 6 }];
+        const both = shape(fillPolygon(fillPolygon(createPixels(6, 6), left, RED), right, BLUE));
+        expect(both).toEqual(Array(6).fill('######'));
+    });
+
+    it('is cut to the picture, leaves the parts a crossed outline wraps twice empty, and needs three corners', () => {
+        expect(shape(fillPolygon(createPixels(3, 2), [{ x: -5, y: -5 }, { x: 9, y: -5 }, { x: 9, y: 9 }, { x: -5, y: 9 }], RED))).toEqual(['###', '###']);
+        // A bow tie on its side: two triangles meeting in the middle, the space between them empty.
+        const bow = fillPolygon(createPixels(8, 8), [{ x: 0, y: 0 }, { x: 8, y: 8 }, { x: 8, y: 0 }, { x: 0, y: 8 }], RED);
+        expect(shape(bow)).toEqual(['#......#', '##....##', '###..###', '########', '########', '###..###', '##....##', '#......#']);
+        expect(shape(fillPolygon(createPixels(2, 2), [{ x: 0, y: 0 }, { x: 2, y: 2 }], RED))).toEqual(['..', '..']);
     });
 });

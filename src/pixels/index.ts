@@ -1,5 +1,5 @@
 export { createPixels } from './create_pixels';
-export { setPixel, getPixel, fillRect, drawLine, fillCircle, drawCircle, fillEllipse, drawEllipse, blitPixels, mapPixels } from './draw';
+export { setPixel, getPixel, fillRect, drawLine, fillCircle, drawCircle, fillEllipse, drawEllipse, fillPolygon, blitPixels, mapPixels } from './draw';
 export { fillGradient, fillNoise, fillChecker } from './fill';
 export { clonePixels, swapColors } from './edit';
 export { BAYER_4X4, bayerAt } from './bayer';

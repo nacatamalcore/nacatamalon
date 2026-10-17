@@ -399,6 +399,64 @@ export const drawEllipse = (pixels: TPixels, cx: number, cy: number, rx: number,
 };
 
 /**
+ * Fills a polygon: a ramp, a slope of ground, a roof, a shard. A pixel is painted when its middle is
+ * inside the outline or on it, so the edge is stepped, one pixel or none, a shape and its mirror image
+ * are painted alike (a ramp up and a ramp down), and two polygons that share a side leave no gap
+ * along it. An outline that crosses itself leaves the parts it wraps twice empty, as a star drawn in
+ * one stroke does.
+ *
+ * @param pixels - The picture.
+ * @param points - Its corners in order, around either way, in pixels from the top-left corner. Fewer
+ * than three paint nothing.
+ * @param color - What it is filled with.
+ * @returns The same picture, to go on painting.
+ *
+ * @example
+ * ```ts
+ * // A ramp rising to the right, 96 wide and 48 high.
+ * const ramp = createPixels(96, 48);
+ * fillPolygon(ramp, [{ x: 0, y: 48 }, { x: 96, y: 0 }, { x: 96, y: 48 }], getColor('#8a5a2b'));
+ * ```
+ *
+ * @category Pixels
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const fillPolygon = (pixels: TPixels, points: ReadonlyArray<{ x: number; y: number }>, color: TColor): TPixels => {
+    if (points.length < 3) {
+        return pixels;
+    }
+    const [r, g, b, a] = bytesOf(color);
+    const top = Math.max(0, Math.floor(Math.min(...points.map((p) => p.y))));
+    const bottom = Math.min(pixels.height - 1, Math.ceil(Math.max(...points.map((p) => p.y))));
+    const crossings: number[] = [];
+    for (let py = top; py <= bottom; py++) {
+        // Where the row through the middles of its pixels crosses the outline, left to right.
+        const y = py + 0.5;
+        crossings.length = 0;
+        for (let i = 0; i < points.length; i++) {
+            const from = points[i]!;
+            const to = points[(i + 1) % points.length]!;
+            // One end counted, not both: a corner on the row is crossed once, a flat side never.
+            if ((from.y <= y) !== (to.y <= y)) {
+                crossings.push(from.x + ((y - from.y) / (to.y - from.y)) * (to.x - from.x));
+            }
+        }
+        crossings.sort((p, q) => p - q);
+        // Inside between each pair: the pixels whose middles fall there, or on either end, so a
+        // left edge and a right edge settle a middle right on them the same way.
+        for (let k = 0; k + 1 < crossings.length; k += 2) {
+            const left = Math.max(0, Math.ceil(crossings[k]! - 0.5));
+            const right = Math.min(pixels.width - 1, Math.floor(crossings[k + 1]! - 0.5));
+            for (let px = left; px <= right; px++) {
+                put(pixels, px, py, r, g, b, a);
+            }
+        }
+    }
+    return pixels;
+};
+
+/**
  * Lays one picture over another, the way a sprite is drawn over a background: a transparent pixel
  * of `source` leaves what was there, an opaque one replaces it, and one in between mixes the two.
  *
