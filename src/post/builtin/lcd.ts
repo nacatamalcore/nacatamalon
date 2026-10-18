@@ -1,3 +1,6 @@
+import type { TColor } from '../../color/color';
+import type { TColorInput } from '../../color/get_color';
+import { colorUniform } from './color_uniform';
 import type { TBuiltinPostEffect } from './types/t_builtin';
 
 /**
@@ -9,7 +12,8 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * corner of each pixel is darkened, so the picture keeps most of its light. The ghost reads what
  * the effect showed last frame, which costs two pictures the size of the canvas while it runs.
  *
- * @param options `grid` and `ghosting` from `0` to `1`; `tint` multiplies every colour.
+ * @param options `grid` and `ghosting` from `0` to `1`; `tint` multiplies every colour, and is any
+ * colour: `'#9bbc0f'`, a `TColor` or `[r, g, b]`.
  * @returns The effect, for `usePostProcess`.
  *
  * @example
@@ -21,7 +25,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const lcd = (options: { grid?: number; ghosting?: number; tint?: [number, number, number] } = {}): TBuiltinPostEffect<{
+export const lcd = (options: { grid?: number; ghosting?: number; tint?: TColorInput | TColor | [number, number, number] } = {}): TBuiltinPostEffect<{
     grid: number; ghosting: number; tint: number[];
 }> => ({
     name: 'lcd',
@@ -63,6 +67,6 @@ vec4 effect(vec4 color, vec2 uv) {
     return vec4(mix(rgb, before, clamp(mu.ghosting, 0.0, 0.95)), 1.0);
 }
 `,
-    uniforms: { grid: options.grid ?? 0.35, ghosting: options.ghosting ?? 0.4, tint: options.tint ?? [1, 1, 1] },
+    uniforms: { grid: options.grid ?? 0.35, ghosting: options.ghosting ?? 0.4, tint: colorUniform(options.tint, [1, 1, 1]) },
     uniformSig: { grid: 'f32', ghosting: 'f32', tint: 'vec3<f32>' },
 });

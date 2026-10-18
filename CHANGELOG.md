@@ -16,8 +16,8 @@ releases are in [changelog/](./changelog/), one file each.
   (16), `saturn`, `n64` and `dreamcast` (32, their usual 16-bit frames) and `gameCube` (64, the 6-bit
   frame it dithered in), next to `genesis`, `snes` and `ps1`. For `dither`, `posterize` and
   `consoleColor`.
-- `bezel` on `crt()` (`TCrtOptions`): the colour around the curved glass, `[r, g, b]`, instead of
-  black, in the corners the bulge leaves and in the soft edge the picture fades into. The page's own
+- `bezel` on `crt()` (`TCrtOptions`): the colour around the curved glass, any colour (`'#0b0710'`,
+  a `TColor` or `[r, g, b]`), instead of black, in the corners the bulge leaves and in the soft edge the picture fades into. The page's own
   colour makes the tube sit on the page, a grey or a beige makes the plastic of the set. Black by
   default, so nothing changes without it; before, the only way was to patch the effect's shader text.
 - Tweens move the fields of an object and can be waited for together (`useTween`). `tween({ target,
@@ -70,6 +70,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- The colour options of the screen effects take any colour, as the rest of the engine does: `tint` in
+  `colorAdjust()` and `lcd()` and `bezel` in `crt()` accept what `getColor` takes (`'#9bbc0f'`,
+  `'red'`, `0x9bbc0f`), a `TColor` (from `getColor` or `consoleColor`) or the `[r, g, b]` they took
+  before, which still works. `effect.uniforms` keeps the `[r, g, b]` the shader reads.
 - `useTileBody2d` stands on, and is stopped by, the objects laid out with a 2D collider that never
   moves (a `'static'` body that is not a sensor), besides the maps: a floor, a wall, a platform made
   of an object rather than of tiles, measured as the rectangle around its collider, unturned. Still

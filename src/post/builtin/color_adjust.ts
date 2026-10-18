@@ -1,3 +1,6 @@
+import type { TColor } from '../../color/color';
+import type { TColorInput } from '../../color/get_color';
+import { colorUniform } from './color_uniform';
 import type { TBuiltinPostEffect } from './types/t_builtin';
 
 /**
@@ -8,7 +11,8 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * of `180` swaps every colour for its opposite. They are applied in that order: gamma, contrast,
  * brightness, saturation, hue, tint.
  *
- * @param options `hue` is in degrees; the rest are multipliers, `1` being unchanged.
+ * @param options `hue` is in degrees; the rest are multipliers, `1` being unchanged. `tint` is any
+ * colour: `'#ffd9b0'`, a `TColor` or `[r, g, b]`.
  * @returns The effect, for `usePostProcess`.
  *
  * @example
@@ -26,7 +30,7 @@ export const colorAdjust = (options: {
     saturation?: number;
     gamma?: number;
     hue?: number;
-    tint?: [number, number, number];
+    tint?: TColorInput | TColor | [number, number, number];
 } = {}): TBuiltinPostEffect<{
     brightness: number; contrast: number; saturation: number; gamma: number; hue: number; tint: number[];
 }> => ({
@@ -68,7 +72,7 @@ vec4 effect(vec4 color, vec2 uv) {
         saturation: options.saturation ?? 1,
         gamma: options.gamma ?? 1,
         hue: options.hue ?? 0,
-        tint: options.tint ?? [1, 1, 1],
+        tint: colorUniform(options.tint, [1, 1, 1]),
     },
     uniformSig: {
         brightness: 'f32', contrast: 'f32', saturation: 'f32', gamma: 'f32', hue: 'f32', tint: 'vec3<f32>',

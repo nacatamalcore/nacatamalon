@@ -1,4 +1,7 @@
 import { NOISE_GLSL, NOISE_WGSL } from './noise';
+import type { TColor } from '../../color/color';
+import type { TColorInput } from '../../color/get_color';
+import { colorUniform } from './color_uniform';
 import type { TBuiltinPostEffect } from './types/t_builtin';
 
 /**
@@ -77,10 +80,11 @@ export type TCrtOptions = {
      */
     cornerRadius?: number;
     /**
-     * The colour around the glass, `[r, g, b]` from `0` to `1`: what fills the corners the bulge
-     * leaves, the plastic of the set. Default black. The page's colour makes the tube sit on the page.
+     * The colour around the glass: what fills the corners the bulge leaves, the plastic of the set.
+     * Any colour, `'#0b0710'`, a `TColor` or `[r, g, b]`. Default black. The page's colour makes the
+     * tube sit on the page.
      */
-    bezel?: [number, number, number];
+    bezel?: TColorInput | TColor | [number, number, number];
 };
 
 /**
@@ -427,7 +431,7 @@ const MASK_TYPES = { aperture: 0, slot: 1, shadow: 2 } as const;
  * usePostProcess(crt(CRT_PRESETS.pvm));
  * usePostProcess(crt({ ...CRT_PRESETS.consumer, noise: 0, curvature: 0 }));
  * // The corners the bulge leaves in the page's own colour instead of black
- * usePostProcess(crt({ curvature: 0.08, bezel: [0.04, 0.03, 0.06] }));
+ * usePostProcess(crt({ curvature: 0.08, bezel: '#0b0710' }));
  * ```
  *
  * @category Post-processing
@@ -459,7 +463,7 @@ export const crt = (options: TCrtOptions = {}): TBuiltinPostEffect<TCrtUniforms>
         flicker: options.flicker ?? 0,
         interlace: options.interlace ?? 0,
         cornerRadius: options.cornerRadius ?? 0.03,
-        bezel: options.bezel ?? [0, 0, 0],
+        bezel: colorUniform(options.bezel, [0, 0, 0]),
     },
     uniformSig: {
         scanlines: 'f32', mask: 'f32', maskType: 'f32', maskScale: 'f32', curvature: 'f32',

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'bun:test';
 import {
-    bloom, COLOR_LEVELS, crt, CRT_PRESETS, dither, findPostBuiltin, lcd, lutGrade, paletteMatch, phosphor, POST_BUILTINS,
-    posterize,
+    bloom, COLOR_LEVELS, colorAdjust, crt, CRT_PRESETS, dither, findPostBuiltin, lcd, lutGrade, paletteMatch, phosphor,
+    POST_BUILTINS, posterize,
 } from '../src/post';
+import { getColor } from '../src/color/get_color';
 
 /**
  * The engine's own effects, and the one property that keeps them honest across two backends.
@@ -109,6 +110,23 @@ describe('the steps a colour is cut into', () => {
         // the pattern takes half a step away would drop it to black, on both backends.
         expect(dither().fragment).toContain('color.rgb + 0.5 / 255.0 +');
         expect(dither().fragmentGlsl).toContain('color.rgb + 0.5 / 255.0 +');
+    });
+});
+
+describe('a colour given to an effect', () => {
+    it('can be written as getColor takes it, as a TColor, or as [r, g, b], and reaches the shader the same', () => {
+        const expected = [1, 0, 0];
+        for (const red of ['#ff0000', 'red', 0xff0000, getColor('#ff0000'), [1, 0, 0] as [number, number, number]]) {
+            expect(crt({ bezel: red }).uniforms.bezel).toEqual(expected);
+            expect(colorAdjust({ tint: red }).uniforms.tint).toEqual(expected);
+            expect(lcd({ tint: red }).uniforms.tint).toEqual(expected);
+        }
+    });
+
+    it('drops alpha, and never hands the caller\'s own array to the shader', () => {
+        expect(crt({ bezel: { r: 0.1, g: 0.2, b: 0.3, a: 0.5 } }).uniforms.bezel).toEqual([0.1, 0.2, 0.3]);
+        const mine: [number, number, number] = [0.5, 0.5, 0.5];
+        expect(lcd({ tint: mine }).uniforms.tint).not.toBe(mine);
     });
 });
 
