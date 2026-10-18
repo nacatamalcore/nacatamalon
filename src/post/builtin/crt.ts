@@ -76,6 +76,11 @@ export type TCrtOptions = {
      * How round the corners of the tube are, as a share of the screen.
      */
     cornerRadius?: number;
+    /**
+     * The colour around the glass, `[r, g, b]` from `0` to `1`: what fills the corners the bulge
+     * leaves, the plastic of the set. Default black. The page's colour makes the tube sit on the page.
+     */
+    bezel?: [number, number, number];
 };
 
 /**
@@ -103,6 +108,7 @@ export type TCrtUniforms = {
     flicker: number;
     interlace: number;
     cornerRadius: number;
+    bezel: number[];
 };
 
 /**
@@ -222,7 +228,7 @@ fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {
     let edge = length(max(corner, vec2<f32>(0.0))) - radius;
     let edgeWidth = max(fwidth(edge), 0.0001);
     if (edge > 0.0) {
-        return vec4<f32>(0.0, 0.0, 0.0, 1.0);
+        return vec4<f32>(mu.bezel, 1.0);
     }
     let at = bent * 0.5 + 0.5;
 
@@ -277,8 +283,9 @@ fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {
 
     rgb = rgb * mu.brightness;
     rgb = rgb * (1.0 - mu.vignette * smoothstep(0.4, 2.0, dot(centred, centred)));
-    // A soft edge a pixel or two wide, so a round corner is not a staircase.
-    rgb = rgb * clamp(-edge / edgeWidth, 0.0, 1.0);
+    // A soft edge a pixel or two wide, so a round corner is not a staircase. It fades into the bezel,
+    // in light like the rest, so it comes back out as the bezel's own colour.
+    rgb = mix(toLight(mu.bezel), rgb, clamp(-edge / edgeWidth, 0.0, 1.0));
     // Grain goes on after the way back out of light: added in light, it would be ten times stronger
     // in the blacks than in the whites.
     let grain = hash12(floor(real) + vec2<f32>(frame * 7.0, frame * 13.0)) - 0.5;
@@ -335,7 +342,7 @@ vec4 effect(vec4 color, vec2 uv) {
     float edge = length(max(corner, vec2(0.0))) - radius;
     float edgeWidth = max(fwidth(edge), 0.0001);
     if (edge > 0.0) {
-        return vec4(0.0, 0.0, 0.0, 1.0);
+        return vec4(mu.bezel, 1.0);
     }
     vec2 at = bent * 0.5 + 0.5;
 
@@ -381,7 +388,7 @@ vec4 effect(vec4 color, vec2 uv) {
 
     rgb *= mu.brightness;
     rgb *= 1.0 - mu.vignette * smoothstep(0.4, 2.0, dot(centred, centred));
-    rgb *= clamp(-edge / edgeWidth, 0.0, 1.0);
+    rgb = mix(toLight(mu.bezel), rgb, clamp(-edge / edgeWidth, 0.0, 1.0));
     float grain = hash12(floor(real) + vec2(frame * 7.0, frame * 13.0)) - 0.5;
     vec3 shown = toScreen(rgb) + grain * mu.noise * step(0.0, -edge);
     return vec4(clamp(shown, 0.0, 1.0), 1.0);
@@ -419,6 +426,8 @@ const MASK_TYPES = { aperture: 0, slot: 1, shadow: 2 } as const;
  * usePostProcess(crt());
  * usePostProcess(crt(CRT_PRESETS.pvm));
  * usePostProcess(crt({ ...CRT_PRESETS.consumer, noise: 0, curvature: 0 }));
+ * // The corners the bulge leaves in the page's own colour instead of black
+ * usePostProcess(crt({ curvature: 0.08, bezel: [0.04, 0.03, 0.06] }));
  * ```
  *
  * @category Post-processing
@@ -450,11 +459,12 @@ export const crt = (options: TCrtOptions = {}): TBuiltinPostEffect<TCrtUniforms>
         flicker: options.flicker ?? 0,
         interlace: options.interlace ?? 0,
         cornerRadius: options.cornerRadius ?? 0.03,
+        bezel: options.bezel ?? [0, 0, 0],
     },
     uniformSig: {
         scanlines: 'f32', mask: 'f32', maskType: 'f32', maskScale: 'f32', curvature: 'f32',
         vignette: 'f32', sharpness: 'f32', beam: 'f32', brightness: 'f32', gamma: 'f32',
         halation: 'f32', convergence: 'f32', noise: 'f32', flicker: 'f32', interlace: 'f32',
-        cornerRadius: 'f32',
+        cornerRadius: 'f32', bezel: 'vec3<f32>',
     },
 });

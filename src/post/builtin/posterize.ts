@@ -20,7 +20,8 @@ export const posterize = (options: { levels?: number } = {}): TBuiltinPostEffect
     fragment: /* wgsl */ `
 fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {
     let top = max(2.0, round(mu.levels)) - 1.0;
-    return vec4<f32>(round(clamp(color.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * top) / top, color.a);
+    // floor(x + 0.5), as in GLSL: WGSL's round() sends a half to the even step.
+    return vec4<f32>(floor(clamp(color.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * top + 0.5) / top, color.a);
 }
 `,
     fragmentGlsl: /* glsl */ `

@@ -93,6 +93,25 @@ describe('the catalogue', () => {
     });
 });
 
+describe('the steps a colour is cut into', () => {
+    it('rounds a half up on both backends, so white under the pattern stays white everywhere', () => {
+        // WGSL's round() sends a half to the even step, and the dither pattern lands exactly on
+        // halves: pure white nudged down half a step is 6.5 of 7, and dropped to 6 on WebGPU only.
+        for (const effect of [dither(), posterize()]) {
+            expect(effect.fragment).not.toMatch(/round\(clamp/);
+            expect(effect.fragment).toContain('+ 0.5) / top');
+            expect(effect.fragmentGlsl).toContain('+ 0.5) / top');
+        }
+    });
+
+    it('leaves a colour on a step flat, though 8 bits keep it just under the step', () => {
+        // 1/7 is stored as 36 of 255, a hair under the step: without the half byte, the dot where
+        // the pattern takes half a step away would drop it to black, on both backends.
+        expect(dither().fragment).toContain('color.rgb + 0.5 / 255.0 +');
+        expect(dither().fragmentGlsl).toContain('color.rgb + 0.5 / 255.0 +');
+    });
+});
+
 describe('what each one starts at', () => {
     it('takes the options it is given, and has sensible answers without them', () => {
         expect(dither().uniforms).toEqual({ levels: COLOR_LEVELS.genesis, strength: 1 });
@@ -103,6 +122,15 @@ describe('what each one starts at', () => {
         expect(crt().uniforms).toMatchObject({ scanlines: 0.45, mask: 0, maskType: 0, noise: 0, flicker: 0, interlace: 0 });
         expect(crt({ maskType: 'slot', mask: 0.4 }).uniforms).toMatchObject({ mask: 0.4, maskType: 1 });
         expect(crt({ maskType: 'shadow' }).uniforms.maskType).toBe(2);
+        // The colour around the glass: black unless told, and fed to both shaders.
+        expect(crt().uniforms.bezel).toEqual([0, 0, 0]);
+        expect(crt({ bezel: [0.1, 0.2, 0.3] }).uniforms.bezel).toEqual([0.1, 0.2, 0.3]);
+        expect(crt().uniformSig.bezel).toBe('vec3<f32>');
+        expect(crt().fragment).toContain('return vec4<f32>(mu.bezel, 1.0);');
+        expect(crt().fragmentGlsl).toContain('return vec4(mu.bezel, 1.0);');
+        for (const source of [crt().fragment, crt().fragmentGlsl]) {
+            expect(source).toContain('mix(toLight(mu.bezel), rgb,');
+        }
     });
 
     it('starts still, so a capture of a still scene is the same twice', () => {

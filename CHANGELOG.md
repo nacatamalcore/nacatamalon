@@ -7,6 +7,32 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- `consoleColor(color, levels)`: a colour as a console could show it, each channel moved to the
+  nearest step of `COLOR_LEVELS.genesis`, `.snes` or any number. Takes what `getColor` takes or a
+  `TColor`, and leaves alpha alone. Under `dither` a colour on the steps stays flat and one between
+  them gets the pattern, as a gradient should; a screen effect cannot tell a tile meant to be flat
+  from a sky meant to be dithered, so the colour is put on the steps where it is chosen.
+- More machines in `COLOR_LEVELS`: `masterSystem` (4 steps a channel), `pcEngine` (8), `gameGear`
+  (16), `saturn`, `n64` and `dreamcast` (32, their usual 16-bit frames) and `gameCube` (64, the 6-bit
+  frame it dithered in), next to `genesis`, `snes` and `ps1`. For `dither`, `posterize` and
+  `consoleColor`.
+- `bezel` on `crt()` (`TCrtOptions`): the colour around the curved glass, `[r, g, b]`, instead of
+  black, in the corners the bulge leaves and in the soft edge the picture fades into. The page's own
+  colour makes the tube sit on the page, a grey or a beige makes the plastic of the set. Black by
+  default, so nothing changes without it; before, the only way was to patch the effect's shader text.
+- Tweens move the fields of an object and can be waited for together (`useTween`). `tween({ target,
+  to, from?, duration })` moves a sprite's, a text's or any object's numbers by their path, `to: {
+  transform: { x: 200 }, tint: { a: 0 } }`, with no `onUpdate`: the path is followed again every
+  frame, so a `tint` swapped halfway is the one that fades, and a field with no `from` starts where it
+  is when the tween starts moving (after its `delay`), so a tween started when another ends picks up
+  where that one left it. Only paths that end in a number typecheck; one that is not there at run
+  time is warned about once and not moved. The handle has `onEnd(listener)` (by arriving or by
+  `finish`) and `onCancel(listener)`, each handing back what stops listening, as `useMotion`'s does.
+  `tween.all(handles)` is several tweens as one handle: it ends once the last of them ends, with their
+  own destinations, durations and delays, which replaces a counter in every `onComplete`; with none
+  (or all already over) it ends on the next frame; if one is cancelled it never ends and says so with
+  `onCancel`; its `pause`, `resume`, `cancel` and `finish` act on all of them, and it can go into
+  another `all`. The tween of a number with `onUpdate` and `onComplete` is as it was.
 - A sprite in a scene document keeps `repeat`, `repeatOffset` and `parallax` (`TSpriteComponent`):
   read from the file, given to the sprite the scene builds, and written back by `serializeScene`
   only when they say something (`repeat: true`, an offset other than none, a parallax other than
@@ -51,6 +77,17 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- `dither` and `posterize` cut colours the same on WebGPU as on WebGL2. WGSL's `round()` sends a half
+  to the even step, and the dither pattern lands exactly on halves: pure white under
+  `dither({ levels: COLOR_LEVELS.genesis })` came out grey (219 instead of 255) on one pixel in 16
+  on WebGPU only. Both shaders now round a half up, as the WebGL2 ones always did; a `strength` just
+  under 1 is no longer needed to keep white white.
+- `dither` leaves a colour that is on one of its steps flat, on both backends. The frame is stored in
+  8 bits, and half the steps land just under themselves there (1/7 of 255 is 36.43, kept as 36): the
+  dot of the pattern that takes half a step away dropped them a step, so a sprite painted in exact
+  Mega Drive colours came out with a dark dot every 4x4 pixels on levels 1, 3 and 5. The shader now
+  adds half a byte before cutting, so nothing needs snapping its colours up by hand first; gradients
+  dither as before.
 - Parallax (`parallax` on a sprite, `useParallax`, a map layer's, a backdrop) is measured against the
   scene's own 2D camera, also while a tool looks through one of its own (`setViewportCamera2d`): an
   editor panned away from where the game's camera is no longer slid a far layer off by most of the

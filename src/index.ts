@@ -149,14 +149,14 @@ export { createGameStore, localStorageAdapter, indexedDbAdapter } from './game_s
 // declared, which is what booting an exported project is. Listing them and writing them are a
 // tool's, and go out of `nacatamalon/authoring`.
 export { getGameStore, storeOf, applyStoreDocs, parseStoreDoc, STORE_FORMAT, STORE_VERSION } from './game_store';
-export { getColor, lerpColor, fromHsl } from './color';
+export { getColor, lerpColor, fromHsl, consoleColor } from './color';
 export { useColor } from './hooks';
 export type { TColor, TColorInput } from './color';
 export type { TScene, TSceneFn } from './scene';
 export type { TUseLoadShaderOptions } from './hooks';
 export type { TUseLoadTextureOptions, TUseLoadAtlasOptions, TUseLoadGltfOptions, TSkeletalAnimation, TSkeletalAnimationOptions, TSceneHandle, TGameObject, TSpawnOptions } from './hooks';
 export type { TSpriteAnimation, TSpriteAnimationOptions, TAnimationClip } from './hooks';
-export type { TTweenOptions, TTweenHandle, TTweenStarter } from './hooks';
+export type { TTweenOptions, TTweenTargetOptions, TTweenFields, TTweenHandle, TTweenStarter } from './hooks';
 export type { TTimer, TTimerHandle } from './hooks';
 export type { TDestroyOptions } from './destroy';
 export type { TLoader, TLoadStatus, TTexture, TLoadedAtlas, TBitmapFont, TFont, TAudioClip, TGltfModel, TGltfPart, TShading } from './loaders';

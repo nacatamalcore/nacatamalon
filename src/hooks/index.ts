@@ -39,7 +39,7 @@ export type { TCubeGeometryOptions, TPlaneGeometryOptions, TCircleGeometryOption
 export type { TUseActionsOptions } from './input';
 export type { TGameObject, TSpawnOptions } from './spawn';
 export type { TSpriteAnimation, TSpriteAnimationOptions, TAnimationClip, TSkeletalAnimation, TSkeletalAnimationOptions } from './animation';
-export type { TTweenOptions, TTweenHandle, TTweenStarter } from './tween';
+export type { TTweenOptions, TTweenTargetOptions, TTweenFields, TTweenHandle, TTweenStarter } from './tween';
 export type { TTimer, TTimerHandle } from './timer';
 export { useHelperLines, useHelperAxis, useHelperGrid } from './helpers';
 export type { TUseHelperLinesOptions, THelperLines, TUseHelperAxisOptions, THelperAxisColors, TUseHelperGridOptions } from './helpers';

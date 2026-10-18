@@ -9,4 +9,5 @@ export { fromCss } from './from_css';
 export { CSS_NAMED_COLORS } from './css_named_color_values';
 export { fromHsl } from './from_hsl';
 export { lerpColor } from './lerp_color';
+export { consoleColor } from './console_color';
 

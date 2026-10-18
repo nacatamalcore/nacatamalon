@@ -8,6 +8,9 @@ import type { TEaseFn } from '../../../math/easing';
  * value and you decide where it goes. Into an `x`, into a `width`, into the amount of one colour
  * mixed into another. Anything made of numbers can be animated without the tween knowing it exists.
  *
+ * When what moves is a field of an object (a sprite's `x`, its `tint.a`), `TTweenTargetOptions`
+ * says it shorter, with no `onUpdate` to write.
+ *
  * @category Animation
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -55,6 +58,88 @@ export type TTweenOptions = {
 };
 
 /**
+ * Countdown for `TTweenFields`, so a path into an object stops a few levels down instead of walking
+ * a sprite's texture and everything it holds.
+ */
+type TFieldDepth = [never, 0, 1, 2, 3];
+
+/**
+ * The fields of an object a tween can move, as a path to each: `{ transform: { x: 200 }, tint: { a: 0 } }`.
+ * Only the ends that are numbers can be named; everything on the way is optional.
+ *
+ * @category Animation
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TTweenFields<T, Depth extends number = 4> = [Depth] extends [never] ? never : {
+    [K in keyof T]?: NonNullable<T[K]> extends number
+        ? number
+        : NonNullable<T[K]> extends (...args: never[]) => unknown
+            ? never
+            : NonNullable<T[K]> extends object
+                ? TTweenFields<NonNullable<T[K]>, TFieldDepth[Depth]>
+                : never;
+};
+
+/**
+ * One trip of the fields of an object: the object, where its fields end, and how long they take.
+ *
+ * `target` is the thing itself (the sprite) and `to` the path down to each number, not the object
+ * that holds the numbers. The path is followed again every frame, so a `tint` swapped for a new one
+ * halfway is the one that goes on fading.
+ *
+ * @example
+ * ```ts
+ * const tween = useTween();
+ * tween({ target: hero, to: { transform: { x: 420 }, tint: { a: 0 } }, duration: 1 });
+ * ```
+ *
+ * @category Animation
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TTweenTargetOptions<T extends object> = {
+    /**
+     * What is moved: a sprite, a text, a box, any object with numbers in it.
+     */
+    target: T;
+    /**
+     * Where each field ends, by its path from `target`.
+     */
+    to: TTweenFields<T>;
+    /**
+     * Where each field starts. A field left out starts where it is when the tween starts moving,
+     * after its `delay`: a tween started when another one ends picks up where that one left it.
+     */
+    from?: TTweenFields<T>;
+    /**
+     * How many seconds one trip takes.
+     */
+    duration: number;
+    /**
+     * The shape of the movement, as in `TTweenOptions`. Default `linear`.
+     */
+    ease?: TEaseFn;
+    /**
+     * Seconds to wait before it starts moving. Default `0`.
+     */
+    delay?: number;
+    /**
+     * How many **extra** times it runs after the first trip. A negative number means for ever.
+     * Default `0`.
+     */
+    repeat?: number;
+    /**
+     * Whether each repeat comes back the other way, there and back. Default `false`.
+     */
+    yoyo?: boolean;
+    /**
+     * Called once when the last trip ends. Never called if it repeats for ever.
+     */
+    onComplete?: () => void;
+};
+
+/**
  * The controls of one tween that is already running, handed back when you start it.
  *
  * @category Animation
@@ -72,13 +157,23 @@ export type TTweenHandle = {
     resume(): void;
     /**
      * Stops it in silence, wherever it had got to. `onComplete` does **not** run: nothing finished,
-     * so nothing is announced. This is how you throw a tween away.
+     * so nothing is announced. This is how you throw a tween away. Only `onCancel` hears it.
      */
     cancel(): void;
     /**
      * Jumps straight to the end value, runs `onComplete` and stops.
      */
     finish(): void;
+    /**
+     * Calls `listener` when it ends: by arriving or by `finish`, never by `cancel`. Can be called
+     * more than once, and from anywhere, which is what lets `all` wait for tweens someone else
+     * started. Hands back what stops listening.
+     */
+    onEnd(listener: () => void): () => void;
+    /**
+     * Calls `listener` when it is cancelled before it ended. Hands back what stops listening.
+     */
+    onCancel(listener: () => void): () => void;
     /**
      * Whether it is over, whichever way it ended: by arriving, by `finish` or by `cancel`.
      */
@@ -93,4 +188,25 @@ export type TTweenHandle = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TTweenStarter = (options: TTweenOptions) => TTweenHandle;
+export type TTweenStarter = {
+    (options: TTweenOptions): TTweenHandle;
+    <T extends object>(options: TTweenTargetOptions<T>): TTweenHandle;
+    /**
+     * Several tweens as one: a handle whose `onEnd` runs once the last of them has ended, and whose
+     * `pause`, `resume`, `cancel` and `finish` act on all of them. Each can have its own
+     * destination, duration and delay.
+     *
+     * - With none, or all of them already over, it ends on the next frame, never at once: its
+     *   `onEnd` is added after it is made, and would otherwise be missed.
+     * - If one of them is cancelled it never ends: its `onCancel` runs, once, and the others carry
+     *   on until they are cancelled too.
+     * - A group is a handle like any other, so it can go into another `all`.
+     *
+     * @example
+     * ```ts
+     * const drops = coins.map((coin, i) => tween({ target: coin, to: { transform: { y: 200 } }, duration: 0.4, delay: i * 0.05 }));
+     * tween.all(drops).onEnd(() => { scoreText.text = 'ALL IN'; });
+     * ```
+     */
+    all(handles: readonly TTweenHandle[]): TTweenHandle;
+};
