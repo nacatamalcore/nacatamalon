@@ -164,8 +164,9 @@ const parseLook = (value: unknown, slot: 'lighting' | 'step'): TLook | undefined
         return undefined;
     }
     const look: Record<string, unknown> = { ...info.build() };
+    const fields = renamedFields(raw, info, look);
     for (const [name, fallback] of Object.entries(look)) {
-        const given = raw[name];
+        const given = fields[name];
         if (typeof fallback === 'number' && typeof given === 'number' && Number.isFinite(given)) {
             look[name] = given;
         } else if (Array.isArray(fallback) && Array.isArray(given) && given.length === fallback.length && given.every((n) => typeof n === 'number')) {
@@ -173,6 +174,44 @@ const parseLook = (value: unknown, slot: 'lighting' | 'step'): TLook | undefined
         }
     }
     return look as TLook;
+};
+
+/**
+ * A look's fields with the names it has now, for a document saved before some were renamed.
+ *
+ * The document is taken as old only when it has a field that is an old name and is no field of the
+ * look now (`mangaDots`'s `spacing`, `rim`'s `strength`): a name that is both, like `mangaDots`'s
+ * `size` (the old spacing, the new spacing too), says nothing alone, so a document of today is never
+ * shuffled. An old one has its renames applied all at once, as a swap (`{ spacing: 6, size: 0.4 }`
+ * is `{ size: 6, fill: 0.4 }`), with one warning for the look.
+ */
+const renamedFields = (
+    raw: Record<string, unknown>,
+    info: { key: string; renamed?: Readonly<Record<string, string>> },
+    look: Record<string, unknown>,
+): Record<string, unknown> => {
+    const renamed = info.renamed;
+    if (renamed === undefined || !Object.keys(renamed).some((old) => old in raw && !(old in look))) {
+        return raw;
+    }
+    const fields: Record<string, unknown> = {};
+    for (const [name, value] of Object.entries(raw)) {
+        if (!(name in renamed)) {
+            fields[name] = value;
+        }
+    }
+    const moved: string[] = [];
+    for (const [old, now] of Object.entries(renamed)) {
+        if (old in raw) {
+            fields[now] = raw[old];
+            moved.push(`'${old}' '${now}'`);
+        }
+    }
+    console.warn(
+        `[NacatamalOn] scene: '${info.key}' calls ${moved.join(', ')} now, so this older look is read with the new names. ` +
+        `Saving the scene writes them.`,
+    );
+    return fields;
 };
 
 const parseLooks = (lighting: unknown, steps: unknown): Pick<TMeshMaterialDoc, 'lighting' | 'steps'> => {

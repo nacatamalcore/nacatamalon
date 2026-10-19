@@ -8,6 +8,8 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * and it is the one that shows what the dithering is actually doing when you put the two side by
  * side.
  *
+ * The same as `dither` with `amount: 0`: one or the other, not both (see `POST_BUILTINS`).
+ *
  * @param options `levels` is steps per channel.
  * @returns The effect, for `usePostProcess`.
  *

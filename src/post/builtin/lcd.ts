@@ -12,6 +12,9 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * corner of each pixel is darkened, so the picture keeps most of its light. The ghost reads what
  * the effect showed last frame, which costs two pictures the size of the canvas while it runs.
  *
+ * Its `ghosting` is a trail of its own: with `phosphor` too, a thing moving leaves two (see
+ * `POST_BUILTINS`).
+ *
  * @param options `grid` and `ghosting` from `0` to `1`; `tint` multiplies every colour, and is any
  * colour: `'#9bbc0f'`, a `TColor` or `[r, g, b]`.
  * @returns The effect, for `usePostProcess`.

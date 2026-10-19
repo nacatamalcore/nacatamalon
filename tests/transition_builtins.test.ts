@@ -80,8 +80,8 @@ describe('the transitions the engine ships', () => {
     });
 
     it('lets an iris be closed on somewhere other than the middle', () => {
-        expect(iris(400).uniforms!.centre).toEqual([0.5, 0.5]);
-        expect(iris(400, undefined, { x: 0.2, y: 0.8 }).uniforms!.centre).toEqual([0.2, 0.8]);
+        expect(iris(400).uniforms!.center).toEqual([0.5, 0.5]);
+        expect(iris(400, undefined, { x: 0.2, y: 0.8 }).uniforms!.center).toEqual([0.2, 0.8]);
     });
 });
 

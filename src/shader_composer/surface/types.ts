@@ -46,11 +46,11 @@ export type TMangaDotsLook = {
     /**
      * How far apart the dots are, in game pixels.
      */
-    spacing: number;
-    /**
-     * How big a dot grows in full shadow, as a part of the gap between dots. Past `0.5` they touch.
-     */
     size: number;
+    /**
+     * How big a dot grows in full shadow, as a part of its cell. Past `0.5` they touch.
+     */
+    fill: number;
     /**
      * The colour of the ink, `[r, g, b]` from `0` to `1`.
      */
@@ -77,7 +77,7 @@ export type TRimLook = {
     /**
      * How far the edge goes towards the colour, `0` none to `1` all the way.
      */
-    strength: number;
+    amount: number;
 };
 
 /**

@@ -24,8 +24,34 @@ releases are in [changelog/](./changelog/), one file each.
 
 - The lighting looks say in their names which slot they go in: `toonLighting()` and
   `unlitLighting()`, for a material's or a model's `lighting`, beside the steps `mangaDots()` and
-  `rim()`. `toon()` and `unlit()` still work, marked deprecated, and make the same looks; what a
-  scene document writes (`look: 'toon'`) and the knobs (`toonShadow`) are unchanged.
+  `rim()`. They were `toon()` and `unlit()`, which are gone; what a scene document writes
+  (`look: 'toon'`) and the knobs (`toonShadow`) are unchanged.
+- One idea, one name, across the screen effects and the looks. `amount` is how much an effect
+  shows, `0` the picture untouched to `1`; `intensity` a brightness that may pass `1`, as a light's;
+  `size` the side of a cell, a block or a dot, in game pixels; `scale` a multiplier with no unit;
+  `radius` a reach in game pixels; `center` a point from `[0, 0]`, the top left, to `[1, 1]`. Renamed
+  to keep to it:
+
+  | Where | Was | Is |
+  |---|---|---|
+  | `ascii`, `halftone` | `color` (a number) | `ownColor` |
+  | `ascii`, `halftone` | `scale` | `size` |
+  | `dither` | `strength` | `amount` |
+  | `zoomBlur` | `strength` | `reach` |
+  | `oldFilm` | `noise` | `grain` |
+  | `glitch` | `rgb` | `split` |
+  | `crt` | `gamma` | `linearBlend` |
+  | `rim()` | `strength` (`rimStrength`) | `amount` (`rimAmount`) |
+  | `mangaDots()` | `spacing` (`mangaDotsSpacing`) | `size` (`mangaDotsSize`) |
+  | `mangaDots()` | `size` (`mangaDotsSize`) | `fill` (`mangaDotsFill`) |
+  | `iris` | `centre` | `center` |
+
+  A `project.json` chain or a scene document written with an old name is read with the new one,
+  and the console says so once; saved again, it is written with the new one. Code is not: an old
+  option is a type error, as `toon()` is.
+- `MATERIAL_LOOKS`, `lookKnobs` and `findMaterialLook` are on `nacatamalon/authoring`, beside
+  `POST_BUILTINS`: they are what a tool lists and a game never reads. The looks themselves
+  (`toonLighting()`, `mangaDots()`…) stay on the front door.
 - `createMaterial` says what is wrong where it is wrong. A lighting look among the `steps`, a step
   as the `lighting` or an option it does not have is refused at the option itself
   (`'TToonLook' is not assignable to type 'TStepLook'`, `'tintt' is not an option of

@@ -133,8 +133,8 @@ describe('a colour given to an effect', () => {
 
 describe('what each one starts at', () => {
     it('takes the options it is given, and has sensible answers without them', () => {
-        expect(dither().uniforms).toEqual({ levels: COLOR_LEVELS.genesis, strength: 1 });
-        expect(dither({ levels: 32, strength: 0.5 }).uniforms).toEqual({ levels: 32, strength: 0.5 });
+        expect(dither().uniforms).toEqual({ levels: COLOR_LEVELS.genesis, amount: 1 });
+        expect(dither({ levels: 32, amount: 0.5 }).uniforms).toEqual({ levels: 32, amount: 0.5 });
         expect(posterize({ levels: 3 }).uniforms).toEqual({ levels: 3 });
         expect(paletteMatch({ dither: 0 }).uniforms).toEqual({ dither: 0 });
         expect(lutGrade().uniforms).toEqual({ amount: 1 });

@@ -61,7 +61,7 @@ export type TMotionTrack = {
     component?: string;
     /**
      * One of the game's screen effects (its post chain), by its name, when the field is the
-     * effect's: `uniforms.strength`, or `enabled`. A screen effect belongs to the game and not to a
+     * effect's: `uniforms.amount`, or `enabled`. A screen effect belongs to the game and not to a
      * box, so such a track names no box.
      */
     post?: string;

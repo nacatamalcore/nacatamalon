@@ -99,6 +99,8 @@ export type THeadlessGame = {
      * Waits until everything the scenes are loading has arrived (or failed), up to `timeoutMs`
      * (default 5000): pictures, fonts and files from the assets folder, and a physics world's engine,
      * which a page lets start between frames and here has to be there before the first one runs.
+     * It ends with a picture of how things are, so a text whose font has just arrived is already
+     * measured in `drawn()`.
      */
     loaded(timeoutMs?: number): Promise<void>;
     /** Ends the game: every scene's cleanups run, and `fetch` is the real one again once the last game goes. */

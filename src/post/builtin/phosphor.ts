@@ -8,6 +8,8 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * one dimmed by `persistence`. That costs two pictures the size of the canvas while it runs. Put it
  * before `crt`, so the trail is of the picture and not of the lines and the mask.
  *
+ * A trail of its own: with `lcd`'s `ghosting` too, a thing moving leaves two (see `POST_BUILTINS`).
+ *
  * @param options `persistence` from `0` (none) to just under `1` (a long trail).
  * @returns The effect, for `usePostProcess`.
  *

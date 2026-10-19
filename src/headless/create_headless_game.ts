@@ -1,7 +1,7 @@
 import { teardownBox } from '../box';
 import { boxRegion, boxesIn } from '../capture/photo_boxes';
 import { cleanGameOptions } from '../game/bootstrap/clean_gameoptions';
-import { createFrameContext } from '../game/loop';
+import { createFrameContext, fillFrameContext } from '../game/loop';
 import { advanceFrame } from '../game/loop/tick';
 import { installPostChain, normalizePostChain } from '../post';
 import { registerScene, startScene } from '../scene';
@@ -132,6 +132,15 @@ export const createHeadlessGame = (options: THeadlessGameOptions): THeadlessGame
     // The first picture, with no time in it: what the scenes made, ready to be looked at.
     advanceFrame(store, ctx, 0);
 
+    /**
+     * A picture of how things are now, with no time in it and no update run: what has just arrived
+     * (a font, a picture's size) is laid out and measured, as it would be on the next frame drawn.
+     */
+    const redraw = (): void => {
+        fillFrameContext(store, ctx, 0);
+        renderer.frame(ctx);
+    };
+
     const key = (type: 'keydown' | 'keyup', name: string): void => {
         const event = new Event(type);
         Object.defineProperty(event, 'key', { value: name });
@@ -210,6 +219,10 @@ export const createHeadlessGame = (options: THeadlessGameOptions): THeadlessGame
             // One more turn, for what the work that just settled goes on to do (bodies put into
             // the world as it opens).
             await turn();
+            // And a picture, so a text whose font has just arrived is measured and shows in drawn().
+            if (!destroyed) {
+                redraw();
+            }
         },
         destroy: () => {
             if (destroyed) {

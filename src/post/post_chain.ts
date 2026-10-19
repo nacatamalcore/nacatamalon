@@ -43,6 +43,40 @@ const asUniforms = (value: unknown): TUniformValues | undefined => {
 };
 
 /**
+ * A built-in's knobs under the names they have now. A project written before a knob was renamed
+ * keeps its value, read under the new name; where the file already has the new one too, that wins,
+ * since it is the later of the two. Said once for the entry, naming every knob it moved.
+ */
+const asCurrentNames = (builtin: string, uniforms: TUniformValues): TUniformValues => {
+    const renamed = findPostBuiltin(builtin)?.renamed;
+    if (renamed === undefined) {
+        return uniforms;
+    }
+    const moved: { old: string; now: string; taken: boolean }[] = [];
+    const kept: TUniformValues = {};
+    for (const [name, value] of Object.entries(uniforms)) {
+        const now = Object.prototype.hasOwnProperty.call(renamed, name) ? renamed[name] : undefined;
+        if (now === undefined) {
+            kept[name] = value;
+            continue;
+        }
+        const taken = Object.prototype.hasOwnProperty.call(uniforms, now);
+        moved.push({ old: name, now, taken });
+        if (!taken) {
+            kept[now] = value;
+        }
+    }
+    if (moved.length > 0) {
+        const calls = moved.map(({ old, now }) => `'${old}' '${now}'`).join(', ');
+        const reads = moved.map(({ old, now, taken }) => taken
+            ? `'${old}' is left out, since '${now}' is set too`
+            : `the value of '${old}' is read as '${now}'`).join('; ');
+        console.warn(`[NacatamalOn] post: '${builtin}' calls ${calls} now, so ${reads}.`);
+    }
+    return kept;
+};
+
+/**
  * A built-in's options, kept only where it declares one by that name (a field marked `rebuild`) and
  * of the kind it takes. Anything else is said once and left out: the effect is made with its own.
  */
@@ -79,6 +113,8 @@ const asOptions = (builtin: string, value: unknown): Record<string, string | num
  * a built-in beats a file, and a palette beats a table. Both of those are cases the editor cannot
  * produce and a hand-edited file can.
  *
+ * A built-in's knob saved under a name it has since changed is read under the new one, and said.
+ *
  * @param value Whatever was under `post` in the file.
  * @returns The chain, in order, with only entries that can run.
  *
@@ -113,7 +149,7 @@ export const normalizePostChain = (value: unknown): TPostChain => {
 
         const uniforms = asUniforms(read.uniforms);
         if (uniforms !== undefined) {
-            entry.uniforms = uniforms;
+            entry.uniforms = builtin === undefined ? uniforms : asCurrentNames(builtin, uniforms);
         }
 
         const options = builtin === undefined ? undefined : asOptions(builtin, read.options);

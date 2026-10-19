@@ -36,6 +36,23 @@ import type { TPostBuiltinInfo } from './types/t_builtin';
  * actually had. Last comes what the picture was shown on: the glow of a phosphor, a composite cable,
  * a handheld's panel, a tube.
  *
+ * **One idea has one name in all of them.** `amount` is how much an effect shows, `0` the picture
+ * untouched to `1`; `intensity` a brightness that may pass `1`, as a light's; `size` the side of a
+ * cell, a block or a dot, in game pixels; `scale` a multiplier with no unit; `radius` a reach in
+ * game pixels; `center` a point from `[0, 0]`, the top left, to `[1, 1]`. A name never changes its
+ * kind from one effect to the next. A knob renamed to keep to that is in its effect's `renamed`, so
+ * a chain written before still reads.
+ *
+ * **Some already hold another's work**, so stacking the two does it twice: `crt` has its own glow
+ * (`halation`), noise, `vignette`, `flicker` and colour split (`convergence`); `oldFilm` its own
+ * grain, vignette and flicker; `glitch` a colour split; `palette` its own `dither`; `lcd`'s
+ * `ghosting` and `phosphor` both leave a trail; `posterize` is `dither` with `amount: 0`. The
+ * composite ones are meant to be used alone, as the whole machine.
+ *
+ * **The ones laid on a grid of game pixels** (mosaic, halftone, ascii, dither's four by four,
+ * grain, lcd, crt's mask, and the material step `mangaDots`) look cleanest with sizes that are
+ * multiples of one another: two grids that do not divide each other beat into a moiré.
+ *
  * @category Post-processing
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -103,6 +120,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         description: 'Smears the picture towards a point, as if rushing at it.',
         binds: null,
         fields: BUILTIN_FIELDS.zoomBlur!,
+        renamed: { strength: 'reach' },
         build: () => zoomBlur(),
     },
     {
@@ -143,6 +161,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         description: 'Printed dots or crossed lines, as in a comic or a newspaper.',
         binds: null,
         fields: BUILTIN_FIELDS.halftone!,
+        renamed: { scale: 'size', color: 'ownColor' },
         build: () => halftone(),
     },
     {
@@ -151,6 +170,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         description: 'The frame in letters, as dense as the picture is bright, in its own colour or a terminal\'s.',
         binds: null,
         fields: BUILTIN_FIELDS.ascii!,
+        renamed: { scale: 'size', color: 'ownColor' },
         // Its letters are written into it when it is made: a project entry's options.
         build: (options) => ascii({ glyphs: typeof options?.glyphs === 'string' ? options.glyphs : undefined }),
     },
@@ -160,6 +180,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         description: 'Bands torn sideways with the colours coming apart: a signal failing.',
         binds: null,
         fields: BUILTIN_FIELDS.glitch!,
+        renamed: { rgb: 'split' },
         build: () => glitch(),
     },
     {
@@ -184,6 +205,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         description: 'Sepia, grain, scratches, flicker and dark edges, at twenty-four frames a second.',
         binds: null,
         fields: BUILTIN_FIELDS.oldFilm!,
+        renamed: { noise: 'grain' },
         build: () => oldFilm(),
     },
     {
@@ -200,6 +222,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         description: 'Cuts each channel to a few steps and hides the bands with an ordered pattern.',
         binds: null,
         fields: BUILTIN_FIELDS.dither!,
+        renamed: { strength: 'amount' },
         build: () => dither(),
     },
     {
@@ -240,6 +263,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         description: 'Lines, a phosphor mask, the bulge and glow of the glass and the faults of a real tube. Four presets in CRT_PRESETS.',
         binds: null,
         fields: BUILTIN_FIELDS.crt!,
+        renamed: { gamma: 'linearBlend' },
         build: () => crt(),
     },
 ];

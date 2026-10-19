@@ -103,6 +103,10 @@ export type TPostBuiltinInfo = {
     binds: 'palette' | 'lut' | null;
     fields: readonly TEffectField[];
     /**
+     * Old knob name → the name it has now, so a project written before a rename keeps its value.
+     */
+    renamed?: Readonly<Record<string, string>>;
+    /**
      * Makes it, with the options its `rebuild` fields name (a project entry's `options`).
      */
     build: (options?: Readonly<Record<string, unknown>>) => TBuiltinPostEffect;

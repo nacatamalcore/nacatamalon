@@ -69,13 +69,13 @@ const stepWith = (look: TStepLook, s: TSurfaceState, name: TNamer): TSurfaceStat
             // into the dark smoothly.
             const shade = s.shade ?? composerOneMinus(composerSmoothstep(0.2, 0.8, brightness(s.light)));
             // Laid out on the screen, so they stay put as the model turns.
-            const cell = composerSub(composerFract(composerDiv(composerScreenPos(), composerUniform(name('spacing'), look.spacing))), 0.5);
-            const radius = composerMul(shade, composerUniform(name('size'), look.size));
+            const cell = composerSub(composerFract(composerDiv(composerScreenPos(), composerUniform(name('size'), look.size))), 0.5);
+            const radius = composerMul(shade, composerUniform(name('fill'), look.fill));
             const inked = composerOneMinus(composerStep(radius, composerLength(cell)));
             return { ...s, color: composerMix(before, composerUniform(name('ink'), look.ink), inked) };
         }
         case 'rim': {
-            const edge = composerMul(composerFresnel(composerUniform(name('power'), look.power)), composerUniform(name('strength'), look.strength));
+            const edge = composerMul(composerFresnel(composerUniform(name('power'), look.power)), composerUniform(name('amount'), look.amount));
             return { ...s, color: composerMix(before, composerUniform(name('color'), look.color), edge) };
         }
     }

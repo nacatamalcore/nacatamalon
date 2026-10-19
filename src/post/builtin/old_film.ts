@@ -5,6 +5,9 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * An old film reel: sepia, grain, a scratch that comes and goes, a flicker and dark edges, all
  * stepping at twenty-four frames a second whatever the game runs at.
  *
+ * It already holds a grain, a vignette and a flicker of its own: over `grain` that part is done
+ * twice (see `POST_BUILTINS`).
+ *
  * @param options Each part from `0` (absent) to about `1`.
  * @returns The effect, for `usePostProcess`.
  *
@@ -19,11 +22,11 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  */
 export const oldFilm = (options: {
     sepia?: number;
-    noise?: number;
+    grain?: number;
     scratches?: number;
     flicker?: number;
     vignette?: number;
-} = {}): TBuiltinPostEffect<{ sepia: number; noise: number; scratches: number; flicker: number; vignette: number }> => ({
+} = {}): TBuiltinPostEffect<{ sepia: number; grain: number; scratches: number; flicker: number; vignette: number }> => ({
     name: 'oldFilm',
     fragment: /* wgsl */ `${NOISE_WGSL}
 fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {
@@ -31,7 +34,7 @@ fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {
     let grey = dot(color.rgb, vec3<f32>(0.299, 0.587, 0.114));
     var rgb = mix(color.rgb, vec3<f32>(grey) * vec3<f32>(1.07, 0.74, 0.43), mu.sepia);
 
-    rgb = rgb + (hash12(floor(uv * mu.resolution) + tick * vec2<f32>(5.3, 9.1)) - 0.5) * mu.noise;
+    rgb = rgb + (hash12(floor(uv * mu.resolution) + tick * vec2<f32>(5.3, 9.1)) - 0.5) * mu.grain;
 
     if (hash12(vec2<f32>(tick, 2.0)) < mu.scratches) {
         let across = hash12(vec2<f32>(tick, 1.0));
@@ -52,7 +55,7 @@ vec4 effect(vec4 color, vec2 uv) {
     float grey = dot(color.rgb, vec3(0.299, 0.587, 0.114));
     vec3 rgb = mix(color.rgb, vec3(grey) * vec3(1.07, 0.74, 0.43), mu.sepia);
 
-    rgb += (hash12(floor(uv * mu.resolution) + tick * vec2(5.3, 9.1)) - 0.5) * mu.noise;
+    rgb += (hash12(floor(uv * mu.resolution) + tick * vec2(5.3, 9.1)) - 0.5) * mu.grain;
 
     if (hash12(vec2(tick, 2.0)) < mu.scratches) {
         float across = hash12(vec2(tick, 1.0));
@@ -69,10 +72,10 @@ vec4 effect(vec4 color, vec2 uv) {
 `,
     uniforms: {
         sepia: options.sepia ?? 0.7,
-        noise: options.noise ?? 0.12,
+        grain: options.grain ?? 0.12,
         scratches: options.scratches ?? 0.4,
         flicker: options.flicker ?? 0.5,
         vignette: options.vignette ?? 0.4,
     },
-    uniformSig: { sepia: 'f32', noise: 'f32', scratches: 'f32', flicker: 'f32', vignette: 'f32' },
+    uniformSig: { sepia: 'f32', grain: 'f32', scratches: 'f32', flicker: 'f32', vignette: 'f32' },
 });

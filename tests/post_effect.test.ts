@@ -60,9 +60,9 @@ describe('installing an effect', () => {
         const { store } = createTestGame();
         const effect = inScene(store, 'Level', () => usePostProcess({ ...dither({ levels: 4 }) }));
 
-        expect(effect.uniforms).toEqual({ levels: 4, strength: 1 });
+        expect(effect.uniforms).toEqual({ levels: 4, amount: 1 });
         // Given and not guessed back off the values: it was written with its kinds.
-        expect(effect.uniformSig).toEqual({ levels: 'f32', strength: 'f32' });
+        expect(effect.uniformSig).toEqual({ levels: 'f32', amount: 'f32' });
         expect(effect.fragmentGlsl).toContain('vec4 effect');
     });
 

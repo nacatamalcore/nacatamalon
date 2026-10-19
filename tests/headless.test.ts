@@ -100,10 +100,9 @@ describe('a game with no browser', () => {
         expect(rolls()).toEqual(rolls());
     });
 
-    it('says what is on the screen and where, a text with what it says', async () => {
+    it('says what is on the screen and where, a text with what it says, as soon as it has loaded', async () => {
         const game = make({ width: 320, height: 180, scenes: { Level } });
         await game.loaded();
-        game.run(1);
 
         const score = game.drawn().find((picture) => picture.text === 'SCORE 0');
         expect(score).toMatchObject({ kind: 'text', left: 8, top: 8, seen: 1 });

@@ -12,7 +12,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * deliberate: the hardware it imitates had no notion of linear light, and a physically tidy version
  * of this bands in the wrong places.
  *
- * @param options `levels` is steps per channel, `strength` how much of the pattern to mix in.
+ * @param options `levels` is steps per channel, `amount` how much of the pattern to mix in.
  *
  * @example
  * ```ts
@@ -24,7 +24,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const dither = (options: { levels?: number; strength?: number } = {}): TBuiltinPostEffect<{ levels: number; strength: number }> => ({
+export const dither = (options: { levels?: number; amount?: number } = {}): TBuiltinPostEffect<{ levels: number; amount: number }> => ({
     name: 'dither',
     fragment: /* wgsl */ `${BAYER_WGSL}
 fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {
@@ -35,7 +35,7 @@ fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {
     // Half a byte up first: the frame is stored in 8 bits, and a colour on a step (1/7 is 36.43 of
     // 255) can be kept just under it (36), where the pattern's lowest dot would drop it a step.
     // So a colour from the palette comes out flat, as the hardware drew it.
-    let nudged = color.rgb + 0.5 / 255.0 + bayer(uv * mu.resolution) * stepSize * mu.strength;
+    let nudged = color.rgb + 0.5 / 255.0 + bayer(uv * mu.resolution) * stepSize * mu.amount;
     // floor(x + 0.5) and not round(): WGSL rounds a half to the even step, and the pattern lands
     // exactly on halves (white nudged down half a step is 6.5 of 7), so WebGPU would drop a level
     // where WebGL2 does not.
@@ -49,11 +49,11 @@ vec4 effect(vec4 color, vec2 uv) {
     float top = levels - 1.0;
     float stepSize = 1.0 / top;
     // Half a byte up first, as in WGSL: a colour on a step stored just under it stays on it.
-    vec3 nudged = color.rgb + 0.5 / 255.0 + bayer(uv * mu.resolution) * stepSize * mu.strength;
+    vec3 nudged = color.rgb + 0.5 / 255.0 + bayer(uv * mu.resolution) * stepSize * mu.amount;
     vec3 stepped = floor(clamp(nudged, 0.0, 1.0) * top + 0.5) / top;
     return vec4(stepped, color.a);
 }
 `,
-    uniforms: { levels: options.levels ?? COLOR_LEVELS.genesis, strength: options.strength ?? 1 },
-    uniformSig: { levels: 'f32', strength: 'f32' },
+    uniforms: { levels: options.levels ?? COLOR_LEVELS.genesis, amount: options.amount ?? 1 },
+    uniformSig: { levels: 'f32', amount: 'f32' },
 });

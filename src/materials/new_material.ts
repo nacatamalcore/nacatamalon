@@ -39,20 +39,6 @@ const mapsOf = (asked: Record<string, TTexture | TMaterialMap> | undefined): Rec
 };
 
 /**
- * Builds the material record from what was asked for, with the lookups already done.
- *
- * The picture and the file are handed in rather than looked up here, because finding them needs the
- * running game and this has to work from a test with no game in it.
- *
- * A material given a file starts with **no source at all** and gets it when the bytes land. That is
- * not a half-built state: a material with nothing to compile draws through the built-in shader, so
- * the first frames of a scene look right rather than looking like nothing.
- *
- * @internal
- * @since 1.0.0
- * @author Francisco Pereira Alvarado
- */
-/**
  * The shader a material's looks make, or `null` when it has none. Refuses what contradicts them: a
  * colour hook of its own (the looks make the colour), and a material for sprites (looks light a
  * model's surface).
@@ -71,6 +57,20 @@ const looksOf = (options: TMaterialOptions, effect: TShader | null) => {
     return compileShader({ shader: 'mesh3d', lighting, steps });
 };
 
+/**
+ * Builds the material record from what was asked for, with the lookups already done.
+ *
+ * The picture and the file are handed in rather than looked up here, because finding them needs the
+ * running game and this has to work from a test with no game in it.
+ *
+ * A material given a file starts with **no source at all** and gets it when the bytes land. That is
+ * not a half-built state: a material with nothing to compile draws through the built-in shader, so
+ * the first frames of a scene look right rather than looking like nothing.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
 export const newMaterial = (
     options: TMaterialOptions,
     texture: TTexture | null,

@@ -75,10 +75,10 @@ describe('a chain entry\'s options', () => {
 
     it('make the effect with them, and its knobs are laid over', () => {
         const { store } = createTestGame();
-        installPostChain(store, normalizePostChain([{ builtin: 'ascii', options: { glyphs: ' ░▒▓█' }, uniforms: { scale: 12 } }]));
+        installPostChain(store, normalizePostChain([{ builtin: 'ascii', options: { glyphs: ' ░▒▓█' }, uniforms: { size: 12 } }]));
         const [effect] = store.get('post').effects;
         expect(effect!.fragment).toContain('array<u32, 5>');
-        expect(effect!.uniforms.scale).toBe(12);
+        expect(effect!.uniforms.size).toBe(12);
     });
 });
 

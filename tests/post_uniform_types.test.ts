@@ -17,7 +17,7 @@ import type { TPostEffect } from '../src/post/types/t_post_effect';
 describe('the knobs of an effect', () => {
     it('come back by name and as numbers, from a built-in and from a hand-written one', () => {
         const { store } = createTestGame();
-        let banded!: TPostEffect<{ levels: number; strength: number }>;
+        let banded!: TPostEffect<{ levels: number; amount: number }>;
         let curved!: ReturnType<typeof usePostProcess<{ curve: number }>>;
         let tube!: ReturnType<typeof usePostProcess<ReturnType<typeof crt>['uniforms']>>;
         startTestScene(store, 'Level', () => {
@@ -30,7 +30,7 @@ describe('the knobs of an effect', () => {
         const levels: number = banded.uniforms.levels;
         const curve: number = curved.uniforms.curve;
         const mask: number = tube.uniforms.mask;
-        banded.uniforms.strength = levels / 8;
+        banded.uniforms.amount = levels / 8;
 
         // @ts-expect-error: dither has no knob by that name, and saying so is the point.
         void banded.uniforms.levles;
@@ -40,6 +40,6 @@ describe('the knobs of an effect', () => {
         expect(levels).toBe(4);
         expect(curve).toBe(0.3);
         expect(mask).toBe(0);
-        expect(banded.uniforms.strength).toBe(0.5);
+        expect(banded.uniforms.amount).toBe(0.5);
     });
 });

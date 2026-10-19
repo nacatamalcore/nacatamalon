@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, spyOn } from 'bun:test';
 import { normalizePostChain } from '../src/post';
 import { cleanGameOptions } from '../src/game/bootstrap/clean_gameoptions';
 
@@ -73,6 +73,49 @@ describe('reading a chain out of a file', () => {
         ]);
 
         expect(normalizePostChain(JSON.parse(JSON.stringify(written)))).toEqual(written);
+    });
+});
+
+describe('reading a chain written before a knob was renamed', () => {
+    it('reads the old name as the new one, and says so once for the entry', () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        const [entry] = normalizePostChain([{ builtin: 'dither', uniforms: { strength: 0.5 } }]);
+
+        expect(entry!.uniforms).toEqual({ amount: 0.5 });
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(String(warn.mock.calls[0]![0])).toContain("'dither' calls 'strength' 'amount' now");
+        warn.mockRestore();
+    });
+
+    it('keeps the value under the new name when both are written, because that is the later one', () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        const [entry] = normalizePostChain([{ builtin: 'dither', uniforms: { strength: 0.5, amount: 0.25, levels: 4 } }]);
+
+        expect(entry!.uniforms).toEqual({ amount: 0.25, levels: 4 });
+        expect(warn).toHaveBeenCalledTimes(1);
+        warn.mockRestore();
+    });
+
+    it('moves every renamed knob of an entry with a single warning', () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        const [entry] = normalizePostChain([{ builtin: 'halftone', uniforms: { scale: 6, color: 1, angle: 30 } }]);
+
+        expect(entry!.uniforms).toEqual({ size: 6, ownColor: 1, angle: 30 });
+        expect(warn).toHaveBeenCalledTimes(1);
+        warn.mockRestore();
+    });
+
+    it('leaves a file\'s effect and a knob already under its new name alone, and says nothing', () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        const [file, current] = normalizePostChain([
+            { shader: 'shaders/mine.wgsl', uniforms: { strength: 0.5 } },
+            { builtin: 'crt', uniforms: { linearBlend: 0, noise: 0.2 } },
+        ]);
+
+        expect(file!.uniforms).toEqual({ strength: 0.5 });
+        expect(current!.uniforms).toEqual({ linearBlend: 0, noise: 0.2 });
+        expect(warn).not.toHaveBeenCalled();
+        warn.mockRestore();
     });
 });
 

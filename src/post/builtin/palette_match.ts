@@ -14,6 +14,9 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * **With no palette, or one of a single colour, it gives back what it was handed.** A palette that
  * has not arrived yet must cost you the palette and not the picture.
  *
+ * Its `dither` is a dither of its own: after `dither` the picture is shaken twice (see
+ * `POST_BUILTINS`).
+ *
  * @param options `dither` is how much to shake before matching. Zero matches exactly.
  *
  * @example

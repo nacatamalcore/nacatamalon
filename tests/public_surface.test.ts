@@ -133,6 +133,8 @@ describe('the tools door', () => {
             // and the angles a tool aims a light with.
             'resolveLayerOrder', 'TILE_LAYER_BANDS', 'POST_BUILTINS', 'findPostBuiltin', 'normalizePostChain',
             'DEFAULT_PROJECT_SETTINGS', 'eulerAim',
+            // The material looks a tool offers, finding one by name, and which uniform each knob is.
+            'MATERIAL_LOOKS', 'findMaterialLook', 'lookKnobs',
             // Saving a picture painted in code as a file, and reading one: a build script's, never a running game's.
             'encodePng', 'decodePng',
             // The same for sound made from text: saving a song, mixing it and writing it as a file, and

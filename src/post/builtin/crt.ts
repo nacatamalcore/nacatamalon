@@ -54,7 +54,7 @@ export type TCrtOptions = {
      * a tube did; `0` works them out in the stored numbers. It changes how the lines blend, not how
      * bright the picture is: the frame goes into light and back out by the same curve.
      */
-    gamma?: number;
+    linearBlend?: number;
     /**
      * The glow that bright parts throw across the glass.
      */
@@ -105,7 +105,7 @@ export type TCrtUniforms = {
     sharpness: number;
     beam: number;
     brightness: number;
-    gamma: number;
+    linearBlend: number;
     halation: number;
     convergence: number;
     noise: number;
@@ -129,22 +129,22 @@ export type TCrtUniforms = {
 export const CRT_PRESETS = {
     consumer: {
         scanlines: 0.45, mask: 0.25, maskType: 'slot', maskScale: 1, curvature: 0.08, vignette: 0.3,
-        sharpness: 0.4, beam: 0.7, brightness: 1.25, gamma: 1, halation: 0.2, convergence: 0.35,
+        sharpness: 0.4, beam: 0.7, brightness: 1.25, linearBlend: 1, halation: 0.2, convergence: 0.35,
         noise: 0.04, flicker: 0.3, interlace: 0, cornerRadius: 0.04,
     },
     pvm: {
         scanlines: 0.6, mask: 0.2, maskType: 'aperture', maskScale: 1, curvature: 0.02, vignette: 0.1,
-        sharpness: 0.85, beam: 0.8, brightness: 1.3, gamma: 1, halation: 0.06, convergence: 0,
+        sharpness: 0.85, beam: 0.8, brightness: 1.3, linearBlend: 1, halation: 0.06, convergence: 0,
         noise: 0, flicker: 0, interlace: 0, cornerRadius: 0.01,
     },
     arcade: {
         scanlines: 0.5, mask: 0.35, maskType: 'shadow', maskScale: 1, curvature: 0.12, vignette: 0.35,
-        sharpness: 0.6, beam: 0.9, brightness: 1.35, gamma: 1, halation: 0.25, convergence: 0.2,
+        sharpness: 0.6, beam: 0.9, brightness: 1.35, linearBlend: 1, halation: 0.25, convergence: 0.2,
         noise: 0.02, flicker: 0.1, interlace: 0, cornerRadius: 0.06,
     },
     composite: {
         scanlines: 0.3, mask: 0.1, maskType: 'slot', maskScale: 1, curvature: 0.08, vignette: 0.3,
-        sharpness: 0.1, beam: 0.5, brightness: 1.15, gamma: 1, halation: 0.3, convergence: 0.6,
+        sharpness: 0.1, beam: 0.5, brightness: 1.15, linearBlend: 1, halation: 0.3, convergence: 0.6,
         noise: 0.06, flicker: 0.2, interlace: 0, cornerRadius: 0.04,
     },
 } as const satisfies Record<string, TCrtOptions>;
@@ -179,11 +179,11 @@ const GLOW_DOWN_GLSL = GLOW_ACROSS_GLSL.replace('vec2(1.0 / mu.resolution.x, 0.0
 
 const TUBE_WGSL = /* wgsl */ `${NOISE_WGSL}
 fn toLight(rgb: vec3<f32>) -> vec3<f32> {
-    return pow(max(rgb, vec3<f32>(0.0)), vec3<f32>(mix(1.0, 2.2, mu.gamma)));
+    return pow(max(rgb, vec3<f32>(0.0)), vec3<f32>(mix(1.0, 2.2, mu.linearBlend)));
 }
 
 fn toScreen(rgb: vec3<f32>) -> vec3<f32> {
-    return pow(max(rgb, vec3<f32>(0.0)), vec3<f32>(1.0 / mix(1.0, 2.2, mu.gamma)));
+    return pow(max(rgb, vec3<f32>(0.0)), vec3<f32>(1.0 / mix(1.0, 2.2, mu.linearBlend)));
 }
 
 // One line of the picture at a place along it, blending the two game pixels either side. Sharpness
@@ -300,11 +300,11 @@ fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {
 
 const TUBE_GLSL = /* glsl */ `${NOISE_GLSL}
 vec3 toLight(vec3 rgb) {
-    return pow(max(rgb, vec3(0.0)), vec3(mix(1.0, 2.2, mu.gamma)));
+    return pow(max(rgb, vec3(0.0)), vec3(mix(1.0, 2.2, mu.linearBlend)));
 }
 
 vec3 toScreen(vec3 rgb) {
-    return pow(max(rgb, vec3(0.0)), vec3(1.0 / mix(1.0, 2.2, mu.gamma)));
+    return pow(max(rgb, vec3(0.0)), vec3(1.0 / mix(1.0, 2.2, mu.linearBlend)));
 }
 
 vec3 beamLine(float x, float y) {
@@ -422,6 +422,9 @@ const MASK_TYPES = { aperture: 0, slot: 1, shadow: 2 } as const;
  * It belongs **last** in a chain: a palette or a dither decides which colours exist, and the tube
  * is what those colours are shown on.
  *
+ * It already holds a glow, noise, a vignette, a flicker and a colour split of its own: laid over
+ * `bloom`, `grain`, `oldFilm` or `rgbSplit`, that part is done twice (see `POST_BUILTINS`).
+ *
  * @param options How strong each part is; see {@link TCrtOptions}.
  * @returns The effect, for `usePostProcess`.
  *
@@ -456,7 +459,7 @@ export const crt = (options: TCrtOptions = {}): TBuiltinPostEffect<TCrtUniforms>
         sharpness: options.sharpness ?? 0.5,
         beam: options.beam ?? 0.6,
         brightness: options.brightness ?? 1.15,
-        gamma: options.gamma ?? 1,
+        linearBlend: options.linearBlend ?? 1,
         halation: options.halation ?? 0.12,
         convergence: options.convergence ?? 0,
         noise: options.noise ?? 0,
@@ -467,7 +470,7 @@ export const crt = (options: TCrtOptions = {}): TBuiltinPostEffect<TCrtUniforms>
     },
     uniformSig: {
         scanlines: 'f32', mask: 'f32', maskType: 'f32', maskScale: 'f32', curvature: 'f32',
-        vignette: 'f32', sharpness: 'f32', beam: 'f32', brightness: 'f32', gamma: 'f32',
+        vignette: 'f32', sharpness: 'f32', beam: 'f32', brightness: 'f32', linearBlend: 'f32',
         halation: 'f32', convergence: 'f32', noise: 'f32', flicker: 'f32', interlace: 'f32',
         cornerRadius: 'f32', bezel: 'vec3<f32>',
     },

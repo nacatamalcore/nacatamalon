@@ -8,7 +8,7 @@ import type { TMeshMaterialDoc } from '../src/scene/document/types/t_component_d
 import { compileShader } from '../src/shader_composer/compile_shader';
 import { composerSurface } from '../src/shader_composer/inputs';
 import { lookKnobs } from '../src/shader_composer/surface/compose_surface';
-import { MATERIAL_LOOKS, mangaDots, rim, toon, toonLighting, unlit, unlitLighting } from '../src/shader_composer/surface/looks';
+import { MATERIAL_LOOKS, mangaDots, rim, toonLighting, unlitLighting } from '../src/shader_composer/surface/looks';
 import { createMaterial } from '../src/gameobjects/material/create_material';
 import type { TLook } from '../src/shader_composer/surface/types';
 import type { TMeshMaterial, TMeshMaterialOptions } from '../src/materials';
@@ -25,13 +25,8 @@ describe('each look', () => {
     it('is plain data with its defaults', () => {
         expect(toonLighting()).toEqual({ look: 'toon', bands: 2, shadow: 0.45, spot: 0.75 });
         expect(unlitLighting()).toEqual({ look: 'unlit' });
-        expect(mangaDots()).toEqual({ look: 'mangaDots', spacing: 5, size: 0.3, ink: [0.16, 0.1, 0.26] });
-        expect(rim({ color: '#ff0000' })).toMatchObject({ look: 'rim', color: [1, 0, 0], power: 4, strength: 0.7 });
-    });
-
-    it('keeps the names the lighting looks had in 0.2.4, making the same looks', () => {
-        expect(toon({ bands: 3 })).toEqual(toonLighting({ bands: 3 }));
-        expect(unlit()).toEqual(unlitLighting());
+        expect(mangaDots()).toEqual({ look: 'mangaDots', size: 5, fill: 0.3, ink: [0.16, 0.1, 0.26] });
+        expect(rim({ color: '#ff0000' })).toMatchObject({ look: 'rim', color: [1, 0, 0], power: 4, amount: 0.7 });
     });
 
     it('is refused by the types in the wrong slot, and again when the game runs', () => {
@@ -67,8 +62,8 @@ describe('each look', () => {
     it('turns its numbers into knobs named after it, with its values', () => {
         expect(looked(toonLighting({ shadow: 0.8 })).uniforms).toEqual({ toonBands: 2, toonShadow: 0.8, toonSpot: 0.75 });
         expect(looked(undefined, [mangaDots(), rim()]).uniforms).toMatchObject({
-            mangaDotsSpacing: 5, mangaDotsSize: 0.3, mangaDotsInk: [0.16, 0.1, 0.26],
-            rimColor: [1, 1, 1], rimPower: 4, rimStrength: 0.7,
+            mangaDotsSize: 5, mangaDotsFill: 0.3, mangaDotsInk: [0.16, 0.1, 0.26],
+            rimColor: [1, 1, 1], rimPower: 4, rimAmount: 0.7,
         });
     });
 
@@ -144,10 +139,10 @@ describe('the knobs, by name', () => {
             { uniform: 'toonSpot', slot: 'lighting', field: 'spot' },
             { uniform: 'rimColor', slot: 0, field: 'color' },
             { uniform: 'rimPower', slot: 0, field: 'power' },
-            { uniform: 'rimStrength', slot: 0, field: 'strength' },
+            { uniform: 'rimAmount', slot: 0, field: 'amount' },
             { uniform: 'rim2Color', slot: 1, field: 'color' },
             { uniform: 'rim2Power', slot: 1, field: 'power' },
-            { uniform: 'rim2Strength', slot: 1, field: 'strength' },
+            { uniform: 'rim2Amount', slot: 1, field: 'amount' },
         ]);
     });
 
@@ -173,7 +168,7 @@ describe('a material made with looks', () => {
         const material = createMaterial({ shader: 'mesh3d', lighting: toonLighting(), steps: [mangaDots()] }) as TMeshMaterial;
         expect(material.fragment).toContain('ctx.screen');
         expect(material.fragmentGlsl).toContain('ctx.screen');
-        expect(material.uniforms).toMatchObject({ toonShadow: 0.45, mangaDotsSpacing: 5 });
+        expect(material.uniforms).toMatchObject({ toonShadow: 0.45, mangaDotsSize: 5 });
         expect(material.uniformSig).toMatchObject({ toonShadow: 'f32', mangaDotsInk: 'vec3<f32>' });
         expect(material.lighting).toEqual(toonLighting());
         expect(material.steps).toEqual([mangaDots()]);
@@ -284,6 +279,43 @@ describe('a scene with looks, written down', () => {
         expect(surface).not.toHaveProperty('lighting');
         expect(surface.steps).toEqual([{ ...rim(), power: 2 }]);
         expect(warn).toHaveBeenCalledTimes(2);
+        warn.mockRestore();
+    });
+});
+
+describe('a look saved before its fields were renamed', () => {
+    const stepsRead = (steps: unknown[]) => {
+        const { store } = createTestGame();
+        const root = startTestScene(store, 'Level', () => {
+            createMesh({ geometry: useCubeGeometry(), material: createMaterial({ shader: 'mesh3d' }) as TMeshMaterial });
+            return createScene();
+        });
+        const doc = serializeScene(root);
+        const mesh = doc.root.components.find((c) => c.type === 'mesh') as { material: Record<string, unknown> };
+        mesh.material.steps = steps;
+        const read = parseSceneDoc(JSON.parse(JSON.stringify(doc)), '/scenes/level.scene');
+        return (read.root.components.find((c) => c.type === 'mesh') as { material: TMeshMaterialDoc }).material.steps;
+    };
+
+    it('reads the old manga dots with the new names, all at once, with a warning', () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        expect(stepsRead([{ look: 'mangaDots', spacing: 6, size: 0.4 }])).toEqual([mangaDots({ size: 6, fill: 0.4 })]);
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(String(warn.mock.calls[0]![0])).toContain("'mangaDots' calls 'spacing' 'size', 'size' 'fill' now");
+        warn.mockRestore();
+    });
+
+    it('leaves manga dots written with the new names as they are, without a word', () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        expect(stepsRead([{ look: 'mangaDots', size: 6, fill: 0.4 }])).toEqual([mangaDots({ size: 6, fill: 0.4 })]);
+        expect(warn).not.toHaveBeenCalled();
+        warn.mockRestore();
+    });
+
+    it('reads an old rim\'s strength as its amount', () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        expect(stepsRead([{ look: 'rim', strength: 0.3 }])).toEqual([rim({ amount: 0.3 })]);
+        expect(warn).toHaveBeenCalledTimes(1);
         warn.mockRestore();
     });
 });

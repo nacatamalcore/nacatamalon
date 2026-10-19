@@ -16,7 +16,7 @@ export {
 export { composerPipe } from './pipe';
 export { composerSimplexNoise, composerFbm, composerCellularNoise } from './noise';
 export { composerFresnel, composerCelShade } from './effects';
-export { toonLighting, unlitLighting, toon, unlit, mangaDots, rim, MATERIAL_LOOKS, findMaterialLook } from './surface/looks';
+export { toonLighting, unlitLighting, mangaDots, rim, MATERIAL_LOOKS, findMaterialLook } from './surface/looks';
 export type { TMaterialLookInfo } from './surface/looks';
 export { lookKnobs } from './surface/compose_surface';
 export type { TLook, TLightingLook, TStepLook, TToonLook, TUnlitLook, TMangaDotsLook, TRimLook } from './surface/types';

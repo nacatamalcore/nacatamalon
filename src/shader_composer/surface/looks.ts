@@ -40,17 +40,6 @@ export const toonLighting = (options: { bands?: number; shadow?: number; spot?: 
 });
 
 /**
- * The name `toonLighting` had in 0.2.4, before the lighting looks said in their names which slot
- * they go in. The same look.
- *
- * @deprecated Use `toonLighting`.
- * @category Shader composer
- * @since 1.0.0
- * @author Francisco Pereira Alvarado
- */
-export const toon = toonLighting;
-
-/**
  * No light at all: the surface exactly as it is painted (its picture, its tint and what it gives off
  * itself), the same from every side and in every shadow. For a material's `lighting`: a sky, a
  * screen, a sign that glows, anything that is not lit but is a light.
@@ -69,41 +58,30 @@ export const toon = toonLighting;
 export const unlitLighting = (): TUnlitLook => ({ look: 'unlit' });
 
 /**
- * The name `unlitLighting` had in 0.2.4, before the lighting looks said in their names which slot
- * they go in. The same look.
- *
- * @deprecated Use `unlitLighting`.
- * @category Shader composer
- * @since 1.0.0
- * @author Francisco Pereira Alvarado
- */
-export const unlit = unlitLighting;
-
-/**
  * Dots of ink in the shadow, the way printed comics shaded: the darker, the bigger. They are laid out
  * on the screen and not on the model, so they stay put as it turns. For a material's `steps`.
  *
  * After `toonLighting` the dots go exactly where its bands went dark; with the engine's light they grow
  * smoothly into the dark.
  *
- * @param options `spacing` how far apart, in game pixels (default `5`); `size` how big a dot grows in
- * full shadow, as a part of the gap (default `0.3`; past `0.5` they touch); `ink` its colour, what
- * `getColor` takes, a `TColor` or `[r, g, b]` (default a deep violet).
+ * @param options `size` how far apart the dots are, in game pixels (default `5`); `fill` how big a dot
+ * grows in full shadow, as a part of its cell (default `0.3`; past `0.5` they touch); `ink` its colour,
+ * what `getColor` takes, a `TColor` or `[r, g, b]` (default a deep violet).
  * @returns The look, for `createMaterial({ steps })` or `createModel({ steps })`.
  *
  * @example
  * ```ts
- * createMaterial({ shader: 'mesh3d', tint, lighting: toonLighting(), steps: [mangaDots({ spacing: 4 })] });
+ * createMaterial({ shader: 'mesh3d', tint, lighting: toonLighting(), steps: [mangaDots({ size: 4 })] });
  * ```
  *
  * @category Shader composer
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const mangaDots = (options: { spacing?: number; size?: number; ink?: TLookColor } = {}): TMangaDotsLook => ({
+export const mangaDots = (options: { size?: number; fill?: number; ink?: TLookColor } = {}): TMangaDotsLook => ({
     look: 'mangaDots',
-    spacing: options.spacing ?? 5,
-    size: options.size ?? 0.3,
+    size: options.size ?? 5,
+    fill: options.fill ?? 0.3,
     ink: colorUniform(options.ink, [0.16, 0.1, 0.26]),
 });
 
@@ -112,7 +90,7 @@ export const mangaDots = (options: { spacing?: number; size?: number; ink?: TLoo
  * towards `color` and never past it, so it brightens without burning. For a material's `steps`.
  *
  * @param options `color`, what `getColor` takes, a `TColor` or `[r, g, b]` (default white); `power`
- * how tightly it keeps to the silhouette (default `4`); `strength` how far the edge goes towards the
+ * how tightly it keeps to the silhouette (default `4`); `amount` how far the edge goes towards the
  * colour, `0` to `1` (default `0.7`).
  * @returns The look, for `createMaterial({ steps })` or `createModel({ steps })`.
  *
@@ -120,11 +98,11 @@ export const mangaDots = (options: { spacing?: number; size?: number; ink?: TLoo
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const rim = (options: { color?: TLookColor; power?: number; strength?: number } = {}): TRimLook => ({
+export const rim = (options: { color?: TLookColor; power?: number; amount?: number } = {}): TRimLook => ({
     look: 'rim',
     color: colorUniform(options.color, [1, 1, 1]),
     power: options.power ?? 4,
-    strength: options.strength ?? 0.7,
+    amount: options.amount ?? 0.7,
 });
 
 /**
@@ -153,6 +131,17 @@ export type TMaterialLookInfo = {
      * Its knobs, for a form to be made of them: every field of the look but `look`, with its range.
      */
     fields: readonly TEffectField[];
+    /**
+     * The fields it called something else before, old name to the name it has now, so a scene saved
+     * before a rename keeps its values.
+     *
+     * The renames are applied all at once, as a swap, never one after another: `{ spacing: 'size',
+     * size: 'fill' }` turns an old `{ spacing: 6, size: 0.4 }` into `{ size: 6, fill: 0.4 }`. A
+     * document is taken as old, and translated, only when it has a field that is an old name and is
+     * no field of the look now (`spacing` above); otherwise it is taken as already written with the
+     * names of today and left as it is, so `{ size: 6, fill: 0.4 }` stays.
+     */
+    renamed?: Readonly<Record<string, string>>;
     build: () => TLook;
 };
 
@@ -177,10 +166,11 @@ export const MATERIAL_LOOKS: readonly TMaterialLookInfo[] = [
     {
         key: 'mangaDots', label: 'Manga dots', description: 'Dots of ink in the shadow, laid out on the screen, bigger where darker.', slot: 'step',
         fields: [
-            { key: 'spacing', type: 'number', default: 5, min: 2, max: 32, step: 0.5, description: 'How far apart, in game pixels.' },
-            { key: 'size', type: 'number', default: 0.3, min: 0, max: 1, step: 0.01, description: 'How big a dot grows in full shadow; past 0.5 they touch.' },
+            { key: 'size', type: 'number', default: 5, min: 2, max: 32, step: 0.5, description: 'How far apart, in game pixels.' },
+            { key: 'fill', type: 'number', default: 0.3, min: 0, max: 1, step: 0.01, description: 'How big a dot grows in full shadow; past 0.5 they touch.' },
             { key: 'ink', type: 'color', default: [0.16, 0.1, 0.26] },
         ],
+        renamed: { spacing: 'size', size: 'fill' },
         build: () => mangaDots(),
     },
     {
@@ -188,8 +178,9 @@ export const MATERIAL_LOOKS: readonly TMaterialLookInfo[] = [
         fields: [
             { key: 'color', label: 'Colour', type: 'color', default: [1, 1, 1] },
             { key: 'power', type: 'number', default: 4, min: 0.5, max: 16, step: 0.1, description: 'How tightly it keeps to the silhouette.' },
-            { key: 'strength', type: 'number', default: 0.7, min: 0, max: 1, step: 0.01 },
+            { key: 'amount', type: 'number', default: 0.7, min: 0, max: 1, step: 0.01 },
         ],
+        renamed: { strength: 'amount' },
         build: () => rim(),
     },
 ];
@@ -197,7 +188,7 @@ export const MATERIAL_LOOKS: readonly TMaterialLookInfo[] = [
 /**
  * The look a document named, or `null` if the engine has no such look.
  *
- * @internal
+ * @category Shader composer
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */

@@ -42,8 +42,8 @@ const glyphList = (glyphs: string): string => {
  * draw is left out with a warning. They are written into the shader when the effect is made, so
  * they are an option and not a knob: other letters are another `ascii()`.
  *
- * @param options `scale` is the side of a cell in game pixels, rounded to a multiple of `6` so every
- * pixel of a letter is the same size (`6` is the smallest, `12` letters twice as big); `color` from
+ * @param options `size` is the side of a cell in game pixels, rounded to a multiple of `6` so every
+ * pixel of a letter is the same size (`6` is the smallest, `12` letters twice as big); `ownColor` from
  * `0` (every letter in `ink`, a terminal) to `1` (the picture's own colour); `ink` is any colour,
  * `'#4dff73'`, a `TColor` or `[r, g, b]`; `background` how much of the picture shows behind the
  * letters, `0` none; `brightness` how bright the letters are against the colour they were read from;
@@ -52,8 +52,8 @@ const glyphList = (glyphs: string): string => {
  *
  * @example
  * ```ts
- * usePostProcess(ascii({ scale: 6 }));
- * usePostProcess(ascii({ glyphs: ' ░▒▓█', color: 0, ink: '#ffb000' }));
+ * usePostProcess(ascii({ size: 6 }));
+ * usePostProcess(ascii({ glyphs: ' ░▒▓█', ownColor: 0, ink: '#ffb000' }));
  * usePostProcess(bloom({ threshold: 0.45, intensity: 0.8 }));
  * ```
  *
@@ -62,10 +62,10 @@ const glyphList = (glyphs: string): string => {
  * @author Francisco Pereira Alvarado
  */
 export const ascii = (options: {
-    scale?: number; color?: number; ink?: TColorInput | TColor | [number, number, number]; background?: number; brightness?: number;
+    size?: number; ownColor?: number; ink?: TColorInput | TColor | [number, number, number]; background?: number; brightness?: number;
     glyphs?: string;
 } = {}): TBuiltinPostEffect<{
-    scale: number; color: number; ink: number[]; background: number; brightness: number;
+    size: number; ownColor: number; ink: number[]; background: number; brightness: number;
 }> => {
     const list = glyphList(options.glyphs ?? DEFAULT_GLYPHS);
     const count = list.split(',').length;
@@ -75,7 +75,7 @@ export const ascii = (options: {
 fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {
     var glyphs = array<u32, ${count}>(${list});
     let place = uv * mu.resolution;
-    let cell = max(6.0, round(mu.scale / 6.0) * 6.0);
+    let cell = max(6.0, round(mu.size / 6.0) * 6.0);
     let middle = (floor(place / cell) + 0.5) * cell;
     let shade = sampleTexture(clamp(middle / mu.resolution, vec2<f32>(0.0), vec2<f32>(1.0))).rgb;
     let lum = dot(shade, vec3<f32>(0.299, 0.587, 0.114));
@@ -85,7 +85,7 @@ fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {
     if (sub.x < 5 && sub.y < 5) {
         lit = f32((glyphs[level] >> u32(sub.y * 5 + sub.x)) & 1u);
     }
-    let ink = mix(mu.ink * (0.35 + lum), shade, mu.color);
+    let ink = mix(mu.ink * (0.35 + lum), shade, mu.ownColor);
     let letter = min(ink * mu.brightness, vec3<f32>(1.0));
     return vec4<f32>(mix(shade * mu.background, letter, lit), color.a);
 }
@@ -95,7 +95,7 @@ const uint GLYPHS[${count}] = uint[${count}](${list});
 
 vec4 effect(vec4 color, vec2 uv) {
     vec2 place = uv * mu.resolution;
-    float cell = max(6.0, floor(mu.scale / 6.0 + 0.5) * 6.0);
+    float cell = max(6.0, floor(mu.size / 6.0 + 0.5) * 6.0);
     vec2 middle = (floor(place / cell) + 0.5) * cell;
     vec3 shade = sampleTexture(clamp(middle / mu.resolution, 0.0, 1.0)).rgb;
     float lum = dot(shade, vec3(0.299, 0.587, 0.114));
@@ -105,18 +105,18 @@ vec4 effect(vec4 color, vec2 uv) {
     if (sub.x < 5 && sub.y < 5) {
         lit = float((GLYPHS[level] >> uint(sub.y * 5 + sub.x)) & 1u);
     }
-    vec3 ink = mix(mu.ink * (0.35 + lum), shade, mu.color);
+    vec3 ink = mix(mu.ink * (0.35 + lum), shade, mu.ownColor);
     vec3 letter = min(ink * mu.brightness, vec3(1.0));
     return vec4(mix(shade * mu.background, letter, lit), color.a);
 }
 `,
         uniforms: {
-            scale: options.scale ?? 6,
-            color: options.color ?? 1,
+            size: options.size ?? 6,
+            ownColor: options.ownColor ?? 1,
             ink: colorUniform(options.ink, [0.3, 1, 0.45]),
             background: options.background ?? 0.08,
             brightness: options.brightness ?? 1.6,
         },
-        uniformSig: { scale: 'f32', color: 'f32', ink: 'vec3<f32>', background: 'f32', brightness: 'f32' },
+        uniformSig: { size: 'f32', ownColor: 'f32', ink: 'vec3<f32>', background: 'f32', brightness: 'f32' },
     };
 };

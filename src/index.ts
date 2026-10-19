@@ -184,12 +184,12 @@ export {
     composerSmoothstep, composerReflect, composerMod, composerAtan2, composerOneMinus, composerSaturate,
     composerPipe, composerSimplexNoise, composerFbm, composerCellularNoise, composerFresnel, composerCelShade,
     parseShaderGraph, compileShaderGraph, SHADER_GRAPH_FORMAT,
-    toonLighting, unlitLighting, toon, unlit, mangaDots, rim, MATERIAL_LOOKS, lookKnobs,
+    toonLighting, unlitLighting, mangaDots, rim,
 } from './shader_composer';
 export type {
     TComposerNode, TComposerInput, TComposerStep, TInputKind, THelperDef, TShaderGraph, TCompiledShader,
     TShaderGraphDoc, TGraphNodeDoc, TGraphEdgeDoc, TGraphCommentDoc, TParamValue, TGraphTarget,
-    TLook, TLightingLook, TStepLook, TToonLook, TUnlitLook, TMangaDotsLook, TRimLook, TMaterialLookInfo,
+    TLook, TLightingLook, TStepLook, TToonLook, TUnlitLook, TMangaDotsLook, TRimLook,
 } from './shader_composer';
 export type { TSprite, TSpriteOptions } from './gameobjects/sprite/types';
 export type { TTransform2d } from './gameobjects/types/t_transform_2d';
