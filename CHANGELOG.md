@@ -18,8 +18,10 @@ releases are in [changelog/](./changelog/), one file each.
   its own. Every number is a knob of the material (`toonShadow`, `mangaDotsSpacing`, `rimColor`; a
   second step of one kind is `rim2Color`), to turn or tween while the game runs. A look is plain
   data, so a scene document writes the looks and not the shader they make, and makes it again when
-  opened; one it does not know is left out with a warning. `MATERIAL_LOOKS` lists them, with the
-  slot each goes in. Both languages, from the shader composer.
+  opened; each knob is written in its look as it is turned at the time, and not again among the
+  material's uniforms. One it does not know is left out with a warning. `MATERIAL_LOOKS` lists them,
+  with the slot each goes in, and `lookKnobs` names each knob and where it lives in the looks. Both
+  languages, from the shader composer.
 - A model's material is told more about where it is drawing. `ctx.screen` is where the pixel is on
   the screen in the game's pixels, `(0, 0)` at the top left, whatever the window's size: a dot
   screen or a hatch lines up with the screen through it instead of sliding with the model.

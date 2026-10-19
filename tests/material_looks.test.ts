@@ -7,6 +7,7 @@ import { createTestGame, startTestScene } from './helpers/test_game';
 import type { TMeshMaterialDoc } from '../src/scene/document/types/t_component_doc';
 import { compileShader } from '../src/shader_composer/compile_shader';
 import { composerSurface } from '../src/shader_composer/inputs';
+import { lookKnobs } from '../src/shader_composer/surface/compose_surface';
 import { MATERIAL_LOOKS, mangaDots, rim, toon, unlit } from '../src/shader_composer/surface/looks';
 import { createMaterial } from '../src/gameobjects/material/create_material';
 import type { TLook } from '../src/shader_composer/surface/types';
@@ -105,6 +106,27 @@ describe('what is refused', () => {
     });
 });
 
+describe('the knobs, by name', () => {
+    it('says where each knob lives in the looks, a second step of a kind numbered', () => {
+        expect(lookKnobs(toon(), [rim(), rim()])).toEqual([
+            { uniform: 'toonBands', slot: 'lighting', field: 'bands' },
+            { uniform: 'toonShadow', slot: 'lighting', field: 'shadow' },
+            { uniform: 'toonSpot', slot: 'lighting', field: 'spot' },
+            { uniform: 'rimColor', slot: 0, field: 'color' },
+            { uniform: 'rimPower', slot: 0, field: 'power' },
+            { uniform: 'rimStrength', slot: 0, field: 'strength' },
+            { uniform: 'rim2Color', slot: 1, field: 'color' },
+            { uniform: 'rim2Power', slot: 1, field: 'power' },
+            { uniform: 'rim2Strength', slot: 1, field: 'strength' },
+        ]);
+    });
+
+    it('names them as the shader does', () => {
+        const knobs = lookKnobs(toon(), [mangaDots(), rim(), rim()]).map((k) => k.uniform).sort();
+        expect(Object.keys(looked(toon(), [mangaDots(), rim(), rim()]).uniforms).sort()).toEqual(knobs);
+    });
+});
+
 describe('the catalogue', () => {
     it('lists every look once, in its slot, built with its defaults', () => {
         expect(MATERIAL_LOOKS.map((info) => [info.key, info.slot])).toEqual([
@@ -177,9 +199,24 @@ describe('a scene with looks, written down', () => {
         expect(surface.steps).toEqual([mangaDots(), rim()]);
         expect(surface.fragment).toBeNull();
         expect(surface.fragmentGlsl).toBeNull();
-        // The knobs, as they are, ride in uniforms like any material's.
-        expect(surface.uniforms).toMatchObject({ toonBands: 3 });
+        // Their knobs are written in the looks, once, and not again among the uniforms.
+        expect(surface.uniforms).toBeNull();
         expect(parseSceneDoc(doc, '/scenes/level.scene')).toEqual(doc);
+    });
+
+    it('writes a knob as it is turned now into its look, and keeps the material\'s own knobs apart', () => {
+        const { store } = createTestGame();
+        const root = startTestScene(store, 'Level', () => {
+            const material = createMaterial({ shader: 'mesh3d', lighting: toon(), steps: [rim(), rim()], uniforms: { wobble: 2 } }) as TMeshMaterial;
+            material.uniforms!.toonShadow = 0.2;
+            material.uniforms!.rim2Color = [0, 0, 1];
+            createMesh({ geometry: useCubeGeometry(), material });
+            return createScene();
+        });
+        const surface = materialOf(serializeScene(root))!;
+        expect(surface.lighting).toEqual({ ...toon(), shadow: 0.2 });
+        expect(surface.steps).toEqual([rim(), { ...rim(), color: [0, 0, 1] }]);
+        expect(surface.uniforms).toEqual({ wobble: 2 });
     });
 
     it('makes the same material again when the scene is opened, knobs as they were turned', () => {
@@ -193,7 +230,8 @@ describe('a scene with looks, written down', () => {
             .filter((d) => (d as { type: string }).type === 'mesh') as unknown as { material: TMeshMaterial }[];
         expect(meshes).toHaveLength(1);
         const material = meshes[0]!.material;
-        expect(material.lighting).toEqual(toon());
+        // The knob turned before saving comes back in its look.
+        expect(material.lighting).toEqual(toon({ shadow: 0.7 }));
         expect(material.fragment).toContain('ctx.screen');
         expect(material.uniforms!.toonShadow).toBe(0.7);
         expect(serializeScene(opened).root.components).toEqual(doc.root.components);

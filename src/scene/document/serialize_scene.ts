@@ -7,6 +7,7 @@ import type { TFog } from '../../fog/types/t_fog';
 import type { TTexture } from '../../loaders';
 import type { TColor } from '../../color';
 import { DEFAULT_CHANNEL } from '../../audio';
+import { lookKnobs } from '../../shader_composer/surface/compose_surface';
 import type { TAssetEntry } from './types/t_asset_entry';
 import type { TMusicAttachment, TSongAttachment, TSoundAttachment } from '../../audio';
 import type { TBox } from '../../box';
@@ -177,8 +178,29 @@ const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting): TMeshMat
     // the truth, and the shader is made again from it, by whatever version opens the scene.
     const looked = material.lighting !== undefined || material.steps !== undefined;
     const written = writeMaterial(material, writing);
+    const lighting = material.lighting === undefined ? undefined : { ...material.lighting } as Record<string, unknown>;
+    const steps = material.steps?.map((step) => ({ ...step }) as Record<string, unknown>);
+    let uniforms = written.uniforms;
+    if (looked && uniforms !== null) {
+        // A look's knobs are written in the look, as they are turned now, and not again among the
+        // uniforms: one place for each number, so whoever edits the document edits the look.
+        const rest = { ...uniforms };
+        for (const knob of lookKnobs(material.lighting, material.steps)) {
+            if (rest[knob.uniform] === undefined) {
+                continue;
+            }
+            const value = rest[knob.uniform];
+            const holder = knob.slot === 'lighting' ? lighting : steps?.[knob.slot];
+            if (holder !== undefined) {
+                holder[knob.field] = Array.isArray(value) ? [...value] : value;
+            }
+            delete rest[knob.uniform];
+        }
+        uniforms = Object.keys(rest).length === 0 ? null : rest;
+    }
     return {
         ...written,
+        uniforms,
         ...(looked ? { fragment: null, fragmentGlsl: null } : {}),
         texture: material.texture === null ? null : material.texture.key,
         tint: { ...material.tint },
@@ -194,8 +216,8 @@ const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting): TMeshMat
             ? { vertexSnap: material.vertexSnap }
             : {}),
         ...(material.affine === true ? { affine: true } : {}),
-        ...(material.lighting !== undefined ? { lighting: { ...material.lighting } as TMeshMaterialDoc['lighting'] } : {}),
-        ...(material.steps !== undefined ? { steps: material.steps.map((step) => ({ ...step })) as TMeshMaterialDoc['steps'] } : {}),
+        ...(lighting !== undefined ? { lighting: lighting as TMeshMaterialDoc['lighting'] } : {}),
+        ...(steps !== undefined ? { steps: steps as TMeshMaterialDoc['steps'] } : {}),
     };
 };
 

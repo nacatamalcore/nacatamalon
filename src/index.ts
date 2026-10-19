@@ -184,7 +184,7 @@ export {
     composerSmoothstep, composerReflect, composerMod, composerAtan2, composerOneMinus, composerSaturate,
     composerPipe, composerSimplexNoise, composerFbm, composerCellularNoise, composerFresnel, composerCelShade,
     parseShaderGraph, compileShaderGraph, SHADER_GRAPH_FORMAT,
-    toon, unlit, mangaDots, rim, MATERIAL_LOOKS,
+    toon, unlit, mangaDots, rim, MATERIAL_LOOKS, lookKnobs,
 } from './shader_composer';
 export type {
     TComposerNode, TComposerInput, TComposerStep, TInputKind, THelperDef, TShaderGraph, TCompiledShader,

@@ -18,6 +18,7 @@ export { composerSimplexNoise, composerFbm, composerCellularNoise } from './nois
 export { composerFresnel, composerCelShade } from './effects';
 export { toon, unlit, mangaDots, rim, MATERIAL_LOOKS, findMaterialLook } from './surface/looks';
 export type { TMaterialLookInfo } from './surface/looks';
+export { lookKnobs } from './surface/compose_surface';
 export type { TLook, TLightingLook, TStepLook, TToonLook, TUnlitLook, TMangaDotsLook, TRimLook } from './surface/types';
 export { compileShader } from './compile_shader';
 export { compilePreviewShader } from './compile_preview_shader';

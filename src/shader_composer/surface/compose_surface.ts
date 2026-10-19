@@ -69,6 +69,51 @@ const stepWith = (look: TStepLook, s: TSurfaceState, name: TNamer): TSurfaceStat
 };
 
 /**
+ * The name each look's numbers take as knobs (`toonShadow`, `rim2Color`), with where the number
+ * lives in the look: `'lighting'`, or the step's place in the list. Every field of a look but `look`
+ * is a knob, named the way the material names it, so a tool that edits a look while the game runs
+ * knows which of the material's `uniforms` to turn.
+ *
+ * @param lighting The material's lighting look, if any.
+ * @param steps Its steps, in order.
+ * @returns One entry per knob.
+ *
+ * @example
+ * ```ts
+ * lookKnobs(toon(), [rim(), rim()]);
+ * // [{ uniform: 'toonBands', slot: 'lighting', field: 'bands' }, ..., { uniform: 'rim2Color', slot: 1, field: 'color' }, ...]
+ * ```
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const lookKnobs = (
+    lighting: TLook | null | undefined,
+    steps: readonly TLook[] | undefined,
+): { uniform: string; slot: 'lighting' | number; field: string }[] => {
+    const knobs: { uniform: string; slot: 'lighting' | number; field: string }[] = [];
+    const add = (look: TLook, prefix: string, slot: 'lighting' | number): void => {
+        const name = namer(prefix);
+        for (const field of Object.keys(look)) {
+            if (field !== 'look') {
+                knobs.push({ uniform: name(field), slot, field });
+            }
+        }
+    };
+    if (lighting !== null && lighting !== undefined) {
+        add(lighting, lighting.look, 'lighting');
+    }
+    const seen = new Map<string, number>();
+    (steps ?? []).forEach((step, index) => {
+        const count = (seen.get(step.look) ?? 0) + 1;
+        seen.set(step.look, count);
+        add(step, count === 1 ? step.look : `${step.look}${count}`, index);
+    });
+    return knobs;
+};
+
+/**
  * Checks the looks are in the slots they belong in, naming what is wrong.
  *
  * @internal
