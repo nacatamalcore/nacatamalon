@@ -24,8 +24,8 @@ const center = (value: number[]): TEffectField => point('center', value, { descr
  * @author Francisco Pereira Alvarado
  */
 export const BUILTIN_FIELDS: Readonly<Record<string, readonly TEffectField[]>> = {
-    lut: [part('amount', 1, { description: 'From the frame untouched to the table\'s word.' })],
-    adjust: [
+    lutGrade: [part('amount', 1, { description: 'From the frame untouched to the table\'s word.' })],
+    colorAdjust: [
         num('brightness', 1, 0, 2, 0.01),
         num('contrast', 1, 0, 2, 0.01),
         num('saturation', 1, 0, 2, 0.01),
@@ -94,7 +94,7 @@ export const BUILTIN_FIELDS: Readonly<Record<string, readonly TEffectField[]>> =
     rgbSplit: [point('red', [-1, 0]), point('green', [0, 0]), point('blue', [1, 0])],
     grain: [part('amount', 0.08), num('size', 1, 1, 8, 0.5), choice('animated', 1, [{ label: 'Frozen', value: 0 }, { label: 'Moving', value: 1 }])],
     oldFilm: [part('sepia', 0.7), part('grain', 0.12), part('scratches', 0.4), part('flicker', 0.5), part('vignette', 0.4)],
-    palette: [part('dither', 0.03, { description: 'How much to shake before matching: 0 matches exactly.' })],
+    paletteMatch: [part('dither', 0.03, { description: 'How much to shake before matching: 0 matches exactly.' })],
     dither: [num('levels', 8, 2, 32, 1, { description: 'Steps per channel.' }), part('amount', 1)],
     posterize: [num('levels', 4, 2, 32, 1, { description: 'Steps per channel.' })],
     phosphor: [num('persistence', 0.6, 0, 0.99, 0.01)],

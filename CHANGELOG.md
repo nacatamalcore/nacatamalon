@@ -51,6 +51,10 @@ releases are in [changelog/](./changelog/), one file each.
   one. A motion says which names it was written with by its `version`, `2` from now on, since
   `mangaDotsSize` was the fill of a dot and is its spacing now. A look's number under the least it
   takes is lifted to it. Code is not translated: an old option is a type error, as `toon()` is.
+- A built-in in a `project.json` chain is named by the call that makes it: `paletteMatch`,
+  `lutGrade` and `colorAdjust`, where they were `palette`, `lut` and `adjust`. The old names are
+  still read, and said; the effect is called by its new one too, which a motion's `post` names, and
+  a motion naming the old one still finds it.
 - `MATERIAL_LOOKS`, `lookKnobs` and `findMaterialLook` are on `nacatamalon/authoring`, beside
   `POST_BUILTINS`: they are what a tool lists and a game never reads. The looks themselves
   (`toonLighting()`, `mangaDots()`…) stay on the front door.

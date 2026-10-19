@@ -31,7 +31,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @author Francisco Pereira Alvarado
  */
 export const paletteMatch = (options: { dither?: number } = {}): TBuiltinPostEffect<{ dither: number }> => ({
-    name: 'palette',
+    name: 'paletteMatch',
     fragment: /* wgsl */ `${BAYER_WGSL}
 fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {
     let count = paletteSize();

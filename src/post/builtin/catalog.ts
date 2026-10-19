@@ -61,19 +61,21 @@ import type { TPostBuiltinInfo } from './types/t_builtin';
  */
 export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
     {
-        key: 'lut',
+        key: 'lutGrade',
+        formerKeys: ['lut'],
         label: 'Colour grade',
         description: 'Looks every colour up in a grading table: warmer, colder, a green night.',
         binds: 'lut',
-        fields: BUILTIN_FIELDS.lut!,
+        fields: BUILTIN_FIELDS.lutGrade!,
         build: () => lutGrade(),
     },
     {
-        key: 'adjust',
+        key: 'colorAdjust',
+        formerKeys: ['adjust'],
         label: 'Colour adjust',
         description: 'Brightness, contrast, saturation, gamma, hue and a tint, each starting where it changes nothing.',
         binds: null,
-        fields: BUILTIN_FIELDS.adjust!,
+        fields: BUILTIN_FIELDS.colorAdjust!,
         build: () => colorAdjust(),
     },
     {
@@ -211,11 +213,12 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         build: () => oldFilm(),
     },
     {
-        key: 'palette',
+        key: 'paletteMatch',
+        formerKeys: ['palette'],
         label: 'Palette',
         description: 'Replaces every colour with the nearest one a palette actually holds.',
         binds: 'palette',
-        fields: BUILTIN_FIELDS.palette!,
+        fields: BUILTIN_FIELDS.paletteMatch!,
         build: () => paletteMatch(),
     },
     {

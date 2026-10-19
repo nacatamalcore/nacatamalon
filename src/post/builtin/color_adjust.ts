@@ -34,7 +34,7 @@ export const colorAdjust = (options: {
 } = {}): TBuiltinPostEffect<{
     brightness: number; contrast: number; saturation: number; gamma: number; hue: number; tint: number[];
 }> => ({
-    name: 'adjust',
+    name: 'colorAdjust',
     fragment: /* wgsl */ `
 fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {
     var rgb = pow(max(color.rgb, vec3<f32>(0.0)), vec3<f32>(1.0 / max(mu.gamma, 0.0001)));

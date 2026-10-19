@@ -16,7 +16,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @author Francisco Pereira Alvarado
  */
 export const lutGrade = (options: { amount?: number } = {}): TBuiltinPostEffect<{ amount: number }> => ({
-    name: 'lut',
+    name: 'lutGrade',
     fragment: /* wgsl */ `
 fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {
     let graded = lutColor(clamp(color.rgb, vec3<f32>(0.0), vec3<f32>(1.0)));

@@ -40,8 +40,8 @@ describe('every built-in has both halves, and they agree', () => {
 describe('the catalogue', () => {
     it('says which data texture each one wants, which is what an editor offers a picker for', () => {
         expect(POST_BUILTINS.map((info) => [info.key, info.binds])).toEqual([
-            ['lut', 'lut'],
-            ['adjust', null],
+            ['lutGrade', 'lut'],
+            ['colorAdjust', null],
             ['wave', null],
             ['shockwave', null],
             ['distort', null],
@@ -58,7 +58,7 @@ describe('the catalogue', () => {
             ['rgbSplit', null],
             ['grain', null],
             ['oldFilm', null],
-            ['palette', 'palette'],
+            ['paletteMatch', 'palette'],
             ['dither', null],
             ['posterize', null],
             ['phosphor', null],
@@ -81,10 +81,10 @@ describe('the catalogue', () => {
 
         // A table moves colours about and the other three take colours away. Grading afterwards
         // would grade colours the machine was never going to show.
-        expect(keys.indexOf('lut')).toBeLessThan(keys.indexOf('palette'));
+        expect(keys.indexOf('lutGrade')).toBeLessThan(keys.indexOf('paletteMatch'));
         // Whatever adds light or colour goes before the palette takes colours away, and the screen
         // goes after all of it.
-        expect(keys.indexOf('bloom')).toBeLessThan(keys.indexOf('palette'));
+        expect(keys.indexOf('bloom')).toBeLessThan(keys.indexOf('paletteMatch'));
         expect(keys.indexOf('grain')).toBeLessThan(keys.indexOf('dither'));
         expect(keys.at(-1)).toBe('crt');
     });

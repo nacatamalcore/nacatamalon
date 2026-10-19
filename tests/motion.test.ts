@@ -438,4 +438,16 @@ describe('a motion written before knobs were renamed', () => {
         expect(grainy.uniforms.amount).toBe(0.5);
         endMotionPreview(store);
     });
+
+    it('finds an engine effect a project left unnamed by the key it had before', () => {
+        const { store } = createTestGame();
+        const matched = newPostEffect({ name: 'paletteMatch', uniforms: { dither: 0 } }, null, 'project');
+        store.get('post').effects.push(matched);
+        startTestScene(store, 'Level', () => createScene());
+        const doc = motion({ tracks: [{ post: 'palette', path: 'uniforms.dither', keys: [{ t: 0, v: 0 }, { t: 1, v: 1 }] }] });
+
+        expect(previewMotion(store, doc, 0.5).moved).toBe(1);
+        expect(matched.uniforms.dither).toBe(0.5);
+        endMotionPreview(store);
+    });
 });

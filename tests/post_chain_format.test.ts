@@ -12,9 +12,9 @@ import { cleanGameOptions } from '../src/game/bootstrap/clean_gameoptions';
 
 describe('reading a chain out of a file', () => {
     it('keeps the order, because the order is the picture', () => {
-        const chain = normalizePostChain([{ builtin: 'lut' }, { builtin: 'palette' }, { builtin: 'dither' }]);
+        const chain = normalizePostChain([{ builtin: 'lutGrade' }, { builtin: 'paletteMatch' }, { builtin: 'dither' }]);
 
-        expect(chain.map((entry) => entry.builtin)).toEqual(['lut', 'palette', 'dither']);
+        expect(chain.map((entry) => entry.builtin)).toEqual(['lutGrade', 'paletteMatch', 'dither']);
     });
 
     it('drops an entry naming neither a built-in nor a file', () => {
@@ -30,7 +30,7 @@ describe('reading a chain out of a file', () => {
     });
 
     it('lets a palette win over a table, because an effect reads one data texture', () => {
-        const [entry] = normalizePostChain([{ builtin: 'palette', palette: 'p.palette', lut: 'l.cube' }]);
+        const [entry] = normalizePostChain([{ builtin: 'paletteMatch', palette: 'p.palette', lut: 'l.cube' }]);
 
         expect(entry!.palette).toBe('p.palette');
         expect(entry!.lut).toBeUndefined();
@@ -68,7 +68,7 @@ describe('reading a chain out of a file', () => {
 
     it('comes out the same after a trip through a file and back', () => {
         const written = normalizePostChain([
-            { builtin: 'palette', palette: 'palettes/nes.palette', name: 'NES' },
+            { builtin: 'paletteMatch', palette: 'palettes/nes.palette', name: 'NES' },
             { shader: 'shaders/crt.wgsl', uniforms: { curve: 0.3 }, enabled: false },
         ]);
 
@@ -125,5 +125,18 @@ describe('the chain a game is created with', () => {
         // out: every game created with a chain in code drew without it, and said nothing.
         const chain = [{ shader: 'shaders/crt.wgsl', uniforms: { scanline: 0.1 } }];
         expect(cleanGameOptions({ width: 256, height: 240, post: chain }).post).toEqual(chain);
+    });
+});
+
+describe('reading a chain written before a built-in was renamed', () => {
+    it('reads the old key as the new one, the name of the call that makes it, and says so', () => {
+        const said = spyOn(console, 'warn').mockImplementation(() => {});
+        const chain = normalizePostChain([{ builtin: 'lut' }, { builtin: 'adjust' }, { builtin: 'palette', palette: 'p.palette' }, { builtin: 'nothing' }]);
+
+        expect(chain.map((entry) => entry.builtin)).toEqual(['lutGrade', 'colorAdjust', 'paletteMatch', 'nothing']);
+        expect(chain[2]!.palette).toBe('p.palette');
+        expect(said).toHaveBeenCalledTimes(3);
+        expect(String(said.mock.calls[2]![0])).toContain("the built-in 'palette' is called 'paletteMatch' now");
+        said.mockRestore();
     });
 });

@@ -1,5 +1,5 @@
 import type { TPostChain, TPostChainEntry } from './types/t_post_chain';
-import { findPostBuiltin } from './builtin/catalog';
+import { findPostBuiltin, POST_BUILTINS } from './builtin/catalog';
 import type { TUniformValues } from '../materials/types/t_uniforms';
 
 /**
@@ -102,6 +102,23 @@ const asOptions = (builtin: string, value: unknown): Record<string, string | num
 };
 
 /**
+ * The name a built-in has now, for one a project wrote under a name it has since changed (`'palette'`
+ * is `'paletteMatch'`), and said. Any other name comes back as it was: one this version does not
+ * have is skipped where the chain is installed, which says so there.
+ */
+const asCurrentKey = (key: string): string => {
+    if (findPostBuiltin(key) !== null) {
+        return key;
+    }
+    const now = POST_BUILTINS.find((builtin) => builtin.formerKeys?.includes(key));
+    if (now === undefined) {
+        return key;
+    }
+    console.warn(`[NacatamalOn] post: the built-in '${key}' is called '${now.key}' now, so that entry is read as '${now.key}'.`);
+    return now.key;
+};
+
+/**
  * Reads a chain out of a project file, whatever state it is in.
  *
  * **Total, and it never throws.** A chain is written by tools and edited by hand, so one bad entry
@@ -113,7 +130,8 @@ const asOptions = (builtin: string, value: unknown): Record<string, string | num
  * a built-in beats a file, and a palette beats a table. Both of those are cases the editor cannot
  * produce and a hand-edited file can.
  *
- * A built-in's knob saved under a name it has since changed is read under the new one, and said.
+ * A built-in, or one of its knobs, saved under a name it has since changed is read under the new one,
+ * and said.
  *
  * @param value Whatever was under `post` in the file.
  * @returns The chain, in order, with only entries that can run.
@@ -134,7 +152,8 @@ export const normalizePostChain = (value: unknown): TPostChain => {
         }
         const read = raw as Record<string, unknown>;
 
-        const builtin = asPath(read.builtin);
+        const named = asPath(read.builtin);
+        const builtin = named === undefined ? undefined : asCurrentKey(named);
         // A built-in is arithmetic the engine already holds, so it wins: there is nothing to fetch
         // and nothing that can point at a file which is not there.
         const shader = builtin === undefined ? asPath(read.shader) : undefined;

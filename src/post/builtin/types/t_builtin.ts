@@ -92,12 +92,18 @@ export type TEffectField = {
  */
 export type TPostBuiltinInfo = {
     /**
-     * How a project file names it.
+     * How a project file names it: the name of the call that makes it (`'paletteMatch'` for
+     * `paletteMatch()`), so the file and the code say the same word.
      *
-     * **These strings are API.** They are written into `project.json`, so renaming one breaks
-     * every project that used it.
+     * **These strings are API.** They are written into `project.json`, so one is never renamed
+     * without its old name kept in `formerKeys`.
      */
     key: string;
+    /**
+     * What a project file called it before, still read as this one (`'palette'` for
+     * `'paletteMatch'`). Left out when it has always had its name.
+     */
+    formerKeys?: readonly string[];
     label: string;
     description: string;
     binds: 'palette' | 'lut' | null;

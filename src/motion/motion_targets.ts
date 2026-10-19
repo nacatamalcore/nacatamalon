@@ -144,7 +144,10 @@ export const resolveMotionTrack = (roots: readonly TBox[], track: TMotionTrack, 
  * A track of one of the game's screen effects, found by the effect's name.
  */
 const resolvePostTrack = (effects: readonly TPostEffect[], track: TMotionTrack): TMotionTarget | string => {
-    const effect = effects.find((one) => one.name === track.post);
+    // An engine effect a project left unnamed is called after its key, and a motion written before
+    // the key was renamed (`'palette'`, now `'paletteMatch'`) names the old one.
+    const now = POST_BUILTINS.find((builtin) => builtin.formerKeys?.includes(track.post!))?.key;
+    const effect = effects.find((one) => one.name === track.post) ?? effects.find((one) => now !== undefined && one.name === now);
     if (effect === undefined) {
         return `the game has no screen effect called "${track.post}"`;
     }
