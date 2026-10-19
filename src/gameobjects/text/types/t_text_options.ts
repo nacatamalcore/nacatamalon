@@ -29,7 +29,7 @@ export type TTextOptions = {
      * in this scene or any earlier one: one scene loads the game's fonts and the others name them,
      * `font: 'title'`. A key nothing was loaded under throws, naming it. Left out, the engine's own: Nacatamal Arcade, an 8 px arcade font
      * with lowercase, accents and the Spanish ñ, ¿ and ¡, carried inside the engine so nothing has to
-     * be loaded.
+     * be loaded. `'nacatamalon:square'` and `'nacatamalon:thin'` name the other two it carries.
      */
     font?: TBitmapFont | TFont | string;
     /**

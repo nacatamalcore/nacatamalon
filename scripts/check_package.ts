@@ -11,8 +11,8 @@
  * - does the README's physics example compile against the physics engines it installs?
  * - do the doors in `exports` resolve, and does a deep import into the engine's files fail?
  * - how big is that game once bundled, and did anything only a tool uses end up inside it?
- * - do the files for coding assistants ship (`llms.txt`, `llms-full.txt`), with the font's licence
- *   (`licenses/OFL.txt`), and does the game in `llms.txt` compile too?
+ * - do the files for coding assistants ship (`llms.txt`, `llms-full.txt`), and does the game in
+ *   `llms.txt` compile too?
  *
  * Run it with `bun run check:package`. `--offline` skips the older TypeScript, which is fetched.
  */
@@ -101,7 +101,7 @@ const [example, physicsExample] = [...readme.matchAll(/```ts\n([\s\S]*?)```/g)].
 check(example !== undefined, 'the README has a TypeScript example');
 writeFileSync(join(work, 'src', 'game.ts'), example ?? '');
 
-for (const file of ['llms.txt', 'llms-full.txt', 'licenses/OFL.txt']) {
+for (const file of ['llms.txt', 'llms-full.txt']) {
     check(existsSync(join(packageDir, file)), `${file} ships with the package`);
 }
 

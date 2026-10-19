@@ -3,8 +3,9 @@ import { trackDrawableOwner } from '../../box';
 import { getActiveBox, getActiveGame } from '../../store';
 import { createRecord } from '../create_record';
 import { listen } from '../../events/listen';
-import { defaultFontOf } from './default_font';
+import { builtinFontOf, isBuiltinFont } from './default_font';
 import type { TBitmapFont, TFont } from '../../loaders';
+import type { TBox } from '../../box';
 import type { TRuntimeStore } from '../../store';
 import type { TText } from './types/t_text';
 import type { TTextOptions } from './types/t_text_options';
@@ -12,9 +13,13 @@ import type { TTextOptions } from './types/t_text_options';
 /**
  * Finds a font by the key it was loaded under, in this game's cache of either kind. A key that is not
  * there throws, as it does for a sprite: a key is always a deliberate reference, and a text silently
- * falling back to another font would hide the typo.
+ * falling back to another font would hide the typo. The keys of the fonts built into the engine
+ * need nothing loaded: they are always there.
  */
-const fontByKey = (store: TRuntimeStore, key: string): TBitmapFont | TFont => {
+const fontByKey = (store: TRuntimeStore, box: TBox, key: string): TBitmapFont | TFont => {
+    if (isBuiltinFont(key)) {
+        return builtinFontOf(store, box, key);
+    }
     const assets = store.get('assets');
     const found = assets.fonts.get(key) ?? assets.bitmapFonts.get(key);
     if (found === undefined) {
@@ -33,7 +38,9 @@ const fontByKey = (store: TRuntimeStore, key: string): TBitmapFont | TFont => {
  * shows on the next frame. It draws nothing until its font has loaded, and appears on its own then.
  *
  * The font is optional: left out, the text uses the one the engine carries (Nacatamal Arcade, 8 px,
- * with lowercase, accents and ñ), which is there from the start. Pass `font` from `useLoadFont` (a
+ * with lowercase, accents and ñ), which is there from the start. Two more are always there too,
+ * named by key: `font: 'nacatamalon:square'` (the same weight, square corners) and
+ * `font: 'nacatamalon:thin'` (one-pixel strokes, narrower). Pass `font` from `useLoadFont` (a
  * `.ttf` or `.woff`) or `useLoadBitmapFont` for a font of your own, or the key one was loaded under,
  * by this scene or an earlier one: a loading scene can load every font once and the rest of the
  * game name them, `font: 'title'`.
@@ -88,8 +95,8 @@ export const createText = (options: TTextOptions): TText => {
         text: options.text,
         // Given none, the engine's own, so a text shows without a font to load first.
         font: options.font === undefined
-            ? defaultFontOf(store, box)
-            : typeof options.font === 'string' ? fontByKey(store, options.font) : options.font,
+            ? builtinFontOf(store, box)
+            : typeof options.font === 'string' ? fontByKey(store, box, options.font) : options.font,
         // As given, not copied: a shared style is shared on purpose.
         style: options.style ?? {},
         tint: options.tint ?? getColor('white'),

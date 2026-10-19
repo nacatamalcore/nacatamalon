@@ -1,6 +1,6 @@
 {
     "name": "nacatamalon",
-    "version": "0.2.3",
+    "version": "0.2.4",
     "description": "A retro-first 2D and 3D game engine for the web, on WebGPU with a WebGL2 fallback, written with hooks and plain functions.",
     "license": "MIT",
     "author": "Francisco José Pereira Alvarado",
@@ -31,7 +31,6 @@
         "README.md",
         "CHANGELOG.md",
         "LICENSE",
-        "licenses/OFL.txt",
         "llms.txt",
         "llms-full.txt"
     ],
@@ -94,6 +93,7 @@
         "build:strip": "bun scripts/strip_bare_imports.ts",
         "build:types": "tsc -p tsconfig.build.json",
         "build:llms": "bun scripts/build_llms.ts",
+        "build:fonts": "bun scripts/build_fonts.ts",
         "check:package": "bun scripts/check_package.ts",
         "prepublishOnly": "bun run build && bun run check:package"
     },

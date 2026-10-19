@@ -5,7 +5,7 @@ import { createParticles3d } from '../../gameobjects/particles/create_particles_
 import { createScene } from '../create_scene';
 import { createSprite } from '../../gameobjects/sprite/create_sprite';
 import { createText } from '../../gameobjects/text/create_text';
-import { DEFAULT_FONT_KEY } from '../../gameobjects/text/default_font';
+import { isBuiltinFont } from '../../gameobjects/text/default_font';
 import { createTilemap } from '../../gameobjects/tilemap/create_tilemap';
 import { getActiveBox, getActiveGame } from '../../store';
 import { rememberBoxExtra } from './serialize_scene';
@@ -335,8 +335,8 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
             break;
         }
         case 'text': {
-            // The engine's own font is in no manifest: left out, `createText` uses it.
-            const own = component.font === DEFAULT_FONT_KEY;
+            // The engine's own fonts are in no manifest: `createText` finds them by their keys.
+            const own = isBuiltinFont(component.font);
             // Either kind of font, by the one key the text names: a scene keeps one manifest.
             const font = own
                 ? undefined
@@ -347,7 +347,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
             const label = createText({
                 ...(component.transform !== undefined ? { transform: component.transform } : {}),
                 text: component.text,
-                ...(font !== undefined ? { font } : {}),
+                font: own ? component.font : font,
                 style: component.style,
                 tint: component.tint,
                 ...(component.anchor !== undefined ? { anchor: component.anchor } : {}),

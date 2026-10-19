@@ -217,7 +217,9 @@ This project uses the nacatamalon game engine: read node_modules/nacatamalon/llm
   `lerp`, vectors).
 
 `createText({ text: 'SCORE 0' })` works as is, with the font the engine carries
-(Nacatamal Arcade, an 8 px arcade font with lowercase, accents and ñ). Load a
+(Nacatamal Arcade, an 8 px arcade font with lowercase, accents and ñ). Two more
+come with it, named by key: `font: 'nacatamalon:square'` (square corners) and
+`font: 'nacatamalon:thin'` (one-pixel strokes). Load a
 `.ttf` or `.woff` with `useLoadFont`, sharp at any size, or a bitmap font with
 `useLoadBitmapFont`, and hand it to `createText` as `font`.
 
@@ -245,7 +247,6 @@ installPhysics2d();
 
 ## License
 
-MIT © 2026 Francisco José Pereira Alvarado. See [LICENSE](./LICENSE).
-
-The built-in font, Nacatamal Arcade, is derived from Press Start 2P and is
-licensed under the SIL Open Font License 1.1: see [licenses/OFL.txt](./licenses/OFL.txt).
+MIT © 2026 Francisco José Pereira Alvarado. See [LICENSE](./LICENSE). The
+built-in fonts are part of the engine and under the same licence: a game that
+uses them owes no credit of its own.

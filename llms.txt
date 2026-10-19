@@ -96,7 +96,9 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
 - **Keys** are `KeyboardEvent.key` names: letters lowercase (`'a'`), named keys as they are
   (`'ArrowLeft'`, `'Enter'`, `'Escape'`). The space bar is `'Space'`; `' '` also works.
 - **Text** needs no font: `createText({ text })` uses the built-in 8 px font, which has lowercase,
-  accents, ñ, ¿ and ¡, and for prompts `← → ↑ ↓ ▲ ▼ ◀ ▶ Ⓐ Ⓑ Ⓧ Ⓨ ★ ♥ ● ■` (`'PRESS ▶'`). `style.fontSize` is the line height in pixels; multiples of 8 stay crisp. A
+  accents, ñ, ¿ and ¡, and for prompts `← → ↑ ↓ ▲ ▼ ◀ ▶ Ⓐ Ⓑ Ⓧ Ⓨ ★ ♥ ● ■` (`'PRESS ▶'`); two more
+  built in, with the same characters, are named by key, nothing loaded: `font: 'nacatamalon:square'`,
+  `font: 'nacatamalon:thin'` (also in `drawText`). `style.fontSize` is the line height in pixels; multiples of 8 stay crisp. A
   font of your own, passed as `font`: `useLoadFont({ src: '/fonts/x.ttf' })` for a `.ttf`/`.woff`
   (sharp at any size; `fontSize` is the em size as in CSS; no `.otf` with cubic outlines or `.woff2`),
   or `useLoadBitmapFont({ json, atlas })` for a bitmap font (an image plus a JSON of glyph positions).

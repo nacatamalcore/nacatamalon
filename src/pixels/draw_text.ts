@@ -1,7 +1,7 @@
 import { getActiveGame } from '../store';
 import { layoutText } from '../gameobjects/text/layout_text';
 import { DEFAULT_FONT_SIZE } from '../gameobjects/text/layout_font_text';
-import { defaultFontInMemory } from '../gameobjects/text/default_font';
+import { builtinFontInMemory, isBuiltinFont } from '../gameobjects/text/default_font';
 import { bitmapFontGlyphs } from '../loaders/bitmap_font/bitmap_font_glyphs';
 import { bitmapFontPixels } from '../loaders/bitmap_font/bitmap_font_pixels';
 import { parsedFontOf } from '../loaders/font/font_glyphs';
@@ -62,10 +62,13 @@ const warnOnce = (font: TBitmapFont | TFont, message: string): void => {
 
 const fontOf = (font: TDrawTextOptions['font']): TBitmapFont | TFont => {
     if (font === undefined) {
-        return defaultFontInMemory();
+        return builtinFontInMemory();
     }
     if (typeof font !== 'string') {
         return font;
+    }
+    if (isBuiltinFont(font)) {
+        return builtinFontInMemory(font);
     }
     const store = getActiveGame();
     if (store === null) {
