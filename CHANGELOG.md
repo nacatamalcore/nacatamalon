@@ -46,9 +46,11 @@ releases are in [changelog/](./changelog/), one file each.
   | `mangaDots()` | `size` (`mangaDotsSize`) | `fill` (`mangaDotsFill`) |
   | `iris` | `centre` | `center` |
 
-  A `project.json` chain or a scene document written with an old name is read with the new one,
-  and the console says so once; saved again, it is written with the new one. Code is not: an old
-  option is a type error, as `toon()` is.
+  A `project.json` chain, a scene document or a motion written with an old name is read with the
+  new one, and the console says so each time it is read; saved again, it is written with the new
+  one. A motion says which names it was written with by its `version`, `2` from now on, since
+  `mangaDotsSize` was the fill of a dot and is its spacing now. A look's number under the least it
+  takes is lifted to it. Code is not translated: an old option is a type error, as `toon()` is.
 - `MATERIAL_LOOKS`, `lookKnobs` and `findMaterialLook` are on `nacatamalon/authoring`, beside
   `POST_BUILTINS`: they are what a tool lists and a game never reads. The looks themselves
   (`toonLighting()`, `mangaDots()`…) stay on the front door.

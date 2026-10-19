@@ -1,6 +1,8 @@
 import { asRecord } from '../utils';
 import { isMotionEase } from './motion_eases';
 import { MOTION_FORMAT, MOTION_VERSION } from './types/t_motion_doc';
+import { findPostBuiltin } from '../post/builtin/catalog';
+import { MATERIAL_LOOKS } from '../shader_composer/surface/looks';
 import type { TMotionDoc, TMotionEvent, TMotionKey, TMotionTrack, TMotionTransition } from './types/t_motion_doc';
 
 const TRANSITIONS = new Set(['fade', 'wipe', 'iris', 'pixelate']);
@@ -59,6 +61,34 @@ const readTrack = (raw: unknown, src: string, index: number): TMotionTrack => {
         path: track.path as string,
         keys,
     };
+};
+
+/**
+ * The path a track of a file written before the knobs were renamed (version `1`) has now: a screen
+ * effect's knob by the effect's own `renamed` (a track names the effect, which is called after its
+ * key unless a project named it otherwise), and a look's knob on a model's material by the look's
+ * (`rimStrength`, `rim2Strength`, `mangaDotsSpacing`). `null` when nothing in it was renamed.
+ */
+const renamedPath = (track: TMotionTrack): string | null => {
+    const parts = track.path.split('.');
+    if (parts.length !== 2 || parts[0] !== 'uniforms') {
+        return null;
+    }
+    const knob = parts[1]!;
+    if (track.post !== undefined) {
+        const now = findPostBuiltin(track.post)?.renamed?.[knob];
+        return now === undefined ? null : `uniforms.${now}`;
+    }
+    const cap = (word: string): string => word[0]!.toUpperCase() + word.slice(1);
+    for (const info of MATERIAL_LOOKS) {
+        for (const [old, now] of Object.entries(info.renamed ?? {})) {
+            const found = new RegExp(`^${info.key}(\\d*)${cap(old)}$`).exec(knob);
+            if (found !== null) {
+                return `uniforms.${info.key}${found[1]}${cap(now)}`;
+            }
+        }
+    }
+    return null;
 };
 
 const readTransition = (raw: unknown, src: string, where: string): TMotionTransition | undefined => {
@@ -150,12 +180,31 @@ export const parseMotionDoc = (raw: unknown, src = 'motion'): TMotionDoc => {
     if (file.events !== undefined && !Array.isArray(file.events)) {
         fail(src, '"events" has to be a list.');
     }
+    let tracks = ((file.tracks ?? []) as unknown[]).map((track, i) => readTrack(track, src, i));
+    // Written before the knobs were renamed: read with the names they have now, and said once.
+    const moved: string[] = [];
+    if (version < 2) {
+        tracks = tracks.map((track) => {
+            const path = renamedPath(track);
+            if (path === null) {
+                return track;
+            }
+            moved.push(`'${track.path}' as '${path}'`);
+            return { ...track, path };
+        });
+    }
+    if (moved.length > 0) {
+        console.warn(
+            `[NacatamalOn] motion "${src}" was written before some knobs were renamed, so it reads ${moved.join(', ')}. ` +
+            'Saving it writes the new names.',
+        );
+    }
     return {
         format: MOTION_FORMAT,
-        version,
+        version: moved.length > 0 ? MOTION_VERSION : version,
         duration: file.duration as number,
         ...(file.loop === true ? { loop: true } : {}),
-        tracks: ((file.tracks ?? []) as unknown[]).map((track, i) => readTrack(track, src, i)),
+        tracks,
         events: ((file.events ?? []) as unknown[]).map((event, i) => readEvent(event, src, i)).sort((a, b) => a.t - b.t),
     };
 };

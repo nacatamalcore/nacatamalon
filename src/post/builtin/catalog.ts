@@ -40,8 +40,9 @@ import type { TPostBuiltinInfo } from './types/t_builtin';
  * untouched to `1`; `intensity` a brightness that may pass `1`, as a light's; `size` the side of a
  * cell, a block or a dot, in game pixels; `scale` a multiplier with no unit; `radius` a reach in
  * game pixels; `center` a point from `[0, 0]`, the top left, to `[1, 1]`. A name never changes its
- * kind from one effect to the next. A knob renamed to keep to that is in its effect's `renamed`, so
- * a chain written before still reads.
+ * kind from one effect to the next; one that says more is its own word (`crt`'s `cornerRadius` is a
+ * part of the screen, `maskScale` a multiplier of the screen's real pixels). A knob renamed to keep
+ * to that is in its effect's `renamed`, so a chain written before still reads.
  *
  * **Some already hold another's work**, so stacking the two does it twice: `crt` has its own glow
  * (`halation`), noise, `vignette`, `flicker` and colour split (`convergence`); `oldFilm` its own
@@ -50,8 +51,9 @@ import type { TPostBuiltinInfo } from './types/t_builtin';
  * composite ones are meant to be used alone, as the whole machine.
  *
  * **The ones laid on a grid of game pixels** (mosaic, halftone, ascii, dither's four by four,
- * grain, lcd, crt's mask, and the material step `mangaDots`) look cleanest with sizes that are
- * multiples of one another: two grids that do not divide each other beat into a moiré.
+ * grain, lcd, and the material step `mangaDots`) look cleanest with sizes that are multiples of one
+ * another: two grids that do not divide each other beat into a moiré. `crt`'s mask is laid on the
+ * screen's real pixels instead, so it beats with none of them.
  *
  * @category Post-processing
  * @since 1.0.0

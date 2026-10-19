@@ -1,4 +1,5 @@
 import { findObject } from '../box/find_object';
+import { POST_BUILTINS } from '../post/builtin/catalog';
 import type { TBox } from '../box';
 import type { TMotionTrack } from './types/t_motion_doc';
 import type { TPostEffect } from '../post/types/t_post_effect';
@@ -148,7 +149,16 @@ const resolvePostTrack = (effects: readonly TPostEffect[], track: TMotionTrack):
         return `the game has no screen effect called "${track.post}"`;
     }
     const parts = track.path.split('.');
-    const field = parts.pop()!;
+    let field = parts.pop()!;
+    // A knob an engine effect has renamed, on an effect a project named itself, so the file could not
+    // tell which effect it is when it was read: the effect lacking the old name and having the new
+    // one is enough to know.
+    if (parts.length === 1 && parts[0] === 'uniforms' && !(field in effect.uniforms)) {
+        const now = POST_BUILTINS.map((builtin) => builtin.renamed?.[field]).find((name) => name !== undefined && name in effect.uniforms);
+        if (now !== undefined) {
+            field = now;
+        }
+    }
     let holder = effect as unknown as Record<string, unknown>;
     for (const part of parts) {
         const next = holder[part];

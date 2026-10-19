@@ -168,6 +168,14 @@ const parseLook = (value: unknown, slot: 'lighting' | 'step'): TLook | undefined
     for (const [name, fallback] of Object.entries(look)) {
         const given = fields[name];
         if (typeof fallback === 'number' && typeof given === 'number' && Number.isFinite(given)) {
+            // Never under the least the look takes (dots 0.4 pixels apart are no dots): a number from
+            // a file written by hand, or with a field's old meaning, is lifted to it, and said.
+            const least = info.fields.find((field) => field.key === name)?.min;
+            if (least !== undefined && given < least) {
+                console.warn(`[NacatamalOn] scene: '${info.key}' takes '${name}' from ${least}, and the document gives ${given}, so it is ${least}.`);
+                look[name] = least;
+                continue;
+            }
             look[name] = given;
         } else if (Array.isArray(fallback) && Array.isArray(given) && given.length === fallback.length && given.every((n) => typeof n === 'number')) {
             look[name] = [...given];
@@ -183,7 +191,8 @@ const parseLook = (value: unknown, slot: 'lighting' | 'step'): TLook | undefined
  * look now (`mangaDots`'s `spacing`, `rim`'s `strength`): a name that is both, like `mangaDots`'s
  * `size` (the old spacing, the new spacing too), says nothing alone, so a document of today is never
  * shuffled. An old one has its renames applied all at once, as a swap (`{ spacing: 6, size: 0.4 }`
- * is `{ size: 6, fill: 0.4 }`), with one warning for the look.
+ * is `{ size: 6, fill: 0.4 }`), with one warning for the look. A value it also has under a new name
+ * that is no old one (`amount`, `fill`) wins, as it does in a post chain: somebody wrote it later.
  */
 const renamedFields = (
     raw: Record<string, unknown>,
@@ -202,10 +211,15 @@ const renamedFields = (
     }
     const moved: string[] = [];
     for (const [old, now] of Object.entries(renamed)) {
-        if (old in raw) {
-            fields[now] = raw[old];
-            moved.push(`'${old}' '${now}'`);
+        if (!(old in raw)) {
+            continue;
         }
+        if (now in raw && !(now in renamed)) {
+            fields[now] = raw[now];
+        } else {
+            fields[now] = raw[old];
+        }
+        moved.push(`'${old}' '${now}'`);
     }
     console.warn(
         `[NacatamalOn] scene: '${info.key}' calls ${moved.join(', ')} now, so this older look is read with the new names. ` +

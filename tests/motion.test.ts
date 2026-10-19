@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, spyOn } from 'bun:test';
 import { parseSceneDoc, sceneFromDoc, serializeScene } from '../src/scene/document';
 import { runHookUpdates } from '../src/game/loop/runHookUpdates';
-import { parseMotionDoc, MOTION_FORMAT } from '../src/motion';
+import { parseMotionDoc, MOTION_FORMAT, MOTION_VERSION } from '../src/motion';
 import { sampleTrack, newTrackCursor } from '../src/motion/sample_track';
 import { previewMotion, endMotionPreview } from '../src/motion/preview_motion';
 import { setAttachmentHandle } from '../src/audio/attachment_players';
@@ -39,7 +39,7 @@ const quiet = () => {
 };
 
 const motion = (rest: Record<string, unknown>): TMotionDoc =>
-    parseMotionDoc({ format: MOTION_FORMAT, version: 1, duration: 1, tracks: [], events: [], ...rest }, 'test.motion');
+    parseMotionDoc({ format: MOTION_FORMAT, version: MOTION_VERSION, duration: 1, tracks: [], events: [], ...rest }, 'test.motion');
 
 /**
  * A field with a crate and a camera, the crate at x 0.
@@ -394,5 +394,48 @@ describe('a motion shown at a moment by an editor', () => {
         expect(vignette.uniforms.strength).toBe(0.2);
         // Written down and read again, a screen effect's track keeps naming it.
         expect(parseMotionDoc(JSON.parse(serializeMotionDoc(doc)), 'again.motion').tracks[0]).toMatchObject({ box: '', post: 'vignette', path: 'uniforms.strength' });
+    });
+});
+
+describe('a motion written before knobs were renamed', () => {
+    const track = (rest: Record<string, unknown>) => ({ keys: [{ t: 0, v: 0 }], ...rest });
+
+    it('reads a file of version 1 with the names the knobs have now, and says so once', () => {
+        const said = quiet();
+        const doc = motion({
+            version: 1,
+            tracks: [
+                track({ post: 'dither', path: 'uniforms.strength' }),
+                track({ box: 'level', component: 'robot', path: 'uniforms.rim2Strength' }),
+                track({ box: 'level', component: 'robot', path: 'uniforms.mangaDotsSize' }),
+                track({ box: 'level', component: 'robot', path: 'uniforms.mangaDotsSpacing' }),
+                track({ box: 'level', path: 'x' }),
+            ],
+        });
+        expect(doc.tracks.map((one) => one.path)).toEqual([
+            'uniforms.amount', 'uniforms.rim2Amount', 'uniforms.mangaDotsFill', 'uniforms.mangaDotsSize', 'x',
+        ]);
+        expect(doc.version).toBe(2);
+        expect(said).toHaveBeenCalledTimes(1);
+        expect(String(said.mock.calls[0]![0])).toContain("'uniforms.strength' as 'uniforms.amount'");
+    });
+
+    it('leaves a file of version 2 as it is: its mangaDotsSize is the spacing', () => {
+        const said = quiet();
+        const doc = motion({ version: 2, tracks: [track({ box: 'level', component: 'robot', path: 'uniforms.mangaDotsSize' })] });
+        expect(doc.tracks[0]!.path).toBe('uniforms.mangaDotsSize');
+        expect(said).not.toHaveBeenCalled();
+    });
+
+    it('finds an engine effect\'s renamed knob on an effect a project named itself', () => {
+        const { store } = createTestGame();
+        const grainy = newPostEffect({ name: 'grainy', uniforms: { levels: 8, amount: 1 } }, null, 'project');
+        store.get('post').effects.push(grainy);
+        startTestScene(store, 'Level', () => createScene());
+        const doc = motion({ version: 2, tracks: [{ post: 'grainy', path: 'uniforms.strength', keys: [{ t: 0, v: 0 }, { t: 1, v: 1 }] }] });
+
+        expect(previewMotion(store, doc, 0.5).moved).toBe(1);
+        expect(grainy.uniforms.amount).toBe(0.5);
+        endMotionPreview(store);
     });
 });

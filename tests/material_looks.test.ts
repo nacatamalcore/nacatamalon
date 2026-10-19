@@ -318,4 +318,20 @@ describe('a look saved before its fields were renamed', () => {
         expect(warn).toHaveBeenCalledTimes(1);
         warn.mockRestore();
     });
+
+    it('keeps a value written under a new name over the old one, as a post chain does', () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        expect(stepsRead([{ look: 'rim', strength: 0.2, amount: 0.9 }])).toEqual([rim({ amount: 0.9 })]);
+        expect(stepsRead([{ look: 'mangaDots', spacing: 6, size: 0.4, fill: 0.9 }])).toEqual([mangaDots({ size: 6, fill: 0.9 })]);
+        warn.mockRestore();
+    });
+
+    it('lifts a number under the least the look takes to it, and says so', () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        // A hand-written old look with its fill alone under the old name: dots 0.4 pixels apart.
+        expect(stepsRead([{ look: 'mangaDots', size: 0.4 }])).toEqual([mangaDots({ size: 2 })]);
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(String(warn.mock.calls[0]![0])).toContain("'mangaDots' takes 'size' from 2");
+        warn.mockRestore();
+    });
 });
