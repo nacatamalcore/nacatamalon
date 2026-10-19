@@ -1,7 +1,7 @@
 import type { TComposerNode } from '../types/t_composer_node';
 
 /**
- * Light cut into flat bands, the cartoon look, as `toon()` writes it down.
+ * Light cut into flat bands, the cartoon look, as `toonLighting()` writes it down.
  *
  * @category Shader composer
  * @since 1.0.0
@@ -24,7 +24,7 @@ export type TToonLook = {
 };
 
 /**
- * No light at all: the surface as it is painted, as `unlit()` writes it down.
+ * No light at all: the surface as it is painted, as `unlitLighting()` writes it down.
  *
  * @category Shader composer
  * @since 1.0.0

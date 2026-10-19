@@ -4,7 +4,7 @@ import { createModel } from '../src/gameobjects/model';
 import { destroy, flushDestroyed } from '../src/destroy';
 import { fillFrameContext } from '../src/game/loop/fill_frame_context';
 import { getColor } from '../src/color';
-import { mangaDots, toon } from '../src/shader_composer/surface/looks';
+import { mangaDots, toonLighting } from '../src/shader_composer/surface/looks';
 import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { whenLoaded } from '../src/loaders';
@@ -184,14 +184,14 @@ describe('createModel', () => {
         let source: TGltfModel | null = null;
         startTestScene(store, 'Level', () => {
             source = useLoadGltf({ src: 'model.gltf' });
-            placed = createModel({ model: source, lighting: toon(), steps: [mangaDots()] });
+            placed = createModel({ model: source, lighting: toonLighting(), steps: [mangaDots()] });
             return createScene();
         });
         await whenLoaded(source as unknown as TGltfModel);
 
         for (const part of placed!.parts) {
             expect(part.material.fragment).toContain('ctx.screen');
-            expect(part.material.lighting).toEqual(toon());
+            expect(part.material.lighting).toEqual(toonLighting());
             expect(part.material.uniforms).toMatchObject({ toonShadow: 0.45 });
         }
         // Still the file's own colours underneath.

@@ -192,6 +192,20 @@ line to your project's instructions file (`AGENTS.md`, `CLAUDE.md`, `.cursorrule
 This project uses the nacatamalon game engine: read node_modules/nacatamalon/llms.txt before writing game code.
 ```
 
+To check what a game does, an assistant (or a test of yours) can run it with no browser, from Node
+or Bun, a frame at a time and the same way every time:
+
+```js
+import { createHeadlessGame } from 'nacatamalon/headless';
+import { Level } from './src/scenes/level';
+
+const game = createHeadlessGame({ width: 320, height: 180, scenes: { Level } });
+await game.loaded();
+game.press('ArrowRight');
+game.run(60);
+console.log(game.drawn().map((p) => p.text ?? p.name));
+```
+
 ## How the API reads
 
 - What `create*` gives back is **data**: change its fields

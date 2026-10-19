@@ -6,6 +6,7 @@ import { placementOf } from '../../box';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
 import type { TGameSignal } from '../../signal';
 import { loadRapier2D } from './load_rapier';
+import { trackPendingWork } from '../../loaders/pending_work';
 import type { TRapierModule } from './load_rapier';
 import type { ColliderDesc, EventQueue, RigidBodyDesc, World } from '@dimforge/rapier2d-compat';
 import type { TBodyOptions, TPhysicsBodyHandle2d, TPhysicsWorldHandle2d, TPhysicsWorldOptions2d } from './types';
@@ -148,6 +149,9 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         // transform and the scene looks merely "wrong" rather than broken.
         console.error('[NacatamalOn] Rapier2D failed to initialize, so physics is inert.', error);
     });
+    // Remembered with the scene, for a host that moves the game itself and must not run a frame
+    // before the world is there (see `pendingWorkOf`).
+    trackPendingWork(readyPromise);
 
     const flushImpulses = (entry: TBodyEntry) => {
         if (!rapier || !world) return;

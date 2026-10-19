@@ -24,10 +24,10 @@ const OLD_TYPESCRIPT = '5.4';
 
 /**
  * Strings that only a tool's code contains. Names are minified away, so the check looks for text
- * that survives: two warnings from `nacatamalon/authoring`. (Not the shader node catalogue: a game
+ * that survives: two warnings from `nacatamalon/authoring` and one from `nacatamalon/headless`. (Not the shader node catalogue: a game
  * can load a `.shader` file at any time, and compiling one needs it.)
  */
-const TOOL_ONLY = ['serializeScene: the shape', 'atlasDocFrames: a grid needs'];
+const TOOL_ONLY = ['serializeScene: the shape', 'atlasDocFrames: a grid needs', 'headless game: '];
 
 const root = join(import.meta.dir, '..');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));

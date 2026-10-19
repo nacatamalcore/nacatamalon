@@ -57,6 +57,11 @@ const resolveEffect = (options: TMaterialOptions): TShader | null => {
 };
 
 /**
+ * Every option either kind of material takes, so one neither takes is refused where it is written.
+ */
+type TMaterialKeys = TMaterialOptions extends infer U ? (U extends unknown ? keyof U : never) : never;
+
+/**
  * The two ways to call `createMaterial`: which kind of material comes back follows from `shader`,
  * so a model's material can only be handed to a model and a sprite's only to a sprite.
  *
@@ -67,12 +72,11 @@ const resolveEffect = (options: TMaterialOptions): TShader | null => {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TCreateMaterial = {
-    (options: TMeshMaterialOptions & { uniforms: TUniformValues }): TMeshMaterial & { uniforms: TUniformValues };
-    (options: TMeshMaterialOptions): TMeshMaterial;
-    (options: TSpriteMaterialOptions & { uniforms: TUniformValues }): TSpriteMaterial & { uniforms: TUniformValues };
-    (options?: TSpriteMaterialOptions): TSpriteMaterial;
-};
+export type TCreateMaterial = <const O extends TMaterialOptions = TSpriteMaterialOptions>(
+    options?: O & { [K in Exclude<keyof O, TMaterialKeys>]: { [P in `'${K & string}' is not an option of createMaterial`]: never } },
+) =>
+    (O extends { shader: 'mesh3d' } ? TMeshMaterial : TSpriteMaterial) &
+    (O extends { uniforms: TUniformValues } ? { uniforms: TUniformValues } : unknown);
 
 /**
  * Makes a material: a shader of your own, and for models the surface it is drawn over.

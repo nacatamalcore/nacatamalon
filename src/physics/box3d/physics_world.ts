@@ -8,6 +8,7 @@ import { fromB3, loadBox3D, toB3 } from './load_box3d';
 import type { TB3Quat } from './load_box3d';
 import { createCharacter, MOVER_CATEGORY } from './character_body';
 import { physicsStepOf } from '../step_length';
+import { trackPendingWork } from '../../loaders/pending_work';
 import type { TBox3dModule } from './load_box3d';
 import { worldPoseOf, writeWorldPose } from './world_pose';
 import { DEFAULT_RAY_DISTANCE } from './types';
@@ -396,8 +397,10 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
         }
     };
 
-    // Kick off the async WASM load; create the world (and any queued bodies) when ready.
-    loadBox3D().then((mod) => {
+    // Kick off the async WASM load; create the world (and any queued bodies) when ready. Remembered
+    // with the scene, for a host that moves the game itself and must not run a frame before the
+    // world is there (see `pendingWorkOf`).
+    trackPendingWork(loadBox3D().then((mod) => {
         if (disposed) return;
         b3 = mod;
         const wd = mod.b3DefaultWorldDef();
@@ -413,7 +416,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
         // transform and the scene reads as merely "wrong" rather than broken. Same guard the
         // 2D adapter already has.
         console.error('[NacatamalOn] Box3D failed to initialize, so physics is inert.', error);
-    });
+    }));
 
     // 1/60, or exactly the game's own step when it has one: see `physicsStepOf`.
     const stepLength = physicsStepOf();

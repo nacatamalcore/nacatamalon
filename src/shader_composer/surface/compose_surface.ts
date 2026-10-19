@@ -15,7 +15,18 @@ const LIGHTING_KEYS: readonly string[] = ['toon', 'unlit'];
 const STEP_KEYS: readonly string[] = ['mangaDots', 'rim'];
 
 const brightness = (v: TComposerNode): TComposerNode => composerDot(v, composerVec3(0.299, 0.587, 0.114));
-const grey = (v: TComposerNode): TComposerNode => composerMul(composerVec3(1, 1, 1), v);
+
+/**
+ * The colour of a light with its strength taken out: its strongest channel at 1, so white stays
+ * white and a blue light a blue, never brighter than it was. White where there is no light to tell
+ * a colour from, so a band in the dark is a grey and not a black.
+ */
+const HUE_FLOOR = 0.001;
+const hueOf = (v: TComposerNode): TComposerNode => {
+    const lifted = composerAdd(v, composerVec3(HUE_FLOOR, HUE_FLOOR, HUE_FLOOR));
+    const strongest = composerMax(composerMax(composerSwizzle(lifted, 'x'), composerSwizzle(lifted, 'y')), composerSwizzle(lifted, 'z'));
+    return composerDiv(lifted, strongest);
+};
 
 /**
  * The colour as the engine works it out, exactly its own ending: the surface times the light, plus
@@ -41,7 +52,9 @@ const lightWith = (look: TLightingLook, s: TSurfaceState, name: TNamer): TSurfac
             const band = composerClamp(composerDiv(composerFloor(composerMul(amount, bands)), composerMax(composerSub(bands, 1), 1)), 0, 1);
             const level = composerMix(composerUniform(name('shadow'), look.shadow), 1, band);
             const spot = composerMul(composerStep(composerUniform(name('spot'), look.spot), brightness(s.shine)), 0.6);
-            return { ...s, light: grey(level), shine: grey(spot), shade: composerOneMinus(band) };
+            // Only the brightness is cut into bands: each keeps the colour of the light that made it,
+            // so a warm lamp gives warm bands and a white one the greys it always gave.
+            return { ...s, light: composerMul(hueOf(s.light), level), shine: composerMul(hueOf(s.shine), spot), shade: composerOneMinus(band) };
         }
         case 'unlit':
             return { ...s, light: composerVec3(1, 1, 1), shine: composerVec3(0, 0, 0), shade: null };
@@ -80,7 +93,7 @@ const stepWith = (look: TStepLook, s: TSurfaceState, name: TNamer): TSurfaceStat
  *
  * @example
  * ```ts
- * lookKnobs(toon(), [rim(), rim()]);
+ * lookKnobs(toonLighting(), [rim(), rim()]);
  * // [{ uniform: 'toonBands', slot: 'lighting', field: 'bands' }, ..., { uniform: 'rim2Color', slot: 1, field: 'color' }, ...]
  * ```
  *
@@ -114,6 +127,12 @@ export const lookKnobs = (
 };
 
 /**
+ * The call that makes a look, by its key, as an error names it: the one a person writes.
+ */
+const MAKERS: Record<string, string> = { toon: 'toonLighting()', unlit: 'unlitLighting()', mangaDots: 'mangaDots()', rim: 'rim()' };
+const maker = (key: string): string => MAKERS[key] ?? `'${key}'`;
+
+/**
  * Checks the looks are in the slots they belong in, naming what is wrong.
  *
  * @internal
@@ -123,15 +142,15 @@ export const lookKnobs = (
 export const checkLooks = (lighting: TLook | null | undefined, steps: readonly TLook[] | undefined): void => {
     if (lighting !== null && lighting !== undefined && !LIGHTING_KEYS.includes(lighting.look)) {
         throw new Error(
-            `[NacatamalOn] '${lighting.look}' is not a lighting look (${LIGHTING_KEYS.join(', ')}): ` +
-            (STEP_KEYS.includes(lighting.look) ? 'it goes in steps.' : 'the engine has no look by that name.'),
+            `[NacatamalOn] '${lighting.look}' is not a lighting look (${LIGHTING_KEYS.map(maker).join(', ')}): ` +
+            (STEP_KEYS.includes(lighting.look) ? `${maker(lighting.look)} goes in steps.` : 'the engine has no look by that name.'),
         );
     }
     for (const step of steps ?? []) {
         if (!STEP_KEYS.includes(step.look)) {
             throw new Error(
-                `[NacatamalOn] '${step.look}' is not a step (${STEP_KEYS.join(', ')}): ` +
-                (LIGHTING_KEYS.includes(step.look) ? 'it is a lighting look, and goes in lighting, alone.' : 'the engine has no look by that name.'),
+                `[NacatamalOn] '${step.look}' is not a step (${STEP_KEYS.map(maker).join(', ')}): ` +
+                (LIGHTING_KEYS.includes(step.look) ? `it is a lighting look, ${maker(step.look)}, and goes in lighting, alone.` : 'the engine has no look by that name.'),
             );
         }
     }

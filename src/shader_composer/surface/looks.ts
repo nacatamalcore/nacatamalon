@@ -13,6 +13,10 @@ type TLookColor = TColorInput | TColor | [number, number, number];
  * The light cut into flat bands, the cartoon look: the surface is lit or it is not, with nothing
  * smeared between, and the shine is one hard spot. For a material's `lighting`.
  *
+ * It cuts the light every light of the scene gives (the sun, the lamps, the shadows they cast), and
+ * only its brightness: each band keeps the colour of the light that made it, so a warm lamp gives
+ * warm bands and a white light greys.
+ *
  * It also says which part it put in shadow, so a step after it (`mangaDots`) inks exactly there.
  *
  * @param options `bands` how many steps of light (default `2`); `shadow` how bright the darkest one
@@ -21,19 +25,30 @@ type TLookColor = TColorInput | TColor | [number, number, number];
  *
  * @example
  * ```ts
- * createMaterial({ shader: 'mesh3d', tint, lighting: toon({ bands: 3 }) });
+ * createMaterial({ shader: 'mesh3d', tint, lighting: toonLighting({ bands: 3 }) });
  * ```
  *
  * @category Shader composer
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const toon = (options: { bands?: number; shadow?: number; spot?: number } = {}): TToonLook => ({
+export const toonLighting = (options: { bands?: number; shadow?: number; spot?: number } = {}): TToonLook => ({
     look: 'toon',
     bands: options.bands ?? 2,
     shadow: options.shadow ?? 0.45,
     spot: options.spot ?? 0.75,
 });
+
+/**
+ * The name `toonLighting` had in 0.2.4, before the lighting looks said in their names which slot
+ * they go in. The same look.
+ *
+ * @deprecated Use `toonLighting`.
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const toon = toonLighting;
 
 /**
  * No light at all: the surface exactly as it is painted (its picture, its tint and what it gives off
@@ -42,17 +57,33 @@ export const toon = (options: { bands?: number; shadow?: number; spot?: number }
  *
  * @returns The look, for `createMaterial({ lighting })` or `createModel({ lighting })`.
  *
+ * @example
+ * ```ts
+ * createMaterial({ shader: 'mesh3d', tint, lighting: unlitLighting() });
+ * ```
+ *
  * @category Shader composer
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const unlit = (): TUnlitLook => ({ look: 'unlit' });
+export const unlitLighting = (): TUnlitLook => ({ look: 'unlit' });
+
+/**
+ * The name `unlitLighting` had in 0.2.4, before the lighting looks said in their names which slot
+ * they go in. The same look.
+ *
+ * @deprecated Use `unlitLighting`.
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const unlit = unlitLighting;
 
 /**
  * Dots of ink in the shadow, the way printed comics shaded: the darker, the bigger. They are laid out
  * on the screen and not on the model, so they stay put as it turns. For a material's `steps`.
  *
- * After `toon` the dots go exactly where its bands went dark; with the engine's light they grow
+ * After `toonLighting` the dots go exactly where its bands went dark; with the engine's light they grow
  * smoothly into the dark.
  *
  * @param options `spacing` how far apart, in game pixels (default `5`); `size` how big a dot grows in
@@ -62,7 +93,7 @@ export const unlit = (): TUnlitLook => ({ look: 'unlit' });
  *
  * @example
  * ```ts
- * createMaterial({ shader: 'mesh3d', tint, lighting: toon(), steps: [mangaDots({ spacing: 4 })] });
+ * createMaterial({ shader: 'mesh3d', tint, lighting: toonLighting(), steps: [mangaDots({ spacing: 4 })] });
  * ```
  *
  * @category Shader composer
@@ -140,9 +171,9 @@ export const MATERIAL_LOOKS: readonly TMaterialLookInfo[] = [
             { key: 'shadow', type: 'number', default: 0.45, min: 0, max: 1, step: 0.01, description: 'How bright the darkest band is.' },
             { key: 'spot', type: 'number', default: 0.75, min: 0, max: 1, step: 0.01, description: 'Where the shine is cut.' },
         ],
-        build: () => toon(),
+        build: () => toonLighting(),
     },
-    { key: 'unlit', label: 'Unlit', description: 'No light at all: the surface as it is painted, glowing or flat.', slot: 'lighting', fields: [], build: () => unlit() },
+    { key: 'unlit', label: 'Unlit', description: 'No light at all: the surface as it is painted, glowing or flat.', slot: 'lighting', fields: [], build: () => unlitLighting() },
     {
         key: 'mangaDots', label: 'Manga dots', description: 'Dots of ink in the shadow, laid out on the screen, bigger where darker.', slot: 'step',
         fields: [

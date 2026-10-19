@@ -72,7 +72,7 @@ export type TModelOptions = {
      */
     visible?: boolean;
     /**
-     * How every piece is lit, in place of the engine's light: `toon()` or `unlit()`. Each piece
+     * How every piece is lit, in place of the engine's light: `toonLighting()` or `unlitLighting()`. Each piece
      * keeps its own picture and colour from the file. A model with bones bends and is lit by it alike.
      */
     lighting?: TLightingLook;

@@ -27,6 +27,7 @@ const DOORS: { spec: string; file: string; who: string }[] = [
     { spec: 'nacatamalon/physics2d', file: 'src/physics/rapier2d/index.ts', who: '2D physics on Rapier2D, which comes with the package. Call `installPhysics2d()` once.' },
     { spec: 'nacatamalon/physics3d', file: 'src/physics/box3d/index.ts', who: '3D physics on box3d, which comes with the package. Call `installPhysics3d()` once.' },
     { spec: 'nacatamalon/react', file: 'src/react/index.ts', who: 'A game inside a React page: `<Game>`, and hooks for the React components drawn over it. Needs `react`. Browser only: the native runtime does not show React components.' },
+    { spec: 'nacatamalon/headless', file: 'src/headless/index.ts', who: 'A game run from Node or Bun with no browser, a frame at a time, the same every time: for tests and scripts that check what a game does. A game never needs it.' },
     { spec: 'nacatamalon/authoring', file: 'src/authoring/index.ts', who: 'For tools that write scenes (editors, generators). A game never needs it.' },
     { spec: 'nacatamalon/extend', file: 'src/extend/index.ts', who: 'For packages that extend the engine (another physics engine, a plugin). A game never needs it.' },
 ];

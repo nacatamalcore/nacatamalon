@@ -181,6 +181,25 @@ export const tick = (store: TRuntimeStore, ctx: TFrameContext, now: number, prev
     // Schedule the next frame first, so an error below does not stop the loop.
     requestAnimationFrame((next) => tick(store, ctx, next, now));
 
+    measureFps(store, now - prev);
+    advanceFrame(store, ctx, now - prev);
+};
+
+/**
+ * One picture of the game, `elapsedMs` after the last: the updates it owes (one, or the fixed steps
+ * that fit, or what a host stepping it asked for), then the drawing. Everything a frame does except
+ * asking the browser for the next one, so a host with no browser (`createHeadlessGame`) runs exactly
+ * what a frame runs.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const advanceFrame = (store: TRuntimeStore, ctx: TFrameContext, elapsedMs: number): void => {
+    if (store.get('loop').destroyed) {
+        return;
+    }
+
     const { pausedBy, timeScale, step, stepCount } = store.get('loop');
     // A host stepping a paused game one frame at a time: this frame runs, by exactly the time it
     // asked for, and the game stays paused. See `TEditorHandle.stepFrame`. Or several frames at
@@ -194,11 +213,10 @@ export const tick = (store: TRuntimeStore, ctx: TFrameContext, now: number, prev
     // transition reads this one, and it is the whole reason it exists: a hit-stop at a tenth of
     // speed must not stretch a 300ms cut into three seconds, and at a standstill the screen would
     // stay covered for good.
-    const unscaled = Math.min(Math.max(0, now - prev) / 1000, MAX_FRAME_DELTA);
+    const unscaled = Math.min(Math.max(0, elapsedMs) / 1000, MAX_FRAME_DELTA);
     // Measured once and shared with the drawing half, because particles are moved there: they are
     // born where their emitter ended up, which is only known after the tree has been walked.
     const dt = paused ? 0 : (stepping ? step! : unscaled) * timeScale;
-    measureFps(store, now - prev);
 
     // The game time this picture moved the world by, which the particles move by while drawing.
     let advanced = dt;

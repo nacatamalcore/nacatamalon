@@ -1,6 +1,6 @@
 {
     "$schema": "https://typedoc.org/schema.json",
-    "entryPoints": ["src/index.ts", "src/authoring/index.ts", "src/extend/index.ts", "src/physics/rapier2d/index.ts", "src/physics/box3d/index.ts"],
+    "entryPoints": ["src/index.ts", "src/authoring/index.ts", "src/extend/index.ts", "src/physics/rapier2d/index.ts", "src/physics/box3d/index.ts", "src/headless/index.ts"],
     "out": "docs/api",
     "name": "nacatamalon",
     "readme": "none",

@@ -20,7 +20,7 @@ export type TShaderGraph<S extends TGraphTarget = TGraphTarget> = {
     color?: TComposerNode;
     position?: TComposerNode;
     /**
-     * How a model's surface is lit, in place of the engine's light: `toon()` or `unlit()`. With
+     * How a model's surface is lit, in place of the engine's light: `toonLighting()` or `unlitLighting()`. With
      * `steps`, it makes the colour, so it is never given with `color`. Models only.
      */
     lighting?: TLook;

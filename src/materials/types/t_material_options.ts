@@ -148,7 +148,7 @@ export type TMeshMaterialOptions = TMaterialShaderOptions & {
      */
     affine?: boolean;
     /**
-     * How the surface is lit, in place of the engine's light: `toon()` (flat bands) or `unlit()` (no
+     * How the surface is lit, in place of the engine's light: `toonLighting()` (flat bands) or `unlitLighting()` (no
      * light at all). One only. Its numbers become knobs of the material (`toonShadow`...), so they can
      * be turned while the game runs. It makes the colour, so it is not given with `fragment` or
      * `effect`; a `vertex` hook may go with it.
