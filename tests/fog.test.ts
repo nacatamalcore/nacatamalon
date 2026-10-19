@@ -87,7 +87,8 @@ describe('useFog', () => {
 
 describe('the lights block', () => {
     const fog = (fields: Partial<TFog> = {}): TFog => ({
-        type: 'fog', id: 'f', color: { r: 0.2, g: 0.3, b: 0.4, a: 1 }, near: 4, far: 20, enabled: true, ...fields,
+        type: 'fog', id: 'f', color: { r: 0.2, g: 0.3, b: 0.4, a: 1 }, near: 4, far: 20, distance: true,
+        height: { enabled: false, top: 0, bottom: -10 }, enabled: true, ...fields,
     });
     const ambient = { r: 0, g: 0, b: 0, a: 1 };
 
@@ -106,6 +107,28 @@ describe('the lights block', () => {
         }
     });
 
+    it('says which kinds are on in the fourth number, and carries the two heights', () => {
+        const kindsOf = (f: TFog) => {
+            const out = new Float32Array(LIGHT_UNIFORM_FLOATS);
+            fillLightUniforms(out, [], ambient, null, f);
+            return out;
+        };
+        const height = { enabled: true, top: 2, bottom: -6 };
+        expect(kindsOf(fog())[FOG_AT + 3]).toBe(1);
+        expect(kindsOf(fog({ height }))[FOG_AT + 3]).toBe(3);
+        const only = kindsOf(fog({ distance: false, height }));
+        expect(only[FOG_AT + 3]).toBe(2);
+        expect([only[FOG_AT + 6], only[FOG_AT + 7]]).toEqual([2, -6]);
+        // Neither kind on is no fog at all.
+        expect(Array.from(kindsOf(fog({ distance: false })).subarray(FOG_AT, FOG_AT + 8))).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+    });
+
+    it('never puts the bottom where the top is, since the shader divides by the gap', () => {
+        const out = new Float32Array(LIGHT_UNIFORM_FLOATS);
+        fillLightUniforms(out, [], ambient, null, fog({ height: { enabled: true, top: 3, bottom: 3 } }));
+        expect(out[FOG_AT + 7]).not.toBe(out[FOG_AT + 6]);
+    });
+
     it('never ends where it starts, since the shader divides by the distance between them', () => {
         const out = new Float32Array(LIGHT_UNIFORM_FLOATS);
         fillLightUniforms(out, [], ambient, null, fog({ near: 10, far: 10 }));
@@ -115,7 +138,7 @@ describe('the lights block', () => {
 });
 
 describe('a scene written down', () => {
-    const written = (fields: { enabled?: boolean } = {}) => {
+    const written = (fields: { enabled?: boolean; distance?: boolean; height?: { top?: number; bottom?: number; enabled?: boolean } } = {}) => {
         const { store } = createTestGame();
         const root = startTestScene(store, 'Level', () => {
             useFog({ color: { r: 0.1, g: 0.1, b: 0.2, a: 1 }, near: 6, far: 40, ...fields });
@@ -132,6 +155,21 @@ describe('a scene written down', () => {
         expect(parseSceneDoc(doc, '/scenes/level.scene')).toEqual(doc);
     });
 
+    it('leaves out the fog by height when there is none, and keeps it when there is', () => {
+        expect(fogOf(written())).not.toHaveProperty('height');
+        expect(fogOf(written())).not.toHaveProperty('distance');
+        const doc = written({ distance: false, height: { top: 1, bottom: -7 } });
+        expect(fogOf(doc)).toMatchObject({ distance: false, height: { top: 1, bottom: -7 } });
+        expect(fogOf(doc)).not.toHaveProperty('height.enabled');
+        expect(parseSceneDoc(doc, '/scenes/level.scene')).toEqual(doc);
+    });
+
+    it('keeps the heights of a fog by height switched off, so it comes back where it was', () => {
+        const doc = written({ height: { top: 4, bottom: -2, enabled: false } });
+        expect(fogOf(doc)).toMatchObject({ height: { top: 4, bottom: -2, enabled: false } });
+        expect(parseSceneDoc(doc, '/scenes/level.scene')).toEqual(doc);
+    });
+
     it('writes down a fog that is switched off, since that is not the default', () => {
         const doc = written({ enabled: false });
         expect(fogOf(doc)).toMatchObject({ enabled: false });
@@ -142,6 +180,9 @@ describe('a scene written down', () => {
 describe('the shaders', () => {
     it('work out the fog per corner, in every vertex shader of both backends', () => {
         expect(MESH_SHADER).toContain('out.fog = fogAt(worldPos);');
+        // Both kinds, the denser winning, on both cards.
+        expect(MESH_SHADER).toContain('amount = max(amount, clamp(low, 0.0, 1.0));');
+        expect(MESH_VERTEX_GLSL).toContain('amount = max(amount, clamp(low, 0.0, 1.0));');
         expect(SKINNED_SHADER).toContain('out.fog = fogAt(worldPos);');
         expect(MESH_VERTEX_GLSL).toContain('vFog = fogAt(worldPos);');
         expect(SKINNED_VERTEX_GLSL).toContain('vFog = fogAt(worldPos);');

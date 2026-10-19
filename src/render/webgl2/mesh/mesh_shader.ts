@@ -51,8 +51,9 @@ layout(std140) uniform Lights {
     // x = how far off the surface to test; y = how dark it goes; z = one step of the map;
     // w = which of the items above casts, or -1 for a scene that casts none.
     vec4 shadowParams;
-    // rgb = what things fade into, w = 1 when the scene has fog; x = where it starts, y = where it
-    // is complete.
+    // rgb = what things fade into, w = which kinds are on (0 none, 1 by distance, 2 by height, 3
+    // both); x = how far it starts, y = how far it is complete, z = the height it starts at, w = the
+    // height it is complete at.
     vec4 fog;
     vec4 fogRange;
     // xyz = the way back towards the viewer, w = 1 when the view is orthographic and that way is
@@ -115,11 +116,20 @@ vec3 affineUv(vec2 uv, vec4 clip) {
 
 // How much of a corner is lost in the fog, 0 to 1. The twin of fogAt in webgpu/mesh/mesh_shader.ts.
 float fogAt(vec3 worldPos) {
-    if (lights.fog.w <= 0.0) {
+    float kinds = lights.fog.w;
+    if (kinds <= 0.0) {
         return 0.0;
     }
-    float dist = length(worldPos - uniforms.cameraPosition.xyz);
-    return clamp((dist - lights.fogRange.x) / (lights.fogRange.y - lights.fogRange.x), 0.0, 1.0);
+    float amount = 0.0;
+    if (abs(kinds - 2.0) > 0.5) {
+        float dist = length(worldPos - uniforms.cameraPosition.xyz);
+        amount = clamp((dist - lights.fogRange.x) / (lights.fogRange.y - lights.fogRange.x), 0.0, 1.0);
+    }
+    if (kinds > 1.5) {
+        float low = (lights.fogRange.z - worldPos.y) / (lights.fogRange.z - lights.fogRange.w);
+        amount = max(amount, clamp(low, 0.0, 1.0));
+    }
+    return amount;
 }
 `;
 

@@ -176,6 +176,7 @@ export {
     composerFloat, composerVec2, composerVec3, composerVec4, composerSwizzle, composerX, composerY, composerZ, composerW,
     composerUv, composerTime, composerResolution, composerSurface, composerWorldNormal, composerWorldPos,
     composerViewDir, composerLight, composerEmissive, composerShine, composerEnvUv, composerVertexPosition, composerVertexNormal, composerVertexColor,
+    composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent,
     composerTextureSample, composerMapSample, composerUniform,
     composerAdd, composerSub, composerMul, composerDiv, composerAbs, composerFloor, composerFract, composerSin,
     composerCos, composerSqrt, composerSign, composerNormalize, composerLength, composerDistance, composerDot,
@@ -183,10 +184,12 @@ export {
     composerSmoothstep, composerReflect, composerMod, composerAtan2, composerOneMinus, composerSaturate,
     composerPipe, composerSimplexNoise, composerFbm, composerCellularNoise, composerFresnel, composerCelShade,
     parseShaderGraph, compileShaderGraph, SHADER_GRAPH_FORMAT,
+    toon, unlit, mangaDots, rim, MATERIAL_LOOKS,
 } from './shader_composer';
 export type {
     TComposerNode, TComposerInput, TComposerStep, TInputKind, THelperDef, TShaderGraph, TCompiledShader,
     TShaderGraphDoc, TGraphNodeDoc, TGraphEdgeDoc, TGraphCommentDoc, TParamValue, TGraphTarget,
+    TLook, TLightingLook, TStepLook, TToonLook, TUnlitLook, TMangaDotsLook, TRimLook, TMaterialLookInfo,
 } from './shader_composer';
 export type { TSprite, TSpriteOptions } from './gameobjects/sprite/types';
 export type { TTransform2d } from './gameobjects/types/t_transform_2d';

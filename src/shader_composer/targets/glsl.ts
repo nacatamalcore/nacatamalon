@@ -33,6 +33,12 @@ const INPUT_SOURCE: Record<TInputKind, Partial<Record<TStageCtx, string>>> = {
     vertexPosition: { 'mesh3d.vert': 'pos', 'preview.frag': 'sgPreviewPos(uv)' },
     vertexNormal:   { 'mesh3d.vert': 'ctx.normal', 'preview.frag': 'sgPreviewNormal(uv)' },
     vertexColor:    { 'mesh3d.frag': 'ctx.color', 'mesh3d.vert': 'ctx.color', 'preview.frag': 'vec4(1.0, 1.0, 1.0, 1.0)' },
+    screenPos:      { 'mesh3d.frag': 'ctx.screen', 'preview.frag': '(uv * mu.resolution)' },
+    uv2:            { 'mesh3d.frag': 'ctx.uv2', 'mesh3d.vert': 'ctx.uv2', 'preview.frag': 'uv' },
+    worldTangent:   { 'mesh3d.frag': 'ctx.tangent', 'preview.frag': 'sgPreviewTangent(uv)' },
+    worldBitangent: { 'mesh3d.frag': 'ctx.bitangent', 'preview.frag': 'cross(sgPreviewNormal(uv), sgPreviewTangent(uv))' },
+    vertexTangent:  { 'mesh3d.vert': 'ctx.tangent', 'preview.frag': 'sgPreviewTangent(uv)' },
+    vertexBitangent: { 'mesh3d.vert': 'ctx.bitangent', 'preview.frag': 'cross(sgPreviewNormal(uv), sgPreviewTangent(uv))' },
 };
 
 /**
@@ -50,6 +56,12 @@ vec3 sgPreviewNormal(vec2 uv) {
     // than becoming NaN, and the corners of the square stay drawable.
     float z = sqrt(max(0.0, 1.0 - min(dot(p, p), 1.0)));
     return normalize(vec3(p.x, -p.y, z + 0.0001));
+}
+
+// Round the sphere, the twin of sgPreviewTangent in the WGSL target.
+vec3 sgPreviewTangent(vec2 uv) {
+    vec3 n = sgPreviewNormal(uv);
+    return normalize(vec3(n.z + 0.0001, 0.0, -n.x));
 }
 
 vec3 sgPreviewLight(vec2 uv) {

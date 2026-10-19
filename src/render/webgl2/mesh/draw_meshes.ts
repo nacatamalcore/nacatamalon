@@ -54,6 +54,17 @@ export const vertexArrayFor = (gl: WebGL2RenderingContext, meshes: TMeshPipeline
     gl.enableVertexAttribArray(5);
     gl.vertexAttribPointer(5, 4, gl.UNSIGNED_BYTE, true, 4, 0);
 
+    // Each corner's tangent and second picture coordinate, from a run of their own: 24 bytes. Only a
+    // material's program reads them; the built-in one declares nothing at 6 and 7, and an attribute
+    // nobody reads costs nothing.
+    if (geometry.detailBuffer !== null) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, toGlBuffer(geometry.detailBuffer));
+        gl.enableVertexAttribArray(6);
+        gl.vertexAttribPointer(6, 4, gl.FLOAT, false, 24, 0);
+        gl.enableVertexAttribArray(7);
+        gl.vertexAttribPointer(7, 2, gl.FLOAT, false, 24, 16);
+    }
+
     if (bends) {
         // A second run beside the first: which four bones carry the corner, and how much of it
         // each one owns. Its own run so a shape that does not bend pays nothing for this.
@@ -139,7 +150,8 @@ export const drawMesh = (
     let effect: ReturnType<TMeshPipeline['materials']['get']> | null = null;
     if (surface.fragment !== null || surface.vertex !== null) {
         meshes.materials.warnIfWgpuOnly(surface);
-        if (surface.fragmentGlsl !== null || surface.vertexGlsl !== null) {
+        // A shape with no detail run cannot feed a material's program, which reads one.
+        if ((surface.fragmentGlsl !== null || surface.vertexGlsl !== null) && mesh.geometry.detailBuffer !== null) {
             const compiled = meshes.materials.get(surface, bends);
             if (!compiled.failed && compiled.program !== null) {
                 effect = compiled;

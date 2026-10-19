@@ -84,6 +84,19 @@ export type TGeometry = {
      * always was.
      */
     colorBuffer: IBuffer | null;
+    /**
+     * For each corner, the way across its surface the picture runs (its tangent, with which hand
+     * its other edge goes in the fourth number) and a second picture coordinate: six numbers.
+     *
+     * What a material reads to find its way over a surface: a relief or a ripple that moves the
+     * picture needs to know which way is across it and which way is down, and a second picture
+     * (baked light, a decal, a detail) needs coordinates of its own. A file that has them keeps
+     * them; any other shape has them worked out when it is made, so every shape has one.
+     *
+     * A run of its own for the reason the colours and the bones have one: only a material's shader
+     * reads it, and the engine's own drawing never binds it.
+     */
+    detailBuffer: IBuffer | null;
 };
 
 /**
@@ -100,3 +113,9 @@ export const COLOR_STRIDE = 4;
  * How many numbers a corner of a deformed shape takes on top: four bones, and four weights.
  */
 export const SKIN_STRIDE = 8;
+
+/**
+ * How many numbers a corner's detail takes: its tangent and the tangent's hand, then a second
+ * picture coordinate.
+ */
+export const DETAIL_STRIDE = 6;

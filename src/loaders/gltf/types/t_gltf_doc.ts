@@ -91,7 +91,7 @@ export type TGltfNode = {
  * @internal
  */
 export type TGltfPrimitive = {
-    attributes: { POSITION?: number; NORMAL?: number; TEXCOORD_0?: number; JOINTS_0?: number; WEIGHTS_0?: number; COLOR_0?: number };
+    attributes: { POSITION?: number; NORMAL?: number; TANGENT?: number; TEXCOORD_0?: number; TEXCOORD_1?: number; JOINTS_0?: number; WEIGHTS_0?: number; COLOR_0?: number };
     indices?: number;
     material?: number;
     /**

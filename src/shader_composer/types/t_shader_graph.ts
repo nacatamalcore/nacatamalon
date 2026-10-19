@@ -1,6 +1,7 @@
 import type { TUniformValues } from '../../materials/types/t_uniforms';
 import type { TComposerNode } from './t_composer_node';
 import type { TGraphTarget } from './t_shader_graph_doc';
+import type { TLook } from '../surface/types';
 
 /**
  * What `compileShader` is handed: the family the shader is for, and up to two results.
@@ -18,6 +19,15 @@ export type TShaderGraph<S extends TGraphTarget = TGraphTarget> = {
     shader: S;
     color?: TComposerNode;
     position?: TComposerNode;
+    /**
+     * How a model's surface is lit, in place of the engine's light: `toon()` or `unlit()`. With
+     * `steps`, it makes the colour, so it is never given with `color`. Models only.
+     */
+    lighting?: TLook;
+    /**
+     * What is done to a model's surface once it is lit, in order: `mangaDots()`, `rim()`. Models only.
+     */
+    steps?: readonly TLook[];
 };
 
 /**

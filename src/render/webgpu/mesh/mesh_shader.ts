@@ -57,8 +57,10 @@ struct Lights {
     // x = how far off the surface to test; y = how dark it goes; z = one step of the map;
     // w = which of the items above casts, or -1 for a scene that casts none.
     shadowParams: vec4<f32>,
-    // rgb = what things fade into, w = 1 when the scene has fog; x = where it starts, y = where it
-    // is complete. Same place and order as its twin in GLSL, because one packer fills both.
+    // rgb = what things fade into, w = which kinds are on (0 none, 1 by distance, 2 by height, 3
+    // both); x = how far it starts, y = how far it is complete, z = the height it starts at, w = the
+    // height it is complete at. Same place and order as its twin in GLSL, because one packer fills
+    // both.
     fog: vec4<f32>,
     fogRange: vec4<f32>,
     // xyz = the way back towards the viewer, w = 1 when the view is orthographic and that way is
@@ -114,16 +116,27 @@ fn affineUv(uv: vec2<f32>, clip: vec4<f32>) -> vec3<f32> {
     return vec3<f32>(uv * k, k);
 }
 
-// How much of a corner is lost in the fog, 0 to 1, by how far it is from the camera. Worked out per
-// corner and smeared across the triangle, like the light, which is how the Nintendo 64 did it. A
-// scene with no fog says so in fog.w and gets zero, before the division by the distance between
-// the two ends, which with no fog is nothing.
+// How much of a corner is lost in the fog, 0 to 1, by how far it is from the camera and how low it
+// is: the denser of the two. Worked out per corner and smeared across the triangle, like the light,
+// which is how the Nintendo 64 did it. A scene with no fog says so in fog.w and gets zero, before
+// either division, which with no fog would be by nothing.
 fn fogAt(worldPos: vec3<f32>) -> f32 {
-    if (lights.fog.w <= 0.0) {
+    let kinds = lights.fog.w;
+    if (kinds <= 0.0) {
         return 0.0;
     }
-    let dist = length(worldPos - uniforms.cameraPosition.xyz);
-    return clamp((dist - lights.fogRange.x) / (lights.fogRange.y - lights.fogRange.x), 0.0, 1.0);
+    var amount = 0.0;
+    // 1 or 3: by distance.
+    if (abs(kinds - 2.0) > 0.5) {
+        let dist = length(worldPos - uniforms.cameraPosition.xyz);
+        amount = clamp((dist - lights.fogRange.x) / (lights.fogRange.y - lights.fogRange.x), 0.0, 1.0);
+    }
+    // 2 or 3: by height. Divided by the signed gap, so a fog running upwards needs no other case.
+    if (kinds > 1.5) {
+        let low = (lights.fogRange.z - worldPos.y) / (lights.fogRange.z - lights.fogRange.w);
+        amount = max(amount, clamp(low, 0.0, 1.0));
+    }
+    return amount;
 }
 
 struct LightSample {

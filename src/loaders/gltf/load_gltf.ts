@@ -177,7 +177,7 @@ export const loadGltf = async (store: TRuntimeStore, model: TGltfModel, options:
                 geometry: uploadGeometry(
                     store,
                     `${model.key}#${i}`,
-                    { vertices: piece.vertices, indices: piece.indices, skin: piece.skin, colors: piece.colors },
+                    { vertices: piece.vertices, indices: piece.indices, skin: piece.skin, colors: piece.colors, detail: piece.detail },
                     { kind: 'gltf', src: model.src, ...(piece.name.length > 0 ? { node: piece.name } : {}) },
                 ),
                 texture,

@@ -46,8 +46,9 @@ describe('every shape', () => {
         // Six faces of four corners, and two triangles each.
         expect(cube.vertexCount).toBe(24);
         expect(cube.indexCount).toBe(36);
-        // The corners, and the colour painted on each: white, since nobody painted a built cube.
-        expect(renderer.buffers.filter((b) => b.usage === 'vertex')).toHaveLength(2);
+        // The corners, the colour painted on each (white, since nobody painted a built cube), and
+        // the detail worked out for each: tangent and second picture coordinate.
+        expect(renderer.buffers.filter((b) => b.usage === 'vertex')).toHaveLength(3);
         expect(renderer.buffers.filter((b) => b.usage === 'index')).toHaveLength(1);
     });
 
@@ -119,15 +120,15 @@ describe('a shape asked for twice', () => {
         const { renderer, made } = built(() => [useCubeGeometry({ width: 2 }), useCubeGeometry({ width: 2 })]);
 
         expect(made[1]).toBe(made[0]);
-        // Corners, colours and triangles, once.
-        expect(renderer.buffers).toHaveLength(3);
+        // Corners, colours, detail and triangles, once.
+        expect(renderer.buffers).toHaveLength(4);
     });
 
     it('is built again when the size is not', () => {
         const { renderer, made } = built(() => [useCubeGeometry({ width: 2 }), useCubeGeometry({ width: 3 })]);
 
         expect(made[1]).not.toBe(made[0]);
-        expect(renderer.buffers).toHaveLength(6);
+        expect(renderer.buffers).toHaveLength(8);
     });
 
     it('is the same one under a name of its own', () => {

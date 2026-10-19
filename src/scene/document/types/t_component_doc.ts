@@ -1,3 +1,4 @@
+import type { TLightingLook, TStepLook } from '../../../shader_composer/surface/types';
 import type { TScriptProps } from '../../../scripts';
 import type { TColor } from '../../../color';
 import type { TTransform2d } from '../../../gameobjects/types/t_transform_2d';
@@ -103,6 +104,16 @@ export type TMeshMaterialDoc = TMaterialDoc & {
      * is the default.
      */
     affine?: boolean;
+    /**
+     * How it is lit, as the look is written down (`{ look: 'toon', bands: 2, ... }`). When a material
+     * has looks, its `fragment` is left out: the looks are the recipe, and the shader they make is
+     * made again when the scene is opened. Its knobs, as turned, are in `uniforms`.
+     */
+    lighting?: TLightingLook;
+    /**
+     * What is done to it once lit, in order, as written down. Left out when there are none.
+     */
+    steps?: TStepLook[];
 };
 
 /**
@@ -509,6 +520,15 @@ export type TFogComponent = {
     color: TColor;
     near: number;
     far: number;
+    /**
+     * Left out when on, which is the default: only `false` is written.
+     */
+    distance?: boolean;
+    /**
+     * The fog by height: where it starts and where it is complete. Left out when it is off and its
+     * heights are the defaults; its own `enabled` is left out when on.
+     */
+    height?: { top: number; bottom: number; enabled?: boolean };
     /**
      * Left out when on, which is the default.
      */

@@ -118,7 +118,9 @@ describe('the two model material shaders', () => {
         expect(membersOf(glsl.vertex, 'struct VertContext {'))
             .toEqual(membersOf(wgsl, 'struct VertContext {'));
         expect(membersOf(wgsl, 'struct FragContext {'))
-            .toEqual(['uv', 'normal', 'worldPos', 'light', 'shine', 'emissive', 'viewDir', 'color']);
+            .toEqual(['uv', 'normal', 'worldPos', 'light', 'shine', 'emissive', 'viewDir', 'color', 'screen', 'tangent', 'bitangent', 'uv2']);
+        expect(membersOf(wgsl, 'struct VertContext {'))
+            .toEqual(['normal', 'uv', 'color', 'tangent', 'bitangent', 'uv2']);
     });
 
     it('stands in for a hook that was not written, and says what the engine would have said', () => {
@@ -137,8 +139,9 @@ describe('the two model material shaders', () => {
         const without = buildMeshMaterialShader(FRAG, null, MESH_SIG);
         const with_ = buildMeshMaterialShader(FRAG, VERT, MESH_SIG);
 
-        expect(without).not.toContain('tangent');
-        expect(with_).toContain('tangent');
+        // The two extra samples a small step away, which only a moved surface needs.
+        expect(without).not.toContain('let moved1 = vertex(');
+        expect(with_).toContain('let moved1 = vertex(');
         // Without one, the surface is left exactly as the model gave it.
         expect(without).toContain('let shaped = ctx.normal;');
     });

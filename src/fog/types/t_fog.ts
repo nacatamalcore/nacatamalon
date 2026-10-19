@@ -28,6 +28,18 @@ export type TFog = {
      */
     far: number;
     /**
+     * Whether things fade by how far they are from the camera (`near` to `far`). `false` leaves only
+     * the fog by height, for a valley full of mist that is clear across.
+     */
+    distance: boolean;
+    /**
+     * Fog by height: below `top` things start to fade, and at `bottom` they are gone, however near.
+     * The mist at the foot of a cliff, a pit with no bottom to see. With `top` under `bottom` it
+     * runs upwards instead, for a cloud the top of a tower disappears into. `enabled` is `false`
+     * unless it was asked for, so the record always has it and a tween can fade it in.
+     */
+    height: { enabled: boolean; top: number; bottom: number };
+    /**
      * Whether it is drawn. Switching it off keeps the rest, so it can be switched back on.
      */
     enabled: boolean;
@@ -53,6 +65,21 @@ export type TFogOptions = {
      * How far from the camera it is complete. Default `100`.
      */
     far?: number;
+    /**
+     * Whether things fade by how far they are from the camera. Default `true`.
+     */
+    distance?: boolean;
+    /**
+     * Fog by height: it begins at `top` and is complete at `bottom` (default `-10` under `top`).
+     * Given, it is on unless `enabled: false`; left out, there is none.
+     *
+     * @example
+     * ```ts
+     * useFog({ color, height: { top: 0, bottom: -8 } });                  // a cliff, and fog far off
+     * useFog({ color, distance: false, height: { top: 0, bottom: -8 } }); // only the cliff
+     * ```
+     */
+    height?: { top?: number; bottom?: number; enabled?: boolean };
     /**
      * Whether it is drawn. Default `true`.
      */

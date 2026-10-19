@@ -2,6 +2,7 @@ import { getColor } from '../color';
 import { createRecord } from '../gameobjects/create_record';
 import { applyShader, rememberOverrides } from './apply_shader';
 import { deriveSignature } from './derive_signature';
+import { compileShader } from '../shader_composer/compile_shader';
 import { MAP_NAME, MAX_MATERIAL_MAPS } from '../render/shared/material_maps';
 import type { TMaterial, TMaterialMap, TMeshMaterial, TSpriteMaterial } from './types/t_material';
 import type { TMaterialOptions, TMeshMaterialOptions } from './types/t_material_options';
@@ -51,11 +52,40 @@ const mapsOf = (asked: Record<string, TTexture | TMaterialMap> | undefined): Rec
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
+/**
+ * The shader a material's looks make, or `null` when it has none. Refuses what contradicts them: a
+ * colour hook of its own (the looks make the colour), and a material for sprites (looks light a
+ * model's surface).
+ */
+const looksOf = (options: TMaterialOptions, effect: TShader | null) => {
+    const { lighting, steps } = options as TMeshMaterialOptions;
+    if (lighting === undefined && (steps === undefined || steps.length === 0)) {
+        return null;
+    }
+    if (options.shader !== 'mesh3d') {
+        throw new Error("[NacatamalOn] createMaterial: lighting and steps light a model's surface, so they need shader: 'mesh3d'.");
+    }
+    if (effect !== null || options.fragment !== undefined || options.fragmentGlsl !== undefined) {
+        throw new Error('[NacatamalOn] createMaterial: lighting and steps make the colour, so a material with them has no fragment or effect of its own. A vertex hook may go with them.');
+    }
+    return compileShader({ shader: 'mesh3d', lighting, steps });
+};
+
 export const newMaterial = (
     options: TMaterialOptions,
     texture: TTexture | null,
     effect: TShader | null,
 ): TMaterial => {
+    const looks = looksOf(options, effect);
+    if (looks !== null) {
+        // The looks' knobs are added to the bag the caller handed in (or a new one) without
+        // overwriting what was asked: the call site says what a knob is here.
+        const knobs = options.uniforms ?? {};
+        for (const [name, value] of Object.entries(looks.uniforms)) {
+            if (!(name in knobs)) knobs[name] = value;
+        }
+        options = { ...options, fragment: looks.fragment, fragmentGlsl: looks.fragmentGlsl, uniforms: knobs };
+    }
     const asked = options.uniforms ?? {};
     // Written inline, the source is what it is from the start. From a file, everything stays empty
     // until it arrives, and `applyShader` fills it in.
@@ -99,6 +129,11 @@ export const newMaterial = (
             // The same: left out unless asked, so a material that never mentioned it saves as before.
             ...(isSnapping((options as TMeshMaterialOptions).vertexSnap) ? { vertexSnap: (options as TMeshMaterialOptions).vertexSnap } : {}),
             ...((options as TMeshMaterialOptions).affine === true ? { affine: true } : {}),
+            // Kept as asked so a document can write the recipe rather than the shader it made.
+            ...((options as TMeshMaterialOptions).lighting !== undefined ? { lighting: (options as TMeshMaterialOptions).lighting } : {}),
+            ...((options as TMeshMaterialOptions).steps !== undefined && (options as TMeshMaterialOptions).steps!.length > 0
+                ? { steps: [...(options as TMeshMaterialOptions).steps!] }
+                : {}),
         }) as TMeshMaterial
         : createRecord('material', { ...half, shader: 'sprite2d' }) as TSpriteMaterial;
 

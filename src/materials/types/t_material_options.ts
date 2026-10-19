@@ -1,3 +1,4 @@
+import type { TLightingLook, TStepLook } from '../../shader_composer/surface/types';
 import type { TColor } from '../../color';
 import type { TTexture } from '../../loaders';
 import type { TShader } from '../../loaders/shader/types/t_shader';
@@ -22,6 +23,14 @@ export type TMaterialShaderOptions = {
     name?: string;
     /**
      * The fragment hook, in WGSL.
+     *
+     * For a model, `fn effect(surface: vec4<f32>, ctx: FragContext) -> vec4<f32>`, where `ctx` has:
+     * `uv`; `normal`, `worldPos` and `viewDir` in the world; `light`, `shine` and `emissive`, the
+     * light reaching it already worked out; `color`, the colour painted on the corners; `screen`,
+     * where it is on the screen in the game's pixels, `(0, 0)` at the top left; `tangent` and
+     * `bitangent`, the way across and down the surface the picture runs, in the world; and `uv2`, a
+     * second picture coordinate (the file's own, or `uv` again). The corner hook's `VertContext`
+     * has `normal`, `uv`, `color`, `tangent`, `bitangent` and `uv2`, before anything is moved.
      */
     fragment?: string;
     /**
@@ -138,6 +147,19 @@ export type TMeshMaterialOptions = TMaterialShaderOptions & {
      * PlayStation drew it: big flat surfaces bend and swim as the camera comes close. Default `false`.
      */
     affine?: boolean;
+    /**
+     * How the surface is lit, in place of the engine's light: `toon()` (flat bands) or `unlit()` (no
+     * light at all). One only. Its numbers become knobs of the material (`toonShadow`...), so they can
+     * be turned while the game runs. It makes the colour, so it is not given with `fragment` or
+     * `effect`; a `vertex` hook may go with it.
+     */
+    lighting?: TLightingLook;
+    /**
+     * What is done to the surface once it is lit, in order: `mangaDots()` (ink in the shadow),
+     * `rim()` (a lit edge). On `lighting` when there is one, on the engine's light when not. Their
+     * numbers become knobs too (`mangaDotsSpacing`, `rimColor`; a second of one kind is `rim2Color`).
+     */
+    steps?: readonly TStepLook[];
 };
 
 /**

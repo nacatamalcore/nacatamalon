@@ -26,7 +26,13 @@ export type TInputKind =
     | 'envUv'
     | 'vertexPosition'
     | 'vertexNormal'
-    | 'vertexColor';
+    | 'vertexColor'
+    | 'screenPos'
+    | 'uv2'
+    | 'worldTangent'
+    | 'worldBitangent'
+    | 'vertexTangent'
+    | 'vertexBitangent';
 
 /**
  * A function a node needs written once at the top of the shader (the noise functions, for

@@ -61,6 +61,9 @@ const buildPart = (
                 smooth: options.smooth,
                 // The game's word over the file's, the same as for see-through.
                 wrap: options.wrap ?? part.wrap,
+                // The same looks on every piece, each over its own picture and colour.
+                lighting: options.lighting,
+                steps: options.steps,
             },
             part.texture,
             null,

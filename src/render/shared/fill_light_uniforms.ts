@@ -201,15 +201,21 @@ export const fillLightUniforms = (
         out[SHADOW_AT + 19] = shadow.lightIndex;
     }
 
-    // Zero is no fog, which is what `fill(0)` above already left: the shader multiplies by it.
-    if (fog !== null && fog.enabled) {
+    // Zero is no fog, which is what `fill(0)` above already left: the shader multiplies by it. The
+    // fourth number says which kinds are on: 1 by distance, 2 by height, 3 both.
+    const kinds = fog === null || !fog.enabled ? 0 : (fog.distance ? 1 : 0) + (fog.height.enabled ? 2 : 0);
+    if (fog !== null && kinds > 0) {
         out[FOG_AT] = fog.color.r;
         out[FOG_AT + 1] = fog.color.g;
         out[FOG_AT + 2] = fog.color.b;
-        out[FOG_AT + 3] = 1;
+        out[FOG_AT + 3] = kinds;
         out[FOG_AT + 4] = fog.near;
         // Never at or before the start: the shader divides by the distance between the two.
         out[FOG_AT + 5] = Math.max(fog.far, fog.near + 0.0001);
+        out[FOG_AT + 6] = fog.height.top;
+        // Never the same height as the top, for the same reason; either side of it is fine, since
+        // which side says which way the fog runs.
+        out[FOG_AT + 7] = fog.height.bottom === fog.height.top ? fog.height.top - 0.0001 : fog.height.bottom;
     }
 
     // Zero, which `fill(0)` already left, is a perspective view. No camera at all is drawn

@@ -60,6 +60,10 @@ export type TDrawMesh = {
          * The colour painted on each corner, four bytes apiece. White when nobody painted it.
          */
         readonly colorBuffer: IBuffer | null;
+        /**
+         * Each corner's tangent and second picture coordinate, read only by a material's shader.
+         */
+        readonly detailBuffer: IBuffer | null;
     } | null;
     /**
      * Where it is, how it is turned, how big. Read when nothing above it moved it.

@@ -2,6 +2,7 @@ import { composerFloat, composerVec4 } from './constructors';
 import { collectHelpers, collectUniforms, emitBody } from './emit';
 import { WGSL_TARGET } from './targets/wgsl';
 import { GLSL_TARGET } from './targets/glsl';
+import { composeSurface } from './surface/compose_surface';
 import type { TUniformValues } from '../materials/types/t_uniforms';
 import type { TComposerNode } from './types/t_composer_node';
 import type { TShaderTarget, TStageCtx } from './types/t_shader_target';
@@ -87,6 +88,26 @@ const emitShader = (graph: TShaderGraph, target: TShaderTarget): TEmitted => {
 };
 
 /**
+ * A graph whose colour is made by looks, turned into one with that colour written out: the looks are
+ * a recipe, and this is where it is followed. A graph with neither is handed back as it is.
+ */
+const withLooks = <S extends TGraphTarget>(graph: TShaderGraph<S>): TShaderGraph<S> => {
+    const looked = graph.lighting !== undefined || (graph.steps !== undefined && graph.steps.length > 0);
+    if (!looked) {
+        return graph;
+    }
+    // Read as the wider family, for whoever calls it from plain JavaScript.
+    const shader: string = graph.shader;
+    if (shader !== 'mesh3d') {
+        throw new Error('[NacatamalOn] shader composer: lighting and steps are for a model\'s surface, so they need shader: \'mesh3d\'.');
+    }
+    if (graph.color !== undefined) {
+        throw new Error('[NacatamalOn] shader composer: lighting and steps make the colour, so a graph with them takes no "color" of its own.');
+    }
+    return { ...graph, color: composeSurface(graph.lighting, graph.steps) };
+};
+
+/**
  * Turns a composed graph into the fields a material takes, **in both languages**.
  *
  * The result spreads straight into `createMaterial`, and whichever backend draws it takes the half
@@ -128,7 +149,8 @@ const emitShader = (graph: TShaderGraph, target: TShaderTarget): TEmitted => {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const compileShader = <S extends TGraphTarget>(graph: TShaderGraph<S>): TCompiledShader<S> => {
+export const compileShader = <S extends TGraphTarget>(asked: TShaderGraph<S>): TCompiledShader<S> => {
+    const graph = withLooks(asked);
     const wgsl = emitShader(graph, WGSL_TARGET);
     const glsl = emitShader(graph, GLSL_TARGET);
     return {

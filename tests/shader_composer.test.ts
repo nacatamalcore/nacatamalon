@@ -3,7 +3,8 @@ import { compileShader } from '../src/shader_composer/compile_shader';
 import { composerSwizzle, composerVec2, composerVec3, composerVec4, composerX } from '../src/shader_composer/constructors';
 import {
     composerLight, composerSurface, composerTextureSample, composerTime, composerUniform, composerUv,
-    composerVertexNormal, composerVertexPosition,
+    composerVertexNormal, composerVertexPosition, composerScreenPos, composerUv2, composerWorldTangent,
+    composerWorldBitangent, composerVertexTangent, composerVertexBitangent,
 } from '../src/shader_composer/inputs';
 import { composerAdd, composerAtan2, composerClamp, composerMix, composerMod, composerMul, composerSin } from '../src/shader_composer/math';
 import { composerPipe } from '../src/shader_composer/pipe';
@@ -320,5 +321,40 @@ describe('composerAtan2', () => {
         });
         expect(compiled.vertexGlsl).toContain('float sgAtan2f(');
         expect(compiled.fragmentGlsl).not.toContain('sgAtan2f');
+    });
+});
+
+describe('the screen, the surface frame and the second coordinate', () => {
+    it('read what the model shader hands over, in both languages', () => {
+        const color = composerVec4(
+            composerAdd(composerWorldTangent(), composerWorldBitangent()),
+            composerX(composerAdd(composerScreenPos(), composerUv2())),
+        );
+        const out = compileShader({ shader: 'mesh3d', color });
+        for (const source of [out.fragment!, out.fragmentGlsl!]) {
+            expect(source).toContain('ctx.tangent');
+            expect(source).toContain('ctx.bitangent');
+            expect(source).toContain('ctx.screen');
+            expect(source).toContain('ctx.uv2');
+        }
+    });
+
+    it('give the corner hook the frame and the second coordinate too', () => {
+        const position = composerAdd(composerVertexPosition(), composerMul(composerAdd(composerVertexTangent(), composerVertexBitangent()), composerX(composerUv2())));
+        const out = compileShader({ shader: 'mesh3d', position });
+        for (const source of [out.vertex!, out.vertexGlsl!]) {
+            expect(source).toContain('ctx.tangent');
+            expect(source).toContain('ctx.bitangent');
+            expect(source).toContain('ctx.uv2');
+        }
+    });
+
+    it('are refused where they do not exist', () => {
+        expect(() => compileShader({ shader: 'sprite2d', color: composerVec4(composerScreenPos(), 0, 1) }))
+            .toThrow(/screenPos is not available in a 2D colour graph/);
+        expect(() => compileShader({ shader: 'mesh3d', position: composerWorldTangent() }))
+            .toThrow(/worldTangent is not available in a model vertex/);
+        expect(() => compileShader({ shader: 'mesh3d', color: composerVertexTangent() }))
+            .toThrow(/vertexTangent is not available/);
     });
 });

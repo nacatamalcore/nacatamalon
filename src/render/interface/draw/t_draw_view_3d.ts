@@ -35,7 +35,7 @@ export type TDrawView3d = {
 
 /**
  * What the backends need of a scene's fog: what it fades into, between which distances from the
- * camera, and whether it is on.
+ * camera and which heights, and whether it is on.
  *
  * @internal
  * @since 1.0.0
@@ -45,5 +45,7 @@ export type TDrawFog = {
     readonly color: TColor;
     readonly near: number;
     readonly far: number;
+    readonly distance: boolean;
+    readonly height: { readonly enabled: boolean; readonly top: number; readonly bottom: number };
     readonly enabled: boolean;
 };

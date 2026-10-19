@@ -4,6 +4,7 @@ export {
 export {
     composerUv, composerTime, composerResolution, composerSurface, composerWorldNormal, composerWorldPos,
     composerViewDir, composerLight, composerEmissive, composerShine, composerEnvUv, composerVertexPosition, composerVertexNormal, composerVertexColor,
+    composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent,
     composerTextureSample, composerMapSample, composerUniform,
 } from './inputs';
 export {
@@ -15,6 +16,9 @@ export {
 export { composerPipe } from './pipe';
 export { composerSimplexNoise, composerFbm, composerCellularNoise } from './noise';
 export { composerFresnel, composerCelShade } from './effects';
+export { toon, unlit, mangaDots, rim, MATERIAL_LOOKS, findMaterialLook } from './surface/looks';
+export type { TMaterialLookInfo } from './surface/looks';
+export type { TLook, TLightingLook, TStepLook, TToonLook, TUnlitLook, TMangaDotsLook, TRimLook } from './surface/types';
 export { compileShader } from './compile_shader';
 export { compilePreviewShader } from './compile_preview_shader';
 export { SHADER_GRAPH_FORMAT, emptyShaderGraph, parseShaderGraph } from './document';

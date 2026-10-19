@@ -7,6 +7,40 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- Material looks: a model's material made from recipes instead of a shader. `lighting` says how its
+  surface is lit, one look in place of the engine's light: `toon()` (the light in flat bands and
+  the shine in one hard spot) or `unlit()` (no light at all). `steps` says what is done to it once
+  lit, in order: `mangaDots()` (dots of ink in the shadow, laid out on the screen and bigger where
+  darker, exactly where toon's bands went dark when it follows toon) and `rim()` (the edge that
+  turns away from the camera, mixed towards a colour). `createMaterial({ shader: 'mesh3d', lighting,
+  steps })`, `createModel({ lighting, steps })` for every piece (with bones too, each over its own
+  picture and colour), and `compileShader({ shader: 'mesh3d', lighting, steps })` for the shader on
+  its own. Every number is a knob of the material (`toonShadow`, `mangaDotsSpacing`, `rimColor`; a
+  second step of one kind is `rim2Color`), to turn or tween while the game runs. A look is plain
+  data, so a scene document writes the looks and not the shader they make, and makes it again when
+  opened; one it does not know is left out with a warning. `MATERIAL_LOOKS` lists them, with the
+  slot each goes in. Both languages, from the shader composer.
+- A model's material is told more about where it is drawing. `ctx.screen` is where the pixel is on
+  the screen in the game's pixels, `(0, 0)` at the top left, whatever the window's size: a dot
+  screen or a hatch lines up with the screen through it instead of sliding with the model.
+  `ctx.tangent` and `ctx.bitangent` are the way across and down the surface the picture runs, in
+  the world, for a relief or a ripple that moves the picture over a surface; `ctx.uv2` is a second
+  picture coordinate. The corner hook's `VertContext` has the tangent, the bitangent and `uv2` too.
+  The same on WebGPU and WebGL2, and on models with bones, whose tangents bend with them. In the
+  shader composer: `composerScreenPos()`, `composerUv2()`, `composerWorldTangent()`,
+  `composerWorldBitangent()`, `composerVertexTangent()` and `composerVertexBitangent()`.
+- Every shape carries a detail run beside its corners: each corner's tangent (with which hand its
+  bitangent goes) and a second picture coordinate. A glTF file's own `TANGENT` and `TEXCOORD_1` are
+  kept; anything else has them worked out when it is made (tangents from how the picture is
+  stretched over each triangle, the second coordinate as a copy of the first), so the engine's own
+  shapes and every model have them. Only a material's shader reads the run; the engine's own
+  drawing never binds it.
+- Fog by height (`useFog({ height: { top, bottom } })`): below `top` things fade, and at `bottom`
+  they are gone however near, for the mist at the foot of a cliff or a pit with no bottom to see.
+  With `top` under `bottom` it runs upwards, into a cloud. It joins the fog by distance, the denser
+  of the two winning at each corner; `distance: false` leaves only the fog by height. Both are in
+  the fog record (`fog.distance`, `fog.height.enabled`, `.top`, `.bottom`), so a tween can fade
+  either in, and in scene documents, which leave out what is at its default.
 - `ascii()`: the frame drawn in letters. Each cell becomes one of ten, from a space to `@`, as dense
   as the picture is bright there, in the picture's own colour or in `ink` (`color` between the two).
   `scale` is the side of a cell in game pixels, rounded to a multiple of 6 so every pixel of a

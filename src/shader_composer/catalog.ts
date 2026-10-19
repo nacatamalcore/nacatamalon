@@ -2,6 +2,7 @@ import { composerFloat, composerSwizzle, composerVec2, composerVec3, composerVec
 import {
     composerEmissive, composerEnvUv, composerLight, composerMapSample, composerShine, composerResolution, composerSurface, composerTextureSample, composerTime,
     composerUniform, composerUv, composerVertexColor, composerVertexNormal, composerVertexPosition, composerViewDir, composerWorldNormal,
+    composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent,
     composerWorldPos,
 } from './inputs';
 import {
@@ -194,6 +195,12 @@ const DEFS: TNodeDef[] = [
     inputNode('vertexPosition', 'Vertex Position', V3, 'The vertex\'s local-space position. Vertex stage only.', ['mesh3d']),
     inputNode('vertexNormal', 'Vertex Normal', V3, 'The vertex\'s normal. Vertex stage only.', ['mesh3d']),
     inputNode('vertexColor', 'Vertex Color', V4, 'The color painted on the model\'s vertices. Already part of Surface.', ['mesh3d']),
+    inputNode('screenPos', 'Screen Position', V2, 'Where the fragment is on the screen, in game pixels from the top left: for patterns that stay put while the model moves.', ['mesh3d']),
+    inputNode('uv2', 'UV 2', V2, 'A second texture coordinate: the model file\'s own, or UV again.', ['mesh3d']),
+    inputNode('worldTangent', 'World Tangent', V3, 'Which way across the surface the texture runs, in world space.', ['mesh3d']),
+    inputNode('worldBitangent', 'World Bitangent', V3, 'Which way down the surface the texture runs, in world space.', ['mesh3d']),
+    inputNode('vertexTangent', 'Vertex Tangent', V3, 'The vertex\'s tangent in the model\'s own space. Vertex stage only.', ['mesh3d']),
+    inputNode('vertexBitangent', 'Vertex Bitangent', V3, 'The vertex\'s bitangent in the model\'s own space. Vertex stage only.', ['mesh3d']),
 
     {
         type: 'textureSample',
@@ -566,6 +573,12 @@ export const INPUT_BUILDERS: Record<string, () => TComposerNode> = {
     vertexPosition: composerVertexPosition,
     vertexNormal: composerVertexNormal,
     vertexColor: composerVertexColor,
+    screenPos: composerScreenPos,
+    uv2: composerUv2,
+    worldTangent: composerWorldTangent,
+    worldBitangent: composerWorldBitangent,
+    vertexTangent: composerVertexTangent,
+    vertexBitangent: composerVertexBitangent,
 };
 
 /**

@@ -1,3 +1,4 @@
+import type { TLightingLook, TStepLook } from '../../shader_composer/surface/types';
 import type { TColor } from '../../color';
 import type { TTexture } from '../../loaders';
 import type { TShader } from '../../loaders/shader/types/t_shader';
@@ -194,6 +195,15 @@ export type TMeshMaterial = TShaderHalf & {
      * `false`, the picture held true to the surface.
      */
     affine?: boolean;
+    /**
+     * The lighting look it was made with, kept so it can be written down and made again. Left out
+     * when it has none.
+     */
+    lighting?: TLightingLook;
+    /**
+     * The steps it was made with, for the same reason. Left out when it has none.
+     */
+    steps?: readonly TStepLook[];
 };
 
 /**

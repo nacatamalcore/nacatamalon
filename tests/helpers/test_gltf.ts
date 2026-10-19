@@ -19,6 +19,14 @@ export type TTestPrimitive = {
     positions: number[];
     normals?: number[];
     uvs?: number[];
+    /**
+     * Four numbers a corner: the way across and its hand. Written as `TANGENT`.
+     */
+    tangents?: number[];
+    /**
+     * A second picture coordinate, two numbers a corner. Written as `TEXCOORD_1`.
+     */
+    uvs2?: number[];
     indices?: number[];
     material?: number;
     mode?: number;
@@ -228,6 +236,8 @@ const assemble = (model: TTestModel) => {
                     const attributes: Record<string, number> = { POSITION: floats(primitive.positions, 'VEC3') };
                     if (primitive.normals !== undefined) attributes.NORMAL = floats(primitive.normals, 'VEC3');
                     if (primitive.uvs !== undefined) attributes.TEXCOORD_0 = floats(primitive.uvs, 'VEC2');
+                    if (primitive.tangents !== undefined) attributes.TANGENT = floats(primitive.tangents, 'VEC4');
+                    if (primitive.uvs2 !== undefined) attributes.TEXCOORD_1 = floats(primitive.uvs2, 'VEC2');
                     if (primitive.joints !== undefined) attributes.JOINTS_0 = wholes(primitive.joints, primitive.jointBits ?? 16);
                     if (primitive.weights !== undefined) attributes.WEIGHTS_0 = floats(primitive.weights, 'VEC4');
                     if (primitive.colors !== undefined) attributes.COLOR_0 = colors(primitive);

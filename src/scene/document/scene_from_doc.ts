@@ -118,6 +118,7 @@ const pendingShape = (key: string, source: TGeometry['source']): TGeometry => cr
     indexType: 'uint16' as const,
     skinBuffer: null,
     colorBuffer: null,
+    detailBuffer: null,
 });
 
 const loadGeometry = (asset: Extract<TAssetEntry, { type: 'geometry' }>, src: string): void => {
@@ -245,6 +246,9 @@ const buildModelMesh = (
             ...(surface.wrap !== undefined ? { wrap: surface.wrap } : {}),
             ...(surface.vertexSnap !== undefined ? { vertexSnap: surface.vertexSnap } : {}),
             ...(surface.affine === true ? { affine: true } : {}),
+            // The looks as written, which make the colour again: a document keeps the recipe, not the shader.
+            ...(surface.lighting !== undefined ? { lighting: surface.lighting } : {}),
+            ...(surface.steps !== undefined ? { steps: surface.steps } : {}),
         }) as TMeshMaterial,
         ...(component.visible !== undefined ? { visible: component.visible } : {}),
         ...(component.zIndex !== undefined ? { zIndex: component.zIndex } : {}),
@@ -404,6 +408,9 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                     ...(Object.keys(maps).length > 0 ? { maps } : {}),
                     ...(surface.vertexSnap !== undefined ? { vertexSnap: surface.vertexSnap } : {}),
                     ...(surface.affine === true ? { affine: true } : {}),
+                    // The looks as written, which make the colour again: a document keeps the recipe, not the shader.
+                    ...(surface.lighting !== undefined ? { lighting: surface.lighting } : {}),
+                    ...(surface.steps !== undefined ? { steps: surface.steps } : {}),
                 }) as TMeshMaterial,
                 ...(component.visible !== undefined ? { visible: component.visible } : {}),
                 ...(component.zIndex !== undefined ? { zIndex: component.zIndex } : {}),
@@ -458,6 +465,10 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                 color: component.color,
                 near: component.near,
                 far: component.far,
+                distance: component.distance !== false,
+                ...(component.height === undefined ? {} : {
+                    height: { top: component.height.top, bottom: component.height.bottom, enabled: component.height.enabled !== false },
+                }),
                 enabled: component.enabled !== false,
             }).id = component.id;
             break;

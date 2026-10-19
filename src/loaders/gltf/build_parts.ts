@@ -1,5 +1,5 @@
-import { GEOMETRY_STRIDE, SKIN_STRIDE } from '../../geometry';
-import { computeNormals, toFlatShaded } from './shading';
+import { computeDetail, GEOMETRY_STRIDE, SKIN_STRIDE } from '../../geometry';
+import { computeNormals, splitPerCorner, toFlatShaded } from './shading';
 import { readColors, readFloats, readIndices, readJoints } from './read_accessors';
 import { GLTF_MODE_TRIANGLES } from './types/t_gltf_doc';
 import type { Mat4 } from '../../math/mat4';
@@ -26,6 +26,11 @@ export type TBuiltPart = {
      * The colour painted on each corner, four screen bytes apiece, or `null` when none was.
      */
     colors: Uint8Array | null;
+    /**
+     * The detail run (tangents and second picture coordinates) when the file had either, or `null`
+     * for the engine to work it all out when the shape is made.
+     */
+    detail: Float32Array | null;
     /**
      * Which rig deforms it, as a place in the model's list of them.
      */
@@ -133,6 +138,23 @@ export const buildParts = (
                 ? readFloats(doc, buffers, primitive.attributes.TEXCOORD_0)
                 : new Float32Array(count * 2);
 
+            // The file's own tangents (the way across, and its hand) and second coordinates, when it
+            // has them. A tangent is a direction, so it is turned with the piece like a facing is.
+            const tangents = primitive.attributes.TANGENT !== undefined && shading !== 'flat'
+                ? readFloats(doc, buffers, primitive.attributes.TANGENT)
+                : null;
+            if (tangents !== null && place !== null) {
+                for (let i = 0; i < count; i++) {
+                    const [tx, ty, tz] = moveDirection(place, tangents[i * 4], tangents[i * 4 + 1], tangents[i * 4 + 2]);
+                    tangents[i * 4] = tx;
+                    tangents[i * 4 + 1] = ty;
+                    tangents[i * 4 + 2] = tz;
+                }
+            }
+            const uv2 = primitive.attributes.TEXCOORD_1 !== undefined
+                ? readFloats(doc, buffers, primitive.attributes.TEXCOORD_1)
+                : null;
+
             const vertices = new Float32Array(count * GEOMETRY_STRIDE);
             for (let i = 0; i < count; i++) {
                 const [px, py, pz] = place === null
@@ -179,12 +201,20 @@ export const buildParts = (
             const shaped = shading === 'flat'
                 ? toFlatShaded(vertices, indices, skin, colors)
                 : { vertices, indices, skin, colors };
+            // Flat shading splits the corners and faces each triangle again, so the file's tangents
+            // (read only when not flat) are left behind with its facings and worked out afresh;
+            // the second coordinates are split like everything else held one per corner.
+            const flatUv2 = uv2 !== null && shading === 'flat' ? splitPerCorner(uv2, 2, indices) : uv2;
+            const detail = tangents !== null || flatUv2 !== null
+                ? computeDetail(shaped.vertices, shaped.indices, tangents, flatUv2)
+                : null;
             parts.push({
                 name: node.name,
                 vertices: shaped.vertices,
                 indices: shaped.indices,
                 skin: shaped.skin,
                 colors: shaped.colors,
+                detail,
                 skeleton: deformed ? node.skinIndex : undefined,
                 materialIndex: primitive.material,
             });

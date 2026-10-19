@@ -2,6 +2,7 @@ import type { TColor } from '../../../color';
 import type { TGltfModel } from '../../../loaders';
 import type { TTransform3d } from '../../types/t_transform_3d';
 import type { TTextureWrap } from '../../../materials';
+import type { TLightingLook, TStepLook } from '../../../shader_composer/surface/types';
 
 /**
  * What `createModel` is asked for. Only the model is needed.
@@ -70,4 +71,13 @@ export type TModelOptions = {
      * Whether it is drawn. Default `true`.
      */
     visible?: boolean;
+    /**
+     * How every piece is lit, in place of the engine's light: `toon()` or `unlit()`. Each piece
+     * keeps its own picture and colour from the file. A model with bones bends and is lit by it alike.
+     */
+    lighting?: TLightingLook;
+    /**
+     * What is done to every piece once it is lit, in order: `mangaDots()`, `rim()`.
+     */
+    steps?: readonly TStepLook[];
 };

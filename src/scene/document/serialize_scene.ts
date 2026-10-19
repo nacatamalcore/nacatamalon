@@ -173,8 +173,13 @@ const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting): TMeshMat
     if (material.texture !== null) {
         listTexture(material.texture, writing);
     }
+    // A material made by looks writes the looks and not the colour hook they made: the recipe is
+    // the truth, and the shader is made again from it, by whatever version opens the scene.
+    const looked = material.lighting !== undefined || material.steps !== undefined;
+    const written = writeMaterial(material, writing);
     return {
-        ...writeMaterial(material, writing),
+        ...written,
+        ...(looked ? { fragment: null, fragmentGlsl: null } : {}),
         texture: material.texture === null ? null : material.texture.key,
         tint: { ...material.tint },
         emissive: { ...material.emissive },
@@ -189,6 +194,8 @@ const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting): TMeshMat
             ? { vertexSnap: material.vertexSnap }
             : {}),
         ...(material.affine === true ? { affine: true } : {}),
+        ...(material.lighting !== undefined ? { lighting: { ...material.lighting } as TMeshMaterialDoc['lighting'] } : {}),
+        ...(material.steps !== undefined ? { steps: material.steps.map((step) => ({ ...step })) as TMeshMaterialDoc['steps'] } : {}),
     };
 };
 
@@ -473,6 +480,12 @@ const writeFog = (fog: TFog): TComponentDoc => ({
     color: { ...fog.color },
     near: fog.near,
     far: fog.far,
+    ...(fog.distance ? {} : { distance: false }),
+    // Written when it is on, or when its heights were set and it was only switched off, so a fog
+    // switched off for a moment comes back where it was.
+    ...(fog.height.enabled || fog.height.top !== 0 || fog.height.bottom !== -10
+        ? { height: { top: fog.height.top, bottom: fog.height.bottom, ...(fog.height.enabled ? {} : { enabled: false }) } }
+        : {}),
     ...(fog.enabled ? {} : { enabled: false }),
 });
 

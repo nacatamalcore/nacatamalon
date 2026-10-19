@@ -88,6 +88,22 @@ export const toFlatShaded = (
 };
 
 /**
+ * Splits any other run held one-per-corner the way `toFlatShaded` split the corners: one entry per
+ * triangle point, in the same order, so it stays numbered for the corners that are there now.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const splitPerCorner = (run: Float32Array, stride: number, indices: Uint16Array | Uint32Array): Float32Array => {
+    const out = new Float32Array(indices.length * stride);
+    for (let i = 0; i < indices.length; i++) {
+        out.set(run.subarray(indices[i] * stride, indices[i] * stride + stride), i * stride);
+    }
+    return out;
+};
+
+/**
  * Works out which way each corner faces by averaging the faces meeting there, for a surface that
  * shades smoothly across.
  *

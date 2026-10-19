@@ -228,3 +228,73 @@ export const composerUniform = (name: string, value: number | number[]): TCompos
     }
     return newNode('uniform', valueType(value), [], { uniform: { name, value } });
 };
+
+/**
+ * Where on the screen the surface is, in the game's pixels (`vec2`): `(0, 0)` at the top left, the
+ * game's width and height at the bottom right, whatever the size of the window. A dot screen, a
+ * hatch or a dither laid over a model lines up with the screen through this rather than sliding
+ * with the model. Models only, colour stage.
+ * @returns The node, to use as the input of another.
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const composerScreenPos = (): TComposerNode => newNode('input', 'vec2<f32>', [], { input: 'screenPos' });
+
+/**
+ * A second picture coordinate (`vec2`): the file's own, or the first again when it had none. For a
+ * second picture laid over the first by coordinates of its own: baked light, a decal, a detail.
+ * Models only, in either stage.
+ * @returns The node, to use as the input of another.
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const composerUv2 = (): TComposerNode => newNode('input', 'vec2<f32>', [], { input: 'uv2' });
+
+/**
+ * Which way across the surface the picture runs, in the world (`vec3`, one long, square to the
+ * normal). With the bitangent and the normal it is the frame a relief or a ripple moves the picture
+ * in. Models only, colour stage.
+ * @returns The node, to use as the input of another.
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const composerWorldTangent = (): TComposerNode => newNode('input', 'vec3<f32>', [], { input: 'worldTangent' });
+
+/**
+ * Which way down the surface the picture runs, in the world (`vec3`): the normal crossed with the
+ * tangent, turned over where the picture is mirrored. Models only, colour stage.
+ * @returns The node, to use as the input of another.
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const composerWorldBitangent = (): TComposerNode => newNode('input', 'vec3<f32>', [], { input: 'worldBitangent' });
+
+/**
+ * Which way across the surface the picture runs, in the model's own space (`vec3`). Models only,
+ * vertex stage.
+ * @returns The node, to use as the input of another.
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const composerVertexTangent = (): TComposerNode => newNode('input', 'vec3<f32>', [], { input: 'vertexTangent' });
+
+/**
+ * Which way down the surface the picture runs, in the model's own space (`vec3`). Models only,
+ * vertex stage.
+ * @returns The node, to use as the input of another.
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const composerVertexBitangent = (): TComposerNode => newNode('input', 'vec3<f32>', [], { input: 'vertexBitangent' });

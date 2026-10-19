@@ -1,3 +1,5 @@
+import { findMaterialLook } from '../../shader_composer/surface/looks';
+import type { TLook } from '../../shader_composer/surface/types';
 import { MAP_NAME, MAX_MATERIAL_MAPS } from '../../render/shared/material_maps';
 import { SCENE_FORMAT, SCENE_VERSION } from './types/t_scene_doc';
 import { asArray, asBoolean, asColor, asNumber, asOneOf, asRecord, asString } from '../../utils';
@@ -141,6 +143,46 @@ const parseMeshMaterial = (value: unknown): TMeshMaterialDoc => {
             ? { vertexSnap: raw.vertexSnap }
             : {}),
         ...(raw.affine === true ? { affine: true } : {}),
+        ...parseLooks(raw.lighting, raw.steps),
+    };
+};
+
+/**
+ * One look as a document wrote it, over the engine's own defaults for it: a number or a colour the
+ * document has is kept, anything missing or of the wrong kind is the default. A look this version
+ * does not have, or one in the wrong slot, is left out with a warning, and the material draws
+ * without it, the way an unknown screen effect is skipped.
+ */
+const parseLook = (value: unknown, slot: 'lighting' | 'step'): TLook | undefined => {
+    const raw = asRecord(value);
+    const info = raw !== null && typeof raw.look === 'string' ? findMaterialLook(raw.look) : null;
+    if (raw === null || info === null || info.slot !== slot) {
+        console.warn(
+            `[NacatamalOn] scene: a material names ${raw !== null && typeof raw.look === 'string' ? `the look '${raw.look}'` : 'a look'}, ` +
+            `which this version does not have as a ${slot === 'lighting' ? 'lighting look' : 'step'}, so it is left out.`,
+        );
+        return undefined;
+    }
+    const look: Record<string, unknown> = { ...info.build() };
+    for (const [name, fallback] of Object.entries(look)) {
+        const given = raw[name];
+        if (typeof fallback === 'number' && typeof given === 'number' && Number.isFinite(given)) {
+            look[name] = given;
+        } else if (Array.isArray(fallback) && Array.isArray(given) && given.length === fallback.length && given.every((n) => typeof n === 'number')) {
+            look[name] = [...given];
+        }
+    }
+    return look as TLook;
+};
+
+const parseLooks = (lighting: unknown, steps: unknown): Pick<TMeshMaterialDoc, 'lighting' | 'steps'> => {
+    const light = lighting === undefined ? undefined : parseLook(lighting, 'lighting');
+    const kept = Array.isArray(steps)
+        ? steps.map((step) => parseLook(step, 'step')).filter((step): step is TLook => step !== undefined)
+        : [];
+    return {
+        ...(light !== undefined ? { lighting: light as TMeshMaterialDoc['lighting'] } : {}),
+        ...(kept.length > 0 ? { steps: kept as TMeshMaterialDoc['steps'] } : {}),
     };
 };
 
@@ -534,6 +576,18 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 color: asColor(raw.color, BLACK),
                 near: asNumber(raw.near, 10),
                 far: asNumber(raw.far, 100),
+                ...(raw.distance === false ? { distance: false } : {}),
+                ...(raw.height === undefined ? {} : (() => {
+                    const height = asRecord(raw.height) ?? {};
+                    const top = asNumber(height.top, 0);
+                    return {
+                        height: {
+                            top,
+                            bottom: asNumber(height.bottom, top - 10),
+                            ...(height.enabled === false ? { enabled: false } : {}),
+                        },
+                    };
+                })()),
                 ...(raw.enabled === false ? { enabled: false } : {}),
             };
         }

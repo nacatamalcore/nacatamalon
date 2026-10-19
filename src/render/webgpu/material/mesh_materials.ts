@@ -3,7 +3,7 @@ import { buildUniformLayout, writeUniformValues } from '../../shared/material_un
 import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
 import { toGpuTexture } from '../texture';
-import { describeMeshPipeline, MESH_BONES, MESH_COLORS, MESH_CORNERS } from '../mesh/pipeline_state';
+import { describeMeshPipeline, MESH_BONES, MESH_COLORS, MESH_CORNERS, MESH_DETAIL } from '../mesh/pipeline_state';
 import type { TDrawMaterial, TDrawShader } from '../../interface/draw/t_draw_material';
 import type { TMeshPipeline } from '../mesh/types/t_mesh_pipeline';
 import type { TUniformLayout } from '../../shared/material_uniforms';
@@ -170,7 +170,8 @@ export const createMeshMaterials = (
             code: buildMeshMaterialShader(material.fragment, material.vertex, material.uniformSig ?? {}, mapNames, skinned),
         });
         const wiring = skinned ? skinnedPipelineLayout : pipelineLayout;
-        const buffers = skinned ? [MESH_CORNERS, MESH_COLORS, MESH_BONES] : [MESH_CORNERS, MESH_COLORS];
+        // The detail run last, after the bones when there are any: slot 2 or 3 at draw time.
+        const buffers = skinned ? [MESH_CORNERS, MESH_COLORS, MESH_BONES, MESH_DETAIL] : [MESH_CORNERS, MESH_COLORS, MESH_DETAIL];
 
         device.pushErrorScope('validation');
         entry.pipeline = device.createRenderPipeline(describeMeshPipeline(

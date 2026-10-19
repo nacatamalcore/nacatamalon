@@ -205,7 +205,9 @@ export const drawMesh = (
     const custom = surface.fragment !== null || surface.vertex !== null
         ? meshes.materials.get(surface, bends)
         : null;
-    const effect = custom !== null && !custom.failed && custom.pipeline !== null ? custom : null;
+    // A shape with no detail run cannot feed a material's pipeline, which reads one: it is drawn
+    // the built-in way instead.
+    const effect = custom !== null && !custom.failed && custom.pipeline !== null && geometry.detailBuffer !== null ? custom : null;
 
     // A see-through model takes the twin that writes no depth. The frame already put it after the
     // solid ones, furthest first; this is the half of that only the card can do.
@@ -228,6 +230,8 @@ export const drawMesh = (
         pass.setVertexBuffer(2, toGpuBuffer(geometry.skinBuffer!));
     }
     if (effect !== null) {
+        // The detail run, which only a material's pipeline reads: after the bones when it bends.
+        pass.setVertexBuffer(bends ? 3 : 2, toGpuBuffer(geometry.detailBuffer!));
         // The same group number the built-in pipeline keeps the bones in. A material on a model
         // that bends carries the bones in this group of its own, beside its knobs and maps.
         const joints = bends ? meshes.joints.upload(mesh.skeleton!) : null;

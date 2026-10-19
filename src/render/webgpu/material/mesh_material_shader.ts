@@ -35,6 +35,12 @@ struct VertContext {
     // The colour painted on the corner: a wind sway can be weighted by it, which is how the era
     // kept the foot of a tree still while its top moved.
     color: vec4<f32>,
+    // Which way across the surface the picture runs, and which way down: with the normal, the
+    // frame a hook moves the picture over the surface in.
+    tangent: vec3<f32>,
+    bitangent: vec3<f32>,
+    // A second picture coordinate: the file's own, or the first again.
+    uv2: vec2<f32>,
 };
 `;
 
@@ -58,6 +64,15 @@ struct FragContext {
     // the hook is handed; this is it on its own, for a hook that uses it as something else, such as
     // how much of a second picture to show.
     color: vec4<f32>,
+    // Where on the screen this is, in the game's pixels: (0, 0) at the top left. A dot screen or a
+    // hatch laid over a model lines up with the screen through this, not with the model.
+    screen: vec2<f32>,
+    // Which way across the surface the picture runs, and which way down, in the world: with the
+    // normal, the frame a relief or a ripple moves the picture in.
+    tangent: vec3<f32>,
+    bitangent: vec3<f32>,
+    // A second picture coordinate: the file's own, or the first again.
+    uv2: vec2<f32>,
 };
 `;
 
@@ -85,6 +100,13 @@ struct VertexOutput {
     @location(7) casterShine: vec3<f32>,
     @location(8) color: vec4<f32>,
     @location(9) fog: f32,
+    // Where the corner lands on the screen, before the card divides by its depth (x, y and w).
+    // Divided at the pixel instead: the card smears every number for depth, so the three arrive as
+    // they are at that pixel and the division gives exactly where it is. See screenOf.
+    @location(10) screen: vec3<f32>,
+    // The tangent in the world, with its hand in w.
+    @location(11) tangent: vec4<f32>,
+    @location(12) uv2: vec2<f32>,
 };
 `;
 
@@ -185,7 +207,9 @@ const SKIN = /* wgsl */ `
         weights.z * joints[u32(bones.z)] +
         weights.w * joints[u32(bones.w)];
     let placed = skin * vec4<f32>(local, 1.0);
-    let facing = mat3x3<f32>(skin[0].xyz, skin[1].xyz, skin[2].xyz) * shaped;
+    let turn = mat3x3<f32>(skin[0].xyz, skin[1].xyz, skin[2].xyz);
+    let facing = turn * shaped;
+    let across = turn * cornerTangent.xyz;
 `;
 
 /**
@@ -194,6 +218,7 @@ const SKIN = /* wgsl */ `
 const STILL = /* wgsl */ `
     let placed = vec4<f32>(local, 1.0);
     let facing = shaped;
+    let across = cornerTangent.xyz;
 `;
 
 const body = (normal: string, skinned: boolean): string => /* wgsl */ `
@@ -204,7 +229,9 @@ fn vs(
     @location(0) position: vec3<f32>,
     @location(1) normal: vec3<f32>,
     @location(2) uv: vec2<f32>,
-    @location(5) color: vec4<f32>,${skinned ? `
+    @location(5) color: vec4<f32>,
+    @location(6) cornerTangent: vec4<f32>,
+    @location(7) cornerUv2: vec2<f32>,${skinned ? `
     @location(3) bones: vec4<f32>,
     @location(4) weights: vec4<f32>,` : ''}
 ) -> VertexOutput {
@@ -212,6 +239,9 @@ fn vs(
     ctx.normal = normal;
     ctx.uv = uv;
     ctx.color = color;
+    ctx.tangent = cornerTangent.xyz;
+    ctx.bitangent = cross(normal, cornerTangent.xyz) * cornerTangent.w;
+    ctx.uv2 = cornerUv2;
 
     let local = vertex(position, ctx);
 ${normal}${skinned ? SKIN : STILL}
@@ -233,7 +263,19 @@ ${normal}${skinned ? SKIN : STILL}
     out.viewDir = viewDir;
     out.color = color;
     out.fog = fogAt(worldPos);
+    out.screen = out.position.xyw;
+    // A direction, so it is moved by the model's own turn and stretch rather than the facing's.
+    out.tangent = vec4<f32>(normalize((uniforms.model * vec4<f32>(across, 0.0)).xyz), cornerTangent.w);
+    out.uv2 = cornerUv2;
     return out;
+}
+
+// Where a pixel is on the screen, in the game's pixels with (0, 0) at the top left: the corner's
+// x and y divided by its w here, at the pixel, then from -1..1 (up) to 0..1 (down), times the size
+// of the game. The twin of screenOf in webgl2/material/mesh_material_shader.ts.
+fn screenOf(clip: vec3<f32>) -> vec2<f32> {
+    let ndc = clip.xy / clip.z;
+    return vec2<f32>(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5) * mu.resolution;
 }
 
 @fragment
@@ -259,6 +301,10 @@ fn fs(in: VertexOutput) -> @location(0) vec4<f32> {
     ctx.emissive = uniforms.emissive.rgb;
     ctx.viewDir = in.viewDir;
     ctx.color = in.color;
+    ctx.screen = screenOf(in.screen);
+    ctx.tangent = normalize(in.tangent.xyz);
+    ctx.bitangent = cross(normalize(in.normal), ctx.tangent) * in.tangent.w;
+    ctx.uv2 = in.uv2;
 
     // The painted colour is part of the surface, as it is in the built-in ending. The fog goes over
     // what the hook made, so a shader of your own sits in the scene's fog without asking for it.

@@ -103,3 +103,23 @@ export const MESH_BONES: GPUVertexBufferLayout = {
         { shaderLocation: 4, offset: 16, format: 'float32x4' },
     ],
 };
+
+/**
+ * Each corner's detail, from a run of its own: the tangent and its hand, then a second picture
+ * coordinate, six numbers in all.
+ *
+ * Only a material's pipelines read it. The engine's own drawing has no use for it and never binds
+ * it, so it costs a model with no material of its own nothing on the card.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const MESH_DETAIL: GPUVertexBufferLayout = {
+    arrayStride: 24,
+    stepMode: 'vertex',
+    attributes: [
+        { shaderLocation: 6, offset: 0, format: 'float32x4' },
+        { shaderLocation: 7, offset: 16, format: 'float32x2' },
+    ],
+};

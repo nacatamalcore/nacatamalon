@@ -19,6 +19,9 @@ struct VertContext {
     vec3 normal;
     vec2 uv;
     vec4 color;
+    vec3 tangent;
+    vec3 bitangent;
+    vec2 uv2;
 };
 `;
 
@@ -35,6 +38,10 @@ struct FragContext {
     vec3 emissive;
     vec3 viewDir;
     vec4 color;
+    vec2 screen;
+    vec3 tangent;
+    vec3 bitangent;
+    vec2 uv2;
 };
 `;
 
@@ -55,6 +62,12 @@ ${direction} vec3 vCasterLight;
 ${direction} vec3 vCasterShine;
 ${direction} vec4 vColor;
 ${direction} float vFog;
+// Where the corner lands on the screen before the division by depth (x, y and w), divided at the
+// pixel: see screenOf.
+${direction} vec3 vScreen;
+// The tangent in the world, with its hand in w.
+${direction} vec4 vTangent;
+${direction} vec2 vUv2;
 `;
 
 /**
@@ -130,6 +143,15 @@ const DEFORMED_NORMAL = /* glsl */ `
 `;
 
 /**
+ * Each corner's detail, from a run of its own: the tangent and its hand, and a second picture
+ * coordinate. Only a material's program declares them; the built-in one leaves 6 and 7 unread.
+ */
+const DETAIL_HEAD = /* glsl */ `
+layout(location = 6) in vec4 aTangent;
+layout(location = 7) in vec2 aUv2;
+`;
+
+/**
  * The bones, read from the run of them the engine keeps in a texture, and how a corner names them.
  * Word for word the built-in bending (mesh/skinned_shader.ts).
  */
@@ -162,6 +184,7 @@ const SKIN = /* glsl */ `
         aWeights.w * boneMatrix(int(aBones.w));
     vec4 placed = skin * vec4(local, 1.0);
     vec3 facing = mat3(skin) * shaped;
+    vec3 across = mat3(skin) * aTangent.xyz;
 `;
 
 /**
@@ -170,6 +193,7 @@ const SKIN = /* glsl */ `
 const STILL = /* glsl */ `
     vec4 placed = vec4(local, 1.0);
     vec3 facing = shaped;
+    vec3 across = aTangent.xyz;
 `;
 
 const vertexBody = (normal: string, skinned: boolean): string => /* glsl */ `
@@ -178,6 +202,9 @@ void main() {
     ctx.normal = aNormal;
     ctx.uv = aUv;
     ctx.color = aColor;
+    ctx.tangent = aTangent.xyz;
+    ctx.bitangent = cross(aNormal, aTangent.xyz) * aTangent.w;
+    ctx.uv2 = aUv2;
 
     vec3 local = vertex(aPosition, ctx);
 ${normal}${skinned ? SKIN : STILL}
@@ -216,11 +243,24 @@ ${normal}${skinned ? SKIN : STILL}
     vViewDir = viewDir;
     vColor = aColor;
     vFog = fogAt(worldPos);
+    vScreen = gl_Position.xyw;
+    // A direction, so it is moved by the model's own turn and stretch rather than the facing's.
+    vTangent = vec4(normalize((uniforms.model * vec4(across, 0.0)).xyz), aTangent.w);
+    vUv2 = aUv2;
 }
 `;
 
 const FRAGMENT_BODY = /* glsl */ `
 out vec4 fragColor;
+
+// Where a pixel is on the screen, in the game's pixels with (0, 0) at the top left. The twin of
+// screenOf in webgpu/material/mesh_material_shader.ts: gl_Position carries y up on both cards, so
+// the same flip gives the same answer, and gl_FragCoord (bottom up here, top down there) is never
+// read.
+vec2 screenOf(vec3 clip) {
+    vec2 ndc = clip.xy / clip.z;
+    return vec2(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5) * mu.resolution;
+}
 
 void main() {
     // A shader you wrote yourself receives shadow, and receives it without being told about it:
@@ -240,6 +280,10 @@ void main() {
     ctx.emissive = uniforms.emissive.rgb;
     ctx.viewDir = vViewDir;
     ctx.color = vColor;
+    ctx.screen = screenOf(vScreen);
+    ctx.tangent = normalize(vTangent.xyz);
+    ctx.bitangent = cross(normalize(vNormal), ctx.tangent) * vTangent.w;
+    ctx.uv2 = vUv2;
 
     // The painted colour is part of the surface, as it is in the built-in ending. The fog goes over
     // what the hook made, so a shader of your own sits in the scene's fog without asking for it.
@@ -271,6 +315,7 @@ export const buildMeshMaterialShaderGlsl = (
 ): { vertex: string; fragment: string } => ({
     vertex: [
         MESH_VERTEX_ATTRIBUTES_GLSL,
+        DETAIL_HEAD,
         skinned ? SKIN_HEAD : '',
         glslUniformBlock(sig),
         VARYINGS('out'),

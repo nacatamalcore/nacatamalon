@@ -1,5 +1,6 @@
 import type { TGeometrySource } from './types/t_geometry_source';
 import { createRecord } from '../gameobjects/create_record';
+import { computeDetail } from './build/compute_tangents';
 import { COLOR_STRIDE, GEOMETRY_STRIDE } from './types/t_geometry';
 import type { TRuntimeStore } from '../store';
 import type { TGeometry } from './types/t_geometry';
@@ -75,11 +76,16 @@ const colorsFor = (count: number, colors: Uint8Array | null | undefined): Uint32
 export const uploadGeometry = (
     store: TRuntimeStore,
     key: string,
-    { vertices, indices, skin, colors }: {
+    { vertices, indices, skin, colors, detail }: {
         vertices: Float32Array;
         indices: Uint16Array | Uint32Array;
         skin?: Float32Array | null;
         colors?: Uint8Array | null;
+        /**
+         * The detail run, `DETAIL_STRIDE` numbers a corner, when whoever built the shape has it
+         * (a file's tangents and second coordinates). Left out, it is worked out from the corners.
+         */
+        detail?: Float32Array | null;
     },
     source: TGeometrySource | null = null,
 ): TGeometry => {
@@ -100,6 +106,7 @@ export const uploadGeometry = (
         indexBuffer: renderer.createBuffer(indices, 'index'),
         skinBuffer: skin === undefined || skin === null ? null : renderer.createBuffer(skin, 'vertex'),
         colorBuffer: renderer.createBuffer(colorsFor(vertices.length / GEOMETRY_STRIDE, colors), 'vertex'),
+        detailBuffer: renderer.createBuffer(detail ?? computeDetail(vertices, indices), 'vertex'),
     });
 
     store.get('assets').geometries.set(key, geometry);

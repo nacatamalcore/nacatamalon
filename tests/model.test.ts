@@ -4,6 +4,7 @@ import { createModel } from '../src/gameobjects/model';
 import { destroy, flushDestroyed } from '../src/destroy';
 import { fillFrameContext } from '../src/game/loop/fill_frame_context';
 import { getColor } from '../src/color';
+import { mangaDots, toon } from '../src/shader_composer/surface/looks';
 import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { whenLoaded } from '../src/loaders';
@@ -173,6 +174,30 @@ describe('createModel', () => {
         expect(placed!.parts[0].material.tint.r).toBeCloseTo(0.5019, 3);
         expect(placed!.parts[0].material.tint.g).toBeCloseTo(0.3691, 3);
         expect(placed!.parts[1].material.tint.b).toBeCloseTo(0.5019, 3);
+        fake.restore();
+    });
+
+    it('puts the same looks on every piece, each over its own colour', async () => {
+        const fake = served();
+        const { store } = createTestGame();
+        let placed: TModel | null = null;
+        let source: TGltfModel | null = null;
+        startTestScene(store, 'Level', () => {
+            source = useLoadGltf({ src: 'model.gltf' });
+            placed = createModel({ model: source, lighting: toon(), steps: [mangaDots()] });
+            return createScene();
+        });
+        await whenLoaded(source as unknown as TGltfModel);
+
+        for (const part of placed!.parts) {
+            expect(part.material.fragment).toContain('ctx.screen');
+            expect(part.material.lighting).toEqual(toon());
+            expect(part.material.uniforms).toMatchObject({ toonShadow: 0.45 });
+        }
+        // Still the file's own colours underneath.
+        expect(placed!.parts[1].material.tint.b).toBeCloseTo(1, 3);
+        // Each piece turns its own knobs.
+        expect(placed!.parts[0].material.uniforms).not.toBe(placed!.parts[1].material.uniforms);
         fake.restore();
     });
 
