@@ -7,10 +7,18 @@ import type { TUniformSignature } from '../../../materials';
  * Where a model material's own parameters are bound.
  *
  * Groups 0, 1 and 2 are the lights, the picture and the model's own numbers, all three shared with
- * the built-in pipeline. Group 3 is where a skeleton's bones go, and a model that bends never takes
- * this path, so the two can never want it at once.
+ * the built-in pipeline. Group 3 is the material's: its knobs, its maps, and, for a model that bends,
+ * its bones too. The built-in pipeline keeps a model's bones in group 3 as well, and WebGPU promises
+ * no more than four groups, so a material on a model that bends carries them in its own group rather
+ * than in a fifth.
  */
 export const MESH_MATERIAL_GROUP = 3;
+
+/**
+ * Where a bending model's bones are bound inside the material's group: after the knobs (0) and the
+ * maps (1 to 8).
+ */
+export const MESH_MATERIAL_JOINTS_BINDING = 1 + MAX_MATERIAL_MAPS * 2;
 
 /**
  * How far apart the two samples are taken when a moved surface has to be re-measured.
@@ -164,13 +172,41 @@ const DEFORMED_NORMAL = /* wgsl */ `
     let shaped = normalize(cross(moved1 - local, moved2 - local));
 `;
 
-const body = (normal: string): string => /* wgsl */ `
+/**
+ * The bones, mixed by how much of the corner each one owns, applied after the corner hook: the hook
+ * moves the model as it stands at rest, and the bones bend what it made, so a ripple or a swell goes
+ * with the arm it is on. Word for word the built-in bending (skinned_shader.ts), so a model looks the
+ * same whichever path draws it.
+ */
+const SKIN = /* wgsl */ `
+    let skin =
+        weights.x * joints[u32(bones.x)] +
+        weights.y * joints[u32(bones.y)] +
+        weights.z * joints[u32(bones.z)] +
+        weights.w * joints[u32(bones.w)];
+    let placed = skin * vec4<f32>(local, 1.0);
+    let facing = mat3x3<f32>(skin[0].xyz, skin[1].xyz, skin[2].xyz) * shaped;
+`;
+
+/**
+ * The corner where the hook left it, for a model that does not bend.
+ */
+const STILL = /* wgsl */ `
+    let placed = vec4<f32>(local, 1.0);
+    let facing = shaped;
+`;
+
+const body = (normal: string, skinned: boolean): string => /* wgsl */ `
+${skinned ? `@group(${MESH_MATERIAL_GROUP}) @binding(${MESH_MATERIAL_JOINTS_BINDING}) var<storage, read> joints: array<mat4x4<f32>>;` : ''}
+
 @vertex
 fn vs(
     @location(0) position: vec3<f32>,
     @location(1) normal: vec3<f32>,
     @location(2) uv: vec2<f32>,
-    @location(5) color: vec4<f32>,
+    @location(5) color: vec4<f32>,${skinned ? `
+    @location(3) bones: vec4<f32>,
+    @location(4) weights: vec4<f32>,` : ''}
 ) -> VertexOutput {
     var ctx: VertContext;
     ctx.normal = normal;
@@ -178,12 +214,12 @@ fn vs(
     ctx.color = color;
 
     let local = vertex(position, ctx);
-${normal}
+${normal}${skinned ? SKIN : STILL}
     var out: VertexOutput;
-    out.position = snapToPixels(uniforms.mvp * vec4<f32>(local, 1.0));
+    out.position = snapToPixels(uniforms.mvp * placed);
 
-    let worldPos = (uniforms.model * vec4<f32>(local, 1.0)).xyz;
-    let worldNormal = normalize((uniforms.normalMatrix * vec4<f32>(shaped, 0.0)).xyz);
+    let worldPos = (uniforms.model * placed).xyz;
+    let worldNormal = normalize((uniforms.normalMatrix * vec4<f32>(facing, 0.0)).xyz);
     let viewDir = viewDirOf(worldPos);
 
     let surface = litBy(worldPos, worldNormal, viewDir);
@@ -242,6 +278,9 @@ fn fs(in: VertexOutput) -> @location(0) vec4<f32> {
  * The declarations are the **same value** the built-in shader is built from, not a copy, so the two
  * cannot drift apart.
  *
+ * `skinned` is the same shader for a model that bends: it also reads the bones each corner names and
+ * bends the corner around them, after the corner hook has moved it.
+ *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -251,6 +290,7 @@ export const buildMeshMaterialShader = (
     vertex: string | null,
     sig: TUniformSignature,
     mapNames: readonly string[] = [],
+    skinned = false,
 ): string => {
     const { structText } = buildUniformLayout(sig);
 
@@ -265,6 +305,6 @@ export const buildMeshMaterialShader = (
         maps(mapNames),
         vertex ?? DEFAULT_VERTEX,
         fragment ?? DEFAULT_EFFECT,
-        body(vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL),
+        body(vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL, skinned),
     ].join('\n');
 };

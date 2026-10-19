@@ -5,7 +5,7 @@ export { installPostChain, replaceProjectPostChain } from './install_post_chain'
 export { buildPostChain } from './build_post_chain';
 export {
     dither, posterize, paletteMatch, lutGrade, COLOR_LEVELS, POST_BUILTINS, findPostBuiltin,
-    crt, CRT_PRESETS, colorAdjust, mosaic, rgbSplit, wave, shockwave, distort, glitch, grain, oldFilm, halftone, ntsc, lcd, zoomBlur, motionBlur, blur, bloom, godrays, tiltShift, phosphor,
+    crt, CRT_PRESETS, colorAdjust, mosaic, rgbSplit, wave, shockwave, distort, glitch, grain, oldFilm, halftone, ascii, ntsc, lcd, zoomBlur, motionBlur, blur, bloom, godrays, tiltShift, phosphor,
 } from './builtin';
 
 export type { TPostEffect, TPostPass, TPostSource } from './types/t_post_effect';

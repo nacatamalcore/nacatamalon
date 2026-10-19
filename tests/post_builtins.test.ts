@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, spyOn } from 'bun:test';
 import {
-    bloom, COLOR_LEVELS, colorAdjust, crt, CRT_PRESETS, dither, findPostBuiltin, lcd, lutGrade, paletteMatch, phosphor,
+    ascii, bloom, COLOR_LEVELS, colorAdjust, crt, CRT_PRESETS, dither, findPostBuiltin, lcd, lutGrade, paletteMatch, phosphor,
     POST_BUILTINS, posterize,
 } from '../src/post';
 import { getColor } from '../src/color/get_color';
@@ -53,6 +53,7 @@ describe('the catalogue', () => {
             ['bloom', null],
             ['godrays', null],
             ['halftone', null],
+            ['ascii', null],
             ['glitch', null],
             ['rgbSplit', null],
             ['grain', null],
@@ -182,5 +183,29 @@ describe('what each one starts at', () => {
         // The first thing the shader does, and the reason a slow file costs the palette not the frame.
         expect(paletteMatch().fragment).toContain('if (count <= 1u) { return color; }');
         expect(paletteMatch().fragmentGlsl).toContain('if (count <= 1) { return color; }');
+    });
+});
+
+describe('ascii', () => {
+    it('writes the letters it is asked for into both shaders, darkest first', () => {
+        const effect = ascii({ glyphs: ' ░▒▓█' });
+        expect(effect.fragment).toContain('array<u32, 5>(0u, 17974417u, 22369621u, 32865631u, 33554431u)');
+        expect(effect.fragmentGlsl).toContain('uint[5](0u, 17974417u, 22369621u, 32865631u, 33554431u)');
+        expect(effect.fragment).toContain('clamp(i32(lum * 5.0), 0, 4)');
+    });
+
+    it('leaves out a letter it cannot draw, and says which', () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        const effect = ascii({ glyphs: ' .ñ@' });
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(String(warn.mock.calls[0][0])).toContain("'ñ'");
+        expect(effect.fragment).toContain('array<u32, 3>(');
+        warn.mockRestore();
+    });
+
+    it('falls back to its own ten when fewer than two are left, since one cannot tell light from dark', () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        expect(ascii({ glyphs: '@' }).fragment).toContain('array<u32, 10>(');
+        warn.mockRestore();
     });
 });

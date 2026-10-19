@@ -129,7 +129,50 @@ const DEFORMED_NORMAL = /* glsl */ `
     vec3 shaped = normalize(cross(moved1 - local, moved2 - local));
 `;
 
-const vertexBody = (normal: string): string => /* glsl */ `
+/**
+ * The bones, read from the run of them the engine keeps in a texture, and how a corner names them.
+ * Word for word the built-in bending (mesh/skinned_shader.ts).
+ */
+const SKIN_HEAD = /* glsl */ `
+layout(location = 3) in vec4 aBones;
+layout(location = 4) in vec4 aWeights;
+
+uniform highp sampler2D uJoints;
+
+mat4 boneMatrix(int bone) {
+    int x = bone * 4;
+    return mat4(
+        texelFetch(uJoints, ivec2(x, 0), 0),
+        texelFetch(uJoints, ivec2(x + 1, 0), 0),
+        texelFetch(uJoints, ivec2(x + 2, 0), 0),
+        texelFetch(uJoints, ivec2(x + 3, 0), 0)
+    );
+}
+`;
+
+/**
+ * The bones, mixed by how much of the corner each one owns, applied after the corner hook: the hook
+ * moves the model as it stands at rest, and the bones bend what it made.
+ */
+const SKIN = /* glsl */ `
+    mat4 skin =
+        aWeights.x * boneMatrix(int(aBones.x)) +
+        aWeights.y * boneMatrix(int(aBones.y)) +
+        aWeights.z * boneMatrix(int(aBones.z)) +
+        aWeights.w * boneMatrix(int(aBones.w));
+    vec4 placed = skin * vec4(local, 1.0);
+    vec3 facing = mat3(skin) * shaped;
+`;
+
+/**
+ * The corner where the hook left it, for a model that does not bend.
+ */
+const STILL = /* glsl */ `
+    vec4 placed = vec4(local, 1.0);
+    vec3 facing = shaped;
+`;
+
+const vertexBody = (normal: string, skinned: boolean): string => /* glsl */ `
 void main() {
     VertContext ctx;
     ctx.normal = aNormal;
@@ -137,11 +180,11 @@ void main() {
     ctx.color = aColor;
 
     vec3 local = vertex(aPosition, ctx);
-${normal}
-    gl_Position = snapToPixels(uniforms.mvp * vec4(local, 1.0));
+${normal}${skinned ? SKIN : STILL}
+    gl_Position = snapToPixels(uniforms.mvp * placed);
 
-    vec3 worldPos = (uniforms.model * vec4(local, 1.0)).xyz;
-    vec3 worldNormal = normalize((uniforms.normalMatrix * vec4(shaped, 0.0)).xyz);
+    vec3 worldPos = (uniforms.model * placed).xyz;
+    vec3 worldNormal = normalize((uniforms.normalMatrix * vec4(facing, 0.0)).xyz);
     vec3 viewDir = viewDirOf(worldPos);
 
     vec3 diffuse = vec3(0.0);
@@ -212,6 +255,9 @@ void main() {
  * thing has to be declared before whatever uses it, and the light helper, the contexts and the
  * hooks are all things the body uses.
  *
+ * `skinned` is the same shader for a model that bends: it also reads the bones each corner names and
+ * bends the corner around them, after the corner hook has moved it.
+ *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -221,15 +267,17 @@ export const buildMeshMaterialShaderGlsl = (
     vertex: string | null,
     sig: TUniformSignature,
     mapNames: readonly string[] = [],
+    skinned = false,
 ): { vertex: string; fragment: string } => ({
     vertex: [
         MESH_VERTEX_ATTRIBUTES_GLSL,
+        skinned ? SKIN_HEAD : '',
         glslUniformBlock(sig),
         VARYINGS('out'),
         MESH_SAMPLE_LIGHT_GLSL,
         VERT_CONTEXT,
         vertex ?? DEFAULT_VERTEX,
-        vertexBody(vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL),
+        vertexBody(vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL, skinned),
     ].join('\n'),
     fragment: [
         MESH_FRAGMENT_HEAD_GLSL,

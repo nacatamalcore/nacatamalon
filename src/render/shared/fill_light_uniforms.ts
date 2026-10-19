@@ -58,9 +58,10 @@ export const LIGHT_FLOATS_PER_ITEM = 16;
  * the same for every model in the scene. Putting it on the model would be the same twenty numbers
  * written again for every crate in the room.
  *
- * It is also why nothing here needed a binding group of its own. Group 3 is already contested
- * between a material of your own and a skeleton's bones, and they only coexist because a model that
- * bends never takes the material path. A third claimant would have broken that.
+ * It is also why nothing here needed a binding group of its own. Group 3 is already shared between
+ * a material of your own and a skeleton's bones: a material on a model that bends carries the bones
+ * inside its own group, since WebGPU promises no more than four. A third claimant would have broken
+ * that.
  *
  * @internal
  */

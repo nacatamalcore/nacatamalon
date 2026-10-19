@@ -8,6 +8,7 @@ import { glitch } from './glitch';
 import { godrays } from './godrays';
 import { grain } from './grain';
 import { halftone } from './halftone';
+import { ascii } from './ascii';
 import { lcd } from './lcd';
 import { lutGrade } from './lut_grade';
 import { mosaic } from './mosaic';
@@ -129,6 +130,13 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         description: 'Printed dots or crossed lines, as in a comic or a newspaper.',
         binds: null,
         build: () => halftone(),
+    },
+    {
+        key: 'ascii',
+        label: 'ASCII',
+        description: 'The frame in letters, as dense as the picture is bright, in its own colour or a terminal\'s.',
+        binds: null,
+        build: () => ascii(),
     },
     {
         key: 'glitch',

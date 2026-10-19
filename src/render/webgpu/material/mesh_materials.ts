@@ -1,9 +1,9 @@
-import { buildMeshMaterialShader, MESH_MATERIAL_GROUP } from './mesh_material_shader';
+import { buildMeshMaterialShader, MESH_MATERIAL_GROUP, MESH_MATERIAL_JOINTS_BINDING } from './mesh_material_shader';
 import { buildUniformLayout, writeUniformValues } from '../../shared/material_uniforms';
 import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
 import { toGpuTexture } from '../texture';
-import { describeMeshPipeline, MESH_COLORS, MESH_CORNERS } from '../mesh/pipeline_state';
+import { describeMeshPipeline, MESH_BONES, MESH_COLORS, MESH_CORNERS } from '../mesh/pipeline_state';
 import type { TDrawMaterial, TDrawShader } from '../../interface/draw/t_draw_material';
 import type { TMeshPipeline } from '../mesh/types/t_mesh_pipeline';
 import type { TUniformLayout } from '../../shared/material_uniforms';
@@ -58,22 +58,36 @@ export const createMeshMaterials = (
             { binding: 2 + i * 2, visibility: GPUShaderStage.FRAGMENT, texture: {} },
         );
     }
+    const knobsEntry: GPUBindGroupLayoutEntry = {
+        binding: 0,
+        // Both stages, because a corner hook turns knobs as readily as a colour hook does.
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        // Where this model's numbers start is given at draw time, so a group depends only on the
+        // maps it binds and not on which slot of the buffer this model landed in.
+        buffer: { type: 'uniform', hasDynamicOffset: true, minBindingSize: MESH_MATERIAL_STRIDE },
+    };
     const materialLayout = device.createBindGroupLayout({
         label: 'mesh material layout',
-        entries: [{
-            binding: 0,
-            // Both stages, because a corner hook turns knobs as readily as a colour hook does.
-            visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-            // Where this model's numbers start is given at draw time, so a group depends only on the
-            // maps it binds and not on which slot of the buffer this model landed in.
-            buffer: { type: 'uniform', hasDynamicOffset: true, minBindingSize: MESH_MATERIAL_STRIDE },
-        }, ...mapEntries],
+        entries: [knobsEntry, ...mapEntries],
+    });
+    // The same group with the bones in it too, for a model that bends.
+    const skinnedMaterialLayout = device.createBindGroupLayout({
+        label: 'skinned mesh material layout',
+        entries: [knobsEntry, ...mapEntries, {
+            binding: MESH_MATERIAL_JOINTS_BINDING,
+            visibility: GPUShaderStage.VERTEX,
+            buffer: { type: 'read-only-storage' },
+        }],
     });
     const pipelineLayout = device.createPipelineLayout({
         label: 'mesh material pipeline layout',
         // The first three are the ones the built-in pipeline already binds: the lights of the scene,
         // the picture, and this model's own numbers. A material changes the shader and nothing else.
         bindGroupLayouts: [layouts.lights, layouts.texture, layouts.uniforms, materialLayout],
+    });
+    const skinnedPipelineLayout = device.createPipelineLayout({
+        label: 'skinned mesh material pipeline layout',
+        bindGroupLayouts: [layouts.lights, layouts.texture, layouts.uniforms, skinnedMaterialLayout],
     });
 
     const compiled = new Map<string, TCompiled>();
@@ -84,17 +98,18 @@ export const createMeshMaterials = (
     let used = 0;
 
     /**
-     * Bind groups by the four pictures and samplers they hold. Cleared when the buffer they point at
-     * is replaced, and when it grows past what a game with a sensible number of maps would make.
+     * Bind groups by the four pictures and samplers they hold, and the bones for a model that bends.
+     * Cleared when the buffer they point at is replaced, and when it grows past what a game with a
+     * sensible number of maps would make.
      */
     const groups = new Map<string, GPUBindGroup>();
-    const ids = new WeakMap<GPUTexture, number>();
+    const ids = new WeakMap<GPUTexture | GPUBuffer, number>();
     let nextId = 0;
-    const idOf = (texture: GPUTexture): number => {
-        let id = ids.get(texture);
+    const idOf = (held: GPUTexture | GPUBuffer): number => {
+        let id = ids.get(held);
         if (id === undefined) {
             id = nextId++;
-            ids.set(texture, id);
+            ids.set(held, id);
         }
         return id;
     };
@@ -115,7 +130,7 @@ export const createMeshMaterials = (
         capacity = size;
     };
 
-    const build = (material: TDrawShader): TCompiled => {
+    const build = (material: TDrawShader, skinned: boolean): TCompiled => {
         const layout = buildUniformLayout(material.uniformSig ?? {});
         const mapNames = mapNamesOf(material.fragment);
 
@@ -149,25 +164,28 @@ export const createMeshMaterials = (
             );
         };
 
+        const kind = skinned ? 'skinned mesh material' : 'mesh material';
         const module = device.createShaderModule({
-            label: `mesh material ${material.name ?? material.id}`,
-            code: buildMeshMaterialShader(material.fragment, material.vertex, material.uniformSig ?? {}, mapNames),
+            label: `${kind} ${material.name ?? material.id}`,
+            code: buildMeshMaterialShader(material.fragment, material.vertex, material.uniformSig ?? {}, mapNames, skinned),
         });
+        const wiring = skinned ? skinnedPipelineLayout : pipelineLayout;
+        const buffers = skinned ? [MESH_CORNERS, MESH_COLORS, MESH_BONES] : [MESH_CORNERS, MESH_COLORS];
 
         device.pushErrorScope('validation');
         entry.pipeline = device.createRenderPipeline(describeMeshPipeline(
-            `mesh material pipeline ${material.name ?? material.id}`,
+            `${kind} pipeline ${material.name ?? material.id}`,
             module,
-            pipelineLayout,
-            [MESH_CORNERS, MESH_COLORS],
+            wiring,
+            buffers,
             format,
             samples,
         ));
         entry.transparentPipeline = device.createRenderPipeline(describeMeshPipeline(
-            `see-through mesh material pipeline ${material.name ?? material.id}`,
+            `see-through ${kind} pipeline ${material.name ?? material.id}`,
             module,
-            pipelineLayout,
-            [MESH_CORNERS, MESH_COLORS],
+            wiring,
+            buffers,
             format,
             samples,
             false,
@@ -197,11 +215,15 @@ export const createMeshMaterials = (
                 grow(models);
             }
         },
-        get: (material: TDrawShader): TCompiled => {
-            const key = `${JSON.stringify(material.uniformSig ?? {})} ${material.fragment ?? ''} ${material.vertex ?? ''}`;
+        /**
+         * The compiled effect, for a model that bends (`skinned`) or one that does not: two shaders,
+         * each built the first time it is wanted.
+         */
+        get: (material: TDrawShader, skinned = false): TCompiled => {
+            const key = `${skinned ? 'skinned ' : ''}${JSON.stringify(material.uniformSig ?? {})} ${material.fragment ?? ''} ${material.vertex ?? ''}`;
             let entry = compiled.get(key);
             if (entry === undefined) {
-                entry = build(material);
+                entry = build(material, skinned);
                 compiled.set(key, entry);
             }
             return entry;
@@ -212,6 +234,9 @@ export const createMeshMaterials = (
          *
          * A map the shader reads and the material does not have, or one still loading, reads as white:
          * a map is a second picture, and a model should not vanish while one is on its way.
+         *
+         * `joints` is a bending model's bones, this frame's, bound in the same group; `null` for one
+         * that does not bend.
          */
         bind: (
             entry: TCompiled,
@@ -221,6 +246,7 @@ export const createMeshMaterials = (
             time: number,
             width: number,
             height: number,
+            joints: GPUBuffer | null = null,
         ): { group: GPUBindGroup; offset: number } => {
             const slot = Math.min(used, capacity - 1);
             used += 1;
@@ -254,7 +280,7 @@ export const createMeshMaterials = (
                 samplers.push(wrapKey(filter, u, v));
             }
 
-            const key = views.map((view, i) => `${idOf(view)} ${samplers[i]}`).join('|');
+            const key = views.map((view, i) => `${idOf(view)} ${samplers[i]}`).join('|') + (joints === null ? '' : `|bones ${idOf(joints)}`);
             let group = groups.get(key);
             if (group === undefined) {
                 if (groups.size > 512) {
@@ -270,7 +296,14 @@ export const createMeshMaterials = (
                         { binding: 2 + i * 2, resource: views[i]!.createView() },
                     );
                 }
-                group = device.createBindGroup({ label: 'mesh material', layout: materialLayout, entries });
+                if (joints !== null) {
+                    entries.push({ binding: MESH_MATERIAL_JOINTS_BINDING, resource: { buffer: joints } });
+                }
+                group = device.createBindGroup({
+                    label: joints === null ? 'mesh material' : 'skinned mesh material',
+                    layout: joints === null ? materialLayout : skinnedMaterialLayout,
+                    entries,
+                });
                 groups.set(key, group);
             }
             return { group, offset: slot * MESH_MATERIAL_STRIDE };

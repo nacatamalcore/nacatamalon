@@ -199,12 +199,11 @@ export const drawMesh = (
     // other would read whichever corners happened to be bound and scatter.
     const bends = mesh.skeleton !== null && geometry.skinBuffer !== null;
 
-    // A model that bends never takes the effect path, and that is a real limit rather than an
-    // oversight: the bone blend lives in the built-in corner stage, and letting an author move a
-    // corner as well would mean a third shader that does both.
+    // A model that bends takes the effect's skinned twin: the same hooks, with the bones bending the
+    // corner after the corner hook has moved it.
     const surface = mesh.material;
-    const custom = !bends && (surface.fragment !== null || surface.vertex !== null)
-        ? meshes.materials.get(surface)
+    const custom = surface.fragment !== null || surface.vertex !== null
+        ? meshes.materials.get(surface, bends)
         : null;
     const effect = custom !== null && !custom.failed && custom.pipeline !== null ? custom : null;
 
@@ -226,13 +225,16 @@ export const drawMesh = (
     pass.setVertexBuffer(1, toGpuBuffer(geometry.colorBuffer));
 
     if (bends) {
-        pass.setBindGroup(3, jointBindGroup(device, meshes, mesh.skeleton!));
         pass.setVertexBuffer(2, toGpuBuffer(geometry.skinBuffer!));
-    } else if (effect !== null) {
-        // The same group number the bones would have used, which is free precisely because the two
-        // can never be wanted at once.
-        const bound = meshes.materials.bind(effect, surface, meshes.defaultSmooth, null, time, width, height);
+    }
+    if (effect !== null) {
+        // The same group number the built-in pipeline keeps the bones in. A material on a model
+        // that bends carries the bones in this group of its own, beside its knobs and maps.
+        const joints = bends ? meshes.joints.upload(mesh.skeleton!) : null;
+        const bound = meshes.materials.bind(effect, surface, meshes.defaultSmooth, null, time, width, height, joints);
         pass.setBindGroup(meshes.materials.group, bound.group, [bound.offset]);
+    } else if (bends) {
+        pass.setBindGroup(3, jointBindGroup(device, meshes, mesh.skeleton!));
     }
 
     pass.setIndexBuffer(toGpuBuffer(geometry.indexBuffer), geometry.indexType);

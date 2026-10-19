@@ -13,6 +13,7 @@ export { glitch } from './glitch';
 export { grain } from './grain';
 export { oldFilm } from './old_film';
 export { halftone } from './halftone';
+export { ascii } from './ascii';
 export { ntsc } from './ntsc';
 export { lcd } from './lcd';
 export { zoomBlur } from './zoom_blur';

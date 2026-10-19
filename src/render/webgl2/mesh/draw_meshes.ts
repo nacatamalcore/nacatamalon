@@ -133,14 +133,14 @@ export const drawMesh = (
     // other would read whichever corners happened to be bound and scatter.
     const bends = mesh.skeleton !== null && mesh.geometry.skinBuffer !== null;
 
-    // A model that bends never takes the effect path: the bone blend lives in the built-in corner
-    // stage, and doing both would be a third shader that does both.
+    // A model that bends takes the effect's skinned twin: the same hooks, with the bones bending the
+    // corner after the corner hook has moved it. Its bones are bound below, on the same unit either way.
     const surface = mesh.material;
     let effect: ReturnType<TMeshPipeline['materials']['get']> | null = null;
-    if (!bends && (surface.fragment !== null || surface.vertex !== null)) {
+    if (surface.fragment !== null || surface.vertex !== null) {
         meshes.materials.warnIfWgpuOnly(surface);
         if (surface.fragmentGlsl !== null || surface.vertexGlsl !== null) {
-            const compiled = meshes.materials.get(surface);
+            const compiled = meshes.materials.get(surface, bends);
             if (!compiled.failed && compiled.program !== null) {
                 effect = compiled;
             }

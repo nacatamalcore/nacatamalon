@@ -7,6 +7,14 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- `ascii()`: the frame drawn in letters. Each cell becomes one of ten, from a space to `@`, as dense
+  as the picture is bright there, in the picture's own colour or in `ink` (`color` between the two).
+  `scale` is the side of a cell in game pixels, rounded to a multiple of 6 so every pixel of a
+  letter is the same size; `background` is how much of the picture shows behind them, `brightness`
+  how bright they are. The letters are carried in the shader, so nothing is loaded; a `bloom()`
+  after it makes them glow. `glyphs` picks them, darkest first (`' .oO0@'`, `' ░▒▓█'`): any
+  printable ASCII character and the four blocks, 5 × 5 each, written into the shader when the effect
+  is made; one it cannot draw is left out with a warning. In the catalogue as `ascii`.
 - `consoleColor(color, levels)`: a colour as a console could show it, each channel moved to the
   nearest step of `COLOR_LEVELS.genesis`, `.snes` or any number. Takes what `getColor` takes or a
   `TColor`, and leaves alpha alone. Under `dither` a colour on the steps stays flat and one between
@@ -81,6 +89,12 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- A material with an effect of its own works on a model with bones. Until now such a model was
+  always drawn with the built-in shader, since the bone blend lived only in its corner stage, and the
+  effect just did not show, with nothing to say why. Now the effect has a twin that also bends the
+  model: the corner hook moves it as it stands at rest and the bones bend what it made, so a ripple
+  goes with the arm it is on, and the colour hook sees the pose the model is in. The same on WebGPU
+  (the bones ride in the material's own group, beside its knobs and maps) and on WebGL2.
 - `dither` and `posterize` cut colours the same on WebGPU as on WebGL2. WGSL's `round()` sends a half
   to the even step, and the dither pattern lands exactly on halves: pure white under
   `dither({ levels: COLOR_LEVELS.genesis })` came out grey (219 instead of 255) on one pixel in 16

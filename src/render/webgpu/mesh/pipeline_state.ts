@@ -84,3 +84,22 @@ export const MESH_COLORS: GPUVertexBufferLayout = {
     stepMode: 'vertex',
     attributes: [{ shaderLocation: 5, offset: 0, format: 'unorm8x4' }],
 };
+
+/**
+ * The four bones each corner names and how much of it each one owns, in the shape's skin buffer.
+ *
+ * Shared by the built-in pipeline for a model that bends and by a material's pipeline for one, so
+ * the two read the skin the same way.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const MESH_BONES: GPUVertexBufferLayout = {
+    arrayStride: 32,
+    stepMode: 'vertex',
+    attributes: [
+        { shaderLocation: 3, offset: 0, format: 'float32x4' },
+        { shaderLocation: 4, offset: 16, format: 'float32x4' },
+    ],
+};

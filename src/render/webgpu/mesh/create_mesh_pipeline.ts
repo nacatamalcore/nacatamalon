@@ -4,7 +4,7 @@ import { SHADOW_FORMAT } from '../shadow/shadow_map';
 import { SKINNED_SHADER } from './skinned_shader';
 import { createJointPalette } from './joint_palette';
 import { createMeshMaterials } from '../material/mesh_materials';
-import { describeMeshPipeline, MESH_COLORS, MESH_CORNERS } from './pipeline_state';
+import { describeMeshPipeline, MESH_BONES, MESH_COLORS, MESH_CORNERS } from './pipeline_state';
 import type { TMeshPipeline } from './types/t_mesh_pipeline';
 import { TEXTURE_WRAPS, wrapKey } from '../../shared/texture_wrap';
 import type { TTextureWrap } from '../../../materials/types/t_material';
@@ -102,14 +102,7 @@ export const createMeshPipeline = (
      * A run of its own so that the first stays exactly what it always was: a shape that does not
      * bend pays nothing, and the same shape could be drawn either way.
      */
-    const BONES: GPUVertexBufferLayout = {
-        arrayStride: 32,
-        stepMode: 'vertex',
-        attributes: [
-            { shaderLocation: 3, offset: 0, format: 'float32x4' },
-            { shaderLocation: 4, offset: 16, format: 'float32x4' },
-        ],
-    };
+    const BONES = MESH_BONES;
 
     const module = device.createShaderModule({ label: 'mesh shader', code: MESH_SHADER });
     const layouts = { lights: lightsLayout, texture: textureLayout, uniforms: uniformsLayout, joints: jointsLayout };

@@ -2,7 +2,7 @@ import { buildMeshMaterialShaderGlsl } from './mesh_material_shader';
 import { buildUniformLayout, writeUniformValues } from '../../shared/material_uniforms';
 import { compileProgram } from '../utils/compile_program';
 import { MATERIAL_UNIFORMS_BINDING } from './uniform_block';
-import { MESH_LIGHTS_BINDING, MESH_MAP_UNITS, MESH_SHADOW_UNIT, MESH_TEXTURE_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
+import { MESH_JOINTS_UNIT, MESH_LIGHTS_BINDING, MESH_MAP_UNITS, MESH_SHADOW_UNIT, MESH_TEXTURE_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
 import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import type { TDrawShader } from '../../interface/draw/t_draw_material';
 import type { TUniformLayout } from '../../shared/material_uniforms';
@@ -47,7 +47,7 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
 
     let parameters: WebGLBuffer | null = null;
 
-    const build = (material: TDrawShader): TCompiled => {
+    const build = (material: TDrawShader, skinned: boolean): TCompiled => {
         const layout = buildUniformLayout(material.uniformSig ?? {});
         const mapNames = mapNamesOf(material.fragmentGlsl);
         if (mapNames.length > MAX_MATERIAL_MAPS) {
@@ -62,6 +62,7 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
             material.vertexGlsl,
             material.uniformSig ?? {},
             mapNames,
+            skinned,
         );
 
         try {
@@ -69,7 +70,7 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
                 gl,
                 sources.vertex,
                 sources.fragment,
-                `mesh material ${material.name ?? material.id}`,
+                `${skinned ? 'skinned mesh material' : 'mesh material'} ${material.name ?? material.id}`,
             );
             gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, 'Uniforms'), MESH_UNIFORMS_BINDING);
             gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, 'Lights'), MESH_LIGHTS_BINDING);
@@ -90,6 +91,10 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
             MESH_MAP_UNITS.forEach((unit, i) => {
                 gl.uniform1i(gl.getUniformLocation(program, `meshMap${i}`), unit);
             });
+            // A model that bends reads its bones from the unit the built-in bending reads them from.
+            if (skinned) {
+                gl.uniform1i(gl.getUniformLocation(program, 'uJoints'), MESH_JOINTS_UNIT);
+            }
             gl.useProgram(null);
             return { program, layout, failed: false, mapNames };
         } catch (error) {
@@ -130,11 +135,15 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
                 'Write the effect again after a // @glsl line to have it on both.',
             );
         },
-        get: (material: TDrawShader): TCompiled => {
-            const key = `${JSON.stringify(material.uniformSig ?? {})} ${material.fragmentGlsl ?? ''} ${material.vertexGlsl ?? ''}`;
+        /**
+         * The compiled effect, for a model that bends (`skinned`) or one that does not: two programs,
+         * each built the first time it is wanted.
+         */
+        get: (material: TDrawShader, skinned = false): TCompiled => {
+            const key = `${skinned ? 'skinned ' : ''}${JSON.stringify(material.uniformSig ?? {})} ${material.fragmentGlsl ?? ''} ${material.vertexGlsl ?? ''}`;
             let entry = compiled.get(key);
             if (entry === undefined) {
-                entry = build(material);
+                entry = build(material, skinned);
                 compiled.set(key, entry);
             }
             return entry;
