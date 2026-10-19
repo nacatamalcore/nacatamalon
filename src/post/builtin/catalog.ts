@@ -23,6 +23,7 @@ import { shockwave } from './shockwave';
 import { tiltShift } from './tilt_shift';
 import { wave } from './wave';
 import { zoomBlur } from './zoom_blur';
+import { BUILTIN_FIELDS } from './builtin_fields';
 import type { TPostBuiltinInfo } from './types/t_builtin';
 
 /**
@@ -45,6 +46,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Colour grade',
         description: 'Looks every colour up in a grading table: warmer, colder, a green night.',
         binds: 'lut',
+        fields: BUILTIN_FIELDS.lut!,
         build: () => lutGrade(),
     },
     {
@@ -52,6 +54,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Colour adjust',
         description: 'Brightness, contrast, saturation, gamma, hue and a tint, each starting where it changes nothing.',
         binds: null,
+        fields: BUILTIN_FIELDS.adjust!,
         build: () => colorAdjust(),
     },
     {
@@ -59,6 +62,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Wave',
         description: 'Slides each line sideways by a moving wave, the way the hardware did heat and water.',
         binds: null,
+        fields: BUILTIN_FIELDS.wave!,
         build: () => wave(),
     },
     {
@@ -66,6 +70,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Shockwave',
         description: 'A ring that pushes the picture outwards as the game moves it.',
         binds: null,
+        fields: BUILTIN_FIELDS.shockwave!,
         build: () => shockwave(),
     },
     {
@@ -73,6 +78,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Distort',
         description: 'Bulges, pinches or twists a round patch of the picture.',
         binds: null,
+        fields: BUILTIN_FIELDS.distort!,
         build: () => distort(),
     },
     {
@@ -80,6 +86,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Mosaic',
         description: 'Big square blocks, each the colour at its middle: the hardware mosaic.',
         binds: null,
+        fields: BUILTIN_FIELDS.mosaic!,
         build: () => mosaic(),
     },
     {
@@ -87,6 +94,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Blur',
         description: 'A soft blur of the whole picture, worked out at half size.',
         binds: null,
+        fields: BUILTIN_FIELDS.blur!,
         build: () => blur(),
     },
     {
@@ -94,6 +102,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Zoom blur',
         description: 'Smears the picture towards a point, as if rushing at it.',
         binds: null,
+        fields: BUILTIN_FIELDS.zoomBlur!,
         build: () => zoomBlur(),
     },
     {
@@ -101,6 +110,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Motion blur',
         description: 'Smears the picture along one direction.',
         binds: null,
+        fields: BUILTIN_FIELDS.motionBlur!,
         build: () => motionBlur(),
     },
     {
@@ -108,6 +118,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Tilt shift',
         description: 'A sharp band with blur above and below: the scene as a model on a table.',
         binds: null,
+        fields: BUILTIN_FIELDS.tiltShift!,
         build: () => tiltShift(),
     },
     {
@@ -115,6 +126,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Bloom',
         description: 'Bright parts glow into what is around them.',
         binds: null,
+        fields: BUILTIN_FIELDS.bloom!,
         build: () => bloom(),
     },
     {
@@ -122,6 +134,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Light shafts',
         description: 'Rays streaming from a point past whatever stands in front of it.',
         binds: null,
+        fields: BUILTIN_FIELDS.godrays!,
         build: () => godrays(),
     },
     {
@@ -129,6 +142,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Halftone',
         description: 'Printed dots or crossed lines, as in a comic or a newspaper.',
         binds: null,
+        fields: BUILTIN_FIELDS.halftone!,
         build: () => halftone(),
     },
     {
@@ -136,13 +150,16 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'ASCII',
         description: 'The frame in letters, as dense as the picture is bright, in its own colour or a terminal\'s.',
         binds: null,
-        build: () => ascii(),
+        fields: BUILTIN_FIELDS.ascii!,
+        // Its letters are written into it when it is made: a project entry's options.
+        build: (options) => ascii({ glyphs: typeof options?.glyphs === 'string' ? options.glyphs : undefined }),
     },
     {
         key: 'glitch',
         label: 'Glitch',
         description: 'Bands torn sideways with the colours coming apart: a signal failing.',
         binds: null,
+        fields: BUILTIN_FIELDS.glitch!,
         build: () => glitch(),
     },
     {
@@ -150,6 +167,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'RGB split',
         description: 'Red, green and blue each read from a slightly different place.',
         binds: null,
+        fields: BUILTIN_FIELDS.rgbSplit!,
         build: () => rgbSplit(),
     },
     {
@@ -157,6 +175,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Grain',
         description: 'Moving grain, as chunky as the game\'s own pixels.',
         binds: null,
+        fields: BUILTIN_FIELDS.grain!,
         build: () => grain(),
     },
     {
@@ -164,6 +183,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Old film',
         description: 'Sepia, grain, scratches, flicker and dark edges, at twenty-four frames a second.',
         binds: null,
+        fields: BUILTIN_FIELDS.oldFilm!,
         build: () => oldFilm(),
     },
     {
@@ -171,6 +191,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Palette',
         description: 'Replaces every colour with the nearest one a palette actually holds.',
         binds: 'palette',
+        fields: BUILTIN_FIELDS.palette!,
         build: () => paletteMatch(),
     },
     {
@@ -178,6 +199,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Dither',
         description: 'Cuts each channel to a few steps and hides the bands with an ordered pattern.',
         binds: null,
+        fields: BUILTIN_FIELDS.dither!,
         build: () => dither(),
     },
     {
@@ -185,6 +207,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Posterize',
         description: 'The same cut with nothing to hide the seams, for when hard bands are the look.',
         binds: null,
+        fields: BUILTIN_FIELDS.posterize!,
         build: () => posterize(),
     },
     {
@@ -192,6 +215,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Phosphor',
         description: 'Bright things moving fast leave a short trail, as on a tube.',
         binds: null,
+        fields: BUILTIN_FIELDS.phosphor!,
         build: () => phosphor(),
     },
     {
@@ -199,6 +223,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Composite',
         description: 'Colour smeared sideways, crawling dots and rainbows: the picture down a composite cable.',
         binds: null,
+        fields: BUILTIN_FIELDS.ntsc!,
         build: () => ntsc(),
     },
     {
@@ -206,6 +231,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'Handheld LCD',
         description: 'A grid between the pixels, a tint, and ghosts behind anything moving.',
         binds: null,
+        fields: BUILTIN_FIELDS.lcd!,
         build: () => lcd(),
     },
     {
@@ -213,6 +239,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         label: 'CRT',
         description: 'Lines, a phosphor mask, the bulge and glow of the glass and the faults of a real tube. Four presets in CRT_PRESETS.',
         binds: null,
+        fields: BUILTIN_FIELDS.crt!,
         build: () => crt(),
     },
 ];

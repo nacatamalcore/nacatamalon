@@ -62,7 +62,7 @@ const lutFor = (store: TRuntimeStore, src: string) => {
 export const installPostChain = (store: TRuntimeStore, chain: TPostChain): void => {
     const { effects } = store.get('post');
 
-    for (const entry of chain) {
+    for (const [index, entry] of chain.entries()) {
         const asked = entry.uniforms ?? {};
         let effect: TPostEffect;
 
@@ -75,7 +75,7 @@ export const installPostChain = (store: TRuntimeStore, chain: TPostChain): void 
                 );
                 continue;
             }
-            const built = builtin.build();
+            const built = builtin.build(entry.options);
             effect = newPostEffect({
                 name: entry.name ?? built.name,
                 fragment: built.fragment,
@@ -107,8 +107,38 @@ export const installPostChain = (store: TRuntimeStore, chain: TPostChain): void 
             effect.lut = lutFor(store, entry.lut);
         }
 
+        entryOf.set(effect, index);
         effects.push(effect);
     }
+};
+
+/**
+ * Which entry of the project's chain made each effect: an entry the engine skipped (a built-in this
+ * version does not have) makes none, so the place in the list and the place in the chain can differ.
+ */
+const entryOf = new WeakMap<TPostEffect, number>();
+
+/**
+ * Lays values over the knobs of the effect the project's chain made from entry `index`, in place:
+ * read by the next frame, with nothing made again. Says whether there was such an effect.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const tuneProjectPostEffect = (store: TRuntimeStore, index: number, values: Readonly<Record<string, unknown>>): boolean => {
+    const effect = store.get('post').effects.find((candidate) => candidate.source === 'project' && entryOf.get(candidate) === index);
+    if (effect === undefined) {
+        return false;
+    }
+    const uniforms = effect.uniforms as Record<string, unknown>;
+    for (const [name, value] of Object.entries(values)) {
+        // Only knobs it has: its shape was fixed when it was made.
+        if (uniforms[name] !== undefined) {
+            uniforms[name] = Array.isArray(value) ? [...value] : value;
+        }
+    }
+    return true;
 };
 
 /**

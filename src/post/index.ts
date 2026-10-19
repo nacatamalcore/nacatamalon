@@ -11,4 +11,4 @@ export {
 export type { TPostEffect, TPostPass, TPostSource } from './types/t_post_effect';
 export type { TPostChain, TPostChainEntry } from './types/t_post_chain';
 export type { TPostProcessOptions } from './types/t_post_options';
-export type { TBuiltinPostEffect, TPostBuiltinInfo, TCrtOptions, TCrtUniforms } from './builtin';
+export type { TBuiltinPostEffect, TPostBuiltinInfo, TEffectField, TCrtOptions, TCrtUniforms } from './builtin';

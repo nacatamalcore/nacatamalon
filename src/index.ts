@@ -81,7 +81,7 @@ export {
     dither, posterize, paletteMatch, lutGrade, COLOR_LEVELS,
     crt, CRT_PRESETS, colorAdjust, mosaic, rgbSplit, wave, shockwave, distort, glitch, grain, oldFilm, halftone, ascii, ntsc, lcd, zoomBlur, motionBlur, blur, bloom, godrays, tiltShift, phosphor,
 } from './post';
-export type { TPostEffect, TPostPass, TPostChain, TPostChainEntry, TPostProcessOptions, TBuiltinPostEffect, TCrtOptions, TCrtUniforms } from './post';
+export type { TPostEffect, TPostPass, TPostChain, TPostChainEntry, TPostProcessOptions, TBuiltinPostEffect, TEffectField, TCrtOptions, TCrtUniforms } from './post';
 
 export { fade, wipe, iris, pixelate } from './transition';
 export type { TTransition, TSceneChangeOptions, TWipeDirection } from './transition';

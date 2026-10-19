@@ -29,6 +29,11 @@ export type TPostChainEntry = {
      */
     uniforms?: TUniformValues;
     /**
+     * A built-in's settings that are written into it when it is made, rather than knobs (its fields
+     * marked `rebuild`, such as `ascii`'s `glyphs`). Left out when there are none.
+     */
+    options?: Record<string, string | number | boolean>;
+    /**
      * A `.palette` file whose colours this effect matches against.
      */
     palette?: string;

@@ -5,7 +5,7 @@ import type { TEditorHandle } from './t_editor_handle';
 import type { TGameInstance } from '../types/t_game_instance';
 import type { TRuntimeStore } from '../../store';
 import { captureScreen } from '../capture';
-import { replaceProjectPostChain } from '../../post/install_post_chain';
+import { replaceProjectPostChain, tuneProjectPostEffect } from '../../post/install_post_chain';
 import { setCameraPreview } from '../preview';
 import { MAX_FRAME_DELTA } from '../../CONFIG';
 import { replaceSongDoc } from '../../loaders/song';
@@ -128,6 +128,7 @@ export const editorHandleOf = async (instance: TGameInstance): Promise<TEditorHa
         getViewportLayers: () => store.get('viewport').layers,
         capture: (options) => captureScreen(store, options),
         setPostChain: (chain) => replaceProjectPostChain(store, chain),
+        setPostUniforms: (index, values) => tuneProjectPostEffect(store, index, values),
         setPostProcessEnabled: (enabled) => store.setState('post', { enabled }),
         getPostEffects: () => store.get('post').effects,
         evictAsset: (key) => {

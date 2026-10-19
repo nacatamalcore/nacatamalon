@@ -98,7 +98,7 @@ export type { TCameraPreview } from '../game/preview';
 // The post-processing effects the engine ships, as a list a tool offers, and the cleanup a chain
 // written by hand gets before it is saved.
 export { POST_BUILTINS, findPostBuiltin, normalizePostChain } from '../post';
-export type { TPostBuiltinInfo } from '../post';
+export type { TPostBuiltinInfo, TEffectField } from '../post';
 
 // A new project's window settings, which is what a project starts from.
 export { DEFAULT_PROJECT_SETTINGS } from '../project';

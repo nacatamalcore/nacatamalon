@@ -1,6 +1,7 @@
 import { colorUniform } from '../../post/builtin/color_uniform';
 import type { TColor } from '../../color/color';
 import type { TColorInput } from '../../color/get_color';
+import type { TEffectField } from '../../post/builtin/types/t_builtin';
 import type { TLook, TMangaDotsLook, TRimLook, TToonLook, TUnlitLook } from './types';
 
 /**
@@ -117,6 +118,10 @@ export type TMaterialLookInfo = {
      * `'lighting'` takes one, in place of the engine's light; `'step'` goes in a list, in order.
      */
     slot: 'lighting' | 'step';
+    /**
+     * Its knobs, for a form to be made of them: every field of the look but `look`, with its range.
+     */
+    fields: readonly TEffectField[];
     build: () => TLook;
 };
 
@@ -128,10 +133,34 @@ export type TMaterialLookInfo = {
  * @author Francisco Pereira Alvarado
  */
 export const MATERIAL_LOOKS: readonly TMaterialLookInfo[] = [
-    { key: 'toon', label: 'Toon', description: 'Light in flat bands and one hard spot of shine: the cartoon look.', slot: 'lighting', build: () => toon() },
-    { key: 'unlit', label: 'Unlit', description: 'No light at all: the surface as it is painted, glowing or flat.', slot: 'lighting', build: () => unlit() },
-    { key: 'mangaDots', label: 'Manga dots', description: 'Dots of ink in the shadow, laid out on the screen, bigger where darker.', slot: 'step', build: () => mangaDots() },
-    { key: 'rim', label: 'Rim', description: 'A light along the edge that turns away from the camera.', slot: 'step', build: () => rim() },
+    {
+        key: 'toon', label: 'Toon', description: 'Light in flat bands and one hard spot of shine: the cartoon look.', slot: 'lighting',
+        fields: [
+            { key: 'bands', type: 'number', default: 2, min: 1, max: 8, step: 1, description: 'How many steps of light.' },
+            { key: 'shadow', type: 'number', default: 0.45, min: 0, max: 1, step: 0.01, description: 'How bright the darkest band is.' },
+            { key: 'spot', type: 'number', default: 0.75, min: 0, max: 1, step: 0.01, description: 'Where the shine is cut.' },
+        ],
+        build: () => toon(),
+    },
+    { key: 'unlit', label: 'Unlit', description: 'No light at all: the surface as it is painted, glowing or flat.', slot: 'lighting', fields: [], build: () => unlit() },
+    {
+        key: 'mangaDots', label: 'Manga dots', description: 'Dots of ink in the shadow, laid out on the screen, bigger where darker.', slot: 'step',
+        fields: [
+            { key: 'spacing', type: 'number', default: 5, min: 2, max: 32, step: 0.5, description: 'How far apart, in game pixels.' },
+            { key: 'size', type: 'number', default: 0.3, min: 0, max: 1, step: 0.01, description: 'How big a dot grows in full shadow; past 0.5 they touch.' },
+            { key: 'ink', type: 'color', default: [0.16, 0.1, 0.26] },
+        ],
+        build: () => mangaDots(),
+    },
+    {
+        key: 'rim', label: 'Rim', description: 'A light along the edge that turns away from the camera.', slot: 'step',
+        fields: [
+            { key: 'color', label: 'Colour', type: 'color', default: [1, 1, 1] },
+            { key: 'power', type: 'number', default: 4, min: 0.5, max: 16, step: 0.1, description: 'How tightly it keeps to the silhouette.' },
+            { key: 'strength', type: 'number', default: 0.7, min: 0, max: 1, step: 0.01 },
+        ],
+        build: () => rim(),
+    },
 ];
 
 /**

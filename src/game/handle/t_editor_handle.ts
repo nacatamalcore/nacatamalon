@@ -120,6 +120,13 @@ export type TEditorHandle = TGameHandle & {
      */
     setPostChain(chain: TPostChain): void;
     /**
+     * Turns knobs of the effect that entry `index` of the project's chain made, in place, without
+     * making the chain again: what a slider in an editor does while it is dragged. Only knobs the
+     * effect has; says whether there was such an effect (an entry naming a built-in this version does
+     * not have makes none).
+     */
+    setPostUniforms(index: number, values: Readonly<Record<string, unknown>>): boolean;
+    /**
      * Turns every screen effect on or off at once, without forgetting any of them. Off costs what no
      * effects cost, so it can be flicked while working. A scene change is still covered either way.
      */

@@ -1,4 +1,5 @@
 import type { TPostChain, TPostChainEntry } from './types/t_post_chain';
+import { findPostBuiltin } from './builtin/catalog';
 import type { TUniformValues } from '../materials/types/t_uniforms';
 
 /**
@@ -39,6 +40,31 @@ const asUniforms = (value: unknown): TUniformValues | undefined => {
     }
 
     return Object.keys(kept).length === 0 ? undefined : kept;
+};
+
+/**
+ * A built-in's options, kept only where it declares one by that name (a field marked `rebuild`) and
+ * of the kind it takes. Anything else is said once and left out: the effect is made with its own.
+ */
+const asOptions = (builtin: string, value: unknown): Record<string, string | number | boolean> | undefined => {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+        return undefined;
+    }
+    const declared = findPostBuiltin(builtin)?.fields.filter((field) => field.rebuild === true) ?? [];
+    const kept: Record<string, string | number | boolean> = {};
+    for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+        const field = declared.find((candidate) => candidate.key === key);
+        if (field !== undefined && typeof raw === typeof field.default) {
+            kept[key] = raw as string | number | boolean;
+        } else {
+            console.warn(
+                `[NacatamalOn] post: '${builtin}' has no option '${key}'` +
+                (field !== undefined ? ` taking a ${typeof raw}` : '') +
+                ` (it has ${declared.map((d) => d.key).join(', ') || 'none'}), so it is left out.`,
+            );
+        }
+    }
+    return Object.keys(kept).length > 0 ? kept : undefined;
 };
 
 /**
@@ -88,6 +114,11 @@ export const normalizePostChain = (value: unknown): TPostChain => {
         const uniforms = asUniforms(read.uniforms);
         if (uniforms !== undefined) {
             entry.uniforms = uniforms;
+        }
+
+        const options = builtin === undefined ? undefined : asOptions(builtin, read.options);
+        if (options !== undefined) {
+            entry.options = options;
         }
 
         // One data texture, read one of two ways. An entry claiming both is one somebody typed.

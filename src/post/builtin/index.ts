@@ -26,5 +26,5 @@ export { phosphor } from './phosphor';
 export { COLOR_LEVELS } from './color_levels';
 export { POST_BUILTINS, findPostBuiltin } from './catalog';
 
-export type { TBuiltinPostEffect, TPostBuiltinInfo } from './types/t_builtin';
+export type { TBuiltinPostEffect, TPostBuiltinInfo, TEffectField } from './types/t_builtin';
 export type { TCrtOptions, TCrtUniforms } from './crt';

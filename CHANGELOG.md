@@ -7,6 +7,14 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- Effects and looks say what can be set on them. Each of `POST_BUILTINS` and `MATERIAL_LOOKS` has
+  `fields` (`TEffectField`): every knob with its kind (a number, a colour, a point, a choice), its
+  range and its default, for an editor to make a form of, the way a script's fields are. A field
+  marked `rebuild` is written into the effect when it is made rather than turned (`ascii`'s
+  `glyphs`), and a project's post chain keeps it in an entry's new `options`:
+  `{ builtin: 'ascii', options: { glyphs: ' ░▒▓█' } }`. An option an effect does not have is left
+  out with a warning. A host editing the game turns a project effect's knobs in place with the
+  editor handle's `setPostUniforms(index, values)`.
 - Material looks: a model's material made from recipes instead of a shader. `lighting` says how its
   surface is lit, one look in place of the engine's light: `toon()` (the light in flat bands and
   the shine in one hard spot) or `unlit()` (no light at all). `steps` says what is done to it once
