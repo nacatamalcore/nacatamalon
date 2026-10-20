@@ -1,6 +1,8 @@
 export { createKeyboard } from './create_keyboard';
 export { createPointer } from './create_pointer';
 export { pickTargets } from './pick_targets';
+export { POINTER_BUTTONS } from './pointer_buttons';
+export type { TPointerButtonName } from './pointer_buttons';
 
 export type { TKeyboard, TKeyboardSource } from './types/t_keyboard';
 export type { TKeyName } from './types/t_key_name';

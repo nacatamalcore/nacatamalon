@@ -125,6 +125,7 @@ const TEST_CONFIG: TGameConfig = {
     fullscreenScaling: 'integer',
     actions: [],
     physicsLayers: [],
+    contextMenu: false,
     banner: false,
     splash: false,
     step: 'display',

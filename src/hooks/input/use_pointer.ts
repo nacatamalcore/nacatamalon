@@ -14,7 +14,7 @@ import type { TPointerHandle } from '../../input';
  *   no camera they are the same numbers.
  * - `target`: the sprite or text on top under the pointer, or `null` over empty space. `hits` has
  *   all of them, top first. A text is touched anywhere inside its block, gaps and spaces included.
- * - `button`: `0` the main button or a finger, `2` the right button.
+ * - `button`: `'main'` (the left button, or a finger), `'right'`, `'middle'`... (`POINTER_BUTTONS`).
  * - `pointerId` and `pointerType`: which pointer, and whether it is a `'mouse'`, a `'touch'` or a
  *   `'pen'`. Every finger has its own id from touching to lifting, so two thumbs are two pointers.
  *

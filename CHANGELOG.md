@@ -8,7 +8,7 @@ releases are in [changelog/](./changelog/), one file each.
 ### Added
 
 - `usePointer().justPressed()` and `justReleased()`: a finger or a mouse button that went down or came
-  up this frame, true for one frame like the keyboard's. `justPressed(2)` asks about the right button.
+  up this frame, true for one frame like the keyboard's. `justPressed('right')` asks about one button.
 - A scene takes props, like a component: how it is opened. `const Level = ({ level = 1 }: { level?:
   number }) => ...`, and `useScene().change(Level, { props: { level: 3 } })` or `launch(Hud, { props
   })`. Given the function, TypeScript checks the props; the name still works, unchecked. Every prop
@@ -49,6 +49,12 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- A right click over the game no longer opens the browser's menu: the right button is the game's,
+  as in a window of its own (`usePointer().justPressed('right')`). Only over the canvas; the page keeps
+  its menu. `createGame(..., { contextMenu: true })` lets it open again.
+- A pointer's `button` is a name: `'main'` (the left button, or a finger), `'middle'`, `'right'`,
+  `'back'` and `'forward'`, all in `POINTER_BUTTONS`, rather than the browser's `0` to `4`. `info.button
+  === 2` becomes `info.button === 'right'`.
 - Collisions are asked by component or by tag, not by a hitbox's group.
   `useCollisionWith(Enemy, (enemy) => enemy.api.hurt(1))` meets the pieces `useSpawn` made from
   `Enemy`, their `api` typed; `useCollisionWith('damageable', ...)` meets everything carrying the tag,

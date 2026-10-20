@@ -209,6 +209,8 @@ export type { TFog, TFogOptions } from './fog';
 export type { TKeyboard, TKeyName, TPointerInfo, TPointerHandle, TPointerType, TPointerTouch, TPointerListener, TPointerWheelInfo, TPointerWheelListener, TPointerLockOptions, TSpriteEvents } from './input';
 export type { TGamepad, TGamepadAxisName, TGamepadButtonName, TGamepadInfo, TGamepadListener, TGamepadTarget, TRumbleOptions, TUseGamepadOptions } from './input';
 export type { TAction, TActionBinding, TActionCaptureOptions, TActionDef, TActionDevice, TActionMap, TActionName, TActionOverrides, TActionPersist, TActionsHandle, TInputMapHandle } from './input';
+export { POINTER_BUTTONS } from './input';
+export type { TPointerButtonName } from './input';
 export { GAMEPAD_AXES, GAMEPAD_AXIS_LABELS, GAMEPAD_BUTTONS, GAMEPAD_BUTTON_LABELS, gamepadAxisDirectionLabel, normalizeActionMap, bindingKey, describeBinding, DEFAULT_ACTION_DEADZONE, DEFAULT_ACTION_PRESS } from './input';
 export { parseProject, gameOptionsFromProject } from './project';
 export type { TProjectSettings } from './project';

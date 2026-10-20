@@ -209,12 +209,12 @@ describe('the pointer asked like the keyboard', () => {
         const { canvas, frame, pointer } = pad();
         canvas.dispatchEvent(Object.assign(new Event('pointerdown'), { clientX: 10, clientY: 10, button: 2, pointerId: 1, pointerType: 'mouse' }));
         frame();
-        expect([pointer().justPressed(2), pointer().justPressed(0)]).toEqual([true, false]);
+        expect([pointer().justPressed('right'), pointer().justPressed('main')]).toEqual([true, false]);
 
         fire(canvas, 'pointerdown', 40, 280, 5);
         fire(canvas, 'pointerup', 40, 280, 5);
         frame();
-        expect([pointer().justPressed(0), pointer().justReleased(0)]).toEqual([true, true]);
+        expect([pointer().justPressed('main'), pointer().justReleased('main')]).toEqual([true, true]);
     });
 
     it('counts a touch the system takes back as lifted', () => {
@@ -224,5 +224,25 @@ describe('the pointer asked like the keyboard', () => {
         fire(canvas, 'pointercancel', 40, 280, 1);
         frame();
         expect([pointer().isDown(), pointer().justReleased()]).toEqual([false, true]);
+    });
+});
+
+describe("the browser's menu on a right click", () => {
+    const rightClick = (canvas: HTMLCanvasElement): boolean => {
+        const event = new Event('contextmenu', { cancelable: true });
+        canvas.dispatchEvent(event);
+        return event.defaultPrevented;
+    };
+
+    it('does not open over the game, which keeps the right button for itself', () => {
+        const canvas = createFakeCanvas();
+        createTestGame({}, canvas);
+        expect(rightClick(canvas)).toBe(true);
+    });
+
+    it('opens when the game says contextMenu: true', () => {
+        const canvas = createFakeCanvas();
+        createTestGame({ contextMenu: true }, canvas);
+        expect(rightClick(canvas)).toBe(false);
     });
 });

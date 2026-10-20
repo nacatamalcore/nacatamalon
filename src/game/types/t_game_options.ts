@@ -216,6 +216,12 @@ export type TGameOptions = {
      */
     physicsLayers?: string[];
     /**
+     * Whether a right click over the game opens the browser's menu. `false` (default): the game
+     * keeps the right button for itself, as it does in a window of its own. Only over the game:
+     * the rest of the page keeps its menu. `true` for a game in a page that wants "save image".
+     */
+    contextMenu?: boolean;
+    /**
      * Where the player's own rebindings are kept, so they are still there next time. Left out, the
      * controls are whatever the game says every run.
      */

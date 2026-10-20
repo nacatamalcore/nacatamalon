@@ -3,6 +3,7 @@ import type { TSprite } from '../../gameobjects/sprite/types/t_sprite';
 import type { TText } from '../../gameobjects/text/types/t_text';
 import type { TNineSlice } from '../../gameobjects/nine_slice/types/t_nine_slice';
 import type { TRuntimeStore } from '../../store';
+import type { TPointerButtonName } from '../pointer_buttons';
 import type { TSpriteEvents } from './t_sprite_events';
 
 /**
@@ -35,9 +36,10 @@ export type TPointerInfo = {
     readonly movementX: number;
     readonly movementY: number;
     /**
-     * Which button: `0` the main one (left, or a finger), `1` the wheel, `2` the secondary one.
+     * Which button: `'main'` (the left, or a finger), `'middle'` (the wheel pressed), `'right'`,
+     * and `'back'` and `'forward'` on the side of some mice. All of them in `POINTER_BUTTONS`.
      */
-    readonly button: number;
+    readonly button: TPointerButtonName;
     /**
      * Which pointer this is: each finger on a touch screen has its own, the same from the moment it
      * touches until it lifts, so two thumbs (one on the throttle, one steering) are told apart. The
@@ -174,17 +176,17 @@ export type TPointerHandle = {
     /**
      * Whether a finger touched or a mouse button went down **during this frame**: true for one frame
      * per press. For what happens once: shooting, jumping, placing a block. With `button`, only that
-     * one: `0` the main button or a finger, `2` the right button.
+     * one: `'main'` (the left, or a finger), `'right'`, `'middle'`... (`POINTER_BUTTONS`).
      *
      * The pointer's answer to the keyboard's `justPressed`. It says nothing about what was pressed;
      * for that, `onDown` and its `target`, or `isPressing`.
      */
-    justPressed(button?: number): boolean;
+    justPressed(button?: TPointerButtonName): boolean;
     /**
      * Whether a finger lifted or a mouse button came up during this frame: the mirror of
      * `justPressed`. A touch the system takes back counts as lifted.
      */
-    justReleased(button?: number): boolean;
+    justReleased(button?: TPointerButtonName): boolean;
     /**
      * Where the pointer was last seen over the game, or `null` once it left (or before it came).
      * For the mouse that is where it hovers, pressed or not; for touch, the last finger that moved.
@@ -287,11 +289,11 @@ export type TPointerSource = {
     /**
      * Whether `button` (any, when left out) went down in the last `dispatch`. See `TPointerHandle.justPressed`.
      */
-    justPressed(button?: number): boolean;
+    justPressed(button?: TPointerButtonName): boolean;
     /**
      * Whether `button` (any, when left out) came up in the last `dispatch`.
      */
-    justReleased(button?: number): boolean;
+    justReleased(button?: TPointerButtonName): boolean;
     /**
      * Where the pointer was last seen over the canvas, as of the last `dispatch`, or `null`.
      */

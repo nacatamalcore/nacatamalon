@@ -1,3 +1,5 @@
+import { pointerButtonName } from './pointer_buttons';
+import type { TPointerButtonName } from './pointer_buttons';
 // Straight from its file: the box barrel reaches the store, and the store creates this pointer.
 import { rootOf } from '../box/root_of';
 import { screenSizeOf } from '../DOM/screen_size';
@@ -29,7 +31,7 @@ type TQueuedEvent = {
     pointerType: TPointerType;
     screenX: number;
     screenY: number;
-    button: number;
+    button: TPointerButtonName;
     deltaX: number;
     deltaY: number;
     movementX: number;
@@ -78,7 +80,7 @@ const PAGE_PIXELS = 800;
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
+export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?: boolean } = {}): TPointerSource => {
     let queue: TQueuedEvent[] = [];
     let registrations: TRegistration[] = [];
 
@@ -107,11 +109,11 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
      */
     const active = new Map<number, { pointerId: number; pointerType: TPointerType; screenX: number; screenY: number }>();
     /**
-     * The buttons that went down and came up in the events of this frame, `0` for a finger. Emptied
+     * The buttons that went down and came up in the events of this frame, `'main'` for a finger. Emptied
      * when the next frame's events are handed out, so each reads as true for one frame.
      */
-    const wentDown = new Set<number>();
-    const cameUp = new Set<number>();
+    const wentDown = new Set<TPointerButtonName>();
+    const cameUp = new Set<TPointerButtonName>();
     /**
      * What is under each pressing pointer, worked out once per frame on the first question and kept
      * until the next frame's events: several buttons asking about the same fingers lay the scene out
@@ -144,7 +146,7 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
             pointerType: typeOf(event),
             screenX: x,
             screenY: y,
-            button: event.button ?? 0,
+            button: pointerButtonName(event.button),
             deltaX: 0,
             deltaY: 0,
             movementX: moved ? event.movementX ?? 0 : 0,
@@ -200,7 +202,7 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
             queue[queue.length - 1] = { ...last, screenX: x, screenY: y, deltaX: last.deltaX + deltaX, deltaY: last.deltaY + deltaY };
             return;
         }
-        queue.push({ kind: 'wheel', pointerId: MOUSE_ID, pointerType: 'mouse', screenX: x, screenY: y, button: 0, deltaX, deltaY, movementX: 0, movementY: 0 });
+        queue.push({ kind: 'wheel', pointerId: MOUSE_ID, pointerType: 'mouse', screenX: x, screenY: y, button: 'main', deltaX, deltaY, movementX: 0, movementY: 0 });
     };
 
     canvas.addEventListener('pointerdown', onDown);
@@ -210,6 +212,10 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
     canvas.addEventListener('pointerleave', onLeave);
     // Not passive, or the page could not be kept from scrolling while the game uses the wheel.
     canvas.addEventListener('wheel', onWheel, { passive: false });
+    // The right button is the game's, so the browser's menu does not open over it. Only the canvas:
+    // the page around it keeps its own.
+    const onContextMenu = (event: Event): void => event.preventDefault();
+    if (options.contextMenu !== true) canvas.addEventListener('contextmenu', onContextMenu);
 
     // Without it a finger dragging on the canvas scrolls or zooms the page instead of reaching the
     // game. The style is not there on a test's fake canvas, hence the check.
@@ -229,7 +235,7 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
     /**
      * What a listener belonging to `box` is told: the world through the camera of its own scene.
      */
-    const infoFor = (box: TBox, screenX: number, screenY: number, button: number, hits: Array<TSprite | TText | TNineSlice>): TPointerInfo => {
+    const infoFor = (box: TBox, screenX: number, screenY: number, button: TPointerButtonName, hits: Array<TSprite | TText | TNineSlice>): TPointerInfo => {
         const world = unapplyView2d(rootOf(box).camera2d, { x: screenX, y: screenY });
         return {
             screenX,
@@ -315,7 +321,7 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
      * Calls one of a sprite's own events on every connection that has it, in the order they were
      * made. Over a copy: a connection removed by an earlier one does not hear this same event.
      */
-    const fireSprite = (sprite: TPointerTarget | null, name: keyof TSpriteEvents, screenX: number, screenY: number, button: number, hits: Array<TSprite | TText | TNineSlice>): void => {
+    const fireSprite = (sprite: TPointerTarget | null, name: keyof TSpriteEvents, screenX: number, screenY: number, button: TPointerButtonName, hits: Array<TSprite | TText | TNineSlice>): void => {
         if (sprite === null) {
             return;
         }
@@ -353,7 +359,7 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
         // hover (a tooltip, a highlight elsewhere) can go. One that left with its scene is already
         // forgotten, and its handlers belong to a scene that no longer runs.
         if (hovered !== null && hovered.destroyed) {
-            fireSprite(hovered, 'onPointerOut', lastPosition?.x ?? 0, lastPosition?.y ?? 0, 0, []);
+            fireSprite(hovered, 'onPointerOut', lastPosition?.x ?? 0, lastPosition?.y ?? 0, 'main', []);
             listening.delete(hovered);
             hovered = null;
         }
@@ -375,9 +381,9 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
         if (next !== hovered) {
             const x = lastPosition?.x ?? 0;
             const y = lastPosition?.y ?? 0;
-            fireSprite(hovered, 'onPointerOut', x, y, 0, hits);
+            fireSprite(hovered, 'onPointerOut', x, y, 'main', hits);
             hovered = next;
-            fireSprite(hovered, 'onPointerOver', x, y, 0, hits);
+            fireSprite(hovered, 'onPointerOver', x, y, 'main', hits);
         }
         setCursor();
     };
@@ -397,7 +403,7 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
 
         if (entry.connections.length === 1 && hovered === sprite) {
             if (tellOut) {
-                fireSprite(sprite, 'onPointerOut', lastPosition?.x ?? 0, lastPosition?.y ?? 0, 0, []);
+                fireSprite(sprite, 'onPointerOut', lastPosition?.x ?? 0, lastPosition?.y ?? 0, 'main', []);
             }
             hovered = null;
             setCursor();
@@ -623,6 +629,7 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
             canvas.removeEventListener('pointermove', onMove);
             canvas.removeEventListener('pointerleave', onLeave);
             canvas.removeEventListener('wheel', onWheel);
+            canvas.removeEventListener('contextmenu', onContextMenu);
             queue = [];
             registrations = [];
             listening.clear();

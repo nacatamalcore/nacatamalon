@@ -36,6 +36,8 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
     const actionsPersist = game_options.actionsPersist;
     // Nor for the layers' names: a game that names none says them by number.
     const physicsLayers = cleanLayerNames(game_options.physicsLayers);
+    // Nor for the browser's menu: the right button is the game's unless it says otherwise.
+    const contextMenu = game_options.contextMenu ?? false;
     // Nor for the project's screen effects: none is none.
     const post = game_options.post;
     // Nor for the startup line: it is on unless the game says otherwise.
@@ -64,6 +66,7 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
         actions,
         actionsPersist,
         physicsLayers,
+        contextMenu,
         post,
         banner,
         splash,

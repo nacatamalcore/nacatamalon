@@ -90,7 +90,7 @@ describe('usePointer', () => {
 
         expect(seen[0].screenX).toBe(100);
         expect(seen[0].screenY).toBe(50);
-        expect(seen[0].button).toBe(2);
+        expect(seen[0].button).toBe('right');
     });
 
     it('gives the world position through the scene camera', () => {

@@ -78,7 +78,7 @@ export const createRuntimeStore = (init: TRuntimeStoreInit): TRuntimeStore => {
     // Built before the state so the actions can be given them.
     const keyboard = createKeyboard(init.canvas);
     const gamepads = createGamepads(init.canvas);
-    const pointer = createPointer(init.canvas);
+    const pointer = createPointer(init.canvas, { contextMenu: init.config.contextMenu });
     // Filled in at the end: what a finger is on is worked out from the scenes, which the store holds.
     let self: TRuntimeStore | null = null;
     // The actions take their pads from the game's own, never around them: a port is only asked about
