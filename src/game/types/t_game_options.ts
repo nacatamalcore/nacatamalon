@@ -219,6 +219,7 @@ export type TGameOptions = {
      * Whether a right click over the game opens the browser's menu. `false` (default): the game
      * keeps the right button for itself, as it does in a window of its own. Only over the game:
      * the rest of the page keeps its menu. `true` for a game in a page that wants "save image".
+     * Changed while it runs with `useGame().setContextMenu()`.
      */
     contextMenu?: boolean;
     /**

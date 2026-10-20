@@ -46,6 +46,9 @@ export const createGameHandle = (store: TRuntimeStore): TGameHandle => ({
     isSmooth: () => store.get('config').smooth,
     setSmooth: (smooth: boolean) => store.setState('config', { smooth }),
 
+    hasContextMenu: () => store.get('config').contextMenu,
+    setContextMenu: (open: boolean) => store.setState('config', { contextMenu: open }),
+
     getTimeScale: () => store.get('loop').timeScale,
     setTimeScale: (scale: number) => store.setState('loop', { timeScale: scale }),
 

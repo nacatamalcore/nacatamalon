@@ -80,7 +80,7 @@ const PAGE_PIXELS = 800;
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?: boolean } = {}): TPointerSource => {
+export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?: () => boolean } = {}): TPointerSource => {
     let queue: TQueuedEvent[] = [];
     let registrations: TRegistration[] = [];
 
@@ -214,8 +214,10 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
     canvas.addEventListener('wheel', onWheel, { passive: false });
     // The right button is the game's, so the browser's menu does not open over it. Only the canvas:
     // the page around it keeps its own.
-    const onContextMenu = (event: Event): void => event.preventDefault();
-    if (options.contextMenu !== true) canvas.addEventListener('contextmenu', onContextMenu);
+    const onContextMenu = (event: Event): void => {
+        if (options.contextMenu?.() !== true) event.preventDefault();
+    };
+    canvas.addEventListener('contextmenu', onContextMenu);
 
     // Without it a finger dragging on the canvas scrolls or zooms the page instead of reaching the
     // game. The style is not there on a test's fake canvas, hence the check.

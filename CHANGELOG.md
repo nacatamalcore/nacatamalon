@@ -51,7 +51,8 @@ releases are in [changelog/](./changelog/), one file each.
 
 - A right click over the game no longer opens the browser's menu: the right button is the game's,
   as in a window of its own (`usePointer().justPressed('right')`). Only over the canvas; the page keeps
-  its menu. `createGame(..., { contextMenu: true })` lets it open again.
+  its menu. `createGame(..., { contextMenu: true })` lets it open again, and
+  `useGame().setContextMenu(true)` while it runs.
 - A pointer's `button` is a name: `'main'` (the left button, or a finger), `'middle'`, `'right'`,
   `'back'` and `'forward'`, all in `POINTER_BUTTONS`, rather than the browser's `0` to `4`. `info.button
   === 2` becomes `info.button === 'right'`.

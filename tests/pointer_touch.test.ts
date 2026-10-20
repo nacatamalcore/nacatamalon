@@ -5,6 +5,7 @@ import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { usePointer } from '../src/hooks/input/use_pointer';
 import { useCamera2d } from '../src/hooks/camera/use_camera_2d';
 import { createFakeCanvas, createTestGame, startTestScene } from './helpers/test_game';
+import { createGameHandle } from '../src/game/handle/create_game_handle';
 import type { TPointerHandle, TPointerInfo } from '../src/input';
 import type { TSprite } from '../src/gameobjects/sprite/types/t_sprite';
 import type { TGameObject } from '../src/hooks/spawn/use_spawn';
@@ -244,5 +245,15 @@ describe("the browser's menu on a right click", () => {
         const canvas = createFakeCanvas();
         createTestGame({ contextMenu: true }, canvas);
         expect(rightClick(canvas)).toBe(false);
+    });
+
+    it('is changed while the game runs, from the game handle', () => {
+        const canvas = createFakeCanvas();
+        const { store } = createTestGame({}, canvas);
+        const game = createGameHandle(store);
+        game.setContextMenu(true);
+        expect([game.hasContextMenu(), rightClick(canvas)]).toEqual([true, false]);
+        game.setContextMenu(false);
+        expect([game.hasContextMenu(), rightClick(canvas)]).toEqual([false, true]);
     });
 });

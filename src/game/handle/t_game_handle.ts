@@ -44,6 +44,17 @@ export type TGameHandle = {
     setSmooth(smooth: boolean): void;
 
     /**
+     * Whether a right click over the game opens the browser's menu. `false` unless the game said
+     * `contextMenu: true`.
+     */
+    hasContextMenu(): boolean;
+    /**
+     * Lets the browser's menu open over the game on a right click (`true`), or keeps the right
+     * button for the game (`false`), from now on.
+     */
+    setContextMenu(open: boolean): void;
+
+    /**
      * How fast the game runs: `1` is normal, `0.5` slow motion, `2` double speed.
      */
     getTimeScale(): number;
