@@ -13,13 +13,13 @@ import type { TRuntimeStore } from '../store';
  * added, and both active pointers are back where they were.
  *
  * Only registered scenes can be roots, and only one root per name runs at a time, so a name
- * always means one scene.
+ * always means one scene. `props` is what the body is called with, `{}` when nobody gave any.
  *
  * @category Scenes
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const startScene = (store: TRuntimeStore, name: string): TBox => {
+export const startScene = (store: TRuntimeStore, name: string, props: object = {}): TBox => {
     const { names, scenes } = store.get('world');
 
     const body = names.get(name);
@@ -32,7 +32,7 @@ export const startScene = (store: TRuntimeStore, name: string): TBox => {
 
     const root = newBox(name);
     trackBoxGame(root, store);
-    const result = withActiveGame(store, () => withActiveBox(store, root, () => body()));
+    const result = withActiveGame(store, () => withActiveBox(store, root, () => body(props)));
 
     // TypeScript already rejects both of these. They are here for plain JavaScript.
     if (typeof (result as { then?: unknown } | undefined)?.then === 'function') {

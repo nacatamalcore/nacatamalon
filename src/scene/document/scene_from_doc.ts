@@ -43,7 +43,7 @@ import type { TComponentDoc, TMaterialDoc, TSpriteTextureComponent, TTilemapComp
 import type { TMaterialMap, TMeshMaterial, TSpriteMaterial } from '../../materials';
 import type { TRuntimeStore } from '../../store';
 import type { TSprite } from '../../gameobjects/sprite/types/t_sprite';
-import type { TSceneFn } from '../types/t_scene_fn';
+import type { TScene } from '../types/t_scene';
 
 /**
  * Asks for everything the manifest names, and nothing else.
@@ -757,7 +757,7 @@ export type TSceneFromDocOptions = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const sceneFromDoc = (doc: TSceneDoc, src = doc.name, options: TSceneFromDocOptions = {}): TSceneFn => () => {
+export const sceneFromDoc = (doc: TSceneDoc, src = doc.name, options: TSceneFromDocOptions = {}): (() => TScene) => () => {
     const store = getActiveGame();
     if (store === null) {
         throw new Error('[NacatamalOn] sceneFromDoc: the body it returns is a scene body, and only the engine may run it.');

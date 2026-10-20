@@ -137,6 +137,11 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   `useScene().change('Level')` starts `Level` and stops the current scene: its objects are removed
   and its `useUpdate` stops. Changing back runs that scene's function again from the start, so
   anything kept in its local variables or `useData` starts over.
+- **A scene takes props**, how it is opened: `const Level = ({ level = 1 }: { level?: number }) =>
+  ...`, then `useScene().change(Level, { props: { level: 3 } })` (or `launch(Hud, { props })`). By the
+  function TypeScript checks them; by name it does not. Every prop needs a default: the first scene,
+  a restart and the editor's Play start it with none. What stays true across scenes (lives, coins)
+  is a store, not a prop.
 - **`change()` acts at once, but the frame it is called in finishes**: the code after it and the old
   scene's other `useUpdate` callbacks still run that one frame, then never again. `return` right
   after `change()` if the rest should not run. The new scene's first update is the next frame, so the

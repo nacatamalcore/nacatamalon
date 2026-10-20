@@ -65,14 +65,27 @@ export type TTransition = {
 };
 
 /**
- * What `useScene().change` accepts beyond the name.
- *
- * One field, and leaving it out is the hard cut `change` has always done.
+ * What `useScene().launch` accepts beyond the scene.
  *
  * @category Scenes
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TSceneChangeOptions = {
+export type TSceneLaunchOptions<P extends object = Record<string, unknown>> = {
+    /**
+     * What the scene's function is called with. Left out, it gets `{}` and its defaults.
+     */
+    props?: P;
+};
+
+/**
+ * What `useScene().change` accepts beyond the scene: its props, and a transition. Without a
+ * transition it is the hard cut.
+ *
+ * @category Scenes
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TSceneChangeOptions<P extends object = Record<string, unknown>> = TSceneLaunchOptions<P> & {
     transition?: TTransition;
 };

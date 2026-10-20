@@ -2,12 +2,16 @@ import { rootOf } from '../../box';
 import { findScene, isScenePaused, setScenePaused, startScene, stopScene } from '../../scene';
 import { getActiveBox, getActiveGame } from '../../store';
 import { canDrawTransition, startTransition } from '../../transition';
-import type { TSceneChangeOptions } from '../../transition';
+import type { TSceneChangeOptions, TSceneLaunchOptions } from '../../transition';
+import type { TSceneFn } from '../../scene/types/t_scene_fn';
 
 /**
  * What a scene can do with the game's scenes, returned by `useScene`. Every name is one of the keys
  * passed to `createGame`. Where the name is optional, leaving it out means the scene that called
  * `useScene`.
+ *
+ * `launch` and `change` take the scene by name or by its function. By the function, TypeScript
+ * checks the props: `change(Level, { props: { level: 3 } })`.
  *
  * @category Scenes
  * @since 1.0.0
@@ -18,7 +22,8 @@ export type TSceneHandle = {
      * Starts another scene **alongside** the running ones, drawn on top of those started before it:
      * a HUD over the level. Throws if the name is not registered or is already running.
      */
-    launch(name: string): void;
+    launch<P extends object>(scene: TSceneFn<P>, options?: TSceneLaunchOptions<P>): void;
+    launch(name: string, options?: TSceneLaunchOptions): void;
     /**
      * Stops a scene and runs its `useCleanup` cleanups, in the same frame. With no name, the
      * scene stops itself (a menu closing on its own button). Stopping the last scene is allowed and
@@ -47,8 +52,10 @@ export type TSceneHandle = {
      * scene.change('Level2');                                  // the hard cut
      * scene.change('Level2', { transition: fade(300) });        // covered
      * scene.change('Level2', { transition: iris(400, black, { x: 0.2, y: 0.6 }) });
+     * scene.change(Level, { props: { level: 3 } });            // its props, checked
      * ```
      */
+    change<P extends object>(scene: TSceneFn<P>, options?: TSceneChangeOptions<P>): void;
     change(name: string, options?: TSceneChangeOptions): void;
     /**
      * Freezes a scene: its `useUpdate` callbacks stop, and it keeps drawing.
@@ -117,14 +124,29 @@ export const useScene = (): TSceneHandle => {
         return store.get('world').scenes.includes(owner) ? owner.name : undefined;
     };
 
+    /**
+     * The name a scene was registered under, given that name or its function.
+     */
+    const nameOf = (scene: string | TSceneFn<never>, action: string): string => {
+        if (typeof scene === 'string') {
+            return scene;
+        }
+        for (const [name, body] of store.get('world').names) {
+            if (body === scene) {
+                return name;
+            }
+        }
+        throw new Error(`[NacatamalOn] useScene().${action}: this function is not one of the game's scenes. Add it to the object passed to createGame.`);
+    };
+
     const warnNotRunning = (action: string, name: string | undefined): void => {
         const which = name === undefined ? `its own scene '${owner.name}'` : `scene '${name}'`;
         console.warn(`[NacatamalOn] useScene().${action}: ${which} is not running.`);
     };
 
     return {
-        launch: (name) => {
-            startScene(store, name);
+        launch: (scene: string | TSceneFn<never>, options?: TSceneLaunchOptions<object>) => {
+            startScene(store, nameOf(scene, 'launch'), options?.props);
         },
         stop: (name) => {
             const target = running(name);
@@ -154,10 +176,12 @@ export const useScene = (): TSceneHandle => {
             }
             return true;
         },
-        change: (name, options) => {
+        change: (scene: string | TSceneFn<never>, options?: TSceneChangeOptions<object>) => {
             if (leaving) {
                 return;
             }
+            const name = nameOf(scene, 'change');
+            const props = options?.props;
 
             // Refused outright, not quietly downgraded to a cut. The latch above only stops the
             // scene that asked; a HUD launched alongside it holds its own handle and knows nothing
@@ -189,14 +213,14 @@ export const useScene = (): TSceneHandle => {
                     // The new scene first here as well, so an unknown name throws before anything
                     // is held or covered. Nothing stops yet: the scene going out is what the screen
                     // is still showing, and it is stopped at the swap.
-                    startTransition(store, transition, startScene(store, name), owner);
+                    startTransition(store, transition, startScene(store, name, props), owner);
                 } else if (name === owner.name) {
                     // Restarting: the old copy has to be gone before the name can start again.
                     stopScene(store, owner.name);
-                    startScene(store, name);
+                    startScene(store, name, props);
                 } else {
                     // The new scene first, so a name that does not exist throws before anything stops.
-                    startScene(store, name);
+                    startScene(store, name, props);
                     stopScene(store, owner.name);
                 }
             } catch (error) {

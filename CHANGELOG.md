@@ -7,6 +7,11 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- A scene takes props, like a component: how it is opened. `const Level = ({ level = 1 }: { level?:
+  number }) => ...`, and `useScene().change(Level, { props: { level: 3 } })` or `launch(Hud, { props
+  })`. Given the function, TypeScript checks the props; the name still works, unchecked. Every prop
+  needs a default, since a scene also starts with none (the first one, a restart, the editor's
+  Play), and `createGame` refuses one that does not have it.
 - `useWatch` watches a store too: `useWatch(() => { hud.text = ... }, [gameStore, lives])` runs on the
   first frame and once a frame after any `set` or action. `useStore` stays for one value, heard
   straight away and in pause.

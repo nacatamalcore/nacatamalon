@@ -85,7 +85,7 @@ describe('an action held by a finger on an on-screen button', () => {
         const { canvas, frame } = game(() => {
             const jump = useAction('jump');
             useUpdate(() => seen.push([jump.isDown(), jump.justPressed()]));
-            return pad();
+            return pad({});
         });
 
         frame();
@@ -102,7 +102,7 @@ describe('an action held by a finger on an on-screen button', () => {
         let actions!: ReturnType<typeof useActions>;
         const { canvas, frame } = game(() => {
             actions = useActions();
-            return pad();
+            return pad({});
         });
 
         touch(canvas, 'pointerdown', 40, 280, 1);
@@ -119,7 +119,7 @@ describe('an action held by a finger on an on-screen button', () => {
         let keyboardOnly!: ReturnType<typeof useActions>;
         const { canvas, frame } = game(() => {
             keyboardOnly = useActions({ device: 'keyboard' });
-            return pad();
+            return pad({});
         });
 
         touch(canvas, 'pointerdown', 400, 280);

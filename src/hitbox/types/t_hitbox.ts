@@ -1,4 +1,3 @@
-import type { TBox } from '../../box/types/t_box';
 import type { TTag, TTaggable } from '../../tags/tags';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
 

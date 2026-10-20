@@ -11,7 +11,7 @@ import { useUpdate } from '../hooks/loop/use_update';
 import { easeOutBack } from '../math/easing/functions/ease_out_back';
 import { easeOutCubic } from '../math/easing/functions/ease_out_cubic';
 import { createScene } from '../scene/create_scene';
-import type { TSceneFn } from '../scene';
+import type { TScene } from '../scene';
 import { SPLASH_MARK, SPLASH_MARK_HEIGHT, SPLASH_MARK_WIDTH } from './splash_mark';
 
 /**
@@ -89,7 +89,7 @@ const prefersStill = (): boolean =>
  *
  * @internal
  */
-export const createSplashScene = (canvas: HTMLCanvasElement, done: () => void): TSceneFn => () => {
+export const createSplashScene = (canvas: HTMLCanvasElement, done: () => void): (() => TScene) => () => {
     const { width, height } = screenSizeOf(canvas);
     const still = prefersStill();
     const tween = useTween();
