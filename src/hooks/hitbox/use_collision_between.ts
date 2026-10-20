@@ -6,7 +6,8 @@ import type { TCollisionListener, TCollisionMatch, TCollisionMatched } from '../
  * Calls `callback` for every thing of kind `a` touching one of kind `b`, every frame they touch: a
  * rule of the scene, shots against enemies, the player against coins. A piece says itself what it
  * collides with with `useCollisionWith`; this is for the scene that knows both. Each kind is a
- * component, whose pieces come with their `api` typed, or a tag, as in `useCollisionWith`.
+ * component, whose pieces come with their `api` typed, or a tag, as in `useCollisionWith`, and
+ * physics bodies meet as they do there.
  *
  * Run once every `useUpdate` of the scene is over, before `useLateUpdate`, measured as
  * `collisionBetween` measures. The two come in the order the tags were named. Once one is destroyed

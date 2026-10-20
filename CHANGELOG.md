@@ -36,7 +36,9 @@ releases are in [changelog/](./changelog/), one file each.
   `useCollisionWith(Enemy, (enemy) => enemy.api.hurt(1))` meets the pieces `useSpawn` made from
   `Enemy`, their `api` typed; `useCollisionWith('damageable', ...)` meets everything carrying the tag,
   pieces and tagged sprites alike. `useCollisionBetween` takes either on each side. A piece is
-  measured by its hitboxes or what it draws, a tagged sprite by itself. `useHitbox` lost its `group`: what a thing is is its tag. A body and a sword that count for
+  measured by its hitboxes or what it draws, a tagged sprite by itself, and two pieces with physics
+  bodies, in 2D or 3D, meet when the simulation says they touch: a game moves from hitboxes to
+  physics without rewriting a collision. Only the bodies a collision asks about report contacts. `useHitbox` lost its `group`: what a thing is is its tag. A body and a sword that count for
   different things are two pieces, each with its own tag.
 - One word for what touches what: `useOverlap` is `useCollisionBetween`, `overlaps` is
   `collisionBetween` and `TOverlapTarget` is `TCollisionTarget`, beside the new `useCollisionWith`.

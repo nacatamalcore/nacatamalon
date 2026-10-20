@@ -69,6 +69,11 @@ export const getPhysicsWorld3d = (): TPhysicsWorldHandle3d | null =>
 let warnedNoWorld = false;
 
 /**
+ * The world each box's body was put in, for `watchContacts`. Weak, so a box gone is forgotten.
+ */
+const worldOfBody = new WeakMap<TGameObject, TPhysicsWorldHandle3d>();
+
+/**
  * A hull or triangle-mesh collider naming a shape the scene never loaded. Warned once per name
  * rather than once per body, because a wall of two hundred identical lines says nothing the
  * first one did not.
@@ -162,6 +167,18 @@ export const box3dProvider: TPhysicsProvider = {
         }
 
         bodyIntoWorld(current, box, record);
+        worldOfBody.set(box, current);
+    },
+
+    watchContacts: (box, told) => {
+        // The world the body was put in, not the current one: another scene's may be current by now.
+        const world = worldOfBody.get(box);
+        const body = world?.bodyOf(box as TGameObject);
+        if (body === null || body === undefined) return false;
+        // Reading the signals is what asks the simulation to report this body's contacts.
+        body.onEnter.connect((other) => told(other, true));
+        body.onExit.connect((other) => told(other, false));
+        return true;
     },
 };
 

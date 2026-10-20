@@ -27,6 +27,13 @@ export type TPhysicsProvider = {
      * and where the simulation writes back to.
      */
     createBody: (box: TBox, body: TPhysicsBody) => void;
+    /**
+     * Tells `told` from now on whenever the body of `box` starts or stops touching another, with the
+     * other's box: what collisions asked by component or by tag count. Answers whether it is the one
+     * simulating that body, so the engine knows to ask no other. Optional: a provider without it
+     * only leaves physics out of those collisions.
+     */
+    watchContacts?: (box: TBox, told: (other: TBox, started: boolean) => void) => boolean;
 };
 
 /**

@@ -2,6 +2,7 @@ import { isGone } from '../game/loop/runHookUpdates';
 import { rectsOverlap } from './hitbox_shape';
 import { rectsOf } from './collision_between';
 import { componentOf } from '../box/made_by';
+import { contactsOf, watchContacts } from '../physics/contacts';
 import type { TTurnedRect } from './hitbox_shape';
 import type { TBox } from '../box/types/t_box';
 import type { TCollisionKey, TCollisionListener } from './types/t_hitbox';
@@ -21,6 +22,16 @@ const goneEntry = (entry: TEntry): boolean => {
     if (entry.thing.destroyed || isGone(entry.holder)) return true;
     const thing = entry.thing;
     return 'children' in thing && thing.hitboxes.length > 0 && !thing.hitboxes.some((hitbox) => hitbox.enabled);
+};
+
+/**
+ * Whether two things touch: their rectangles share any area, or, for two pieces with physics
+ * bodies, the simulation says they touch. A body meets a piece of the right kind whether a hitbox or
+ * the physics tells it.
+ */
+const touch = (one: TEntry, other: TEntry): boolean => {
+    if (one.rects.some((rect) => other.rects.some((theirs) => rectsOverlap(rect, theirs)))) return true;
+    return 'children' in other.thing && contactsOf(one.holder).has(other.thing as TBox);
 };
 
 /**
@@ -46,6 +57,8 @@ const indexMatches = (scene: TBox, wanted: ReadonlySet<TCollisionKey>): Map<TCol
         for (const tag of box.tags) if (wanted.has(tag)) note(tag, box as TTaggable, box);
         const made = componentOf(box);
         if (made !== undefined && wanted.has(made)) note(made, box as TTaggable, box);
+        // A piece with a body that a collision asks about: from now on its contacts are told.
+        if (box.physics !== null && (made !== undefined && wanted.has(made) || box.tags.some((tag) => wanted.has(tag)))) watchContacts(box);
         for (const drawable of box.drawables) {
             if ((drawable.type === 'sprite' || drawable.type === 'text' || drawable.type === 'nine-slice') && !drawable.destroyed && drawable.tags !== undefined) {
                 for (const tag of drawable.tags) if (wanted.has(tag)) note(tag, drawable, box);
@@ -63,14 +76,13 @@ const indexMatches = (scene: TBox, wanted: ReadonlySet<TCollisionKey>): Map<TCol
  * `'start'` and `'end'` are told from.
  */
 const collideWith = (owner: TBox, listener: Extract<TCollisionListener, { kind: 'with' }>, index: Map<TCollisionKey, TEntry[]>): void => {
-    const mine = rectsOf(owner);
+    watchContacts(owner);
+    const mine: TEntry = { thing: owner as TTaggable, holder: owner, rects: rectsOf(owner) };
     const now = new Set<TTaggable>();
-    if (mine.length > 0) {
-        for (const other of index.get(listener.match) ?? []) {
-            if (other.thing === owner || now.has(other.thing) || goneEntry(other)) continue;
-            if (mine.some((rect) => other.rects.some((theirs) => rectsOverlap(rect, theirs)))) {
-                now.add(other.thing);
-            }
+    for (const other of index.get(listener.match) ?? []) {
+        if (other.thing === owner || now.has(other.thing) || goneEntry(other)) continue;
+        if (touch(mine, other)) {
+            now.add(other.thing);
         }
     }
     const before = listener.touching;
@@ -148,7 +160,7 @@ export const runCollisions = (scene: TBox, touching: readonly TBox[]): void => {
                         continue;
                     }
                     const key = same && other.thing.id < one.thing.id ? `${other.thing.id}:${one.thing.id}` : `${one.thing.id}:${other.thing.id}`;
-                    if (called.has(key) || !one.rects.some((rect) => other.rects.some((theirs) => rectsOverlap(rect, theirs)))) {
+                    if (called.has(key) || !touch(one, other)) {
                         continue;
                     }
                     // Asked at the moment of calling: an earlier call may have destroyed either, or

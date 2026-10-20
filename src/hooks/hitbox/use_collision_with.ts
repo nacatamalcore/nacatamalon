@@ -29,8 +29,10 @@ export type TCollisionWithOptions = {
  * scene and the editor can name.
  *
  * Measured as `collisionBetween` measures: a piece by its hitboxes that are on, or by what it draws
- * when it has none; a sprite, text or panel by itself. Run with the scene's other collisions, once
- * its updates are over; not while it is paused. Stops when the object goes away.
+ * when it has none; a sprite, text or panel by itself. Two pieces with physics bodies also touch
+ * when the simulation says so, in 2D and in 3D, so the same line works whether a hitbox or a body
+ * tells it. Run with the scene's other collisions, once its updates are over; not while it is
+ * paused. Stops when the object goes away.
  *
  * @param match What it collides with: a component, or a tag.
  * @param callback What to do with each one.

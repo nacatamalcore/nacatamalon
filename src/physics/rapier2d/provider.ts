@@ -70,6 +70,11 @@ export const getPhysicsWorld2d = (): TPhysicsWorldHandle2d | null =>
 let warnedNoWorld = false;
 
 /**
+ * The world each box's body was put in, for `watchContacts`. Weak, so a box gone is forgotten.
+ */
+const worldOfBody = new WeakMap<TGameObject, TPhysicsWorldHandle2d>();
+
+/**
  * The surface half of a collider, which is identical in every shape, so it is read off the
  * record once rather than spelled out in each of the three branches below.
  */
@@ -147,6 +152,18 @@ export const rapier2dProvider: TPhysicsProvider = {
         }
 
         bodyIntoWorld(current, box, record);
+        worldOfBody.set(box, current);
+    },
+
+    watchContacts: (box, told) => {
+        // The world the body was put in, not the current one: another scene's may be current by now.
+        const world = worldOfBody.get(box);
+        const body = world?.bodyOf(box as TGameObject);
+        if (body === null || body === undefined) return false;
+        // Reading the signals is what asks the simulation to report this body's contacts.
+        body.onEnter.connect((other) => told(other, true));
+        body.onExit.connect((other) => told(other, false));
+        return true;
     },
 };
 
