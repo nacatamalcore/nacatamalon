@@ -50,7 +50,7 @@ export type TGamepadListener = (info: TGamepadInfo) => void;
  */
 export type TRumbleOptions = {
     /**
-     * Milliseconds, default 200, never more than 5000: past that the browser cuts it without saying so.
+     * Seconds, default 0.2, never more than 5: past that the browser cuts it without saying so.
      */
     duration?: number;
     /**
@@ -62,7 +62,7 @@ export type TRumbleOptions = {
      */
     weak?: number;
     /**
-     * Milliseconds to wait before starting, default 0.
+     * Seconds to wait before starting, default 0.
      */
     delay?: number;
 };

@@ -203,8 +203,8 @@ export const createHeadlessGame = (options: THeadlessGameOptions): THeadlessGame
                     seen,
                 };
             }),
-        loaded: async (timeoutMs = 5000) => {
-            const until = Date.now() + timeoutMs;
+        loaded: async (timeout = 5) => {
+            const until = Date.now() + timeout * 1000;
             const scenesNow = () => store.get('world').scenes;
             const loading = () => scenesNow().flatMap((scene) => scene.loads).filter((load) => load.status === 'loading');
             // The files, and the work a scene started without waiting for it (a physics world
@@ -213,7 +213,7 @@ export const createHeadlessGame = (options: THeadlessGameOptions): THeadlessGame
             while (!destroyed && busy()) {
                 if (Date.now() > until) {
                     const what = loading().map((load) => (load as { src?: string }).src ?? 'a file');
-                    throw new Error(`[NacatamalOn] headless game: still loading after ${timeoutMs} ms: ${what.join(', ') || 'a physics world'}.`);
+                    throw new Error(`[NacatamalOn] headless game: still loading after ${timeout} seconds: ${what.join(', ') || 'a physics world'}.`);
                 }
                 await turn();
             }

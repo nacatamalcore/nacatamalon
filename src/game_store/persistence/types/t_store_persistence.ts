@@ -43,7 +43,7 @@ export type TStorePersistence<S> = {
  * How a store saves itself.
  *
  * - `mode: 'auto'`, the default: the store saves on its own after it changes, at most once every
- *   `throttle` milliseconds. A value changed on every frame still saves regularly.
+ *   `throttle` seconds. A value changed on every frame still saves regularly.
  * - `mode: 'manual'`: the store only saves when `save()` is called. A save point: the game lives in
  *   memory and is only written when the player reaches the typewriter.
  *
@@ -63,7 +63,7 @@ export type TStorePersist<S> = {
      */
     mode?: 'auto' | 'manual';
     /**
-     * In `'auto'`, the shortest time between two saves, in milliseconds. Default `250`.
+     * In `'auto'`, the shortest time between two saves, in seconds. Default `0.25`.
      */
     throttle?: number;
 };

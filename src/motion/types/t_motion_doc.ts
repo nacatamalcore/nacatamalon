@@ -95,7 +95,7 @@ export type TMotionEvent =
 
 /**
  * The cover a `scene` event changes under: one of the engine's transitions, by name, and how long it
- * takes in milliseconds.
+ * takes in seconds. A file that says `ms`, as they did before, is read in milliseconds.
  *
  * @category Animation
  * @since 1.0.0
@@ -103,7 +103,7 @@ export type TMotionEvent =
  */
 export type TMotionTransition = {
     type: 'fade' | 'wipe' | 'iris' | 'pixelate';
-    ms?: number;
+    duration?: number;
 };
 
 /**

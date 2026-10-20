@@ -128,8 +128,15 @@ describe('a store as a file', () => {
         expect(String(said.mock.calls[0][0])).toContain('inventory');
     });
 
+    it('reads the throttle in seconds, and a version 1 file in the milliseconds it said', () => {
+        const persist = (version: number, throttle: number) =>
+            parseStoreDoc({ format: STORE_FORMAT, version, key: 'k', fields: [], persist: { adapter: 'localStorage', throttle } }, 'k.store').persist;
+        expect(persist(2, 0.4)?.throttle).toBe(0.4);
+        expect(persist(1, 400)?.throttle).toBe(0.4);
+    });
+
     it('opens a new one empty', () => {
-        expect(emptyStoreDoc('coins')).toEqual({ format: STORE_FORMAT, version: 1, key: 'coins', fields: [] });
+        expect(emptyStoreDoc('coins')).toEqual({ format: STORE_FORMAT, version: 2, key: 'coins', fields: [] });
     });
 });
 

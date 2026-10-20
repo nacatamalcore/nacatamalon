@@ -9,7 +9,7 @@ const GAMEPAD_PORTS = 4;
 /**
  * Longer than this and the browser cuts the vibration without saying so.
  */
-const MAX_RUMBLE_MS = 5000;
+const MAX_RUMBLE = 5;
 const DEFAULT_DEADZONE = 0.2;
 
 const clamp01 = (value: number): number => (value < 0 ? 0 : value > 1 ? 1 : value);
@@ -347,8 +347,9 @@ export const createGamepads = (canvas: HTMLCanvasElement): TGamepadSource => {
                     return Promise.resolve(false);
                 }
 
-                const duration = Math.min(Math.max(rumbleOptions.duration ?? 200, 0), MAX_RUMBLE_MS);
-                const startDelay = Math.max(rumbleOptions.delay ?? 0, 0);
+                // Seconds here, milliseconds for the browser.
+                const duration = Math.min(Math.max(rumbleOptions.duration ?? 0.2, 0), MAX_RUMBLE) * 1000;
+                const startDelay = Math.max(rumbleOptions.delay ?? 0, 0) * 1000;
                 portNow().rumbled = true;
 
                 return actuator

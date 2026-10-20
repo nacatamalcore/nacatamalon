@@ -2,7 +2,7 @@ import { bumpVersion, markWatchable } from '../store';
 import { adoptProvisionalStore, registerGameStore, storeInternals } from './store_registry';
 import type { TGameStore, TGameStoreConfig, TStoreListener, TStoreSelector } from './types/t_game_store';
 
-const DEFAULT_THROTTLE = 250;
+const DEFAULT_THROTTLE = 0.25;
 
 /**
  * Makes a store: data of the game that outlives a scene (lives, coins, options, a pet), with a way to
@@ -133,7 +133,7 @@ export const createGameStore = <S extends object, A = Record<string, never>>(
         saveTimer = setTimeout(() => {
             saveTimer = null;
             void save();
-        }, throttle);
+        }, throttle * 1000);
     };
 
     const changed = (): void => {

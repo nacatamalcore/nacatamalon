@@ -16,7 +16,7 @@ const BLACK: TColor = { r: 0, g: 0, b: 0, a: 1 };
  * of becoming an ellipse, and it opens far enough past the furthest corner that "open" really means
  * nothing covered, wherever the centre is.
  *
- * @param duration How long the whole thing takes in milliseconds, closing and opening together.
+ * @param duration How long the whole thing takes in seconds, closing and opening together.
  * @param color What the outside of the circle is painted. Black unless you say otherwise.
  * @param center Where it closes on, in screen fractions: `{ x: 0, y: 0 }` is the top left corner
  * and `{ x: 1, y: 1 }` the bottom right. The middle unless you say otherwise.
@@ -28,7 +28,7 @@ const BLACK: TColor = { r: 0, g: 0, b: 0, a: 1 };
  * @author Francisco Pereira Alvarado
  */
 export const iris = (
-    duration = 400,
+    duration = 0.4,
     color: TColor = BLACK,
     center: { x: number; y: number } = { x: 0.5, y: 0.5 },
 ): TTransition => ({

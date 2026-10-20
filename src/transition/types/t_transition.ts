@@ -17,8 +17,8 @@ import type { TUniformSignature, TUniformValues } from '../../materials/types/t_
  * @example
  * ```ts
  * const scene = useScene();
- * scene.change('Level2', { transition: fade(300) });
- * scene.change('Level2', { transition: wipe(400, 'right') });
+ * scene.change('Level2', { transition: fade(0.3) });
+ * scene.change('Level2', { transition: wipe(0.4, 'right') });
  * ```
  *
  * @category Scenes
@@ -31,10 +31,10 @@ export type TTransition = {
      */
     name?: string;
     /**
-     * How long the whole thing takes, in milliseconds, **covering and uncovering together**.
+     * How long the whole thing takes, in seconds, **covering and uncovering together**.
      *
-     * So `fade(300)` covers for 150 and uncovers for 150, and a stopwatch agrees with the number
-     * that was written. Each half still runs `progress` from 0 to 1 over its own 150.
+     * So `fade(0.3)` covers for 0.15 and uncovers for 0.15, and a stopwatch agrees with the number
+     * that was written. Each half still runs `progress` from 0 to 1 over its own 0.15.
      *
      * Zero is allowed and means the screen is covered for exactly as long as the incoming scene
      * takes to load, which is a loading screen with no animation and a perfectly good thing to ask

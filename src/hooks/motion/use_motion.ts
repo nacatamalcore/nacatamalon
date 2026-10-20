@@ -25,10 +25,10 @@ const MAX_LOOPS_PER_FRAME = 8;
 const transitionOf = (transition: TMotionTransition | undefined): TTransition | undefined => {
     if (transition === undefined) return undefined;
     switch (transition.type) {
-        case 'fade': return fade(transition.ms);
-        case 'wipe': return wipe(transition.ms);
-        case 'iris': return iris(transition.ms);
-        case 'pixelate': return pixelate(transition.ms);
+        case 'fade': return fade(transition.duration);
+        case 'wipe': return wipe(transition.duration);
+        case 'iris': return iris(transition.duration);
+        case 'pixelate': return pixelate(transition.duration);
     }
 };
 

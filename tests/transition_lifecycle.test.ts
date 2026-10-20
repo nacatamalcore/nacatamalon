@@ -97,7 +97,7 @@ const drawnCount = (ctx: ReturnType<typeof createFrameContext>): number => ctx.p
 describe('a scene held behind a transition', () => {
     it('is running from the moment of the change, and is the only one not drawn', () => {
         const { store, ctx, frame, counted, handle } = twoRooms();
-        handle().change('B', { transition: fade(300) });
+        handle().change('B', { transition: fade(0.3) });
 
         const incoming = findScene(store, 'B');
         expect(incoming).toBeDefined();
@@ -121,7 +121,7 @@ describe('a scene held behind a transition', () => {
             return createScene();
         });
 
-        handle().change('C', { transition: fade(300) });
+        handle().change('C', { transition: fade(0.3) });
         canvas.dispatchEvent(Object.assign(new Event('pointerdown'), { clientX: 0, clientY: 0, button: 0, pointerId: 1 }));
         frame();
 
@@ -132,9 +132,9 @@ describe('a scene held behind a transition', () => {
 describe('the swap', () => {
     it('happens once the screen is covered, and not before', () => {
         const { store, frames, counted, handle } = twoRooms();
-        handle().change('B', { transition: fade(300) });
+        handle().change('B', { transition: fade(0.3) });
 
-        // Half of 300ms is 150ms of cover. Just short of it, nothing has moved.
+        // Half of 0.3 s is 0.15 s of cover. Just short of it, nothing has moved.
         frames(0.12);
         expect(findScene(store, 'A')).toBeDefined();
         expect(counted.unmounted).toBe(0);
@@ -163,7 +163,7 @@ describe('the swap', () => {
             return createScene();
         });
 
-        handle().change('Slow', { transition: fade(300) });
+        handle().change('Slow', { transition: fade(0.3) });
         frames(1);
         expect(store.get('transition').active!.phase).toBe('cover');
         expect(store.get('transition').active!.progress).toBe(1);
@@ -182,7 +182,7 @@ describe('the cover always comes off', () => {
         const { store, frames, handle } = twoRooms();
         store.setState('loop', { ...store.get('loop'), timeScale: 0, pausedBy: ['test'] });
 
-        handle().change('B', { transition: fade(300) });
+        handle().change('B', { transition: fade(0.3) });
         frames(0.4);
 
         expect(store.get('transition').active).toBeNull();
@@ -192,10 +192,10 @@ describe('the cover always comes off', () => {
 
     it('is still in the frame that reaches the end, and gone from the one after', () => {
         const { store, ctx, frame, handle } = twoRooms();
-        handle().change('B', { transition: fade(300) });
+        handle().change('B', { transition: fade(0.3) });
 
         // Driven until it says it has finished rather than counted out in advance: how many whole
-        // frames fit in 300ms is not the thing being pinned here.
+        // frames fit in 0.3 s is not the thing being pinned here.
         for (let i = 0; i < 60 && store.get('transition').active?.done !== true; i++) {
             frame();
         }
@@ -219,7 +219,7 @@ describe('a change that cannot be made', () => {
         let other!: TSceneHandle;
         registerScene(store, 'D', () => createScene());
 
-        handle().change('B', { transition: fade(300) });
+        handle().change('B', { transition: fade(0.3) });
         // A scene launched alongside holds its own handle and knows nothing about the change in
         // flight. Cutting now would leave that change with neither of its ends.
         startTestScene(store, 'Hud', () => {
@@ -236,7 +236,7 @@ describe('a change that cannot be made', () => {
 
     it('will not let either end be stopped out from under it', () => {
         const { store, handle } = twoRooms();
-        handle().change('B', { transition: fade(300) });
+        handle().change('B', { transition: fade(0.3) });
 
         expect(handle().stop('A')).toBe(false);
         expect(handle().stop('B')).toBe(false);
@@ -246,7 +246,7 @@ describe('a change that cannot be made', () => {
 
     it('lets go of a transition whose end is torn down by the lower door', () => {
         const { store, handle } = twoRooms();
-        handle().change('B', { transition: fade(300) });
+        handle().change('B', { transition: fade(0.3) });
 
         // `stopScene` is the door a destroyed game and a host loading another scene both go
         // through, and neither of those is polite enough to ask first.
@@ -259,7 +259,7 @@ describe('a change that cannot be made', () => {
         const { store, handle } = twoRooms();
         // Both copies would have to run at once for the old one to stay on screen, and a name
         // means one scene.
-        handle().change('A', { transition: fade(300) });
+        handle().change('A', { transition: fade(0.3) });
 
         expect(store.get('transition').active).toBeNull();
         expect(findScene(store, 'A')).toBeDefined();

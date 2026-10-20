@@ -50,8 +50,8 @@ export type TSceneHandle = {
      * @example
      * ```ts
      * scene.change('Level2');                                  // the hard cut
-     * scene.change('Level2', { transition: fade(300) });        // covered
-     * scene.change('Level2', { transition: iris(400, black, { x: 0.2, y: 0.6 }) });
+     * scene.change('Level2', { transition: fade(0.3) });        // covered
+     * scene.change('Level2', { transition: iris(0.4, black, { x: 0.2, y: 0.6 }) });
      * scene.change(Level, { props: { level: 3 } });            // its props, checked
      * ```
      */

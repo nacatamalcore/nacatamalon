@@ -183,6 +183,11 @@ describe('useGamepad', () => {
 
         expect(await pad.rumble({ duration: 999999, strong: 2, weak: -1 })).toBe(true);
         expect(played).toEqual([['dual-rumble', { duration: 5000, startDelay: 0, strongMagnitude: 1, weakMagnitude: 0 }]]);
+
+        // Seconds here, and the milliseconds the browser counts there.
+        played.length = 0;
+        await pad.rumble({ duration: 0.3, delay: 0.1 });
+        expect(played).toEqual([['dual-rumble', { duration: 300, startDelay: 100, strongMagnitude: 1, weakMagnitude: 1 }]]);
     });
 
     it('does not ask the browser anything when nobody asked for a pad', () => {

@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, spyOn } from 'bun:test';
 import { fade, iris, pixelate, wipe } from '../src/transition/builtin';
-import { canDrawTransition } from '../src/transition/start_transition';
+import { canDrawTransition, startTransition } from '../src/transition/start_transition';
 import { stepTransition } from '../src/transition/step_transition';
 import { createTestGame } from './helpers/test_game';
+import { newBox } from '../src/box';
 import type { TBox } from '../src/box';
 import type { TPostEffect } from '../src/post/types/t_post_effect';
 import type { TTransition } from '../src/transition';
@@ -18,10 +19,10 @@ import type { TTransitionState } from '../src/transition/types/t_transition_stat
  */
 
 const ALL: Array<[string, TTransition]> = [
-    ['fade', fade(300)],
-    ['wipe', wipe(300, 'right')],
-    ['iris', iris(400)],
-    ['pixelate', pixelate(400)],
+    ['fade', fade(0.3)],
+    ['wipe', wipe(0.3, 'right')],
+    ['iris', iris(0.4)],
+    ['pixelate', pixelate(0.4)],
 ];
 
 /**
@@ -29,7 +30,7 @@ const ALL: Array<[string, TTransition]> = [
  */
 const inFlight = (duration: number, loaded = true): TTransitionState => ({
     effect: { type: 'post' } as TPostEffect,
-    half: duration / 2000,
+    half: duration / 2,
     elapsed: 0,
     progress: 0,
     phase: 'cover',
@@ -57,14 +58,14 @@ describe('the transitions the engine ships', () => {
     });
 
     it('take the duration as written, and it is the whole thing', () => {
-        expect(fade(300).duration).toBe(300);
-        // Half of it covers and half uncovers, so what the clock counts per half is 150ms.
-        expect(inFlight(300).half).toBeCloseTo(0.15, 6);
+        expect(fade(0.3).duration).toBe(0.3);
+        // Half of it covers and half uncovers, so what the clock counts per half is 0.15 s.
+        expect(inFlight(0.3).half).toBeCloseTo(0.15, 6);
     });
 
     it('send a wipe\'s direction as a vector, one per side, never as the word', () => {
         const axes = (['left', 'right', 'up', 'down'] as const)
-            .map((direction) => wipe(300, direction).uniforms!.direction as number[]);
+            .map((direction) => wipe(0.3, direction).uniforms!.direction as number[]);
 
         for (const axis of axes) {
             expect(Math.hypot(axis[0], axis[1])).toBeCloseTo(1, 6);
@@ -80,14 +81,14 @@ describe('the transitions the engine ships', () => {
     });
 
     it('lets an iris be closed on somewhere other than the middle', () => {
-        expect(iris(400).uniforms!.center).toEqual([0.5, 0.5]);
-        expect(iris(400, undefined, { x: 0.2, y: 0.8 }).uniforms!.center).toEqual([0.2, 0.8]);
+        expect(iris(0.4).uniforms!.center).toEqual([0.5, 0.5]);
+        expect(iris(0.4, undefined, { x: 0.2, y: 0.8 }).uniforms!.center).toEqual([0.2, 0.8]);
     });
 });
 
 describe('how a transition is moved on', () => {
     it('runs 0 to 1 covering, then 0 to 1 again uncovering', () => {
-        const state = inFlight(300);
+        const state = inFlight(0.3);
 
         expect(stepTransition(state, 0.075)).toBe('running');
         expect(state.phase).toBe('cover');
@@ -105,7 +106,7 @@ describe('how a transition is moved on', () => {
     });
 
     it('is marked done only once, and one frame before it is taken away', () => {
-        const state = inFlight(300);
+        const state = inFlight(0.3);
         stepTransition(state, 0.15);
         stepTransition(state, 0.15);
 
@@ -116,7 +117,7 @@ describe('how a transition is moved on', () => {
     });
 
     it('holds at full cover until what is coming in has landed', () => {
-        const state = inFlight(300, false);
+        const state = inFlight(0.3, false);
 
         expect(stepTransition(state, 0.15)).toBe('running');
         expect(state.progress).toBe(1);
@@ -132,13 +133,13 @@ describe('how a transition is moved on', () => {
     it('carries the overshoot into the uncover, but never more than one frame of it', () => {
         // Covered with time to spare: the leftover goes into the second half so the whole thing
         // keeps to the duration it was given.
-        const quick = inFlight(300);
+        const quick = inFlight(0.3);
         stepTransition(quick, 0.2);
         expect(quick.elapsed).toBeCloseTo(0.05, 6);
 
         // Held at full cover for two seconds waiting on a load: carrying *that* leftover would
         // skip the uncover altogether, so it is capped at the frame that released it.
-        const slow = inFlight(300, false);
+        const slow = inFlight(0.3, false);
         stepTransition(slow, 2);
         slow.loaded = true;
         stepTransition(slow, 0.016);
@@ -166,7 +167,7 @@ describe('a card that cannot draw it', () => {
 
     it('refuses a WGSL-only transition on WebGL2, rather than running it blind', () => {
         const { store, renderer } = createTestGame();
-        const wgslOnly: TTransition = { name: 'mine', duration: 300, fragment: 'fn effect() {}' };
+        const wgslOnly: TTransition = { name: 'mine', duration: 0.3, fragment: 'fn effect() {}' };
 
         expect(canDrawTransition(store, wgslOnly)).toBe(true);
 
@@ -174,6 +175,19 @@ describe('a card that cannot draw it', () => {
         // A cover nobody can draw is worse than no cover: the scene coming in would sit held and
         // unseen for the whole duration and then appear all at once.
         expect(canDrawTransition(store, wgslOnly)).toBe(false);
-        expect(canDrawTransition(store, fade(300))).toBe(true);
+        expect(canDrawTransition(store, fade(0.3))).toBe(true);
+    });
+});
+
+describe('a transition written in milliseconds', () => {
+    it('is said, with the number it most likely meant', () => {
+        const { store } = createTestGame();
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        try {
+            startTransition(store, fade(300), newBox('In'), newBox('Out'));
+            expect(String(warn.mock.calls[0][0])).toContain('did you mean 0.3?');
+        } finally {
+            warn.mockRestore();
+        }
     });
 });

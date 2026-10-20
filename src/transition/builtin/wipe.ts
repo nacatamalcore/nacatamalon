@@ -30,7 +30,7 @@ const AXIS: Record<TWipeDirection, [number, number]> = {
  * itself and flips which side of the edge is covered, so the edge goes on travelling the same way in
  * both halves. Taking the leftover of `progress` instead would bring the edge back the way it came.
  *
- * @param duration How long the whole thing takes in milliseconds, covering and uncovering together.
+ * @param duration How long the whole thing takes in seconds, covering and uncovering together.
  * @param direction Which way the edge travels. To the right unless you say otherwise.
  * @param color What the covered side is painted. Black unless you say otherwise.
  * @returns The transition, for `useScene().change(name, { transition })`.
@@ -39,7 +39,7 @@ const AXIS: Record<TWipeDirection, [number, number]> = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const wipe = (duration = 300, direction: TWipeDirection = 'right', color: TColor = BLACK): TTransition => ({
+export const wipe = (duration = 0.3, direction: TWipeDirection = 'right', color: TColor = BLACK): TTransition => ({
     name: 'wipe',
     duration,
     uniforms: {

@@ -237,8 +237,8 @@ describe('a scene change with a fixed step', () => {
         registerScene(store, 'Next', () => createScene());
         store.setState('loop', { ...store.get('loop'), timeScale: 0.1 });
 
-        handle.change('Next', { transition: fade(300) });
-        // Well past the 300 ms it lasts, on real time; at a tenth of the speed it would be 3 s.
+        handle.change('Next', { transition: fade(0.3) });
+        // Well past the 0.3 s it lasts, on real time; at a tenth of the speed it would be 3 s.
         runFor(picture, 60, 0.5);
 
         expect(store.get('transition').active).toBeNull();

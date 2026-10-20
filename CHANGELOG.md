@@ -49,6 +49,13 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- Time is in seconds everywhere. Four things counted milliseconds and now count seconds, like `delta`,
+  timers and tweens always did: transitions (`fade(0.3)` rather than `fade(300)`, and `wipe`, `iris`,
+  `pixelate`), a pad's `rumble({ duration, delay })`, a store's `persist.throttle`, and a headless
+  game's `loaded(timeout)`. A transition over ten seconds says it is probably milliseconds. Saved
+  files are read as they were: a motion's transition `"ms": 400` is read as `"duration": 0.4` and
+  written back so, and a store file of version 1 has its throttle read in milliseconds (they are
+  version 2 now).
 - A right click over the game no longer opens the browser's menu: the right button is the game's,
   as in a window of its own (`usePointer().justPressed('right')`). Only over the canvas; the page keeps
   its menu. `createGame(..., { contextMenu: true })` lets it open again, and

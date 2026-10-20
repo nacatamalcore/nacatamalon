@@ -80,7 +80,7 @@ describe('a scene built from a document', () => {
         });
 
         // Nothing here knows the scene came out of a file, which is the point.
-        scene.change('Room', { transition: fade(300) });
+        scene.change('Room', { transition: fade(0.3) });
 
         const incoming = findScene(store, 'Room');
         expect(incoming).toBeDefined();

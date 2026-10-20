@@ -116,6 +116,21 @@ describe('reading a .motion file', () => {
         expect(serializeMotionDoc(motion({}))).toContain('"tracks": [],');
     });
 
+    it('reads a transition in seconds, and an old one that said its milliseconds', () => {
+        const read = motion({
+            events: [
+                { t: 0, kind: 'scene', scene: 'A', transition: { type: 'fade', duration: 0.4 } },
+                { t: 0, kind: 'scene', scene: 'B', transition: { type: 'iris', ms: 400 } },
+            ],
+        });
+        expect(read.events.map((e) => (e as { transition?: unknown }).transition)).toEqual([
+            { type: 'fade', duration: 0.4 },
+            { type: 'iris', duration: 0.4 },
+        ]);
+        // Written back in seconds: the old field does not come back.
+        expect(serializeMotionDoc(read)).not.toContain('"ms"');
+    });
+
     it('refuses an event of a kind it does not know', () => {
         expect(() => motion({ events: [{ t: 0, kind: 'explode' }] })).toThrow('"kind"');
     });

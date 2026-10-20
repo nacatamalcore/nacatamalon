@@ -240,7 +240,7 @@ describe('useStore', () => {
 describe('createGameStore: saving', () => {
     it("'auto' turns a burst of changes into one save of the latest state", async () => {
         const memory = memoryAdapter<TPet>();
-        const store = createGameStore({ key: 'pet', state: newPet(), persist: { adapter: memory.adapter, throttle: 20 } });
+        const store = createGameStore({ key: 'pet', state: newPet(), persist: { adapter: memory.adapter, throttle: 0.02 } });
 
         store.set((s) => { s.hunger = 1; });
         store.set((s) => { s.hunger = 2; });
@@ -255,7 +255,7 @@ describe('createGameStore: saving', () => {
 
     it("'auto' keeps saving while something changes all the time", async () => {
         const memory = memoryAdapter<TPet>();
-        const store = createGameStore({ key: 'pet', state: newPet(), persist: { adapter: memory.adapter, throttle: 20 } });
+        const store = createGameStore({ key: 'pet', state: newPet(), persist: { adapter: memory.adapter, throttle: 0.02 } });
 
         // A value decaying every 5 ms for 110 ms: a debounce would never save until it stopped.
         for (let i = 0; i < 22; i++) {
@@ -268,7 +268,7 @@ describe('createGameStore: saving', () => {
 
     it("'manual' only saves when asked", async () => {
         const memory = memoryAdapter<TPet>();
-        const store = createGameStore({ key: 'pet', state: newPet(), persist: { adapter: memory.adapter, mode: 'manual', throttle: 5 } });
+        const store = createGameStore({ key: 'pet', state: newPet(), persist: { adapter: memory.adapter, mode: 'manual', throttle: 0.005 } });
 
         store.set((s) => { s.timesFed = 4; });
         await sleep(20);
@@ -280,7 +280,7 @@ describe('createGameStore: saving', () => {
 
     it('save cancels the pending automatic save instead of writing twice', async () => {
         const memory = memoryAdapter<TPet>();
-        const store = createGameStore({ key: 'pet', state: newPet(), persist: { adapter: memory.adapter, throttle: 20 } });
+        const store = createGameStore({ key: 'pet', state: newPet(), persist: { adapter: memory.adapter, throttle: 0.02 } });
 
         store.set((s) => { s.hunger = 1; });
         await store.save();

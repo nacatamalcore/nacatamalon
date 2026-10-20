@@ -14,7 +14,7 @@ const BLACK: TColor = { r: 0, g: 0, b: 0, a: 1 };
  * middle of it is quantized like everything else: stepped, not smooth. That is how a fade looked on
  * the hardware this engine is aimed at, and it is the reason the transition goes first.
  *
- * @param duration How long the whole thing takes in milliseconds, covering and uncovering together.
+ * @param duration How long the whole thing takes in seconds, covering and uncovering together.
  * @param color What the screen sinks into. Black unless you say otherwise.
  * @returns The transition, for `useScene().change(name, { transition })`.
  *
@@ -22,7 +22,7 @@ const BLACK: TColor = { r: 0, g: 0, b: 0, a: 1 };
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const fade = (duration = 300, color: TColor = BLACK): TTransition => ({
+export const fade = (duration = 0.3, color: TColor = BLACK): TTransition => ({
     name: 'fade',
     duration,
     uniforms: { color: [color.r, color.g, color.b, color.a] },

@@ -17,7 +17,7 @@ export const STORE_FORMAT = 'nacatamalon-store';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const STORE_VERSION = 1;
+export const STORE_VERSION = 2;
 
 /**
  * What a store field can hold.
@@ -86,7 +86,8 @@ export type TStorePersistDoc = {
     adapter: 'localStorage' | 'indexedDb';
     mode?: 'auto' | 'manual';
     /**
-     * How long the trailing throttle waits, in milliseconds.
+     * How long the trailing throttle waits, in seconds. A file of version 1 said it in milliseconds,
+     * and is read so.
      */
     throttle?: number;
     /**

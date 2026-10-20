@@ -32,7 +32,7 @@ export const startWithSplash = (store: TRuntimeStore, initial: string, canvas: H
         if (splash === null || game === null) {
             return;
         }
-        const transition = fade(500, getColor(SPLASH_BACKGROUND));
+        const transition = fade(0.5, getColor(SPLASH_BACKGROUND));
         // The game started a change of its own while it was being built, or the card cannot draw
         // the fade: the splash steps aside and the game is simply shown.
         if (store.get('transition').active !== null || !canDrawTransition(store, transition)) {

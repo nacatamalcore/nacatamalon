@@ -69,15 +69,19 @@ const parseField = (raw: unknown): TStoreField | null => {
     return { name, type, value: parseValue(type, record.value) };
 };
 
-const parsePersist = (raw: unknown): TStorePersistDoc | undefined => {
+/**
+ * `fromVersion` is the version the file says it is: a version 1 file kept its throttle in milliseconds.
+ */
+const parsePersist = (raw: unknown, fromVersion: number): TStorePersistDoc | undefined => {
     const record = asRecord(raw);
     if (record === null || (record.adapter !== 'localStorage' && record.adapter !== 'indexedDb')) {
         return undefined;
     }
+    const inMilliseconds = fromVersion < 2;
     return {
         adapter: record.adapter,
         ...(record.mode !== undefined ? { mode: asOneOf(record.mode, ['auto', 'manual'] as const, 'auto') } : {}),
-        ...(record.throttle !== undefined ? { throttle: asNumber(record.throttle, 250) } : {}),
+        ...(record.throttle !== undefined ? { throttle: inMilliseconds ? asNumber(record.throttle, 250) / 1000 : asNumber(record.throttle, 0.25) } : {}),
         ...(record.dbName !== undefined ? { dbName: asString(record.dbName, '') } : {}),
     };
 };
@@ -127,7 +131,7 @@ export const parseStoreDoc = (raw: unknown, src: string): TStoreDoc => {
         console.warn(`[NacatamalOn] store "${src}": ${dropped.length} field(s) this version cannot read (${dropped.join(', ')}). The store opens without them.`);
     }
 
-    const persist = parsePersist(record.persist);
+    const persist = parsePersist(record.persist, typeof record.version === 'number' ? record.version : 1);
     return {
         format: STORE_FORMAT,
         version: STORE_VERSION,

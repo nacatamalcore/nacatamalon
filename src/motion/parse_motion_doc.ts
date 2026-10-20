@@ -97,15 +97,22 @@ const readTransition = (raw: unknown, src: string, where: string): TMotionTransi
     }
     const transition = asRecord(raw);
     if (transition === null || !TRANSITIONS.has(transition.type as string)) {
-        fail(src, `${where}: "transition" has to be { "type": "fade" | "wipe" | "iris" | "pixelate", "ms": 400 }.`);
+        fail(src, `${where}: "transition" has to be { "type": "fade" | "wipe" | "iris" | "pixelate", "duration": 0.4 }.`);
     }
     const read: TMotionTransition = { type: (transition as Record<string, unknown>).type as TMotionTransition['type'] };
+    const duration = (transition as Record<string, unknown>).duration;
+    // What the files said before: the same, in milliseconds. Read, and written back in seconds.
     const ms = (transition as Record<string, unknown>).ms;
-    if (ms !== undefined) {
+    if (duration !== undefined) {
+        if (!isTime(duration)) {
+            fail(src, `${where}: the transition's "duration" has to be the seconds it takes.`);
+        }
+        read.duration = duration as number;
+    } else if (ms !== undefined) {
         if (!isTime(ms)) {
             fail(src, `${where}: the transition's "ms" has to be the milliseconds it takes.`);
         }
-        read.ms = ms as number;
+        read.duration = (ms as number) / 1000;
     }
     return read;
 };

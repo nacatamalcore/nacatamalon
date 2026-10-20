@@ -23,7 +23,7 @@ const BLACK: TColor = { r: 0, g: 0, b: 0, a: 1 };
  * At rest it snaps to the centre of each pixel, which reads back exactly what was there: with
  * nothing to cover it changes nothing.
  *
- * @param duration How long the whole thing takes in milliseconds, breaking down and coming back.
+ * @param duration How long the whole thing takes in seconds, breaking down and coming back.
  * @param color What it flattens into once the blocks are as big as they get.
  * @param minBlocks How many blocks across the short side of the screen at the worst of it. Six.
  * @returns The transition, for `useScene().change(name, { transition })`.
@@ -32,7 +32,7 @@ const BLACK: TColor = { r: 0, g: 0, b: 0, a: 1 };
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const pixelate = (duration = 400, color: TColor = BLACK, minBlocks = 6): TTransition => ({
+export const pixelate = (duration = 0.4, color: TColor = BLACK, minBlocks = 6): TTransition => ({
     name: 'pixelate',
     duration,
     uniforms: {

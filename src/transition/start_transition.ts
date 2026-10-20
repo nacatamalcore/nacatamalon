@@ -32,13 +32,18 @@ export const canDrawTransition = (store: TRuntimeStore, transition: TTransition)
 };
 
 /**
+ * Seconds past which a transition is taken to be a mistake, and said so.
+ */
+const LONG_TRANSITION = 10;
+
+/**
  * Puts a transition in flight: builds the effect that draws it, holds the scene coming in, and
  * starts watching what that scene asked to load.
  *
  * The effect is made **here and once**, and the record is then kept for the life of the transition:
  * a compiled shader is cached against that object's identity, so building a fresh one each frame
  * would compile each frame and never once find the cache. Its knobs are copied out of the recipe
- * rather than shared with it, so two changes made from the same `fade(300)` cannot write over each
+ * rather than shared with it, so two changes made from the same `fade(0.3)` cannot write over each
  * other.
  *
  * @param store The runtime store of the game the change belongs to.
@@ -56,6 +61,11 @@ export const startTransition = (
     incoming: TBox,
     outgoing: TBox,
 ): TTransitionState => {
+    // Ten seconds of cover is no transition anyone meant: it is almost always a number written in
+    // milliseconds, which is what transitions took before.
+    if (transition.duration > LONG_TRANSITION) {
+        console.warn(`[NacatamalOn] The transition '${transition.name ?? 'transition'}' takes ${transition.duration} seconds. Durations are in seconds: did you mean ${transition.duration / 1000}?`);
+    }
     const effect = newPostEffect({
         name: transition.name ?? 'transition',
         fragment: transition.fragment,
@@ -66,9 +76,8 @@ export const startTransition = (
 
     const state: TTransitionState = {
         effect,
-        // Half of what the author wrote, and in the other unit: they count the whole thing in
-        // milliseconds because that is what a stopwatch says, the loop counts seconds.
-        half: Math.max(0, transition.duration) / 2000,
+        // Half of what the author wrote: they count the whole thing, covering and uncovering.
+        half: Math.max(0, transition.duration) / 2,
         elapsed: 0,
         progress: 0,
         phase: 'cover',
