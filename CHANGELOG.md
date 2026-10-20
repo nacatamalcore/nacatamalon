@@ -32,6 +32,9 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- `useCameraFollow` follows the scene's camera whichever came first in the body. With
+  `useCamera2d({ zoom: 2 })` written after it, the follow went on moving a camera of its own that
+  nothing drew through, and the scene's stood still, with only a warning about a camera replaced.
 - `onEvent` stops when whoever listened goes away, not only when the object listened on does. A
   HUD listening on its scene went on hearing once destroyed, writing on a text that was gone, and a
   new HUD in its place made two. One connected inside a body now lasts as long as that body's

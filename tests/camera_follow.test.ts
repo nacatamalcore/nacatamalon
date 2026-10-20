@@ -289,3 +289,36 @@ describe('useCameraFollow with a grid of rooms and bounds', () => {
         expect(camera().x + W).toBeLessThanOrEqual(bounds.width);
     });
 });
+
+describe('a camera made after the follow', () => {
+    it('is the one it moves, whichever came first in the body', () => {
+        const { store } = createTestGame({}, createFakeCanvas(W, H));
+        const ctx = createFrameContext();
+        let follow!: TCameraFollow;
+        let camera!: ReturnType<typeof useCamera2d>;
+        const warn = console.warn;
+        const said: string[] = [];
+        console.warn = (message: string) => { said.push(message); };
+        try {
+            registerScene(store, 'Level', () => {
+                const hero = useSpawn(function Hero() {
+                    useTransform({ x: 1000, y: 500 });
+                })();
+                follow = useCameraFollow(hero);
+                // The camera of the scene, asked for after: zoomed, so it shows half as much.
+                camera = useCamera2d({ zoom: 2 });
+                return createScene();
+            });
+            startScene(store, 'Level');
+            tick(store, ctx, 1000 / 60, 0);
+        } finally {
+            console.warn = warn;
+        }
+
+        expect(follow.camera).toBe(camera);
+        // The hero in the middle of a screen 160 by 112 at that zoom.
+        expect(camera.transform.x).toBe(1000 - W / 4);
+        expect(camera.transform.y).toBe(500 - H / 4);
+        expect(said.filter((message) => message.includes('already had a camera'))).toEqual([]);
+    });
+});

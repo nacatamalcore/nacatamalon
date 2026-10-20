@@ -87,7 +87,8 @@ export type TCameraFollowOptions = {
  */
 export type TCameraFollow = {
     /**
-     * The scene's camera, which this moves.
+     * The scene's camera, which this moves: the one it has now, so a `useCamera2d` before or after
+     * this in the body is the one followed.
      */
     readonly camera: TCamera2d;
     /**
@@ -284,10 +285,18 @@ export const useCameraFollow = (target: TCameraTarget | null, options: TCameraFo
         throw new Error('[NacatamalOn] useCameraFollow: call it inside a scene body, not from a timer or a callback.');
     }
     const scene = viewOf(box);
-    if (scene.camera2d === null) {
-        scene.camera2d = createCamera2d();
-    }
-    const camera = scene.camera2d;
+    /**
+     * The scene's camera as it is now, made when it has none. Asked for every time rather than kept:
+     * a `useCamera2d` after this one in the body replaces the scene's camera, and keeping the first
+     * would leave this moving one nobody draws through. Not made here and now either, so that
+     * `useCamera2d` coming second finds no camera of this one's to warn about.
+     */
+    const cameraOf = (): TCamera2d => {
+        if (scene.camera2d === null) {
+            scene.camera2d = createCamera2d();
+        }
+        return scene.camera2d;
+    };
     const random = store.get('random').rng;
 
     // Where the middle of the view is, unrounded: the camera itself is put on whole pixels, and
@@ -303,7 +312,9 @@ export const useCameraFollow = (target: TCameraTarget | null, options: TCameraFo
     let shown: TRect | null = null;
 
     const follow: TCameraFollow = {
-        camera,
+        get camera() {
+            return cameraOf();
+        },
         target,
         deadzone: { width: options.deadzone?.width ?? 0, height: options.deadzone?.height ?? 0 },
         bounds: options.bounds ?? null,
@@ -329,6 +340,7 @@ export const useCameraFollow = (target: TCameraTarget | null, options: TCameraFo
     };
 
     useLateUpdate((delta) => {
+        const camera = cameraOf();
         const screen = screenSizeOf(store.get('screen').canvas);
         const zoom = camera.zoom > 0 ? camera.zoom : 1;
         const half = { x: screen.width / zoom / 2, y: screen.height / zoom / 2 };
