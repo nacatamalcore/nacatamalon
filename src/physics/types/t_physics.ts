@@ -104,7 +104,8 @@ export type TPhysicsSurface = {
      */
     sensor: boolean;
     /**
-     * Which layer this body **is on**, `0` to `15`.
+     * Which layer this body **is on**, `0` to `15`. In code it can be said by the name the game gave
+     * it (`physicsLayers`); the record keeps the number.
      *
      * One layer, and the restraint is deliberate: "what is this thing" has one answer in every game
      * that has ever needed layers, and the moment something is on two, a table of what hits what

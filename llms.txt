@@ -199,6 +199,10 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   `getPhysicsWorld2d()?.bodyOf(useSelf())` (or `getPhysicsWorld3d`) taken while the object is built.
   The handle's `setLayers(layer, collidesWith)` changes what it collides with, and its `destroy()`
   removes the body and keeps the object. `destroy(object)` removes the object's body too.
+- Physics layers have names when the game gives them: `createGame(…, { physicsLayers: ['world',
+  'player', 'enemy'] })` (or `physicsLayers` in `project.json`), the first is layer 0; then a body
+  says `layer: 'enemy', collidesWith: ['world', 'player']`, and `setLayers('ghost', [])` the same.
+  Two bodies meet only if each one's `collidesWith` has the other's layer.
 
 ## Talking between pieces
 
@@ -207,7 +211,7 @@ A game is small pieces made with `useSpawn`, and each way they talk has one job:
 | To... | Use |
 |---|---|
 | keep a value of this piece that others watch (lives, a level's points) | `useData`, read with `useWatch` |
-| keep a value of the whole game, across scenes or saved (best score, settings) | `createGameStore`, `useStore` |
+| keep a value of the whole game, across scenes or saved (best score, settings) | `createGameStore`; `useStore` to react to one value of it, `useWatch(fn, [store, lives])` to draw from it and more |
 | say something happened, for anyone to hear (`gameOver`) | `createGameSignal`, `useSignal` |
 | tell whoever placed you (an enemy dead, a button pressed) | a callback in your props: `useSpawn(Enemy)({ onDied })`. From a pack or a behaviour, which take only data: `useReport('pressed')` sends it up, `onReport(copy, 'pressed', h)` or a pack's `on` hears it |
 | tell a piece you made what to do (`hurt`, `open`) | the `api` it returns: `useSpawn(Bat)({ x }).api.hurt(1)` |

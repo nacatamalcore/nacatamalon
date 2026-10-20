@@ -34,7 +34,7 @@ export type { TDrawable } from './gameobjects/types';
 // The four that turn something about an axis come out too, for a rotate gizmo.
 // The rest of the quaternion arithmetic stays inside, where the renderer and the rigs use it.
 export { fromEuler as quatFromEuler } from './math/quat';
-export { fromAxisAngle as quatFromAxisAngle, multiply as quatMultiply, normalize as quatNormalize, rotateVec3 as quatRotateVec3 } from './math/quat';
+export { fromAxisAngle as quatFromAxisAngle, multiply as quatMultiply, normalize as quatNormalize, rotateVec3 as quatRotateVec3, slerp as quatSlerp } from './math/quat';
 export type { TQuat } from './math/quat';
 // The everyday arithmetic of a game: keeping a number in range, blending two of them, turning
 // degrees into the radians every rotation uses, and points and directions. Prefixed (`vec2Add`, not
@@ -114,6 +114,7 @@ export { createGameSignal, scenePaused, sceneResumed, gamePaused, gameResumed } 
 // loading a physics engine at all. What does move them is installed with one call from its own door
 // (`installPhysics2d()` from `nacatamalon/physics2d`, `installPhysics3d()` from `nacatamalon/physics3d`).
 export { createPhysicsBody2d, createPhysicsBody3d, PHYSICS_LAYERS, ALL_LAYERS } from './physics';
+export type { TPhysicsLayer, TPhysicsLayerOptions } from './physics';
 export type {
     TPhysicsBody, TPhysicsBody2d, TPhysicsBody3d, TPhysicsBodyType,
     TPhysicsSurface, TPhysicsWorld, TPhysicsWorld2d, TPhysicsWorld3d, TCollider2d, TCollider3d,

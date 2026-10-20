@@ -2,6 +2,8 @@ import { useUpdate } from '../../hooks/loop/use_update';
 import { useCleanup } from '../../hooks/scene/use_cleanup';
 import { createGameSignal } from '../../signal/create_game_signal';
 import { ALL_LAYERS } from '../layers';
+import { resolveLayers } from '../layer_names';
+import { getActiveGame } from '../../store';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
 import type { TGameSignal } from '../../signal';
 import { fromB3, loadBox3D, toB3 } from './load_box3d';
@@ -507,6 +509,8 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
             return signal;
         };
 
+        // The names the game gave its layers, as it is when the body is made, for `setLayers`.
+        const layerNames = getActiveGame()?.get('config').physicsLayers ?? [];
         const body: TPhysicsBodyHandle3d = {
             get onEnter() { return ensureSignal('onEnter'); },
             get onExit() { return ensureSignal('onExit'); },
@@ -515,9 +519,11 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
             applyTorque: (x, y, z) => act('torque', x, y, z),
             setLinearVelocity: (x, y, z) => act('linear', x, y, z),
             setAngularVelocity: (x, y, z) => act('angular', x, y, z),
-            setLayers: (layer, collidesWith) => {
+            setLayers: (given, givenMask) => {
                 if (entry.destroyed) return;
-                const mask = collidesWith ?? spec.material?.collidesWith ?? ALL_LAYERS;
+                const resolved = resolveLayers({ layer: given, collidesWith: givenMask }, layerNames);
+                const layer = resolved.layer ?? 0;
+                const mask = resolved.collidesWith ?? spec.material?.collidesWith ?? ALL_LAYERS;
                 // Kept on the spec as well as applied, so a body still waiting for the WebAssembly
                 // is built on the new layers when it lands.
                 spec.material = { ...spec.material, layer, collidesWith: mask };

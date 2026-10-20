@@ -1,8 +1,8 @@
 import { getActiveBox, getVersion, isWatchable } from '../../store';
 
 /**
- * Something `useWatch` can be given to watch: state from `useData`, or an asset from one of the
- * `useLoad…` hooks.
+ * Something `useWatch` can be given to watch: state from `useData`, a store from `createGameStore`,
+ * or an asset from one of the `useLoad…` hooks.
  *
  * Not a number or a string. Those are read once, where the list is written, and can never change
  * afterwards, so watching one is always a mistake and is refused rather than accepted quietly.
@@ -27,6 +27,9 @@ export type TWatchDep = object;
  * is never announced, so it cannot be watched. Passing one is refused when the scene starts rather
  * than accepted into a callback that would never run again.
  *
+ * A store counts as changed on any `set` or action, whatever it touched. To hear one value of it,
+ * straight away and even in pause, use `useStore`; to draw from several things at once, this.
+ *
  * The first run happens whether or not anything changed, so a scene does not need to write its
  * starting state twice: once in the body and once in the watch.
  *
@@ -46,14 +49,16 @@ export type TWatchDep = object;
  * declare const counter: TText;
  * declare const hero: TSprite;
  *
+ * declare const coins: TGameStore<{ coins: number }>;
+ *
  * export const Level: TSceneFn = () => {
  *     const texture = useLoadTexture({ src: '/assets/hero.png' });
  *     const [lives, setLives] = useData(3);
  *
  *     useWatch(() => {
- *         counter.text = `LIVES ${lives.value}`;
+ *         counter.text = `LIVES ${lives.value}  COINS ${coins.state.coins}`;
  *         hero.visible = texture.status === 'ready';
- *     }, [lives, texture]);
+ *     }, [lives, coins, texture]);
  *
  *     return createScene();
  * };
@@ -79,7 +84,7 @@ export const useWatch = (fn: () => void, deps: readonly TWatchDep[]): void => {
         if (!isWatchable(dep)) {
             throw new Error(
                 '[NacatamalOn] useWatch: nothing announces changes on this, so the watch would run once and never again. ' +
-                'It can watch state from useData and assets from useLoadTexture, useLoadFont, useLoadBitmapFont, useLoadAtlas and the rest. ' +
+                'It can watch state from useData, a store from createGameStore, and assets from useLoadTexture, useLoadFont, useLoadBitmapFont, useLoadAtlas and the rest. ' +
                 'Something the game moves by hand, a transform for instance, is changed in place and is never announced: ' +
                 'do that work in useUpdate.',
             );

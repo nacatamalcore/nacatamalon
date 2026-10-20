@@ -33,6 +33,7 @@ export const DEFAULT_PROJECT_SETTINGS: TProjectSettings = {
     step: 'display',
     mainScene: '',
     actions: [],
+    physicsLayers: [],
     actionsPersist: 'none',
     post: [],
 };

@@ -9,6 +9,7 @@ import { tick } from '../src/game/loop/tick';
 import { useData } from '../src/hooks/state/use_data';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useWatch } from '../src/hooks/state/use_watch';
+import { clearGameStores, createGameStore } from '../src/game_store';
 import { createFakeCanvas, createTestGame, startTestScene } from './helpers/test_game';
 import type { TRuntimeStore } from '../src/store';
 import type { TSceneFn } from '../src/scene';
@@ -277,5 +278,32 @@ describe('useWatch over an asset', () => {
         await loadTexture(store, texture);
         game.frame();
         expect(seen).toEqual(['loading', 'ready']);
+    });
+});
+
+describe('useWatch on a store', () => {
+    afterEach(() => { clearGameStores(); });
+
+    it('runs on the first frame, then once a frame after any set or action', () => {
+        const coins = createGameStore({
+            key: 'coins',
+            state: { coins: 0, gems: 0 },
+            actions: (set) => ({ gem: () => set((s) => { s.gems++; }) }),
+        });
+        const seen: string[] = [];
+        const { frame } = driven('Level', () => {
+            const [lives] = useData(3);
+            useWatch(() => { seen.push(`${lives.value} ${coins.state.coins} ${coins.state.gems}`); }, [lives, coins]);
+            return createScene();
+        });
+
+        frame();
+        frame();
+        coins.set((s) => { s.coins = 5; });
+        coins.set((s) => { s.coins = 6; });
+        frame();
+        coins.actions.gem();
+        frame();
+        expect(seen).toEqual(['3 0 0', '3 6 0', '3 6 1']);
     });
 });

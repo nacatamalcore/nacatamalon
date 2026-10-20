@@ -91,6 +91,11 @@ export type TProjectSettings = {
      */
     actions: TActionMap;
     /**
+     * Names for the physics layers, in order: the first is layer 0. Empty when the game says its
+     * layers by number.
+     */
+    physicsLayers: string[];
+    /**
      * Whether the player's own controls survive a reload, and where they are kept. `'none'` by
      * default: writing to somebody's browser storage unasked is not something a game should start
      * doing because the engine gained a feature.

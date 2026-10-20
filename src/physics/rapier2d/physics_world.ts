@@ -2,6 +2,8 @@ import { useUpdate } from '../../hooks/loop/use_update';
 import { useCleanup } from '../../hooks/scene/use_cleanup';
 import { createGameSignal } from '../../signal/create_game_signal';
 import { ALL_LAYERS } from '../layers';
+import { resolveLayers } from '../layer_names';
+import type { TPhysicsLayer } from '../layer_names';
 import { placementOf } from '../../box';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
 import type { TGameSignal } from '../../signal';
@@ -767,6 +769,8 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         };
         box.cleanups.push(remove);
 
+        // The names the game gave its layers, as it is when the body is made, for `setLayers`.
+        const layerNames = getActiveGame()?.get('config').physicsLayers ?? [];
         const handle: TPhysicsBodyHandle2d = {
             get onEnter() { return ensureSignal('onEnter'); },
             get onExit() { return ensureSignal('onExit'); },
@@ -816,9 +820,11 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
                 }
             },
 
-            setLayers: (layer: number, collidesWith?: number) => {
+            setLayers: (given: TPhysicsLayer, givenMask?: number | readonly TPhysicsLayer[]) => {
                 if (bodyEntry.removed) return;
-                const mask = collidesWith ?? shape.collidesWith ?? ALL_LAYERS;
+                const resolved = resolveLayers({ layer: given, collidesWith: givenMask }, layerNames);
+                const layer = resolved.layer ?? 0;
+                const mask = resolved.collidesWith ?? shape.collidesWith ?? ALL_LAYERS;
                 // Kept on the shape as well as applied, so a body still waiting for the WebAssembly
                 // is built on the new layers when it lands.
                 shape.layer = layer;

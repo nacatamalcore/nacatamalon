@@ -7,6 +7,16 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- `useWatch` watches a store too: `useWatch(() => { hud.text = ... }, [gameStore, lives])` runs on the
+  first frame and once a frame after any `set` or action. `useStore` stays for one value, heard
+  straight away and in pause.
+- `quatSlerp(a, b, t)`: turns smoothly from one 3D facing to another, a turret easing toward the
+  player or a camera toward where it looks.
+- Physics layers have names: `physicsLayers: ['world', 'player', 'enemy']` in `createGame` or the
+  project, the first being layer 0, and a body says `layer: 'enemy', collidesWith: ['world',
+  'player']` rather than `2` and a mask; `setLayers` takes names too. A saved scene keeps the
+  numbers, so renaming a layer changes nothing there. A name the game did not give is said once and
+  taken as layer 0.
 - Tags: what something is, as many as it likes. `useTag('enemy')` gives the tag, to `add`,
   `remove`, `has`, find `all()` in the scene and `clear()`; asking is getting, and nothing registers
   it. A piece adds itself (`useTag('enemy').add(useSelf())`) or is made with

@@ -211,6 +211,11 @@ export type TGameOptions = {
      */
     actions?: TActionMap;
     /**
+     * Names for the physics layers, in order: the first is layer 0. With them a body says
+     * `layer: 'enemy'` and `collidesWith: ['world', 'player']` rather than numbers. Sixteen at most.
+     */
+    physicsLayers?: string[];
+    /**
      * Where the player's own rebindings are kept, so they are still there next time. Left out, the
      * controls are whatever the game says every run.
      */

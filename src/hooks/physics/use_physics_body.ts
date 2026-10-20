@@ -1,4 +1,6 @@
-import { getActiveBox } from '../../store';
+import { getActiveBox, getActiveGame } from '../../store';
+import { resolveLayers } from '../../physics/layer_names';
+import type { TPhysicsLayerOptions } from '../../physics/layer_names';
 import { isShowingOnly } from './is_showing_only';
 import { placement3dOf, placementOf } from '../../box';
 import { getPhysicsProviders, createPhysicsBody2d, createPhysicsBody3d, warnMissingPhysicsProvider } from '../../physics';
@@ -19,7 +21,7 @@ export type TPhysicsBody2dOptions = {
     name?: string;
     body: TPhysicsBodyType;
     collider: TCollider2d;
-} & Partial<TPhysicsSurface>;
+} & Partial<Omit<TPhysicsSurface, 'layer' | 'collidesWith'>> & TPhysicsLayerOptions;
 
 /**
  * The same for a body in space.
@@ -34,7 +36,10 @@ export type TPhysicsBody3dOptions = {
     body: TPhysicsBodyType;
     collider: TCollider3d;
     offset?: [number, number, number];
-} & Partial<TPhysicsSurface>;
+} & Partial<Omit<TPhysicsSurface, 'layer' | 'collidesWith'>> & TPhysicsLayerOptions;
+
+/** The names the game gave its physics layers, for a body that says its layers by name. */
+const layerNames = (): readonly string[] => getActiveGame()?.get('config').physicsLayers ?? [];
 
 /**
  * Gives this object a flat shape to collide with.
@@ -75,7 +80,8 @@ export const usePhysicsBody2d = (options: TPhysicsBody2dOptions): TPhysicsBody2d
         throw new Error('[NacatamalOn] usePhysicsBody2d: call it inside a scene body.');
     }
 
-    const record = createPhysicsBody2d({ name: box.name, ...options });
+    const { layer, collidesWith, ...rest } = options;
+    const record = createPhysicsBody2d({ name: box.name, ...rest, ...resolveLayers({ layer, collidesWith }, layerNames()) });
     // Written on the object before anything can decline to simulate it, so a scene with no adapter
     // still saves every collider it declares.
     box.physics = record;
@@ -126,7 +132,8 @@ export const usePhysicsBody3d = (options: TPhysicsBody3dOptions): TPhysicsBody3d
         throw new Error('[NacatamalOn] usePhysicsBody3d: call it inside a scene body.');
     }
 
-    const record = createPhysicsBody3d({ name: box.name, ...options });
+    const { layer, collidesWith, ...rest } = options;
+    const record = createPhysicsBody3d({ name: box.name, ...rest, ...resolveLayers({ layer, collidesWith }, layerNames()) });
     box.physics = record;
 
     // The same reason as above, asked of space: an object is where it is, or where the shape it

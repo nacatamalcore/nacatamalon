@@ -1,3 +1,4 @@
+import { bumpVersion, markWatchable } from '../store';
 import { adoptProvisionalStore, registerGameStore, storeInternals } from './store_registry';
 import type { TGameStore, TGameStoreConfig, TStoreListener, TStoreSelector } from './types/t_game_store';
 
@@ -86,6 +87,8 @@ export const createGameStore = <S extends object, A = Record<string, never>>(
      * Tells everyone listening. Over a copy, for the same reasons as a signal's `emit`.
      */
     const notify = (): void => {
+        // For `useWatch`, which compares this count once a frame.
+        bumpVersion(store);
         for (const run of [...subscriptions]) {
             // One removed by an earlier listener of this same change is not called.
             if (!subscriptions.includes(run)) {
@@ -219,6 +222,7 @@ export const createGameStore = <S extends object, A = Record<string, never>>(
         reset,
     });
     storeInternals.set(store, { subscriptions, notify });
+    markWatchable(store);
 
     // After the store exists, so an action can reach `set` and `get` the moment it is called.
     (store as { actions: A }).actions = config.actions ? config.actions(set, get) : ({} as A);

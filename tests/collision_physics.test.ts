@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { registerPhysicsProvider } from '../src/physics';
-import { rapier2dProvider } from '../src/physics/rapier2d/provider';
+import { getPhysicsWorld2d, rapier2dProvider } from '../src/physics/rapier2d/provider';
 import { loadRapier2D } from '../src/physics/rapier2d/load_rapier';
 import { box3dProvider } from '../src/physics/box3d/provider';
 import { loadBox3D } from '../src/physics/box3d/load_box3d';
@@ -11,6 +11,7 @@ import { registerScene } from '../src/scene/register_scene';
 import { startScene } from '../src/scene/start_scene';
 import { usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d } from '../src/hooks/physics';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
+import { useSelf } from '../src/hooks/spawn/use_self';
 import { useTransform } from '../src/hooks/transform/use_transform';
 import { useCollisionBetween, useCollisionWith } from '../src/hooks/hitbox';
 import { createTestGame } from './helpers/test_game';
@@ -27,10 +28,10 @@ import type { TGameObject } from '../src/hooks/spawn/use_spawn';
 beforeEach(() => { registerPhysicsProvider(rapier2dProvider); registerPhysicsProvider(box3dProvider); });
 afterEach(() => { registerPhysicsProvider(null); });
 
-const game = async (body: TSceneFn) => {
+const game = async (body: TSceneFn, physicsLayers: string[] = []) => {
     await loadRapier2D();
     await loadBox3D();
-    const { store } = createTestGame({ step: 60 });
+    const { store } = createTestGame({ step: 60, physicsLayers });
     const ctx = createFrameContext();
     let now = 0;
     registerScene(store, 'Level', body);
@@ -111,5 +112,32 @@ describe('a collision met by physics', () => {
         expect(said).toEqual([]);
         frames(120);
         expect(said).toEqual(['Floor']);
+    });
+
+    it('changes layers by name while it runs, and a crate that leaves the floor\'s falls through it', async () => {
+        let crate!: TGameObject;
+        let fell = false;
+        const { frames } = await game(() => {
+            usePhysicsWorld2d();
+            useSpawn(() => {
+                useTransform({ x: 0, y: 100 });
+                usePhysicsBody2d({ body: 'static', collider: { shape: 'rect', width: 200, height: 20 }, layer: 'world', collidesWith: ['crates'] });
+            }, 'Ground')();
+            crate = useSpawn(() => {
+                const place = useTransform({ x: 0, y: 0 });
+                usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'rect', width: 20, height: 20 }, layer: 'crates', collidesWith: ['world'] });
+                const body = getPhysicsWorld2d()?.bodyOf(useSelf());
+                // A ghost from the start: on its own layer, meeting nothing.
+                body?.setLayers('ghost', []);
+                return { below: () => place.y > 140 };
+            }, 'Crate')() as TGameObject;
+            return createScene();
+        }, ['world', 'crates', 'ghost']);
+
+        frames(150);
+        fell = (crate.api as { below: () => boolean }).below();
+        expect(crate.physics?.layer).toBe(2);
+        expect(crate.physics?.collidesWith).toBe(0);
+        expect(fell).toBe(true);
     });
 });

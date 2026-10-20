@@ -165,6 +165,7 @@ describe('gameOptionsFromProject', () => {
             pauseOnBlur: settings.pauseOnBlur,
             step: settings.step,
             actions: settings.actions,
+            physicsLayers: settings.physicsLayers,
             actionsPersist: undefined,
             post: settings.post,
         });

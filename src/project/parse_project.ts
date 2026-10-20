@@ -1,3 +1,4 @@
+import { cleanLayerNames } from '../physics/layer_names';
 import { normalizeActionMap } from '../input';
 import { normalizePostChain } from '../post/post_chain';
 import { asBoolean, asColor, asInt, asOneOf } from '../utils';
@@ -79,6 +80,7 @@ export const parseProject = (value: unknown): TProjectSettings => {
         seed: typeof raw.seed === 'number' && Number.isFinite(raw.seed) ? raw.seed : undefined,
         mainScene: typeof raw.mainScene === 'string' ? raw.mainScene : DEFAULT_PROJECT_SETTINGS.mainScene,
         actions: normalizeActionMap(raw.actions),
+        physicsLayers: cleanLayerNames(raw.physicsLayers),
         actionsPersist: asOneOf(raw.actionsPersist, ['none', 'localStorage', 'indexedDb'] as const, DEFAULT_PROJECT_SETTINGS.actionsPersist),
         post: normalizePostChain(raw.post),
     };

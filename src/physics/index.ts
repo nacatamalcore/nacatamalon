@@ -1,4 +1,5 @@
 export { ALL_LAYERS, PHYSICS_LAYERS } from './layers';
+export type { TPhysicsLayer, TPhysicsLayerOptions } from './layer_names';
 export { createPhysicsBody2d, createPhysicsBody3d } from './new_physics_body';
 export { registerPhysicsProvider, getPhysicsProviders, warnMissingPhysicsProvider } from './physics_provider';
 

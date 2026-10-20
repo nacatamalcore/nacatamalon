@@ -42,6 +42,7 @@ export const gameOptionsFromProject = (settings: TProjectSettings): TGameOptions
     pauseOnBlur: settings.pauseOnBlur,
     step: settings.step,
     actions: settings.actions,
+    physicsLayers: settings.physicsLayers,
     // The project says where to keep the player's controls; the engine picks the adapter, so a
     // project file never has to name one and can be read anywhere.
     actionsPersist: settings.actionsPersist === 'none'

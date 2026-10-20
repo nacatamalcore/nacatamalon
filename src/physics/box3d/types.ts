@@ -4,6 +4,7 @@ import type { TGeometry } from '../../geometry';
 import type { TCharacterBody, TCharacterOptions } from './character_body';
 // How a body moves is the engine's own word for it, the same one a scene writes down.
 import type { TPhysicsBodyType } from '../types/t_physics';
+import type { TPhysicsLayer } from '../layer_names';
 export type { TPhysicsBodyType };
 
 /**
@@ -76,7 +77,7 @@ export type TPhysicsBodyHandle3d = {
      * `collidesWith` left out keeps the mask the body already had. The object's physics record is
      * updated too, so a scene saved afterwards keeps the layers it is simulating with.
      */
-    setLayers: (layer: number, collidesWith?: number) => void;
+    setLayers: (layer: TPhysicsLayer, collidesWith?: number | readonly TPhysicsLayer[]) => void;
     /**
      * Removes this body from the simulation, freeing its WASM memory. The object stops being
      * driven and keeps whatever placement it last had. Safe to call twice; the world's own

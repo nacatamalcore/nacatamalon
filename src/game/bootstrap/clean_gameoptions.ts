@@ -1,3 +1,4 @@
+import { cleanLayerNames } from '../../physics/layer_names';
 import { DEFAULT_GAME_OPTIONS, MAX_STEP_RATE, MIN_STEP_RATE } from "../../CONFIG";
 import type { TGameOptions } from "../types/t_game_options";
 
@@ -33,6 +34,8 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
     // says nothing about keeping the player's controls does not keep them.
     const actions = game_options.actions ?? [];
     const actionsPersist = game_options.actionsPersist;
+    // Nor for the layers' names: a game that names none says them by number.
+    const physicsLayers = cleanLayerNames(game_options.physicsLayers);
     // Nor for the project's screen effects: none is none.
     const post = game_options.post;
     // Nor for the startup line: it is on unless the game says otherwise.
@@ -60,6 +63,7 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
         fullscreenScaling,
         actions,
         actionsPersist,
+        physicsLayers,
         post,
         banner,
         splash,

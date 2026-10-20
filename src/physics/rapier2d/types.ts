@@ -6,6 +6,7 @@ import type { TGameObject } from '../../hooks/spawn/use_spawn';
 import type { TGameSignal } from '../../signal';
 // How a body moves is the engine's own word for it, the same one a scene writes down.
 import type { TPhysicsBodyType } from '../types/t_physics';
+import type { TPhysicsLayer } from '../layer_names';
 export type { TPhysicsBodyType };
 
 /**
@@ -179,10 +180,11 @@ export type TPhysicsBodyHandle2d = {
      * engine's `TPhysicsSurface`), and the same mutual rule: two bodies meet only if each one's mask
      * includes the other's layer.
      *
-     * `collidesWith` left out keeps the mask the body already had. The object's physics record is
+     * By number or by the names the game gave its layers (`physicsLayers`): `setLayers('ghost',
+     * ['world'])`. `collidesWith` left out keeps the mask the body already had. The object's physics record is
      * updated too, so a scene saved afterwards keeps the layers it is simulating with.
      */
-    setLayers: (layer: number, collidesWith?: number) => void;
+    setLayers: (layer: TPhysicsLayer, collidesWith?: number | readonly TPhysicsLayer[]) => void;
 
     /**
      * Takes the body out of the simulation and leaves the object where it is, still drawn and
