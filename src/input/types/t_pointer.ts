@@ -172,6 +172,20 @@ export type TPointerHandle = {
      */
     isDown(): boolean;
     /**
+     * Whether a finger touched or a mouse button went down **during this frame**: true for one frame
+     * per press. For what happens once: shooting, jumping, placing a block. With `button`, only that
+     * one: `0` the main button or a finger, `2` the right button.
+     *
+     * The pointer's answer to the keyboard's `justPressed`. It says nothing about what was pressed;
+     * for that, `onDown` and its `target`, or `isPressing`.
+     */
+    justPressed(button?: number): boolean;
+    /**
+     * Whether a finger lifted or a mouse button came up during this frame: the mirror of
+     * `justPressed`. A touch the system takes back counts as lifted.
+     */
+    justReleased(button?: number): boolean;
+    /**
      * Where the pointer was last seen over the game, or `null` once it left (or before it came).
      * For the mouse that is where it hovers, pressed or not; for touch, the last finger that moved.
      */
@@ -270,6 +284,14 @@ export type TPointerSource = {
      * Every pointer pressing, as of the last `dispatch`, in screen pixels: the state a frame reads.
      */
     touches(): ReadonlyArray<{ pointerId: number; pointerType: TPointerType; screenX: number; screenY: number }>;
+    /**
+     * Whether `button` (any, when left out) went down in the last `dispatch`. See `TPointerHandle.justPressed`.
+     */
+    justPressed(button?: number): boolean;
+    /**
+     * Whether `button` (any, when left out) came up in the last `dispatch`.
+     */
+    justReleased(button?: number): boolean;
     /**
      * Where the pointer was last seen over the canvas, as of the last `dispatch`, or `null`.
      */

@@ -7,6 +7,8 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- `usePointer().justPressed()` and `justReleased()`: a finger or a mouse button that went down or came
+  up this frame, true for one frame like the keyboard's. `justPressed(2)` asks about the right button.
 - A scene takes props, like a component: how it is opened. `const Level = ({ level = 1 }: { level?:
   number }) => ...`, and `useScene().change(Level, { props: { level: 3 } })` or `launch(Hud, { props
   })`. Given the function, TypeScript checks the props; the name still works, unchecked. Every prop

@@ -116,7 +116,8 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   (`useSpawn(Button)({ x: 400, action: 'jump' })`). A project's map binds a button of a scene by its
   name instead, `{ type: 'touch', box: 'Jump' }`. Draw it with the
   engine, never as HTML over the canvas (the native runtime has no page). `usePointer()` also answers
-  `isDown()`, `position()`, `touches()` (each finger, by `pointerId`) and `isPressing(sprite)`. How long
+  `isDown()`, `justPressed()` and `justReleased()` (one frame, like the keyboard; `justPressed(2)` for
+  the right button), `position()`, `touches()` (each finger, by `pointerId`) and `isPressing(sprite)`. How long
   an action has been held, for a charged shot: `actions.heldFor('fire')`, still set on its
   `justReleased` frame.
 - **Colours** are `{ r, g, b, a }`, each 0 to 1. `getColor` takes `'#ff6b1a'`, `0xff6b1a`, a CSS

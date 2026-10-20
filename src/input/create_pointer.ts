@@ -107,6 +107,12 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
      */
     const active = new Map<number, { pointerId: number; pointerType: TPointerType; screenX: number; screenY: number }>();
     /**
+     * The buttons that went down and came up in the events of this frame, `0` for a finger. Emptied
+     * when the next frame's events are handed out, so each reads as true for one frame.
+     */
+    const wentDown = new Set<number>();
+    const cameUp = new Set<number>();
+    /**
      * What is under each pressing pointer, worked out once per frame on the first question and kept
      * until the next frame's events: several buttons asking about the same fingers lay the scene out
      * once. Same order as `active`.
@@ -474,6 +480,8 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
             queue = [];
             // A new frame: what is under the fingers is asked again.
             underActive = null;
+            wentDown.clear();
+            cameUp.clear();
 
             for (const event of events) {
                 const { screenX, screenY, button, deltaX, deltaY, pointerId } = event;
@@ -495,8 +503,10 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
                 // hears the same as the event it is handling.
                 if (kind === 'down') {
                     active.set(pointerId, { pointerId, pointerType: event.pointerType, screenX, screenY });
+                    wentDown.add(button);
                 } else if (kind === 'up') {
                     active.delete(pointerId);
+                    cameUp.add(button);
                 } else if (kind === 'move') {
                     const finger = active.get(pointerId);
                     if (finger !== undefined) {
@@ -577,6 +587,8 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
         },
 
         touches: () => [...active.values()],
+        justPressed: (button) => (button === undefined ? wentDown.size > 0 : wentDown.has(button)),
+        justReleased: (button) => (button === undefined ? cameUp.size > 0 : cameUp.has(button)),
         position: () => lastPosition,
         isPressing: (store, target) => {
             if (active.size === 0) {

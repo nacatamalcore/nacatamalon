@@ -24,7 +24,8 @@ import type { TPointerHandle } from '../../input';
  * browser's) ends as a release, never as a click, so nothing stays held.
  *
  * It can also be asked, like the keyboard, from an update: `isDown()` while a finger is on the
- * screen or a button is held, `position()` for where it is, `touches()` for every finger, and
+ * screen or a button is held, `justPressed()` and `justReleased()` for the one frame it went down
+ * or came up, `position()` for where it is, `touches()` for every finger, and
  * `isPressing(button)` for whether a finger is on a sprite right now, which is what an on-screen
  * button needs. An action can be bound to one, too: `{ type: 'touch', box: 'Jump' }`.
  *
@@ -42,7 +43,8 @@ import type { TPointerHandle } from '../../input';
  * the game. Call it from a click or a key press, which is the only time the browser allows it; Esc
  * gives the mouse back to the player, and `isLocked()` says whether the game has it.
  *
- * @returns The pointer: `onDown`, `onUp`, `onMove`, `onWheel`, `pick`, `isDown`, `position`,
+ * @returns The pointer: `onDown`, `onUp`, `onMove`, `onWheel`, `pick`, `isDown`, `justPressed`,
+ * `justReleased`, `position`,
  * `touches`, `isPressing`, and `lock`, `unlock` and `isLocked`.
  *
  * @example
@@ -109,6 +111,8 @@ export const usePointer = (): TPointerHandle => {
         onWheel: (listener) => pointer.on('wheel', box, listener),
         pick: (screenX, screenY) => pickTargets(store, screenX, screenY),
         isDown: () => pointer.touches().length > 0,
+        justPressed: (button) => pointer.justPressed(button),
+        justReleased: (button) => pointer.justReleased(button),
         position: () => {
             const at = pointer.position();
             if (at === null) {

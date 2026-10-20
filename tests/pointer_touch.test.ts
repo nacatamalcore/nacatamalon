@@ -188,3 +188,41 @@ describe('a finger on a button', () => {
         expect(pointer().isPressing(left())).toBe(false);
     });
 });
+
+describe('the pointer asked like the keyboard', () => {
+    it('reads as just pressed for one frame, then held, then just released for one', () => {
+        const { canvas, frame, pointer } = pad();
+        const read = () => [pointer().justPressed(), pointer().isDown(), pointer().justReleased()];
+        fire(canvas, 'pointerdown', 40, 280, 1);
+        frame();
+        expect(read()).toEqual([true, true, false]);
+        frame();
+        expect(read()).toEqual([false, true, false]);
+        fire(canvas, 'pointerup', 40, 280, 1);
+        frame();
+        expect(read()).toEqual([false, false, true]);
+        frame();
+        expect(read()).toEqual([false, false, false]);
+    });
+
+    it('tells one button from another, and a tap within one frame is both', () => {
+        const { canvas, frame, pointer } = pad();
+        canvas.dispatchEvent(Object.assign(new Event('pointerdown'), { clientX: 10, clientY: 10, button: 2, pointerId: 1, pointerType: 'mouse' }));
+        frame();
+        expect([pointer().justPressed(2), pointer().justPressed(0)]).toEqual([true, false]);
+
+        fire(canvas, 'pointerdown', 40, 280, 5);
+        fire(canvas, 'pointerup', 40, 280, 5);
+        frame();
+        expect([pointer().justPressed(0), pointer().justReleased(0)]).toEqual([true, true]);
+    });
+
+    it('counts a touch the system takes back as lifted', () => {
+        const { canvas, frame, pointer } = pad();
+        fire(canvas, 'pointerdown', 40, 280, 1);
+        frame();
+        fire(canvas, 'pointercancel', 40, 280, 1);
+        frame();
+        expect([pointer().isDown(), pointer().justReleased()]).toEqual([false, true]);
+    });
+});
