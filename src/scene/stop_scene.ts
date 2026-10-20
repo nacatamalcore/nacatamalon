@@ -1,6 +1,7 @@
 import { teardownBox } from '../box';
 import type { TRuntimeStore } from '../store';
 import { findScene } from './find_scene';
+import { markSceneStopped } from './stopped_scenes';
 
 /**
  * Takes a running scene out of the game: off `world.scenes`, then through its cleanups.
@@ -37,6 +38,8 @@ export const stopScene = (store: TRuntimeStore, name: string): boolean => {
     }
 
     store.setState('world', { scenes: store.get('world').scenes.filter((scene) => scene !== root) });
+    // Before its cleanups, so one of them that makes something finds the scene already gone.
+    markSceneStopped(root);
     teardownBox(root);
     return true;
 };

@@ -32,6 +32,11 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- A maker from `useSpawn` called once its scene has stopped, from a `setTimeout` or a listener
+  that outlived it, makes nothing and says so once, rather than building into a scene nobody draws,
+  playing its sounds and starting its timers for no one. It gives back something already destroyed,
+  so `destroy` and `.api` on it do what they always do. Under something destroyed it makes nothing
+  either, in silence: that goes at the end of the frame.
 - `useCameraFollow` follows the scene's camera whichever came first in the body. With
   `useCamera2d({ zoom: 2 })` written after it, the follow went on moving a camera of its own that
   nothing drew through, and the scene's stood still, with only a warning about a camera replaced.

@@ -11,6 +11,7 @@ import { useSceneUnmount } from '../src/hooks/scene/use_scene_unmount';
 import { useUpdate } from '../src/hooks/loop/use_update';
 import { withSceneUpdates } from '../src/store/scene_updates';
 import { createTestGame, startTestScene } from './helpers/test_game';
+import { stopScene } from '../src/scene/stop_scene';
 import type { TBox } from '../src/box';
 import type { TSprite } from '../src/gameobjects/sprite/types/t_sprite';
 
@@ -319,3 +320,67 @@ describe('destroy of a spawned object', () => {
         expect(store.get('world').pendingDestroy).toHaveLength(0);
     });
 });
+
+describe('a maker whose scene has gone', () => {
+    const quietly = (run: () => void): string[] => {
+        const warn = console.warn;
+        const said: string[] = [];
+        console.warn = (message: string) => { said.push(message); };
+        try {
+            run();
+        } finally {
+            console.warn = warn;
+        }
+        return said;
+    };
+
+    it('makes nothing, says so once, and gives back something already destroyed', () => {
+        const { store } = createTestGame();
+        let ran = 0;
+        const Bullet = () => {
+            ran++;
+            createSprite({ width: 4, height: 4, tint });
+        };
+        let spawn!: () => TBox;
+        const root = startTestScene(store, 'Level', () => {
+            spawn = useSpawn(Bullet, 'Bullet');
+            return createScene();
+        });
+        stopScene(store, 'Level');
+
+        let first!: TBox;
+        const said = quietly(() => {
+            // From a timer that outlived the scene: twice, as a timer does.
+            first = spawn();
+            spawn();
+        });
+
+        expect(ran).toBe(0);
+        expect(root.children).toHaveLength(0);
+        expect(first.destroyed).toBe(true);
+        expect(said).toHaveLength(1);
+        expect(said[0]).toContain("'Bullet'");
+        expect(said[0]).toContain("'Level'");
+    });
+
+    it('makes nothing under something already destroyed, and says nothing: it is gone at the end of the frame', () => {
+        const { store } = createTestGame();
+        let ran = 0;
+        let spawnShot!: () => TBox;
+        let enemy!: TBox;
+        startTestScene(store, 'Level', () => {
+            enemy = useSpawn(() => {
+                spawnShot = useSpawn(() => { ran++; });
+            }, 'Enemy')();
+            return createScene();
+        });
+        destroy(enemy);
+
+        const said = quietly(() => spawnShot());
+
+        expect(ran).toBe(0);
+        expect(said).toEqual([]);
+        flushDestroyed(store);
+    });
+});
+

@@ -1,6 +1,7 @@
-import { markNamedByFunction, spawnBox } from '../../box';
+import { markNamedByFunction, newBox, spawnBox } from '../../box';
 import type { TBox } from '../../box';
 import { getActiveBox, getActiveGame } from '../../store';
+import { isSceneStopped } from '../../scene/stopped_scenes';
 
 /**
  * One thing made by a spawner: what `destroy` takes to remove it whole, with its sprites, its
@@ -66,7 +67,9 @@ export type TSpawnOptions = {
  * lookup. It is there once the maker returns, never while the component is still being run.
  *
  * Call it while the scene is being built, like every hook. It remembers the scene it was called
- * in, so the maker keeps working long after that.
+ * in, so the maker keeps working long after that, for as long as that scene runs. Called once the
+ * scene has stopped (from a `setTimeout` or a listener that outlived it), it makes nothing, says so
+ * once, and gives back something already destroyed; under something destroyed, the same in silence.
  *
  * @param component The function describing one of these things. Whatever it returns becomes the
  *   new thing's `api`.
@@ -168,9 +171,51 @@ export const useSpawn = <TArgs extends unknown[], TApi>(
     const name = options.name ?? (component.name.length > 0 ? component.name : 'spawned');
     const byFunction = options.name === undefined && component.name.length > 0;
 
+    /**
+     * Why nothing can be made now, or `null` when something can. The place it would hang from may
+     * be gone: destroyed, or in a scene that has stopped (a timer or a module's listener that
+     * outlived it), or a game that has ended.
+     */
+    const goneFrom = (parent: TBox): 'destroyed' | 'stopped' | null => {
+        if (store.get('loop').destroyed) {
+            return 'stopped';
+        }
+        let top = parent;
+        for (let at: TBox | null = parent; at !== null; at = at.parent) {
+            if (at.destroyed) {
+                return 'destroyed';
+            }
+            top = at;
+        }
+        return isSceneStopped(top) ? 'stopped' : null;
+    };
+    let warned = false;
+
     return (...args: TArgs) => {
+        const parent = parentOf();
+        const gone = goneFrom(parent);
+        if (gone !== null) {
+            // Nothing built, nothing run: a body building into a scene nobody draws would play its
+            // sounds and start its timers for no one. Something already destroyed comes back, so the
+            // caller's `destroy` or `.api` finds what it always finds. Under something destroyed it
+            // says nothing, as that goes at the end of the frame anyway: a shot from an enemy killed
+            // this frame. A scene gone is a mistake worth saying, once.
+            if (gone === 'stopped' && !warned) {
+                warned = true;
+                let top = parent;
+                while (top.parent !== null) top = top.parent;
+                console.warn(
+                    `[NacatamalOn] useSpawn: '${name}' was asked for after its scene '${top.name}' had stopped, ` +
+                    'so nothing was made. Something kept calling the maker once the scene was gone: a ' +
+                    'setTimeout or a listener of its own. useTimer and the hooks stop with the scene.',
+                );
+            }
+            const dead = newBox(name) as TGameObject<TApi>;
+            dead.destroyed = true;
+            return dead;
+        }
         let api: TApi | undefined;
-        const box = spawnBox(store, parentOf(), name, (...given: TArgs) => {
+        const box = spawnBox(store, parent, name, (...given: TArgs) => {
             // Before the body, so a body that names itself is seen doing it.
             if (byFunction) {
                 const self = getActiveBox();
