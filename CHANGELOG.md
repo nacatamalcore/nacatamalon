@@ -49,9 +49,11 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- `useLight` is `useDirectionalLight`, as its sisters say what they are (`usePointLight`,
+  `useSpotLight`, `useAmbientLight`) and as `createDirectionalLight` already was.
 - Lights and cameras are placed with `transform`, like everything else: `useCamera3d({ transform: { z:
   5 }, fov: 60 })` rather than `useCamera3d({ z: 5, fov: 60 })`, and the same for `useCamera2d`,
-  `useLight`, `usePointLight`, `useSpotLight` and their `create…`. They were written flat and read
+  `useDirectionalLight`, `usePointLight`, `useSpotLight` and their `create…`. They were written flat and read
   as `.transform`; now both are `transform`. What is their own (`fov`, `zoom`, `color`, `range`…)
   stays where it was. Scene documents do not change.
 - `halftone`'s `angle`, in degrees, is `rotation`, in radians (`Math.PI / 4` by default), like every

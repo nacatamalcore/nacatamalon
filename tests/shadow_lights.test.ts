@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from 'bun:te
 import { collectLighting } from '../src/game/loop/helper/collect_lights';
 import { createScene } from '../src/scene/create_scene';
 import { lightSpaceMatrix, reportCastersOutside, resetShadowWarnings } from '../src/render/shared/light_space';
-import { useLight } from '../src/hooks/light/use_light';
+import { useDirectionalLight } from '../src/hooks/light/use_directional_light';
 import { usePointLight } from '../src/hooks/light/use_point_light';
 import { useAmbientLight } from '../src/hooks/light/use_ambient_light';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
@@ -54,8 +54,8 @@ describe('a second light that asks to cast', () => {
         const { store } = createTestGame();
 
         const root = startTestScene(store, 'Level', () => {
-            useLight({ castShadow: true });
-            useSpawn(() => { useLight({ castShadow: true }); })();
+            useDirectionalLight({ castShadow: true });
+            useSpawn(() => { useDirectionalLight({ castShadow: true }); })();
             return createScene();
         });
         collectLighting(root);
@@ -73,7 +73,7 @@ describe('a second light that asks to cast', () => {
         const { store } = createTestGame();
 
         const root = startTestScene(store, 'Level', () => {
-            useLight({ castShadow: true });
+            useDirectionalLight({ castShadow: true });
             useSpawn(() => { usePointLight({ range: 5 }); })();
             return createScene();
         });
@@ -131,7 +131,7 @@ describe('what a light hook accepts', () => {
      * A guard that runs at build time rather than here.
      *
      * Each hook's options and its constructor's are written out twice, by hand, in two files, and
-     * nothing holds the two together: `useLight` went a whole slice without `shadowArea`, which
+     * nothing holds the two together: `useDirectionalLight` went a whole slice without `shadowArea`, which
      * typechecked perfectly because nothing ever called it with one. The sandbox did, and the
      * sandbox's examples are strings that no compiler ever reads.
      *
@@ -142,7 +142,7 @@ describe('what a light hook accepts', () => {
         const { store } = createTestGame();
 
         const root = startTestScene(store, 'Level', () => {
-            useLight({
+            useDirectionalLight({
                 color: { r: 1, g: 1, b: 1, a: 1 }, intensity: 1, ambient: 0.3,
                 transform: { x: 1, y: 2, z: 3, rotationX: -0.5, rotationY: 0.5 },
                 castShadow: true, shadowBias: 0.002, shadowStrength: 0.8,

@@ -2,7 +2,7 @@
 export { createGame } from './game/bootstrap/create_game';
 export { createScene } from './scene';
 export { useTransform, useCamera3d, useFog } from './hooks';
-export { useLight, usePointLight, useSpotLight, useAmbientLight, useBlobShadow } from './hooks';
+export { useDirectionalLight, usePointLight, useSpotLight, useAmbientLight, useBlobShadow } from './hooks';
 export { createMesh } from './gameobjects/mesh';
 export type { TMesh, TMeshOptions } from './gameobjects/mesh';
 export { createModel } from './gameobjects/model';

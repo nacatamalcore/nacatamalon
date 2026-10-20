@@ -6,7 +6,7 @@ import { createSpriteTexture } from '../src/gameobjects/sprite_texture';
 import { useCubeGeometry } from '../src/hooks';
 import { useCamera2d } from '../src/hooks/camera/use_camera_2d';
 import { useCamera3d } from '../src/hooks/camera/use_camera_3d';
-import { useLight } from '../src/hooks/light/use_light';
+import { useDirectionalLight } from '../src/hooks/light/use_directional_light';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { destroy } from '../src/destroy/destroy';
 import { flushDestroyed } from '../src/destroy/flush_destroyed';
@@ -369,10 +369,10 @@ describe('the world inside a picture', () => {
         let picture!: TTexture;
         startTestScene(store, 'S', () => {
             const cube = useCubeGeometry();
-            useLight({ intensity: 0.25 });
+            useDirectionalLight({ intensity: 0.25 });
             createMesh({ geometry: cube });
             picture = createSpriteTexture({ width: 8, height: 8 }, () => {
-                useLight({ intensity: 0.75 });
+                useDirectionalLight({ intensity: 0.75 });
                 createMesh({ geometry: cube });
             });
             return createScene();
@@ -390,10 +390,10 @@ describe('the world inside a picture', () => {
         const { store } = createTestGame();
         startTestScene(store, 'S', () => {
             const cube = useCubeGeometry();
-            useLight({ castShadow: true, intensity: 0.25 });
+            useDirectionalLight({ castShadow: true, intensity: 0.25 });
             createMesh({ geometry: cube });
             createSpriteTexture({ width: 8, height: 8 }, () => {
-                useLight({ castShadow: true, intensity: 0.75 });
+                useDirectionalLight({ castShadow: true, intensity: 0.75 });
                 createMesh({ geometry: cube });
             });
             return createScene();

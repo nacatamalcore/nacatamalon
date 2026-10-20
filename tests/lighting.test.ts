@@ -1,7 +1,7 @@
 import { describe, expect, it, spyOn } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
 import { collectLighting } from '../src/game/loop/helper/collect_lights';
-import { useAmbientLight, useLight, usePointLight, useSpotLight } from '../src/hooks/light';
+import { useAmbientLight, useDirectionalLight, usePointLight, useSpotLight } from '../src/hooks/light';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useSelf } from '../src/hooks/spawn/use_self';
 import { useTransform } from '../src/hooks/transform/use_transform';
@@ -45,7 +45,7 @@ describe('what lights a scene', () => {
 
     it('is what the scene asked for when it asked', () => {
         const lighting = lit(() => {
-            useLight({ intensity: 2 });
+            useDirectionalLight({ intensity: 2 });
             // On its own object, because one object holds one light.
             useSpawn(() => { usePointLight({ transform: { x: 5 }, range: 20 }); })();
         });
@@ -72,7 +72,7 @@ describe('what lights a scene', () => {
 describe('the level of the dark side', () => {
     it('is what an ambient light says when a scene has one', () => {
         const lighting = lit(() => {
-            useLight({ ambient: 0.9 });
+            useDirectionalLight({ ambient: 0.9 });
             useSpawn(() => { useAmbientLight({ intensity: 0.1 }); })();
         });
 
@@ -82,7 +82,7 @@ describe('the level of the dark side', () => {
 
     it('is the brightest any one light asks for, not the sum', () => {
         const lighting = lit(() => {
-            useLight({ ambient: 0.2 });
+            useDirectionalLight({ ambient: 0.2 });
             useSpawn(() => { usePointLight({ ambient: 0.5 }); })();
             useSpawn(() => { usePointLight({ ambient: 0.3 }); })();
         });
@@ -108,7 +108,7 @@ describe('a light inside something that moves', () => {
 
     it('is left out when that thing is not drawn', () => {
         const lighting = lit(() => {
-            useLight({ intensity: 3 });
+            useDirectionalLight({ intensity: 3 });
             useSpawn(() => {
                 useSelf().visible = false;
                 usePointLight({ intensity: 9 });
@@ -123,7 +123,7 @@ describe('a light inside something that moves', () => {
     it('replaces the one an object already had, and says so', () => {
         const warn = spyOn(console, 'warn').mockImplementation(() => {});
         const lighting = lit(() => {
-            useLight();
+            useDirectionalLight();
             usePointLight({ transform: { x: 2 } });
         });
         const said = warn.mock.calls.length;

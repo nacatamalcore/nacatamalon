@@ -24,7 +24,7 @@ import type { TDirectionalLight } from '../../light';
  * ```ts
  * const Level = () => {
  *     useCamera3d({ projection: 'perspective', transform: { z: 5 } });
- *     useLight({ intensity: 1.2 });
+ *     useDirectionalLight({ intensity: 1.2 });
  *     createMesh({ geometry: useUvSphereGeometry() });
  *
  *     return createScene();
@@ -35,14 +35,14 @@ import type { TDirectionalLight } from '../../light';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const useLight = (options: TLightOptionsBase & { shadowArea?: number; shadowDistance?: number } = {}): TDirectionalLight => {
+export const useDirectionalLight = (options: TLightOptionsBase & { shadowArea?: number; shadowDistance?: number } = {}): TDirectionalLight => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useLight: call it inside a scene body, or inside something created with useSpawn.');
+        throw new Error('[NacatamalOn] useDirectionalLight: call it inside a scene body, or inside something created with useSpawn.');
     }
 
     if (box.light !== null) {
-        console.warn('[NacatamalOn] useLight: this object already has a light, so the one it had is replaced. Put the second one on its own object.');
+        console.warn('[NacatamalOn] useDirectionalLight: this object already has a light, so the one it had is replaced. Put the second one on its own object.');
     }
 
     const light = createDirectionalLight(options);

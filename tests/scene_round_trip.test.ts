@@ -16,7 +16,7 @@ import { useScript } from '../src/hooks/script/use_script';
 import { registerScript, clearScripts } from '../src/scripts';
 import { clearGameStores, createGameStore, storeOf } from '../src/game_store';
 import { useStoreLink } from '../src/hooks/store/use_store_link';
-import { useLight } from '../src/hooks/light/use_light';
+import { useDirectionalLight } from '../src/hooks/light/use_directional_light';
 import { usePointLight } from '../src/hooks/light/use_point_light';
 import { useScreenSpace } from '../src/hooks/camera/use_screen_space';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
@@ -571,7 +571,7 @@ describe('the whole loop', () => {
 
     it('keeps a light casting, and everything it was told about how', () => {
         const { doc } = written(() => {
-            useLight({
+            useDirectionalLight({
                 intensity: 1.2, transform: { rotationX: -0.8, rotationY: 0.4 },
                 castShadow: true, shadowBias: 0.004, shadowStrength: 0.7,
                 shadowArea: 420, shadowDistance: 500,
