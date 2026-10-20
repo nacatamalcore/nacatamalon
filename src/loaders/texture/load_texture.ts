@@ -1,4 +1,5 @@
 import { bumpVersion } from '../../store/record_version';
+import { fetchAsset } from '../fetch_asset';
 import { uploadTexture } from './upload_texture';
 import type { TRuntimeStore } from '../../store';
 import type { TTexture } from './types/t_texture';
@@ -18,7 +19,7 @@ import type { TTexture } from './types/t_texture';
  * @author Francisco Pereira Alvarado
  */
 export const loadTexture = (store: TRuntimeStore, texture: TTexture): Promise<void> =>
-    fetch(texture.src)
+    fetchAsset(texture.src)
         .then((response) => {
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);

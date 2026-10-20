@@ -1,4 +1,5 @@
 import { bumpVersion } from '../../store/record_version';
+import { fetchAsset } from '../fetch_asset';
 import { uploadTexture } from '../texture/upload_texture';
 import { keepBitmapFontPixels } from './bitmap_font_pixels';
 import type { TRuntimeStore } from '../../store';
@@ -18,13 +19,13 @@ import type { TBitmapFont, TBitmapFontMeta } from './types/t_bitmap_font';
 export const loadBitmapFont = async (store: TRuntimeStore, font: TBitmapFont): Promise<void> => {
     try {
         const [meta, image] = await Promise.all([
-            fetch(font.src).then((response) => {
+            fetchAsset(font.src).then((response) => {
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
                 }
                 return response.json() as Promise<TBitmapFontMeta>;
             }),
-            fetch(font.texture.src).then((response) => {
+            fetchAsset(font.texture.src).then((response) => {
                 if (!response.ok) {
                     throw new Error(`its image '${font.texture.src}' could not be loaded: HTTP ${response.status}`);
                 }
