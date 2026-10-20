@@ -20,6 +20,24 @@ releases are in [changelog/](./changelog/), one file each.
   a controls screen neither lists nor saves it. `{ type: 'touch', box: 'Jump' }` stays for a map
   written in a project file.
 
+### Changed
+
+- `useSkeletalAnimation` moves a placed model, the one `createModel` gave back, and no longer the
+  file: `const fox = createModel({ model: file }); useSkeletalAnimation(fox, { play: 'Walk' })`.
+  Every model placed from a file has bones of its own (`fox.skeletons`, next to `fox.model`, the
+  file), so five enemies of one file walk, jump and stand still each on their own; before, they all
+  wore the file's bones and took whatever pose the last animator wrote. Passing the file is a type
+  error that points at the call to change. The bones on the graphics card of a model no longer drawn
+  are let go of after a couple of seconds, so enemies born and killed do not fill it.
+
+### Fixed
+
+- A key let go of with another name than it went down with stays held no more. Shift+1 goes down
+  as `'!'`, and with Shift let go first it comes up as `'1'`: `'!'` was held until the window lost
+  focus. A key is now let go of by the name it went down with, known by which key it is
+  (`KeyboardEvent.code`), and keeps that name through its repeats. A name two keys share, as the two
+  Shifts, is held until both are let go.
+
 ## 0.2.5 — 2026-10-19
 
 ### Added

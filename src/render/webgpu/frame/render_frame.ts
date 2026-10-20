@@ -73,9 +73,12 @@ const flatSpace = newCameraSpace();
 
 export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
     let encoder = gpu.device.createCommandEncoder();
-    // Said once here rather than by each draw: a set of bones is written once however many models
-    // wear it and however many passes they are drawn in.
-    gpu.meshes.joints.beginFrame();
+    // Said once here rather than by each draw: a set of bones is written once however many pieces
+    // wear it and however many passes they are drawn in. The groups pointing at bones let go of go
+    // with them.
+    for (const key of gpu.meshes.joints.beginFrame()) {
+        gpu.meshes.jointBindGroups.delete(key);
+    }
 
     // Nothing below this line happens for a frame with no effects, which is the promise
     // `TFrameContext.post` makes. Every pass draws where it always did.

@@ -7,7 +7,9 @@ import { getActiveBox, getActiveGame } from '../../store';
 import { whenLoaded } from '../../loaders';
 import type { TColor } from '../../color';
 import type { TBox } from '../../box';
+import { copyPose } from '../../animation';
 import type { TGltfPart } from '../../loaders';
+import type { TSkeleton } from '../../animation';
 import type { TMesh } from '../mesh/types/t_mesh';
 import type { TMeshMaterial } from '../../materials';
 import type { TModel } from './types/t_model';
@@ -35,6 +37,7 @@ const buildPart = (
     store: TRuntimeStore,
     box: TBox,
     part: TGltfPart,
+    skeleton: TSkeleton | null,
     transform: TTransform3d,
     options: TModelOptions,
     visible: boolean,
@@ -42,7 +45,7 @@ const buildPart = (
     const mesh = createRecord('mesh', {
         geometry: part.geometry,
         transform,
-        skeleton: part.skeleton,
+        skeleton,
         // One material per piece and not one for the model: the pieces are a body, glass and tyres,
         // and having their own colours is the reason the file bothered to keep them apart.
         material: newMaterial(
@@ -130,7 +133,8 @@ export const createModel = (options: TModelOptions): TModel => {
     const transform: TTransform3d = { ...NOWHERE, ...options.transform };
     // Kept here and not on any one piece, because there may be no pieces yet to keep it on.
     let visible = options.visible ?? true;
-    const model = { id: nanoId(), type: 'model', transform, parts: [] as TMesh[] } as TModel;
+    const source = options.model;
+    const model = { id: nanoId(), type: 'model', transform, model: source, parts: [] as TMesh[], skeletons: [] as TSkeleton[] } as TModel;
     Object.defineProperty(model, 'visible', {
         enumerable: true,
         get: () => visible,
@@ -141,11 +145,27 @@ export const createModel = (options: TModelOptions): TModel => {
             }
         },
     });
-    const source = options.model;
 
     const build = (): void => {
+        // Bones of its own, so another model of the same file can be doing something else. What
+        // never changes (how the bones hang, how they stand at rest) is the file's and shared; what
+        // a movement writes is this model's. The key is its own too: the card keeps a skeleton's
+        // bones by it.
+        const own = new Map<TSkeleton, TSkeleton>();
+        for (const skeleton of source.skeletons) {
+            const copy: TSkeleton = {
+                ...skeleton,
+                key: `${skeleton.key}@${model.id}`,
+                pose: copyPose(skeleton.bindPose),
+                jointMatrices: new Float32Array(skeleton.jointMatrices.length),
+                posedOn: -1,
+            };
+            own.set(skeleton, copy);
+            model.skeletons.push(copy);
+        }
         for (const part of source.parts) {
-            model.parts.push(buildPart(store, box, part, transform, options, visible));
+            const skeleton = part.skeleton === null ? null : own.get(part.skeleton) ?? null;
+            model.parts.push(buildPart(store, box, part, skeleton, transform, options, visible));
         }
     };
 

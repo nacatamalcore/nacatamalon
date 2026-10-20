@@ -4,11 +4,13 @@ import { createScene } from '../src/scene/create_scene';
 import { runHookUpdates } from '../src/game/loop/runHookUpdates';
 import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
 import { useSkeletalAnimation } from '../src/hooks/animation/use_skeletal_animation';
+import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { whenLoaded } from '../src/loaders';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { asGltf, serveGltf } from './helpers/test_gltf';
 import type { TBox } from '../src/box';
 import type { TGltfModel } from '../src/loaders';
+import type { TModel } from '../src/gameobjects/model';
 import type { TSkeletalAnimation } from '../src/hooks';
 import type { TTestModel } from './helpers/test_gltf';
 
@@ -55,22 +57,23 @@ const rigged = () => {
 const withRig = async (options: Record<string, unknown> = {}) => {
     const fake = rigged();
     const { store } = createTestGame();
-    let model!: TGltfModel;
+    let file!: TGltfModel;
+    let model!: TModel;
     let moves!: TSkeletalAnimation;
     const scene: TBox = startTestScene(store, 'Level', () => {
-        model = useLoadGltf({ src: 'model.gltf' });
-        createModel({ model });
+        file = useLoadGltf({ src: 'model.gltf' });
+        model = createModel({ model: file });
         moves = useSkeletalAnimation(model, options as never);
         return createScene();
     });
-    await whenLoaded(model);
+    await whenLoaded(file);
     return { store, scene, model, moves, restore: fake.restore };
 };
 
 /**
  * Where the one bone is, which is what the movement writes.
  */
-const bone = (model: TGltfModel): number => model.skeletons[0].pose[0].t[0];
+const bone = (model: TModel): number => model.skeletons[0].pose[0].t[0];
 const step = (scene: TBox, seconds: number): void => { runHookUpdates(scene, seconds); };
 
 afterEach(() => { mock.restore(); });
@@ -322,17 +325,54 @@ describe('when something is asked for that is not there', () => {
         const plain = asGltf({ nodes: [{ name: 'Rock', primitives: [{ positions: [0, 0, 0], indices: [0] }] }] });
         const fake = serveGltf({ 'model.gltf': plain.json, 'model.bin': plain.bin });
         const { store } = createTestGame();
-        let model!: TGltfModel;
+        let file!: TGltfModel;
         let moves!: TSkeletalAnimation;
         const scene = startTestScene(store, 'Level', () => {
-            model = useLoadGltf({ src: 'model.gltf' });
-            moves = useSkeletalAnimation(model);
+            file = useLoadGltf({ src: 'model.gltf' });
+            moves = useSkeletalAnimation(createModel({ model: file }));
             return createScene();
         });
-        await whenLoaded(model);
+        await whenLoaded(file);
 
         expect(() => step(scene, 0.5)).not.toThrow();
         expect(moves.clip).toBeNull();
+        fake.restore();
+    });
+});
+
+describe('two models of one file', () => {
+    it('move each on their own: one walks while the other jumps', async () => {
+        const fake = rigged();
+        const { store } = createTestGame();
+        let file!: TGltfModel;
+        const placed: TModel[] = [];
+        const Enemy = ({ move }: { move: string }) => {
+            file = useLoadGltf({ src: 'model.gltf' });
+            const model = createModel({ model: file });
+            placed.push(model);
+            useSkeletalAnimation(model, { play: move });
+        };
+        const scene = startTestScene(store, 'Level', () => {
+            const enemy = useSpawn(Enemy, 'Enemy');
+            enemy({ move: 'Walk' });
+            enemy({ move: 'Jump' });
+            return createScene();
+        });
+        await whenLoaded(file);
+        step(scene, 0);
+        step(scene, 0.5);
+
+        const [walker, jumper] = placed;
+        expect(walker.skeletons[0]).not.toBe(jumper.skeletons[0]);
+        // Walk slides the bone along x, Jump lifts it: half a second into each.
+        expect(walker.skeletons[0].pose[0].t[0]).toBeCloseTo(5);
+        expect(walker.skeletons[0].pose[0].t[1]).toBeCloseTo(0);
+        expect(jumper.skeletons[0].pose[0].t[0]).toBeCloseTo(0);
+        expect(jumper.skeletons[0].pose[0].t[1]).toBeCloseTo(10);
+        // Each piece wears its own model's bones, and the file's stand untouched at rest.
+        expect(walker.parts[0].skeleton).toBe(walker.skeletons[0]);
+        expect(file.skeletons[0].pose[0].t).toEqual([0, 0, 0]);
+        expect(walker.skeletons[0].key).not.toBe(jumper.skeletons[0].key);
         fake.restore();
     });
 });

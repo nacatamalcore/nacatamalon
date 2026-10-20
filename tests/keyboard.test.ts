@@ -11,7 +11,11 @@ const fakeCanvas = () => {
     const send = (type: 'keydown' | 'keyup' | 'blur', key = '') => {
         view.dispatchEvent(Object.assign(new Event(type), { key }));
     };
-    return { canvas, send };
+    // As a browser sends them: the name the key gives now, and which physical key it is.
+    const press = (type: 'keydown' | 'keyup', key: string, code: string) => {
+        view.dispatchEvent(Object.assign(new Event(type), { key, code }));
+    };
+    return { canvas, send, press };
 };
 
 describe('the keyboard', () => {
@@ -98,6 +102,54 @@ describe('the keyboard', () => {
         send('keydown', 'ArrowLeft');
         expect(keys.isDown('ArrowLeft')).toBe(true);
         expect(keys.isDown('arrowleft')).toBe(false);
+    });
+
+    it('lets go of a key by the name it went down with, whatever it says coming up', () => {
+        const { canvas, press } = fakeCanvas();
+        const keys = createKeyboard(canvas);
+
+        // Shift+1 goes down as '!'; with Shift let go first, the 1 comes up as '1'.
+        press('keydown', 'Shift', 'ShiftLeft');
+        press('keydown', '!', 'Digit1');
+        press('keyup', 'Shift', 'ShiftLeft');
+        expect(keys.isDown('!')).toBe(true);
+        press('keyup', '1', 'Digit1');
+
+        expect(keys.isDown('!')).toBe(false);
+        expect(keys.justReleased('!')).toBe(true);
+        expect(keys.isDown('1')).toBe(false);
+        expect(keys.justReleased('1')).toBe(false);
+    });
+
+    it('keeps the name a held key went down with through its repeats', () => {
+        const { canvas, press } = fakeCanvas();
+        const keys = createKeyboard(canvas);
+
+        press('keydown', '1', 'Digit1');
+        keys.endFrame();
+        // Shift pressed while 1 is held: the repeats now say '!', and are still the same key.
+        press('keydown', 'Shift', 'ShiftLeft');
+        press('keydown', '!', 'Digit1');
+
+        expect(keys.isDown('1')).toBe(true);
+        expect(keys.isDown('!')).toBe(false);
+        expect(keys.justPressed('!')).toBe(false);
+    });
+
+    it('holds a name two keys share until both are let go', () => {
+        const { canvas, press } = fakeCanvas();
+        const keys = createKeyboard(canvas);
+
+        press('keydown', 'Shift', 'ShiftLeft');
+        press('keydown', 'Shift', 'ShiftRight');
+        keys.endFrame();
+        press('keyup', 'Shift', 'ShiftLeft');
+        expect(keys.isDown('Shift')).toBe(true);
+        expect(keys.justReleased('Shift')).toBe(false);
+
+        press('keyup', 'Shift', 'ShiftRight');
+        expect(keys.isDown('Shift')).toBe(false);
+        expect(keys.justReleased('Shift')).toBe(true);
     });
 
     it('lets go of everything when the window loses focus', () => {

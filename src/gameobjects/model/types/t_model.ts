@@ -1,4 +1,6 @@
 import type { TMesh } from '../../mesh/types/t_mesh';
+import type { TGltfModel } from '../../../loaders';
+import type { TSkeleton } from '../../../animation';
 import type { TTransform3d } from '../../types/t_transform_3d';
 
 /**
@@ -24,9 +26,19 @@ export type TModel = {
      */
     transform: TTransform3d;
     /**
+     * The file it was placed from, with the movements it knows (`clips`).
+     */
+    model: TGltfModel;
+    /**
      * The pieces, in the order the file lists them. Empty until it arrives.
      */
     parts: TMesh[];
+    /**
+     * Its own bones, one set per skeleton in the file, which its pieces wear: what
+     * `useSkeletalAnimation` moves. Its own and not the file's, so two models placed from one file
+     * stand, walk and jump each on their own. Empty until the file arrives.
+     */
+    skeletons: TSkeleton[];
     /**
      * Whether any of it is drawn. Setting it hides or shows every piece at once, and holds for the
      * pieces still on the way too: hidden before the file arrives, they arrive hidden.

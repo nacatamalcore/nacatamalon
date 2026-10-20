@@ -6,6 +6,14 @@ import type { TDrawSkeleton } from '../../interface/draw/t_draw_mesh';
 type THeld = { buffer: GPUBuffer; joints: number; writtenOn: number };
 
 /**
+ * How many frames a skeleton's bones stay on the card after it was last drawn. Every placed model
+ * has bones of its own, so an enemy that is born and dies leaves its bones behind; let go of after
+ * this long unused, a game spawning enemies for an hour does not fill the card. Long enough that a
+ * model hidden for a moment does not have them made again when it shows.
+ */
+const FORGET_AFTER = 120;
+
+/**
  * Keeps each skeleton's bones on the graphics card, and puts this frame's numbers in them.
  *
  * **A run of the storage kind, not a block of the uniform kind**, because how many bones a model
@@ -13,8 +21,8 @@ type THeld = { buffer: GPUBuffer; joints: number; writtenOn: number };
  * when the shader is built, which would mean a ceiling picked in advance and memory wasted by every
  * model under it. This way a rig of four bones costs four.
  *
- * Written once a frame however many models wear the same bones, which is the ordinary case for a
- * crowd: the numbers are the same for all of them.
+ * Written once a frame however many pieces wear the same bones: a model of several pieces has one
+ * set of bones for all of them.
  *
  * @internal
  * @since 1.0.0
@@ -26,9 +34,22 @@ export const createJointPalette = (device: GPUDevice) => {
 
     return {
         /**
-         * Says a new frame has begun, so each skeleton is written once more.
+         * Says a new frame has begun, so each skeleton is written once more, and lets go of the bones
+         * nothing has drawn for a while. Gives back the keys let go of, for whoever kept something
+         * of theirs.
          */
-        beginFrame: (): void => { frame++; },
+        beginFrame: (): string[] => {
+            frame++;
+            const forgotten: string[] = [];
+            for (const [key, entry] of held) {
+                if (frame - entry.writtenOn > FORGET_AFTER) {
+                    entry.buffer.destroy();
+                    held.delete(key);
+                    forgotten.push(key);
+                }
+            }
+            return forgotten;
+        },
 
         /**
          * The bones of this skeleton on the card, with this frame's numbers already in them.

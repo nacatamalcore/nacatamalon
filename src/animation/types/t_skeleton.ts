@@ -70,8 +70,8 @@ export type TSkeleton = {
      */
     rootMatrices: Float32Array | null;
     /**
-     * Which frame `jointMatrices` was last worked out on, so several models sharing one skeleton
-     * do the work once between them. `-1` before it has ever been done.
+     * Which frame `jointMatrices` was last worked out on, so the pieces of a model, which share its
+     * skeleton, do the work once between them. `-1` before it has ever been done.
      */
     posedOn: number;
 };

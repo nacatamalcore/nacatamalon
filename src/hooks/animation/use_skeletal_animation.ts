@@ -1,21 +1,25 @@
 import { blendPoses, sampleClip } from '../../math/skinning';
 import { copyPose, restingJoint } from '../../animation';
 import { useUpdate } from '../loop/use_update';
-import type { TGltfModel } from '../../loaders';
+import type { TModel } from '../../gameobjects/model';
 import type { TJointPose } from '../../animation';
 import type { TSkeletalAnimation, TSkeletalAnimationOptions } from './types/t_skeletal_animation';
 
 /**
  * Somewhere to put a sampled pose, one set per skeleton, made once and written over after that.
  */
-const roomFor = (model: TGltfModel): TJointPose[][] =>
+const roomFor = (model: TModel): TJointPose[][] =>
     model.skeletons.map((skeleton) => skeleton.pose.map(() => restingJoint()));
 
 /**
- * Makes a loaded model move: plays the movements it came with, and eases between them.
+ * Makes a placed model move: plays the movements its file came with, and eases between them.
  *
  * A rigged model is a skin stretched over bones. A movement turns the bones, and the skin follows,
  * which is why one model can walk, run and fall over without three copies of it existing.
+ *
+ * **It moves the model `createModel` gave back, and only that one.** Every model placed from a file
+ * has bones of its own, so five enemies of one file can walk, jump and stand still each on their
+ * own, each with an animator of its own.
  *
  * **It can be asked for a movement before the file has arrived**, which is the ordinary case: the
  * model comes back still loading, so `play` is remembered and honoured the moment it shows up.
@@ -24,7 +28,7 @@ const roomFor = (model: TGltfModel): TJointPose[][] =>
  * half a second, it turns the bones from where one has them to where the other does; cutting
  * straight across snaps a leg from behind to in front in a single frame.
  *
- * @param model The loaded model, from `useLoadGltf`.
+ * @param model The placed model, from `createModel`.
  * @param options Which movement to start on, and how it plays.
  * @returns The handle: what it is doing, and how to change it.
  *
@@ -34,8 +38,8 @@ const roomFor = (model: TGltfModel): TJointPose[][] =>
  *     useCamera3d({ projection: 'perspective', z: 200 });
  *     useLight({ intensity: 1 });
  *
- *     const fox = useLoadGltf({ src: '/models/fox.glb' });
- *     createModel({ model: fox });
+ *     const file = useLoadGltf({ src: '/models/fox.glb' });
+ *     const fox = createModel({ model: file });
  *     const moves = useSkeletalAnimation(fox, { play: 'Walk', fade: 0.25 });
  *
  *     const keys = useKeyboard();
@@ -51,7 +55,10 @@ const roomFor = (model: TGltfModel): TJointPose[][] =>
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const useSkeletalAnimation = (model: TGltfModel, options: TSkeletalAnimationOptions = {}): TSkeletalAnimation => {
+export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationOptions = {}): TSkeletalAnimation => {
+    // The movements are the file's, read each time because they arrive with it; the bones they
+    // turn are this model's own.
+    const file = model.model;
     let clipName: string | null = null;
     let playing = false;
     let loop = options.loop ?? true;
@@ -116,7 +123,7 @@ export const useSkeletalAnimation = (model: TGltfModel, options: TSkeletalAnimat
         loop: boolean; speed: number; ended: boolean;
     } | null = null;
 
-    const known = (): string[] => Object.keys(model.clips);
+    const known = (): string[] => Object.keys(file.clips);
 
     /**
      * Puts the bones back the way the model was made.
@@ -132,7 +139,7 @@ export const useSkeletalAnimation = (model: TGltfModel, options: TSkeletalAnimat
     };
 
     const start = (name: string, fadeSeconds: number): void => {
-        const clip = model.clips[name];
+        const clip = file.clips[name];
         if (clip === undefined) {
             // An empty table has not arrived yet; one with other names in it is a typo, and that
             // is worth saying out loud.
@@ -147,9 +154,10 @@ export const useSkeletalAnimation = (model: TGltfModel, options: TSkeletalAnimat
         pending = null;
 
         // Easing only means something when there is something to ease from.
-        if (fadeSeconds > 0 && clipName !== null && clipName !== name && model.clips[clipName] !== undefined) {
-            from = from ?? roomFor(model);
-            to = to ?? roomFor(model);
+        if (fadeSeconds > 0 && clipName !== null && clipName !== name && file.clips[clipName] !== undefined) {
+            // Made again if the bones arrived after the room was made for none.
+            from = from !== null && from.length === model.skeletons.length ? from : roomFor(model);
+            to = to !== null && to.length === model.skeletons.length ? to : roomFor(model);
             fade = { name: clipName, time, elapsed: 0, duration: fadeSeconds, loop, speed, ended: !playing };
         } else {
             fade = null;
@@ -185,7 +193,7 @@ export const useSkeletalAnimation = (model: TGltfModel, options: TSkeletalAnimat
     useUpdate((delta) => {
         if (pending !== null) {
             // Cheap while it lasts, and it lasts until the file lands.
-            if (model.clips[pending] !== undefined) {
+            if (file.clips[pending] !== undefined) {
                 start(pending, 0);
             }
             return;
@@ -197,7 +205,7 @@ export const useSkeletalAnimation = (model: TGltfModel, options: TSkeletalAnimat
             start(known()[0], 0);
         }
 
-        const clip = clipName === null ? undefined : model.clips[clipName];
+        const clip = clipName === null ? undefined : file.clips[clipName];
         if (!playing || clip === undefined || model.skeletons.length === 0) {
             return;
         }
@@ -207,7 +215,7 @@ export const useSkeletalAnimation = (model: TGltfModel, options: TSkeletalAnimat
         time = stepped.time;
 
         if (fade !== null && from !== null && to !== null) {
-            const outgoing = model.clips[fade.name];
+            const outgoing = file.clips[fade.name];
             fade.elapsed += delta;
             const weight = fade.duration > 0 ? Math.min(fade.elapsed / fade.duration, 1) : 1;
 

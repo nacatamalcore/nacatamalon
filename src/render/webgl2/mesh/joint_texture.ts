@@ -6,6 +6,14 @@ import type { TDrawSkeleton } from '../../interface/draw/t_draw_mesh';
 type THeld = { texture: WebGLTexture; joints: number; writtenOn: number };
 
 /**
+ * How many frames a skeleton's bones stay on the card after it was last drawn. Every placed model
+ * has bones of its own, so an enemy that is born and dies leaves its bones behind; let go of after
+ * this long unused, a game spawning enemies for an hour does not fill the card. Long enough that a
+ * model hidden for a moment does not have them made again when it shows.
+ */
+const FORGET_AFTER = 120;
+
+/**
  * Keeps each skeleton's bones on the graphics card **as a picture**, and fills it each frame.
  *
  * A picture rather than a block of numbers, because a block has its length written into the shader
@@ -26,7 +34,18 @@ export const createJointTextures = (gl: WebGL2RenderingContext) => {
     let frame = 0;
 
     return {
-        beginFrame: (): void => { frame++; },
+        /**
+         * Says a new frame has begun, and lets go of the bones nothing has drawn for a while.
+         */
+        beginFrame: (): void => {
+            frame++;
+            for (const [key, entry] of held) {
+                if (frame - entry.writtenOn > FORGET_AFTER) {
+                    gl.deleteTexture(entry.texture);
+                    held.delete(key);
+                }
+            }
+        },
 
         /**
          * The bones of this skeleton as a picture, with this frame's numbers already in it.
@@ -51,11 +70,14 @@ export const createJointTextures = (gl: WebGL2RenderingContext) => {
                 held.set(skeleton.key, entry);
             }
 
-            if (entry.writtenOn !== frame && joints > 0) {
+            // Marked as drawn even with no bones to write, so it is not let go of while in use.
+            if (entry.writtenOn !== frame) {
                 entry.writtenOn = frame;
-                gl.bindTexture(gl.TEXTURE_2D, entry.texture);
-                gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, joints * 4, 1, gl.RGBA, gl.FLOAT, skeleton.jointMatrices);
-                gl.bindTexture(gl.TEXTURE_2D, null);
+                if (joints > 0) {
+                    gl.bindTexture(gl.TEXTURE_2D, entry.texture);
+                    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, joints * 4, 1, gl.RGBA, gl.FLOAT, skeleton.jointMatrices);
+                    gl.bindTexture(gl.TEXTURE_2D, null);
+                }
             }
             return entry.texture;
         },

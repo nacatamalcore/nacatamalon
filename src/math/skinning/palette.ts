@@ -55,8 +55,8 @@ const roomFor = (skeleton: TSkeleton, count: number): Float32Array => {
  * skeleton's own space**: where the model itself stands is applied on top, by the shader, so a
  * character is still placed and turned like anything else.
  *
- * **`frame` is what stops this being done twice.** Several models can share one skeleton, and both
- * of them would pose it identically; a shadow pass would do it a third time. Handing the frame
+ * **`frame` is what stops this being done twice.** The pieces of one model share its skeleton, and
+ * each would pose it identically; a shadow pass would do it once more. Handing the frame
  * number in means the answer is worked out once and read as many times as needed.
  */
 export const computeJointMatrices = (skeleton: TSkeleton, frame: number): void => {

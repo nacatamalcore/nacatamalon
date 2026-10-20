@@ -12,6 +12,7 @@ import { createTestGame, startTestScene } from './helpers/test_game';
 import { asGltf, serveGltf } from './helpers/test_gltf';
 import type { TBox } from '../src/box';
 import type { TGltfModel } from '../src/loaders';
+import type { TModel } from '../src/gameobjects/model';
 import type { TSkeletalAnimation } from '../src/hooks';
 import type { TSpriteAnimation, TSpriteAnimationOptions } from '../src/hooks/animation/types/t_sprite_animation';
 import type { TTestModel } from './helpers/test_gltf';
@@ -218,15 +219,16 @@ const withRig = async (options: Record<string, unknown> = {}) => {
     const { json, bin } = asGltf(RIGGED);
     const fake = serveGltf({ 'model.gltf': json, 'model.bin': bin });
     const { store } = createTestGame();
-    let model!: TGltfModel;
+    let file!: TGltfModel;
+    let model!: TModel;
     let moves!: TSkeletalAnimation;
     const scene: TBox = startTestScene(store, 'Level', () => {
-        model = useLoadGltf({ src: 'model.gltf' });
-        createModel({ model });
+        file = useLoadGltf({ src: 'model.gltf' });
+        model = createModel({ model: file });
         moves = useSkeletalAnimation(model, options as never);
         return createScene();
     });
-    await whenLoaded(model);
+    await whenLoaded(file);
     // The first frame is the one that honours the movement asked for before the file arrived, and
     // nothing else happens in it. Settled here, of no length, so each test below reads as its own
     // timing rather than as that timing plus one dead frame.

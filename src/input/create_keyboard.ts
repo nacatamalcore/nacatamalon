@@ -18,7 +18,17 @@ import type { TKeyboardSource } from './types/t_keyboard';
  * @author Francisco Pereira Alvarado
  */
 export const createKeyboard = (canvas: HTMLCanvasElement): TKeyboardSource => {
-    const held = new Set<string>();
+    /**
+     * How many physical keys hold each name down: the two Shifts are one `'Shift'`, held until both
+     * are let go.
+     */
+    const held = new Map<string, number>();
+    /**
+     * The name each physical key went down with, by `KeyboardEvent.code`. Its release lets go of
+     * that name, whatever the key says when it comes up: Shift+1 goes down as `'!'`, and with Shift
+     * let go first it comes up as `'1'`, which released by its own name left `'!'` held for ever.
+     */
+    const down = new Map<string, string>();
     const pressed = new Set<string>();
     const released = new Set<string>();
 
@@ -27,35 +37,65 @@ export const createKeyboard = (canvas: HTMLCanvasElement): TKeyboardSource => {
      */
     let rawListeners: Array<(key: string) => void> = [];
 
+    /**
+     * The physical key an event is about. An event with no `code` (made by hand, or by a host that
+     * only knows names) stands for the key of its name.
+     */
+    const physical = (event: KeyboardEvent, key: string): string =>
+        typeof event.code === 'string' && event.code.length > 0 ? event.code : `key:${key}`;
+
+    const letGo = (key: string): void => {
+        const count = (held.get(key) ?? 0) - 1;
+        if (count > 0) {
+            held.set(key, count);
+            return;
+        }
+        held.delete(key);
+        released.add(key);
+    };
+
     const onKeyDown = (event: Event): void => {
-        const key = normalizeKey((event as KeyboardEvent).key);
+        const keyEvent = event as KeyboardEvent;
+        const key = normalizeKey(keyEvent.key);
         // A copy: one that stops listening while being told must not make the next one skip.
         for (const listener of [...rawListeners]) {
             listener(key);
         }
         // A held key repeats `keydown` several times a second, and a repeat is not a press. Without
-        // this guard, leaning on the fire button would read as one shot per repeat.
-        if (!held.has(key)) {
+        // this guard, leaning on the fire button would read as one shot per repeat. It keeps the name
+        // it went down with: a repeat after Shift is pressed says `'!'` for a `'1'` still held.
+        const code = physical(keyEvent, key);
+        if (down.has(code)) {
+            return;
+        }
+        down.set(code, key);
+        const count = held.get(key) ?? 0;
+        if (count === 0) {
             pressed.add(key);
         }
-        held.add(key);
+        held.set(key, count + 1);
     };
 
     const onKeyUp = (event: Event): void => {
-        const key = normalizeKey((event as KeyboardEvent).key);
-        if (held.delete(key)) {
-            released.add(key);
+        const keyEvent = event as KeyboardEvent;
+        const code = physical(keyEvent, normalizeKey(keyEvent.key));
+        const key = down.get(code);
+        if (key === undefined) {
+            return;
         }
+        down.delete(code);
+        letGo(key);
     };
 
     // A key let go of while the tab is not focused never fires `keyup`, so it would stay held for
     // ever. They count as released rather than simply cleared: a game waiting for the end of a
     // charged shot would otherwise wait for a release that can never arrive.
     const onBlur = (): void => {
-        for (const key of held) {
+        for (const key of held.keys()) {
             released.add(key);
         }
         held.clear();
+        down.clear();
     };
 
     const view = canvas.ownerDocument?.defaultView ?? (globalThis as unknown as Window);
@@ -83,6 +123,7 @@ export const createKeyboard = (canvas: HTMLCanvasElement): TKeyboardSource => {
             view.removeEventListener('blur', onBlur);
             rawListeners = [];
             held.clear();
+            down.clear();
             pressed.clear();
             released.clear();
         },
