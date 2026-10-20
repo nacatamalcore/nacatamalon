@@ -1,5 +1,5 @@
 import type { TColor } from './color';
-import { getColor, type TColorInput } from './get_color';
+import { getColor, type TColorOption } from './get_color';
 
 /**
  * A colour as a console could show it: each channel moved to the nearest of the steps that machine
@@ -29,8 +29,8 @@ import { getColor, type TColorInput } from './get_color';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const consoleColor = (color: TColorInput | TColor, levels: number): TColor => {
-    const from = typeof color === 'object' ? color : getColor(color);
+export const consoleColor = (color: TColorOption, levels: number): TColor => {
+    const from = getColor(color);
     const top = Math.max(2, Math.round(levels)) - 1;
     const step = (channel: number): number => Math.round(Math.min(1, Math.max(0, channel)) * top) / top;
     return { r: step(from.r), g: step(from.g), b: step(from.b), a: from.a };

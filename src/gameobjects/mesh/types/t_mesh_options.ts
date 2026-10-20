@@ -1,4 +1,4 @@
-import type { TColor } from '../../../color';
+import type { TColorOption } from '../../../color';
 import type { TGeometry } from '../../../geometry';
 import type { TMeshMaterial } from '../../../materials';
 import type { TTexture } from '../../../loaders';
@@ -40,16 +40,16 @@ export type TMeshOptions = {
     /**
      * Multiplies the picture, and is the whole colour without one. Default white.
      */
-    tint?: TColor;
+    tint?: TColorOption;
     /**
      * Light it gives off by itself. Default none.
      */
-    emissive?: TColor;
+    emissive?: TColorOption;
     /**
      * The colour of its shine. Default none, which is a matt surface: a shine is the thing that
      * makes something read as wet, polished or metal, and everything else looks better without it.
      */
-    specular?: TColor;
+    specular?: TColorOption;
     /**
      * How tight that shine is. Default `32`. Higher is smaller and harder.
      */

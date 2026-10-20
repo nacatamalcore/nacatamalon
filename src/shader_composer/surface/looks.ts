@@ -1,13 +1,12 @@
+import type { TColorOption } from '../../color';
 import { colorUniform } from '../../post/builtin/color_uniform';
-import type { TColor } from '../../color/color';
-import type { TColorInput } from '../../color/get_color';
 import type { TEffectField } from '../../post/builtin/types/t_builtin';
 import type { TLook, TMangaDotsLook, TRimLook, TToonLook, TUnlitLook } from './types';
 
 /**
  * A colour as a look takes it: what `getColor` takes, a `TColor`, or `[r, g, b]` from `0` to `1`.
  */
-type TLookColor = TColorInput | TColor | [number, number, number];
+type TLookColor = TColorOption | [number, number, number];
 
 /**
  * The light cut into flat bands, the cartoon look: the surface is lit or it is not, with nothing

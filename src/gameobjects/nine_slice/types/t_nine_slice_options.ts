@@ -1,9 +1,6 @@
-import type { TColor } from '../../../color';
+import type { T2dOptions } from '../../types/t_2d_options';
 import type { TTexture } from '../../../loaders';
 import type { TSpriteAtlas } from '../../../atlas';
-import type { TPointerListener } from '../../../input';
-import type { TSpriteMaterial, TUniformValues } from '../../../materials';
-import type { TTransform2d } from '../../types/t_transform_2d';
 import type { TNineSliceBorders, TNineSliceMode } from './t_nine_slice';
 
 /**
@@ -13,7 +10,7 @@ import type { TNineSliceBorders, TNineSliceMode } from './t_nine_slice';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TNineSliceOptions = {
+export type TNineSliceOptions = T2dOptions & {
     /**
      * A texture from `useLoadTexture`. Wins over `key` and `atlas`.
      */
@@ -58,70 +55,4 @@ export type TNineSliceOptions = {
      * How tall to draw it, in pixels.
      */
     height: number;
-    /**
-     * Where it is, how it is turned and how big. Only what is given: the rest is no turn and a scale
-     * of 1, so `{ x, y }` is enough.
-     */
-    transform?: Partial<TTransform2d>;
-    /**
-     * Its colour, multiplied over the picture. Default white, the picture as drawn.
-     */
-    tint?: TColor;
-    /**
-     * Which point of it sits on `x`, `y`, in 0-1. Default its middle: `{ x: 0, y: 0 }` is its top-left corner.
-     */
-    anchor?: { x: number; y: number };
-    /**
-     * The point it turns and grows about, in 0-1, when it is not the anchor: a panel placed by its
-     * corner that pops open from its middle (`{ x: 0.5, y: 0.5 }`). Default: its anchor.
-     */
-    pivot?: { x: number; y: number };
-    /**
-     * Draw order within its scene, as for a sprite.
-     */
-    zIndex?: number;
-    /**
-     * Crisp (`false`) or blended (`true`) when scaled. Default: the game's `smooth`.
-     */
-    smooth?: boolean;
-    /**
-     * What it is, as `useTag` says it: `['wall']`. The same as adding them after.
-     */
-    tags?: string[];
-    /**
-     * Whether it is drawn. Default `true`.
-     */
-    visible?: boolean;
-    /**
-     * An effect of its own, from `createMaterial`. Omitted is the built-in shader.
-     */
-    material?: TSpriteMaterial;
-    /**
-     * Its own values for that material's knobs.
-     */
-    uniforms?: TUniformValues;
-    /**
-     * Called when the mouse or a finger comes over it. The whole rectangle counts.
-     */
-    onPointerOver?: TPointerListener;
-    /**
-     * Called when the pointer stops being over it, or leaves the game.
-     */
-    onPointerOut?: TPointerListener;
-    /**
-     * Called when the pointer moves while over it.
-     */
-    onPointerMove?: TPointerListener;
-    /**
-     * Called when a button is pressed, or a finger touches, over it.
-     */
-    onPointerDown?: TPointerListener;
-    /**
-     * Called when a button is released, or a finger lifts, over it.
-     */
-    onPointerUp?: TPointerListener;
-    /**
-     * Called when it is pressed and released without leaving it. The cursor turns into a hand over it.
-     */
-    onClick?: TPointerListener;
 };

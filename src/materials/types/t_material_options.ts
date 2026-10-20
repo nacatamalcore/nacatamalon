@@ -1,5 +1,5 @@
 import type { TLightingLook, TStepLook } from '../../shader_composer/surface/types';
-import type { TColor } from '../../color';
+import type { TColorOption } from '../../color';
 import type { TTexture } from '../../loaders';
 import type { TShader } from '../../loaders/shader/types/t_shader';
 import type { TUniformValues } from './t_uniforms';
@@ -83,15 +83,15 @@ export type TMeshMaterialOptions = TMaterialShaderOptions & {
     /**
      * Multiplies the picture, and is the whole colour without one. Default white.
      */
-    tint?: TColor;
+    tint?: TColorOption;
     /**
      * Light it gives off by itself. Default none.
      */
-    emissive?: TColor;
+    emissive?: TColorOption;
     /**
      * The colour of its shine. Default none, which is matt.
      */
-    specular?: TColor;
+    specular?: TColorOption;
     /**
      * How tight that shine is. Default `32`.
      */

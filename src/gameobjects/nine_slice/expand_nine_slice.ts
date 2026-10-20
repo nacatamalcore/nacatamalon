@@ -33,6 +33,7 @@ type TPieceSprite = {
     smooth?: boolean;
     material?: TNineSlice['material'];
     uniforms?: TNineSlice['uniforms'];
+    blend?: TNineSlice['blend'];
 };
 
 /**
@@ -225,6 +226,7 @@ export const expandNineSlice = (slice: TNineSlice): readonly TDrawSprite[] => {
             piece.tint = slice.tint;
             piece.smooth = slice.smooth;
             piece.material = slice.material;
+            piece.blend = slice.blend;
             piece.uniforms = slice.uniforms;
             piece.uvOffset.x = window.uvOffset.x + column.from / texture.width;
             piece.uvOffset.y = window.uvOffset.y + row.from / texture.height;

@@ -1,3 +1,4 @@
+import { getColor } from '../../color';
 import { cleanLayerNames } from '../../physics/layer_names';
 import { DEFAULT_GAME_OPTIONS, MAX_STEP_RATE, MIN_STEP_RATE } from "../../CONFIG";
 import type { TGameOptions } from "../types/t_game_options";
@@ -11,7 +12,7 @@ import type { TGameOptions } from "../types/t_game_options";
 export const cleanGameOptions = (game_options: TGameOptions ) => {
     const width = game_options.width || DEFAULT_GAME_OPTIONS.width;
     const height = game_options.height || DEFAULT_GAME_OPTIONS.height;
-    const background = game_options.background || DEFAULT_GAME_OPTIONS.background;
+    const background = getColor(game_options.background || DEFAULT_GAME_OPTIONS.background!);
     const renderer = game_options.renderer || DEFAULT_GAME_OPTIONS.renderer;
     // `??` and not `||`: 0 is a seed like any other, and `||` turned it into a different run every time.
     const seed = game_options.seed ?? DEFAULT_GAME_OPTIONS.seed;

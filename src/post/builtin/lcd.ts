@@ -1,6 +1,5 @@
-import type { TColor } from '../../color/color';
-import type { TColorInput } from '../../color/get_color';
 import { colorUniform } from './color_uniform';
+import type { TColorOption } from '../../color/get_color';
 import type { TBuiltinPostEffect } from './types/t_builtin';
 
 /**
@@ -28,7 +27,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const lcd = (options: { grid?: number; ghosting?: number; tint?: TColorInput | TColor | [number, number, number] } = {}): TBuiltinPostEffect<{
+export const lcd = (options: { grid?: number; ghosting?: number; tint?: TColorOption | [number, number, number] } = {}): TBuiltinPostEffect<{
     grid: number; ghosting: number; tint: number[];
 }> => ({
     name: 'lcd',

@@ -4,6 +4,8 @@ import { fillFrameContext } from '../src/game/loop/fill_frame_context';
 import { runHookUpdates } from '../src/game/loop/runHookUpdates';
 import { createScene } from '../src/scene/create_scene';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
+import { createText } from '../src/gameobjects/text/create_text';
+import { createNineSlice } from '../src/gameobjects/nine_slice/create_nine_slice';
 import { createBackdrop } from '../src/gameobjects/sprite/create_backdrop';
 import { createTilemap } from '../src/gameobjects/tilemap/create_tilemap';
 import { useCamera2d } from '../src/hooks/camera/use_camera_2d';
@@ -16,8 +18,12 @@ import { parseTilemapDoc } from '../src/loaders/tilemap/parse_tilemap_doc';
 import { serializeTilemapDoc } from '../src/loaders/tilemap/serialize_tilemap_doc';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { serveTilemap, TEST_MAP } from './helpers/test_tilemap';
+import { createTestFont } from './helpers/test_font';
 import type { TDrawSprite } from '../src/render/interface';
 import type { TSprite } from '../src/gameobjects/sprite/types/t_sprite';
+import type { TText } from '../src/gameobjects/text/types/t_text';
+import type { TNineSlice } from '../src/gameobjects/nine_slice/types/t_nine_slice';
+import type { TTexture } from '../src/loaders';
 import type { TTilemap } from '../src/gameobjects/tilemap/types/t_tilemap';
 import type { TFrameContext } from '../src/render';
 import type { TRuntimeStore } from '../src/store';
@@ -215,5 +221,68 @@ describe('createBackdrop', () => {
         expect(sky.height).toBeGreaterThan(10000);
         expect(sky.anchor).toEqual({ x: 0.5, y: 0.5 });
         void store;
+    });
+});
+
+describe('parallax and blend on a text and a panel, as on a sprite', () => {
+    // A font already loaded: the engine's own needs a browser to be read.
+    const font = createTestFont();
+    const panelPicture = { type: 'texture', key: 'panel', src: '/panel.png', width: 24, height: 24, status: 'ready', gpu: { resourceType: 'texture' } } as unknown as TTexture;
+
+    /** A scene whose camera has moved 100 across and 40 down, drawn once; what reached the card. */
+    const drawnWithCamera = (body: () => void): { store: TRuntimeStore; drawn: TDrawSprite[] } => {
+        const { store } = createTestGame();
+        startTestScene(store, 'Level', () => {
+            const camera = useCamera2d();
+            camera.transform.x = 100;
+            camera.transform.y = 40;
+            body();
+            return createScene();
+        });
+        const ctx: TFrameContext = { passes: [{}], time: 0, progress: 0, phase: 0 };
+        fillFrameContext(store, ctx);
+        return { store, drawn: (ctx.passes[0].drawables ?? []) as TDrawSprite[] };
+    };
+
+    it('moves a text in the world half as much as the camera, its letters with it', () => {
+        let far!: TText;
+        let near!: TText;
+        const { drawn } = drawnWithCamera(() => {
+            far = createText({ text: 'A', font, transform: at(200, 100), parallax: { x: 0.5, y: 0.5 } });
+            near = createText({ text: 'B', font, transform: at(200, 100) });
+        });
+        expect(drawnAt(far)).toEqual([250, 120]);
+        // And so do its letters, which is what is seen: 50 across and 20 down from the other's.
+        const [farLetter, nearLetter] = drawn;
+        expect([farLetter!.transform.x - nearLetter!.transform.x, farLetter!.transform.y - nearLetter!.transform.y]).toEqual([50, 20]);
+        // One that does not ask moves with the camera as before, and its placement is its own.
+        expect(drawnAt(near)).toEqual([200, 100]);
+        expect([far.transform.x, far.transform.y]).toEqual([200, 100]);
+    });
+
+    it('keeps a HUD text where it is on the screen, whatever its parallax says', () => {
+        let score!: TText;
+        let panel!: TNineSlice;
+        drawnWithCamera(() => {
+            useSpawn(function Hud() {
+                useScreenSpace();
+                score = createText({ text: 'ACE', font, transform: at(8, 8), parallax: { x: 0.5, y: 0.5 } });
+                panel = createNineSlice({ texture: panelPicture, slice: 8, width: 40, height: 20, transform: at(8, 30), parallax: { x: 0, y: 0 } });
+            })();
+        });
+        expect(drawnAt(score)).toEqual([8, 8]);
+        expect(drawnAt(panel)).toEqual([8, 30]);
+    });
+
+    it('adds a glowing text and panel to what is behind, every letter and every piece', () => {
+        const { drawn } = drawnWithCamera(() => {
+            createText({ text: 'AB', font, blend: 'additive' });
+            createNineSlice({ texture: panelPicture, slice: 8, width: 40, height: 20, blend: 'additive' });
+            createText({ text: 'ABCDE', font });
+        });
+        const glowing = drawn.filter((piece) => piece.blend === 'additive');
+        // Two letters and nine pieces; the plain text's five letters cover as before.
+        expect(glowing).toHaveLength(2 + 9);
+        expect(drawn.filter((piece) => piece.blend === undefined)).toHaveLength(5);
     });
 });

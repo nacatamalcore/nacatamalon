@@ -1,3 +1,5 @@
+import type { TVec2 } from '../../math/vec2';
+import { pointUniform } from './point_uniform';
 import type { TBuiltinPostEffect } from './types/t_builtin';
 
 /**
@@ -6,12 +8,12 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * Each offset is in game pixels, so a split of one pixel stays one pixel wide however large the
  * canvas is. Small and still, it is a cheap lens; large and shaken, it is a hit.
  *
- * @param options `red`, `green` and `blue` are where each channel is read from, as `[x, y]`.
+ * @param options `red`, `green` and `blue` are where each channel is read from, as `{ x, y }`.
  * @returns The effect, for `usePostProcess`.
  *
  * @example
  * ```ts
- * usePostProcess(rgbSplit({ red: [-2, 0], blue: [2, 0] }));
+ * usePostProcess(rgbSplit({ red: { x: -2, y: 0 }, blue: { x: 2, y: 0 } }));
  * ```
  *
  * @category Post-processing
@@ -19,9 +21,9 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @author Francisco Pereira Alvarado
  */
 export const rgbSplit = (options: {
-    red?: [number, number];
-    green?: [number, number];
-    blue?: [number, number];
+    red?: TVec2;
+    green?: TVec2;
+    blue?: TVec2;
 } = {}): TBuiltinPostEffect<{ red: number[]; green: number[]; blue: number[] }> => ({
     name: 'rgbSplit',
     fragment: /* wgsl */ `
@@ -42,6 +44,6 @@ vec4 effect(vec4 color, vec2 uv) {
     return vec4(r, g, b, color.a);
 }
 `,
-    uniforms: { red: options.red ?? [-1, 0], green: options.green ?? [0, 0], blue: options.blue ?? [1, 0] },
+    uniforms: { red: pointUniform(options.red, [-1, 0]), green: pointUniform(options.green, [0, 0]), blue: pointUniform(options.blue, [1, 0]) },
     uniformSig: { red: 'vec2<f32>', green: 'vec2<f32>', blue: 'vec2<f32>' },
 });

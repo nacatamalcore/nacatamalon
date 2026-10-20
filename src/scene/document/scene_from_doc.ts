@@ -353,6 +353,8 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                 ...(component.anchor !== undefined ? { anchor: component.anchor } : {}),
                 ...(component.pivot !== undefined ? { pivot: component.pivot } : {}),
                 ...(component.smooth !== undefined ? { smooth: component.smooth } : {}),
+                ...(component.blend !== undefined ? { blend: component.blend } : {}),
+                ...(component.parallax !== undefined ? { parallax: { ...component.parallax } } : {}),
                 ...(component.visible !== undefined ? { visible: component.visible } : {}),
                 ...(component.zIndex !== undefined ? { zIndex: component.zIndex } : {}),
                 ...(component.material !== undefined ? { material: buildMaterial(component.material) } : {}),

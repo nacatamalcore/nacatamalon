@@ -1,3 +1,5 @@
+import type { TVec2 } from '../../math/vec2';
+import { pointUniform } from './point_uniform';
 import type { TBuiltinPostEffect } from './types/t_builtin';
 
 /**
@@ -8,14 +10,14 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * pass at the same size, and added back over the sharp picture. Only what is brighter than
  * `threshold` casts rays, so a dark silhouette in front of a bright sky is what makes them.
  *
- * @param options `center` from `[0, 0]` (top left) to `[1, 1]`, and it may lie off screen; `density`
+ * @param options `center` from `{ x: 0, y: 0 }` (top left) to `{ x: 1, y: 1 }`, and it may lie off screen; `density`
  * how far the rays reach, from `0` to `1`; `decay` how fast they fade along the way; `intensity` how
  * strong they are.
  * @returns The effect, for `usePostProcess`.
  *
  * @example
  * ```ts
- * usePostProcess(godrays({ center: [0.8, 0.1], threshold: 0.75 }));
+ * usePostProcess(godrays({ center: { x: 0.8, y: 0.1 }, threshold: 0.75 }));
  * ```
  *
  * @category Post-processing
@@ -23,7 +25,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @author Francisco Pereira Alvarado
  */
 export const godrays = (options: {
-    center?: [number, number];
+    center?: TVec2;
     threshold?: number;
     density?: number;
     decay?: number;
@@ -95,7 +97,7 @@ vec4 effect(vec4 color, vec2 uv) {
 }
 `,
     uniforms: {
-        center: options.center ?? [0.5, 0.2],
+        center: pointUniform(options.center, [0.5, 0.2]),
         threshold: options.threshold ?? 0.7,
         density: options.density ?? 0.8,
         decay: options.decay ?? 0.96,

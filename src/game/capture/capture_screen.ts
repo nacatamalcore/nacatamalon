@@ -1,3 +1,4 @@
+import { getColor } from '../../color';
 import { screenSizeOf } from '../../DOM/screen_size';
 import type { TRuntimeStore } from '../../store';
 import type { TCaptureResult } from '../../render/interface';
@@ -52,7 +53,7 @@ export const captureScreen = async (
                     // its screen in screen pixels; one of the tool's view keeps the tool's screen.
                     screen2d: 'camera2d' in options ? null : viewport.screen2d,
                     layers: 'layers' in options ? options.layers ?? null : viewport.layers,
-                    background: options.background ?? store.get('config').background,
+                    background: options.background === undefined ? store.get('config').background : getColor(options.background),
                     // What a game's photo leaves out or keeps alone (`useCapture`); a tool's has neither.
                     hide: boxes.hide ?? null,
                     only: boxes.only ?? null,

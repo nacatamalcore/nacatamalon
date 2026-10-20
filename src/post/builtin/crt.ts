@@ -1,6 +1,5 @@
 import { NOISE_GLSL, NOISE_WGSL } from './noise';
-import type { TColor } from '../../color/color';
-import type { TColorInput } from '../../color/get_color';
+import type { TColorOption } from '../../color/get_color';
 import { colorUniform } from './color_uniform';
 import type { TBuiltinPostEffect } from './types/t_builtin';
 
@@ -50,11 +49,11 @@ export type TCrtOptions = {
      */
     brightness?: number;
     /**
-     * `1` works the lines and the glow out in light rather than in the stored numbers, which is what
-     * a tube did; `0` works them out in the stored numbers. It changes how the lines blend, not how
+     * `true` (the default) works the lines and the glow out in light rather than in the stored
+     * numbers, which is what a tube did; `false` works them out in the stored numbers. It changes how the lines blend, not how
      * bright the picture is: the frame goes into light and back out by the same curve.
      */
-    linearBlend?: number;
+    linearBlend?: boolean;
     /**
      * The glow that bright parts throw across the glass.
      */
@@ -72,9 +71,9 @@ export type TCrtOptions = {
      */
     flicker?: number;
     /**
-     * `1` draws odd and even lines on alternate frames.
+     * `true` draws odd and even lines on alternate frames.
      */
-    interlace?: number;
+    interlace?: boolean;
     /**
      * How round the corners of the tube are, as a share of the screen.
      */
@@ -84,12 +83,13 @@ export type TCrtOptions = {
      * Any colour, `'#0b0710'`, a `TColor` or `[r, g, b]`. Default black. The page's colour makes the
      * tube sit on the page.
      */
-    bezel?: TColorInput | TColor | [number, number, number];
+    bezel?: TColorOption | [number, number, number];
 };
 
 /**
  * The knobs of the effect `crt()` returns, as `effect.uniforms` holds them: the same names as
- * {@link TCrtOptions}, each a plain number. `maskType` is `0` aperture, `1` slot, `2` shadow.
+ * {@link TCrtOptions}, each a plain number. `maskType` is `0` aperture, `1` slot, `2` shadow;
+ * `linearBlend` and `interlace` are `1` for `true` and `0` for `false`.
  *
  * @category Post-processing
  * @since 1.0.0
@@ -129,23 +129,23 @@ export type TCrtUniforms = {
 export const CRT_PRESETS = {
     consumer: {
         scanlines: 0.45, mask: 0.25, maskType: 'slot', maskScale: 1, curvature: 0.08, vignette: 0.3,
-        sharpness: 0.4, beam: 0.7, brightness: 1.25, linearBlend: 1, halation: 0.2, convergence: 0.35,
-        noise: 0.04, flicker: 0.3, interlace: 0, cornerRadius: 0.04,
+        sharpness: 0.4, beam: 0.7, brightness: 1.25, linearBlend: true, halation: 0.2, convergence: 0.35,
+        noise: 0.04, flicker: 0.3, interlace: false, cornerRadius: 0.04,
     },
     pvm: {
         scanlines: 0.6, mask: 0.2, maskType: 'aperture', maskScale: 1, curvature: 0.02, vignette: 0.1,
-        sharpness: 0.85, beam: 0.8, brightness: 1.3, linearBlend: 1, halation: 0.06, convergence: 0,
-        noise: 0, flicker: 0, interlace: 0, cornerRadius: 0.01,
+        sharpness: 0.85, beam: 0.8, brightness: 1.3, linearBlend: true, halation: 0.06, convergence: 0,
+        noise: 0, flicker: 0, interlace: false, cornerRadius: 0.01,
     },
     arcade: {
         scanlines: 0.5, mask: 0.35, maskType: 'shadow', maskScale: 1, curvature: 0.12, vignette: 0.35,
-        sharpness: 0.6, beam: 0.9, brightness: 1.35, linearBlend: 1, halation: 0.25, convergence: 0.2,
-        noise: 0.02, flicker: 0.1, interlace: 0, cornerRadius: 0.06,
+        sharpness: 0.6, beam: 0.9, brightness: 1.35, linearBlend: true, halation: 0.25, convergence: 0.2,
+        noise: 0.02, flicker: 0.1, interlace: false, cornerRadius: 0.06,
     },
     composite: {
         scanlines: 0.3, mask: 0.1, maskType: 'slot', maskScale: 1, curvature: 0.08, vignette: 0.3,
-        sharpness: 0.1, beam: 0.5, brightness: 1.15, linearBlend: 1, halation: 0.3, convergence: 0.6,
-        noise: 0.06, flicker: 0.2, interlace: 0, cornerRadius: 0.04,
+        sharpness: 0.1, beam: 0.5, brightness: 1.15, linearBlend: true, halation: 0.3, convergence: 0.6,
+        noise: 0.06, flicker: 0.2, interlace: false, cornerRadius: 0.04,
     },
 } as const satisfies Record<string, TCrtOptions>;
 
@@ -459,12 +459,12 @@ export const crt = (options: TCrtOptions = {}): TBuiltinPostEffect<TCrtUniforms>
         sharpness: options.sharpness ?? 0.5,
         beam: options.beam ?? 0.6,
         brightness: options.brightness ?? 1.15,
-        linearBlend: options.linearBlend ?? 1,
+        linearBlend: options.linearBlend === false ? 0 : 1,
         halation: options.halation ?? 0.12,
         convergence: options.convergence ?? 0,
         noise: options.noise ?? 0,
         flicker: options.flicker ?? 0,
-        interlace: options.interlace ?? 0,
+        interlace: options.interlace === true ? 1 : 0,
         cornerRadius: options.cornerRadius ?? 0.03,
         bezel: colorUniform(options.bezel, [0, 0, 0]),
     },

@@ -1,3 +1,4 @@
+import { getColor } from '../../color';
 import { spawnBox } from '../../box';
 import { getActiveBox, getActiveGame } from '../../store';
 import { nanoId } from '../../utils';
@@ -68,7 +69,7 @@ export const newSpriteTexture = (store: TRuntimeStore, options: TSpriteTextureOp
         width,
         height,
         sees: options.sees ?? 'inside',
-        background: { ...(options.background ?? { r: 0, g: 0, b: 0, a: 1 }) },
+        background: { ...getColor(options.background ?? { r: 0, g: 0, b: 0, a: 1 }) },
         texture,
     };
 };

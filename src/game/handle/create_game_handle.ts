@@ -1,4 +1,5 @@
-import type { TColor } from '../../color';
+import { getColor } from '../../color';
+import type { TColor, TColorOption } from '../../color';
 import type { TRuntimeStore } from '../../store';
 import type { TBox } from '../../box';
 import { gamePaused, gameResumed } from '../../signal/engine_signals';
@@ -41,7 +42,7 @@ export const createGameHandle = (store: TRuntimeStore): TGameHandle => ({
     getHeight: () => screenSizeOf(store.get('screen').canvas).height,
 
     getBackground: () => store.get('config').background,
-    setBackground: (color: TColor) => store.setState('config', { background: color }),
+    setBackground: (color: TColorOption) => store.setState('config', { background: getColor(color) }),
 
     isSmooth: () => store.get('config').smooth,
     setSmooth: (smooth: boolean) => store.setState('config', { smooth }),

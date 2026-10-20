@@ -1,6 +1,5 @@
-import type { TColor } from '../../color/color';
-import type { TColorInput } from '../../color/get_color';
 import { colorUniform } from './color_uniform';
+import type { TColorOption } from '../../color/get_color';
 import type { TBuiltinPostEffect } from './types/t_builtin';
 
 /**
@@ -30,7 +29,7 @@ export const colorAdjust = (options: {
     saturation?: number;
     gamma?: number;
     hue?: number;
-    tint?: TColorInput | TColor | [number, number, number];
+    tint?: TColorOption | [number, number, number];
 } = {}): TBuiltinPostEffect<{
     brightness: number; contrast: number; saturation: number; gamma: number; hue: number; tint: number[];
 }> => ({

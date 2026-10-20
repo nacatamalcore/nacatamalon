@@ -26,6 +26,7 @@ type TGlyphSprite = {
     distanceField?: boolean;
     material?: TText['material'];
     uniforms?: TText['uniforms'];
+    blend?: TText['blend'];
 };
 
 /**
@@ -176,6 +177,7 @@ export const expandText = (text: TText): readonly TDrawSprite[] => {
         // Every letter of one text carries the same material object, so they all land in a single
         // batch rather than one draw per letter.
         sprite.material = text.material;
+        sprite.blend = text.blend;
         sprite.uniforms = text.uniforms;
         sprite.uvOffset.x = placement.source.x / atlasWidth;
         sprite.uvOffset.y = placement.source.y / atlasHeight;

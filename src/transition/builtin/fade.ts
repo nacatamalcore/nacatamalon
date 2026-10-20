@@ -1,5 +1,6 @@
 import { COVER_AMOUNT_GLSL, COVER_AMOUNT_WGSL } from './cover_amount';
-import type { TColor } from '../../color';
+import { rgbaUniform } from './rgba_uniform';
+import type { TColor, TColorOption } from '../../color';
 import type { TTransition } from '../types/t_transition';
 
 const BLACK: TColor = { r: 0, g: 0, b: 0, a: 1 };
@@ -22,10 +23,10 @@ const BLACK: TColor = { r: 0, g: 0, b: 0, a: 1 };
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const fade = (duration = 0.3, color: TColor = BLACK): TTransition => ({
+export const fade = (duration = 0.3, color: TColorOption = BLACK): TTransition => ({
     name: 'fade',
     duration,
-    uniforms: { color: [color.r, color.g, color.b, color.a] },
+    uniforms: { color: rgbaUniform(color) },
     uniformSig: { color: 'vec4<f32>' },
     fragment: /* wgsl */ `${COVER_AMOUNT_WGSL}
 fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {

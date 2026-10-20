@@ -1,6 +1,6 @@
 import { createAmbientLight } from '../../light';
 import { getActiveBox } from '../../store';
-import type { TColor } from '../../color';
+import type { TColorOption } from '../../color';
 import type { TAmbientLight } from '../../light';
 
 /**
@@ -33,7 +33,7 @@ import type { TAmbientLight } from '../../light';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const useAmbientLight = (options: { color?: TColor; intensity?: number } = {}): TAmbientLight => {
+export const useAmbientLight = (options: { color?: TColorOption; intensity?: number } = {}): TAmbientLight => {
     const box = getActiveBox();
     if (box === null) {
         throw new Error('[NacatamalOn] useAmbientLight: call it inside a scene body, or inside something created with useSpawn.');

@@ -55,7 +55,7 @@ export const createParticles3d = (options: TParticles3dOptions): TParticles3d =>
         name: options.name ?? file.src,
         file,
         transform: { ...NOWHERE, ...options.transform },
-        tint: options.tint ?? getColor('white'),
+        tint: getColor(options.tint ?? 'white'),
         alpha: options.alpha ?? 1,
         smooth: options.smooth,
         overrides: options.overrides,

@@ -99,7 +99,7 @@ export const createText = (options: TTextOptions): TText => {
             : typeof options.font === 'string' ? fontByKey(store, box, options.font) : options.font,
         // As given, not copied: a shared style is shared on purpose.
         style: options.style ?? {},
-        tint: options.tint ?? getColor('white'),
+        tint: getColor(options.tint ?? 'white'),
         transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, ...options.transform },
         anchor: options.anchor,
         ...(options.pivot !== undefined ? { pivot: options.pivot } : {}),
@@ -108,6 +108,8 @@ export const createText = (options: TTextOptions): TText => {
         visible: options.visible,
         material: options.material,
         uniforms: options.uniforms,
+        ...(options.parallax !== undefined ? { parallax: { x: options.parallax.x, y: options.parallax.y } } : {}),
+        ...(options.blend !== undefined ? { blend: options.blend } : {}),
         destroyed: false,
     });
     if (options.tags !== undefined && options.tags.length > 0) Object.assign(text, { tags: [...options.tags] });

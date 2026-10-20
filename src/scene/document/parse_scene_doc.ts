@@ -545,6 +545,8 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 ...(parsePoint(raw.anchor) !== undefined ? { anchor: parsePoint(raw.anchor) } : {}),
                 ...(parsePoint(raw.pivot) !== undefined ? { pivot: parsePoint(raw.pivot) } : {}),
                 ...optionalBoolean(raw, 'smooth'),
+                ...(raw.blend === 'additive' ? { blend: 'additive' as const } : {}),
+                ...(parsePoint(raw.parallax) !== undefined ? { parallax: parsePoint(raw.parallax) } : {}),
                 ...optionalBoolean(raw, 'visible'),
                 ...optionalNumber(raw, 'zIndex'),
                 ...(material !== undefined ? { material } : {}),

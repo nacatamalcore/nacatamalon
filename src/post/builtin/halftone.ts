@@ -2,7 +2,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
 
 /**
  * Prints the picture the way a comic or a newspaper did: dots that grow where it is dark
- * (`mode: 0`), or lines laid over each other as it darkens (`mode: 1`).
+ * (`mode: 'dots'`, the default), or lines laid over each other as it darkens (`mode: 'lines'`).
  *
  * The ink is black, or the picture's own colour as `ownColor` goes to `1`. The paper is white.
  *
@@ -19,7 +19,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const halftone = (options: { size?: number; rotation?: number; mode?: 0 | 1; ownColor?: number } = {}): TBuiltinPostEffect<{
+export const halftone = (options: { size?: number; rotation?: number; mode?: 'dots' | 'lines'; ownColor?: number } = {}): TBuiltinPostEffect<{
     size: number; rotation: number; mode: number; ownColor: number;
 }> => ({
     name: 'halftone',
@@ -94,7 +94,7 @@ vec4 effect(vec4 color, vec2 uv) {
     uniforms: {
         size: options.size ?? 4,
         rotation: options.rotation ?? Math.PI / 4,
-        mode: options.mode ?? 0,
+        mode: options.mode === 'lines' ? 1 : 0,
         ownColor: options.ownColor ?? 0,
     },
     uniformSig: { size: 'f32', rotation: 'f32', mode: 'f32', ownColor: 'f32' },

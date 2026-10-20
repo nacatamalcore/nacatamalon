@@ -1,3 +1,5 @@
+import type { TVec2 } from '../../math/vec2';
+import { pointUniform } from './point_uniform';
 import type { TBuiltinPostEffect } from './types/t_builtin';
 
 /**
@@ -6,13 +8,13 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * Outside `radius` nothing moves, and the edge of the patch always meets the picture around it, so
  * the effect can be dropped anywhere without a seam.
  *
- * @param options `center` from `[0, 0]` (top left) to `[1, 1]`; `radius` in game pixels; `bulge`
+ * @param options `center` from `{ x: 0, y: 0 }` (top left) to `{ x: 1, y: 1 }`; `radius` in game pixels; `bulge`
  * from `-1` (pinch) to `1` (bulge); `twist` is how far the middle turns, in radians.
  * @returns The effect, for `usePostProcess`.
  *
  * @example
  * ```ts
- * usePostProcess(distort({ center: [0.5, 0.5], radius: 60, twist: 2 }));
+ * usePostProcess(distort({ center: { x: 0.5, y: 0.5 }, radius: 60, twist: 2 }));
  * ```
  *
  * @category Post-processing
@@ -20,7 +22,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @author Francisco Pereira Alvarado
  */
 export const distort = (options: {
-    center?: [number, number];
+    center?: TVec2;
     radius?: number;
     bulge?: number;
     twist?: number;
@@ -68,7 +70,7 @@ vec4 effect(vec4 color, vec2 uv) {
 }
 `,
     uniforms: {
-        center: options.center ?? [0.5, 0.5],
+        center: pointUniform(options.center, [0.5, 0.5]),
         radius: options.radius ?? 64,
         bulge: options.bulge ?? 0.5,
         twist: options.twist ?? 0,

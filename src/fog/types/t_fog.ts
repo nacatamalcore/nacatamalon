@@ -1,4 +1,4 @@
-import type { TColor } from '../../color';
+import type { TColor, TColorOption } from '../../color';
 
 /**
  * The fog a scene is seen through: things fade into `color` as they get further from the camera.
@@ -56,7 +56,7 @@ export type TFogOptions = {
     /**
      * What things fade into. Default black.
      */
-    color?: TColor;
+    color?: TColorOption;
     /**
      * How far from the camera the fog begins. Default `10`.
      */

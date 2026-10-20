@@ -1,9 +1,11 @@
+import type { TVec2 } from '../../math/vec2';
+import { pointUniform } from './point_uniform';
 import type { TBuiltinPostEffect } from './types/t_builtin';
 
 /**
  * Smears the picture towards a point, as if the camera rushed at it: speed, a dash, an impact.
  *
- * @param options `center` from `[0, 0]` (top left) to `[1, 1]`; `reach` is how much of the way
+ * @param options `center` from `{ x: 0, y: 0 }` (top left) to `{ x: 1, y: 1 }`; `reach` is how much of the way
  * to the centre the smear goes; `samples` how many reads make it up, at most 32.
  * @returns The effect, for `usePostProcess`.
  *
@@ -16,7 +18,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const zoomBlur = (options: { center?: [number, number]; reach?: number; samples?: number } = {}): TBuiltinPostEffect<{
+export const zoomBlur = (options: { center?: TVec2; reach?: number; samples?: number } = {}): TBuiltinPostEffect<{
     center: number[]; reach: number; samples: number;
 }> => ({
     name: 'zoomBlur',
@@ -44,6 +46,6 @@ vec4 effect(vec4 color, vec2 uv) {
     return vec4(sum / count, color.a);
 }
 `,
-    uniforms: { center: options.center ?? [0.5, 0.5], reach: options.reach ?? 0.1, samples: options.samples ?? 16 },
+    uniforms: { center: pointUniform(options.center, [0.5, 0.5]), reach: options.reach ?? 0.1, samples: options.samples ?? 16 },
     uniformSig: { center: 'vec2<f32>', reach: 'f32', samples: 'f32' },
 });

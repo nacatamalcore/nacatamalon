@@ -1,5 +1,6 @@
+import { getColor } from '../../color';
 import { newLines } from '../../gameobjects/lines';
-import type { TColor } from '../../color';
+import type { TColor, TColorOption } from '../../color';
 import type { TNewLinesOptions } from '../../gameobjects/lines';
 import type { TLines } from '../../gameobjects/lines';
 
@@ -11,9 +12,9 @@ import type { TLines } from '../../gameobjects/lines';
  * @author Francisco Pereira Alvarado
  */
 export type THelperAxisColors = {
-    x?: TColor;
-    y?: TColor;
-    z?: TColor;
+    x?: TColorOption;
+    y?: TColorOption;
+    z?: TColorOption;
 };
 
 /**
@@ -82,9 +83,9 @@ const arm = (data: number[], dx: number, dy: number, dz: number, c: TColor): voi
  */
 export const useHelperAxis = (options: TUseHelperAxisOptions = {}): TLines => {
     const size = options.size ?? 1;
-    const x = options.colors?.x ?? DEFAULT_X;
-    const y = options.colors?.y ?? DEFAULT_Y;
-    const z = options.colors?.z ?? DEFAULT_Z;
+    const x = getColor(options.colors?.x ?? DEFAULT_X);
+    const y = getColor(options.colors?.y ?? DEFAULT_Y);
+    const z = getColor(options.colors?.z ?? DEFAULT_Z);
 
     const data: number[] = [];
     arm(data, size, 0, 0, x);

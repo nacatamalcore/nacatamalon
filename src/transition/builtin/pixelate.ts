@@ -1,5 +1,6 @@
 import { COVER_AMOUNT_GLSL, COVER_AMOUNT_WGSL } from './cover_amount';
-import type { TColor } from '../../color';
+import { rgbaUniform } from './rgba_uniform';
+import type { TColor, TColorOption } from '../../color';
 import type { TTransition } from '../types/t_transition';
 
 const BLACK: TColor = { r: 0, g: 0, b: 0, a: 1 };
@@ -32,11 +33,11 @@ const BLACK: TColor = { r: 0, g: 0, b: 0, a: 1 };
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const pixelate = (duration = 0.4, color: TColor = BLACK, minBlocks = 6): TTransition => ({
+export const pixelate = (duration = 0.4, color: TColorOption = BLACK, minBlocks = 6): TTransition => ({
     name: 'pixelate',
     duration,
     uniforms: {
-        color: [color.r, color.g, color.b, color.a],
+        color: rgbaUniform(color),
         minBlocks,
     },
     uniformSig: { color: 'vec4<f32>', minBlocks: 'f32' },

@@ -7,7 +7,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * `size` is in game pixels, so the grain is as chunky as the art around it rather than finer than
  * anything else on screen.
  *
- * @param options `amount` is how strong; `size` how big a grain is; `animated` `0` to freeze it.
+ * @param options `amount` is how strong; `size` how big a grain is; `animated` `false` to freeze it.
  * @returns The effect, for `usePostProcess`.
  *
  * @example
@@ -19,7 +19,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const grain = (options: { amount?: number; size?: number; animated?: 0 | 1 } = {}): TBuiltinPostEffect<{
+export const grain = (options: { amount?: number; size?: number; animated?: boolean } = {}): TBuiltinPostEffect<{
     amount: number; size: number; animated: number;
 }> => ({
     name: 'grain',
@@ -39,6 +39,6 @@ vec4 effect(vec4 color, vec2 uv) {
     return vec4(clamp(color.rgb + n * mu.amount, 0.0, 1.0), color.a);
 }
 `,
-    uniforms: { amount: options.amount ?? 0.08, size: options.size ?? 1, animated: options.animated ?? 1 },
+    uniforms: { amount: options.amount ?? 0.08, size: options.size ?? 1, animated: options.animated === false ? 0 : 1 },
     uniformSig: { amount: 'f32', size: 'f32', animated: 'f32' },
 });

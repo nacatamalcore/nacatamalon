@@ -57,7 +57,8 @@ const resolveFrame = (options: TSpriteOptions) => {
 };
 
 const cleanSpriteOptions = (options: TSpriteOptions) => {
-    const { width, height, smooth, blend, anchor, pivot, zIndex, flipX, flipY, repeat, repeatOffset, parallax, visible, material, uniforms, tint = getColor('white') } = options;
+    const { width, height, smooth, blend, anchor, pivot, zIndex, flipX, flipY, repeat, repeatOffset, parallax, visible, material, uniforms, tint: tintOption = 'white' } = options;
+    const tint = getColor(tintOption);
     const { uvOffset, uvScale } = resolveFrame(options);
 
     // Default transform

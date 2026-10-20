@@ -1,4 +1,5 @@
-import type { TColor } from '../../color';
+import { rgbaUniform } from './rgba_uniform';
+import type { TColor, TColorOption } from '../../color';
 import type { TTransition } from '../types/t_transition';
 
 const BLACK: TColor = { r: 0, g: 0, b: 0, a: 1 };
@@ -39,11 +40,11 @@ const AXIS: Record<TWipeDirection, [number, number]> = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const wipe = (duration = 0.3, direction: TWipeDirection = 'right', color: TColor = BLACK): TTransition => ({
+export const wipe = (duration = 0.3, direction: TWipeDirection = 'right', color: TColorOption = BLACK): TTransition => ({
     name: 'wipe',
     duration,
     uniforms: {
-        color: [color.r, color.g, color.b, color.a],
+        color: rgbaUniform(color),
         direction: AXIS[direction] ?? AXIS.right,
     },
     uniformSig: { color: 'vec4<f32>', direction: 'vec2<f32>' },

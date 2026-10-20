@@ -156,7 +156,7 @@ export { createGameStore, localStorageAdapter, indexedDbAdapter } from './game_s
 export { getGameStore, storeOf, applyStoreDocs, parseStoreDoc, STORE_FORMAT, STORE_VERSION } from './game_store';
 export { getColor, lerpColor, fromHsl, consoleColor } from './color';
 export { useColor } from './hooks';
-export type { TColor, TColorInput } from './color';
+export type { TColor, TColorInput, TColorOption } from './color';
 export type { TScene, TSceneFn } from './scene';
 export type { TUseLoadShaderOptions } from './hooks';
 export type { TUseLoadTextureOptions, TUseLoadAtlasOptions, TUseLoadGltfOptions, TSkeletalAnimation, TSkeletalAnimationOptions, TSceneHandle, TGameObject, TSpawnOptions } from './hooks';
@@ -198,6 +198,7 @@ export type {
 } from './shader_composer';
 export type { TSprite, TSpriteOptions } from './gameobjects/sprite/types';
 export type { TTransform2d } from './gameobjects/types/t_transform_2d';
+export type { T2dOptions } from './gameobjects/types/t_2d_options';
 export type { TText, TTextStyle, TTextOptions } from './gameobjects/text';
 export type { TNineSlice, TNineSliceBorders, TNineSliceMode, TNineSliceOptions } from './gameobjects/nine_slice/types';
 export type { TTilemap, TTilemapLayer, TTilemapOptions } from './gameobjects/tilemap';

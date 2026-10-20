@@ -1,7 +1,7 @@
 import type { TPostChain } from '../../post/types/t_post_chain';
 import type { TCanvasScaling } from '../../DOM/types/t_canvas_scaling';
 import type { TCanvasKeep } from '../../DOM/types/t_canvas_keep';
-import type { TColor } from "../../color";
+import type { TColorOption } from "../../color";
 import type { TRendererType } from '../../render';
 import type { TActionMap, TActionPersist } from '../../input';
 
@@ -43,7 +43,7 @@ export type TGameOptions = {
      * Read live from the store every frame, so changing it at runtime takes effect on the
      * next one.
      */
-    background?: TColor;
+    background?: TColorOption;
     /**
      * Which backend draws.
      *

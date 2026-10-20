@@ -1,4 +1,4 @@
-import type { TColor } from '../../../color';
+import type { TColorOption } from '../../../color';
 import type { TGltfModel } from '../../../loaders';
 import type { TTransform3d } from '../../types/t_transform_3d';
 import type { TTextureWrap } from '../../../materials';
@@ -24,7 +24,7 @@ export type TModelOptions = {
      * Multiplies the colour of every piece, so the file's own colours are kept and shaded: white,
      * the default, leaves it exactly as it was made.
      */
-    tint?: TColor;
+    tint?: TColorOption;
     /**
      * How solid it is, `0` to `1`. Default `1`.
      */
@@ -37,7 +37,7 @@ export type TModelOptions = {
     /**
      * The colour of its shine. Default none, which is a matt surface.
      */
-    specular?: TColor;
+    specular?: TColorOption;
     /**
      * How tight that shine is. Default `32`. Higher is smaller and harder.
      */

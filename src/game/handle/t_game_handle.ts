@@ -1,4 +1,4 @@
-import type { TColor } from '../../color';
+import type { TColor, TColorOption } from '../../color';
 import type { TRendererBackend } from '../../render/interface';
 
 /**
@@ -31,7 +31,7 @@ export type TGameHandle = {
     /**
      * Paints the background from now on: a room change, a hit flash, a menu dimming the world.
      */
-    setBackground(color: TColor): void;
+    setBackground(color: TColorOption): void;
 
     /**
      * Whether images are blended by default, rather than kept crisp.

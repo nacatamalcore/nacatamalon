@@ -83,7 +83,10 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   `{ x: 0, y: 0 }` places the top-left corner, `{ x: 0.5, y: 1 }` the feet.
 - **Text anchor** defaults to the top-left corner, `{ x: 0, y: 0 }`. `{ x: 0.5, y: 0 }` centres it on
   `x`; `{ x: 1, y: 0 }` puts its right edge on `x` (a score at the right of the screen);
-  `{ x: 0.5, y: 0.5 }` centres it both ways on the point.
+  `{ x: 0.5, y: 0.5 }` centres it both ways on the point. The two differ on purpose: a thing of the
+  world sits by its middle, the point it turns and grows on; a text by its corner, so it grows without
+  moving (a score going from 9 to 10 does not shift). A panel (`createNineSlice`) sits by its middle,
+  like a sprite. A label centred on a panel gives both the same anchor.
 - **Pivot**: a sprite, a text or a panel turns and grows about its anchor, unless `pivot` (0-1, like
   `anchor`) names another point. The anchor says where it sits, the pivot what it spins on: a bike
   anchored under its back wheel (`anchor: { x: 5 / 24, y: 1 }`) wheelies about it, and set
@@ -129,10 +132,17 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
 - **Angles are in radians** (`Math.PI / 2` is a quarter turn; `degToRad(90)` if you think in degrees):
   every `rotation`, a spot light's `angle`, particles' `spread` and `spin`. Three are in degrees, as
   everyone says them: a 3D camera's `fov` (`60`), a `hue` (0 to 360), and a sound's `cone`.
+- **A screen effect's call takes what a person writes**: points `{ x, y }` (`distort({ center: { x:
+  0.5, y: 0.5 } })`), modes by name (`halftone({ mode: 'lines' })`, `wave({ axis: 'columns' })`), yes or no
+  as booleans (`grain({ animated: false })`). Its `effect.uniforms` are what the shader reads: numbers
+  and `[x, y]`, which is what a project file keeps and a motion moves.
 - **Colours** are `{ r, g, b, a }`, each 0 to 1. `getColor` takes `'#ff6b1a'`, `0xff6b1a`, a CSS
-  name (`'red'`) or any CSS colour (`'rgba(255, 0, 0, 0.5)'`, `'hsl(30 100% 50%)'`).
+  name (`'red'`) or any CSS colour (`'rgba(255, 0, 0, 0.5)'`, `'hsl(30 100% 50%)'`). Every option that
+  takes a colour takes the same (`createSprite({ tint: '#ff6b1a' })`, `usePointLight({ color: 'orange'
+  })`, `fade(0.3, 'white')`, `setBackground('#000')`); what is read back (`sprite.tint`) is always `{ r,
+  g, b, a }`, so assigning one is `sprite.tint = getColor('red')`.
   To blend two colours (a sky between dusk and night), `lerpColor(a, b, t)`.
-- **Glows, flashes, beams of light**: `createSprite({ ..., blend: 'additive' })` adds its colour to
+- **Glows, flashes, beams of light**: `createSprite({ ..., blend: 'additive' })` (a text or a panel too) adds its colour to
   what is behind instead of covering it, the same as additive particles.
 - **Hiding a model**: `createModel(...)` returns an object with `visible`; set it any time, even
   before the file arrives (its pieces arrive hidden). No need to walk `parts`.
@@ -292,7 +302,7 @@ const App = () => (
 - **State**: `useData`, `useWatch`, `createGameStore`, `useStore`, `createGameSignal`, `useSignal`.
 - **Maths and random**: `useRandom`, `clamp`, `lerp`, `vec2Add`, `vec3Add` and the other `vec2*`/`vec3*`.
 - **Whole pixels**: `createGame({ pixelSnap })`, on by default unless `smooth`: things are drawn on whole game pixels (where they are keeps its fractions).
-- **Platformer camera and layers**: `useCameraFollow(hero, { deadzone: { width, height }, bounds: map, lead, smooth })` (moves in late update, whole pixels; `.shake(px, s)`, `.snap()`; `rooms: [rect, …]` or `{ width, height }` keeps it in the target's room and scrolls to the next over `scroll` s, with `onRoom` and `.scrolling`); `createBackdrop({ key, parallax: { x, y }, y })` for endless far layers; `parallax` on sprites and map layers, `useParallax` on objects; `repeat: true` on a sprite tiles its picture instead of stretching.
+- **Platformer camera and layers**: `useCameraFollow(hero, { deadzone: { width, height }, bounds: map, lead, smooth })` (moves in late update, whole pixels; `.shake(px, s)`, `.snap()`; `rooms: [rect, …]` or `{ width, height }` keeps it in the target's room and scrolls to the next over `scroll` s, with `onRoom` and `.scrolling`); `createBackdrop({ key, parallax: { x, y }, y })` for endless far layers; `parallax` on sprites, texts, panels and map layers (never on what is pinned to the screen), `useParallax` on objects; `repeat: true` on a sprite tiles its picture instead of stretching.
 - **Platformer character with no physics**: `useTileBody2d({ width, height })`, walking on the scene's maps; same fields as `useCharacterBody2d` (`TCharacterBody2d`), which is the one that also pushes crates in a 2D world.
 - **2D physics**: `installPhysics2d` and `useCharacterBody2d` from `nacatamalon/physics2d`; `usePhysicsWorld2d` and `usePhysicsBody2d` from `nacatamalon`. A scene's maps are in its world (walls, ledges, slopes). `useCharacterBody2d({ width, height })` is a platformer's character: write `velocity` (px/s) every frame; read `onGround`, `onWall`, `onCeiling`, `onOneWay` (`dropThrough()`), `onLadder` (set `climbing`), `ground`, `damage`.
 - **Joints (2D)**: `useJoint2d(a, b, { type: 'hinge', at: { x, y } })` from `nacatamalon/physics2d`; types `hinge`, `rope`, `spring` (`frequency`, `damping`), `slider` (`axis`), `weld`; `b = null` pins to the world; points are world points.

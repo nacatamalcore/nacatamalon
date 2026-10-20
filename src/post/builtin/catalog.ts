@@ -40,10 +40,15 @@ import type { TPostBuiltinInfo } from './types/t_builtin';
  * **One idea has one name in all of them.** `amount` is how much an effect shows, `0` the picture
  * untouched to `1`; `intensity` a brightness that may pass `1`, as a light's; `size` the side of a
  * cell, a block or a dot, in game pixels; `scale` a multiplier with no unit; `radius` a reach in
- * game pixels; `center` a point from `[0, 0]`, the top left, to `[1, 1]`. A name never changes its
+ * game pixels; `center` a point from `{ x: 0, y: 0 }`, the top left, to `{ x: 1, y: 1 }`. A name never changes its
  * kind from one effect to the next; one that says more is its own word (`crt`'s `cornerRadius` is a
  * part of the screen, `maskScale` a multiplier of the screen's real pixels). A knob renamed to keep
  * to that is in its effect's `renamed`, so a chain written before still reads.
+ *
+ * **The call is for people, `effect.uniforms` for the shader.** What an effect is made with says a
+ * point as `{ x, y }`, a mode by its name (`halftone({ mode: 'lines' })`) and a yes or no as `true`
+ * or `false`; its `uniforms` hold what the shader reads, numbers and `[x, y]`, which is also what a
+ * project file keeps and a motion moves.
  *
  * **Some already hold another's work**, so stacking the two does it twice: `crt` has its own glow
  * (`halation`), noise, `vignette`, `flicker` and colour split (`convergence`); `oldFilm` its own

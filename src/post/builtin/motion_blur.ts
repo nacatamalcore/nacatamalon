@@ -1,15 +1,17 @@
+import type { TVec2 } from '../../math/vec2';
+import { pointUniform } from './point_uniform';
 import type { TBuiltinPostEffect } from './types/t_builtin';
 
 /**
  * Smears the whole picture along one direction, as if it moved during the exposure.
  *
- * @param options `velocity` is the length and direction of the smear in game pixels, as `[x, y]`;
+ * @param options `velocity` is the length and direction of the smear in game pixels, as `{ x, y }`;
  * `samples` how many reads make it up, at most 32.
  * @returns The effect, for `usePostProcess`.
  *
  * @example
  * ```ts
- * const blur = usePostProcess(motionBlur({ velocity: [0, 0] }));
+ * const blur = usePostProcess(motionBlur({ velocity: { x: 0, y: 0 } }));
  * // while dashing: blur.uniforms.velocity = [12, 0];
  * ```
  *
@@ -17,7 +19,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const motionBlur = (options: { velocity?: [number, number]; samples?: number } = {}): TBuiltinPostEffect<{
+export const motionBlur = (options: { velocity?: TVec2; samples?: number } = {}): TBuiltinPostEffect<{
     velocity: number[]; samples: number;
 }> => ({
     name: 'motionBlur',
@@ -47,6 +49,6 @@ vec4 effect(vec4 color, vec2 uv) {
     return vec4(sum / count, color.a);
 }
 `,
-    uniforms: { velocity: options.velocity ?? [8, 0], samples: options.samples ?? 12 },
+    uniforms: { velocity: pointUniform(options.velocity, [8, 0]), samples: options.samples ?? 12 },
     uniformSig: { velocity: 'vec2<f32>', samples: 'f32' },
 });

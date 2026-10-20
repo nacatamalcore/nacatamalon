@@ -93,7 +93,7 @@ export const createParticles = (options: TParticlesOptions): TParticles => {
         name: options.name ?? file.src,
         file,
         transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, ...options.transform },
-        tint: options.tint ?? getColor('white'),
+        tint: getColor(options.tint ?? 'white'),
         alpha: options.alpha ?? 1,
         smooth: options.smooth,
         overrides: options.overrides,

@@ -11,7 +11,7 @@ import type { TTransform3d } from '../gameobjects/types/t_transform_3d';
  * @author Francisco Pereira Alvarado
  */
 export type TLightOptionsBase = {
-    color?: import('../color').TColor;
+    color?: import('../color').TColorOption;
     /**
      * How strong it is. Default `1`.
      */
@@ -76,7 +76,7 @@ export const createDirectionalLight = (
     ...shadowing(options),
     ...(options.shadowArea !== undefined ? { shadowArea: options.shadowArea } : {}),
     ...(options.shadowDistance !== undefined ? { shadowDistance: options.shadowDistance } : {}),
-    color: options.color ?? getColor('white'),
+    color: getColor(options.color ?? 'white'),
     intensity: options.intensity ?? 1,
     ambient: options.ambient ?? 0.35,
     // Pointing down and forwards by default, the way afternoon sun does: straight down flattens
@@ -91,7 +91,7 @@ export const createPointLight = (options: TLightOptionsBase & { range?: number }
     // A point light shines every way at once, so casting from it needs a cube of six maps: out of
     // scope. What it was told is kept anyway, so asking costs a warning and not your settings.
     ...shadowing(options),
-    color: options.color ?? getColor('white'),
+    color: getColor(options.color ?? 'white'),
     intensity: options.intensity ?? 1,
     ambient: options.ambient ?? 0.35,
     range: options.range ?? 10,
@@ -103,7 +103,7 @@ export const createPointLight = (options: TLightOptionsBase & { range?: number }
  */
 export const createSpotLight = (options: TLightOptionsBase & { range?: number; angle?: number; penumbra?: number } = {}): TSpotLight => createRecord('spot', {
     ...shadowing(options),
-    color: options.color ?? getColor('white'),
+    color: getColor(options.color ?? 'white'),
     intensity: options.intensity ?? 1,
     ambient: options.ambient ?? 0.35,
     range: options.range ?? 10,
@@ -115,7 +115,7 @@ export const createSpotLight = (options: TLightOptionsBase & { range?: number; a
 /**
  * @internal
  */
-export const createAmbientLight = (options: { color?: import('../color').TColor; intensity?: number } = {}): TAmbientLight => createRecord('ambient', {
-    color: options.color ?? getColor('white'),
+export const createAmbientLight = (options: { color?: import('../color').TColorOption; intensity?: number } = {}): TAmbientLight => createRecord('ambient', {
+    color: getColor(options.color ?? 'white'),
     intensity: options.intensity ?? 0.35,
 });

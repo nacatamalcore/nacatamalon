@@ -91,7 +91,7 @@ export const createNineSlice = (options: TNineSliceOptions): TNineSlice => {
         height: options.height,
         transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, ...options.transform },
         texture: resolveTexture(options),
-        tint: options.tint ?? getColor('white'),
+        tint: getColor(options.tint ?? 'white'),
         // Copied, so the object handed in stays the caller's.
         slice: typeof slice === 'number'
             ? { left: slice, top: slice, right: slice, bottom: slice }
@@ -109,6 +109,8 @@ export const createNineSlice = (options: TNineSliceOptions): TNineSlice => {
         visible: options.visible,
         material: options.material,
         uniforms: options.uniforms,
+        ...(options.parallax !== undefined ? { parallax: { x: options.parallax.x, y: options.parallax.y } } : {}),
+        ...(options.blend !== undefined ? { blend: options.blend } : {}),
         destroyed: false,
     });
     if (options.tags !== undefined && options.tags.length > 0) Object.assign(nineSlice, { tags: [...options.tags] });

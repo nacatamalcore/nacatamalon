@@ -295,6 +295,8 @@ const writeText = (text: TText, writing: TWriting): TComponentDoc => {
         ...(point(text.anchor) !== undefined ? { anchor: point(text.anchor) } : {}),
         ...(point(text.pivot) !== undefined ? { pivot: point(text.pivot) } : {}),
         ...unless('smooth', text.smooth, undefined),
+        ...(text.blend === 'additive' ? { blend: 'additive' as const } : {}),
+        ...(text.parallax !== undefined && (text.parallax.x !== 1 || text.parallax.y !== 1) ? { parallax: point(text.parallax) } : {}),
         ...unless('visible', text.visible, true),
         ...unless('zIndex', text.zIndex, undefined),
         ...(text.material !== undefined ? { material: writeMaterial(text.material as TSpriteMaterial, writing) } : {}),

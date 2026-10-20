@@ -1,3 +1,4 @@
+import { getColor } from '../../color';
 import { rootOf } from '../../box';
 import { getActiveBox, getActiveGame } from '../../store';
 import { loadTilemap, newTilemap } from '../../loaders/tilemap';
@@ -147,7 +148,7 @@ export const createTilemap = (options: TTilemapOptions): TTilemap => {
         Object.assign(loaded.transform, { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, ...options.transform });
     }
     if (options.tint !== undefined) {
-        Object.assign(loaded.tint, options.tint);
+        Object.assign(loaded.tint, getColor(options.tint));
     }
     loaded.smooth = options.smooth;
 

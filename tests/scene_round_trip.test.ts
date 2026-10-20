@@ -172,6 +172,19 @@ describe('what the writer leaves out', () => {
         expect(rebuilt(doc)).toEqual(doc);
     });
 
+    it('keeps the glow and the parallax of a text, and writes nothing for an ordinary one', () => {
+        const { doc } = written(() => {
+            createText({ text: 'AB', font: createTestFont(), tint, blend: 'additive', parallax: { x: 0.5, y: 0 } });
+            createText({ text: 'AB', font: createTestFont(), tint, blend: 'alpha', parallax: { x: 1, y: 1 } });
+        });
+
+        expect(doc.root.components[0]).toMatchObject({ blend: 'additive', parallax: { x: 0.5, y: 0 } });
+        expect(doc.root.components[1]).not.toHaveProperty('blend');
+        expect(doc.root.components[1]).not.toHaveProperty('parallax');
+        expect(parseSceneDoc(doc, '/scenes/level.scene')).toEqual(doc);
+        expect(rebuilt(doc)).toEqual(doc);
+    });
+
     it('leaves out a box born after its scene was built, and keeps one built with it', () => {
         const { store } = createTestGame();
         const Brick = () => { createSprite({ width: 8, height: 8, tint }); };

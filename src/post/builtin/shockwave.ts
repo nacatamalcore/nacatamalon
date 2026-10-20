@@ -1,3 +1,5 @@
+import type { TVec2 } from '../../math/vec2';
+import { pointUniform } from './point_uniform';
 import type { TBuiltinPostEffect } from './types/t_builtin';
 
 /**
@@ -6,13 +8,13 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * It does not grow on its own: `radius` is where the ring is now, and the game moves it. That keeps
  * one effect good for any number of blasts, at any speed, with any easing.
  *
- * @param options `center` is where it starts, from `[0, 0]` (top left) to `[1, 1]`; `radius`,
+ * @param options `center` is where it starts, from `{ x: 0, y: 0 }` (top left) to `{ x: 1, y: 1 }`; `radius`,
  * `amplitude` and `wavelength` are in game pixels; `brightness` lights the crest a little.
  * @returns The effect, for `usePostProcess`.
  *
  * @example
  * ```ts
- * const blast = usePostProcess(shockwave({ center: [0.5, 0.5] }));
+ * const blast = usePostProcess(shockwave({ center: { x: 0.5, y: 0.5 } }));
  * useUpdate((dt) => { blast.uniforms.radius += dt * 240; });
  * ```
  *
@@ -21,7 +23,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @author Francisco Pereira Alvarado
  */
 export const shockwave = (options: {
-    center?: [number, number];
+    center?: TVec2;
     radius?: number;
     amplitude?: number;
     wavelength?: number;
@@ -65,7 +67,7 @@ vec4 effect(vec4 color, vec2 uv) {
 }
 `,
     uniforms: {
-        center: options.center ?? [0.5, 0.5],
+        center: pointUniform(options.center, [0.5, 0.5]),
         radius: options.radius ?? 0,
         amplitude: options.amplitude ?? 6,
         wavelength: options.wavelength ?? 24,

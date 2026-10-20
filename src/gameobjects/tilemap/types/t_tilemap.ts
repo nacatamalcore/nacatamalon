@@ -1,4 +1,4 @@
-import type { TColor } from '../../../color';
+import type { TColor, TColorOption } from '../../../color';
 import type { TLoadedAtlas, TLoadStatus, TTexture } from '../../../loaders';
 import type { TTileDoc, TTileLayerOrder } from '../../../loaders/tilemap/types/t_tilemap_doc';
 import type { TTransform2d } from '../../types/t_transform_2d';
@@ -190,7 +190,7 @@ export type TTilemapOptions = {
     /**
      * Multiplies the colour of every layer. Default white.
      */
-    tint?: TColor;
+    tint?: TColorOption;
     /**
      * Overrides the game's `smooth` for this map.
      */

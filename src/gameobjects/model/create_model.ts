@@ -51,9 +51,9 @@ const buildPart = (
         material: newMaterial(
             {
                 shader: 'mesh3d',
-                tint: multiply(part.tint, options.tint ?? getColor('white')),
+                tint: multiply(part.tint, getColor(options.tint ?? 'white')),
                 emissive: part.emissive,
-                specular: options.specular,
+                specular: options.specular === undefined ? undefined : getColor(options.specular),
                 shininess: options.shininess,
                 vertexSnap: options.vertexSnap,
                 affine: options.affine,

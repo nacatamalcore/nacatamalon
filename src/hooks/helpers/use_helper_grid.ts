@@ -1,5 +1,6 @@
+import { getColor } from '../../color';
 import { newLines } from '../../gameobjects/lines';
-import type { TColor } from '../../color';
+import type { TColor, TColorOption } from '../../color';
 import type { TNewLinesOptions } from '../../gameobjects/lines';
 import type { TLines } from '../../gameobjects/lines';
 
@@ -22,15 +23,15 @@ export type TUseHelperGridOptions = TNewLinesOptions & {
     /**
      * The colour of the ordinary lines. Default a dim grey.
      */
-    color?: TColor;
+    color?: TColorOption;
     /**
      * The colour of the middle line along X. Default red. `null` draws it like the rest.
      */
-    xColor?: TColor | null;
+    xColor?: TColorOption | null;
     /**
      * The colour of the middle line along Z. Default blue. `null` draws it like the rest.
      */
-    zColor?: TColor | null;
+    zColor?: TColorOption | null;
 };
 
 const DEFAULT_COLOR: TColor = { r: 0.3, g: 0.3, b: 0.34, a: 1 };
@@ -64,9 +65,9 @@ const DEFAULT_Z: TColor = { r: 0.28, g: 0.44, b: 0.78, a: 1 };
 export const useHelperGrid = (options: TUseHelperGridOptions = {}): TLines => {
     const half = options.half ?? 10;
     const step = options.step ?? 1;
-    const color = options.color ?? DEFAULT_COLOR;
-    const xColor = options.xColor === undefined ? DEFAULT_X : options.xColor;
-    const zColor = options.zColor === undefined ? DEFAULT_Z : options.zColor;
+    const color = getColor(options.color ?? DEFAULT_COLOR);
+    const xColor = options.xColor === undefined ? DEFAULT_X : options.xColor === null ? null : getColor(options.xColor);
+    const zColor = options.zColor === undefined ? DEFAULT_Z : options.zColor === null ? null : getColor(options.zColor);
     if (!(step > 0) || !(half > 0)) {
         throw new Error('[NacatamalOn] useHelperGrid: half and step have to be more than zero.');
     }

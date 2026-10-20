@@ -1,3 +1,4 @@
+import type { TColor } from '../../color';
 import type { TGameOptions } from './t_game_options';
 
 /**
@@ -15,4 +16,7 @@ import type { TGameOptions } from './t_game_options';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TGameConfig = Required<Omit<TGameOptions, 'seed' | 'actionsPersist' | 'post'>> & Pick<TGameOptions, 'seed' | 'actionsPersist' | 'post'>;
+export type TGameConfig = Required<Omit<TGameOptions, 'seed' | 'actionsPersist' | 'post' | 'background'>> & Pick<TGameOptions, 'seed' | 'actionsPersist' | 'post'> & {
+    /** Read as a colour once, whatever form it was given in. */
+    background: TColor;
+};

@@ -1,5 +1,5 @@
 export type { TColor, } from './color';
-export type { TColorInput } from './get_color';
+export type { TColorInput, TColorOption } from './get_color';
 export type { TCssNamedColor } from './css_named_colors';
 
 export { getColor } from './get_color';

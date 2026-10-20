@@ -1,4 +1,4 @@
-import type { TColor } from '../../../color';
+import type { TColorOption } from '../../../color';
 import type { TCamera2d } from '../../../camera/types/t_camera_2d';
 import type { TCamera3d } from '../../../camera/types/t_camera_3d';
 import type { TDrawable } from '../../../gameobjects/types';
@@ -42,5 +42,5 @@ export type TCaptureOptions = {
     /**
      * The colour behind everything. Left out, the game's background.
      */
-    background?: TColor;
+    background?: TColorOption;
 };

@@ -1,5 +1,6 @@
 import { COVER_AMOUNT_GLSL, COVER_AMOUNT_WGSL } from './cover_amount';
-import type { TColor } from '../../color';
+import { rgbaUniform } from './rgba_uniform';
+import type { TColor, TColorOption } from '../../color';
 import type { TTransition } from '../types/t_transition';
 
 const BLACK: TColor = { r: 0, g: 0, b: 0, a: 1 };
@@ -29,13 +30,13 @@ const BLACK: TColor = { r: 0, g: 0, b: 0, a: 1 };
  */
 export const iris = (
     duration = 0.4,
-    color: TColor = BLACK,
+    color: TColorOption = BLACK,
     center: { x: number; y: number } = { x: 0.5, y: 0.5 },
 ): TTransition => ({
     name: 'iris',
     duration,
     uniforms: {
-        color: [color.r, color.g, color.b, color.a],
+        color: rgbaUniform(color),
         center: [center.x, center.y],
     },
     uniformSig: { color: 'vec4<f32>', center: 'vec2<f32>' },

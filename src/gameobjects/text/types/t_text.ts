@@ -60,6 +60,16 @@ export type TText = {
      */
     smooth?: boolean;
     /**
+     * How much it moves with the camera, as for a sprite: `1` (the default) as everything else, `0`
+     * not at all. Ignored on what is pinned to the screen. Can be changed any frame.
+     */
+    parallax?: { x: number; y: number };
+    /**
+     * `'additive'` adds its colour to what is behind it, so it can only brighten; `'alpha'` (the
+     * default) covers it. Can be changed any frame.
+     */
+    blend?: 'alpha' | 'additive';
+    /**
      * What it is, for something drawn on its own rather than a piece: `['wall']`. What `useTag` adds and
      * finds, and what collisions are asked by. Absent is none.
      */

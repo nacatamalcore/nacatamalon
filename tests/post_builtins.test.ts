@@ -1,7 +1,7 @@
 import { describe, expect, it, spyOn } from 'bun:test';
 import {
-    ascii, bloom, COLOR_LEVELS, colorAdjust, crt, CRT_PRESETS, dither, findPostBuiltin, lcd, lutGrade, paletteMatch, phosphor,
-    POST_BUILTINS, posterize,
+    ascii, bloom, COLOR_LEVELS, colorAdjust, crt, CRT_PRESETS, dither, distort, findPostBuiltin, grain, halftone, lcd, lutGrade,
+    motionBlur, paletteMatch, phosphor, POST_BUILTINS, posterize, rgbSplit, wave,
 } from '../src/post';
 import { getColor } from '../src/color/get_color';
 
@@ -207,5 +207,18 @@ describe('ascii', () => {
         const warn = spyOn(console, 'warn').mockImplementation(() => {});
         expect(ascii({ glyphs: '@' }).fragment).toContain('array<u32, 10>(');
         warn.mockRestore();
+    });
+});
+
+describe('what an effect is made with, and what its shader reads', () => {
+    it('takes points as { x, y }, modes by name and yes or no as booleans, and gives the shader numbers', () => {
+        expect(distort({ center: { x: 0.2, y: 0.7 } }).uniforms.center).toEqual([0.2, 0.7]);
+        expect(rgbSplit({ red: { x: -3, y: 1 } }).uniforms.red).toEqual([-3, 1]);
+        expect(motionBlur({ velocity: { x: 4, y: 0 } }).uniforms.velocity).toEqual([4, 0]);
+        expect([halftone().uniforms.mode, halftone({ mode: 'lines' }).uniforms.mode]).toEqual([0, 1]);
+        expect([wave().uniforms.axis, wave({ axis: 'columns' }).uniforms.axis]).toEqual([0, 1]);
+        expect([grain().uniforms.animated, grain({ animated: false }).uniforms.animated]).toEqual([1, 0]);
+        const tube = crt({ interlace: true, linearBlend: false });
+        expect([tube.uniforms.interlace, tube.uniforms.linearBlend]).toEqual([1, 0]);
     });
 });

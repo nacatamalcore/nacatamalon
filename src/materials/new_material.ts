@@ -114,9 +114,9 @@ export const newMaterial = (
             ...half,
             shader: 'mesh3d',
             texture,
-            tint: (options as TMeshMaterialOptions).tint ?? getColor('white'),
-            emissive: (options as TMeshMaterialOptions).emissive ?? getColor('black'),
-            specular: (options as TMeshMaterialOptions).specular ?? getColor('black'),
+            tint: getColor((options as TMeshMaterialOptions).tint ?? 'white'),
+            emissive: getColor((options as TMeshMaterialOptions).emissive ?? 'black'),
+            specular: getColor((options as TMeshMaterialOptions).specular ?? 'black'),
             shininess: (options as TMeshMaterialOptions).shininess ?? 32,
             alpha: (options as TMeshMaterialOptions).alpha ?? 1,
             // Left as written: absent means "decided by the alpha", which is not the same as `false`.

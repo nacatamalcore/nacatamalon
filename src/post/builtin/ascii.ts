@@ -1,6 +1,5 @@
-import type { TColor } from '../../color/color';
-import type { TColorInput } from '../../color/get_color';
 import { ASCII_GLYPHS } from './ascii_glyphs';
+import type { TColorOption } from '../../color/get_color';
 import { colorUniform } from './color_uniform';
 import type { TBuiltinPostEffect } from './types/t_builtin';
 
@@ -62,7 +61,7 @@ const glyphList = (glyphs: string): string => {
  * @author Francisco Pereira Alvarado
  */
 export const ascii = (options: {
-    size?: number; ownColor?: number; ink?: TColorInput | TColor | [number, number, number]; background?: number; brightness?: number;
+    size?: number; ownColor?: number; ink?: TColorOption | [number, number, number]; background?: number; brightness?: number;
     glyphs?: string;
 } = {}): TBuiltinPostEffect<{
     size: number; ownColor: number; ink: number[]; background: number; brightness: number;

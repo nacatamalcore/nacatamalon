@@ -6,10 +6,10 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  *
  * It moves **whole lines**, one game row at a time, which is how the consoles did it: by changing
  * the scroll of the next line while the screen was being drawn. A smooth version looks like a
- * modern shader; this one looks like the hardware. `axis: 1` moves columns up and down instead.
+ * modern shader; this one looks like the hardware. `axis: 'columns'` moves columns up and down instead.
  *
  * @param options `amplitude` is how far a line moves, in game pixels; `frequency` how many waves fit
- * on the screen; `speed` how fast they travel; `axis` `0` for lines, `1` for columns.
+ * on the screen; `speed` how fast they travel; `axis` `'rows'` (the default) or `'columns'`.
  * @returns The effect, for `usePostProcess`.
  *
  * @example
@@ -25,7 +25,7 @@ export const wave = (options: {
     amplitude?: number;
     frequency?: number;
     speed?: number;
-    axis?: 0 | 1;
+    axis?: 'rows' | 'columns';
 } = {}): TBuiltinPostEffect<{ amplitude: number; frequency: number; speed: number; axis: number }> => ({
     name: 'wave',
     fragment: /* wgsl */ `
@@ -60,7 +60,7 @@ vec4 effect(vec4 color, vec2 uv) {
         amplitude: options.amplitude ?? 4,
         frequency: options.frequency ?? 4,
         speed: options.speed ?? 3,
-        axis: options.axis ?? 0,
+        axis: options.axis === 'columns' ? 1 : 0,
     },
     uniformSig: { amplitude: 'f32', frequency: 'f32', speed: 'f32', axis: 'f32' },
 });

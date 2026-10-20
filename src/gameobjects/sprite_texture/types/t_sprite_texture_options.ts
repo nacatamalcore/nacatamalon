@@ -1,4 +1,4 @@
-import type { TColor } from '../../../color';
+import type { TColorOption } from '../../../color';
 import type { TSpriteTextureSees } from './t_sprite_texture';
 
 /**
@@ -29,7 +29,7 @@ export type TSpriteTextureOptions = {
      * What is behind everything drawn into it. Opaque black when left out. A transparent one lets
      * whatever shows the picture be seen through the parts nothing covers.
      */
-    background?: TColor;
+    background?: TColorOption;
     /**
      * The name the picture is kept under, so a model can ask for it by name the way it asks for a
      * loaded image. A new one of its own when left out.

@@ -293,6 +293,14 @@ export type TTextComponent = {
      */
     pivot?: { x: number; y: number };
     smooth?: boolean;
+    /**
+     * Left out for `'alpha'`, the ordinary way of covering what is behind.
+     */
+    blend?: 'additive';
+    /**
+     * How much it moves with the camera, as a sprite's. Absent, `{ x: 1, y: 1 }`.
+     */
+    parallax?: { x: number; y: number };
     visible?: boolean;
     zIndex?: number;
     material?: TMaterialDoc;

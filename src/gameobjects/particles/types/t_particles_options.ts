@@ -1,4 +1,4 @@
-import type { TColor } from '../../../color';
+import type { TColorOption } from '../../../color';
 import type { TParticleOverrides } from './t_particles';
 import type { TParticlesEffect } from '../../../loaders/particles/types/t_particles_effect';
 import type { TParticlesFile } from '../../../loaders/particles/types/t_particles_file';
@@ -35,7 +35,7 @@ export type TParticlesOptions = {
     /**
      * Multiplied into every particle, over the colour the effect's own curve gives it.
      */
-    tint?: TColor;
+    tint?: TColorOption;
     /**
      * Multiplied into every particle's opacity, the same way. Default `1`.
      */

@@ -1,9 +1,10 @@
+import { getColor } from '../../color';
 import { createMaterial } from '../../gameobjects/material';
 import { createMesh } from '../../gameobjects/mesh';
 import { useCircleGeometry } from '../geometry/use_circle_geometry';
 import { useUpdate } from '../loop/use_update';
 import { BLOB_SHADOW_WGSL, BLOB_SHADOW_GLSL } from '../../render/shared/blob_shadow_shader';
-import type { TColor } from '../../color';
+import type { TColorOption } from '../../color';
 import type { TMesh } from '../../gameobjects/mesh';
 import type { TMeshMaterial } from '../../materials';
 
@@ -51,7 +52,7 @@ export type TBlobShadowOptions = {
     /**
      * What colour it is. Default black: a shadow is darkness, faded by `opacity` and not tinted.
      */
-    color?: TColor;
+    color?: TColorOption;
     /**
      * How dark it is in the middle, `0` to `1`. Default `0.5`.
      */
@@ -133,7 +134,7 @@ export const useBlobShadow = (options: TBlobShadowOptions): TMesh => {
     const material = createMaterial({
         name:         'blob-shadow',
         shader:       'mesh3d',
-        tint:         color,
+        tint:         getColor(color),
         alpha:        opacity,
         fragment:     BLOB_SHADOW_WGSL,
         fragmentGlsl: BLOB_SHADOW_GLSL,

@@ -3,7 +3,7 @@ import { trackDrawableOwner } from '../../box';
 import { getActiveBox, getActiveGame } from '../../store';
 import { createRecord } from '../create_record';
 import { uvsFitting } from './polygon_state';
-import type { TColor } from '../../color';
+import type { TColorOption } from '../../color';
 import type { TTexture } from '../../loaders';
 import type { TSpriteAtlas } from '../../atlas';
 import type { TTransform2d } from '../types/t_transform_2d';
@@ -41,7 +41,7 @@ export type TPolygonOptions = {
     /**
      * Multiplies the colour of the picture; the colour itself without one. White by default.
      */
-    tint?: TColor;
+    tint?: TColorOption;
     transform?: Partial<TTransform2d>;
     zIndex?: number;
     visible?: boolean;
@@ -112,7 +112,7 @@ export const createPolygon = (options: TPolygonOptions): TPolygon => {
         uvs: options.uvs?.map((uv) => ({ x: uv.x, y: uv.y })) ?? uvsFitting(points),
         texture: options.texture ?? options.atlas?.texture ?? null,
         ...(options.atlas === undefined ? {} : { atlas: options.atlas, frame: options.frame ?? 0 }),
-        tint: options.tint ?? getColor('white'),
+        tint: getColor(options.tint ?? 'white'),
         ...(options.smooth === undefined ? {} : { smooth: options.smooth }),
         zIndex: options.zIndex ?? 0,
         ...(options.visible === undefined ? {} : { visible: options.visible }),

@@ -19,17 +19,30 @@ import { fromCss } from './from_css';
 export type TColorInput = number | TCssNamedColor | (string & {});
 
 /**
- * Alias for {@link useColor}, identical in behaviour.
+ * Any colour an option takes: what `getColor` reads (`'#ff6b1a'`, `0xff6b1a`, `'tomato'`, `'rgb(…)'`)
+ * or a `TColor` already made. What it becomes is always a `TColor`, which is what is read back.
  *
- * Used to prevent React hook error
- * @param input - A colour: a hex number, a hex string, or any CSS colour.
+ * @category Color & palettes
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TColorOption = TColorInput | TColor;
+
+/**
+ * A colour as the engine keeps it, `{ r, g, b, a }` from `0` to `1`, from a hex number, a hex string,
+ * any CSS colour, or a `TColor`, which is handed back as it is (the same object, not a copy).
+ *
+ * Every option that takes a colour reads it through here, so `tint: '#ff6b1a'` and
+ * `tint: getColor('#ff6b1a')` are the same thing.
+ * @param input - A colour: a hex number, a hex string, any CSS colour, or a `TColor`.
  * @returns The colour, with each channel from `0` to `1`.
  *
  * @category Color & palettes
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const getColor = (input: TColorInput): TColor =>
-    typeof input === 'number'  ? fromHex(input)
+export const getColor = (input: TColorOption): TColor =>
+    typeof input === 'object'  ? input
+    : typeof input === 'number' ? fromHex(input)
     : input.startsWith('#')    ? fromHexString(input)
     : fromCss(input);

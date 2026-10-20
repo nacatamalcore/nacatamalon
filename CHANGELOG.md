@@ -7,6 +7,19 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- A text and a panel take `parallax` and `blend` too, as a sprite does, now that they are in
+  `T2dOptions`: a far sign that slides by slowly, a glowing "LEVEL UP!". What is pinned to the screen
+  has no parallax whatever it says, so a HUD stays put. To mirror a text or a panel, `scaleX: -1`. A
+  scene document keeps a text's `blend` and `parallax` too, and the editor's inspector shows them, with
+  `Blend` for a sprite as well. (A panel is not in scene documents yet.)
+- `T2dOptions`: what a sprite, a text and a panel share (`transform`, `anchor`, `pivot`, `tint`,
+  `visible`, `zIndex`, `smooth`, `tags`, `material`, `uniforms` and the pointer events), written once.
+  `TSpriteOptions`, `TTextOptions` and `TNineSliceOptions` are it plus what is their own.
+- A colour is said the same way wherever one is asked for: `'#ff6b1a'`, `0xff6b1a`, `'tomato'`, any CSS
+  colour, or a `TColor` (the type is `TColorOption`). `tint` on every object, lights, fog, materials,
+  transitions, the background, the helpers: they took only a `TColor` and needed `getColor` around
+  every one; the screen effects and the looks already took them all. What is read back is a `TColor`
+  as before. `getColor` takes a `TColor` too and hands it back as it is.
 - `usePointer().justPressed()` and `justReleased()`: a finger or a mouse button that went down or came
   up this frame, true for one frame like the keyboard's. `justPressed('right')` asks about one button.
 - A scene takes props, like a component: how it is opened. `const Level = ({ level = 1 }: { level?:
@@ -49,6 +62,12 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- A screen effect is made with what a person writes, as `crt`'s `maskType` already was: points as `{ x,
+  y }` (`distort`, `godrays`, `shockwave` and `zoomBlur`'s `center`, `motionBlur`'s `velocity`,
+  `rgbSplit`'s channels), modes by name (`halftone({ mode: 'lines' })`, `wave({ axis: 'columns' })`)
+  and yes or no as booleans (`grain`'s `animated`, `crt`'s `interlace` and `linearBlend`, and
+  `CRT_PRESETS`). `effect.uniforms` keep the numbers and `[x, y]` the shader reads, so project files
+  and motions do not change.
 - `useLight` is `useDirectionalLight`, as its sisters say what they are (`usePointLight`,
   `useSpotLight`, `useAmbientLight`) and as `createDirectionalLight` already was.
 - Lights and cameras are placed with `transform`, like everything else: `useCamera3d({ transform: { z:
