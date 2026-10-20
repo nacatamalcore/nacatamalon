@@ -150,8 +150,11 @@ export const MOTION_FORMAT = 'nacatamalon-motion';
  * read with the names they have now. A version is what tells them apart where a name was given to
  * something else (`mangaDotsSize` was the dot's fill and is its spacing now).
  *
+ * `3` is the first with times and turns in the units they have now: a transition's `duration` in
+ * seconds (`ms` before), and `halftone`'s `rotation` in radians (`angle`, in degrees, before).
+ *
  * @category Animation
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const MOTION_VERSION = 2;
+export const MOTION_VERSION = 3;

@@ -165,7 +165,8 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         description: 'Printed dots or crossed lines, as in a comic or a newspaper.',
         binds: null,
         fields: BUILTIN_FIELDS.halftone!,
-        renamed: { scale: 'size', color: 'ownColor' },
+        renamed: { scale: 'size', color: 'ownColor', angle: 'rotation' },
+        converted: { angle: (degrees) => (degrees * Math.PI) / 180 },
         build: () => halftone(),
     },
     {

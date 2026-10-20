@@ -6,8 +6,8 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  *
  * The ink is black, or the picture's own colour as `ownColor` goes to `1`. The paper is white.
  *
- * @param options `size` is one dot, or the gap between lines, in game pixels; `angle`
- * turns the dot grid, in degrees.
+ * @param options `size` is one dot, or the gap between lines, in game pixels; `rotation`
+ * turns the dot grid, in radians (`Math.PI / 4`, the default, is 45°).
  * @returns The effect, for `usePostProcess`.
  *
  * @example
@@ -19,8 +19,8 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const halftone = (options: { size?: number; angle?: number; mode?: 0 | 1; ownColor?: number } = {}): TBuiltinPostEffect<{
-    size: number; angle: number; mode: number; ownColor: number;
+export const halftone = (options: { size?: number; rotation?: number; mode?: 0 | 1; ownColor?: number } = {}): TBuiltinPostEffect<{
+    size: number; rotation: number; mode: number; ownColor: number;
 }> => ({
     name: 'halftone',
     fragment: /* wgsl */ `
@@ -35,9 +35,8 @@ fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {
     var shade = color.rgb;
 
     if (mu.mode < 0.5) {
-        let angle = radians(mu.angle);
-        let s = sin(angle);
-        let c = cos(angle);
+        let s = sin(mu.rotation);
+        let c = cos(mu.rotation);
         let turned = vec2<f32>(c * place.x + s * place.y, -s * place.x + c * place.y);
         let inside = fract(turned / scale) - 0.5;
         let middle = (floor(turned / scale) + 0.5) * scale;
@@ -70,9 +69,8 @@ vec4 effect(vec4 color, vec2 uv) {
     vec3 shade = color.rgb;
 
     if (mu.mode < 0.5) {
-        float angle = radians(mu.angle);
-        float s = sin(angle);
-        float c = cos(angle);
+        float s = sin(mu.rotation);
+        float c = cos(mu.rotation);
         vec2 turned = vec2(c * place.x + s * place.y, -s * place.x + c * place.y);
         vec2 inside = fract(turned / scale) - 0.5;
         vec2 middle = (floor(turned / scale) + 0.5) * scale;
@@ -95,9 +93,9 @@ vec4 effect(vec4 color, vec2 uv) {
 `,
     uniforms: {
         size: options.size ?? 4,
-        angle: options.angle ?? 45,
+        rotation: options.rotation ?? Math.PI / 4,
         mode: options.mode ?? 0,
         ownColor: options.ownColor ?? 0,
     },
-    uniformSig: { size: 'f32', angle: 'f32', mode: 'f32', ownColor: 'f32' },
+    uniformSig: { size: 'f32', rotation: 'f32', mode: 'f32', ownColor: 'f32' },
 });

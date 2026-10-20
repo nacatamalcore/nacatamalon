@@ -190,6 +190,21 @@ export const parseMotionDoc = (raw: unknown, src = 'motion'): TMotionDoc => {
     let tracks = ((file.tracks ?? []) as unknown[]).map((track, i) => readTrack(track, src, i));
     // Written before the knobs were renamed: read with the names they have now, and said once.
     const moved: string[] = [];
+    // A knob whose unit changed with its name, before version 3: renamed, and every key's value
+    // turned into the new unit. First, so the renaming below finds nothing of it left.
+    if (version < 3) {
+        tracks = tracks.map((track) => {
+            const knob = track.path.startsWith('uniforms.') ? track.path.slice('uniforms.'.length) : null;
+            const info = track.post === undefined || knob === null ? undefined : findPostBuiltin(track.post);
+            const convert = knob === null ? undefined : info?.converted?.[knob];
+            const now = knob === null ? undefined : info?.renamed?.[knob];
+            if (convert === undefined || now === undefined) {
+                return track;
+            }
+            moved.push(`'${track.path}' as '${`uniforms.${now}`}'`);
+            return { ...track, path: `uniforms.${now}`, keys: track.keys.map((key) => (typeof key.v === 'number' ? { ...key, v: convert(key.v) } : key)) };
+        });
+    }
     if (version < 2) {
         tracks = tracks.map((track) => {
             const path = renamedPath(track);

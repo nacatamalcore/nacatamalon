@@ -50,7 +50,7 @@ export const BUILTIN_FIELDS: Readonly<Record<string, readonly TEffectField[]>> =
         center([0.5, 0.5]),
         num('radius', 64, 0, 512, 1, { description: 'In game pixels.' }),
         num('bulge', 0.5, -1, 1, 0.01, { description: 'From -1, a pinch, to 1, a bulge.' }),
-        num('twist', 0, -6.28, 6.28, 0.01, { description: 'How far the middle turns, in radians.' }),
+        num('twist', 0, -Math.PI * 2, Math.PI * 2, 0.01, { description: 'How far the middle turns.', angle: true }),
     ],
     mosaic: [num('size', 4, 1, 64, 1, { description: 'How many game pixels wide a block is.' })],
     blur: [num('radius', 4, 0, 32, 0.5), part('amount', 1)],
@@ -67,7 +67,7 @@ export const BUILTIN_FIELDS: Readonly<Record<string, readonly TEffectField[]>> =
     ],
     halftone: [
         num('size', 4, 2, 32, 1),
-        num('angle', 45, 0, 180, 1, { description: 'In degrees.' }),
+        num('rotation', Math.PI / 4, 0, Math.PI, 0.01, { description: 'How far the dot grid turns.', angle: true }),
         choice('mode', 0, [{ label: 'Dots', value: 0 }, { label: 'Lines', value: 1 }]),
         part('ownColor', 0, { label: 'Own colour', description: 'Black ink at 0, the picture\'s own colour at 1.' }),
     ],

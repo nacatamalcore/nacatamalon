@@ -430,7 +430,7 @@ describe('a motion written before knobs were renamed', () => {
         expect(doc.tracks.map((one) => one.path)).toEqual([
             'uniforms.amount', 'uniforms.rim2Amount', 'uniforms.mangaDotsFill', 'uniforms.mangaDotsSize', 'x',
         ]);
-        expect(doc.version).toBe(2);
+        expect(doc.version).toBe(MOTION_VERSION);
         expect(said).toHaveBeenCalledTimes(1);
         expect(String(said.mock.calls[0]![0])).toContain("'uniforms.strength' as 'uniforms.amount'");
     });
@@ -440,6 +440,13 @@ describe('a motion written before knobs were renamed', () => {
         const doc = motion({ version: 2, tracks: [track({ box: 'level', component: 'robot', path: 'uniforms.mangaDotsSize' })] });
         expect(doc.tracks[0]!.path).toBe('uniforms.mangaDotsSize');
         expect(said).not.toHaveBeenCalled();
+    });
+
+    it('reads halftone\'s angle of a file of version 2 as its rotation, from degrees to radians', () => {
+        quiet();
+        const doc = motion({ version: 2, tracks: [{ ...track({ post: 'halftone', path: 'uniforms.angle' }), keys: [{ t: 0, v: 0 }, { t: 1, v: 90 }] }] });
+        expect(doc.tracks[0]!.path).toBe('uniforms.rotation');
+        expect(doc.tracks[0]!.keys.map((key) => key.v)).toEqual([0, Math.PI / 2]);
     });
 
     it('finds an engine effect\'s renamed knob on an effect a project named itself', () => {

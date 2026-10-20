@@ -123,6 +123,9 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   `justReleased` frame.
 - **Time is in seconds**, everywhere: `delta`, timers (`timer.after(0.5)`), tweens, animations,
   transitions (`fade(0.3)`, not `fade(300)`), a pad's `rumble({ duration: 0.2 })`, a store's `throttle`.
+- **Angles are in radians** (`Math.PI / 2` is a quarter turn; `degToRad(90)` if you think in degrees):
+  every `rotation`, a spot light's `angle`, particles' `spread` and `spin`. Three are in degrees, as
+  everyone says them: a 3D camera's `fov` (`60`), a `hue` (0 to 360), and a sound's `cone`.
 - **Colours** are `{ r, g, b, a }`, each 0 to 1. `getColor` takes `'#ff6b1a'`, `0xff6b1a`, a CSS
   name (`'red'`) or any CSS colour (`'rgba(255, 0, 0, 0.5)'`, `'hsl(30 100% 50%)'`).
   To blend two colours (a sky between dusk and night), `lerpColor(a, b, t)`.

@@ -73,6 +73,11 @@ export type TEffectField = {
      */
     suggestions?: readonly string[];
     /**
+     * `'number'` only: a turn, kept in radians like every one in the engine, which a form may show
+     * and take in degrees.
+     */
+    angle?: true;
+    /**
      * Written into the effect when it is made, not a knob: changing it makes the effect again, so it
      * cannot be tweened. A project file keeps it in the entry's `options`, not its `uniforms`.
      */
@@ -112,6 +117,11 @@ export type TPostBuiltinInfo = {
      * Old knob name → the name it has now, so a project written before a rename keeps its value.
      */
     renamed?: Readonly<Record<string, string>>;
+    /**
+     * Old knob name → how its value becomes the new one's, where the unit changed with the name
+     * (`angle` in degrees → `rotation` in radians).
+     */
+    converted?: Readonly<Record<string, (value: number) => number>>;
     /**
      * Makes it, with the options its `rebuild` fields name (a project entry's `options`).
      */

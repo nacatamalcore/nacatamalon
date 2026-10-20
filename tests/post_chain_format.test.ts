@@ -100,7 +100,8 @@ describe('reading a chain written before a knob was renamed', () => {
         const warn = spyOn(console, 'warn').mockImplementation(() => {});
         const [entry] = normalizePostChain([{ builtin: 'halftone', uniforms: { scale: 6, color: 1, angle: 30 } }]);
 
-        expect(entry!.uniforms).toEqual({ size: 6, ownColor: 1, angle: 30 });
+        // And the turn from the degrees it was written in to the radians it is now.
+        expect(entry!.uniforms).toEqual({ size: 6, ownColor: 1, rotation: (30 * Math.PI) / 180 });
         expect(warn).toHaveBeenCalledTimes(1);
         warn.mockRestore();
     });

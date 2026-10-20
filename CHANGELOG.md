@@ -49,6 +49,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- `halftone`'s `angle`, in degrees, is `rotation`, in radians (`Math.PI / 4` by default), like every
+  other turn: angles are radians, except a 3D camera's `fov`, a `hue` and a sound's `cone`, which
+  everyone says in degrees. A project or a motion that wrote `angle: 30` is read as `rotation` of
+  30°; motions are version 3 now.
 - Time is in seconds everywhere. Four things counted milliseconds and now count seconds, like `delta`,
   timers and tweens always did: transitions (`fade(0.3)` rather than `fade(300)`, and `wipe`, `iris`,
   `pixelate`), a pad's `rumble({ duration, delay })`, a store's `persist.throttle`, and a headless

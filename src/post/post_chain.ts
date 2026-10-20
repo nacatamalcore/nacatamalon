@@ -48,7 +48,8 @@ const asUniforms = (value: unknown): TUniformValues | undefined => {
  * since it is the later of the two. Said once for the entry, naming every knob it moved.
  */
 const asCurrentNames = (builtin: string, uniforms: TUniformValues): TUniformValues => {
-    const renamed = findPostBuiltin(builtin)?.renamed;
+    const info = findPostBuiltin(builtin);
+    const renamed = info?.renamed;
     if (renamed === undefined) {
         return uniforms;
     }
@@ -63,7 +64,8 @@ const asCurrentNames = (builtin: string, uniforms: TUniformValues): TUniformValu
         const taken = Object.prototype.hasOwnProperty.call(uniforms, now);
         moved.push({ old: name, now, taken });
         if (!taken) {
-            kept[now] = value;
+            const convert = info?.converted?.[name];
+            kept[now] = convert !== undefined && typeof value === 'number' ? convert(value) : value;
         }
     }
     if (moved.length > 0) {
