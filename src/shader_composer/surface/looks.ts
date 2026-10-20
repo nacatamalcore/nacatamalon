@@ -25,6 +25,8 @@ type TLookColor = TColorInput | TColor | [number, number, number];
  *
  * @example
  * ```ts
+ * declare const tint: TColor;
+ *
  * createMaterial({ shader: 'mesh3d', tint, lighting: toonLighting({ bands: 3 }) });
  * ```
  *
@@ -48,6 +50,8 @@ export const toonLighting = (options: { bands?: number; shadow?: number; spot?: 
  *
  * @example
  * ```ts
+ * declare const tint: TColor;
+ *
  * createMaterial({ shader: 'mesh3d', tint, lighting: unlitLighting() });
  * ```
  *
@@ -71,6 +75,8 @@ export const unlitLighting = (): TUnlitLook => ({ look: 'unlit' });
  *
  * @example
  * ```ts
+ * declare const tint: TColor;
+ *
  * createMaterial({ shader: 'mesh3d', tint, lighting: toonLighting(), steps: [mangaDots({ size: 4 })] });
  * ```
  *

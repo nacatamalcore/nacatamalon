@@ -45,6 +45,7 @@ import type { TSongFile } from '../../loaders/song';
  * @example
  * ```ts
  * declare const crowd: TSprite;
+ * declare const lastInning: TGameSignal;
  *
  * const Ballpark = () => {
  *     const song = useSong(useLoadSong({ src: '/music/minuet.song' }), { autoplay: true });

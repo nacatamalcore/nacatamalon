@@ -92,7 +92,9 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   says. It turns about it when its own transform turns or its box's (a behaviour turning `self`);
   boxes further up carry it as one. No sine, cosine or offset by hand, and no extra box.
 - **Sprite size**: a sprite created with both `width` and `height` has them as numbers. A sprite
-  sized by its picture (a `texture`, no `width`/`height`) has them `undefined` until the picture loads.
+  sized by its picture (a `texture`, no `width`/`height`) has them `undefined`, and they stay so: it
+  is drawn at the size of what it shows, which is `texture.width * (uvScale?.x ?? 1)` (and the same
+  for the height) once the picture has loaded, one frame of a sheet and not the whole sheet.
 - **Keys** are `KeyboardEvent.key` names: letters lowercase (`'a'`), named keys as they are
   (`'ArrowLeft'`, `'Enter'`, `'Escape'`). The space bar is `'Space'`; `' '` also works.
 - **Text** needs no font: `createText({ text })` uses the built-in 8 px font, which has lowercase,

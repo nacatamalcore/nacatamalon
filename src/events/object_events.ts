@@ -83,7 +83,11 @@ export const connectObjectEvent = <T>(object: TBox, name: string, handler: TObje
  *
  * Stopping at the first is what makes a copy a boundary: a game listens on what `createPack` gave back,
  * and an event sent from anywhere inside that copy reaches it, and goes no further. An object that is
- * destroyed, or whose scene is paused or held behind a transition, is skipped as if it were not there.
+ * destroyed is skipped as if it were not there, and so is a connection whose listener was destroyed.
+ *
+ * A paused scene still hears, as it does a signal: nothing inside it sends while it is paused (its
+ * updates and timers stand still, and the pointer passes it by), so what reaches it was sent on
+ * purpose from elsewhere, and dropping it would lose it without a word.
  *
  * @internal
  */

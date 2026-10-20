@@ -90,6 +90,8 @@ export type TTweenFields<T, Depth extends number = 4> = [Depth] extends [never] 
  *
  * @example
  * ```ts
+ * declare const hero: TSprite;
+ *
  * const tween = useTween();
  * tween({ target: hero, to: { transform: { x: 420 }, tint: { a: 0 } }, duration: 1 });
  * ```

@@ -23,11 +23,13 @@ export type TSpriteOptions = {
     uniforms?: TUniformValues;
 
     /**
-     * Omitted: the texture's width once it has loaded.
+     * Omitted, it is drawn as wide as what it shows of its texture, and the sprite's `width` stays
+     * `undefined`.
      */
     width?: number;
     /**
-     * Omitted: the texture's height once it has loaded.
+     * Omitted, it is drawn as tall as what it shows of its texture, and the sprite's `height` stays
+     * `undefined`.
      */
     height?: number;
     /**

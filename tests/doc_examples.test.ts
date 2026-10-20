@@ -11,11 +11,9 @@ import { join } from 'node:path';
  *
  * An example has to stand on its own to pass: it imports what it uses from `'nacatamalon'` (or is
  * given every name from the front door when it imports nothing) and declares what it only refers to.
- * Categories join `CHECKED` as their comments are reviewed, so a category that was put right cannot
- * quietly go wrong again.
+ * Every category is checked: they were reviewed one by one, and one left out is where an example went
+ * wrong unseen (`registerScript`'s callback written with the wrong arguments in a sound's).
  */
-
-const CHECKED = new Set<string>(['Game', 'Scenes', 'Hooks', 'Sprites', 'Game objects', 'Input', 'Assets & loading', 'Camera', 'Scripts', 'Post-processing', 'Tilemaps', 'Signals', 'Store', 'Color & palettes', 'Project', 'Physics', 'Hitboxes']);
 
 const ROOT = join(import.meta.dir, '..', 'src');
 const DOORS = {
@@ -33,7 +31,8 @@ const OPTIONS: ts.CompilerOptions = {
     strict: true,
     noEmit: true,
     skipLibCheck: true,
-    types: ['@webgpu/types'],
+    // Node's, for the examples of what a tool runs there: a PNG read from disk, or written to it.
+    types: ['@webgpu/types', 'node'],
     typeRoots: [join(import.meta.dir, '..', 'node_modules'), join(import.meta.dir, '..', 'node_modules', '@types')],
     paths: Object.fromEntries(Object.entries(DOORS).map(([spec, file]) => [spec, [join(ROOT, file)]])),
 };
@@ -115,14 +114,14 @@ const compileAll = (all: TExample[], frontNames: string[]): Map<TExample, string
 };
 
 const { examples, frontNames } = collect();
-const results = compileAll(examples.filter((e) => CHECKED.has(e.category) || process.env.ALL_EXAMPLES !== undefined), frontNames);
+const results = compileAll(examples, frontNames);
 
 describe('the examples in the public documentation', () => {
     it('are found', () => {
         expect(examples.length).toBeGreaterThan(50);
     });
 
-    for (const example of examples.filter((e) => CHECKED.has(e.category))) {
+    for (const example of examples) {
         it(`${example.category}: ${example.symbol} #${example.index + 1} compiles`, () => {
             expect(results.get(example)).toEqual([]);
         });

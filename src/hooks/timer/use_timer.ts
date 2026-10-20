@@ -45,6 +45,9 @@ const isOver = (call: TWaiting): boolean => call.cancelled || call.fired;
  *
  * @example
  * ```ts
+ * declare const font: TBitmapFont;
+ * declare const spawnEnemy: () => void;
+ *
  * export const Level: TSceneFn = () => {
  *     const timer = useTimer();
  *     const banner = createText({ text: 'READY', font, transform: { x: 160, y: 100 } });

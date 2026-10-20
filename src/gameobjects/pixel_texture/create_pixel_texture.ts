@@ -262,6 +262,11 @@ const adopt = (store: TRuntimeStore, texture: TTexture, pixels: TPixels | null, 
  *
  * @example
  * ```ts
+ * declare const ground: TPixels;
+ * declare const groundTexture: TTexture;
+ * declare const hitX: number;
+ * declare const hitY: number;
+ *
  * fillCircle(ground, hitX, hitY, 6, getColor('transparent'));
  * updatePixelTexture(groundTexture, { x: hitX - 6, y: hitY - 6, width: 13, height: 13 });
  * ```

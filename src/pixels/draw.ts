@@ -533,6 +533,10 @@ export const blitPixels = (
  *
  * @example
  * ```ts
+ * declare const wall: TPixels;
+ * declare const mortar: TColor;
+ * declare const brick: TColor;
+ *
  * // Brick: rows of 8 pixels, every other row shifted by half a brick, with a darker mortar line.
  * mapPixels(wall, (color, x, y) =>
  *     y % 8 === 0 || (x + (Math.floor(y / 8) % 2) * 8) % 16 === 0 ? mortar : brick);

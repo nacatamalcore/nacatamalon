@@ -28,9 +28,9 @@ const NOWHERE: TTransform3d = { x: 0, y: 0, z: 0, rotation: 0, rotationX: 0, rot
  * `rotationX` and `rotationY` are for three dimensions.
  *
  * For something free to point anywhere there is `quaternion`, and setting one puts the three angles
- * aside: `Quat.fromEuler` starts one off facing the same way they did, and `Quat.slerp` eases from
- * one facing to another without the wobble that easing three angles gives. Note that it speaks for
- * three dimensions only: pictures and writing inside this one are still turned by `rotation`.
+ * aside: `quatFromEuler` starts one off facing the same way they did, and `quatMultiply` turns it on
+ * from there (by a `quatFromAxisAngle`). Note that it speaks for three dimensions only: pictures and
+ * writing inside this one are still turned by `rotation`.
  *
  * Asking twice gives back the same placement, so a later call never quietly throws away where
  * something already was.

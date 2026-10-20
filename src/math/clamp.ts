@@ -11,6 +11,9 @@
  *
  * @example
  * ```ts
+ * declare const hero: TSprite;
+ * declare const speed: number;
+ *
  * useUpdate((delta) => {
  *     hero.transform.x = clamp(hero.transform.x + speed * delta, 8, 312);
  * });

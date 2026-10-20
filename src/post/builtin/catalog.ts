@@ -46,7 +46,7 @@ import type { TPostBuiltinInfo } from './types/t_builtin';
  *
  * **Some already hold another's work**, so stacking the two does it twice: `crt` has its own glow
  * (`halation`), noise, `vignette`, `flicker` and colour split (`convergence`); `oldFilm` its own
- * grain, vignette and flicker; `glitch` a colour split; `palette` its own `dither`; `lcd`'s
+ * grain, vignette and flicker; `glitch` a colour split; `paletteMatch` its own `dither`; `lcd`'s
  * `ghosting` and `phosphor` both leave a trail; `posterize` is `dither` with `amount: 0`. The
  * composite ones are meant to be used alone, as the whole machine.
  *

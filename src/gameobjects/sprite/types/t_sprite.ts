@@ -10,11 +10,14 @@ export type TSprite = {
     id: string;
     type: 'sprite';
     /**
-     * Width in pixels, before scale. Omitted: the texture's width once it has loaded.
+     * Width in pixels, before scale. Omitted, it is drawn as wide as what it shows of its texture
+     * (one frame of a sheet, not the whole sheet), and stays omitted: the field is not filled in when
+     * the picture loads. That width is `texture.width * (uvScale?.x ?? 1)` once it has.
      */
     width?: number;
     /**
-     * Height in pixels, before scale. Omitted: the texture's height once it has loaded.
+     * Height in pixels, before scale. Omitted, it is drawn as tall as what it shows of its texture,
+     * and stays omitted, as `width` does: `texture.height * (uvScale?.y ?? 1)` once it has loaded.
      */
     height?: number;
     transform: TTransform2d;

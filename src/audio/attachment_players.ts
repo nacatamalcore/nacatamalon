@@ -53,7 +53,7 @@ const named = (file: { key: string; src: string }, name: string): boolean =>
  * volume and whether it loops, instead of naming the file in code:
  *
  * ```ts
- * registerScript('title-screen', ({ self }) => {
+ * registerScript('title-screen', (self) => {
  *     useUpdate(() => {
  *         if (pressed) soundOf<TSongHandle>(self, 'title_theme')?.stop();
  *     });

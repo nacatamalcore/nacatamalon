@@ -80,6 +80,8 @@ const piecesOf = (steps: number): typeof PIECES => {
  *
  * @example
  * ```ts
+ * import { parseSongNotes, writeSongNotes } from 'nacatamalon/authoring';
+ *
  * const { notes } = parseSongNotes('c4 e g | c\'2.', 'pulse1', [3, 4]);
  * notes.push({ voice: 'pulse1', start: 6, beats: 3, pitch: 67 });
  * writeSongNotes(notes, 'pulse1', [3, 4]); // 'c e g | c\'2. | g. |'
