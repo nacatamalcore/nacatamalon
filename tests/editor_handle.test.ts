@@ -4,7 +4,7 @@ import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { loadHostScene } from '../src/scene/load_host_scene';
 import { editorHandleOf } from '../src/game/handle';
 import { parseSceneDoc, sceneFromDoc } from '../src/scene';
-import { useSceneUnmount } from '../src/hooks/scene/use_scene_unmount';
+import { useCleanup } from '../src/hooks/scene/use_cleanup';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { createTestGame } from './helpers/test_game';
 import type { TSceneDoc } from '../src/scene';
@@ -82,7 +82,7 @@ describe('a tool loading a scene from outside', () => {
         const Scene = () => {
             useSpawn(function Thing() {
                 createSprite({ width: 8, height: 8, tint, transform: at(0, 0) });
-                useSceneUnmount(() => { released += 1; });
+                useCleanup(() => { released += 1; });
             })();
             return createScene();
         };

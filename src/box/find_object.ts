@@ -10,6 +10,10 @@ import type { TBox } from './types/t_box';
  * handled, because a part can be renamed while the game runs, or come in with another name when a
  * model is exported again. Nothing here throws.
  *
+ * Something destroyed is not found, nor anything inside it, even before the end of the frame takes
+ * it out: a coin collected this frame is not there to be collected again. To look across the whole
+ * scene rather than inside one thing, start from `sceneOf(self)`.
+ *
  * By name and not by id, because a name is what an author can type.
  *
  * @param root Where to look.
@@ -30,6 +34,9 @@ import type { TBox } from './types/t_box';
  * @author Francisco Pereira Alvarado
  */
 export const findObject = (root: TBox, name: string): TBox | null => {
+    if (root.destroyed) {
+        return null;
+    }
     if (root.name === name) {
         noteFoundByName(root, name);
         return root;
@@ -48,6 +55,7 @@ export const findObject = (root: TBox, name: string): TBox | null => {
  * them. For names shared on purpose: the four wheels of a car, every spawn point of a level.
  *
  * An empty list rather than `null` when nothing matches, so a `for ... of` over it needs no guard.
+ * Leaves out what is destroyed, as `findObject` does.
  *
  * @param root Where to look.
  * @param name The name to find.
@@ -60,6 +68,9 @@ export const findObject = (root: TBox, name: string): TBox | null => {
 export const findObjects = (root: TBox, name: string): TBox[] => {
     const found: TBox[] = [];
     const visit = (box: TBox): void => {
+        if (box.destroyed) {
+            return;
+        }
         if (box.name === name) {
             noteFoundByName(box, name);
             found.push(box);

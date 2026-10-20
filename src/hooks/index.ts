@@ -23,11 +23,12 @@ export { useCubeGeometry, usePlaneGeometry, useCircleGeometry, useUvSphereGeomet
 export { useLoadTexture, useLoadAtlas, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadShader, useLoadPalette, useLoadLut, useLoadParticles, useLoadPack, useLoadAudio, useLoader, useLoadPixels, useLoadSong, useLoadMotion } from './loaders';
 export type { TUseLoadPackOptions } from './loaders';
 export { usePostProcess } from './post/use_post_process';
-export { useScene, useSceneUnmount, useReady } from './scene';
+export { useScene, useCleanup, useReady } from './scene';
 export { useSpawn, useSelf } from './spawn';
 export { useData, useWatch } from './state';
 export { useScript, provide, useApi } from './script';
-export { useEvent } from './events';
+export type { TUseScriptOptions } from './script';
+export { useReport } from './events';
 export { useCapture } from './capture';
 
 export type { TUseLoadTextureOptions, TUseLoadAtlasOptions, TUseLoadBitmapFontOptions, TUseLoadFontOptions, TUseLoadGltfOptions, TUseLoadShaderOptions } from './loaders';

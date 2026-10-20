@@ -20,7 +20,7 @@ export type TSceneHandle = {
      */
     launch(name: string): void;
     /**
-     * Stops a scene and runs its `useSceneUnmount` cleanups, in the same frame. With no name, the
+     * Stops a scene and runs its `useCleanup` cleanups, in the same frame. With no name, the
      * scene stops itself (a menu closing on its own button). Stopping the last scene is allowed and
      * warned about: the game keeps running with nothing in it.
      *

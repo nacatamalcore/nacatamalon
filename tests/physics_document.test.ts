@@ -117,7 +117,7 @@ describe('a scene with physics, written and read', () => {
             useSpawn(function Crate() {
                 createSprite({ width: 24, height: 24, tint, transform: at(10, 10) });
                 usePhysicsBody2d({ body: 'dynamic', collider: rect });
-                useScript('probe', 'one');
+                useScript('probe', undefined, { id: 'one' });
             })();
         });
 

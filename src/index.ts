@@ -57,13 +57,14 @@ export type { TVec3 } from './math/vec3';
 export type { TTransformOptions } from './hooks';
 export type { TTransform3d } from './gameobjects/types/t_transform_3d';
 export { useData, useWatch } from './hooks';
-export { useScript, provide, useApi, useEvent } from './hooks';
+export { useScript, provide, useApi, useReport } from './hooks';
+export type { TUseScriptOptions } from './hooks';
 // Registering a behaviour is a game's own business: its entry point calls this, next to where the
 // behaviour is written. Looking INSIDE the registry is a tool's, and lives in `nacatamalon/authoring`.
 export { registerScript } from './scripts';
 export type { TScriptFn, TScriptProps, TScriptField, TScriptOptions, TScriptRequirement, TScriptAttachment } from './scripts';
 export type { TDataRecord, TDataSetter, TWatchDep } from './hooks';
-export { useUpdate, useLateUpdate, useLoadTexture, useLoadAtlas, useLoader, useScene, useSceneUnmount, useReady, useSpawn, useSelf, useKeyboard, useGame, useSpriteAnimation, getSpriteAnimation, useSkeletalAnimation, useTween, useTimer, useCamera2d, useScreenSpace, usePointer, useGamepad, useActions, useAction, useVector, useInputMap, useTouchAction, useRandom, useSignal, useStore, useStoreLink, usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadShader, useLoadPalette, useLoadLut, useLoadParticles, useLoadPack, useLoadAudio, useLoadPixels, useSound, useAudio, useMusic, useSong, useLoadSong, useMotion, useLoadMotion, useAudioListener, usePostProcess, useParticleCollider2d, useParticleCollider3d } from './hooks';
+export { useUpdate, useLateUpdate, useLoadTexture, useLoadAtlas, useLoader, useScene, useCleanup, useReady, useSpawn, useSelf, useKeyboard, useGame, useSpriteAnimation, getSpriteAnimation, useSkeletalAnimation, useTween, useTimer, useCamera2d, useScreenSpace, usePointer, useGamepad, useActions, useAction, useVector, useInputMap, useTouchAction, useRandom, useSignal, useStore, useStoreLink, usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadShader, useLoadPalette, useLoadLut, useLoadParticles, useLoadPack, useLoadAudio, useLoadPixels, useSound, useAudio, useMusic, useSong, useLoadSong, useMotion, useLoadMotion, useAudioListener, usePostProcess, useParticleCollider2d, useParticleCollider3d } from './hooks';
 export { createMaterial } from './gameobjects/material';
 // Lines in space: the debug helpers (an axis gizmo, a floor grid) and any lines a game wants to draw.
 export { useHelperLines, useHelperAxis, useHelperGrid } from './hooks';
@@ -104,8 +105,8 @@ export { createSpriteAtlas, setSpriteFrame } from './atlas';
 export { parseAtlasDoc, ATLAS_FORMAT } from './atlas/document';
 export type { TAtlasDoc, TAtlasDocFrame, TAtlasGridSpec, TAtlasPixelRect, TAtlasSequenceDoc } from './atlas/document';
 export { destroy } from './destroy';
-export { listen, onEvent } from './events';
-export type { TObjectEventHandler } from './events';
+export { listen, onReport } from './events';
+export type { TReportHandler } from './events';
 export { createGameSignal, scenePaused, sceneResumed, gamePaused, gameResumed } from './signal';
 // Physics: the FORMAT only. The engine keeps colliders, writes them down and reads them back while
 // being completely unable to move them. What moves them is registered from outside, so a game that
@@ -118,7 +119,7 @@ export type {
     TPhysicsSurface, TPhysicsWorld, TPhysicsWorld2d, TPhysicsWorld3d, TCollider2d, TCollider3d,
 } from './physics';
 // Reaching a named part of something, the turret of a tank or the wheels of a car, from a behaviour.
-export { findObject, findObjects } from './box';
+export { findObject, findObjects, sceneOf } from './box';
 // A point of the world measured on an object, and a point of an object found in the world: where a
 // hit landed on it, where a shot leaves it from.
 export { worldToLocal, localToWorld, worldToLocal3d, localToWorld3d } from './box';

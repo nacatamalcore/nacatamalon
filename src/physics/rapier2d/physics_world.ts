@@ -1,5 +1,5 @@
 import { useUpdate } from '../../hooks/loop/use_update';
-import { useSceneUnmount } from '../../hooks/scene/use_scene_unmount';
+import { useCleanup } from '../../hooks/scene/use_cleanup';
 import { createGameSignal } from '../../signal/create_game_signal';
 import { ALL_LAYERS } from '../layers';
 import { placementOf } from '../../box';
@@ -874,7 +874,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
     };
 
     // Cleanup on scene unmount.
-    useSceneUnmount(() => {
+    useCleanup(() => {
         joints.clear();
         softBodies.clear();
         standing.clear();

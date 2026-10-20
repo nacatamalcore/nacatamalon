@@ -1,4 +1,4 @@
-import { useSceneUnmount } from '../../hooks/scene/use_scene_unmount';
+import { useCleanup } from '../../hooks/scene/use_cleanup';
 import { getGeometry } from '../../geometry';
 import { getActiveGame } from '../../store';
 import { registerPhysicsProvider } from '../physics_provider';
@@ -19,7 +19,7 @@ let current: TPhysicsWorldHandle3d | null = null;
 /**
  * The game `current` belongs to.
  *
- * A world outlives the deserialization that built it, and `useSceneUnmount` only clears the
+ * A world outlives the deserialization that built it, and `useCleanup` only clears the
  * pointer when that scene is torn down *properly*. Two situations are not that: the editor runs
  * a second engine instance for Play alongside the live one, and a scene can simply be abandoned.
  * In both, a bare module pointer keeps answering with a world belonging to somewhere else, which
@@ -140,7 +140,7 @@ export const box3dProvider: TPhysicsProvider = {
         // the next scene's world already, and an unconditional `current = null` would erase it,
         // so the room you just walked into would come up with a world nothing can reach.
         const mine = current;
-        useSceneUnmount(() => {
+        useCleanup(() => {
             if (current !== mine) return;
             current = null;
             owner = null;

@@ -5,7 +5,7 @@ import { createText } from '../gameobjects/text/create_text';
 import { screenSizeOf } from '../DOM/screen_size';
 import { useCamera2d } from '../hooks/camera/use_camera_2d';
 import { useLoadTexture } from '../hooks/loaders/use_load_texture';
-import { useSceneUnmount } from '../hooks/scene/use_scene_unmount';
+import { useCleanup } from '../hooks/scene/use_cleanup';
 import { useTween } from '../hooks/tween/use_tween';
 import { useUpdate } from '../hooks/loop/use_update';
 import { easeOutBack } from '../math/easing/functions/ease_out_back';
@@ -274,7 +274,7 @@ export const createSplashScene = (canvas: HTMLCanvasElement, done: () => void): 
     });
     globalThis.addEventListener?.('keydown', finish);
     canvas.addEventListener('pointerdown', finish);
-    useSceneUnmount(() => {
+    useCleanup(() => {
         globalThis.removeEventListener?.('keydown', finish);
         canvas.removeEventListener('pointerdown', finish);
     });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { cameraLookAt, createCamera3d, screenToRay, worldToScreen } from '../src/camera';
-import { findObject, findObjects } from '../src/box';
+import { findObject, findObjects, sceneOf } from '../src/box';
+import { destroy } from '../src/destroy';
 import { createScene } from '../src/scene/create_scene';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useSelf } from '../src/hooks/spawn/use_self';
@@ -165,6 +166,30 @@ describe('findObject and findObjects', () => {
 
         expect(findObjects(root, 'Wheel')).toHaveLength(2);
         expect(findObjects(root, 'Cannon')).toEqual([]);
+    });
+
+    it('does not find what is destroyed, nor what is inside it, before the frame takes it out', () => {
+        const { store } = createTestGame();
+        const root = tank(store);
+        const turret = findObject(root, 'Turret')!;
+        const wheel = findObjects(root, 'Wheel')[0]!;
+
+        destroy(turret);
+        destroy(wheel);
+
+        expect(findObject(root, 'Turret')).toBeNull();
+        expect(findObject(root, 'Barrel')).toBeNull();
+        expect(findObjects(root, 'Wheel')).toHaveLength(1);
+    });
+
+    it('reaches the whole scene from anything in it through sceneOf', () => {
+        const { store } = createTestGame();
+        const root = tank(store);
+        const barrel = findObject(root, 'Barrel')!;
+
+        expect(sceneOf(barrel)).toBe(root);
+        expect(sceneOf(root)).toBe(root);
+        expect(findObjects(sceneOf(barrel), 'Wheel')).toHaveLength(2);
     });
 
     it('looks only inside where it is asked to', () => {

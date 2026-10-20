@@ -4,6 +4,21 @@ import { nanoId } from '../../utils';
 import type { TScriptProps } from '../../scripts';
 
 /**
+ * What `useScript` takes besides the behaviour and its settings.
+ *
+ * @category Scripts
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TUseScriptOptions = {
+    /**
+     * The attachment's identity, to keep it across saving and opening: what a scene read from a
+     * file passes. Left out, it gets a fresh one, which is what a game writing its own wants.
+     */
+    id?: string;
+};
+
+/**
  * Attaches a behaviour by name to the object being built, and runs it.
  *
  * Two things happen. The object records that it carries this behaviour, so the attachment is
@@ -23,17 +38,16 @@ import type { TScriptProps } from '../../scripts';
  * object carries its behaviour without performing it.
  *
  * @param ref The behaviour's name, as `registerScript` was given it.
- * @param id Pass one only to keep an attachment's identity across saving and opening. Left out, it
- *   gets a fresh one.
  * @param props The authored settings. What the behaviour actually receives is its declared
  *   defaults with these laid over them, key by key.
+ * @param options What a tool needs and a game seldom does: see {@link TUseScriptOptions}.
  *
  * @example
  * ```ts
  * const Guard = () => {
  *     const texture = useLoadTexture({ src: '/assets/guard.png' });
  *     createSprite({ texture, transform: { x: 40, y: 112 } });
- *     useScript('patrol', undefined, { speed: 80 });
+ *     useScript('patrol', { speed: 80 });
  * };
  * ```
  *
@@ -41,7 +55,7 @@ import type { TScriptProps } from '../../scripts';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const useScript = (ref: string, id?: string, props?: TScriptProps): void => {
+export const useScript = (ref: string, props?: TScriptProps, options: TUseScriptOptions = {}): void => {
     const box = getActiveBox();
     const store = getActiveGame();
     if (box === null || store === null) {
@@ -55,7 +69,7 @@ export const useScript = (ref: string, id?: string, props?: TScriptProps): void 
     const resolved: TScriptProps = { ...defaultScriptProps(ref), ...props };
 
     // Recorded before anything can decline to run it, so the attachment survives either way.
-    box.scripts.push({ id: id ?? nanoId(), ref, props: resolved });
+    box.scripts.push({ id: options.id ?? nanoId(), ref, props: resolved });
 
     const fn = getScript(ref);
     if (fn === undefined) {

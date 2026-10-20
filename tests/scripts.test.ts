@@ -113,7 +113,7 @@ describe('the settings an attachment runs with', () => {
 
         const { store } = createTestGame();
         startTestScene(store, 'Level', () => {
-            useScript('patrol', undefined, { speed: 120 });
+            useScript('patrol', { speed: 120 });
             return createScene();
         });
 
@@ -132,7 +132,7 @@ describe('the settings an attachment runs with', () => {
 
         const { store } = createTestGame();
         startTestScene(store, 'Level', () => {
-            useScript('patrol', undefined, saved);
+            useScript('patrol', saved);
             return createScene();
         });
 
@@ -144,7 +144,7 @@ describe('the settings an attachment runs with', () => {
 
         const { store } = createTestGame();
         const root = startTestScene(store, 'Level', () => {
-            useScript('patrol', 'attachment-1', { speed: 7 });
+            useScript('patrol', { speed: 7 }, { id: 'attachment-1' });
             return createScene();
         });
 
@@ -158,7 +158,7 @@ describe('a name nothing registered', () => {
 
         const { store } = createTestGame();
         const root = startTestScene(store, 'Level', () => {
-            useScript('gone', 'attachment-1', { speed: 3 });
+            useScript('gone', { speed: 3 }, { id: 'attachment-1' });
             return createScene();
         });
 
@@ -171,7 +171,7 @@ describe('a name nothing registered', () => {
 
         const { store } = createTestGame();
         const root = startTestScene(store, 'Level', () => {
-            useScript('gone', 'attachment-1', { speed: 3 });
+            useScript('gone', { speed: 3 }, { id: 'attachment-1' });
             return createScene();
         });
 

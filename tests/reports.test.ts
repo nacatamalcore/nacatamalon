@@ -4,8 +4,8 @@ import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useSelf } from '../src/hooks/spawn/use_self';
 import { useTransform } from '../src/hooks/transform/use_transform';
-import { useEvent } from '../src/hooks/events/use_event';
-import { onEvent } from '../src/events/on_event';
+import { useReport } from '../src/hooks/events/use_report';
+import { onReport } from '../src/events/on_report';
 import { listen } from '../src/events/listen';
 import { destroy, flushDestroyed } from '../src/destroy';
 import { createFakeCanvas, createTestGame, startTestScene } from './helpers/test_game';
@@ -14,9 +14,9 @@ import type { TRuntimeStore } from '../src/store';
 
 const tint = { r: 1, g: 1, b: 1, a: 1 };
 
-describe('useEvent and onEvent', () => {
-    it('refuses to declare an event outside a body', () => {
-        expect(() => useEvent('pressed')).toThrow('[NacatamalOn] useEvent');
+describe('useReport and onReport', () => {
+    it('refuses to declare a report outside a body', () => {
+        expect(() => useReport('pressed')).toThrow('[NacatamalOn] useReport');
     });
 
     it('travels up to the first object that listens, and stops there', () => {
@@ -28,15 +28,15 @@ describe('useEvent and onEvent', () => {
             // A copy holding a box holding the one that sends: three levels, like a pack's button.
             copy = useSpawn(() => {
                 inner = useSpawn(() => {
-                    useSpawn(() => { send = useEvent<{ n: number }>('pressed'); })();
+                    useSpawn(() => { send = useReport<{ n: number }>('pressed'); })();
                 })();
             })();
             return createScene();
         });
 
         const heard: string[] = [];
-        onEvent(root, 'pressed', () => heard.push('root'));
-        onEvent<{ n: number }>(copy, 'pressed', ({ n }, from) => heard.push(`copy ${n} from ${from.parent === inner ? 'inside' : '?'}`));
+        onReport(root, 'pressed', () => heard.push('root'));
+        onReport<{ n: number }>(copy, 'pressed', ({ n }, from) => heard.push(`copy ${n} from ${from.parent === inner ? 'inside' : '?'}`));
 
         expect(send({ n: 1 })).toBe(true);
         // The copy heard it; the scene above it did not: the first listener is the boundary.
@@ -48,12 +48,12 @@ describe('useEvent and onEvent', () => {
         let send!: () => boolean;
         let holder!: TBox;
         startTestScene(store, 'Level', () => {
-            holder = useSpawn(() => { send = useEvent('done'); })();
+            holder = useSpawn(() => { send = useReport('done'); })();
             return createScene();
         });
 
         expect(send()).toBe(false);
-        const off = onEvent(holder, 'done', () => {});
+        const off = onReport(holder, 'done', () => {});
         expect(send()).toBe(true);
         off();
         expect(send()).toBe(false);
@@ -65,11 +65,11 @@ describe('useEvent and onEvent', () => {
         let holder!: TBox;
         const heard: string[] = [];
         const root = startTestScene(store, 'Level', () => {
-            holder = useSpawn(() => { useSpawn(() => { send = useEvent('ping'); })(); })();
+            holder = useSpawn(() => { useSpawn(() => { send = useReport('ping'); })(); })();
             return createScene();
         });
-        onEvent(holder, 'ping', () => heard.push('holder'));
-        onEvent(root, 'ping', () => heard.push('root'));
+        onReport(holder, 'ping', () => heard.push('holder'));
+        onReport(root, 'ping', () => heard.push('root'));
 
         destroy(holder);
         // Marked first and taken out at the end of the frame: in between it is already deaf.
@@ -84,11 +84,11 @@ describe('useEvent and onEvent', () => {
         const heard: string[] = [];
         // A HUD that listens to the whole scene it sits in, which outlives it.
         const Hud = (label: string) => {
-            onEvent(useSelf().parent!, 'collected', () => heard.push(label));
+            onReport(useSelf().parent!, 'collected', () => heard.push(label));
         };
         let hud!: TBox;
         startTestScene(store, 'Level', () => {
-            useSpawn(() => { send = useEvent('collected'); })();
+            useSpawn(() => { send = useReport('collected'); })();
             hud = useSpawn(Hud)('old');
             return createScene();
         });
@@ -96,7 +96,7 @@ describe('useEvent and onEvent', () => {
         send();
         destroy(hud);
         // The scene itself listening: with the HUD gone, it is the first that hears.
-        onEvent(hud.parent!, 'collected', () => heard.push('scene'));
+        onReport(hud.parent!, 'collected', () => heard.push('scene'));
         // Deaf from the moment it is destroyed, before the end of the frame takes it out.
         send();
         flushDestroyed(store);
@@ -108,13 +108,13 @@ describe('useEvent and onEvent', () => {
         const { store } = createTestGame();
         let send!: () => boolean;
         const root = startTestScene(store, 'Level', () => {
-            useSpawn(() => { send = useEvent('ping'); })();
+            useSpawn(() => { send = useReport('ping'); })();
             return createScene();
         });
         let count = 0;
         const handler = () => { count++; };
-        const first = onEvent(root, 'ping', handler);
-        onEvent(root, 'ping', handler);
+        const first = onReport(root, 'ping', handler);
+        onReport(root, 'ping', handler);
 
         first();
         send();

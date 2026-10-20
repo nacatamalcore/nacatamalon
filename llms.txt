@@ -200,6 +200,24 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   The handle's `setLayers(layer, collidesWith)` changes what it collides with, and its `destroy()`
   removes the body and keeps the object. `destroy(object)` removes the object's body too.
 
+## Talking between pieces
+
+A game is small pieces made with `useSpawn`, and each way they talk has one job:
+
+| To... | Use |
+|---|---|
+| keep a value of this piece that others watch (lives, a level's points) | `useData`, read with `useWatch` |
+| keep a value of the whole game, across scenes or saved (best score, settings) | `createGameStore`, `useStore` |
+| say something happened, for anyone to hear (`gameOver`) | `createGameSignal`, `useSignal` |
+| tell whoever placed you (an enemy dead, a button pressed) | a callback in your props: `useSpawn(Enemy)({ onDied })`. From a pack or a behaviour, which take only data: `useReport('pressed')` sends it up, `onReport(copy, 'pressed', h)` or a pack's `on` hears it |
+| tell a piece you made what to do (`hurt`, `open`) | the `api` it returns: `useSpawn(Bat)({ x }).api.hurt(1)` |
+| let two behaviours on the same box talk | `provide` and `useApi` |
+| reach something you did not make (a box of a saved scene) | `findObject(sceneOf(self), 'Score')` |
+
+A signal is imported by both sides and every listener hears every one; a report needs nothing in
+common and reaches only the first one above that listens, so three copies of a pack's button are
+three things to tell apart. Not a module `let`: it is not reset when the scene starts again.
+
 ## React
 
 `nacatamalon/react` puts a game in a React page, with the HUD and menus written as React components
@@ -234,7 +252,7 @@ const App = () => (
 
 ## Where things are (search llms-full.txt for each name)
 
-- **Game and scenes**: `createGame`, `createScene`, `useScene`, `useGame`, `useSpawn` (what the component returns is the object's `api`: `useSpawn(Bat)({ x: 200 }).api.hurt(1)`; a name for what it makes, when something finds it by name, `useSpawn(Bat, 'Bat')`: the function's own is shortened by a published build), `useSelf`, `destroy`, `useReady`, `useSceneUnmount`.
+- **Game and scenes**: `createGame`, `createScene`, `useScene`, `useGame`, `useSpawn` (what the component returns is the object's `api`: `useSpawn(Bat)({ x: 200 }).api.hurt(1)`; a name for what it makes, when something finds it by name, `useSpawn(Bat, 'Bat')`: the function's own is shortened by a published build), `useSelf`, `sceneOf` and `findObject` (the scene something is in, and a box of it by name, destroyed ones left out: `findObject(sceneOf(self), 'Score')`), `destroy`, `useReady`, `useCleanup` (runs when its component is destroyed or its scene stops: for a window listener or an interval; what the engine made needs none).
 - **Touching, with no physics**: `overlaps(a, b)`; `useHitbox({ group: 'enemy', width?, height? })` (the picture's size by default; change `x`, `y`, `width`, `height`, `enabled` any time); `useOverlap('shot', 'enemy', (shot, enemy) => ...)`, called every frame each pair touches, after the updates.
 - **Points on an object**: `worldToLocal(object, point)` and `localToWorld(object, point)` (a sprite works too), `worldToLocal3d` and `localToWorld3d`; the pointer's `worldX`/`worldY` are the world they mean.
 - **Time**: `useUpdate`, `useLateUpdate`, `useTimer`, `useTween`, easings such as `linear` and `easeInOutSine`.

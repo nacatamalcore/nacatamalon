@@ -610,7 +610,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
             useAudioListener(component.enabled !== undefined ? { enabled: component.enabled } : {}).id = component.id;
             break;
         case 'script': {
-            useScript(component.ref, component.id, component.props);
+            useScript(component.ref, component.props, { id: component.id });
             break;
         }
         default: {

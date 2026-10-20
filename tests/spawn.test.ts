@@ -7,7 +7,7 @@ import { runHookUpdates } from '../src/game/loop/runHookUpdates';
 import { useSelf } from '../src/hooks/spawn/use_self';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { findObject, findObjects } from '../src/box/find_object';
-import { useSceneUnmount } from '../src/hooks/scene/use_scene_unmount';
+import { useCleanup } from '../src/hooks/scene/use_cleanup';
 import { useUpdate } from '../src/hooks/loop/use_update';
 import { withSceneUpdates } from '../src/store/scene_updates';
 import { createTestGame, startTestScene } from './helpers/test_game';
@@ -220,7 +220,7 @@ describe('destroy of a spawned object', () => {
             self = useSelf();
             createSprite({ width: 4, height: 4, tint, transform: at(0) });
             useUpdate(() => ticks.push('bullet'));
-            useSceneUnmount(() => cleanups.push('bullet'));
+            useCleanup(() => cleanups.push('bullet'));
         };
 
         const root = startTestScene(store, 'Level', () => {
@@ -259,11 +259,11 @@ describe('destroy of a spawned object', () => {
     it('takes everything under it, children first', () => {
         const { store } = createTestGame();
         const order: string[] = [];
-        const Turret = () => { useSceneUnmount(() => order.push('turret')); };
+        const Turret = () => { useCleanup(() => order.push('turret')); };
         let tank!: TBox;
         const Tank = () => {
             tank = useSelf();
-            useSceneUnmount(() => order.push('tank'));
+            useCleanup(() => order.push('tank'));
             useSpawn(Turret)();
         };
 

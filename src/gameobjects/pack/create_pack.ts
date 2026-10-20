@@ -5,7 +5,7 @@ import { listScripts } from '../../scripts/script_registry';
 import { getActiveBox, getActiveGame } from '../../store';
 import { useTransform } from '../../hooks/transform/use_transform';
 import { nanoId } from '../../utils';
-import { connectObjectEvent } from '../../events/object_events';
+import { connectReport } from '../../events/reports';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
 import type { TBoxNode, TSceneDoc } from '../../scene/document/types/t_scene_doc';
 import type { TPackOptions } from './types/t_pack_options';
@@ -125,7 +125,7 @@ export const createPack = (options: TPackOptions): TGameObject => {
     // Connected now, before anything inside exists: an event sent from the pack's box, once it is built,
     // travels up to this copy and is heard here.
     for (const [name, handler] of Object.entries(options.on ?? {})) {
-        connectObjectEvent(holder, name, handler);
+        connectReport(holder, name, handler);
     }
 
     const build = (): void => {

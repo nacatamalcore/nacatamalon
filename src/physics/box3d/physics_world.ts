@@ -1,5 +1,5 @@
 import { useUpdate } from '../../hooks/loop/use_update';
-import { useSceneUnmount } from '../../hooks/scene/use_scene_unmount';
+import { useCleanup } from '../../hooks/scene/use_cleanup';
 import { createGameSignal } from '../../signal/create_game_signal';
 import { ALL_LAYERS } from '../layers';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
@@ -128,7 +128,7 @@ const shapeKey = (id: { index1: number; generation: number }): string => `${id.i
  * Creates a physics world for the running scene and steps it every frame, syncing each
  * body's simulated pose back onto the object it belongs to. This is the whole integration
  * seam: it runs entirely on the engine's public hooks (`useUpdate` to advance the
- * simulation, `useSceneUnmount` to free the WASM world and bodies when the scene
+ * simulation, `useCleanup` to free the WASM world and bodies when the scene
  * leaves), so nothing in the engine itself knows physics exists.
  *
  * Because the WASM runtime loads asynchronously, the world and any bodies added before
@@ -443,7 +443,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
         }
     });
 
-    useSceneUnmount(() => {
+    useCleanup(() => {
         disposed = true;
         if (!b3 || world === null) return;
         for (const entry of entries) {

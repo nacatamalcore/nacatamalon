@@ -10,7 +10,7 @@ import { tick } from '../src/game/loop/tick';
 import { trackLoad } from '../src/loaders/track_load';
 import { usePointer } from '../src/hooks/input/use_pointer';
 import { useScene } from '../src/hooks/scene/use_scene';
-import { useSceneUnmount } from '../src/hooks/scene/use_scene_unmount';
+import { useCleanup } from '../src/hooks/scene/use_cleanup';
 import { useUpdate } from '../src/hooks/loop/use_update';
 import { createFakeCanvas, createTestGame, startTestScene } from './helpers/test_game';
 import type { TLoadStatus } from '../src/loaders';
@@ -81,7 +81,7 @@ const twoRooms = () => {
     let handle!: TSceneHandle;
     startTestScene(driven.store, 'A', () => {
         handle = useScene();
-        useSceneUnmount(() => { counted.unmounted += 1; });
+        useCleanup(() => { counted.unmounted += 1; });
         createSprite({ width: 8, height: 8, tint: { r: 1, g: 1, b: 1, a: 1 }, transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 } });
         return createScene();
     });

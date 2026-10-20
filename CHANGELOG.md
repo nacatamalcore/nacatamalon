@@ -7,6 +7,8 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- `sceneOf(self)`: the scene something is in, to reach the rest of it by name,
+  `findObject(sceneOf(self), 'Score')`, wherever the behaviour sits.
 - `useSpawn` takes a name for what it makes: `useSpawn(Button, 'Jump')`, or
   `useSpawn(Bullet, { name: 'Bullet', parent: 'scene' })` beside the place. Without one, a thing is
   still called after its component's function, but that is only a label: a published build shortens
@@ -22,6 +24,19 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- `useEvent` and `onEvent` are `useReport` and `onReport`, and `TObjectEventHandler` is
+  `TReportHandler`: what a piece reports to whoever placed it, which is all they ever did, beside a
+  signal that the whole game hears. They are for pieces made of data, a pack's script or a
+  behaviour, which cannot be handed a function; a component of your own code takes a callback in its
+  props. A pack's `on` is unchanged. The old names are gone.
+- `useSceneUnmount` is `useCleanup`. It always ran when its owner went away, a component as well
+  as a scene, and its name only told of the scene, so a pause menu listening on the window would not
+  find it. The old name is gone: the type checker points at each call.
+- `useScript(ref, props, { id })` takes the settings second, where nearly every call wants them,
+  and the attachment's identity, which only a scene read from a file passes, in options at the end:
+  `useScript('patrol', { speed: 80 })` rather than `useScript('patrol', undefined, { speed: 80 })`.
+- `findObject` and `findObjects` leave out what is destroyed and what is inside it, from the moment
+  it is destroyed: a coin collected this frame is not there to be collected again.
 - `useSkeletalAnimation` moves a placed model, the one `createModel` gave back, and no longer the
   file: `const fox = createModel({ model: file }); useSkeletalAnimation(fox, { play: 'Walk' })`.
   Every model placed from a file has bones of its own (`fox.skeletons`, next to `fox.model`, the
@@ -40,12 +55,12 @@ releases are in [changelog/](./changelog/), one file each.
 - `useCameraFollow` follows the scene's camera whichever came first in the body. With
   `useCamera2d({ zoom: 2 })` written after it, the follow went on moving a camera of its own that
   nothing drew through, and the scene's stood still, with only a warning about a camera replaced.
-- `onEvent` stops when whoever listened goes away, not only when the object listened on does. A
-  HUD listening on its scene went on hearing once destroyed, writing on a text that was gone, and a
-  new HUD in its place made two. One connected inside a body now lasts as long as that body's
-  object, deaf from the moment it is destroyed, and an event passes it by for the next one up. The
-  function `onEvent` gives back lets go of its own connection only: the same handler connected twice
-  lost both.
+- `onReport` (`onEvent` until now) stops when whoever listened goes away, not only when the object
+  listened on does. A HUD listening on its scene went on hearing once destroyed, writing on a text
+  that was gone, and a new HUD in its place made two. One connected inside a body now lasts as long
+  as that body's object, deaf from the moment it is destroyed, and a report passes it by for the next
+  one up. The function `onReport` gives back lets go of its own connection only: the same handler
+  connected twice lost both.
 - A sprite's `frame` and `atlas` show what they say when they are set: `chest.frame = 1` opens the
   chest, and `hero.atlas = attacking` shows the same frame of the other sheet. Until now only
   `setSpriteFrame` changed the picture, and writing the field did nothing, while a polygon's and a

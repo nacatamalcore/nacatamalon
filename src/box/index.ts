@@ -15,5 +15,6 @@ export type { TPose3d } from './world_placement_3d_of';
 
 export type { TBox } from './types/t_box';
 export { findObject, findObjects } from './find_object';
+export { sceneOf } from './scene_of';
 export { markNamedByFunction, noteFoundByName } from './named_by_function';
 export { worldToLocal, localToWorld, worldToLocal3d, localToWorld3d } from './world_to_local';

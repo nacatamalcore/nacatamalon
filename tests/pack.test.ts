@@ -3,7 +3,7 @@ import { createScene } from '../src/scene/create_scene';
 import { useLoadPack } from '../src/hooks/loaders/use_load_pack';
 import { rootOf } from '../src/box';
 import { createPack } from '../src/gameobjects/pack';
-import { useEvent } from '../src/hooks/events/use_event';
+import { useReport } from '../src/hooks/events/use_report';
 import { whenLoaded } from '../src/loaders/track_load';
 import { clearScripts, registerScript } from '../src/scripts/script_registry';
 import { createTestGame, startTestScene } from './helpers/test_game';
@@ -237,7 +237,7 @@ describe('createPack', () => {
 
     it("hears what a copy tells it through on, connected before the pack even landed", async () => {
         registerScript('sign_talk', (_self, props) => {
-            const said = useEvent<string>('said');
+            const said = useReport<string>('said');
             said(String(props.label));
         });
         const heard: string[] = [];

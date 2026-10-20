@@ -432,7 +432,7 @@ describe('the state an object is wired to', () => {
             // from a document is reordered, which is what the second half of this checks.
             useStoreLink('pet');
             createSprite({ width: 8, height: 8, tint, transform: at(3, 4) });
-            useScript('feed', 'one');
+            useScript('feed', undefined, { id: 'one' });
         });
 
         // Written before the behaviours and after what the object is, because that is the order it
@@ -470,8 +470,8 @@ describe('the behaviours an object carries', () => {
 
         const { doc } = written(() => {
             createSprite({ width: 8, height: 8, tint, transform: at(3, 4) });
-            useScript('patrol', 'one', { speed: 120 });
-            useScript('blink', 'two');
+            useScript('patrol', { speed: 120 }, { id: 'one' });
+            useScript('blink', undefined, { id: 'two' });
         });
         clearScripts();
 
@@ -487,8 +487,8 @@ describe('the behaviours an object carries', () => {
 
         const { doc } = written(() => {
             createSprite({ width: 8, height: 8, tint, transform: at(3, 4) });
-            useScript('patrol', 'one', { speed: 120 });
-            useScript('blink', 'two');
+            useScript('patrol', { speed: 120 }, { id: 'one' });
+            useScript('blink', undefined, { id: 'two' });
         });
 
         const back = rebuilt(doc);
@@ -502,7 +502,7 @@ describe('the behaviours an object carries', () => {
 
         const { doc } = written(() => {
             createSprite({ width: 8, height: 8, tint, transform: at(3, 4) });
-            useScript('count', 'one');
+            useScript('count', undefined, { id: 'one' });
         });
 
         // The file now lists the behaviour FIRST, which is what an editor reordering things can do.

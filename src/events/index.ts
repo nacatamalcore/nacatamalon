@@ -1,3 +1,3 @@
 export { listen } from './listen';
-export { onEvent } from './on_event';
-export type { TObjectEventHandler } from './object_events';
+export { onReport } from './on_report';
+export type { TReportHandler } from './reports';

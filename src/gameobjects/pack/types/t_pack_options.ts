@@ -1,7 +1,7 @@
 import type { TLoadedPack } from '../../../loaders/pack';
 import type { TScriptProps } from '../../../scripts/types/t_script';
 import type { TTransformOptions } from '../../../hooks/transform/use_transform';
-import type { TObjectEventHandler } from '../../../events/object_events';
+import type { TReportHandler } from '../../../events/reports';
 
 /**
  * What `createPack` is asked for: which thing of which pack, where, and with which settings.
@@ -34,9 +34,9 @@ export type TPackOptions = {
      */
     props?: TScriptProps;
     /**
-     * What to do when the copy tells its parent something: the events its behaviours send with
-     * `useEvent` (a button's `'pressed'`), by name. The same as `onEvent` on the copy, connected before
-     * the pack has even landed.
+     * What to do when the copy reports something: what its behaviours send with `useReport` (a
+     * button's `'pressed'`), by name. The same as `onReport` on the copy, connected before the pack
+     * has even landed.
      */
-    on?: Record<string, TObjectEventHandler>;
+    on?: Record<string, TReportHandler>;
 };
