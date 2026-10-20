@@ -41,8 +41,8 @@ export const runHookUpdates = (box: TBox, dt: number, time?: number, late?: TBox
     if (moving !== undefined && box.moveCallbacks.length > 0) {
         moving.push(box);
     }
-    // And the boxes with something to compare once the updates are over: see `useOverlap`.
-    if (touching !== undefined && (box.hitboxes.length > 0 || box.overlapCallbacks.length > 0)) {
+    // And the boxes with something to compare once the updates are over: see `useCollisionBetween`.
+    if (touching !== undefined && (box.hitboxes.length > 0 || box.collisionCallbacks.length > 0)) {
         touching.push(box);
     }
 

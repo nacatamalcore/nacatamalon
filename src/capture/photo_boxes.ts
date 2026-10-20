@@ -1,7 +1,7 @@
 import { rootOf } from '../box/root_of';
 import { applyView2d } from '../render/shared/apply_view_2d';
 import { pictureRect } from '../hitbox/hitbox_shape';
-import { rectsOf } from '../hitbox/overlaps';
+import { rectsOf } from '../hitbox/collision_between';
 import { ownerOfDrawable } from '../box/drawable_owner';
 import type { TSprite } from '../gameobjects/sprite/types/t_sprite';
 import type { TText } from '../gameobjects/text/types/t_text';

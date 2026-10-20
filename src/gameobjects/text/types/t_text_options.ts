@@ -65,6 +65,10 @@ export type TTextOptions = {
      */
     smooth?: boolean;
     /**
+     * What it is, as `useTag` says it: `['wall']`. The same as adding them after.
+     */
+    tags?: string[];
+    /**
      * Whether it is drawn. Default `true`.
      */
     visible?: boolean;

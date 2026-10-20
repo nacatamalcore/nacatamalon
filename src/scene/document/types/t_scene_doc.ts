@@ -89,6 +89,10 @@ export type TBoxNode = {
      */
     data?: TDataEntry[];
     /**
+     * What it is, as `useTag` says it: `["enemy", "damageable"]`. Absent is none.
+     */
+    tags?: string[];
+    /**
      * Absent means drawn. Only ever written when it is `false`.
      */
     visible?: boolean;

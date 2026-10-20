@@ -14,6 +14,7 @@ import type { TBox } from './types/t_box';
 export const newBox = (name: string): TBox => ({
     id: nanoId(),
     name,
+    tags: [],
     parent: null,
     children: [],
     updateCallbacks: [],
@@ -28,7 +29,7 @@ export const newBox = (name: string): TBox => ({
     physics: null,
     physicsWorld: null,
     hitboxes: [],
-    overlapCallbacks: [],
+    collisionCallbacks: [],
     scripts: [],
     provided: new Map(),
     api: undefined,

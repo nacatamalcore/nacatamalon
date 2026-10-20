@@ -1,4 +1,4 @@
-import { markNamedByFunction, newBox, spawnBox } from '../../box';
+import { markMadeBy, markNamedByFunction, newBox, spawnBox } from '../../box';
 import type { TBox } from '../../box';
 import { getActiveBox, getActiveGame } from '../../store';
 import { isSceneStopped } from '../../scene/stopped_scenes';
@@ -33,6 +33,11 @@ export type TSpawnOptions = {
      * too. Anything looked up by name needs it written here.
      */
     name?: string;
+    /**
+     * What each one is, as `useTag` says it: `['coin']`. The same as `useTag('coin').add(useSelf())`
+     * in its body, and there before the body runs.
+     */
+    tags?: string[];
     /**
      * Left out, each one hangs under whoever is making it: a tank that makes its own turret carries
      * it along. `'scene'` puts it at the top of the scene instead, which is what a shot fired from a
@@ -216,12 +221,12 @@ export const useSpawn = <TArgs extends unknown[], TApi>(
         }
         let api: TApi | undefined;
         const box = spawnBox(store, parent, name, (...given: TArgs) => {
-            // Before the body, so a body that names itself is seen doing it.
-            if (byFunction) {
-                const self = getActiveBox();
-                if (self !== null) {
-                    markNamedByFunction(self);
-                }
+            const self = getActiveBox();
+            // Before the body, so a body that names itself is seen doing it, and finds its tags.
+            if (self !== null) {
+                markMadeBy(self, component);
+                if (byFunction) markNamedByFunction(self);
+                if (options.tags !== undefined && options.tags.length > 0) self.tags = [...options.tags];
             }
             api = component(...given);
         }, args);

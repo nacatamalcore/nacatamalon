@@ -32,7 +32,7 @@ const BLACK: TColor = { r: 0, g: 0, b: 0, a: 1 };
 /**
  * Which keys of a box node the reader consumes. Everything else is somebody else's and is kept.
  */
-const BOX_KEYS = new Set(['id', 'name', 'transform', 'components', 'children', 'data', 'visible', 'screenSpace', 'extra']);
+const BOX_KEYS = new Set(['id', 'name', 'tags', 'transform', 'components', 'children', 'data', 'visible', 'screenSpace', 'extra']);
 
 /**
  * Where an unknown component is kept, so that writing the document back puts it where it was.
@@ -281,6 +281,14 @@ const parseMaps = (value: unknown): Pick<TMeshMaterialDoc, 'maps'> => {
 /**
  * Only writes the key when the file did, so a default never becomes a written-down decision.
  */
+/**
+ * A box's tags: the names that are names, each once, and nothing written when none is left.
+ */
+const tagsOf = (raw: unknown): { tags?: string[] } => {
+    const tags = [...new Set(asArray(raw).filter((tag): tag is string => typeof tag === 'string' && tag !== ''))];
+    return tags.length > 0 ? { tags } : {};
+};
+
 const optionalBoolean = <K extends string>(raw: Record<string, unknown>, key: K): Partial<Record<K, boolean>> =>
     (typeof raw[key] === 'boolean' ? { [key]: raw[key] } as Record<K, boolean> : {});
 
@@ -997,6 +1005,7 @@ const parseBox = (value: unknown, unknowns: TUnknowns): TBoxNode => {
     return {
         id: asString(raw.id, nanoId()),
         name: asString(raw.name, 'Box'),
+        ...tagsOf(raw.tags),
         transform: parseTransform(raw.transform),
         components,
         children: asArray(raw.children).map((child) => parseBox(child, unknowns)),

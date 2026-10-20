@@ -12,7 +12,7 @@ import type { TSprite } from '../../gameobjects/sprite/types/t_sprite';
 import type { TText } from '../../gameobjects/text/types/t_text';
 import type { TNineSlice } from '../../gameobjects/nine_slice/types/t_nine_slice';
 import type { TTilemap } from '../../gameobjects/tilemap/types/t_tilemap';
-import type { TRect } from '../../hitbox/overlaps';
+import type { TRect } from '../../hitbox/collision_between';
 
 /**
  * What a camera can follow: an object, something it draws, or a point that the game moves.

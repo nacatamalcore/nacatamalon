@@ -15,13 +15,13 @@ import type { TNineSlice } from '../gameobjects/nine_slice/types/t_nine_slice';
 export type TRect = { x: number; y: number; width: number; height: number };
 
 /**
- * Anything `overlaps` can compare: an object, something it draws, or a rectangle of the world.
+ * Anything `collisionBetween` can compare: an object, something it draws, or a rectangle of the world.
  *
  * @category Hitboxes
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TOverlapTarget = TBox | TSprite | TText | TNineSlice | TRect;
+export type TCollisionTarget = TBox | TSprite | TText | TNineSlice | TRect;
 
 /**
  * The rectangles a target is touched by. An object with hitboxes is touched by those that are on,
@@ -30,7 +30,7 @@ export type TOverlapTarget = TBox | TSprite | TText | TNineSlice | TRect;
  *
  * @internal
  */
-export const rectsOf = (target: TOverlapTarget): TTurnedRect[] => {
+export const rectsOf = (target: TCollisionTarget): TTurnedRect[] => {
     if ('children' in target) {
         if (target.hitboxes.length > 0) {
             return target.hitboxes.filter((hitbox) => hitbox.enabled).map((hitbox) => hitboxRect(target, hitbox));
@@ -54,7 +54,7 @@ export const rectsOf = (target: TOverlapTarget): TTurnedRect[] => {
  * where it is drawn: turned, grown and moved with everything above it. Edges that only meet do not
  * count, so two tiles side by side are not touching.
  *
- * For many things against many, every frame, `useOverlap` with groups says it once.
+ * For many things against many, every frame, `useCollisionBetween` with groups says it once.
  *
  * @param a One thing.
  * @param b The other.
@@ -66,7 +66,7 @@ export const rectsOf = (target: TOverlapTarget): TTurnedRect[] => {
  * declare const brick: TSprite;
  *
  * useUpdate(() => {
- *     if (overlaps(bullet, brick)) {
+ *     if (collisionBetween(bullet, brick)) {
  *         bullet.visible = false;
  *     }
  * });
@@ -76,7 +76,7 @@ export const rectsOf = (target: TOverlapTarget): TTurnedRect[] => {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const overlaps = (a: TOverlapTarget, b: TOverlapTarget): boolean => {
+export const collisionBetween = (a: TCollisionTarget, b: TCollisionTarget): boolean => {
     const first = rectsOf(a);
     if (first.length === 0) {
         return false;

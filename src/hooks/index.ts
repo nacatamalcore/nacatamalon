@@ -1,5 +1,7 @@
 export { useUpdate, useLateUpdate } from './loop';
-export { useHitbox, useOverlap } from './hitbox';
+export { useHitbox, useCollisionBetween, useCollisionWith } from './hitbox';
+export { useTag } from './tags';
+export type { TCollisionWithOptions } from './hitbox';
 export type { THitboxOptions } from './hitbox';
 export { useColor } from './color';
 export { useKeyboard, usePointer, useGamepad, useActions, useAction, useVector, useInputMap, useTouchAction } from './input';

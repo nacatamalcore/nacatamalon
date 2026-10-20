@@ -60,6 +60,11 @@ export type TText = {
      */
     smooth?: boolean;
     /**
+     * What it is, for something drawn on its own rather than a piece: `['wall']`. What `useTag` adds and
+     * finds, and what collisions are asked by. Absent is none.
+     */
+    tags?: string[];
+    /**
      * Whether it is drawn at all. Omitted is drawn. Hidden, it keeps what it says and costs nothing
      * to show again, which is what a label that comes and goes wants.
      */

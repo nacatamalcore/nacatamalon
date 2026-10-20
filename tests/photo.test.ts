@@ -153,7 +153,7 @@ describe('useCapture', () => {
             createSprite({ width: 40, height: 20, transform: { x: 150, y: 60 }, visible: false });
             useSpawn(function Frame() {
                 useTransform({ x: 150, y: 60 });
-                useHitbox({ group: 'frame', width: 40, height: 20 });
+                useHitbox({ width: 40, height: 20 });
             }, 'Frame')();
         });
         const byHitbox = await develop(capture()({ region: 'Frame' }));

@@ -670,6 +670,7 @@ const buildBox = (node: TBoxNode, store: TRuntimeStore, src: string): void => {
     // Kept, so a tool that remembers a selection or a link still finds what it remembered.
     box.id = node.id;
     box.name = node.name;
+    if (node.tags !== undefined) box.tags = [...node.tags];
     if (node.visible === false) box.visible = false;
     if (node.screenSpace === true) useScreenSpace();
     if (node.transform !== null) useTransform(node.transform);

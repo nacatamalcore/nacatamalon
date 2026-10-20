@@ -7,7 +7,7 @@ import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useTransform } from '../src/hooks/transform/use_transform';
 import { fillFrameContext } from '../src/game/loop/fill_frame_context';
 import { pickTargets } from '../src/input/pick_targets';
-import { overlaps } from '../src/hitbox';
+import { collisionBetween } from '../src/hitbox';
 import { pivotPlace } from '../src/render/shared/pivot_place';
 import { composeTransform2d } from '../src/render/shared/compose_transform_2d';
 import { createTestGame, startTestScene } from './helpers/test_game';
@@ -128,13 +128,13 @@ describe('a pivot on what a game makes', () => {
         expect(pickTargets(store, 130, 100)).not.toContain(bike);
         // Turned about its left end, it would have stood at x 100, from y 100 to 140.
         expect(pickTargets(store, 100, 130)).not.toContain(bike);
-        expect(overlaps(bike, probe)).toBe(true);
+        expect(collisionBetween(bike, probe)).toBe(true);
 
         // Taken away: back to turning about its anchor.
         bike.pivot = undefined;
         drawn(store);
         expect(pickTargets(store, 100, 130)).toContain(bike);
-        expect(overlaps(bike, probe)).toBe(false);
+        expect(collisionBetween(bike, probe)).toBe(false);
     });
 
     it('a text: anchored at its corner and turned about its middle is the text anchored at its middle', () => {
@@ -207,7 +207,7 @@ describe('a pivot on what a game makes', () => {
         drawn(store);
         expect(pickTargets(store, 220, 185)).toContain(bar);
         expect(pickTargets(store, 200, 230)).not.toContain(bar);
-        expect(overlaps(bar, bar)).toBe(true);
+        expect(collisionBetween(bar, bar)).toBe(true);
     });
 
     it('a group above the box carries it as one: turning the group turns the whole about the group', () => {

@@ -693,6 +693,7 @@ const writeBox = (box: TBox, writing: TWriting): TBoxNode => {
     return {
         id: box.id,
         name: box.name,
+        ...(box.tags.length > 0 ? { tags: [...box.tags] } : {}),
         transform: writeTransform(box.transform),
         components,
         // A box born after its scene was built is a bullet in flight, not part of the level.

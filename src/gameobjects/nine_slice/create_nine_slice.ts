@@ -111,6 +111,7 @@ export const createNineSlice = (options: TNineSliceOptions): TNineSlice => {
         uniforms: options.uniforms,
         destroyed: false,
     });
+    if (options.tags !== undefined && options.tags.length > 0) Object.assign(nineSlice, { tags: [...options.tags] });
 
     box.drawables.push(nineSlice);
     trackDrawableOwner(nineSlice, box, store);

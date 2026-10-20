@@ -7,6 +7,14 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- Tags: what something is, as many as it likes. `useTag('enemy')` gives the tag, to `add`,
+  `remove`, `has`, find `all()` in the scene and `clear()`; asking is getting, and nothing registers
+  it. A piece adds itself (`useTag('enemy').add(useSelf())`) or is made with
+  `useSpawn(Bat, { tags: ['enemy'] })`; a sprite, text or panel carries tags on its own
+  (`createSprite({ tags: ['wall'] })`). A saved scene's box keeps them.
+- `useCollisionWith(Enemy, (enemy) => ...)`: a piece says itself what it collides with, by component
+  or by tag, from its own body, so a bullet and an enemy written apart need no rule in the scene that knows both.
+  Every frame they touch by default, or `{ when: 'start' }` on the first and `'end'` on parting.
 - `sceneOf(self)`: the scene something is in, to reach the rest of it by name,
   `findObject(sceneOf(self), 'Score')`, wherever the behaviour sits.
 - `useSpawn` takes a name for what it makes: `useSpawn(Button, 'Jump')`, or
@@ -24,6 +32,15 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- Collisions are asked by component or by tag, not by a hitbox's group.
+  `useCollisionWith(Enemy, (enemy) => enemy.api.hurt(1))` meets the pieces `useSpawn` made from
+  `Enemy`, their `api` typed; `useCollisionWith('damageable', ...)` meets everything carrying the tag,
+  pieces and tagged sprites alike. `useCollisionBetween` takes either on each side. A piece is
+  measured by its hitboxes or what it draws, a tagged sprite by itself. `useHitbox` lost its `group`: what a thing is is its tag. A body and a sword that count for
+  different things are two pieces, each with its own tag.
+- One word for what touches what: `useOverlap` is `useCollisionBetween`, `overlaps` is
+  `collisionBetween` and `TOverlapTarget` is `TCollisionTarget`, beside the new `useCollisionWith`.
+  `useHitbox` is unchanged. The old names are gone.
 - `useEvent` and `onEvent` are `useReport` and `onReport`, and `TObjectEventHandler` is
   `TReportHandler`: what a piece reports to whoever placed it, which is all they ever did, beside a
   signal that the whole game hears. They are for pieces made of data, a pack's script or a

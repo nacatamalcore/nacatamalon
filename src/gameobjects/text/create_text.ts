@@ -110,6 +110,7 @@ export const createText = (options: TTextOptions): TText => {
         uniforms: options.uniforms,
         destroyed: false,
     });
+    if (options.tags !== undefined && options.tags.length > 0) Object.assign(text, { tags: [...options.tags] });
 
     box.drawables.push(text);
     trackDrawableOwner(text, box, store);

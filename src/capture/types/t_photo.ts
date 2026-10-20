@@ -26,7 +26,7 @@ export type TPhotoOptions = {
     /**
      * The part of the screen it is of: a rectangle in the game's pixels (`{ x, y, width, height }`
      * from the screen's top-left corner), or a box, the part of the screen it covers. A box is
-     * measured as `overlaps` measures it, by its hitboxes or else by what it draws, and is measured
+     * measured as `collisionBetween` measures it, by its hitboxes or else by what it draws, and is measured
      * hidden too: a viewfinder can be a box that is never shown. Default: the whole screen.
      */
     region?: TPixelRegion | TPhotoBoxRef;

@@ -11,8 +11,10 @@ import { useSelf } from '../src/hooks/spawn/use_self';
 import { useUpdate } from '../src/hooks/loop/use_update';
 import { useLateUpdate } from '../src/hooks/loop/use_late_update';
 import { useTransform } from '../src/hooks/transform/use_transform';
-import { useHitbox, useOverlap } from '../src/hooks/hitbox';
-import { overlaps } from '../src/hitbox';
+import { useHitbox, useCollisionBetween, useCollisionWith } from '../src/hooks/hitbox';
+import { useTag } from '../src/hooks/tags/use_tag';
+import type { THitboxOptions } from '../src/hooks/hitbox/use_hitbox';
+import { collisionBetween } from '../src/hitbox';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import type { TSceneFn } from '../src/scene';
 import type { TSprite } from '../src/gameobjects/sprite/types/t_sprite';
@@ -21,7 +23,7 @@ import type { THitbox } from '../src/hitbox';
 
 /**
  * Whether things touch, with no physics: two rectangles, turned the way they are drawn, sharing any
- * area. Asked once with `overlaps`, or every frame between groups with `useOverlap`.
+ * area. Asked once with `collisionBetween`, or every frame between tags with `useCollisionBetween`.
  */
 
 (globalThis as { requestAnimationFrame?: (cb: FrameRequestCallback) => number }).requestAnimationFrame = () => 0;
@@ -34,6 +36,12 @@ const square = (x: number, y: number, size = 10, rotation = 0) =>
 /**
  * A scene built with `body`, and a frame to run it by, through the real tick.
  */
+/** A hitbox on the object being built, and the tag it is touched by. */
+const hitboxOf = (tag: string, options: THitboxOptions = {}) => {
+    useTag(tag).add(useSelf());
+    return useHitbox(options);
+};
+
 const game = (body: TSceneFn) => {
     const { store } = createTestGame();
     const ctx = createFrameContext();
@@ -50,7 +58,7 @@ const game = (body: TSceneFn) => {
     };
 };
 
-describe('overlaps', () => {
+describe('collision_between', () => {
     it('says whether two pictures share any area, and edges that only meet are not touching', () => {
         const { store } = createTestGame();
         let a!: TSprite; let b!: TSprite; let c!: TSprite; let d!: TSprite;
@@ -63,9 +71,9 @@ describe('overlaps', () => {
             return createScene();
         });
 
-        expect(overlaps(a, b)).toBe(true);
-        expect(overlaps(a, c)).toBe(false);
-        expect(overlaps(a, d)).toBe(false);
+        expect(collisionBetween(a, b)).toBe(true);
+        expect(collisionBetween(a, c)).toBe(false);
+        expect(collisionBetween(a, d)).toBe(false);
     });
 
     it('follows a turn: a bar on the diagonal misses what the box around it would catch', () => {
@@ -79,8 +87,8 @@ describe('overlaps', () => {
             return createScene();
         });
 
-        expect(overlaps(bar, off)).toBe(false);
-        expect(overlaps(bar, on)).toBe(true);
+        expect(collisionBetween(bar, off)).toBe(false);
+        expect(collisionBetween(bar, on)).toBe(true);
     });
 
     it('measures a picture where it is drawn, through the objects above it', () => {
@@ -95,8 +103,8 @@ describe('overlaps', () => {
         });
 
         // At 120, 50 in the world and 8 wide: from 116 to 124.
-        expect(overlaps(barrel, { x: 123, y: 48, width: 4, height: 4 })).toBe(true);
-        expect(overlaps(barrel, { x: 124, y: 48, width: 4, height: 4 })).toBe(false);
+        expect(collisionBetween(barrel, { x: 123, y: 48, width: 4, height: 4 })).toBe(true);
+        expect(collisionBetween(barrel, { x: 124, y: 48, width: 4, height: 4 })).toBe(false);
     });
 
     it('measures an object by its hitboxes, by nothing when they are off, and by its picture when it has none', () => {
@@ -105,7 +113,7 @@ describe('overlaps', () => {
         startTestScene(store, 'Level', () => {
             hero = useSpawn(function Hero() {
                 square(50, 50, 20);
-                body = useHitbox({ group: 'player', width: 6, height: 6 });
+                body = hitboxOf('player', { width: 6, height: 6 });
             })();
             rock = useSpawn(function Rock() { square(64, 50, 10); })();
             return createScene();
@@ -113,13 +121,13 @@ describe('overlaps', () => {
         const near = { x: 56, y: 48, width: 4, height: 4 };
 
         // The picture reaches 60, the hitbox only 53.
-        expect(overlaps(hero, rock)).toBe(false);
+        expect(collisionBetween(hero, rock)).toBe(false);
         // Where the hero's picture is and its hitbox is not.
-        expect(overlaps(hero, near)).toBe(false);
-        expect(overlaps(hero, { x: 52, y: 48, width: 4, height: 4 })).toBe(true);
+        expect(collisionBetween(hero, near)).toBe(false);
+        expect(collisionBetween(hero, { x: 52, y: 48, width: 4, height: 4 })).toBe(true);
         body.enabled = false;
-        expect(overlaps(hero, { x: 52, y: 48, width: 4, height: 4 })).toBe(false);
-        expect(overlaps(rock, { x: 58, y: 48, width: 4, height: 4 })).toBe(true);
+        expect(collisionBetween(hero, { x: 52, y: 48, width: 4, height: 4 })).toBe(false);
+        expect(collisionBetween(rock, { x: 58, y: 48, width: 4, height: 4 })).toBe(true);
     });
 
     it('takes the picture\'s size until given one, follows it when it changes, and moves by x and y', () => {
@@ -128,34 +136,106 @@ describe('overlaps', () => {
         startTestScene(store, 'Level', () => {
             hero = useSpawn(function Hero() {
                 sprite = square(50, 50, 20);
-                body = useHitbox({ group: 'player' });
+                body = hitboxOf('player');
             })();
             return createScene();
         });
         const probe = { x: 58, y: 49, width: 1, height: 2 };
 
-        expect(overlaps(hero, probe)).toBe(true);
+        expect(collisionBetween(hero, probe)).toBe(true);
         sprite.width = 10;
-        expect(overlaps(hero, probe)).toBe(false);
+        expect(collisionBetween(hero, probe)).toBe(false);
         body.width = 30;
-        expect(overlaps(hero, probe)).toBe(true);
+        expect(collisionBetween(hero, probe)).toBe(true);
         // Moved down by 20: its top is now at 50, below the probe.
         body.y = 20;
-        expect(overlaps(hero, probe)).toBe(false);
+        expect(collisionBetween(hero, probe)).toBe(false);
     });
 });
 
-describe('useOverlap', () => {
-    const Shot = (x: number) => { square(x, 50, 4); useHitbox({ group: 'shot' }); };
-    const Bat = (x: number) => { square(x, 50, 10); useHitbox({ group: 'enemy' }); };
+describe('useCollisionWith', () => {
+    const Bat = (x: number) => { square(x, 50, 10); hitboxOf('enemy'); };
 
-    it('calls for every pair touching, every frame they touch, in the order the groups were named', () => {
+    it('calls with each thing of the tag the piece touches, every frame, from the piece itself', () => {
+        const seen: string[] = [];
+        const { frame } = game(() => {
+            // Two bullets written apart from the bats, each saying what it hits: no rule in the scene.
+            const Bullet = (label: string, x: number) => {
+                square(x, 50, 4);
+                hitboxOf('shot');
+                useCollisionWith('enemy', (bat) => seen.push(`${label}>${(bat as TGameObject).name}`));
+            };
+            useSpawn(Bat, 'Bat')(52);
+            useSpawn(Bat, 'Bat')(200);
+            useSpawn(Bullet)('a', 50);
+            useSpawn(Bullet)('b', 120);
+            return createScene();
+        });
+
+        frame();
+        frame();
+
+        expect(seen).toEqual(['a>Bat', 'a>Bat']);
+    });
+
+    it('calls once on the first frame they touch with start, and once when they part with end', () => {
+        const said: string[] = [];
+        let bat!: TSprite;
+        const { frame } = game(() => {
+            useSpawn(() => { bat = square(52, 50, 10); hitboxOf('enemy'); }, 'Bat')();
+            useSpawn(() => {
+                square(50, 50, 4);
+                useCollisionWith('enemy', () => said.push('start'), { when: 'start' });
+                useCollisionWith('enemy', () => said.push('end'), { when: 'end' });
+            }, 'Player')();
+            return createScene();
+        });
+
+        frame();
+        frame();
+        bat.transform.x = 300;
+        frame();
+        frame();
+
+        expect(said).toEqual(['start', 'end']);
+    });
+
+    it('is not called again once the piece destroyed itself, nor with what an earlier call destroyed', () => {
+        const hits: string[] = [];
+        const { frame } = game(() => {
+            useSpawn(Bat, 'Bat')(48);
+            useSpawn(Bat, 'Bat')(52);
+            useSpawn(() => {
+                const self = useSelf();
+                square(50, 50, 4);
+                hitboxOf('shot');
+                useCollisionWith('enemy', (bat) => {
+                    hits.push((bat as TGameObject).name);
+                    destroy(self);
+                });
+            }, 'Bullet')();
+            return createScene();
+        });
+
+        frame();
+        frame();
+
+        // One bullet, one bat.
+        expect(hits).toEqual(['Bat']);
+    });
+});
+
+describe('useCollisionBetween', () => {
+    const Shot = (x: number) => { square(x, 50, 4); hitboxOf('shot'); };
+    const Bat = (x: number) => { square(x, 50, 10); hitboxOf('enemy'); };
+
+    it('calls for every pair touching, every frame they touch, in the order the tags were named', () => {
         const seen: string[] = [];
         const { frame } = game(() => {
             useSpawn(Shot)(50);
             useSpawn(Bat)(52);
             useSpawn(Bat)(200);
-            useOverlap('shot', 'enemy', (shot, bat) => seen.push(`${shot.name}>${bat.name}`));
+            useCollisionBetween('shot', 'enemy', (shot, bat) => seen.push(`${(shot as TGameObject).name}>${(bat as TGameObject).name}`));
             return createScene();
         });
 
@@ -170,11 +250,11 @@ describe('useOverlap', () => {
         const { frame } = game(() => {
             useSpawn(function Runner() {
                 const sprite = square(0, 50, 4);
-                useHitbox({ group: 'shot' });
+                hitboxOf('shot');
                 useUpdate(() => { sprite.transform.x = 50; order.push('update'); });
             })();
             useSpawn(Bat)(52);
-            useOverlap('shot', 'enemy', () => order.push('overlap'));
+            useCollisionBetween('shot', 'enemy', () => order.push('overlap'));
             useLateUpdate(() => order.push('late'));
             return createScene();
         });
@@ -190,8 +270,8 @@ describe('useOverlap', () => {
             useSpawn(Shot)(50);
             useSpawn(Bat)(48);
             useSpawn(Bat)(52);
-            useOverlap('shot', 'enemy', (shot, bat) => {
-                hit.push(bat.drawables.length);
+            useCollisionBetween('shot', 'enemy', (shot, bat) => {
+                hit.push((bat as TGameObject).drawables.length);
                 destroy(shot);
             });
             return createScene();
@@ -203,11 +283,11 @@ describe('useOverlap', () => {
         expect(store.get('world').scenes[0].children.filter((child) => child.name === 'Shot')).toHaveLength(0);
     });
 
-    it('calls once for each pair of one group, and never pairs a thing with itself', () => {
+    it('calls once for each pair of one tag, and never pairs a thing with itself', () => {
         const pairs: string[] = [];
         const { frame } = game(() => {
             const bats: TGameObject[] = [useSpawn(Bat)(50), useSpawn(Bat)(55), useSpawn(Bat)(58)];
-            useOverlap('enemy', 'enemy', (one, other) => pairs.push([bats.indexOf(one), bats.indexOf(other)].sort().join('')));
+            useCollisionBetween('enemy', 'enemy', (one, other) => pairs.push([bats.indexOf(one as TGameObject), bats.indexOf(other as TGameObject)].sort().join('')));
             return createScene();
         });
 
@@ -221,11 +301,11 @@ describe('useOverlap', () => {
         const { frame } = game(() => {
             useSpawn(function Knight() {
                 square(50, 50, 10);
-                useHitbox({ group: 'enemy' });
-                useHitbox({ group: 'enemy', x: 2 });
+                hitboxOf('enemy');
+                hitboxOf('enemy', { x: 2 });
             })();
             useSpawn(Shot)(50);
-            useOverlap('shot', 'enemy', () => { calls += 1; });
+            useCollisionBetween('shot', 'enemy', () => { calls += 1; });
             return createScene();
         });
 
@@ -238,10 +318,10 @@ describe('useOverlap', () => {
         const seen: number[] = [];
         let first!: THitbox;
         const { frame } = game(() => {
-            useSpawn(function Hero() { square(50, 50, 10); first = useHitbox({ group: 'player' }); })();
+            useSpawn(function Hero() { square(50, 50, 10); first = hitboxOf('player'); })();
             useSpawn(Bat)(52);
             useSpawn(Bat)(48);
-            useOverlap('player', 'enemy', () => {
+            useCollisionBetween('player', 'enemy', () => {
                 seen.push(1);
                 // Hurt: blinking, so nothing else hurts this frame or after.
                 first.enabled = false;
@@ -263,9 +343,9 @@ describe('useOverlap', () => {
         const { frame } = game(() => {
             useSpawn(Shot)(50);
             useSpawn(Bat)(52);
-            stop = useOverlap('shot', 'enemy', () => { a += 1; });
+            stop = useCollisionBetween('shot', 'enemy', () => { a += 1; });
             watcher = useSpawn(function Watcher() {
-                useOverlap('shot', 'enemy', () => { b += 1; });
+                useCollisionBetween('shot', 'enemy', () => { b += 1; });
             })();
             return createScene();
         });
@@ -283,7 +363,7 @@ describe('useOverlap', () => {
         const { frame, store } = game(() => {
             useSpawn(Shot)(50);
             useSpawn(Bat)(52);
-            useOverlap('shot', 'enemy', () => { calls += 1; });
+            useCollisionBetween('shot', 'enemy', () => { calls += 1; });
             return createScene();
         });
 
@@ -298,10 +378,10 @@ describe('useOverlap', () => {
             useSpawn(function Coin() {
                 const self = useSelf();
                 square(50, 50, 6);
-                useHitbox({ group: 'coin' });
-                useOverlap('player', 'coin', (_, coin) => { if (coin === self) destroy(self); });
+                hitboxOf('coin');
+                useCollisionBetween('player', 'coin', (_, coin) => { if (coin === self) destroy(self); });
             })();
-            useSpawn(function Hero() { square(52, 50, 10); useHitbox({ group: 'player' }); })();
+            useSpawn(function Hero() { square(52, 50, 10); hitboxOf('player'); })();
             return createScene();
         });
 

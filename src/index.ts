@@ -124,9 +124,12 @@ export { findObject, findObjects, sceneOf } from './box';
 // hit landed on it, where a shot leaves it from.
 export { worldToLocal, localToWorld, worldToLocal3d, localToWorld3d } from './box';
 // Whether two things touch, with no physics: a bullet and a brick, the player and the coins.
-export { overlaps } from './hitbox';
-export type { TRect, TOverlapTarget, THitbox } from './hitbox';
-export { useHitbox, useOverlap } from './hooks';
+export { collisionBetween } from './hitbox';
+export type { TRect, TCollisionTarget, THitbox } from './hitbox';
+export type { TCollisionWhen } from './hitbox/types/t_hitbox';
+export { useHitbox, useCollisionBetween, useCollisionWith, useTag } from './hooks';
+export type { TTag, TTaggable } from './tags';
+export type { TCollisionWithOptions } from './hooks';
 // Photos of the game taken by the game: a photography game, an album, a sticker.
 export { useCapture } from './hooks';
 export type { TCapture, TPhoto, TPhotoBox, TPhotoBoxRef, TPhotoOptions } from './capture';

@@ -108,6 +108,10 @@ export type TSpriteOptions = {
      */
     parallax?: { x: number; y: number };
     /**
+     * What it is, as `useTag` says it: `['wall']`. The same as adding them after.
+     */
+    tags?: string[];
+    /**
      * Whether it is drawn. Default `true`. `false` makes it straight away hidden, which is how a
      * set of them is prepared in advance and shown one at a time.
      */

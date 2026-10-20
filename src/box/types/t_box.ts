@@ -12,7 +12,7 @@ import type { TCamera2d } from '../../camera';
 import type { TCamera3d } from '../../camera/types/t_camera_3d';
 import type { TSpriteTexture } from '../../gameobjects/sprite_texture/types/t_sprite_texture';
 import type { TMotionAttachment } from '../../motion/types/t_motion';
-import type { THitbox, TOverlapListener } from '../../hitbox/types/t_hitbox';
+import type { THitbox, TCollisionListener } from '../../hitbox/types/t_hitbox';
 
 /**
  * One box at runtime: the engine's single composition primitive, a node in the tree. A scene
@@ -39,6 +39,11 @@ export type TBox = {
      * What the box is called where it was placed. Not unique: two enemies can share it.
      */
     name: string;
+    /**
+     * What it is: `'enemy'`, `'coin'`, `'damageable'`, as many as it likes. What `useTag` adds and
+     * finds, and what collisions are asked by. Changed whenever the game likes.
+     */
+    tags: string[];
     /**
      * `null` for a scene root. Kept so a box can be detached without searching the tree.
      */
@@ -154,10 +159,10 @@ export type TBox = {
      */
     hitboxes: THitbox[];
     /**
-     * Registered by `useOverlap`: two groups to compare once every update of the scene has run, and
+     * Registered by `useCollisionBetween`: two groups to compare once every update of the scene has run, and
      * what to call for each pair touching.
      */
-    overlapCallbacks: TOverlapListener[];
+    collisionCallbacks: TCollisionListener[];
     /**
      * Only meaningful on a scene root: while `true` the tick skips this scene's updates and still
      * draws it. Lives on the root so it goes away with the scene and cannot be left behind.

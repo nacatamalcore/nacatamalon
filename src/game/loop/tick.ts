@@ -6,7 +6,7 @@ import { MAX_FRAME_DELTA, MAX_STEPS_PER_FRAME } from "../../CONFIG";
 import { runHookUpdates as runUpdates, runLateUpdates, runMoves } from "./runHookUpdates";
 import { stepGameTransition } from "./helper/step_game_transition";
 import { flushDestroyed } from "../../destroy";
-import { runOverlaps } from "../../hitbox/run_overlaps";
+import { runCollisions } from "../../hitbox/run_collisions";
 import { updateAudio } from "../../audio";
 import { settleCapture } from "../capture";
 import { reportFrameError } from "./report_frame_error";
@@ -97,8 +97,8 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
                     runUpdates(scene, dt, undefined, late, touching, moving);
                     // The bodies the updates gave a speed, moved against the world.
                     runMoves(moving, dt, scene.time);
-                    // Where every update left things, before anything reads it late: see `useOverlap`.
-                    runOverlaps(touching);
+                    // Where every update left things, before anything reads it late: see `useCollisionBetween`.
+                    runCollisions(scene, touching);
                     // Once every update of the scene is over, so what is read there is where things
                     // ended up this frame: see `useLateUpdate`.
                     runLateUpdates(late, dt, scene.time);

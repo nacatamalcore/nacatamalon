@@ -183,6 +183,7 @@ export const createSprite = ((options: TSpriteOptions): TSprite => {
     };
     const sprite = createRecord('sprite', { width, height, smooth, blend, anchor, zIndex, flipX, flipY, ...extras, visible, material, uniforms, uvOffset, uvScale, atlas, frame, texture, transform, tint, destroyed: false });
     liveFrame(sprite);
+    if (options.tags !== undefined && options.tags.length > 0) Object.assign(sprite, { tags: [...options.tags] });
 
     box.drawables.push(sprite);
 
