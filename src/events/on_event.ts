@@ -11,8 +11,11 @@ import type { TObjectEventHandler } from './object_events';
  * a game hears a pack: listen on what `createPack` gave back (or pass `on` to `createPack`, which does
  * this), even though the pack's content is only built when the pack lands.
  *
- * - It can be called at any moment, and it adds: two handlers on one event both run.
- * - It stops by itself when the object goes away. The function it returns stops it earlier.
+ * - It can be called at any moment, and it adds: two handlers on one event both run, and so does one
+ *   handler connected twice.
+ * - It stops by itself when the object goes away, and, called while something is being built, when
+ *   that something goes away: a HUD listening on its scene stops hearing when the HUD is destroyed,
+ *   though the scene lives on. The function it returns stops it earlier.
  * - For something the whole game should hear, from anywhere, a signal (`createGameSignal`) is the tool.
  *   This is for one object telling the one above it.
  *

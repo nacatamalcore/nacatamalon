@@ -32,6 +32,12 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- `onEvent` stops when whoever listened goes away, not only when the object listened on does. A
+  HUD listening on its scene went on hearing once destroyed, writing on a text that was gone, and a
+  new HUD in its place made two. One connected inside a body now lasts as long as that body's
+  object, deaf from the moment it is destroyed, and an event passes it by for the next one up. The
+  function `onEvent` gives back lets go of its own connection only: the same handler connected twice
+  lost both.
 - A sprite's `frame` and `atlas` show what they say when they are set: `chest.frame = 1` opens the
   chest, and `hero.atlas = attacking` shows the same frame of the other sheet. Until now only
   `setSpriteFrame` changed the picture, and writing the field did nothing, while a polygon's and a

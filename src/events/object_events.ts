@@ -1,3 +1,4 @@
+import { getActiveBox } from '../store/active_box';
 import type { TBox } from '../box';
 
 /**
@@ -17,8 +18,27 @@ export type TObjectEventHandler<T = unknown> = (payload: T, from: TBox) => void;
 const handlers = new WeakMap<TBox, Map<string, TObjectEventHandler[]>>();
 
 /**
+ * Whoever was being built when each connection was made, for the ones made inside a body.
+ */
+const listeners = new WeakMap<TObjectEventHandler, TBox>();
+
+/**
+ * Whether a connection still hears: not once whoever made it has been destroyed.
+ */
+const hears = (connection: TObjectEventHandler): boolean => listeners.get(connection)?.destroyed !== true;
+
+/**
  * Connects `handler` to the event `name` on `object`. Internal twin of `onEvent`, which is the one a
  * game calls; `createPack` connects its `on` through here.
+ *
+ * **It lasts as long as both ends do**: the object listened on, and whoever was being built when it
+ * was connected. A HUD listening on its scene goes deaf when the HUD is destroyed, though the scene
+ * lives on, rather than writing on a text that is gone, and hearing twice once a new HUD takes its
+ * place. Deaf from the moment it is destroyed, not only once the frame ends and takes it out.
+ * Connected from outside any body (a callback, a timer), only the object listened on decides.
+ *
+ * Each call is a connection of its own: the same handler connected twice is two, and the function
+ * one call gives back lets go of that one only.
  *
  * @internal
  */
@@ -28,19 +48,32 @@ export const connectObjectEvent = <T>(object: TBox, name: string, handler: TObje
         byName = new Map();
         handlers.set(object, byName);
     }
+    const listener = getActiveBox();
+    // Its own function, not `handler`: what tells this connection from another of the same handler.
+    const connection: TObjectEventHandler = (payload, from) => (handler as TObjectEventHandler)(payload, from);
+    if (listener !== null) {
+        listeners.set(connection, listener);
+    }
     const list = byName.get(name) ?? [];
-    list.push(handler as TObjectEventHandler);
+    list.push(connection);
     byName.set(name, list);
 
+    let connected = true;
     const off = (): void => {
+        if (!connected) return;
+        connected = false;
         const current = handlers.get(object)?.get(name);
         if (current === undefined) return;
-        const left = current.filter((existing) => existing !== handler);
+        const left = current.filter((existing) => existing !== connection);
         if (left.length === 0) handlers.get(object)!.delete(name);
         else handlers.get(object)!.set(name, left);
     };
     // Leaves with the object: a destroyed one, or one whose scene stopped, hears nothing more.
     object.cleanups.push(off);
+    // And with whoever listened, when that is something else.
+    if (listener !== null && listener !== object) {
+        listener.cleanups.push(off);
+    }
     return off;
 };
 
@@ -57,10 +90,14 @@ export const connectObjectEvent = <T>(object: TBox, name: string, handler: TObje
 export const sendObjectEvent = (from: TBox, name: string, payload: unknown): boolean => {
     let object: TBox | null = from;
     while (object !== null) {
-        const list = object.destroyed ? undefined : handlers.get(object)?.get(name);
+        // Only the connections that still hear: one whose listener was destroyed this frame is not a
+        // listener, and must not keep the event from the object above.
+        const list = object.destroyed ? undefined : handlers.get(object)?.get(name)?.filter(hears);
         if (list !== undefined && list.length > 0) {
-            // Over a copy: a handler that disconnects another during this event does not stop it here.
-            for (const handler of [...list]) handler(payload, from);
+            // A copy already: a handler that disconnects another during this event does not stop it here.
+            for (const handler of list) {
+                if (hears(handler)) handler(payload, from);
+            }
             return true;
         }
         object = object.parent;

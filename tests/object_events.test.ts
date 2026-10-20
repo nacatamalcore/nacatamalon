@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
+import { useSelf } from '../src/hooks/spawn/use_self';
 import { useTransform } from '../src/hooks/transform/use_transform';
 import { useEvent } from '../src/hooks/events/use_event';
 import { onEvent } from '../src/events/on_event';
@@ -75,6 +76,49 @@ describe('useEvent and onEvent', () => {
         send();
         expect(heard).toEqual(['root']);
         flushDestroyed(store);
+    });
+
+    it('stops being heard by whoever listened once that one is destroyed', () => {
+        const { store } = createTestGame();
+        let send!: () => boolean;
+        const heard: string[] = [];
+        // A HUD that listens to the whole scene it sits in, which outlives it.
+        const Hud = (label: string) => {
+            onEvent(useSelf().parent!, 'collected', () => heard.push(label));
+        };
+        let hud!: TBox;
+        startTestScene(store, 'Level', () => {
+            useSpawn(() => { send = useEvent('collected'); })();
+            hud = useSpawn(Hud)('old');
+            return createScene();
+        });
+
+        send();
+        destroy(hud);
+        // The scene itself listening: with the HUD gone, it is the first that hears.
+        onEvent(hud.parent!, 'collected', () => heard.push('scene'));
+        // Deaf from the moment it is destroyed, before the end of the frame takes it out.
+        send();
+        flushDestroyed(store);
+        send();
+        expect(heard).toEqual(['old', 'scene', 'scene']);
+    });
+
+    it('lets go of one connection at a time, even of one handler connected twice', () => {
+        const { store } = createTestGame();
+        let send!: () => boolean;
+        const root = startTestScene(store, 'Level', () => {
+            useSpawn(() => { send = useEvent('ping'); })();
+            return createScene();
+        });
+        let count = 0;
+        const handler = () => { count++; };
+        const first = onEvent(root, 'ping', handler);
+        onEvent(root, 'ping', handler);
+
+        first();
+        send();
+        expect(count).toBe(1);
     });
 });
 
