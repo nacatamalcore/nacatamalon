@@ -1,4 +1,5 @@
-import { atlasFrame, setSpriteFrame } from "../../atlas";
+import { atlasFrame } from "../../atlas";
+import { showFrame } from "../../atlas/set_sprite_frame";
 import { whenLoaded } from "../../loaders";
 import type { TLoadable } from "../../loaders";
 import { getColor } from "../../color";
@@ -7,6 +8,7 @@ import { getActiveBox, getActiveGame } from "../../store";
 import { createRecord } from "../create_record";
 import type { TTexture } from "../../loaders";
 import type { TSprite, TSpriteOptions } from "./types";
+import type { TSpriteAtlas } from "../../atlas";
 import { listen } from "../../events/listen";
 
 /**
@@ -80,6 +82,52 @@ export type TCreateSprite = {
 };
 
 /**
+ * Makes `frame` and `atlas` show what they say the moment they are set, like every other field of a
+ * sprite: `coin.frame = 3` shows frame 3 on the next frame, and `hero.atlas = attacking` the same
+ * frame of the other sheet. Underneath, what a sprite draws is its image through a window
+ * (`texture`, `uvOffset`, `uvScale`); these two are worked into that window as they are written, so
+ * the window stays the one thing the renderer reads.
+ *
+ * Still plain to read and to save: both are ordinary enumerable values on the record.
+ */
+const liveFrame = (sprite: TSprite): void => {
+    let frame = sprite.frame;
+    let atlas = sprite.atlas;
+    Object.defineProperty(sprite, 'frame', {
+        configurable: true,
+        enumerable: true,
+        get: () => frame,
+        set: (next: number | undefined) => {
+            if (next !== undefined) showFrame(sprite, atlas, next);
+            frame = next;
+        },
+    });
+    Object.defineProperty(sprite, 'atlas', {
+        configurable: true,
+        enumerable: true,
+        get: () => atlas,
+        set: (next: TSpriteAtlas | undefined) => {
+            atlas = next;
+            if (next === undefined) {
+                return;
+            }
+            if (frame === undefined || (next.frames > 0 && frame >= next.frames)) {
+                // A frame the new sheet has: the first, when the old one was past its end.
+                frame = 0;
+            }
+            if (next.frames > 0) {
+                showFrame(sprite, next, frame);
+                return;
+            }
+            // A sheet still on its way: shown when it lands, if it is still this sprite's sheet.
+            void whenLoaded(next as unknown as TLoadable).then(() => {
+                if (atlas === next) showFrame(sprite, next, frame ?? 0);
+            });
+        },
+    });
+};
+
+/**
  * Puts a picture in the scene: an image from `useLoadTexture`, a frame of a sheet, or a plain
  * coloured rectangle when it has neither.
  *
@@ -134,6 +182,7 @@ export const createSprite = ((options: TSpriteOptions): TSprite => {
         ...(pivot !== undefined ? { pivot } : {}),
     };
     const sprite = createRecord('sprite', { width, height, smooth, blend, anchor, zIndex, flipX, flipY, ...extras, visible, material, uniforms, uvOffset, uvScale, atlas, frame, texture, transform, tint, destroyed: false });
+    liveFrame(sprite);
 
     box.drawables.push(sprite);
 
@@ -147,8 +196,12 @@ export const createSprite = ((options: TSpriteOptions): TSprite => {
 
     // A sheet from a file only knows its grid once its image has landed, so the frame is set
     // then. Nothing is lost by waiting: the sprite has no image to draw until that same moment.
+    // The frame it has by then, which a game may have changed while the image was on its way.
     if (options.atlas !== undefined && options.atlas.frames === 0) {
-        whenLoaded(options.atlas as unknown as TLoadable).then(() => setSpriteFrame(sprite, options.frame ?? 0));
+        const sheet = options.atlas;
+        whenLoaded(sheet as unknown as TLoadable).then(() => {
+            if (sprite.atlas === sheet) showFrame(sprite, sheet, sprite.frame ?? 0);
+        });
     }
 
     // return the sprite

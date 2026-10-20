@@ -125,6 +125,47 @@ describe('setSpriteFrame', () => {
         expect(sprite.uvOffset).toEqual({ x: 1 / 6, y: 0 });
     });
 
+    it('is the same as setting the frame: the field shows what it says', () => {
+        const { sprite } = spriteOnSheet();
+
+        sprite.frame = 3;
+
+        expect(sprite.uvOffset).toEqual({ x: 3 / 6, y: 0 });
+        expect(sprite.frame).toBe(3);
+    });
+
+    it('shows the same frame of another sheet when the sheet alone is changed', () => {
+        const { sprite } = spriteOnSheet();
+        sprite.frame = 2;
+        const other = sheet();
+        other.key = 'attack';
+
+        sprite.atlas = createSpriteAtlas({ texture: other, columns: 3 });
+
+        expect(sprite.texture).toBe(other);
+        expect(sprite.frame).toBe(2);
+        expect(sprite.uvOffset).toEqual({ x: 2 / 3, y: 0 });
+    });
+
+    it('goes back to the first frame on a sheet too short for the one it showed', () => {
+        const { sprite } = spriteOnSheet();
+        sprite.frame = 5;
+
+        sprite.atlas = createSpriteAtlas({ texture: sheet(), columns: 2 });
+
+        expect(sprite.frame).toBe(0);
+        expect(sprite.uvOffset).toEqual({ x: 0, y: 0 });
+    });
+
+    it('keeps its frame and its sheet plain to read and to save', () => {
+        const { sprite, atlas } = spriteOnSheet();
+        sprite.frame = 4;
+
+        expect(Object.keys(sprite)).toContain('frame');
+        expect({ ...sprite }.frame).toBe(4);
+        expect({ ...sprite }.atlas).toBe(atlas);
+    });
+
     it('ignores a sprite that came from no sheet', () => {
         const { store } = createTestGame();
         let plain!: TSprite;

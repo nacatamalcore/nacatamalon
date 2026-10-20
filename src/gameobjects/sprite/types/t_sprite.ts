@@ -33,13 +33,15 @@ export type TSprite = {
     texture: TTexture | null;
     tint: TColor;
     /**
-     * The sheet its picture came from, if it came from one. Kept so anything that changes which
-     * frame it shows, an animation above all, does not have to be handed the sheet again.
+     * The sheet its picture came from, if it came from one. Set another and it shows the same frame
+     * of that one, image and all (the first, when the new sheet is shorter): walking to attacking
+     * is `hero.atlas = attacking`.
      */
     atlas?: TSpriteAtlas;
     /**
-     * Which frame of `atlas` it shows, kept in step by whatever changes it, an animation above all,
-     * so a scene saved halfway through a run keeps the picture that was on screen.
+     * Which frame of `atlas` it shows. Set it and that frame shows, as with any other field:
+     * `chest.frame = 1`. An animation sets it too, so a scene saved halfway through a run keeps the
+     * picture that was on screen.
      */
     frame?: number;
     /**

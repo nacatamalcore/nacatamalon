@@ -32,6 +32,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- A sprite's `frame` and `atlas` show what they say when they are set: `chest.frame = 1` opens the
+  chest, and `hero.atlas = attacking` shows the same frame of the other sheet. Until now only
+  `setSpriteFrame` changed the picture, and writing the field did nothing, while a polygon's and a
+  panel's `frame` did. `setSpriteFrame` stays, and is the same thing written as a call.
 - A key let go of with another name than it went down with stays held no more. Shift+1 goes down
   as `'!'`, and with Shift let go first it comes up as `'1'`: `'!'` was held until the window lost
   focus. A key is now let go of by the name it went down with, known by which key it is
