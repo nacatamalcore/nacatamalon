@@ -73,7 +73,7 @@ import type { TPointerHandle } from '../../input';
  * ```ts
  * // A first-person camera: click to capture the mouse, move it to look around, Esc to let go.
  * export const Room: TSceneFn = () => {
- *     const camera = useCamera3d({ fov: 70, y: 1.6 });
+ *     const camera = useCamera3d({ fov: 70, transform: { y: 1.6 } });
  *     const pointer = usePointer();
  *
  *     pointer.onDown(() => {

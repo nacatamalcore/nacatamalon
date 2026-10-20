@@ -119,7 +119,7 @@ describe('a picture being drawn into', () => {
         let monitor!: ReturnType<typeof createMesh>;
         let feed!: TTexture;
         startTestScene(store, 'S', () => {
-            useCamera3d({ projection: 'perspective', z: 5 });
+            useCamera3d({ projection: 'perspective', transform: { z: 5 } });
             feed = createSpriteTexture({ width: 8, height: 8, sees: 'scene' });
             monitor = createMesh({
                 geometry: useCubeGeometry(),

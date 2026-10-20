@@ -9,6 +9,6 @@ import type { TCamera2d, TCamera2dOptions } from './types/t_camera_2d';
  * @author Francisco Pereira Alvarado
  */
 export const createCamera2d = (options: TCamera2dOptions = {}): TCamera2d => createRecord('camera2d', {
-    transform: { x: options.x ?? 0, y: options.y ?? 0, rotation: options.rotation ?? 0 },
+    transform: { x: options.transform?.x ?? 0, y: options.transform?.y ?? 0, rotation: options.transform?.rotation ?? 0 },
     zoom: options.zoom ?? 1,
 });

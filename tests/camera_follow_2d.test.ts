@@ -96,7 +96,7 @@ describe('a scene whose 3D camera follows its 2D one', () => {
             flat.transform.x = 1408;
             flat.transform.y = 1492;
             flat.zoom = 2;
-            useCamera3d({ projection: 'orthographic', z: 800, follow2d: true });
+            useCamera3d({ projection: 'orthographic', transform: { z: 800 }, follow2d: true });
             createMesh({ geometry: useCubeGeometry() });
             return createScene();
         });
@@ -112,7 +112,7 @@ describe('a scene whose 3D camera follows its 2D one', () => {
         let own!: ReturnType<typeof useCamera3d>;
         startTestScene(store, 'Level', () => {
             useCamera2d();
-            own = useCamera3d({ projection: 'orthographic', z: 800 });
+            own = useCamera3d({ projection: 'orthographic', transform: { z: 800 } });
             createMesh({ geometry: useCubeGeometry() });
             return createScene();
         });

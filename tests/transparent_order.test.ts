@@ -42,7 +42,7 @@ const cube = (name: string, z: number, options: { alpha?: number; transparent?: 
  * The camera at z = 10 looking down -z, so a lower z is further away.
  */
 const camera = (): void => {
-    useCamera3d({ projection: 'perspective', fov: 60, z: 10 });
+    useCamera3d({ projection: 'perspective', fov: 60, transform: { z: 10 } });
 };
 
 const paintOrder = (store: TRuntimeStore): string[] => {

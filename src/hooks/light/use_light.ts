@@ -23,7 +23,7 @@ import type { TDirectionalLight } from '../../light';
  * @example
  * ```ts
  * const Level = () => {
- *     useCamera3d({ projection: 'perspective', z: 5 });
+ *     useCamera3d({ projection: 'perspective', transform: { z: 5 } });
  *     useLight({ intensity: 1.2 });
  *     createMesh({ geometry: useUvSphereGeometry() });
  *

@@ -19,7 +19,7 @@ import type { TCamera3d } from './types/t_camera_3d';
  * ```ts
  * declare const player: TTransform3d;
  *
- * const camera = useCamera3d({ projection: 'perspective', fov: 60, y: 3, z: 6 });
+ * const camera = useCamera3d({ projection: 'perspective', fov: 60, transform: { y: 3, z: 6 } });
  * useUpdate(() => cameraLookAt(camera, player));
  * ```
  *

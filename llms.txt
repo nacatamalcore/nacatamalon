@@ -121,6 +121,9 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   `contextMenu: true`, or `useGame().setContextMenu(true)` while it runs), `position()`, `touches()` (each finger, by `pointerId`) and `isPressing(sprite)`. How long
   an action has been held, for a charged shot: `actions.heldFor('fire')`, still set on its
   `justReleased` frame.
+- **Where something is goes in `transform`**, for everything placed in the world, lights and cameras
+  too: `useCamera3d({ transform: { z: 5 }, fov: 60 })`, `useSpotLight({ transform: { y: 4, rotationX:
+  -1.2 }, range: 8 })`, read back as `camera.transform.z`. A light with none is where its object is.
 - **Time is in seconds**, everywhere: `delta`, timers (`timer.after(0.5)`), tweens, animations,
   transitions (`fade(0.3)`, not `fade(300)`), a pad's `rumble({ duration: 0.2 })`, a store's `throttle`.
 - **Angles are in radians** (`Math.PI / 2` is a quarter turn; `degToRad(90)` if you think in degrees):

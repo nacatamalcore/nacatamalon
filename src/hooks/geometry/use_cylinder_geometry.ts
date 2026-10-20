@@ -44,7 +44,7 @@ export type TCylinderGeometryOptions = {
  * @example
  * ```ts
  * const Level = () => {
- *     useCamera3d({ projection: 'perspective', z: 4 });
+ *     useCamera3d({ projection: 'perspective', transform: { z: 4 } });
  *     const shape = useCylinderGeometry();
  *     createMesh({ geometry: shape });
  *

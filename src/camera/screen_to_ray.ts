@@ -52,7 +52,7 @@ const unproject = (m: mat.Mat4, x: number, y: number, z: number): [number, numbe
  *
  * @example
  * ```ts
- * const camera = useCamera3d({ projection: 'perspective', fov: 60, y: 3, z: 6 });
+ * const camera = useCamera3d({ projection: 'perspective', fov: 60, transform: { y: 3, z: 6 } });
  * const game = useGame();
  * declare const marker: TTransform3d;
  *

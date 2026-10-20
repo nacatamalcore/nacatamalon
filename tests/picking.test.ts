@@ -22,9 +22,9 @@ const W = 480;
 const H = 320;
 
 const perspective = (): TCamera3d =>
-    createCamera3d({ projection: 'perspective', fov: 60, near: 0.1, far: 100, x: 1, y: 2, z: 8, rotationX: -0.2, rotationY: 0.3 });
+    createCamera3d({ projection: 'perspective', fov: 60, near: 0.1, far: 100, transform: { x: 1, y: 2, z: 8, rotationX: -0.2, rotationY: 0.3 } });
 
-const orthographic = (): TCamera3d => createCamera3d({ projection: 'orthographic', z: 50 });
+const orthographic = (): TCamera3d => createCamera3d({ projection: 'orthographic', transform: { z: 50 } });
 
 /**
  * The point a ray reaches after `t` units.
@@ -54,7 +54,7 @@ describe('screenToRay and worldToScreen', () => {
     }
 
     it('casts the middle of the screen straight along where the camera looks', () => {
-        const camera = createCamera3d({ projection: 'perspective', z: 5 });
+        const camera = createCamera3d({ projection: 'perspective', transform: { z: 5 } });
         const ray = screenToRay(camera, W, H, W / 2, H / 2);
 
         expect(ray.direction.x).toBeCloseTo(0, 6);
@@ -65,7 +65,7 @@ describe('screenToRay and worldToScreen', () => {
     });
 
     it('puts the top of the screen above the camera: y grows downwards on the screen, upwards in the world', () => {
-        const camera = createCamera3d({ projection: 'perspective', z: 5 });
+        const camera = createCamera3d({ projection: 'perspective', transform: { z: 5 } });
 
         expect(screenToRay(camera, W, H, W / 2, 0).direction.y).toBeGreaterThan(0);
         expect(worldToScreen(camera, W, H, { x: 0, y: 1, z: 0 }).y).toBeLessThan(H / 2);
@@ -73,14 +73,14 @@ describe('screenToRay and worldToScreen', () => {
     });
 
     it('says when a point is behind the camera', () => {
-        const camera = createCamera3d({ projection: 'perspective', z: 5 });
+        const camera = createCamera3d({ projection: 'perspective', transform: { z: 5 } });
 
         expect(worldToScreen(camera, W, H, { x: 0, y: 0, z: 0 }).behind).toBe(false);
         expect(worldToScreen(camera, W, H, { x: 0, y: 0, z: 10 }).behind).toBe(true);
     });
 
     it('puts depth from 0 at the near plane to 1 at the far one', () => {
-        const camera = createCamera3d({ projection: 'perspective', near: 1, far: 10, z: 0 });
+        const camera = createCamera3d({ projection: 'perspective', near: 1, far: 10, transform: { z: 0 } });
 
         expect(worldToScreen(camera, W, H, { x: 0, y: 0, z: -1 }).depth).toBeCloseTo(0, 4);
         expect(worldToScreen(camera, W, H, { x: 0, y: 0, z: -10 }).depth).toBeCloseTo(1, 4);
@@ -103,7 +103,7 @@ describe('cameraLookAt', () => {
             [{ x: 3, y: 4, z: -2 }, { x: -1, y: 0, z: 6 }],
             [{ x: -5, y: -1, z: 0 }, { x: 2, y: 3, z: 0.5 }],
         ]) {
-            const camera = createCamera3d({ projection: 'perspective', ...from });
+            const camera = createCamera3d({ projection: 'perspective', transform: from });
             cameraLookAt(camera, target);
 
             const at = worldToScreen(camera, W, H, target);
@@ -114,7 +114,7 @@ describe('cameraLookAt', () => {
     });
 
     it('keeps its roll, and gives up a quaternion that would be read instead of the angles', () => {
-        const camera = createCamera3d({ projection: 'perspective', rotation: 0.4, z: 5 });
+        const camera = createCamera3d({ projection: 'perspective', transform: { rotation: 0.4, z: 5 } });
         camera.transform.quaternion = [0, 0, 0, 1];
         cameraLookAt(camera, { x: 2, y: 0, z: 0 });
 
@@ -123,7 +123,7 @@ describe('cameraLookAt', () => {
     });
 
     it('keeps its left and right when told to look straight down', () => {
-        const camera = createCamera3d({ projection: 'perspective', rotationY: 1.2, y: 5 });
+        const camera = createCamera3d({ projection: 'perspective', transform: { rotationY: 1.2, y: 5 } });
         cameraLookAt(camera, { x: 0, y: 0, z: 0 });
 
         expect(camera.transform.rotationY).toBe(1.2);

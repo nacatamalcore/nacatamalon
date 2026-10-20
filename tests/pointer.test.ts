@@ -96,7 +96,7 @@ describe('usePointer', () => {
     it('gives the world position through the scene camera', () => {
         const { store, canvas, frame } = pointerGame();
         const { seen } = listening(store, 'Level', () => {
-            useCamera2d({ x: 1000, y: 500, zoom: 2 });
+            useCamera2d({ transform: { x: 1000, y: 500 }, zoom: 2 });
         });
 
         fire(canvas, 'pointerdown', 100, 60);
@@ -111,7 +111,7 @@ describe('usePointer', () => {
     it('turns a turned camera back when working out the world position', () => {
         const { store, canvas, frame } = pointerGame();
         const { seen } = listening(store, 'Level', () => {
-            useCamera2d({ x: 0, y: 0, rotation: Math.PI / 2 });
+            useCamera2d({ transform: { x: 0, y: 0, rotation: Math.PI / 2 } });
         });
 
         fire(canvas, 'pointerdown', 0, -10);
@@ -332,7 +332,7 @@ describe('what is under the pointer', () => {
         const Hud = () => { useScreenSpace(); onScreen = box({ x: 50, y: 50 }); };
 
         const { pointer } = listening(store, 'Level', () => {
-            useCamera2d({ x: 1000, y: 1000, zoom: 2 });
+            useCamera2d({ transform: { x: 1000, y: 1000 }, zoom: 2 });
             inWorld = box({ x: 1100, y: 1050 });
             useSpawn(Hud)();
         });

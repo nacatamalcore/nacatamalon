@@ -38,7 +38,7 @@ const driven = () => {
     const { store, renderer } = createTestGame({}, createFakeCanvas(320, 224));
     let own!: TCamera3d;
     startTestScene(store, 'Level', () => {
-        own = useCamera3d({ projection: 'perspective', z: 5 });
+        own = useCamera3d({ projection: 'perspective', transform: { z: 5 } });
         createMesh({ geometry: useCubeGeometry() });
         createSprite({ width: 8, height: 8 });
         return createScene();
@@ -141,8 +141,8 @@ describe('a capture', () => {
 
     it('with nothing said, is the screen: the tool\'s camera and the tool\'s filter', () => {
         const { store, made, frame, passInto } = driven();
-        const flying = createCamera3d({ projection: 'perspective', y: 3, z: 9 });
-        const panning = createCamera2d({ x: 40 });
+        const flying = createCamera3d({ projection: 'perspective', transform: { y: 3, z: 9 } });
+        const panning = createCamera2d({ transform: { x: 40 } });
         store.setState('viewport', { camera3d: flying, camera2d: panning, layers: ['sprite'] });
 
         void captureScreen(store);
@@ -167,10 +167,10 @@ describe('a capture', () => {
 
     it('through a camera of its own, without moving the screen off the tool\'s', () => {
         const { store, own, made, frame, passInto } = driven();
-        const flying = createCamera3d({ projection: 'perspective', y: 3, z: 9 });
+        const flying = createCamera3d({ projection: 'perspective', transform: { y: 3, z: 9 } });
         store.setState('viewport', { camera3d: flying });
         // Neither the tool's nor the scene's, so the answer can only have come from the options.
-        const game = createCamera3d({ projection: 'perspective', x: -4, z: 7 });
+        const game = createCamera3d({ projection: 'perspective', transform: { x: -4, z: 7 } });
 
         void captureScreen(store, { camera3d: game });
         const passes = frame();
@@ -182,8 +182,8 @@ describe('a capture', () => {
 
     it('with `null` cameras is the game: each scene\'s own, whatever the tool is looking through', () => {
         const { store, own, made, frame, passInto } = driven();
-        const flying = createCamera3d({ projection: 'perspective', y: 3, z: 9 });
-        const panning = createCamera2d({ x: 40 });
+        const flying = createCamera3d({ projection: 'perspective', transform: { y: 3, z: 9 } });
+        const panning = createCamera2d({ transform: { x: 40 } });
         store.setState('viewport', { camera3d: flying, camera2d: panning });
 
         void captureScreen(store, { camera3d: null, camera2d: null });
@@ -203,13 +203,13 @@ describe('a capture', () => {
         const { store, renderer } = createTestGame({}, createFakeCanvas(320, 224));
         let own2d!: TCamera2d;
         startTestScene(store, 'Flat', () => {
-            own2d = useCamera2d({ x: 10, zoom: 2 });
+            own2d = useCamera2d({ transform: { x: 10 }, zoom: 2 });
             createSprite({ width: 8, height: 8 });
             return createScene();
         });
         const target: ITexture = { resourceType: 'texture' };
         renderer.createRenderTexture = () => target;
-        store.setState('viewport', { camera2d: createCamera2d({ x: 40 }) });
+        store.setState('viewport', { camera2d: createCamera2d({ transform: { x: 40 } }) });
 
         void captureScreen(store, { camera2d: null });
         const ctx = createFrameContext();
@@ -318,7 +318,7 @@ describe('a camera preview', () => {
 
     it('left out, sees what the screen shows; null, what the game shows', () => {
         const { store, own, frame } = driven();
-        const flying = createCamera3d({ projection: 'perspective', z: 40 });
+        const flying = createCamera3d({ projection: 'perspective', transform: { z: 40 } });
         store.setState('viewport', { camera3d: flying, layers: ['sprite'] });
 
         setCameraPreview(store, { canvas });

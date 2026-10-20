@@ -49,6 +49,11 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- Lights and cameras are placed with `transform`, like everything else: `useCamera3d({ transform: { z:
+  5 }, fov: 60 })` rather than `useCamera3d({ z: 5, fov: 60 })`, and the same for `useCamera2d`,
+  `useLight`, `usePointLight`, `useSpotLight` and their `create…`. They were written flat and read
+  as `.transform`; now both are `transform`. What is their own (`fov`, `zoom`, `color`, `range`…)
+  stays where it was. Scene documents do not change.
 - `halftone`'s `angle`, in degrees, is `rotation`, in radians (`Math.PI / 4` by default), like every
   other turn: angles are radians, except a 3D camera's `fov`, a `hue` and a sound's `cone`, which
   everyone says in degrees. A project or a motion that wrote `angle: 30` is read as `rotation` of

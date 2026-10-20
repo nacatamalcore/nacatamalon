@@ -61,7 +61,7 @@ export type TUseLoadGltfOptions = {
  * @example
  * ```ts
  * export const Level: TSceneFn = () => {
- *     useCamera3d({ projection: 'perspective', z: 6 });
+ *     useCamera3d({ projection: 'perspective', transform: { z: 6 } });
  *     useLight({ intensity: 1 });
  *
  *     const tower = useLoadGltf({ src: '/models/tower.glb' });

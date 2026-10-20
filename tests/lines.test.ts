@@ -67,7 +67,7 @@ describe('writing lines', () => {
         const { store } = createTestGame();
         let set!: (vertices: Float32Array) => void;
         startTestScene(store, 'Level', () => {
-            useCamera3d({ projection: 'perspective', z: 5 });
+            useCamera3d({ projection: 'perspective', transform: { z: 5 } });
             [, set] = useHelperLines({ vertices: RED_LINE });
             return createScene();
         });
@@ -88,7 +88,7 @@ describe('writing lines', () => {
         const { store } = createTestGame();
         let set!: (vertices: Float32Array) => void;
         startTestScene(store, 'Level', () => {
-            useCamera3d({ projection: 'perspective', z: 5 });
+            useCamera3d({ projection: 'perspective', transform: { z: 5 } });
             [, set] = useHelperLines();
             return createScene();
         });
@@ -104,7 +104,7 @@ describe('where the lines are drawn', () => {
     it('reaches the backend in the world, placed, turned and scaled by its own transform', () => {
         const { store } = createTestGame();
         startTestScene(store, 'Level', () => {
-            useCamera3d({ projection: 'perspective', z: 5 });
+            useCamera3d({ projection: 'perspective', transform: { z: 5 } });
             useHelperLines({ vertices: RED_LINE, transform: { x: 10, rotationY: Math.PI / 2, scaleX: 2 } });
             return createScene();
         });
@@ -123,7 +123,7 @@ describe('where the lines are drawn', () => {
         const { store } = createTestGame();
         let place!: ReturnType<typeof useTransform>;
         startTestScene(store, 'Level', () => {
-            useCamera3d({ projection: 'perspective', z: 5 });
+            useCamera3d({ projection: 'perspective', transform: { z: 5 } });
             useSpawn(() => {
                 place = useTransform({ x: 3 });
                 useHelperLines({ vertices: RED_LINE });
@@ -142,7 +142,7 @@ describe('where the lines are drawn', () => {
     it('is seen through the scene\'s 3D view, like a model', () => {
         const { store } = createTestGame();
         startTestScene(store, 'Level', () => {
-            useCamera3d({ projection: 'perspective', z: 5 });
+            useCamera3d({ projection: 'perspective', transform: { z: 5 } });
             useHelperAxis();
             return createScene();
         });
@@ -157,7 +157,7 @@ describe('where the lines are drawn', () => {
         const { store } = createTestGame();
         let axis!: TLines;
         startTestScene(store, 'Level', () => {
-            useCamera3d({ projection: 'perspective', z: 5 });
+            useCamera3d({ projection: 'perspective', transform: { z: 5 } });
             axis = useHelperAxis();
             return createScene();
         });
@@ -171,7 +171,7 @@ describe('where the lines are drawn', () => {
     it('keeps its place among the models, in the order they were made', () => {
         const { store } = createTestGame();
         startTestScene(store, 'Level', () => {
-            useCamera3d({ projection: 'perspective', z: 5 });
+            useCamera3d({ projection: 'perspective', transform: { z: 5 } });
             const cube = useCubeGeometry();
             createMesh({ geometry: cube });
             useHelperAxis();
@@ -187,7 +187,7 @@ describe('the helpers', () => {
     it('draws three arms from the middle, or six with the other halves dimmed', () => {
         const { store } = createTestGame();
         startTestScene(store, 'Level', () => {
-            useCamera3d({ projection: 'perspective', z: 5 });
+            useCamera3d({ projection: 'perspective', transform: { z: 5 } });
             useHelperAxis({ size: 2 });
             useHelperAxis({ size: 2, negative: true });
             return createScene();
@@ -208,7 +208,7 @@ describe('the helpers', () => {
     it('draws a grid of 2n + 1 lines each way, the middle ones in the axes\' colours', () => {
         const { store } = createTestGame();
         startTestScene(store, 'Level', () => {
-            useCamera3d({ projection: 'perspective', z: 5 });
+            useCamera3d({ projection: 'perspective', transform: { z: 5 } });
             useHelperGrid({ half: 2, step: 1 });
             return createScene();
         });
@@ -229,7 +229,7 @@ describe('the helpers', () => {
     it('does not lose the last line to a step that is not exact in binary', () => {
         const { store } = createTestGame();
         startTestScene(store, 'Level', () => {
-            useCamera3d({ projection: 'perspective', z: 5 });
+            useCamera3d({ projection: 'perspective', transform: { z: 5 } });
             useHelperGrid({ half: 0.3, step: 0.1 });
             return createScene();
         });
@@ -249,7 +249,7 @@ describe('the helpers', () => {
     it('is left out of a scene document: it is a debug drawing, not part of the scene', () => {
         const { store } = createTestGame();
         const root = startTestScene(store, 'Level', () => {
-            useCamera3d({ projection: 'perspective', z: 5 });
+            useCamera3d({ projection: 'perspective', transform: { z: 5 } });
             useHelperGrid();
             return createScene();
         });

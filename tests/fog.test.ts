@@ -73,7 +73,7 @@ describe('useFog', () => {
         const { store } = createTestGame();
         let fog!: TFog;
         startTestScene(store, 'Level', () => {
-            useCamera3d({ projection: 'perspective', z: 5 });
+            useCamera3d({ projection: 'perspective', transform: { z: 5 } });
             fog = useFog({ near: 3, far: 9 });
             createMesh({ geometry: useCubeGeometry() });
             return createScene();

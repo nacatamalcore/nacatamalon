@@ -68,7 +68,7 @@ const written = (body: () => void): { root: TBox; doc: TSceneDoc } => {
 describe('a document the writer produced', () => {
     it('survives the reader with nothing changed', () => {
         const { doc } = written(() => {
-            useCamera2d({ x: 10, y: 20, zoom: 2 });
+            useCamera2d({ transform: { x: 10, y: 20 }, zoom: 2 });
             useCamera3d({ fov: 55, near: 0.2, far: 120 });
             usePointLight({ intensity: 0.8, range: 12 });
             createSprite({ width: 32, height: 32, tint, anchor: { x: 0, y: 1 }, zIndex: 3, transform: at(40, 60) });
@@ -529,7 +529,7 @@ describe('the whole loop', () => {
         const { doc } = written(() => {
             usePhysicsWorld2d({ gravity: { x: 0, y: 900 } });
             usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'rect', width: 32, height: 32 }, restitution: 0.3 });
-            useCamera2d({ x: 10, y: 20, zoom: 2 });
+            useCamera2d({ transform: { x: 10, y: 20 }, zoom: 2 });
             useCamera3d({ fov: 55, near: 0.2, far: 120 });
             createSprite({ width: 32, height: 32, tint, anchor: { x: 0, y: 1 }, zIndex: 3, transform: at(40, 60) });
             createText({ text: 'ABC', font: createTestFont(), tint, transform: at(8, 8) });
@@ -545,7 +545,7 @@ describe('the whole loop', () => {
     it('does not drift on a second pass, which is what a default filled in on read would look like', () => {
         const { doc } = written(() => {
             createSprite({ width: 8, height: 8, tint, transform: at(3, 4) });
-            usePointLight({ intensity: 0.8, range: 12, x: 5, rotationY: 0.5 });
+            usePointLight({ intensity: 0.8, range: 12, transform: { x: 5, rotationY: 0.5 } });
         });
 
         const once = rebuilt(doc);
@@ -556,7 +556,7 @@ describe('the whole loop', () => {
 
     it('keeps a lamp aimed, which its box could not have said for it', () => {
         const { doc } = written(() => {
-            usePointLight({ intensity: 2, range: 7, x: 4, y: 5, z: 6, rotationX: 0.25, rotationY: -0.5 });
+            usePointLight({ intensity: 2, range: 7, transform: { x: 4, y: 5, z: 6, rotationX: 0.25, rotationY: -0.5 } });
         });
 
         const lamp = rebuilt(doc).root.components[0];
@@ -572,7 +572,7 @@ describe('the whole loop', () => {
     it('keeps a light casting, and everything it was told about how', () => {
         const { doc } = written(() => {
             useLight({
-                intensity: 1.2, rotationX: -0.8, rotationY: 0.4,
+                intensity: 1.2, transform: { rotationX: -0.8, rotationY: 0.4 },
                 castShadow: true, shadowBias: 0.004, shadowStrength: 0.7,
                 shadowArea: 420, shadowDistance: 500,
             });

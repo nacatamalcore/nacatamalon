@@ -447,14 +447,13 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
             break;
         }
         case 'camera2d':
-            useCamera2d({ ...component.transform, zoom: component.zoom }).id = component.id;
+            useCamera2d({ transform: component.transform, zoom: component.zoom }).id = component.id;
             break;
         case 'camera3d': {
             const place = component.transform;
             useCamera3d({
                 projection: component.projection,
-                x: place.x, y: place.y, z: place.z,
-                rotation: place.rotation, rotationX: place.rotationX, rotationY: place.rotationY,
+                transform: { x: place.x, y: place.y, z: place.z, rotation: place.rotation, rotationX: place.rotationX, rotationY: place.rotationY },
                 fov: component.fov, near: component.near, far: component.far, zoom: component.zoom,
                 ...(component.follow2d === true ? { follow2d: true } : {}),
             }).id = component.id;
@@ -486,7 +485,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                 ...(component.shadowBias !== undefined ? { shadowBias: component.shadowBias } : {}),
                 ...(component.shadowStrength !== undefined ? { shadowStrength: component.shadowStrength } : {}),
             };
-            const aimed = { ...shared, ...shadowing, ambient: component.ambient ?? 0, ...(component.transform ?? {}) };
+            const aimed = { ...shared, ...shadowing, ambient: component.ambient ?? 0, ...(component.transform !== undefined ? { transform: component.transform } : {}) };
             const lamp = component.kind === 'point' ? usePointLight({ ...aimed, range: component.range ?? 10 })
                 : component.kind === 'spot' ? useSpotLight({ ...aimed, range: component.range ?? 10, angle: component.angle ?? Math.PI / 6, penumbra: component.penumbra ?? 0.1 })
                 : useLight({

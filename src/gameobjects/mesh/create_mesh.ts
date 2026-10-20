@@ -53,7 +53,7 @@ const resolveTexture = (options: TMeshOptions): TTexture | null => {
  * @example
  * ```ts
  * const Level = () => {
- *     useCamera3d({ projection: 'perspective', z: 4 });
+ *     useCamera3d({ projection: 'perspective', transform: { z: 4 } });
  *     const crate = createMesh({ geometry: useCubeGeometry(), tint: getColor('#c08040') });
  *
  *     useUpdate((delta) => {

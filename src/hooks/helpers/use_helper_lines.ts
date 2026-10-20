@@ -47,7 +47,7 @@ export type THelperLines = [lines: TLines, setVertices: (vertices: Float32Array)
  * declare const target: { x: number; y: number; z: number };
  *
  * const Level = () => {
- *     useCamera3d({ projection: 'perspective', fov: 60, z: 6 });
+ *     useCamera3d({ projection: 'perspective', fov: 60, transform: { z: 6 } });
  *     const [, setPath] = useHelperLines();
  *
  *     useUpdate(() => {

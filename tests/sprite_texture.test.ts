@@ -346,7 +346,7 @@ describe('the world inside a picture', () => {
         const scene = startTestScene(store, 'S', () => {
             world = useCamera2d();
             picture = createSpriteTexture({ width: 8, height: 8 }, () => {
-                screenCamera = useCamera2d({ x: 50 });
+                screenCamera = useCamera2d({ transform: { x: 50 } });
                 deep = useCamera3d({ projection: 'perspective' });
                 block();
             });
@@ -420,12 +420,12 @@ describe('a picture that sees the scene', () => {
         } = {};
         startTestScene(store, 'S', () => {
             const cube = useCubeGeometry();
-            useCamera3d({ projection: 'perspective', z: 5 });
+            useCamera3d({ projection: 'perspective', transform: { z: 5 } });
             made.handheld = createSpriteTexture({ width: 8, height: 8 }, block);
             made.model = createMesh({ geometry: cube, texture: made.handheld });
             made.flat = block();
             made.feed = createSpriteTexture({ width: 16, height: 16, sees: 'scene' }, () => {
-                made.camera = useCamera3d({ projection: 'perspective', y: 5 });
+                made.camera = useCamera3d({ projection: 'perspective', transform: { y: 5 } });
                 made.rec = block(4, 4);
             });
             made.monitor = createMesh({ geometry: cube, texture: made.feed });
@@ -463,7 +463,7 @@ describe('a picture that sees the scene', () => {
         let scene!: ReturnType<typeof useCamera3d>;
         let feed!: TTexture;
         startTestScene(store, 'S', () => {
-            scene = useCamera3d({ projection: 'perspective', z: 5 });
+            scene = useCamera3d({ projection: 'perspective', transform: { z: 5 } });
             createMesh({ geometry: useCubeGeometry() });
             feed = createSpriteTexture({ width: 8, height: 8, sees: 'scene' });
             return createScene();
@@ -480,7 +480,7 @@ describe('a picture in a scene document', () => {
         const { store } = createTestGame();
         startTestScene(store, 'S', () => {
             const tv = createSpriteTexture({ width: 32, height: 16, key: 'tv', background: { r: 1, g: 0, b: 0, a: 1 }, sees: 'scene' }, () => {
-                useCamera2d({ x: 3 });
+                useCamera2d({ transform: { x: 3 } });
                 block();
             });
             createMesh({ geometry: useCubeGeometry(), texture: tv });
@@ -513,7 +513,7 @@ describe('a picture in a scene document', () => {
         startTestScene(store, 'S', () => {
             // The model on the scene itself, which is written before any object under it.
             createMesh({ geometry: useCubeGeometry(), texture: createSpriteTexture({ width: 8, height: 8, key: 'tv' }, () => {
-                useCamera2d({ x: 9 });
+                useCamera2d({ transform: { x: 9 } });
             }) });
             return createScene();
         });

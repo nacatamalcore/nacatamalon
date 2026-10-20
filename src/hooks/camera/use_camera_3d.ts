@@ -25,7 +25,7 @@ import type { TCamera3d, TCamera3dOptions } from '../../camera/types/t_camera_3d
  * @example
  * ```ts
  * const Level = () => {
- *     const camera = useCamera3d({ projection: 'perspective', z: 6 });
+ *     const camera = useCamera3d({ projection: 'perspective', transform: { z: 6 } });
  *
  *     useUpdate((delta) => {
  *         camera.transform.rotationY += delta * 0.5;

@@ -58,7 +58,7 @@ describe('useCamera2d', () => {
         const { store } = createTestGame();
         let camera!: TCamera2d;
         startTestScene(store, 'Level', () => {
-            camera = useCamera2d({ x: 120, y: -40, rotation: 0.5, zoom: 2 });
+            camera = useCamera2d({ transform: { x: 120, y: -40, rotation: 0.5 }, zoom: 2 });
             return createScene();
         });
 
@@ -88,7 +88,7 @@ describe('useCamera2d', () => {
 
         const root = startTestScene(store, 'Level', () => {
             useCamera2d();
-            second = useCamera2d({ x: 5 });
+            second = useCamera2d({ transform: { x: 5 } });
             return createScene();
         });
 

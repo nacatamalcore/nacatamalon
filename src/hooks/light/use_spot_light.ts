@@ -21,7 +21,7 @@ import type { TSpotLight } from '../../light';
  * @example
  * ```ts
  * const Level = () => {
- *     useCamera3d({ projection: 'perspective', z: 5 });
+ *     useCamera3d({ projection: 'perspective', transform: { z: 5 } });
  *     useSpotLight({ intensity: 1.2 });
  *     createMesh({ geometry: useUvSphereGeometry() });
  *

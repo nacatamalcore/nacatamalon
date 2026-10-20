@@ -48,7 +48,7 @@ export type TPlaneGeometryOptions = {
  * @example
  * ```ts
  * const Level = () => {
- *     useCamera3d({ projection: 'perspective', z: 4 });
+ *     useCamera3d({ projection: 'perspective', transform: { z: 4 } });
  *     const shape = usePlaneGeometry();
  *     createMesh({ geometry: shape });
  *

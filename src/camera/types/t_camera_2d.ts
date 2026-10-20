@@ -38,14 +38,11 @@ export type TCamera2d = {
  */
 export type TCamera2dOptions = {
     /**
-     * The world point on the top-left corner of the screen, in pixels. Default `0`.
+     * Where it is, as it is read afterwards (`camera.transform`): `x` and `y` are the world point on
+     * the top-left corner of the screen, in pixels, and `rotation` turns it, in radians. All `0` by
+     * default.
      */
-    x?: number;
-    y?: number;
-    /**
-     * In radians. Default `0`.
-     */
-    rotation?: number;
+    transform?: Partial<{ x: number; y: number; rotation: number }>;
     /**
      * Magnification. Default `1`.
      */

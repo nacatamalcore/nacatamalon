@@ -119,7 +119,7 @@ const releasePicture = (store: TRuntimeStore, texture: TTexture): void => {
  * };
  *
  * const Level = () => {
- *     useCamera3d({ projection: 'perspective', z: 3 });
+ *     useCamera3d({ projection: 'perspective', transform: { z: 3 } });
  *     const screen = createSpriteTexture({ width: 128, height: 128 }, Screen);
  *     createMesh({ geometry: useCubeGeometry(), texture: screen });
  *     return createScene();

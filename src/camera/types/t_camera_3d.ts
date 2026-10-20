@@ -68,20 +68,11 @@ export type TCamera3dOptions = {
      */
     projection?: 'perspective' | 'orthographic';
     /**
-     * Where it is. Default the origin, looking along -Z.
+     * Where it is and where it looks, as it is read afterwards (`camera.transform`): `x`, `y`, `z`
+     * (default the origin, looking along -Z), `rotationX` and `rotationY` to look up and down and
+     * turn, `rotation` to roll, in radians.
      */
-    x?: number;
-    y?: number;
-    z?: number;
-    /**
-     * Looking up and down, and turning left and right, in radians.
-     */
-    rotationX?: number;
-    rotationY?: number;
-    /**
-     * Rolling, in radians.
-     */
-    rotation?: number;
+    transform?: Partial<Pick<TTransform3d, 'x' | 'y' | 'z' | 'rotation' | 'rotationX' | 'rotationY'>>;
     /**
      * In degrees. Default `60`. Perspective only.
      */

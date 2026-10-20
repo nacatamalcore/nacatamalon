@@ -114,7 +114,7 @@ describe('text events', () => {
         const game = textGame();
         const Hud = () => { useScreenSpace(); game.text({ transform: at(10, 10), onClick: () => { game.log.push('hud'); } }); };
         startTestScene(game.store, 'Menu', () => {
-            useCamera2d({ x: 1000, y: 0 });
+            useCamera2d({ transform: { x: 1000, y: 0 } });
             game.text({ transform: at(1100, 100), onClick: () => { game.log.push('world'); } });
             useSpawn(Hud)();
             return createScene();

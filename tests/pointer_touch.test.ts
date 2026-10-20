@@ -134,7 +134,7 @@ describe('the pointer, asked', () => {
         const { store } = createTestGame({}, canvas);
         let pointer!: TPointerHandle;
         startTestScene(store, 'Level', () => {
-            useCamera2d({ x: 100, y: 50 });
+            useCamera2d({ transform: { x: 100, y: 50 } });
             pointer = usePointer();
             return createScene();
         });

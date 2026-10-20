@@ -148,7 +148,7 @@ describe('useCapture', () => {
 
     it('takes the part of the screen a box covers, through its scene\'s camera, hidden or empty', async () => {
         const { capture, develop } = studio(() => {
-            useCamera2d({ x: 50, y: 0 });
+            useCamera2d({ transform: { x: 50, y: 0 } });
             // A viewfinder never drawn: 40 × 20 about (150, 60) in the world, (100, 60) on the screen.
             createSprite({ width: 40, height: 20, transform: { x: 150, y: 60 }, visible: false });
             useSpawn(function Frame() {

@@ -51,7 +51,7 @@ const DEFAULT_Z: TColor = { r: 0.28, g: 0.44, b: 0.78, a: 1 };
  * @example
  * ```ts
  * const Level = () => {
- *     useCamera3d({ projection: 'perspective', fov: 60, y: 4, z: 8, rotationX: -0.45 });
+ *     useCamera3d({ projection: 'perspective', fov: 60, transform: { y: 4, z: 8, rotationX: -0.45 } });
  *     useHelperGrid({ half: 5 });
  *     return createScene();
  * };

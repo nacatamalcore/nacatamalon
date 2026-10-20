@@ -36,8 +36,8 @@ const level = (store: ReturnType<typeof createTestGame>['store']) => {
     let own3d!: TCamera3d;
     let own2d!: TCamera2d;
     startTestScene(store, 'Level', () => {
-        own3d = useCamera3d({ projection: 'perspective', z: 5 });
-        own2d = useCamera2d({ x: 10 });
+        own3d = useCamera3d({ projection: 'perspective', transform: { z: 5 } });
+        own2d = useCamera2d({ transform: { x: 10 } });
         createMesh({ geometry: useCubeGeometry() });
         createSprite({ width: 8, height: 8 });
         return createScene();
@@ -58,8 +58,8 @@ describe('the viewport cameras', () => {
     it('replace both of the scene\'s cameras on the screen, read live and not copied', () => {
         const { store } = createTestGame();
         level(store);
-        const flying = createCamera3d({ projection: 'perspective', y: 3, z: 9 });
-        const panning = createCamera2d({ x: 40, zoom: 2 });
+        const flying = createCamera3d({ projection: 'perspective', transform: { y: 3, z: 9 } });
+        const panning = createCamera2d({ transform: { x: 40 }, zoom: 2 });
         store.setState('viewport', { camera3d: flying, camera2d: panning });
 
         const screen = screenOf(frame(store));
@@ -73,7 +73,7 @@ describe('the viewport cameras', () => {
             createSprite({ width: 8, height: 8 });
             return createScene();
         });
-        const panning = createCamera2d({ x: 40 });
+        const panning = createCamera2d({ transform: { x: 40 } });
         store.setState('viewport', { camera2d: panning });
 
         const screen = screenOf(frame(store));
@@ -96,13 +96,13 @@ describe('the viewport cameras', () => {
         startTestScene(store, 'Level', () => {
             createSpriteTexture({ width: 32, height: 32 }, () => {
                 useSpawn(() => {
-                    inner = useCamera2d({ x: 5 });
+                    inner = useCamera2d({ transform: { x: 5 } });
                 })();
                 createSprite({ width: 4, height: 4 });
             });
             return createScene();
         });
-        store.setState('viewport', { camera2d: createCamera2d({ x: 999 }) });
+        store.setState('viewport', { camera2d: createCamera2d({ transform: { x: 999 } }) });
 
         const ctx = frame(store);
         const picture = ctx.passes.find((pass) => pass.renderTarget !== undefined)!;
@@ -164,7 +164,7 @@ describe('the viewport cameras', () => {
         it('leaves what is pinned to the screen in screen pixels until a tool sets it', () => {
             const { store } = createTestGame();
             withHud(store);
-            const panning = createCamera2d({ x: 40, zoom: 2 });
+            const panning = createCamera2d({ transform: { x: 40 }, zoom: 2 });
             store.setState('viewport', { camera2d: panning });
 
             const screen = screenOf(frame(store));
@@ -177,8 +177,8 @@ describe('the viewport cameras', () => {
             const instance: TGameInstance = { destroy: () => {}, on: () => () => {} };
             openHost(instance).resolve(store);
             const handle = await editorHandleOf(instance);
-            const panning = createCamera2d({ x: 40, zoom: 2 });
-            const hud = createCamera2d({ x: -20, y: -10, zoom: 2 });
+            const panning = createCamera2d({ transform: { x: 40 }, zoom: 2 });
+            const hud = createCamera2d({ transform: { x: -20, y: -10 }, zoom: 2 });
             handle.setViewportCamera2d(panning);
             handle.setScreenCamera2d(hud);
             expect(handle.getScreenCamera2d()).toBe(hud);

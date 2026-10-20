@@ -102,7 +102,7 @@ export type TBlobShadowOptions = {
  * @example
  * ```ts
  * const Level = () => {
- *     useCamera3d({ projection: 'perspective', y: 3, z: 6, rotationX: -0.5 });
+ *     useCamera3d({ projection: 'perspective', transform: { y: 3, z: 6, rotationX: -0.5 } });
  *     createMesh({ geometry: usePlaneGeometry({ width: 12, depth: 12 }) });
  *
  *     const hero = createMesh({ geometry: useCubeGeometry(), transform: { y: 0.5 } });

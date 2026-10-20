@@ -70,7 +70,7 @@ const arm = (data: number[], dx: number, dy: number, dz: number, c: TColor): voi
  * @example
  * ```ts
  * const Level = () => {
- *     useCamera3d({ projection: 'perspective', fov: 60, y: 1, z: 4, rotationX: -0.2 });
+ *     useCamera3d({ projection: 'perspective', fov: 60, transform: { y: 1, z: 4, rotationX: -0.2 } });
  *     useHelperAxis({ size: 2, negative: true });
  *     return createScene();
  * };

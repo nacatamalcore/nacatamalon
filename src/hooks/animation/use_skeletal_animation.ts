@@ -35,7 +35,7 @@ const roomFor = (model: TModel): TJointPose[][] =>
  * @example
  * ```ts
  * export const Level: TSceneFn = () => {
- *     useCamera3d({ projection: 'perspective', z: 200 });
+ *     useCamera3d({ projection: 'perspective', transform: { z: 200 } });
  *     useLight({ intensity: 1 });
  *
  *     const file = useLoadGltf({ src: '/models/fox.glb' });

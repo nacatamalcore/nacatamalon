@@ -40,7 +40,7 @@ export type TCircleGeometryOptions = {
  * @example
  * ```ts
  * const Level = () => {
- *     useCamera3d({ projection: 'perspective', z: 4 });
+ *     useCamera3d({ projection: 'perspective', transform: { z: 4 } });
  *     const shape = useCircleGeometry();
  *     createMesh({ geometry: shape });
  *

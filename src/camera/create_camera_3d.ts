@@ -11,12 +11,12 @@ import type { TCamera3d, TCamera3dOptions } from './types/t_camera_3d';
 export const createCamera3d = (options: TCamera3dOptions = {}): TCamera3d => createRecord('camera3d', {
     projection: options.projection ?? 'orthographic',
     transform: {
-        x: options.x ?? 0,
-        y: options.y ?? 0,
-        z: options.z ?? 0,
-        rotation: options.rotation ?? 0,
-        rotationX: options.rotationX ?? 0,
-        rotationY: options.rotationY ?? 0,
+        x: options.transform?.x ?? 0,
+        y: options.transform?.y ?? 0,
+        z: options.transform?.z ?? 0,
+        rotation: options.transform?.rotation ?? 0,
+        rotationX: options.transform?.rotationX ?? 0,
+        rotationY: options.transform?.rotationY ?? 0,
         // A camera does not stretch, and these are here so it is the same shape as everything else.
         scaleX: 1,
         scaleY: 1,

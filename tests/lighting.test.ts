@@ -47,7 +47,7 @@ describe('what lights a scene', () => {
         const lighting = lit(() => {
             useLight({ intensity: 2 });
             // On its own object, because one object holds one light.
-            useSpawn(() => { usePointLight({ x: 5, range: 20 }); })();
+            useSpawn(() => { usePointLight({ transform: { x: 5 }, range: 20 }); })();
         });
 
         expect(lighting.lights.map((light) => light.type)).toEqual(['directional', 'point']);
@@ -57,7 +57,7 @@ describe('what lights a scene', () => {
         const warn = spyOn(console, 'warn').mockImplementation(() => {});
         const lighting = lit(() => {
             for (let i = 0; i < MAX_LIGHTS + 3; i++) {
-                useSpawn(() => { usePointLight({ x: i }); })();
+                useSpawn(() => { usePointLight({ transform: { x: i } }); })();
             }
         });
         warn.mockRestore();
@@ -97,7 +97,7 @@ describe('a light inside something that moves', () => {
         const lighting = lit(() => {
             useSpawn(() => {
                 useTransform({ x: 100, y: 40 });
-                usePointLight({ x: 5 });
+                usePointLight({ transform: { x: 5 } });
             })();
         });
 
@@ -124,7 +124,7 @@ describe('a light inside something that moves', () => {
         const warn = spyOn(console, 'warn').mockImplementation(() => {});
         const lighting = lit(() => {
             useLight();
-            usePointLight({ x: 2 });
+            usePointLight({ transform: { x: 2 } });
         });
         const said = warn.mock.calls.length;
         warn.mockRestore();

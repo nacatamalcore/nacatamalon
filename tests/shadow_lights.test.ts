@@ -144,7 +144,7 @@ describe('what a light hook accepts', () => {
         const root = startTestScene(store, 'Level', () => {
             useLight({
                 color: { r: 1, g: 1, b: 1, a: 1 }, intensity: 1, ambient: 0.3,
-                x: 1, y: 2, z: 3, rotationX: -0.5, rotationY: 0.5,
+                transform: { x: 1, y: 2, z: 3, rotationX: -0.5, rotationY: 0.5 },
                 castShadow: true, shadowBias: 0.002, shadowStrength: 0.8,
                 shadowArea: 40, shadowDistance: 60,
             });

@@ -1,17 +1,10 @@
+import { FORGET_JOINTS_AFTER } from '../../shared/joint_lifetime';
 import type { TDrawSkeleton } from '../../interface/draw/t_draw_mesh';
 
 /**
  * One skeleton's bones on the card, and how many it was made for.
  */
 type THeld = { buffer: GPUBuffer; joints: number; writtenOn: number };
-
-/**
- * How many frames a skeleton's bones stay on the card after it was last drawn. Every placed model
- * has bones of its own, so an enemy that is born and dies leaves its bones behind; let go of after
- * this long unused, a game spawning enemies for an hour does not fill the card. Long enough that a
- * model hidden for a moment does not have them made again when it shows.
- */
-const FORGET_AFTER = 120;
 
 /**
  * Keeps each skeleton's bones on the graphics card, and puts this frame's numbers in them.
@@ -42,7 +35,7 @@ export const createJointPalette = (device: GPUDevice) => {
             frame++;
             const forgotten: string[] = [];
             for (const [key, entry] of held) {
-                if (frame - entry.writtenOn > FORGET_AFTER) {
+                if (frame - entry.writtenOn > FORGET_JOINTS_AFTER) {
                     entry.buffer.destroy();
                     held.delete(key);
                     forgotten.push(key);

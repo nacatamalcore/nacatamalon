@@ -1,3 +1,4 @@
+import { degToRad } from '../../math/angle/deg_to_rad';
 import { bloom } from './bloom';
 import { blur } from './blur';
 import { colorAdjust } from './color_adjust';
@@ -166,7 +167,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         binds: null,
         fields: BUILTIN_FIELDS.halftone!,
         renamed: { scale: 'size', color: 'ownColor', angle: 'rotation' },
-        converted: { angle: (degrees) => (degrees * Math.PI) / 180 },
+        converted: { angle: degToRad },
         build: () => halftone(),
     },
     {

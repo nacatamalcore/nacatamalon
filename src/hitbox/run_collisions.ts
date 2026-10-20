@@ -6,6 +6,7 @@ import { contactsOf, watchContacts } from '../physics/contacts';
 import type { TTurnedRect } from './hitbox_shape';
 import type { TBox } from '../box/types/t_box';
 import type { TCollisionKey, TCollisionListener } from './types/t_hitbox';
+import { isTaggableDrawing } from '../tags/tags';
 import type { TTaggable } from '../tags/tags';
 
 /**
@@ -60,7 +61,7 @@ const indexMatches = (scene: TBox, wanted: ReadonlySet<TCollisionKey>): Map<TCol
         // A piece with a body that a collision asks about: from now on its contacts are told.
         if (box.physics !== null && (made !== undefined && wanted.has(made) || box.tags.some((tag) => wanted.has(tag)))) watchContacts(box);
         for (const drawable of box.drawables) {
-            if ((drawable.type === 'sprite' || drawable.type === 'text' || drawable.type === 'nine-slice') && !drawable.destroyed && drawable.tags !== undefined) {
+            if (isTaggableDrawing(drawable) && !drawable.destroyed && drawable.tags !== undefined) {
                 for (const tag of drawable.tags) if (wanted.has(tag)) note(tag, drawable, box);
             }
         }

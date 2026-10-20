@@ -152,8 +152,8 @@ describe('useCamera3d', () => {
         let first!: ReturnType<typeof useCamera3d>;
         let second!: ReturnType<typeof useCamera3d>;
         const scene = startTestScene(store, 'Level', () => {
-            first = useCamera3d({ z: 5 });
-            second = useCamera3d({ z: 900 });
+            first = useCamera3d({ transform: { z: 5 } });
+            second = useCamera3d({ transform: { z: 900 } });
             return createScene();
         });
         console.warn = warn;

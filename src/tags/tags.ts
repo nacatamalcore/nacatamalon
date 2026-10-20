@@ -3,6 +3,7 @@ import type { TGameObject } from '../hooks/spawn/use_spawn';
 import type { TSprite } from '../gameobjects/sprite/types/t_sprite';
 import type { TText } from '../gameobjects/text/types/t_text';
 import type { TNineSlice } from '../gameobjects/nine_slice/types/t_nine_slice';
+import type { TDrawable } from '../gameobjects/types';
 
 /**
  * What can carry a tag: a piece (a box) or something drawn on its own, a sprite, a text or a panel.
@@ -49,6 +50,14 @@ export const tagName = (tag: string | TTag): string => (typeof tag === 'string' 
 export const carries = (thing: { tags?: string[] }, name: string): boolean => thing.tags?.includes(name) === true;
 
 /**
+ * Whether a drawing is one of those that carry tags of their own: a sprite, a text or a panel.
+ *
+ * @internal
+ */
+export const isTaggableDrawing = (drawable: TDrawable): drawable is TSprite | TText | TNineSlice =>
+    drawable.type === 'sprite' || drawable.type === 'text' || drawable.type === 'nine-slice';
+
+/**
  * Everything under `root` that carries the tag, in the tree's order, `root` included: boxes, and what
  * they draw on its own. What is destroyed is left out, and what is inside it.
  *
@@ -64,7 +73,7 @@ export const findTagged = (root: TBox, name: string): TTaggable[] => {
             found.push(box as TGameObject);
         }
         for (const drawable of box.drawables) {
-            if ((drawable.type === 'sprite' || drawable.type === 'text' || drawable.type === 'nine-slice') && !drawable.destroyed && carries(drawable, name)) {
+            if (isTaggableDrawing(drawable) && !drawable.destroyed && carries(drawable, name)) {
                 found.push(drawable);
             }
         }

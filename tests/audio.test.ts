@@ -363,7 +363,7 @@ describe('sound placed in the world', () => {
         const { store } = createTestGame();
         let camera!: ReturnType<typeof useCamera2d>;
         startTestScene(store, 'Level', () => {
-            camera = useCamera2d({ x: 1000, y: 500 });
+            camera = useCamera2d({ transform: { x: 1000, y: 500 } });
             useSound({ src: '/audio/bird.mp3' }, { spatial: true });
             return createScene();
         });

@@ -104,7 +104,7 @@ describe('where the game is heard from', () => {
     it('is the perspective camera, facing the way it looks', async () => {
         const { store } = createTestGame();
         startTestScene(store, 'Level', () => {
-            useCamera3d({ ...PERSPECTIVE, x: 1, y: 2, z: 3, rotationY: Math.PI / 2 });
+            useCamera3d({ ...PERSPECTIVE, transform: { x: 1, y: 2, z: 3, rotationY: Math.PI / 2 } });
             useSound({ src: '/audio/bird.mp3' }, { spatial: true });
             return createScene();
         });
@@ -122,7 +122,7 @@ describe('where the game is heard from', () => {
     it('is the middle of what an orthographic camera shows, in its pixels', async () => {
         const { store } = createTestGame();
         startTestScene(store, 'Level', () => {
-            useCamera3d({ projection: 'orthographic', x: 40, y: 10 });
+            useCamera3d({ projection: 'orthographic', transform: { x: 40, y: 10 } });
             useSound({ src: '/audio/bird.mp3' }, { spatial: true });
             return createScene();
         });
@@ -142,7 +142,7 @@ describe('where the game is heard from', () => {
             ears = useAudioListener();
         };
         startTestScene(store, 'Level', () => {
-            useCamera3d({ ...PERSPECTIVE, z: 9 });
+            useCamera3d({ ...PERSPECTIVE, transform: { z: 9 } });
             useSpawn(Player)();
             return createScene();
         });
@@ -223,7 +223,7 @@ describe('how a placed sound is heard', () => {
         const { store } = createTestGame();
         let sound!: TSoundHandle;
         startTestScene(store, 'Level', () => {
-            useCamera3d({ ...PERSPECTIVE, x: 2, y: 3, z: 4 });
+            useCamera3d({ ...PERSPECTIVE, transform: { x: 2, y: 3, z: 4 } });
             return createScene();
         });
         startTestScene(store, 'Hud', () => {
@@ -246,7 +246,7 @@ describe('how a placed sound is heard', () => {
             sound = useSound({ src: '/audio/bird.mp3' }, { spatial: true });
         };
         startTestScene(store, 'Level', () => {
-            useCamera3d({ ...PERSPECTIVE, z: 6 });
+            useCamera3d({ ...PERSPECTIVE, transform: { z: 6 } });
             createSpriteTexture({ width: 16, height: 16 }, Screen);
             return createScene();
         });

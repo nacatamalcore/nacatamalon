@@ -21,16 +21,11 @@ export type TLightOptionsBase = {
      */
     ambient?: number;
     /**
-     * Where it is.
+     * Where it is and which way it faces, as it is read afterwards (`light.transform`): `x`, `y`,
+     * `z`, and `rotationX` and `rotationY` in radians. A light shines along its own -Z. Left out, it
+     * is where its object is.
      */
-    x?: number;
-    y?: number;
-    z?: number;
-    /**
-     * Which way it faces, in radians. A light shines along its own -Z.
-     */
-    rotationX?: number;
-    rotationY?: number;
+    transform?: Partial<Pick<TTransform3d, 'x' | 'y' | 'z' | 'rotationX' | 'rotationY'>>;
     /**
      * Whether this is the one light that casts shadows. Default `false`. See `TLight`.
      */
@@ -61,12 +56,12 @@ const shadowing = (options: TLightOptionsBase) => ({
  * Where a light is and which way it faces, filled in from what was asked for.
  */
 const placement = (options: TLightOptionsBase): TTransform3d => ({
-    x: options.x ?? 0,
-    y: options.y ?? 0,
-    z: options.z ?? 0,
+    x: options.transform?.x ?? 0,
+    y: options.transform?.y ?? 0,
+    z: options.transform?.z ?? 0,
     rotation: 0,
-    rotationX: options.rotationX ?? 0,
-    rotationY: options.rotationY ?? 0,
+    rotationX: options.transform?.rotationX ?? 0,
+    rotationY: options.transform?.rotationY ?? 0,
     scaleX: 1,
     scaleY: 1,
     scaleZ: 1,
@@ -86,7 +81,7 @@ export const createDirectionalLight = (
     ambient: options.ambient ?? 0.35,
     // Pointing down and forwards by default, the way afternoon sun does: straight down flattens
     // everything, and along the view leaves no shading at all.
-    transform: { ...placement(options), rotationX: options.rotationX ?? -0.9, rotationY: options.rotationY ?? 0.6 },
+    transform: { ...placement(options), rotationX: options.transform?.rotationX ?? -0.9, rotationY: options.transform?.rotationY ?? 0.6 },
 });
 
 /**
@@ -114,7 +109,7 @@ export const createSpotLight = (options: TLightOptionsBase & { range?: number; a
     range: options.range ?? 10,
     angle: options.angle ?? Math.PI / 8,
     penumbra: options.penumbra ?? 0.2,
-    transform: { ...placement(options), rotationX: options.rotationX ?? -Math.PI / 2 },
+    transform: { ...placement(options), rotationX: options.transform?.rotationX ?? -Math.PI / 2 },
 });
 
 /**
