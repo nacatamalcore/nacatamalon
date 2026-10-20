@@ -7,6 +7,9 @@ import { tick } from '../src/game/loop/tick';
 import { useUpdate } from '../src/hooks/loop/use_update';
 import { useAction, useActions } from '../src/hooks/input/use_actions';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
+import { useTouchAction } from '../src/hooks/input/use_touch_action';
+import { destroy } from '../src/destroy/destroy';
+import type { TGameObject } from '../src/hooks/spawn/use_spawn';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { normalizeActionMap, bindingKey, describeBinding } from '../src/input';
 import { createFakeCanvas, createTestGame } from './helpers/test_game';
@@ -43,8 +46,8 @@ const MAP: TActionMap = normalizeActionMap([
 ]);
 
 /**
- * A button: a 40x40 sprite at a point. The object made from it is named after the function, as
- * everything `useSpawn` makes is, which is the name a touch binding asks for.
+ * A button: a 40x40 sprite at a point. The object made from it is given the name a touch binding
+ * asks for.
  */
 const button = (x: number, y: number) => {
     createSprite({ width: 40, height: 40, tint, transform: { x, y, rotation: 0, scaleX: 1, scaleY: 1 } });
@@ -71,9 +74,9 @@ const game = (body: TSceneFn, step: TGameStep = 'display') => {
 
 describe('an action held by a finger on an on-screen button', () => {
     const pad: TSceneFn = () => {
-        useSpawn(Jump)();
-        useSpawn(Left)();
-        useSpawn(Right)();
+        useSpawn(Jump, 'Jump')();
+        useSpawn(Left, 'Left')();
+        useSpawn(Right, 'Right')();
         return createScene();
     };
 
@@ -132,6 +135,87 @@ describe('an action held by a finger on an on-screen button', () => {
         ]);
         expect(bindingKey(binding)).toBe('touch:Jump');
         expect(describeBinding(binding)).toBe('Touch Jump');
+    });
+});
+
+describe('an action held by a button that says which (useTouchAction)', () => {
+    // No names anywhere: one component, two props, and the map binds the actions to keys only.
+    const Button = ({ x, action }: { x: number; action: string }) => {
+        button(x, 280);
+        useTouchAction(action);
+    };
+
+    it('holds its action while a finger is on it, beside the map\'s own bindings', () => {
+        let actions!: ReturnType<typeof useActions>;
+        const { canvas, frame } = game(() => {
+            actions = useActions();
+            useSpawn(Button)({ x: 40, action: 'left' });
+            useSpawn(Button)({ x: 400, action: 'jump' });
+            return createScene();
+        });
+
+        touch(canvas, 'pointerdown', 400, 280);
+        frame();
+        expect([actions.isDown('jump'), actions.justPressed('jump'), actions.isDown('left')]).toEqual([true, true, false]);
+
+        touch(canvas, 'pointermove', 40, 280);
+        frame();
+        expect([actions.isDown('jump'), actions.isDown('left')]).toEqual([false, true]);
+
+        touch(canvas, 'pointerup', 40, 280);
+        frame();
+        expect(actions.isDown('left')).toBe(false);
+    });
+
+    it('presses nothing once the button is destroyed', () => {
+        let actions!: ReturnType<typeof useActions>;
+        let jump!: TGameObject;
+        const { canvas, frame } = game(() => {
+            actions = useActions();
+            jump = useSpawn(Button)({ x: 400, action: 'jump' });
+            return createScene();
+        });
+
+        touch(canvas, 'pointerdown', 400, 280);
+        frame();
+        expect(actions.isDown('jump')).toBe(true);
+
+        destroy(jump);
+        frame();
+        frame();
+        expect(actions.isDown('jump')).toBe(false);
+    });
+
+    it('does not count for a handle on the keyboard alone', () => {
+        let keyboardOnly!: ReturnType<typeof useActions>;
+        const { canvas, frame } = game(() => {
+            keyboardOnly = useActions({ device: 'keyboard' });
+            useSpawn(Button)({ x: 400, action: 'jump' });
+            return createScene();
+        });
+
+        touch(canvas, 'pointerdown', 400, 280);
+        frame();
+        expect(keyboardOnly.isDown('jump')).toBe(false);
+    });
+
+    it('warns when the game has no such action', () => {
+        const warn = console.warn;
+        const said: string[] = [];
+        console.warn = (message: string) => { said.push(message); };
+        try {
+            game(() => {
+                useSpawn(Button)({ x: 400, action: 'jmup' });
+                return createScene();
+            });
+        } finally {
+            console.warn = warn;
+        }
+        expect(said.some((message) => message.includes("no action 'jmup'"))).toBe(true);
+    });
+
+    it('throws outside a body', () => {
+        expect(() => useTouchAction('jump')).toThrow(/inside the body/);
     });
 });
 

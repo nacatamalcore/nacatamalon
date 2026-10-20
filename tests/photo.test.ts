@@ -129,7 +129,7 @@ describe('useCapture', () => {
         const { capture, develop, passes } = studio(() => {
             useSpawn(function Hud() {
                 hud = createSprite({ width: 10, height: 10 });
-            })();
+            }, 'Hud')();
             bird = createSprite({ width: 10, height: 10, transform: { x: 50, y: 50 } });
         });
         await develop(capture()({ hide: ['Hud'] }));
@@ -154,7 +154,7 @@ describe('useCapture', () => {
             useSpawn(function Frame() {
                 useTransform({ x: 150, y: 60 });
                 useHitbox({ group: 'frame', width: 40, height: 20 });
-            })();
+            }, 'Frame')();
         });
         const byHitbox = await develop(capture()({ region: 'Frame' }));
         expect([byHitbox.width, byHitbox.height]).toEqual([40, 20]);
@@ -181,7 +181,7 @@ describe('useCapture', () => {
                 useScreenSpace();
                 useTransform({ x: 110, y: 50 });
                 createSprite({ width: 4, height: 4 });
-            })();
+            }, 'Hud')();
         });
         const photo = await develop(capture()({ region: { x: 100, y: 40, width: 60, height: 40 }, width: 30, hide: ['Hud'] }));
         expect(photo.boxes.map((b) => b.name)).toEqual(['Bird', 'Branch']);

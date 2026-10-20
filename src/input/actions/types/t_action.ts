@@ -23,6 +23,8 @@ export type TActionName = string;
  * of the scene, drawn by the engine and placed like any other, so a pad on a phone is a few sprites
  * and the game still reads `isDown('jump')`, whatever pressed it. A finger sliding from one button to
  * the next moves from one action to the other. It counts for a handle on every device (`'any'`).
+ * In code, a button can say itself which action it presses with `useTouchAction`, and needs no name;
+ * this binding is for a map written in a project file, where a scene's button has only its name.
  *
  * `dir` on an axis is not a threshold and is not optional: it is part of **which** input this is. An
  * axis goes both ways and an action does not, so "the horizontal axis of the left stick" does not

@@ -279,10 +279,10 @@ export type TPointerSource = {
      */
     isPressing(store: TRuntimeStore, target: TSprite | TText | TNineSlice | TBox): boolean;
     /**
-     * The name of every object a pressing pointer is on, its own and those of everything it sits in:
-     * what an action bound to a touch (`{ type: 'touch', box }`) asks.
+     * Every object a pressing pointer is on, and everything it sits in: what an action bound to a
+     * touch (`{ type: 'touch', box }`) asks, by the object or by its name.
      */
-    pressedNames(store: TRuntimeStore): ReadonlySet<string>;
+    pressedBoxes(store: TRuntimeStore): ReadonlySet<TBox>;
     /**
      * Captures the mouse on this canvas. See `TPointerHandle.lock`.
      */

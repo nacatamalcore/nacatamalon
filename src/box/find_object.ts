@@ -1,3 +1,4 @@
+import { noteFoundByName } from './named_by_function';
 import type { TBox } from './types/t_box';
 
 /**
@@ -30,6 +31,7 @@ import type { TBox } from './types/t_box';
  */
 export const findObject = (root: TBox, name: string): TBox | null => {
     if (root.name === name) {
+        noteFoundByName(root, name);
         return root;
     }
     for (const child of root.children) {
@@ -59,6 +61,7 @@ export const findObjects = (root: TBox, name: string): TBox[] => {
     const found: TBox[] = [];
     const visit = (box: TBox): void => {
         if (box.name === name) {
+            noteFoundByName(box, name);
             found.push(box);
         }
         for (const child of box.children) {

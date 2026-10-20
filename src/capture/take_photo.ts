@@ -1,3 +1,4 @@
+import { noteFoundByName } from '../box/named_by_function';
 import { captureScreen } from '../game/capture';
 import { cutAndScale, photoSize } from './photo_pixels';
 import { boxRegion, boxesIn } from './photo_boxes';
@@ -14,6 +15,7 @@ const named = (scenes: readonly TBox[], name: string): TBox[] => {
     const found: TBox[] = [];
     const visit = (box: TBox): void => {
         if (box.name === name) {
+            noteFoundByName(box, name);
             found.push(box);
         }
         box.children.forEach(visit);

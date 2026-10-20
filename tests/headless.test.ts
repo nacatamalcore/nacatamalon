@@ -51,7 +51,7 @@ function Player() {
 }
 
 const Level: TSceneFn = () => {
-    useSpawn(Player)();
+    useSpawn(Player, 'Player')();
     createText({ text: 'SCORE 0', transform: { x: 8, y: 8 } });
     return createScene();
 };
@@ -172,7 +172,7 @@ describe('physics with no browser', () => {
         const Flat: TSceneFn = () => {
             usePhysicsWorld2d({ gravity: { x: 0, y: 900 } });
             useSpawn(Ground)();
-            useSpawn(Crate)();
+            useSpawn(Crate, 'Crate')();
             return createScene();
         };
         const game = make({ width: 320, height: 180, scenes: { Flat } });
@@ -204,7 +204,7 @@ describe('physics with no browser', () => {
         const Solid: TSceneFn = () => {
             usePhysicsWorld3d();
             useSpawn(Floor)();
-            useSpawn(Box)();
+            useSpawn(Box, 'Box')();
             return createScene();
         };
         const game = make({ width: 320, height: 180, scenes: { Solid } });

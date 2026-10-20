@@ -3,6 +3,23 @@
 What changed in the current release of `nacatamalon`, and what is waiting for the next one. Earlier
 releases are in [changelog/](./changelog/), one file each.
 
+## Unreleased
+
+### Added
+
+- `useSpawn` takes a name for what it makes: `useSpawn(Button, 'Jump')`, or
+  `useSpawn(Bullet, { name: 'Bullet', parent: 'scene' })` beside the place. Without one, a thing is
+  still called after its component's function, but that is only a label: a published build shortens
+  function names, so a touch button or a `findObject` that found `Jump` while developing found
+  nothing once shipped. Anything looked up by name needs it given. While developing, a lookup that
+  finds something only by its function's name says so in the console, once a name, with the line
+  to write; `findObject`, `findObjects`, a touch binding, a photo and a headless `find` all tell.
+- `useTouchAction('jump')`: an on-screen button says itself which action a finger on it holds, from
+  its own body. No name to match with the action map, one `Button` component made twice with two
+  props is two buttons, and a destroyed button presses nothing. It is the game's, not a binding, so
+  a controls screen neither lists nor saves it. `{ type: 'touch', box: 'Jump' }` stays for a map
+  written in a project file.
+
 ## 0.2.5 — 2026-10-19
 
 ### Added

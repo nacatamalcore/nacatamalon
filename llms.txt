@@ -108,9 +108,11 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   a click or key press (`pointer.onDown(() => { void pointer.lock(); })`); then turn the camera with
   `movementX`/`movementY` from `onMove`, which keep changing while `screenX`/`screenY` do not.
   `isLocked()` turns `false` when the player presses Esc.
-- **Touch** (phones): an on-screen button is an ordinary object (`useSpawn(function Jump() {
-  createSprite(...) })()` names it `Jump`) and an action bound to it with `{ type: 'touch', box: 'Jump' }`
-  is held while a finger is on it, so the game still reads `actions.isDown('jump')`; draw it with the
+- **Touch** (phones): an on-screen button is an ordinary component that says which action it presses,
+  `useTouchAction('jump')` in its body: the action is held while a finger is on it, so the game still
+  reads `actions.isDown('jump')`, and one `Button` component made twice with two props is two buttons
+  (`useSpawn(Button)({ x: 400, action: 'jump' })`). A project's map binds a button of a scene by its
+  name instead, `{ type: 'touch', box: 'Jump' }`. Draw it with the
   engine, never as HTML over the canvas (the native runtime has no page). `usePointer()` also answers
   `isDown()`, `position()`, `touches()` (each finger, by `pointerId`) and `isPressing(sprite)`. How long
   an action has been held, for a charged shot: `actions.heldFor('fire')`, still set on its
@@ -230,11 +232,11 @@ const App = () => (
 
 ## Where things are (search llms-full.txt for each name)
 
-- **Game and scenes**: `createGame`, `createScene`, `useScene`, `useGame`, `useSpawn` (what the component returns is the object's `api`: `useSpawn(Bat)(200).api.hurt(1)`), `useSelf`, `destroy`, `useReady`, `useSceneUnmount`.
+- **Game and scenes**: `createGame`, `createScene`, `useScene`, `useGame`, `useSpawn` (what the component returns is the object's `api`: `useSpawn(Bat)({ x: 200 }).api.hurt(1)`; a name for what it makes, when something finds it by name, `useSpawn(Bat, 'Bat')`: the function's own is shortened by a published build), `useSelf`, `destroy`, `useReady`, `useSceneUnmount`.
 - **Touching, with no physics**: `overlaps(a, b)`; `useHitbox({ group: 'enemy', width?, height? })` (the picture's size by default; change `x`, `y`, `width`, `height`, `enabled` any time); `useOverlap('shot', 'enemy', (shot, enemy) => ...)`, called every frame each pair touches, after the updates.
 - **Points on an object**: `worldToLocal(object, point)` and `localToWorld(object, point)` (a sprite works too), `worldToLocal3d` and `localToWorld3d`; the pointer's `worldX`/`worldY` are the world they mean.
 - **Time**: `useUpdate`, `useLateUpdate`, `useTimer`, `useTween`, easings such as `linear` and `easeInOutSine`.
-- **Input**: `useKeyboard`, `usePointer`, `useGamepad`, `useActions`, `useAction`.
+- **Input**: `useKeyboard`, `usePointer`, `useGamepad`, `useActions`, `useAction`, `useTouchAction`.
 - **2D**: `createSprite`, `useLoadTexture`, `useLoadAtlas`, `useSpriteAnimation`, `createText`, `useLoadFont`, `useLoadBitmapFont`, `createNineSlice`, `createTilemap`, `tileAt`, `solidAt`, `tileInfoAtPoint`, `createParticles`, `useCamera2d`.
 - **Platformer tiles** (fields of a tile in the `.tilemap`, read with `tileInfoAt`/`tileInfoAtPoint`): `oneWay` (a ledge, stood on from above), `ladder`, `slope: [left, right]` (floor heights 0 to 1), `damage` (a value the game interprets; the engine never applies it), `push: { x, y }` (pixels per second), and `props` for anything else (`{ water: true }`). A ledge or slope leaves `solid` off.
 - **3D**: `createMesh`, `useCubeGeometry`, `usePlaneGeometry`, `useUvSphereGeometry`, `createMaterial`, `useLoadGltf`, `createModel`, `useSkeletalAnimation`, `useCamera3d`, `cameraLookAt`, `useLight`, `usePointLight`, `useSpotLight`, `useBlobShadow`, `createParticles3d`.

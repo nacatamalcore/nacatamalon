@@ -584,19 +584,19 @@ export const createPointer = (canvas: HTMLCanvasElement): TPointerSource => {
             }
             return heldHits(store).some((hits) => hits.some((hit) => hit === target || sitsIn(hit, target)));
         },
-        pressedNames: (store) => {
-            const names = new Set<string>();
+        pressedBoxes: (store) => {
+            const boxes = new Set<TBox>();
             if (active.size === 0) {
-                return names;
+                return boxes;
             }
             for (const hits of heldHits(store)) {
                 for (const hit of hits) {
                     for (let box = ownerOfDrawable(hit)?.box ?? null; box !== null; box = box.parent) {
-                        names.add(box.name);
+                        boxes.add(box);
                     }
                 }
             }
-            return names;
+            return boxes;
         },
 
         lock,

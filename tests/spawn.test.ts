@@ -6,6 +6,7 @@ import { flushDestroyed } from '../src/destroy/flush_destroyed';
 import { runHookUpdates } from '../src/game/loop/runHookUpdates';
 import { useSelf } from '../src/hooks/spawn/use_self';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
+import { findObject, findObjects } from '../src/box/find_object';
 import { useSceneUnmount } from '../src/hooks/scene/use_scene_unmount';
 import { useUpdate } from '../src/hooks/loop/use_update';
 import { withSceneUpdates } from '../src/store/scene_updates';
@@ -35,6 +36,50 @@ describe('useSpawn', () => {
         expect(root.children).toHaveLength(2);
         expect(root.children.map((child) => child.name)).toEqual(['Bullet', 'Bullet']);
         expect(root.children[0].id).not.toBe(root.children[1].id);
+    });
+
+    it('names what it makes as told, by a string alone or beside the place', () => {
+        const { store } = createTestGame();
+        const Button = ({ x }: { x: number }) => { createSprite({ width: 4, height: 4, tint, transform: at(x) }); };
+
+        const root = startTestScene(store, 'Level', () => {
+            const holder = useSpawn(() => {}, 'Holder')();
+            useSpawn(Button, 'Jump')({ x: 1 });
+            useSpawn(Button, { name: 'Fire', parent: holder })({ x: 2 });
+            useSpawn(Button, { parent: holder })({ x: 3 });
+            return createScene();
+        });
+
+        expect(root.children.map((child) => child.name)).toEqual(['Holder', 'Jump']);
+        expect(root.children[0].children.map((child) => child.name)).toEqual(['Fire', 'Button']);
+    });
+
+    it('warns, once, when something is found only by its component\'s function name', () => {
+        const { store } = createTestGame();
+        function Lantern() {}
+        function Signpost() {}
+        const Gate = () => { useSelf().name = 'Gate'; };
+        const warn = console.warn;
+        const said: string[] = [];
+        console.warn = (message: string) => { said.push(message); };
+        try {
+            const root = startTestScene(store, 'Level', () => {
+                useSpawn(Lantern)();
+                useSpawn(Signpost, 'Signpost')();
+                useSpawn(Gate)();
+                return createScene();
+            });
+            findObject(root, 'Lantern');
+            findObjects(root, 'Lantern');
+            findObject(root, 'Signpost');
+            findObject(root, 'Gate');
+        } finally {
+            console.warn = warn;
+        }
+        // Lantern has only its function's name; Signpost was given one; Gate named itself.
+        expect(said).toHaveLength(1);
+        expect(said[0]).toContain("'Lantern' was found by its component's function name");
+        expect(said[0]).toContain("useSpawn(Lantern, 'Lantern')");
     });
 
     it('keeps the sprites and the per-frame code on the thing itself, not on the scene', () => {

@@ -1,5 +1,7 @@
 import { deadzoneRadial, deadzoneScalar, GAMEPAD_AXES, GAMEPAD_BUTTONS, gamepadAxisIndex } from '../gamepad';
+import { noteFoundByName } from '../../box/named_by_function';
 import { bindingKey, DEFAULT_ACTION_DEADZONE, DEFAULT_ACTION_PRESS } from './normalize_action_map';
+import type { TBox } from '../../box';
 import type { TGamepad } from '../gamepad';
 import type { TKeyboardSource } from '../types/t_keyboard';
 import type {
@@ -49,7 +51,8 @@ type TRow = {
 /**
  * Nothing under any finger.
  */
-const NO_TOUCH: ReadonlySet<string> = new Set();
+const NO_TOUCH: ReadonlySet<TBox> = new Set();
+const NO_ACTIONS: ReadonlySet<TActionName> = new Set();
 
 /**
  * Someone waiting for the player to press anything.
@@ -82,10 +85,10 @@ export type TActionSourceOptions = {
     gamepad: (index: number) => TGamepad;
     actions?: TActionMap;
     /**
-     * The names of the objects a finger is on, asked once per sample, for touch bindings. A game
-     * with no pointer (a test) has none.
+     * The objects a finger is on, and everything they sit in, asked once per sample, for touch
+     * bindings. A game with no pointer (a test) has none.
      */
-    touch?: () => ReadonlySet<string>;
+    touch?: () => ReadonlySet<TBox>;
 };
 
 /**
@@ -137,6 +140,12 @@ export type TActionSource = {
      * Waits for the player to press anything.
      */
     capture(done: (binding: TActionBinding | null) => void, options?: TActionCaptureOptions): () => void;
+    /**
+     * Holds `action` while a finger is on `box` or on anything inside it, beside whatever the map
+     * binds it to. Not a binding: it is the game's own, so no controls screen lists, changes or saves
+     * it. Gives back what stops it. See `useTouchAction`.
+     */
+    touchAction(box: TBox, action: TActionName): () => void;
 };
 
 export const createActions = (options: TActionSourceOptions): TActionSource => {
@@ -144,12 +153,39 @@ export const createActions = (options: TActionSourceOptions): TActionSource => {
     /**
      * What fingers are on this sample, asked once for every row and binding.
      */
-    let touched: ReadonlySet<string> = NO_TOUCH;
+    let touched: ReadonlySet<TBox> = NO_TOUCH;
+    /**
+     * Whether a finger is on an object of that name, worked out from `touched` the first time a
+     * binding by name asks in a sample, then kept until the next.
+     */
+    let touchedByName: Map<string, TBox> | null = null;
+    const touchedNamed = (name: string): boolean => {
+        if (touchedByName === null) {
+            touchedByName = new Map();
+            for (const box of touched) {
+                if (!touchedByName.has(box.name)) {
+                    touchedByName.set(box.name, box);
+                }
+            }
+        }
+        const box = touchedByName.get(name);
+        if (box === undefined) {
+            return false;
+        }
+        noteFoundByName(box, name);
+        return true;
+    };
     /**
      * Whether any action listens to a touch. Without one nothing asks what the fingers are on, which
      * would lay the scene out every frame a finger is down for no one.
      */
     let anyTouch = false;
+    /**
+     * The objects that say themselves which action a finger on them holds (`useTouchAction`), and
+     * which of those actions are held this sample.
+     */
+    const touchButtons: Array<{ box: TBox; action: TActionName }> = [];
+    let touchedActions: ReadonlySet<TActionName> = NO_ACTIONS;
 
     let defs: TActionDef[] = [...(options.actions ?? [])];
     const overrideMap = new Map<TActionName, TActionBinding[]>();
@@ -198,7 +234,10 @@ export const createActions = (options: TActionSourceOptions): TActionSource => {
             return row.keyboard && keyboard.isDown(binding.key) ? 1 : 0;
         }
         if (binding.type === 'touch') {
-            return row.touch && touched.has(binding.box) ? 1 : 0;
+            if (!row.touch) {
+                return 0;
+            }
+            return touchedNamed(binding.box) ? 1 : 0;
         }
         if (binding.type === 'button') {
             let best = 0;
@@ -232,6 +271,9 @@ export const createActions = (options: TActionSourceOptions): TActionSource => {
             // reorder. The strongest is the same answer whatever the order, and that is a test.
             for (const binding of plan[i].bindings) {
                 best = Math.max(best, strengthOf(binding, row));
+            }
+            if (row.touch && touchedActions.has(plan[i].name)) {
+                best = 1;
             }
             row.cur[i] = best;
         }
@@ -452,7 +494,9 @@ export const createActions = (options: TActionSourceOptions): TActionSource => {
         handle: (device = 'any') => buildHandle(device),
         sample: (dt = 0) => {
             ensureCompiled();
-            touched = anyTouch ? options.touch?.() ?? NO_TOUCH : NO_TOUCH;
+            touched = anyTouch || touchButtons.length > 0 ? options.touch?.() ?? NO_TOUCH : NO_TOUCH;
+            touchedByName = null;
+            touchedActions = touched.size === 0 ? NO_ACTIONS : new Set(touchButtons.filter((button) => touched.has(button.box)).map((button) => button.action));
             for (const row of rows.values()) {
                 sampleRow(row);
                 timeHeld(row, dt);
@@ -528,6 +572,16 @@ export const createActions = (options: TActionSourceOptions): TActionSource => {
                 overrideMap.set(action, unique);
             }
             dirty = true;
+        },
+        touchAction: (box, action) => {
+            const button = { box, action };
+            touchButtons.push(button);
+            return () => {
+                const at = touchButtons.indexOf(button);
+                if (at !== -1) {
+                    touchButtons.splice(at, 1);
+                }
+            };
         },
         overrides: () => {
             const out: TActionOverrides = {};

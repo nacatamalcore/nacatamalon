@@ -3,6 +3,7 @@ import { createRandom } from '../math/random';
 import { nanoId } from '../utils';
 import type { TRuntimeSectionName, TRuntimeState } from './types/t_runtime_state';
 import type { TRuntimeStore, TRuntimeStoreInit } from './types/t_runtime_store';
+import type { TBox } from '../box';
 
 /**
  * Builds the source of truth for one running game.
@@ -86,7 +87,7 @@ export const createRuntimeStore = (init: TRuntimeStoreInit): TRuntimeStore => {
         keyboard,
         gamepad: (index) => gamepads.handle(index),
         actions: init.config.actions,
-        touch: () => (self === null ? new Set<string>() : pointer.pressedNames(self)),
+        touch: () => (self === null ? new Set<TBox>() : pointer.pressedBoxes(self)),
     });
 
     const state: TRuntimeState = {

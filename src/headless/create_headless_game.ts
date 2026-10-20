@@ -1,4 +1,4 @@
-import { teardownBox } from '../box';
+import { noteFoundByName, teardownBox } from '../box';
 import { boxRegion, boxesIn } from '../capture/photo_boxes';
 import { cleanGameOptions } from '../game/bootstrap/clean_gameoptions';
 import { createFrameContext, fillFrameContext } from '../game/loop';
@@ -151,6 +151,7 @@ export const createHeadlessGame = (options: THeadlessGameOptions): THeadlessGame
         const found: TBox[] = [];
         const visit = (box: TBox): void => {
             if (box.name === name) {
+                noteFoundByName(box, name);
                 found.push(box);
             }
             box.children.forEach(visit);

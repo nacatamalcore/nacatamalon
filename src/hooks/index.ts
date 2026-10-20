@@ -2,7 +2,7 @@ export { useUpdate, useLateUpdate } from './loop';
 export { useHitbox, useOverlap } from './hitbox';
 export type { THitboxOptions } from './hitbox';
 export { useColor } from './color';
-export { useKeyboard, usePointer, useGamepad, useActions, useAction, useVector, useInputMap } from './input';
+export { useKeyboard, usePointer, useGamepad, useActions, useAction, useVector, useInputMap, useTouchAction } from './input';
 export { useRandom } from './random';
 export { useSignal } from './signal';
 export { useStore, useStoreLink } from './store';

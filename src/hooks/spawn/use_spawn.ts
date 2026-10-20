@@ -1,4 +1,4 @@
-import { spawnBox } from '../../box';
+import { markNamedByFunction, spawnBox } from '../../box';
 import type { TBox } from '../../box';
 import { getActiveBox, getActiveGame } from '../../store';
 
@@ -16,18 +16,28 @@ import { getActiveBox, getActiveGame } from '../../store';
 export type TGameObject<TApi = unknown> = TBox & { api: TApi };
 
 /**
- * Where the things a maker makes are placed.
- *
- * Left out, each one hangs under whoever is making it: a tank that makes its own turret carries
- * it along. `'scene'` puts it at the top of the scene instead, which is what a shot fired from a
- * cannon wants, since it must not swing round with the barrel once it has left. Or any thing
- * already in the scene, to hang under that one.
+ * What every thing a maker makes is called, and where it is placed. A string alone is the name,
+ * the usual case: `useSpawn(Button, 'Jump')`.
  *
  * @category Game objects
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
 export type TSpawnOptions = {
+    /**
+     * What each one is called, for whatever finds it by name: a touch button's action
+     * (`{ type: 'touch', box: 'Jump' }`), `findObject`, a script's field. Left out, it is the
+     * component's function name, which is only a label for warnings: a published build shortens
+     * function names, so `function Jump` may ship as `c`, and a renamed function would rename it
+     * too. Anything looked up by name needs it written here.
+     */
+    name?: string;
+    /**
+     * Left out, each one hangs under whoever is making it: a tank that makes its own turret carries
+     * it along. `'scene'` puts it at the top of the scene instead, which is what a shot fired from a
+     * cannon wants, since it must not swing round with the barrel once it has left. Or any thing
+     * already in the scene, to hang under that one.
+     */
     parent?: 'scene' | TGameObject;
 };
 
@@ -40,9 +50,16 @@ export type TSpawnOptions = {
  * everything else there. Made through the maker, each bullet gets its own place: its sprites, its
  * per-frame code and its cleanups are *its*, and `destroy` can take exactly one of them away.
  *
- * Whatever you pass to the maker reaches the component as its arguments. What comes back is the
+ * Whatever you pass to the maker reaches the component as its arguments: one object of props,
+ * `makeBullet({ x: 10 })`, reads like the tag it stands for and keeps its names. They arrive once,
+ * when the thing is made; the component is not run again when they change. What comes back is the
  * thing itself, for later: keep it to destroy it, or let the component end its own life with
  * `useSelf`.
+ *
+ * **What is the same for every one goes to `useSpawn`, what changes from one to the next to the
+ * maker**: the name and the place are decided once, here, while the scene is built; the props are
+ * given to each one, whenever it is made. Two buttons of one component with names of their own are
+ * two makers, which cost nothing.
  *
  * **Whatever the component returns is the thing's `api`**, so the one who made it can talk to it:
  * an enemy that returns `{ hurt }` is hurt with `enemy.api.hurt(1)`, typed, with no signal and no
@@ -53,12 +70,13 @@ export type TSpawnOptions = {
  *
  * @param component The function describing one of these things. Whatever it returns becomes the
  *   new thing's `api`.
- * @param options Where they are placed: see {@link TSpawnOptions}.
+ * @param options What they are called and where they are placed, or the name alone: see
+ *   {@link TSpawnOptions}.
  *
  * @example
  * ```ts
  * // An enemy that its level can hurt.
- * const Bat = (x: number) => {
+ * const Bat = ({ x }: { x: number }) => {
  *     const self = useSelf();
  *     let life = 3;
  *     createSprite({ key: 'bat', transform: { x, y: 120 } });
@@ -71,7 +89,7 @@ export type TSpawnOptions = {
  * };
  *
  * export const Cave: TSceneFn = () => {
- *     const bat = useSpawn(Bat)(200);
+ *     const bat = useSpawn(Bat, 'Bat')({ x: 200 });
  *     const keys = useKeyboard();
  *
  *     useUpdate(() => {
@@ -87,7 +105,7 @@ export type TSpawnOptions = {
  * declare const gun: TSprite;
  * declare let firing: boolean;
  *
- * const Bullet = (x: number) => {
+ * const Bullet = ({ x }: { x: number }) => {
  *     const self = useSelf();
  *     const sprite = createSprite({ key: 'bullet', transform: { x, y: 200 } });
  *
@@ -100,10 +118,11 @@ export type TSpawnOptions = {
  * };
  *
  * export const Level: TSceneFn = () => {
- *     const spawnBullet = useSpawn(Bullet);
+ *     // Shots leave the gun behind, so they hang from the scene.
+ *     const spawnBullet = useSpawn(Bullet, { name: 'Bullet', parent: 'scene' });
  *
  *     useUpdate(() => {
- *         if (firing) spawnBullet(gun.transform.x);
+ *         if (firing) spawnBullet({ x: gun.transform.x });
  *     });
  *
  *     return createScene();
@@ -119,8 +138,9 @@ export type TSpawnOptions = {
  */
 export const useSpawn = <TArgs extends unknown[], TApi>(
     component: (...args: TArgs) => TApi,
-    options: TSpawnOptions = {},
+    given: string | TSpawnOptions = {},
 ): ((...args: TArgs) => TGameObject<TApi>) => {
+    const options: TSpawnOptions = typeof given === 'string' ? { name: given } : given;
     const store = getActiveGame();
     const active = getActiveBox();
     if (store === null || active === null) {
@@ -143,13 +163,21 @@ export const useSpawn = <TArgs extends unknown[], TApi>(
         return top;
     };
 
-    // The name is the component's own, which is what shows up in a warning about a cleanup that
-    // threw. An anonymous function still has to be called something.
-    const name = component.name.length > 0 ? component.name : 'spawned';
+    // Without one given, the component's own, which is what shows up in a warning about a cleanup
+    // that threw. An anonymous function still has to be called something.
+    const name = options.name ?? (component.name.length > 0 ? component.name : 'spawned');
+    const byFunction = options.name === undefined && component.name.length > 0;
 
     return (...args: TArgs) => {
         let api: TApi | undefined;
         const box = spawnBox(store, parentOf(), name, (...given: TArgs) => {
+            // Before the body, so a body that names itself is seen doing it.
+            if (byFunction) {
+                const self = getActiveBox();
+                if (self !== null) {
+                    markNamedByFunction(self);
+                }
+            }
             api = component(...given);
         }, args);
         // Set once the body is over rather than from inside it: until then there is nothing whole
