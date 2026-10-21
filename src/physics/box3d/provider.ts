@@ -155,7 +155,10 @@ export const box3dProvider: TPhysicsProvider = {
     createBody: (box: TGameObject, record: TPhysicsBody) => {
         if (record._type !== 'physics3d') return;
 
-        if (!current) {
+        // This game's world only: one left behind by a scene that was abandoned, or by the other
+        // game on the page, is not where this body goes.
+        const world = getPhysicsWorld3d();
+        if (world === null) {
             if (!warnedNoWorld) {
                 warnedNoWorld = true;
                 console.warn(
@@ -166,8 +169,8 @@ export const box3dProvider: TPhysicsProvider = {
             return;
         }
 
-        bodyIntoWorld(current, box, record);
-        worldOfBody.set(box, current);
+        bodyIntoWorld(world, box, record);
+        worldOfBody.set(box, world);
     },
 
     watchContacts: (box, told) => {

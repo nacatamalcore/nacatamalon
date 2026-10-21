@@ -157,6 +157,9 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- A collider is added to its own game's physics world only. A scene with no world of its own, in a
+  page where another game had left one open (the editor's Play next to the edited game, or a scene
+  abandoned without stopping), put its bodies in that one instead of saying it had none.
 - A key that already names a file, asked for with another (`useLoadTexture({ src: '/b.png', key:
   'hero' })` after `/a.png`), handed back the first without a word, in all fourteen `useLoad…`. It is
   said now, once.

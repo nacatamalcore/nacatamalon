@@ -139,7 +139,10 @@ export const rapier2dProvider: TPhysicsProvider = {
     createBody: (box: TGameObject, record: TPhysicsBody) => {
         if (record._type !== 'physics2d') return;
 
-        if (!current) {
+        // This game's world only: one left behind by a scene that was abandoned, or by the other
+        // game on the page, is not where this body goes.
+        const world = getPhysicsWorld2d();
+        if (world === null) {
             if (!warnedNoWorld) {
                 warnedNoWorld = true;
                 console.warn(
@@ -151,8 +154,8 @@ export const rapier2dProvider: TPhysicsProvider = {
             return;
         }
 
-        bodyIntoWorld(current, box, record);
-        worldOfBody.set(box, current);
+        bodyIntoWorld(world, box, record);
+        worldOfBody.set(box, world);
     },
 
     watchContacts: (box, told) => {

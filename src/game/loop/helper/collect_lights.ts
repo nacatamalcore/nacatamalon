@@ -26,6 +26,18 @@ let warnedBudget = false;
 let warnedSecondCaster = false;
 
 /**
+ * Forgets that the warnings below were already given. For the tests, like `resetShadowWarnings`.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const resetLightWarnings = (): void => {
+    warnedBudget = false;
+    warnedSecondCaster = false;
+};
+
+/**
  * Puts one placement inside another: the same rule drawables follow, with `z` added.
  *
  * Only the flat half turns and scales, for the same reason and with the same limits as a sprite.

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';
-import { collectLighting } from '../src/game/loop/helper/collect_lights';
+import { collectLighting, resetLightWarnings } from '../src/game/loop/helper/collect_lights';
 import { createScene } from '../src/scene/create_scene';
 import { lightSpaceMatrix, reportCastersOutside, resetShadowWarnings } from '../src/render/shared/light_space';
 import { useDirectionalLight } from '../src/hooks/light/use_directional_light';
@@ -47,6 +47,8 @@ const caster = (x: number, y = 0, z = 0): TDrawMesh => ({
 });
 
 describe('a second light that asks to cast', () => {
+    // Said once for the life of the page: another file that had two casters would silence this one.
+    beforeEach(() => { resetLightWarnings(); });
     afterEach(() => { mock.restore(); });
 
     it('is told it will not, once, instead of being dropped in silence', () => {

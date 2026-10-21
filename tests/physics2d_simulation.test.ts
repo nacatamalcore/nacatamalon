@@ -387,3 +387,39 @@ describe('a force asked for every frame', () => {
         expect(at144).toBeCloseTo(at60, 0);
     });
 });
+
+describe('two games on one page', () => {
+    it('puts a body in its own game\'s world, never in the one another game left open', async () => {
+        // The editor runs a game for Play next to the one it edits: the world of the first must not
+        // collect the bodies of a second scene that has none.
+        const { store: first } = createTestGame();
+        let theirs: ReturnType<typeof getPhysicsWorld2d> = null;
+        startTestScene(first, 'Level', () => {
+            usePhysicsWorld2d();
+            theirs = getPhysicsWorld2d();
+            return createScene();
+        });
+
+        const { store: second } = createTestGame();
+        let crate!: TGameObject;
+        const warned: string[] = [];
+        const original = console.warn;
+        console.warn = (message: unknown) => { warned.push(String(message)); };
+        try {
+            startTestScene(second, 'Level', () => {
+                crate = useSpawn(function Crate() {
+                    createSprite({ width: 20, height: 20, tint });
+                    usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'rect', width: 20, height: 20 } });
+                })();
+                return createScene();
+            });
+        } finally {
+            console.warn = original;
+        }
+        await loadRapier2D();
+
+        expect(theirs).not.toBeNull();
+        expect(theirs!.bodyOf(crate)).toBeNull();
+        expect(warned.join('\n')).toContain('no physics world');
+    });
+});
