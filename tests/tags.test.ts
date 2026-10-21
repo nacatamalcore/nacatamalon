@@ -143,6 +143,33 @@ describe('collisions by tag', () => {
     });
 });
 
+describe('a piece and what it draws', () => {
+    it('is not met by its own tagged sprite, and meets another piece\'s', () => {
+        const heard: string[] = [];
+        const between: string[] = [];
+        const kindOf = (thing: object): string => ('type' in thing ? String(thing.type) : 'box');
+        const Crate = (x: number) => () => {
+            createSprite({ width: 10, height: 10, tint, tags: ['damageable'], transform: { x, y: 50, rotation: 0, scaleX: 1, scaleY: 1 } });
+        };
+        const { frame } = game(() => {
+            useSpawn(() => {
+                Crate(50)();
+                useCollisionWith('damageable', (thing) => heard.push(kindOf(thing)), { when: 'start' });
+            }, 'Lone')();
+            useSpawn(Crate(55), 'Other')();
+            useCollisionBetween('damageable', 'damageable', (a, b) => between.push(`${kindOf(a)}:${kindOf(b)}`));
+            return createScene();
+        });
+
+        frame();
+        frame();
+        // Its own sprite is not something else it touches; the other crate's is.
+        expect(heard).toEqual(['sprite']);
+        // The two sprites, once: each one with the other, and never with itself.
+        expect(between).toEqual(['sprite:sprite', 'sprite:sprite']);
+    });
+});
+
 describe('collisions by component', () => {
     it('meets the pieces made from it, with their api typed, and nothing else', () => {
         const hurt: number[] = [];

@@ -3,6 +3,7 @@ import { createScene } from '../src/scene/create_scene';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { createText } from '../src/gameobjects/text/create_text';
 import { createNineSlice } from '../src/gameobjects/nine_slice/create_nine_slice';
+import { createSpriteAtlas } from '../src/atlas/create_sprite_atlas';
 import { useLoadTexture } from '../src/hooks/loaders/use_load_texture';
 import { useLoadAtlas } from '../src/hooks/loaders/use_load_atlas';
 import { createMesh } from '../src/gameobjects/mesh/create_mesh';
@@ -681,6 +682,20 @@ describe('a panel', () => {
         expect(doc.root.components[0]).toMatchObject({ type: 'nine-slice', texture: null, atlas: 'frames', frame: 2 });
         expect(doc.assets).toContainEqual({ type: 'atlas', key: 'frames', src: '/ui/frames.atlas' });
         expect(parseSceneDoc(doc, '/scenes/level.scene')).toEqual(doc);
+    });
+
+    it('keeps the cell of a sheet made in code, and a window given by hand, as its window into the picture', () => {
+        const doc = quietly(() => written(() => {
+            const picture = useLoadTexture({ src: '/ui/frames.png', key: 'frames' });
+            // Four cells across and two down: the third is the third of the top row.
+            createNineSlice({ atlas: createSpriteAtlas({ texture: picture, columns: 4, rows: 2 }), frame: 2, slice: 3, width: 48, height: 24 });
+            createNineSlice({ texture: picture, uvOffset: { x: 0.5, y: 0 }, uvScale: { x: 0.5, y: 0.5 }, slice: 3, width: 48, height: 24 });
+        }).doc);
+        const [cell, window] = doc.root.components;
+        expect(cell).toMatchObject({ type: 'nine-slice', texture: 'frames', uvOffset: { x: 0.5, y: 0 }, uvScale: { x: 0.25, y: 0.5 } });
+        expect(window).toMatchObject({ type: 'nine-slice', texture: 'frames', uvOffset: { x: 0.5, y: 0 }, uvScale: { x: 0.5, y: 0.5 } });
+        expect(parseSceneDoc(doc, '/scenes/level.scene')).toEqual(doc);
+        expect(quietly(() => rebuilt(doc))).toEqual(doc);
     });
 
     it('writes nothing for what is as it would be anyway', () => {

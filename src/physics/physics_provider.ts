@@ -34,6 +34,12 @@ export type TPhysicsProvider = {
      * only leaves physics out of those collisions.
      */
     watchContacts?: (box: TBox, told: (other: TBox, started: boolean) => void) => boolean;
+    /**
+     * Whether `box` still has a body here: `true` or `false` when this provider simulates it, and
+     * `undefined` when it is not this provider's. A body taken away while its object stays touches
+     * nothing any more. Optional, like `watchContacts`.
+     */
+    hasBody?: (box: TBox) => boolean | undefined;
 };
 
 /**

@@ -2,9 +2,11 @@ import { bitmapFontGlyphs } from '../loaders';
 import { spriteSize } from '../render/shared/sprite_size';
 import { layoutText } from './text/layout_text';
 import { layoutFontText } from './text/layout_font_text';
+import { builtinFontMeta, isBuiltinFont } from './text/default_font';
 import type { TSprite } from './sprite/types/t_sprite';
 import type { TText } from './text/types/t_text';
 import type { TNineSlice } from './nine_slice/types/t_nine_slice';
+import type { TBitmapFontGlyph } from '../loaders';
 
 /**
  * Something drawn flat that `sizeOf` and `boundsOf` measure: a sprite, a text or a panel.
@@ -16,6 +18,9 @@ import type { TNineSlice } from './nine_slice/types/t_nine_slice';
 export type TMeasurable = TSprite | TText | TNineSlice;
 
 const MIDDLE = { x: 0.5, y: 0.5 };
+
+/** The letters of each built-in font by character, made once: `sizeOf` is asked every frame. */
+const builtinGlyphs = new Map<string, Map<string, TBitmapFontGlyph>>();
 const TOP_LEFT = { x: 0, y: 0 };
 
 /**
@@ -31,9 +36,23 @@ const unscaled = (thing: TMeasurable): { width: number; height: number } => {
     }
     // Laid out now, the same way it is laid out to be drawn, so it is right on the frame it is made.
     const { font, style } = thing;
-    const layout = font.type === 'font'
-        ? layoutFontText(thing.text, style, font)
-        : layoutText(thing.text, style, font.meta, bitmapFontGlyphs(font));
+    if (font.type === 'font') {
+        const layout = layoutFontText(thing.text, style, font);
+        return { width: layout.width, height: layout.height };
+    }
+    // A font the engine carries is measured before it has loaded: its letters are worked out, not
+    // read from the file.
+    if (font.meta === null && isBuiltinFont(font.key)) {
+        const meta = builtinFontMeta(font.key);
+        let glyphs = builtinGlyphs.get(font.key);
+        if (glyphs === undefined) {
+            glyphs = new Map(meta.chars.map((glyph) => [glyph.char, glyph]));
+            builtinGlyphs.set(font.key, glyphs);
+        }
+        const layout = layoutText(thing.text, style, meta, glyphs);
+        return { width: layout.width, height: layout.height };
+    }
+    const layout = layoutText(thing.text, style, font.meta, bitmapFontGlyphs(font));
     return { width: layout.width, height: layout.height };
 };
 

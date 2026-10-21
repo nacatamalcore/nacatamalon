@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, spyOn } from 'bun:test';
-import { bodyIntoWorld, box3dProvider } from '../src/physics/box3d/provider';
+import { bodyIntoWorld, box3dProvider, resetNoWorldWarning } from '../src/physics/box3d/provider';
 import type { TGameObject } from '../src/hooks/spawn/use_spawn';
 import type { TPhysicsBody, TPhysicsBody3d, TPhysicsWorld } from '../src/physics';
 import type { TPhysicsBodyHandle3d, TPhysicsWorldHandle3d } from '../src/physics/box3d/types';
@@ -100,6 +100,7 @@ describe('what a declared collider becomes', () => {
     });
 
     it('says once when a collider has no world to be in', () => {
+        resetNoWorldWarning();
         const said = silence();
 
         const record = body3d({ shape: 'box', size: [1, 1, 1] });

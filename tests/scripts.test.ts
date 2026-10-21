@@ -2,10 +2,11 @@ import { afterEach, describe, expect, it, spyOn } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { parseSceneDoc, sceneFromDoc, serializeScene } from '../src/scene/document';
-import { useScriptApi } from '../src/hooks/script/use_script_api';
+import { provide, useScriptApi } from '../src/hooks/script/use_script_api';
 import { registerScript, clearScripts, listScripts, getScriptFields, getScriptRequires, defaultScriptProps } from '../src/scripts';
 import { registerScene } from '../src/scene/register_scene';
 import { runHookUpdates } from '../src/game/loop/runHookUpdates';
+import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { startScene } from '../src/scene/start_scene';
 import { useScript } from '../src/hooks/script/use_script';
 import { useUpdate } from '../src/hooks/loop/use_update';
@@ -263,6 +264,26 @@ describe('behaviours on one object talking to each other', () => {
         expect(seen).toEqual(['the spinner']);
     });
 
+    it('reaches what behaviours of different names offer under one word', () => {
+        const seen: (string | null)[] = [];
+        registerScript('slime', () => { provide('health', { who: () => 'slime' }); });
+        registerScript('boss', () => { provide('health', { who: () => 'boss' }); });
+        registerScript('spikes', () => {
+            const health = useScriptApi<{ who(): string }>('health');
+            useUpdate(() => { seen.push(health()?.who() ?? null); });
+        });
+
+        const { store } = createTestGame();
+        const root = startTestScene(store, 'Level', () => {
+            useSpawn(() => { useScript('spikes'); useScript('slime'); }, 'Slime')();
+            useSpawn(() => { useScript('boss'); useScript('spikes'); }, 'Boss')();
+            return createScene();
+        });
+
+        runHookUpdates(root, 0.016);
+        expect(seen.sort()).toEqual(['boss', 'slime']);
+    });
+
     it('answers nothing for a behaviour not on the object, or one that returned nothing', () => {
         const seen: unknown[] = [];
         registerScript('quiet', () => { /* returns nothing */ });
@@ -314,6 +335,10 @@ describe('behaviours on one object talking to each other', () => {
 describe('outside a scene body', () => {
     it('useScript throws', () => {
         expect(() => useScript('anything')).toThrow('useScript');
+    });
+
+    it('provide throws', () => {
+        expect(() => provide('key', 1)).toThrow('provide');
     });
 
     it('useScriptApi throws', () => {

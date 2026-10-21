@@ -9,7 +9,7 @@ import type { TBox } from "../../box";
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const runHookUpdates = (box: TBox, dt: number, time?: number, late?: TBox[], touching?: TBox[], moving?: TBox[]) => {
+export const runHookUpdates = (box: TBox, dt: number, time?: number, late?: TBox[], touching?: TBox[], moving?: TBox[], reached?: Set<TBox>) => {
 
     // Destroyed this frame and not swept yet: it stops now, so a bullet cannot report a second
     // hit after the one that killed it.
@@ -45,13 +45,16 @@ export const runHookUpdates = (box: TBox, dt: number, time?: number, late?: TBox
     if (touching !== undefined && (box.hitboxes.length > 0 || box.collisionCallbacks.length > 0)) {
         touching.push(box);
     }
+    // And every box the walk reached: what the collisions compare, so one born during the updates
+    // meets things from the next frame, as it moves from the next.
+    reached?.add(box);
 
     for (const callback of box.updateCallbacks) {
         callback(dt, time);
     }
 
     for (const child of children) {
-        runHookUpdates(child, dt, time, late, touching, moving);
+        runHookUpdates(child, dt, time, late, touching, moving, reached);
     }
     // Implementation for running hook updates goes here
 };

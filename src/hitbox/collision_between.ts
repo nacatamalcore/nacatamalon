@@ -54,7 +54,8 @@ export const rectsOf = (target: TCollisionTarget): TTurnedRect[] => {
  * where it is drawn: turned, grown and moved with everything above it. Edges that only meet do not
  * count, so two tiles side by side are not touching.
  *
- * For many things against many, every frame, `useCollisionBetween` with groups says it once.
+ * For many things against many, every frame, `useCollisionBetween` with components or tags says it
+ * once.
  *
  * @param a One thing.
  * @param b The other.

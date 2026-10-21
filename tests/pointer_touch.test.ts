@@ -218,6 +218,30 @@ describe('the pointer asked like the keyboard', () => {
         expect([pointer().justPressed('main'), pointer().justReleased('main')]).toEqual([true, true]);
     });
 
+    it('hears a second button pressed and let go while another is held', () => {
+        const { canvas, frame, pointer } = pad();
+        // The way a browser tells it: the first button is a down, a second one while it is held is a
+        // move that names the button that changed, with every button held in `buttons`.
+        const mouse = (type: string, button: number, buttons: number) => canvas.dispatchEvent(Object.assign(new Event(type), {
+            clientX: 10, clientY: 10, button, buttons, pointerId: 1, pointerType: 'mouse',
+        }));
+        mouse('pointerdown', 0, 1);
+        frame();
+        mouse('pointermove', 2, 3);
+        frame();
+        expect([pointer().justPressed('right'), pointer().justPressed('main'), pointer().isDown()]).toEqual([true, false, true]);
+        mouse('pointermove', 0, 2);
+        frame();
+        expect([pointer().justReleased('main'), pointer().justReleased('right'), pointer().isDown()]).toEqual([true, false, true]);
+        mouse('pointerup', 2, 0);
+        frame();
+        expect([pointer().justReleased('right'), pointer().isDown()]).toEqual([true, false]);
+        // A plain move names no button, and is no press.
+        mouse('pointermove', -1, 0);
+        frame();
+        expect(pointer().justPressed()).toBe(false);
+    });
+
     it('counts a touch the system takes back as lifted', () => {
         const { canvas, frame, pointer } = pad();
         fire(canvas, 'pointerdown', 40, 280, 1);

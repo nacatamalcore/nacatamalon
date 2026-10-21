@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, spyOn } from 'bun:test';
-import { bodyIntoWorld, rapier2dProvider } from '../src/physics/rapier2d/provider';
+import { bodyIntoWorld, rapier2dProvider, resetNoWorldWarning } from '../src/physics/rapier2d/provider';
 import type { TGameObject } from '../src/hooks/spawn/use_spawn';
 import type { TPhysicsBody, TPhysicsBody2d, TPhysicsWorld } from '../src/physics';
 import type { TPhysicsBodyHandle2d, TPhysicsWorldHandle2d } from '../src/physics/rapier2d/types';
@@ -96,6 +96,7 @@ describe('what a declared collider becomes', () => {
     });
 
     it('says once when a collider has no world to be in', () => {
+        resetNoWorldWarning();
         const said = silence();
 
         const body = {

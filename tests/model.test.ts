@@ -305,6 +305,19 @@ describe('a placed model, used like any other drawing', () => {
         restore();
     });
 
+    it('is tinted by changing its tint in place too, as a tween does', async () => {
+        const { placed, arrived, restore } = placedModel();
+        await arrived();
+        const own = tints(placed());
+
+        placed().tint.g = 0;
+        placed().tint.b = 0;
+        expect(tints(placed())).toEqual(own.map(([r]) => [r, 0, 0]));
+        placed().tint.a = 0.25;
+        expect(placed().parts.map((part) => part.material.tint.a)).toEqual([0.25, 0.25]);
+        restore();
+    });
+
     it('hands what is set before its file arrives to the pieces that arrive', async () => {
         const plain = placedModel();
         await plain.arrived();

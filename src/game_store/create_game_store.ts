@@ -1,8 +1,12 @@
 import { bumpVersion, markWatchable } from '../store';
+import { saysMilliseconds } from '../utils/says_milliseconds';
 import { adoptProvisionalStore, registerGameStore, storeInternals } from './store_registry';
 import type { TGameStore, TGameStoreConfig, TStoreListener, TStoreSelector } from './types/t_game_store';
 
 const DEFAULT_THROTTLE = 0.25;
+
+/** Writing less than once a minute is not what a throttle is for: past it, it was milliseconds. */
+const LONGEST_THROTTLE = 60;
 
 /**
  * Makes a store: data of the game that outlives a scene (lives, coins, options, a pet), with a way to
@@ -76,6 +80,7 @@ export const createGameStore = <S extends object, A = Record<string, never>>(
     const persist = config.persist ?? null;
     const mode = persist?.mode ?? 'auto';
     const throttle = persist?.throttle ?? DEFAULT_THROTTLE;
+    saysMilliseconds('store persist throttle', throttle, LONGEST_THROTTLE);
 
     // A list and not a set, like the signals: the same function subscribed twice is two subscriptions.
     // Taken over from the store being adopted, so that whoever was listening to the one the

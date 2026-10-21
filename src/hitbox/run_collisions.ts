@@ -26,6 +26,13 @@ const goneEntry = (entry: TEntry): boolean => {
 };
 
 /**
+ * Whether two entries are one thing: the same, or a box and what it draws itself. A crate does not
+ * touch its own tagged sprite; two sprites a box draws are two things, and can.
+ */
+const oneThing = (one: TEntry, other: TEntry): boolean =>
+    one.thing === other.thing || one.thing === other.holder || other.thing === one.holder;
+
+/**
  * Whether two things touch: their rectangles share any area, or, for two pieces with physics
  * bodies, the simulation says they touch. A body meets a piece of the right kind whether a hitbox or
  * the physics tells it.
@@ -40,7 +47,7 @@ const touch = (one: TEntry, other: TEntry): boolean => {
  * carries it; under a component, the pieces made from it. Measured as `collisionBetween` measures: a
  * piece by its hitboxes that are on, or by what it draws; a sprite, text or panel by itself.
  */
-const indexMatches = (scene: TBox, wanted: ReadonlySet<TCollisionKey>): Map<TCollisionKey, TEntry[]> => {
+const indexMatches = (scene: TBox, wanted: ReadonlySet<TCollisionKey>, reached?: ReadonlySet<TBox>): Map<TCollisionKey, TEntry[]> => {
     const index = new Map<TCollisionKey, TEntry[]>();
     const measured = new Map<TTaggable, TEntry>();
     const note = (key: TCollisionKey, thing: TTaggable, holder: TBox): void => {
@@ -54,7 +61,8 @@ const indexMatches = (scene: TBox, wanted: ReadonlySet<TCollisionKey>): Map<TCol
         index.set(key, list);
     };
     const visit = (box: TBox): void => {
-        if (isGone(box)) return;
+        // Born during this frame's updates: it meets things from the next one.
+        if (isGone(box) || (reached !== undefined && !reached.has(box))) return;
         for (const tag of box.tags) if (wanted.has(tag)) note(tag, box as TTaggable, box);
         const made = componentOf(box);
         if (made !== undefined && wanted.has(made)) note(made, box as TTaggable, box);
@@ -81,7 +89,7 @@ const collideWith = (owner: TBox, listener: Extract<TCollisionListener, { kind: 
     const mine: TEntry = { thing: owner as TTaggable, holder: owner, rects: rectsOf(owner) };
     const now = new Set<TTaggable>();
     for (const other of index.get(listener.match) ?? []) {
-        if (other.thing === owner || now.has(other.thing) || goneEntry(other)) continue;
+        if (oneThing(mine, other) || now.has(other.thing) || goneEntry(other)) continue;
         if (touch(mine, other)) {
             now.add(other.thing);
         }
@@ -117,12 +125,13 @@ const collideWith = (owner: TBox, listener: Extract<TCollisionListener, { kind: 
  *
  * @param scene The scene, whose things are compared.
  * @param touching The boxes the update walk noted: those with something to compare.
+ * @param reached Every box the update walk reached; one born after it is left for the next frame.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const runCollisions = (scene: TBox, touching: readonly TBox[]): void => {
+export const runCollisions = (scene: TBox, touching: readonly TBox[], reached?: ReadonlySet<TBox>): void => {
     const owners = touching.filter((box) => box.collisionCallbacks.length > 0);
     if (owners.length === 0) {
         return;
@@ -139,7 +148,7 @@ export const runCollisions = (scene: TBox, touching: readonly TBox[]): void => {
             }
         }
     }
-    const index = indexMatches(scene, wanted);
+    const index = indexMatches(scene, wanted, reached);
 
     for (const owner of owners) {
         for (const listener of [...owner.collisionCallbacks]) {
@@ -157,7 +166,7 @@ export const runCollisions = (scene: TBox, touching: readonly TBox[]): void => {
             const called = new Set<string>();
             for (const one of first) {
                 for (const other of second) {
-                    if (one.thing === other.thing) {
+                    if (oneThing(one, other)) {
                         continue;
                     }
                     const key = same && other.thing.id < one.thing.id ? `${other.thing.id}:${one.thing.id}` : `${one.thing.id}:${other.thing.id}`;

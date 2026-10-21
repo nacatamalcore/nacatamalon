@@ -28,7 +28,7 @@ export { usePostProcess } from './post/use_post_process';
 export { useScene, useCleanup, useReady } from './scene';
 export { useSpawn, useSelf } from './spawn';
 export { useData, useWatch } from './state';
-export { useScript, useScriptApi } from './script';
+export { useScript, provide, useScriptApi } from './script';
 export type { TUseScriptOptions } from './script';
 export { useReport } from './events';
 export { useCapture } from './capture';

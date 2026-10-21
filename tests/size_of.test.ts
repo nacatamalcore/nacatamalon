@@ -70,6 +70,15 @@ describe('sizeOf', () => {
         expect(sizeOf(text).width).toBeGreaterThan(before.width);
     });
 
+    it('measures a text in the font the engine carries, while that font is still on its way', () => {
+        // No font given: the built-in one, which loads like any other and is not ready in the body.
+        const [short, long] = inScene(() => [createText({ text: 'SCORE 0' }), createText({ text: 'SCORE 0000' })]);
+        expect(short.font.status).not.toBe('ready');
+        expect(sizeOf(short).width).toBeGreaterThan(0);
+        expect(sizeOf(short).height).toBeGreaterThan(0);
+        expect(sizeOf(long).width).toBeGreaterThan(sizeOf(short).width);
+    });
+
     it('is a panel\'s width and height', () => {
         const panel = inScene(() => createNineSlice({ texture: picture(24, 24), slice: 8, width: 100, height: 40 }));
         expect(sizeOf(panel)).toEqual({ width: 100, height: 40 });

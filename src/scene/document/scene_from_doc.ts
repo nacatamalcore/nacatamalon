@@ -349,6 +349,8 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                 ...(texture !== undefined ? { texture } : {}),
                 ...(sheet !== undefined ? { atlas: sheet } : {}),
                 ...(component.frame !== undefined ? { frame: component.frame } : {}),
+                ...(component.uvOffset !== undefined ? { uvOffset: { ...component.uvOffset } } : {}),
+                ...(component.uvScale !== undefined ? { uvScale: { ...component.uvScale } } : {}),
                 width: component.width,
                 height: component.height,
                 slice: { ...component.slice },

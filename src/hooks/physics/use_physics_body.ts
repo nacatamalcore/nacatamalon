@@ -2,6 +2,7 @@ import { getActiveBox, getActiveGame } from '../../store';
 import { resolveLayers } from '../../physics/layer_names';
 import type { TPhysicsLayerOptions } from '../../physics/layer_names';
 import { isShowingOnly } from './is_showing_only';
+import { watchContacts } from '../../physics/contacts';
 import { placement3dOf, placementOf } from '../../box';
 import { getPhysicsProviders, createPhysicsBody2d, createPhysicsBody3d, warnMissingPhysicsProvider } from '../../physics';
 import type {
@@ -108,6 +109,9 @@ export const usePhysicsBody2d = (options: TPhysicsBody2dOptions): TPhysicsBody2d
     for (const provider of installed) {
         provider.createBody(box, record);
     }
+    // Its contacts are told from the start, so one that begins before a collision asks about it is
+    // known all the same.
+    watchContacts(box);
     return record;
 };
 
@@ -158,5 +162,8 @@ export const usePhysicsBody3d = (options: TPhysicsBody3dOptions): TPhysicsBody3d
     for (const provider of installed) {
         provider.createBody(box, record);
     }
+    // Its contacts are told from the start, so one that begins before a collision asks about it is
+    // known all the same.
+    watchContacts(box);
     return record;
 };

@@ -82,8 +82,8 @@ export type TBox = {
      */
     scripts: TScriptAttachment[];
     /**
-     * What each behaviour on this object returned, by its name: its api, read by `useScriptApi`.
-     * Empty on almost every object.
+     * What each behaviour on this object returned, by its name, and what they offered with
+     * `provide`, by its word: read by `useScriptApi`. Empty on almost every object.
      *
      * **Runtime only, and never written to a file**: these are functions, and the scripts are run
      * again when the scene is opened and return them again.
@@ -154,8 +154,8 @@ export type TBox = {
      */
     hitboxes: THitbox[];
     /**
-     * Registered by `useCollisionBetween`: two groups to compare once every update of the scene has run, and
-     * what to call for each pair touching.
+     * Registered by `useCollisionBetween` and `useCollisionWith`: what to compare (a component, or a
+     * tag) once every update of the scene has run, and what to call for each pair touching.
      */
     collisionCallbacks: TCollisionListener[];
     /**

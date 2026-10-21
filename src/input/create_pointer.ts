@@ -25,8 +25,11 @@ type TQueuedEvent = {
     /**
      * `cancel` is a press the system took back (a gesture of the browser's, a call coming in): it
      * ends like a release, so nothing stays held, but it is never a click.
+     *
+     * `pressed` and `released` are a second button changing while another is held: the browser
+     * says so in a move, not in a down or an up, so they only reach `justPressed` and `justReleased`.
      */
-    kind: TPointerKind | 'leave' | 'cancel';
+    kind: TPointerKind | 'leave' | 'cancel' | 'pressed' | 'released';
     pointerId: number;
     pointerType: TPointerType;
     screenX: number;
@@ -137,6 +140,9 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
         };
     };
 
+    /** Each button's bit in a pointer event's `buttons`, by its number in `button`. */
+    const BUTTON_BITS = [1, 4, 2, 8, 16];
+
     const enqueue = (kind: TQueuedEvent['kind'], event: PointerEvent): void => {
         const { x, y } = toScreen(event);
         const moved = kind === 'move';
@@ -174,11 +180,38 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
         // Keeps the release coming to this canvas even if it happens outside it, or a drag that
         // ends off the edge would leave the button held for ever.
         canvas.setPointerCapture?.(pointerEvent.pointerId);
+        noteButtons(pointerEvent);
         enqueue('down', pointerEvent);
     };
-    const onUp = (event: Event): void => enqueue('up', event as PointerEvent);
-    const onCancel = (event: Event): void => enqueue('cancel', event as PointerEvent);
-    const onMove = (event: Event): void => enqueue('move', event as PointerEvent);
+    const onUp = (event: Event): void => {
+        // The last button let go: nothing of this pointer is held, and a finger's id is not reused.
+        heldButtons.delete((event as PointerEvent).pointerId ?? MOUSE_ID);
+        enqueue('up', event as PointerEvent);
+    };
+    const onCancel = (event: Event): void => {
+        heldButtons.delete((event as PointerEvent).pointerId ?? MOUSE_ID);
+        enqueue('cancel', event as PointerEvent);
+    };
+    /** The buttons each pointer had held at its last event, as `buttons` says them. */
+    const heldButtons = new Map<number, number>();
+    const noteButtons = (event: PointerEvent): void => {
+        if (typeof event.buttons === 'number') heldButtons.set(event.pointerId ?? MOUSE_ID, event.buttons);
+    };
+
+    const onMove = (event: Event): void => {
+        const pointerEvent = event as PointerEvent;
+        // A button changing while another is held, a chord, comes as a move and not as a down or an
+        // up: it is told by `buttons`, the bit of the button the move names now set or now clear.
+        const changed = pointerEvent.button ?? -1;
+        const bit = BUTTON_BITS[changed];
+        if (bit !== undefined && typeof pointerEvent.buttons === 'number') {
+            const before = heldButtons.get(pointerEvent.pointerId ?? MOUSE_ID) ?? 0;
+            const now = pointerEvent.buttons & bit;
+            if (now !== (before & bit)) enqueue(now !== 0 ? 'pressed' : 'released', pointerEvent);
+        }
+        noteButtons(pointerEvent);
+        enqueue('move', pointerEvent);
+    };
     const onLeave = (event: Event): void => enqueue('leave', event as PointerEvent);
 
     const onWheel = (event: Event): void => {
@@ -495,7 +528,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
                 const { screenX, screenY, button, deltaX, deltaY, pointerId } = event;
                 // Taken back by the system: everything a release does but the click.
                 const cancelled = event.kind === 'cancel';
-                const kind = (cancelled ? 'up' : event.kind) as TPointerKind | 'leave';
+                const kind = (cancelled ? 'up' : event.kind) as Exclude<TQueuedEvent['kind'], 'cancel'>;
                 movement.x = event.movementX;
                 movement.y = event.movementY;
                 current.pointerId = pointerId;
@@ -503,6 +536,10 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
 
                 if (kind === 'leave') {
                     lastPosition = null;
+                    continue;
+                }
+                if (kind === 'pressed' || kind === 'released') {
+                    (kind === 'pressed' ? wentDown : cameUp).add(button);
                     continue;
                 }
                 lastPosition = { x: screenX, y: screenY };

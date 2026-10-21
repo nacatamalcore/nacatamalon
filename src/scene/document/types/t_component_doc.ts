@@ -276,6 +276,12 @@ export type TNineSliceComponent = {
      */
     atlas?: string;
     frame?: number;
+    /**
+     * The window into the picture, in 0 to 1, when it is not the whole of it nor a cell of `atlas`:
+     * a cell of a sheet made in code is written this way, as it has no file to name.
+     */
+    uvOffset?: { x: number; y: number };
+    uvScale?: { x: number; y: number };
     width: number;
     height: number;
     /**

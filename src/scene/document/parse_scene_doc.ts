@@ -281,9 +281,6 @@ const parseMaps = (value: unknown): Pick<TMeshMaterialDoc, 'maps'> => {
 };
 
 /**
- * Only writes the key when the file did, so a default never becomes a written-down decision.
- */
-/**
  * A box's tags: the names that are names, each once, and nothing written when none is left.
  */
 const tagsOf = (raw: unknown): { tags?: string[] } => {
@@ -291,6 +288,9 @@ const tagsOf = (raw: unknown): { tags?: string[] } => {
     return tags.length > 0 ? { tags } : {};
 };
 
+/**
+ * Only writes the key when the file did, so a default never becomes a written-down decision.
+ */
 const optionalBoolean = <K extends string>(raw: Record<string, unknown>, key: K): Partial<Record<K, boolean>> =>
     (typeof raw[key] === 'boolean' ? { [key]: raw[key] } as Record<K, boolean> : {});
 
@@ -563,6 +563,8 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 texture: typeof raw.texture === 'string' ? raw.texture : null,
                 ...optionalString(raw, 'atlas'),
                 ...optionalNumber(raw, 'frame'),
+                ...(parsePoint(raw.uvOffset) !== undefined ? { uvOffset: parsePoint(raw.uvOffset) } : {}),
+                ...(parsePoint(raw.uvScale) !== undefined ? { uvScale: parsePoint(raw.uvScale) } : {}),
                 width: asNumber(raw.width, 32),
                 height: asNumber(raw.height, 32),
                 slice: parseBorders(raw.slice),

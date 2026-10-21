@@ -146,7 +146,8 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   transitions (`fade(0.3)`, not `fade(300)`), a pad's `rumble({ duration: 0.2 })`, a store's `throttle`.
 - **Angles are in radians** (`Math.PI / 2` is a quarter turn; `degToRad(90)` if you think in degrees):
   every `rotation`, a spot light's `angle`, particles' `spread` and `spin`. Three are in degrees, as
-  everyone says them: a 3D camera's `fov` (`60`), a `hue` (0 to 360), and a sound's `cone`.
+  everyone says them: a 3D camera's `fov` (`60`), a `hue` (0 to 360 in `fromHsl`, -180 to 180 in
+  `colorAdjust`), and a sound's `cone`.
 - **A screen effect's call takes what a person writes**: points `{ x, y }` (`distort({ center: { x:
   0.5, y: 0.5 } })`), modes by name (`halftone({ mode: 'lines' })`, `wave({ axis: 'columns' })`), yes or no
   as booleans (`grain({ animated: false })`). Its `effect.uniforms` are what the shader reads: numbers
@@ -257,7 +258,7 @@ A game is small pieces made with `useSpawn`, and each way they talk has one job:
 | say something happened, for anyone to hear (`gameOver`) | `createGameSignal`, `useSignal` |
 | tell whoever placed you (an enemy dead, a button pressed) | a callback in your props: `useSpawn(Enemy)({ onDied })`. From a pack or a behaviour, which take only data: `useReport('pressed')` sends it up, `onReport(copy, 'pressed', h)` or a pack's `on` hears it |
 | tell a piece you made what to do (`hurt`, `open`) | the `api` it returns: `useSpawn(Bat)({ x }).api.hurt(1)` |
-| let two behaviours on the same box talk | return an api from one, `useScriptApi(name)` in the other |
+| let two behaviours on the same box talk | return an api from one, `useScriptApi(name)` in the other; `provide(word, api)` for a word several behaviours answer to |
 | find everything of a kind (every coin left) | a tag: `useTag('coin').all()` |
 | reach something you did not make (a box of a saved scene) | `findObject(sceneOf(self), 'Score')` |
 

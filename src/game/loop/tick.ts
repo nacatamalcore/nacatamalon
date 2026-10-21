@@ -94,11 +94,12 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
                     const late: TBox[] = [];
                     const touching: TBox[] = [];
                     const moving: TBox[] = [];
-                    runUpdates(scene, dt, undefined, late, touching, moving);
+                    const reached = new Set<TBox>();
+                    runUpdates(scene, dt, undefined, late, touching, moving, reached);
                     // The bodies the updates gave a speed, moved against the world.
                     runMoves(moving, dt, scene.time);
                     // Where every update left things, before anything reads it late: see `useCollisionBetween`.
-                    runCollisions(scene, touching);
+                    runCollisions(scene, touching, reached);
                     // Once every update of the scene is over, so what is read there is where things
                     // ended up this frame: see `useLateUpdate`.
                     runLateUpdates(late, dt, scene.time);

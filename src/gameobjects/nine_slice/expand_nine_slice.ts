@@ -120,9 +120,12 @@ export const sliceAxis = (size: number, source: number, first: number, last: num
 };
 
 /**
- * The window into the texture the picture is, whichever way it was asked for.
+ * The window into the texture the picture is, whichever way it was asked for: what a scene document
+ * keeps for a panel cut from a sheet made in code, which has no file to name.
+ *
+ * @internal
  */
-const windowOf = (slice: TNineSlice): { uvOffset: { x: number; y: number }; uvScale: { x: number; y: number } } => {
+export const windowOf = (slice: TNineSlice): { uvOffset: { x: number; y: number }; uvScale: { x: number; y: number } } => {
     // A sheet read from a file only knows its frames once its image has landed.
     const frame = slice.atlas !== undefined && slice.atlas.frames > 0 ? atlasFrame(slice.atlas, slice.frame ?? 0) : WHOLE;
     return { uvOffset: slice.uvOffset ?? frame.uvOffset, uvScale: slice.uvScale ?? frame.uvScale };

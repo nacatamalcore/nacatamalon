@@ -1,4 +1,5 @@
 import { deadzoneRadial, deadzoneScalar } from './deadzone';
+import { saysMilliseconds } from '../../utils/says_milliseconds';
 import { GAMEPAD_AXES, GAMEPAD_BUTTONS, gamepadAxisIndex, gamepadButtonIndex } from './gamepad_standard';
 import type { TGamepad, TGamepadInfo, TGamepadListener, TGamepadSource, TGamepadTarget, TRumbleOptions, TUseGamepadOptions } from './types/t_gamepad';
 
@@ -348,6 +349,7 @@ export const createGamepads = (canvas: HTMLCanvasElement): TGamepadSource => {
                 }
 
                 // Seconds here, milliseconds for the browser.
+                saysMilliseconds('rumble duration', rumbleOptions.duration ?? 0, MAX_RUMBLE);
                 const duration = Math.min(Math.max(rumbleOptions.duration ?? 0.2, 0), MAX_RUMBLE) * 1000;
                 const startDelay = Math.max(rumbleOptions.delay ?? 0, 0) * 1000;
                 portNow().rumbled = true;

@@ -70,6 +70,16 @@ export const getPhysicsWorld2d = (): TPhysicsWorldHandle2d | null =>
 let warnedNoWorld = false;
 
 /**
+ * Forgets that a collider with no world was already reported. For the tests, like
+ * `resetShadowWarnings`: said once for the page, the first file to trip it would silence the rest.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const resetNoWorldWarning = (): void => { warnedNoWorld = false; };
+
+/**
  * The world each box's body was put in, for `watchContacts`. Weak, so a box gone is forgotten.
  */
 const worldOfBody = new WeakMap<TGameObject, TPhysicsWorldHandle2d>();
@@ -167,6 +177,11 @@ export const rapier2dProvider: TPhysicsProvider = {
         body.onEnter.connect((other) => told(other, true));
         body.onExit.connect((other) => told(other, false));
         return true;
+    },
+
+    hasBody: (box) => {
+        const world = worldOfBody.get(box as TGameObject);
+        return world === undefined ? undefined : world.bodyOf(box as TGameObject) !== null;
     },
 };
 

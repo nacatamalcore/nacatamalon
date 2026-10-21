@@ -9,6 +9,10 @@ import { createRuntimeStore } from '../store';
 import { pendingWorkOf } from '../loaders/pending_work';
 import { enterHeadless, leaveHeadless } from './headless_environment';
 import { createNullRenderer } from './null_renderer';
+import { saysMilliseconds } from '../utils/says_milliseconds';
+
+/** A test waiting longer than two minutes for its files is waiting for milliseconds. */
+const LONGEST_LOADED_WAIT = 120;
 import type { TBox } from '../box';
 import type { TGameConfig } from '../game/types/t_game_config';
 import type { TGameObject } from '../hooks';
@@ -204,6 +208,7 @@ export const createHeadlessGame = (options: THeadlessGameOptions): THeadlessGame
                 };
             }),
         loaded: async (timeout = 5) => {
+            saysMilliseconds('loaded() timeout', timeout, LONGEST_LOADED_WAIT);
             const until = Date.now() + timeout * 1000;
             const scenesNow = () => store.get('world').scenes;
             const loading = () => scenesNow().flatMap((scene) => scene.loads).filter((load) => load.status === 'loading');

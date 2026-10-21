@@ -79,6 +79,26 @@ export const builtinFontOf = (store: TRuntimeStore, box: TBox, key: string = DEF
     return font;
 };
 
+/** The description of each built-in font, made once: it is worked out, not loaded. */
+const metas = new Map<string, TBitmapFontMeta>();
+
+/**
+ * Where each letter of a built-in font is and how wide, at once: what a text in it measures while
+ * the font itself is still loading, since nothing about its letters has to arrive.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const builtinFontMeta = (key: string): TBitmapFontMeta => {
+    let meta = metas.get(key);
+    if (meta === undefined) {
+        meta = metaOf(builtinFont(key));
+        metas.set(key, meta);
+    }
+    return meta;
+};
+
 /**
  * The same fonts for painting into pixels: built from the image already inside the engine, read on
  * the spot, so `drawText` with no font needs no game and no wait. One of each for the whole page,

@@ -24,6 +24,7 @@ import type { TParticles3d } from '../../gameobjects/particles/types/t_particles
 import type { TSprite } from '../../gameobjects/sprite/types/t_sprite';
 import type { TLoadedAtlas } from '../../loaders';
 import type { TNineSlice } from '../../gameobjects/nine_slice/types/t_nine_slice';
+import { windowOf } from '../../gameobjects/nine_slice/expand_nine_slice';
 import type { TText } from '../../gameobjects/text/types/t_text';
 import type { TTilemapLayer } from '../../gameobjects/tilemap';
 import type { TTransform2d } from '../../gameobjects/types/t_transform_2d';
@@ -286,6 +287,11 @@ const writeNineSlice = (panel: TNineSlice, writing: TWriting): TComponentDoc => 
     }
     const place = writeFlatPlace(panel.transform);
     const mode = panel.mode;
+    // A sheet made in code has no file to name, so it is written as its picture and the window into
+    // it, as a sprite's is; a window given by hand the same.
+    const window = file === undefined && (atlas !== undefined || panel.uvOffset !== undefined || panel.uvScale !== undefined)
+        ? windowOf(panel)
+        : undefined;
     return {
         type: 'nine-slice',
         id: panel.id,
@@ -293,6 +299,8 @@ const writeNineSlice = (panel: TNineSlice, writing: TWriting): TComponentDoc => 
         ...(file !== undefined
             ? { texture: null, atlas: file.key, ...(panel.frame !== undefined ? { frame: panel.frame } : {}) }
             : { texture: panel.texture.key }),
+        ...(window !== undefined && (window.uvOffset.x !== 0 || window.uvOffset.y !== 0) ? { uvOffset: point(window.uvOffset) } : {}),
+        ...(window !== undefined && (window.uvScale.x !== 1 || window.uvScale.y !== 1) ? { uvScale: point(window.uvScale) } : {}),
         width: panel.width,
         height: panel.height,
         slice: { ...panel.slice },

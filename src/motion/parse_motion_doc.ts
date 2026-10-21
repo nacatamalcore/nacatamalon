@@ -1,7 +1,8 @@
 import { asRecord } from '../utils';
 import { isMotionEase } from './motion_eases';
 import { MOTION_FORMAT, MOTION_VERSION } from './types/t_motion_doc';
-import { findPostBuiltin } from '../post/builtin/catalog';
+import { findPostBuiltin, POST_BUILTINS } from '../post/builtin/catalog';
+import type { TPostBuiltinInfo } from '../post/builtin/types/t_builtin';
 import { MATERIAL_LOOKS } from '../shader_composer/surface/looks';
 import type { TMotionDoc, TMotionEvent, TMotionKey, TMotionTrack, TMotionTransition } from './types/t_motion_doc';
 
@@ -61,6 +62,18 @@ const readTrack = (raw: unknown, src: string, index: number): TMotionTrack => {
         path: track.path as string,
         keys,
     };
+};
+
+/**
+ * The engine effect a knob belongs to when the track names an effect the project named itself
+ * (`'comic'` for a halftone), so the file cannot say which it is: the one effect that changed that
+ * knob's unit, when no effect has a knob of that name now. Only halftone's `angle` is such a knob, and
+ * a game's own effect with an `angle` in a file of before version 3 would be read as one too.
+ */
+const onlyConverting = (knob: string): TPostBuiltinInfo | undefined => {
+    const converting = POST_BUILTINS.filter((builtin) => builtin.converted?.[knob] !== undefined);
+    const current = POST_BUILTINS.some((builtin) => builtin.fields.some((field) => field.key === knob));
+    return converting.length === 1 && !current ? converting[0] : undefined;
 };
 
 /**
@@ -195,7 +208,9 @@ export const parseMotionDoc = (raw: unknown, src = 'motion'): TMotionDoc => {
     if (version < 3) {
         tracks = tracks.map((track) => {
             const knob = track.path.startsWith('uniforms.') ? track.path.slice('uniforms.'.length) : null;
-            const info = track.post === undefined || knob === null ? undefined : findPostBuiltin(track.post);
+            const info = track.post === undefined || knob === null
+                ? undefined
+                : findPostBuiltin(track.post) ?? onlyConverting(knob);
             const convert = knob === null ? undefined : info?.converted?.[knob];
             const now = knob === null ? undefined : info?.renamed?.[knob];
             if (convert === undefined || now === undefined) {

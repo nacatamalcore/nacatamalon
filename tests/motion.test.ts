@@ -449,6 +449,15 @@ describe('a motion written before knobs were renamed', () => {
         expect(doc.tracks[0]!.keys.map((key) => key.v)).toEqual([0, Math.PI / 2]);
     });
 
+    it('reads the angle of a halftone a project named itself, in a file of version 2, in radians', () => {
+        quiet();
+        // The file cannot tell from 'comic' that it is a halftone; only halftone ever had an angle.
+        const doc = motion({ version: 2, tracks: [{ ...track({ post: 'comic', path: 'uniforms.angle' }), keys: [{ t: 0, v: 0 }, { t: 1, v: 90 }] }] });
+        expect(doc.tracks[0]!.path).toBe('uniforms.rotation');
+        expect(doc.tracks[0]!.keys.map((key) => key.v)).toEqual([0, Math.PI / 2]);
+        expect(doc.version).toBe(MOTION_VERSION);
+    });
+
     it('finds an engine effect\'s renamed knob on an effect a project named itself', () => {
         const { store } = createTestGame();
         const grainy = newPostEffect({ name: 'grainy', uniforms: { levels: 8, amount: 1 } }, null, 'project');

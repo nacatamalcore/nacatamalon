@@ -14,6 +14,8 @@ import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useSelf } from '../src/hooks/spawn/use_self';
 import { useTransform } from '../src/hooks/transform/use_transform';
 import { useCollisionBetween, useCollisionWith } from '../src/hooks/hitbox';
+import { destroy } from '../src/destroy/destroy';
+import { contactsOf } from '../src/physics/contacts';
 import { createTestGame } from './helpers/test_game';
 import type { TSceneFn } from '../src/scene';
 import type { TGameObject } from '../src/hooks/spawn/use_spawn';
@@ -141,3 +143,107 @@ describe('a collision met by physics', () => {
         expect(fell).toBe(true);
     });
 });
+
+describe('what a body touches, whenever it is asked', () => {
+    // Placed as a level is placed: resting on the floor from the start, so the touch never begins
+    // while anyone is listening.
+    const RestingCrate = () => {
+        useTransform({ x: 0, y: 81 });
+        usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'rect', width: 20, height: 20 } });
+    };
+
+    it('meets a crate that was resting on the floor from the start', async () => {
+        let met = 0;
+        const { frames } = await game(() => {
+            usePhysicsWorld2d();
+            useSpawn(Ground, 'Ground')();
+            useSpawn(() => {
+                RestingCrate();
+                useCollisionWith(Ground, () => { met++; });
+            }, 'Crate')();
+            return createScene();
+        });
+
+        frames(30);
+        expect(met).toBeGreaterThan(20);
+    });
+
+    it('in space as well: a box resting on the floor from the start', async () => {
+        let met = 0;
+        const Floor = () => {
+            useTransform({ y: -0.5, scaleX: 20, scaleZ: 20 });
+            usePhysicsBody3d({ body: 'static', collider: { shape: 'box', size: [1, 1, 1] } });
+        };
+        const { frames } = await game(() => {
+            usePhysicsWorld3d();
+            useSpawn(Floor, 'Floor')();
+            useSpawn(() => {
+                useTransform({ y: 0.5 });
+                usePhysicsBody3d({ body: 'dynamic', collider: { shape: 'box', size: [1, 1, 1] } });
+                useCollisionWith(Floor, () => { met++; });
+            }, 'Box')();
+            return createScene();
+        });
+
+        frames(30);
+        expect(met).toBeGreaterThan(20);
+    });
+
+    it('meets in a rule made after the crate has landed', async () => {
+        let met = 0;
+        let addRule!: () => void;
+        const { frames } = await game(() => {
+            usePhysicsWorld2d();
+            useSpawn(Ground, 'Ground')();
+            useSpawn(RestingCrate, 'Crate')();
+            const rule = useSpawn(() => { useCollisionBetween(RestingCrate, Ground, () => { met++; }); }, 'Rule');
+            addRule = () => { rule(); };
+            return createScene();
+        });
+
+        frames(60);
+        addRule();
+        frames(30);
+        expect(met).toBeGreaterThan(20);
+    });
+
+    it('forgets a crate that is destroyed, and one whose body is taken away stops touching', async () => {
+        const said: string[] = [];
+        let ground!: TGameObject;
+        let kept!: TGameObject;
+        let world: ReturnType<typeof getPhysicsWorld2d> = null;
+        const gone: TGameObject[] = [];
+        const { frames } = await game(() => {
+            usePhysicsWorld2d();
+            world = getPhysicsWorld2d();
+            ground = useSpawn(Ground, 'Ground')();
+            for (const x of [-60, -30, 30]) {
+                gone.push(useSpawn(() => {
+                    useTransform({ x, y: 81 });
+                    usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'rect', width: 20, height: 20 } });
+                }, 'Gone')());
+            }
+            kept = useSpawn(() => {
+                RestingCrate();
+                useCollisionWith(Ground, () => { said.push('touching'); }, { when: 'touching' });
+                useCollisionWith(Ground, () => { said.push('end'); }, { when: 'end' });
+            }, 'Kept')();
+            return createScene();
+        });
+
+        frames(20);
+        expect(contactsOf(ground).size).toBe(4);
+        for (const crate of gone) destroy(crate);
+        frames(5);
+        // Destroyed things are not kept: the floor touches the one crate still there.
+        expect(contactsOf(ground).size).toBe(1);
+
+        // Its body only: the crate itself stays.
+        world!.bodyOf(kept)!.destroy();
+        said.length = 0;
+        frames(20);
+        // No body, no touch: it ends once and is not met again.
+        expect(said).toEqual(['end']);
+    });
+});
+

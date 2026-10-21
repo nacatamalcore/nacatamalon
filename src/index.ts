@@ -57,7 +57,7 @@ export type { TVec3 } from './math/vec3';
 export type { TTransformOptions } from './hooks';
 export type { TTransform3d } from './gameobjects/types/t_transform_3d';
 export { useData, useWatch } from './hooks';
-export { useScript, useScriptApi, useReport } from './hooks';
+export { useScript, provide, useScriptApi, useReport } from './hooks';
 export type { TUseScriptOptions } from './hooks';
 // Registering a behaviour is a game's own business: its entry point calls this, next to where the
 // behaviour is written. Looking INSIDE the registry is a tool's, and lives in `nacatamalon/authoring`.

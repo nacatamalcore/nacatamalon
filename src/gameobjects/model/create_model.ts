@@ -17,11 +17,12 @@ import type { TModelOptions } from './types/t_model_options';
 import type { TRuntimeStore } from '../../store';
 import type { TTransform3d } from '../types/t_transform_3d';
 
+/** No tint: what a piece's own colour is multiplied by when nothing was asked for. */
+const WHITE: TColor = { r: 1, g: 1, b: 1, a: 1 };
+
 /**
  * Nowhere in particular, which is where a model goes when it is not told.
  */
-const WHITE: TColor = { r: 1, g: 1, b: 1, a: 1 };
-
 const NOWHERE = { x: 0, y: 0, z: 0, rotation: 0, rotationX: 0, rotationY: 0, scaleX: 1, scaleY: 1, scaleZ: 1 };
 
 /**
@@ -200,9 +201,22 @@ export const createModel = (options: TModelOptions): TModel => {
         });
     };
     shared('visible', () => state.visible, (value) => { state.visible = value; }, (part) => { part.visible = state.visible; });
-    shared('tint', () => state.tint, (value) => { state.tint = getColor(value); }, (part) => {
+    const tintPart = (part: TMesh): void => {
         part.material.tint = multiply(fileTints.get(part) ?? WHITE, state.tint);
+    };
+    /**
+     * The tint as it is handed out: a channel changed on it (`model.tint.a = 0.2`, which is what a
+     * tween does) reaches every piece too, as a whole colour set on the model does.
+     */
+    const tintView = (): TColor => new Proxy(state.tint, {
+        set: (target, channel, value) => {
+            (target as Record<string | symbol, unknown>)[channel] = value;
+            for (const part of model.parts) tintPart(part);
+            return true;
+        },
     });
+    let tint = tintView();
+    shared('tint', () => tint, (value) => { state.tint = getColor(value); tint = tintView(); }, tintPart);
     shared('alpha', () => state.alpha ?? 1, (value) => { state.alpha = value; }, (part) => { part.material.alpha = state.alpha ?? 1; });
     shared('zIndex', () => state.zIndex ?? 0, (value) => { state.zIndex = value; }, (part) => { part.zIndex = state.zIndex; });
     shared('castShadow', () => state.castShadow !== false, (value) => { state.castShadow = value; }, (part) => { part.castShadow = state.castShadow; });

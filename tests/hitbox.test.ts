@@ -178,6 +178,25 @@ describe('useCollisionWith', () => {
         expect(seen).toEqual(['a>Bat', 'a>Bat']);
     });
 
+    it('meets a thing born during this frame\'s updates from the next frame, as it moves from the next', () => {
+        const frames: number[] = [];
+        let frameNumber = 0;
+        const { frame } = game(() => {
+            const spawnBat = useSpawn(Bat, 'Bat');
+            useSpawn(() => {
+                square(50, 50, 4);
+                hitboxOf('shot');
+                useCollisionWith('enemy', () => frames.push(frameNumber));
+            }, 'Bullet')();
+            // A bat let out during the third frame's updates, right on the bullet.
+            useUpdate(() => { if (frameNumber === 3) spawnBat(52); });
+            return createScene();
+        });
+
+        for (frameNumber = 1; frameNumber <= 5; frameNumber++) frame();
+        expect(frames).toEqual([4, 5]);
+    });
+
     it('calls once on the first frame they touch with start, and once when they part with end', () => {
         const said: string[] = [];
         let bat!: TSprite;

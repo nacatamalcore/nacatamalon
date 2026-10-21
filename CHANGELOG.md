@@ -16,8 +16,10 @@ releases are in [changelog/](./changelog/), one file each.
 - A panel (`createNineSlice`) is kept in scene documents, as a `nine-slice` component with its
   picture or sheet, its size, its four borders and how it fills, so a level saved from a running game
   keeps its buttons and dialogue boxes instead of leaving them out. One whose picture is missing is
-  said and left out, and the rest of the scene opens. The editor shows it as a Panel, and turns a
-  sprite into a panel and back.
+  said and left out, and the rest of the scene opens. A cell of a sheet made in code, which has no file
+  to name, is kept as its picture and the window into it (`uvOffset`, `uvScale`), as a sprite's is.
+  The editor shows it as a Panel (selected and moved in the 2D view, sized by its width and height),
+  and turns a sprite into a panel and back.
 - `T3dOptions`, the 3D side of `T2dOptions`: what a shape (`createMesh`) and a placed model
   (`createModel`) share, written once, with `TMeshSurfaceOptions` inside it for how the surface is
   painted. `TMeshOptions` and `TModelOptions` are it plus what is their own. Like `T2dOptions`, it is
@@ -25,19 +27,21 @@ releases are in [changelog/](./changelog/), one file each.
 - `createSprite({ texture: 'hero' })` and `createNineSlice({ texture: 'panel' })` name their picture by
   the key it was loaded under, the way a text names its font; `key` stays.
 - `sizeOf(thing)` and `boundsOf(thing)`: how big a sprite, a text or a panel is, and the rectangle it
-  covers. A sprite given no size measures its picture, and a text its letters, the moment it is made;
+  covers. A sprite given no size measures its picture, and a text its letters, the moment it is made
+  (in the font the engine carries too, before it has loaded);
   `boundsOf` takes the anchor, the pivot and the scale into account, in the place its `transform` is
   written, so things of one box line up: a box behind a label, a coin after a score.
 - A placed model is used like any other drawing: `tint`, `alpha`, `zIndex` and `castShadow` (new, also
   an option of `createModel`) on what `createModel` returns change every piece at once, the ones still
-  on the way too, and each piece keeps its own colour under the tint; `destroy(model)` takes it all,
+  on the way too, and each piece keeps its own colour under the tint (a tint changed in place,
+  `model.tint.a = 0.5` or a tween of it, reaches them too); `destroy(model)` takes it all,
   and one destroyed while its file loads never comes. `parts` stays for one piece alone.
   `createMesh({ material, tint })` says, once, that a material's colours go in the material.
 - A text and a panel take `parallax` and `blend` too, as a sprite does, now that they are in
   `T2dOptions`: a far sign that slides by slowly, a glowing "LEVEL UP!". What is pinned to the screen
   has no parallax whatever it says, so a HUD stays put. To mirror a text or a panel, `scaleX: -1`. A
   scene document keeps a text's `blend` and `parallax` too, and the editor's inspector shows them, with
-  `Blend` for a sprite as well. (A panel is not in scene documents yet.)
+  `Blend` for a sprite as well. A panel keeps them in scene documents too.
 - `T2dOptions`: what a sprite, a text and a panel share (`transform`, `anchor`, `pivot`, `tint`,
   `visible`, `zIndex`, `smooth`, `tags`, `material`, `uniforms` and the pointer events), written once.
   `TSpriteOptions`, `TTextOptions` and `TNineSliceOptions` are it plus what is their own.
@@ -47,12 +51,13 @@ releases are in [changelog/](./changelog/), one file each.
   every one; the screen effects and the looks already took them all. What is read back is a `TColor`
   as before. `getColor` takes a `TColor` too and hands it back as it is.
 - `usePointer().justPressed()` and `justReleased()`: a finger or a mouse button that went down or came
-  up this frame, true for one frame like the keyboard's. `justPressed('right')` asks about one button.
+  up this frame, true for one frame like the keyboard's. `justPressed('right')` asks about one button,
+  also when it is pressed or let go while another is held.
 - A scene takes props, like a component: how it is opened. `const Level = ({ level = 1 }: { level?:
   number }) => ...`, and `useScene().change(Level, { props: { level: 3 } })` or `launch(Hud, { props
   })`. Given the function, TypeScript checks the props; the name still works, unchecked. Every prop
   needs a default, since a scene also starts with none (the first one, a restart, the editor's
-  Play), and `createGame` refuses one that does not have it.
+  Play), and TypeScript refuses to hand `createGame` one that does not have it.
 - `useWatch` watches a store too: `useWatch(() => { hud.text = ... }, [gameStore, lives])` runs on the
   first frame and once a frame after any `set` or action. `useStore` stays for one value, heard
   straight away and in pause.
@@ -90,9 +95,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 - A behaviour shares with the others on its object the way a component does with `useSpawn`: what
   its function returns is its api, and `useScriptApi('spin')` reaches it by the name it was
-  registered under, the same word as in `requires`. `provide` and `useApi` are gone: `provide('spin',
-  { stop })` is now `return { stop }`, and `useApi('spin')` is `useScriptApi('spin')`. `api` means one
-  thing, what something returns.
+  registered under, the same word as in `requires`. `useApi` is now `useScriptApi`, and `provide('spin',
+  { stop })` in a behaviour called `spin` is simply `return { stop }`. `provide` stays for a word of
+  its own: several behaviours that answer to one word (`provide('health', …)` in a slime and in a
+  boss), or a second thing from one behaviour; `useScriptApi('health')` reaches it the same way.
 - In `project.json`'s screen-effect chain, an effect of the game's own is named by `effect`, as code
   names it (`usePostProcess({ effect })`, a material's `effect`): `{ "effect": "shaders/crt.shader" }`
   rather than `"shader"`. A project written before is read the same and saved with the new name.
@@ -114,11 +120,12 @@ releases are in [changelog/](./changelog/), one file each.
 - `halftone`'s `angle`, in degrees, is `rotation`, in radians (`Math.PI / 4` by default), like every
   other turn: angles are radians, except a 3D camera's `fov`, a `hue` and a sound's `cone`, which
   everyone says in degrees. A project or a motion that wrote `angle: 30` is read as `rotation` of
-  30°; motions are version 3 now.
+  30°, on a halftone the project named itself too; motions are version 3 now.
 - Time is in seconds everywhere. Four things counted milliseconds and now count seconds, like `delta`,
   timers and tweens always did: transitions (`fade(0.3)` rather than `fade(300)`, and `wipe`, `iris`,
   `pixelate`), a pad's `rumble({ duration, delay })`, a store's `persist.throttle`, and a headless
-  game's `loaded(timeout)`. A transition over ten seconds says it is probably milliseconds. Saved
+  game's `loaded(timeout)`. A transition over ten seconds says it is probably milliseconds, and so do
+  a rumble over its five, a throttle over a minute and a `loaded` wait over two. Saved
   files are read as they were: a motion's transition `"ms": 400` is read as `"duration": 0.4` and
   written back so, and a store file of version 1 has its throttle read in milliseconds (they are
   version 2 now).
@@ -135,7 +142,12 @@ releases are in [changelog/](./changelog/), one file each.
   pieces and tagged sprites alike. `useCollisionBetween` takes either on each side. A piece is
   measured by its hitboxes or what it draws, a tagged sprite by itself, and two pieces with physics
   bodies, in 2D or 3D, meet when the simulation says they touch: a game moves from hitboxes to
-  physics without rewriting a collision. Only the bodies a collision asks about report contacts. `useHitbox` lost its `group`: what a thing is is its tag. A body and a sword that count for
+  physics without rewriting a collision. Every body tells when a touch begins and ends from the
+  moment it is made, so a crate placed resting on the floor counts, and so does one met by a rule
+  made after it landed; a body taken away, or one destroyed, touches nothing from then on. A piece
+  does not touch what it draws itself (its own tagged sprite), and something made during a frame's
+  updates meets things from the next frame, as it moves from the next. `useHitbox` lost its `group`:
+  what a thing is is its tag. A body and a sword that count for
   different things are two pieces, each with its own tag.
 - One word for what touches what: `useOverlap` is `useCollisionBetween`, `overlaps` is
   `collisionBetween` and `TOverlapTarget` is `TCollisionTarget`, beside the new `useCollisionWith`.
@@ -163,9 +175,13 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- The fonts the engine carries and its splash show on a page with a strict Content Security Policy:
+  they are read from inside the engine instead of fetched from a `data:` address, which such a page
+  refuses.
 - A collider is added to its own game's physics world only. A scene with no world of its own, in a
   page where another game had left one open (the editor's Play next to the edited game, or a scene
-  abandoned without stopping), put its bodies in that one instead of saying it had none.
+  abandoned without stopping), put its bodies in that one instead of saying it had none. Two scenes of
+  one game running together still share the world made last.
 - A key that already names a file, asked for with another (`useLoadTexture({ src: '/b.png', key:
   'hero' })` after `/a.png`), handed back the first without a word, in all fourteen `useLoad…`. It is
   said now, once.
