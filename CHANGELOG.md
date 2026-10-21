@@ -7,6 +7,11 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- A placed model is used like any other drawing: `tint`, `alpha`, `zIndex` and `castShadow` (new, also
+  an option of `createModel`) on what `createModel` returns change every piece at once, the ones still
+  on the way too, and each piece keeps its own colour under the tint; `destroy(model)` takes it all,
+  and one destroyed while its file loads never comes. `parts` stays for one piece alone.
+  `createMesh({ material, tint })` says, once, that a material's colours go in the material.
 - A text and a panel take `parallax` and `blend` too, as a sprite does, now that they are in
   `T2dOptions`: a far sign that slides by slowly, a glowing "LEVEL UP!". What is pinned to the screen
   has no parallax whatever it says, so a HUD stays put. To mirror a text or a panel, `scaleX: -1`. A

@@ -20,12 +20,50 @@ import type { TTransform3d } from '../types/t_transform_3d';
 /**
  * Nowhere in particular, which is where a model goes when it is not told.
  */
+const WHITE: TColor = { r: 1, g: 1, b: 1, a: 1 };
+
 const NOWHERE = { x: 0, y: 0, z: 0, rotation: 0, rotationX: 0, rotationY: 0, scaleX: 1, scaleY: 1, scaleZ: 1 };
 
 /**
  * Two colours multiplied: the file's own, shaded by whatever was asked for on top.
  */
 const multiply = (a: TColor, b: TColor): TColor => ({ r: a.r * b.r, g: a.g * b.g, b: a.b * b.b, a: a.a * b.a });
+
+/**
+ * What is set on a placed model and goes to every piece of it, the ones still on the way included.
+ */
+type TModelState = {
+    visible: boolean;
+    tint: TColor;
+    alpha: number | undefined;
+    zIndex: number | undefined;
+    castShadow: boolean | undefined;
+    destroyed: boolean;
+};
+
+/**
+ * Each piece's own colour, as its file has it: what the model's `tint` multiplies, so shading the
+ * model again does not shade what was already shaded.
+ */
+const fileTints = new WeakMap<TMesh, TColor>();
+
+/**
+ * Each placed model's state, for `destroy`, which is the one thing that changes it from outside.
+ */
+const states = new WeakMap<TModel, TModelState>();
+
+/**
+ * Marks a placed model as gone and hands back the pieces to take with it; `null` for one that was
+ * already gone. What `destroy(model)` asks.
+ *
+ * @internal
+ */
+export const endModel = (model: TModel): TMesh[] | null => {
+    const state = states.get(model);
+    if (state === undefined || state.destroyed) return null;
+    state.destroyed = true;
+    return [...model.parts];
+};
 
 /**
  * Makes one drawable piece out of one piece of the file.
@@ -40,7 +78,7 @@ const buildPart = (
     skeleton: TSkeleton | null,
     transform: TTransform3d,
     options: TModelOptions,
-    visible: boolean,
+    state: TModelState,
 ): TMesh => {
     const mesh = createRecord('mesh', {
         geometry: part.geometry,
@@ -51,13 +89,13 @@ const buildPart = (
         material: newMaterial(
             {
                 shader: 'mesh3d',
-                tint: multiply(part.tint, getColor(options.tint ?? 'white')),
+                tint: multiply(part.tint, state.tint),
                 emissive: part.emissive,
                 specular: options.specular === undefined ? undefined : getColor(options.specular),
                 shininess: options.shininess,
                 vertexSnap: options.vertexSnap,
                 affine: options.affine,
-                alpha: options.alpha,
+                alpha: state.alpha,
                 // The file's word unless the game says otherwise. A piece the file does not call
                 // see-through is left to its alpha, rather than written down as solid.
                 transparent: options.transparent ?? (part.transparent ? true : undefined),
@@ -71,10 +109,13 @@ const buildPart = (
             part.texture,
             null,
         ) as TMeshMaterial,
-        zIndex: options.zIndex,
-        visible,
+        zIndex: state.zIndex,
+        visible: state.visible,
+        // Absent means casting, as for any model: written down only when it was said.
+        ...(state.castShadow !== undefined ? { castShadow: state.castShadow } : {}),
         destroyed: false,
     });
+    fileTints.set(mesh, part.tint);
 
     box.drawables.push(mesh);
     trackDrawableOwner(mesh, box, store);
@@ -93,11 +134,12 @@ const buildPart = (
  * there. Nothing has to be waited for or wired up.
  *
  * `tint` multiplies, so the colours the model was made with survive: white leaves it exactly as it
- * was made, and a darker colour shades all of it at once. To change one piece, reach into `parts`
- * once the file is here.
+ * was made, and a darker colour shades all of it at once.
  *
- * `visible` on what this returns hides or shows the whole model, and can be set straight away: a
- * model hidden before its file arrives arrives hidden.
+ * What comes back is used like any other drawing: `tint`, `alpha`, `zIndex`, `castShadow` and
+ * `visible` on it change every piece at once, and can be set straight away (a model hidden before its
+ * file arrives arrives hidden); `destroy(model)` takes it all. To change one piece alone, reach into
+ * `parts` once the file is here.
  *
  * @param options The model, and anything else about how it looks.
  * @returns The placement and its pieces.
@@ -132,19 +174,39 @@ export const createModel = (options: TModelOptions): TModel => {
 
     const transform: TTransform3d = { ...NOWHERE, ...options.transform };
     // Kept here and not on any one piece, because there may be no pieces yet to keep it on.
-    let visible = options.visible ?? true;
+    const state: TModelState = {
+        visible: options.visible ?? true,
+        tint: getColor(options.tint ?? 'white'),
+        alpha: options.alpha,
+        zIndex: options.zIndex,
+        castShadow: options.castShadow,
+        destroyed: false,
+    };
     const source = options.model;
-    const model = { id: nanoId(), type: 'model', transform, model: source, parts: [] as TMesh[], skeletons: [] as TSkeleton[] } as TModel;
-    Object.defineProperty(model, 'visible', {
-        enumerable: true,
-        get: () => visible,
-        set: (value: boolean) => {
-            visible = value;
-            for (const part of model.parts) {
-                part.visible = value;
-            }
-        },
+    const model = { id: nanoId(), type: 'model', transform, model: source, parts: [] as TMesh[], skeletons: [] as TSkeleton[] } as unknown as TModel;
+    states.set(model, state);
+    /**
+     * A field of the model that goes to every piece: kept in the state, and written on each piece
+     * there is when it is set.
+     */
+    const shared = <K extends keyof TModelState>(key: K, read: () => unknown, write: (value: TModelState[K]) => void, onPart: (part: TMesh) => void): void => {
+        Object.defineProperty(model, key, {
+            enumerable: true,
+            get: read,
+            set: (value: TModelState[K]) => {
+                write(value);
+                for (const part of model.parts) onPart(part);
+            },
+        });
+    };
+    shared('visible', () => state.visible, (value) => { state.visible = value; }, (part) => { part.visible = state.visible; });
+    shared('tint', () => state.tint, (value) => { state.tint = getColor(value); }, (part) => {
+        part.material.tint = multiply(fileTints.get(part) ?? WHITE, state.tint);
     });
+    shared('alpha', () => state.alpha ?? 1, (value) => { state.alpha = value; }, (part) => { part.material.alpha = state.alpha ?? 1; });
+    shared('zIndex', () => state.zIndex ?? 0, (value) => { state.zIndex = value; }, (part) => { part.zIndex = state.zIndex; });
+    shared('castShadow', () => state.castShadow !== false, (value) => { state.castShadow = value; }, (part) => { part.castShadow = state.castShadow; });
+    Object.defineProperty(model, 'destroyed', { enumerable: true, get: () => state.destroyed });
 
     const build = (): void => {
         // Bones of its own, so another model of the same file can be doing something else. What
@@ -165,7 +227,7 @@ export const createModel = (options: TModelOptions): TModel => {
         }
         for (const part of source.parts) {
             const skeleton = part.skeleton === null ? null : own.get(part.skeleton) ?? null;
-            model.parts.push(buildPart(store, box, part, skeleton, transform, options, visible));
+            model.parts.push(buildPart(store, box, part, skeleton, transform, options, state));
         }
     };
 
@@ -180,7 +242,8 @@ export const createModel = (options: TModelOptions): TModel => {
     // the file is here. Both guards matter: a scene can be left, or the whole game ended, in the
     // time a file takes to arrive, and adding to either would be adding to something nobody draws.
     void whenLoaded(source).then(() => {
-        if (store.get('loop').destroyed || box.destroyed || source.status !== 'ready') {
+        // A model destroyed while its file was on the way never comes.
+        if (store.get('loop').destroyed || box.destroyed || state.destroyed || source.status !== 'ready') {
             return;
         }
         build();

@@ -6,6 +6,8 @@ import type { TDrawable } from '../gameobjects/types';
 import { finishDestroy } from './finish_destroy';
 import { isGameObject } from './is_game_object';
 import type { TGameObject } from '../hooks';
+import { endModel } from '../gameobjects/model/create_model';
+import type { TModel } from '../gameobjects/model/types/t_model';
 
 /**
  * How `destroy` should go about it.
@@ -22,6 +24,12 @@ export type TDestroyOptions = {
      */
     immediate?: boolean;
 };
+
+/**
+ * A model placed with `createModel`, which is neither a drawing nor an object of the game: its pieces are.
+ */
+const isModel = (target: TDrawable | TGameObject | TModel): target is TModel =>
+    !('children' in target) && (target as { type?: string }).type === 'model';
 
 /**
  * The game a target belongs to, whichever kind it is. Both keep it outside themselves, because
@@ -44,7 +52,7 @@ const storeOf = (target: TDrawable | TBox): TRuntimeStore | undefined =>
  * Images are **not** freed. Several things can be showing the same one, and the game keeps it for
  * whoever asks next, so destroying a sprite never costs the next one a reload.
  *
- * @param target The sprite or spawned object to remove. A scene is not one of these: it leaves
+ * @param target The sprite, model or spawned object to remove. A scene is not one of these: it leaves
  * through `useScene().stop()`, and passing one here warns and does nothing.
  * @param options See `TDestroyOptions`. Leave it out for the usual behaviour.
  *
@@ -68,8 +76,15 @@ const storeOf = (target: TDrawable | TBox): TRuntimeStore | undefined =>
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const destroy = (target: TDrawable | TGameObject, options?: TDestroyOptions): void => {
+export const destroy = (target: TDrawable | TGameObject | TModel, options?: TDestroyOptions): void => {
     if (target.destroyed) {
+        return;
+    }
+
+    // A placed model is its pieces: each goes the way any model goes, and one still on the way is
+    // never made.
+    if (isModel(target)) {
+        for (const part of endModel(target) ?? []) destroy(part, options);
         return;
     }
 

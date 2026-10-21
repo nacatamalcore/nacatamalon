@@ -36,6 +36,11 @@ const resolveTexture = (options: TMeshOptions): TTexture | null => {
 };
 
 /**
+ * Said once: a game that builds many models from one material would say it for every one of them.
+ */
+let warnedAboutMaterial = false;
+
+/**
  * Puts a model in the scene: a shape, somewhere, with a surface.
  *
  * The shape comes from one of the shape hooks and is shared, so making a hundred of these from one
@@ -73,6 +78,13 @@ export const createMesh = (options: TMeshOptions): TMesh => {
     const store = getActiveGame();
     if (box === null || store === null) {
         throw new Error('[NacatamalOn] createMesh: call it inside a scene body, or inside something created with useSpawn.');
+    }
+    if (options.material !== undefined && !warnedAboutMaterial) {
+        const ignored = (['tint', 'emissive', 'specular'] as const).filter((key) => options[key] !== undefined);
+        if (ignored.length > 0) {
+            warnedAboutMaterial = true;
+            console.warn(`[NacatamalOn] createMesh: given a material, its ${ignored.join(', ')} ${ignored.length === 1 ? 'is' : 'are'} not read: they go in the material (createMaterial({ ${ignored[0]}: … })), which every model wearing it shares.`);
+        }
     }
 
     const mesh = createRecord('mesh', {

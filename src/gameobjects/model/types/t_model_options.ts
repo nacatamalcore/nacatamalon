@@ -72,6 +72,10 @@ export type TModelOptions = {
      */
     visible?: boolean;
     /**
+     * Whether its pieces throw a shadow. Default `true`.
+     */
+    castShadow?: boolean;
+    /**
      * How every piece is lit, in place of the engine's light: `toonLighting()` or `unlitLighting()`. Each piece
      * keeps its own picture and colour from the file. A model with bones bends and is lit by it alike.
      */

@@ -144,8 +144,10 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   To blend two colours (a sky between dusk and night), `lerpColor(a, b, t)`.
 - **Glows, flashes, beams of light**: `createSprite({ ..., blend: 'additive' })` (a text or a panel too) adds its colour to
   what is behind instead of covering it, the same as additive particles.
-- **Hiding a model**: `createModel(...)` returns an object with `visible`; set it any time, even
-  before the file arrives (its pieces arrive hidden). No need to walk `parts`.
+- **A placed model is used like any drawing**: what `createModel(...)` returns has `visible`, `tint`,
+  `alpha`, `zIndex` and `castShadow` for every piece at once, set any time, even before the file
+  arrives (its pieces arrive so); `destroy(model)` takes it all. `parts` is for one piece alone (the
+  glass of a car).
 - **Particle effects that depend on the game** (dust the colour of the ground, a tint per level):
   write the effect in code, `createParticles({ effect: { kind: 'particles2d', emission: { rate: 30 },
   colorOverLife: [{ t: 0, color: lerpColor(a, b, t) }], texture: createPixelTexture(puff) } })`, with

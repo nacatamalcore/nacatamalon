@@ -1,6 +1,9 @@
-import { afterEach, describe, expect, it, mock } from 'bun:test';
+import { afterEach, describe, expect, it, mock, spyOn } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
 import { createModel } from '../src/gameobjects/model';
+import { createMesh } from '../src/gameobjects/mesh/create_mesh';
+import { createMaterial } from '../src/gameobjects/material/create_material';
+import { useCubeGeometry } from '../src/hooks/geometry/use_cube_geometry';
 import { destroy, flushDestroyed } from '../src/destroy';
 import { fillFrameContext } from '../src/game/loop/fill_frame_context';
 import { getColor } from '../src/color';
@@ -13,6 +16,7 @@ import { asGltf, serveGltf, TEST_QUAD } from './helpers/test_gltf';
 import type { TFrameContext } from '../src/render';
 import type { TGltfModel } from '../src/loaders';
 import type { TModel } from '../src/gameobjects/model';
+import type { TMeshMaterial } from '../src/materials';
 import type { TRuntimeStore } from '../src/store';
 import type { TTestModel } from './helpers/test_gltf';
 
@@ -264,5 +268,107 @@ describe('createModel', () => {
 
         expect(kinds(store)).toEqual([]);
         fake.restore();
+    });
+});
+
+describe('a placed model, used like any other drawing', () => {
+    /** A scene with one placed model of the two-piece file, and what it takes to wait for it. */
+    const placedModel = (options: Partial<Parameters<typeof createModel>[0]> = {}) => {
+        const fake = served();
+        const { store } = createTestGame();
+        let placed!: TModel;
+        let source!: TGltfModel;
+        startTestScene(store, 'Level', () => {
+            source = useLoadGltf({ src: 'model.gltf' });
+            placed = createModel({ model: source, ...options });
+            return createScene();
+        });
+        return { store, placed: () => placed, arrived: () => whenLoaded(source), restore: () => fake.restore() };
+    };
+    const tints = (model: TModel) => model.parts.map((part) => {
+        const { r, g, b } = part.material.tint;
+        return [r, g, b];
+    });
+
+    it('is tinted all at once, each piece keeping its own colour under it', async () => {
+        const { placed, arrived, restore } = placedModel();
+        await arrived();
+        // The file's orange body and blue glass, as they arrived.
+        const own = tints(placed());
+
+        placed().tint = getColor('#ff0000');
+        expect(tints(placed())).toEqual(own.map(([r]) => [r, 0, 0]));
+        // Again, from the file's colours and not from the last shade.
+        placed().tint = getColor('white');
+        expect(tints(placed())).toEqual(own);
+        expect(placed().tint).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+        restore();
+    });
+
+    it('hands what is set before its file arrives to the pieces that arrive', async () => {
+        const plain = placedModel();
+        await plain.arrived();
+        const own = tints(plain.placed());
+        plain.restore();
+
+        const { placed, arrived, restore } = placedModel();
+        placed().tint = getColor('#00ff00');
+        placed().alpha = 0.5;
+        placed().zIndex = 3;
+        placed().castShadow = false;
+        await arrived();
+
+        expect(tints(placed())).toEqual(own.map(([, g]) => [0, g, 0]));
+        expect(placed().parts.map((part) => [part.material.alpha, part.zIndex, part.castShadow])).toEqual([[0.5, 3, false], [0.5, 3, false]]);
+        restore();
+    });
+
+    it('takes castShadow when it is made', async () => {
+        const { placed, arrived, restore } = placedModel({ castShadow: false });
+        await arrived();
+        expect(placed().castShadow).toBe(false);
+        expect(placed().parts.every((part) => part.castShadow === false)).toBe(true);
+        restore();
+    });
+
+    it('is destroyed whole, its pieces leaving at the end of the frame', async () => {
+        const { store, placed, arrived, restore } = placedModel();
+        await arrived();
+        expect(kinds(store)).toEqual(['mesh', 'mesh']);
+
+        destroy(placed());
+        expect(placed().destroyed).toBe(true);
+        expect(placed().parts.every((part) => part.destroyed)).toBe(true);
+        flushDestroyed(store);
+        expect(kinds(store)).toEqual([]);
+        // Twice is once.
+        destroy(placed());
+        restore();
+    });
+
+    it('never comes when it is destroyed while its file is on the way', async () => {
+        const { store, placed, arrived, restore } = placedModel();
+        destroy(placed());
+        await arrived();
+        expect(placed().parts).toHaveLength(0);
+        expect(kinds(store)).toEqual([]);
+        restore();
+    });
+});
+
+describe('a model given a material and colours of its own', () => {
+    it('says once that the colours go in the material', () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        const { store } = createTestGame();
+        startTestScene(store, 'Level', () => {
+            const material = createMaterial({ shader: 'mesh3d' }) as TMeshMaterial;
+            createMesh({ geometry: useCubeGeometry(), material, tint: getColor('red') });
+            createMesh({ geometry: useCubeGeometry(), material, tint: getColor('red') });
+            return createScene();
+        });
+        const said = warn.mock.calls.map((call) => String(call[0])).filter((line) => line.includes('createMesh: given a material'));
+        warn.mockRestore();
+        expect(said).toHaveLength(1);
+        expect(said[0]).toContain('tint');
     });
 });

@@ -1,3 +1,4 @@
+import type { TColor } from '../../../color';
 import type { TMesh } from '../../mesh/types/t_mesh';
 import type { TGltfModel } from '../../../loaders';
 import type { TSkeleton } from '../../../animation';
@@ -6,9 +7,10 @@ import type { TTransform3d } from '../../types/t_transform_3d';
 /**
  * A loaded model placed in the scene: one placement, and the pieces it is made of.
  *
- * **Move the placement and all of it moves**, however many pieces the file turned out to hold. The
- * pieces are ordinary models of their own, so anything you can do to one you can do to a wheel: tint
- * it, hide it, give it its own draw order.
+ * **Move the placement and all of it moves**, however many pieces the file turned out to hold. What
+ * is set on the model (`tint`, `alpha`, `zIndex`, `castShadow`, `visible`) goes to every piece at once,
+ * the ones still on the way too, and `destroy(model)` takes them all. The pieces are ordinary models
+ * of their own, so one alone can still be changed through `parts`: the glass of a car.
  *
  * `parts` fills in when the file arrives, so it is empty on the frame you make this and has what the
  * file held on a later one. Look a piece up by the name it had in the file when you need one in
@@ -46,4 +48,27 @@ export type TModel = {
      * A piece can still be hidden on its own through `parts`; this overwrites them all.
      */
     visible: boolean;
+    /**
+     * Multiplies the colour of every piece, so the file's own colours are kept and shaded: white
+     * leaves it as it was made. Setting it shades them all at once, a flash of red on a hit:
+     * `enemy.tint = getColor('red')`. It takes any colour, and reads back as `{ r, g, b, a }`.
+     */
+    tint: TColor;
+    /**
+     * How solid every piece is, `0` to `1`. Setting it fades them all at once.
+     */
+    alpha: number;
+    /**
+     * Draw order within its scene, for every piece. `0` by default.
+     */
+    zIndex: number;
+    /**
+     * Whether its pieces throw a shadow. `true` by default.
+     */
+    castShadow: boolean;
+    /**
+     * `true` once `destroy(model)` has been asked: its pieces are gone, and one still on the way
+     * never comes.
+     */
+    readonly destroyed: boolean;
 };
