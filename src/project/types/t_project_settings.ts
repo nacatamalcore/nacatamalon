@@ -46,6 +46,11 @@ export type TProjectSettings = {
      */
     smooth: boolean;
     /**
+     * Whether what is drawn lands on whole pixels. Absent, it follows `smooth`: on for crisp pixel
+     * art, off for a smooth game. See `TGameOptions.pixelSnap`.
+     */
+    pixelSnap?: boolean;
+    /**
      * Anti-aliasing: `1` is off, which is the aliased look of the era.
      */
     msaa: 1 | 4;
@@ -62,6 +67,11 @@ export type TProjectSettings = {
      */
     keep: TCanvasKeep;
     /**
+     * How the canvas is fitted once the player asks for full screen. `'integer'` by default. See
+     * `TGameOptions.fullscreenScaling`.
+     */
+    fullscreenScaling: TCanvasScaling;
+    /**
      * How many real pixels each game pixel is drawn with: `1` (the default, and the one for pixel
      * art), a number, or `'device'` to follow the screen. Sharper edges for 3D and HD games, at the
      * square of the cost. See `TGameOptions.pixelRatio`.
@@ -71,6 +81,20 @@ export type TProjectSettings = {
      * Whether the game pauses itself when the page loses focus.
      */
     pauseOnBlur: boolean;
+    /**
+     * Whether a right click over the game opens the browser's menu. `false` by default: the right
+     * button is the game's. See `TGameOptions.contextMenu`.
+     */
+    contextMenu: boolean;
+    /**
+     * Whether the startup line is printed in the console. `true` by default.
+     */
+    banner: boolean;
+    /**
+     * Whether the game opens with "Made with NacatamalOn": `true` in the published game,
+     * `'always'` while developing too. `false` by default. See `TGameOptions.splash`.
+     */
+    splash: boolean | 'always';
     /**
      * How the game's time moves forward: `'display'`, one update per picture the screen shows, or
      * that many fixed steps a second (`60`, `50` for PAL). See `TGameOptions.step`.

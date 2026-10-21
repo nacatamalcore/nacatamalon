@@ -31,8 +31,10 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
+      # In a different order each run, so a test that only passes after another is found. The run
+      # prints its seed: `bun test --randomize --seed=<it>` repeats that order.
       - name: Tests
-        run: bun test
+        run: bun test --randomize
 
       # Builds the package, installs it in an empty project and compiles the README's and
       # llms.txt's games against it, on this repo's TypeScript and on 5.4.

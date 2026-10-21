@@ -63,16 +63,22 @@ export const parseProject = (value: unknown): TProjectSettings => {
         height: asInt(raw.height, DEFAULT_PROJECT_SETTINGS.height, 1, 16384),
         background: asColor(raw.background, DEFAULT_PROJECT_SETTINGS.background),
         smooth: asBoolean(raw.smooth, DEFAULT_PROJECT_SETTINGS.smooth),
+        // Absent follows `smooth`, so it is kept absent rather than given a default of its own.
+        ...(typeof raw.pixelSnap === 'boolean' ? { pixelSnap: raw.pixelSnap } : {}),
         msaa: asOneOf(String(raw.msaa), ['1', '4'], '1') === '4' ? 4 : 1,
         renderer: asOneOf(raw.renderer, ['AUTO', 'WEBGPU', 'WEBGL2'] as const, DEFAULT_PROJECT_SETTINGS.renderer),
         scaling: asOneOf(raw.scaling, ['none', 'integer', 'contain', 'fill'] as const, DEFAULT_PROJECT_SETTINGS.scaling),
         keep: asOneOf(raw.keep, ['both', 'height', 'width', 'none'] as const, DEFAULT_PROJECT_SETTINGS.keep),
+        fullscreenScaling: asOneOf(raw.fullscreenScaling, ['none', 'integer', 'contain', 'fill'] as const, DEFAULT_PROJECT_SETTINGS.fullscreenScaling),
         // `createGame` throws on a ratio that cannot draw; a file falls back instead, like every
         // other field here.
         pixelRatio: raw.pixelRatio === 'device' || (typeof raw.pixelRatio === 'number' && Number.isFinite(raw.pixelRatio) && raw.pixelRatio > 0)
             ? raw.pixelRatio
             : DEFAULT_PROJECT_SETTINGS.pixelRatio,
         pauseOnBlur: asBoolean(raw.pauseOnBlur, DEFAULT_PROJECT_SETTINGS.pauseOnBlur),
+        contextMenu: asBoolean(raw.contextMenu, DEFAULT_PROJECT_SETTINGS.contextMenu),
+        banner: asBoolean(raw.banner, DEFAULT_PROJECT_SETTINGS.banner),
+        splash: raw.splash === 'always' ? 'always' : asBoolean(raw.splash, DEFAULT_PROJECT_SETTINGS.splash === true),
         // The range `createGame` takes; outside it a file falls back, like every other field here.
         step: typeof raw.step === 'number' && Number.isFinite(raw.step) && raw.step >= MIN_STEP_RATE && raw.step <= MAX_STEP_RATE
             ? raw.step

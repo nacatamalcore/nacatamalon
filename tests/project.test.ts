@@ -55,6 +55,27 @@ describe('parseProject', () => {
         expect(settings.actions).toEqual([]);
         expect(settings.seed).toBeUndefined();
         expect(settings.pixelRatio).toBe(1);
+        // What createGame does when it is not said.
+        expect(settings.pixelSnap).toBeUndefined();
+        expect(settings.fullscreenScaling).toBe('integer');
+        expect(settings.contextMenu).toBe(false);
+        expect(settings.banner).toBe(true);
+        expect(settings.splash).toBe(false);
+    });
+
+    it('reads what createGame takes about the page: snapping, full screen, the menu, the banner and the splash', () => {
+        const settings = parseProject({ pixelSnap: false, fullscreenScaling: 'contain', contextMenu: true, banner: false, splash: 'always' });
+        expect(settings.pixelSnap).toBe(false);
+        expect(settings.fullscreenScaling).toBe('contain');
+        expect(settings.contextMenu).toBe(true);
+        expect(settings.banner).toBe(false);
+        expect(settings.splash).toBe('always');
+        expect(parseProject({ splash: true }).splash).toBe(true);
+
+        const options = gameOptionsFromProject(settings);
+        expect(options).toMatchObject({ pixelSnap: false, fullscreenScaling: 'contain', contextMenu: true, banner: false, splash: 'always' });
+        // Left out, it follows `smooth` in createGame, so it is not written for it.
+        expect('pixelSnap' in gameOptionsFromProject(parseProject({}))).toBe(false);
     });
 
     it('reads a fixed step, and falls back to the screen\'s time from one createGame would refuse', () => {
@@ -162,8 +183,12 @@ describe('gameOptionsFromProject', () => {
             msaa: settings.msaa,
             scaling: settings.scaling,
             keep: settings.keep,
+            fullscreenScaling: settings.fullscreenScaling,
             pixelRatio: settings.pixelRatio,
             pauseOnBlur: settings.pauseOnBlur,
+            contextMenu: settings.contextMenu,
+            banner: settings.banner,
+            splash: settings.splash,
             step: settings.step,
             actions: settings.actions,
             physicsLayers: settings.physicsLayers,

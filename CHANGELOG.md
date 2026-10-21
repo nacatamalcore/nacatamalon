@@ -7,6 +7,12 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- `project.json` keeps what `createGame` takes about the page and the console that it could not say
+  before: `pixelSnap` (left out, it follows `smooth`), `fullscreenScaling`, `contextMenu`, `banner`
+  and `splash`. A project written before reads them as the defaults, and `gameOptionsFromProject`
+  hands them on, so a game made in the editor can open with its splash or let a right click open the
+  browser's menu. The editor shows them in the project's settings.
+
 - A panel (`createNineSlice`) is kept in scene documents, as a `nine-slice` component with its
   picture or sheet, its size, its four borders and how it fills, so a level saved from a running game
   keeps its buttons and dialogue boxes instead of leaving them out. One whose picture is missing is
