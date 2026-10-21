@@ -2,7 +2,7 @@
 export { createGame } from './game/bootstrap/create_game';
 export { createScene } from './scene';
 export { useTransform, useCamera3d, useFog } from './hooks';
-export { useDirectionalLight, usePointLight, useSpotLight, useAmbientLight, useBlobShadow } from './hooks';
+export { useDirectionalLight, usePointLight, useSpotLight, useRectLight, useAmbientLight, useBlobShadow } from './hooks';
 export { createMesh } from './gameobjects/mesh';
 export type { TMesh, TMeshOptions } from './gameobjects/mesh';
 export { createModel } from './gameobjects/model';
@@ -23,7 +23,7 @@ export type { TLoadedPixels } from './loaders/pixels';
 export type { TUseLoadPixelsOptions } from './hooks';
 export type { TModel, TModelOptions } from './gameobjects/model';
 export { MAX_LIGHTS } from './light';
-export type { TLight, TDirectionalLight, TPointLight, TSpotLight, TAmbientLight, TLightOptionsBase } from './light';
+export type { TLight, TDirectionalLight, TPointLight, TSpotLight, TRectLight, TAmbientLight, TLightOptionsBase } from './light';
 export { useCubeGeometry, usePlaneGeometry, useCircleGeometry, useUvSphereGeometry, useIcoSphereGeometry, useCylinderGeometry, useConeGeometry, useTorusGeometry } from './hooks';
 export type { TBlobShadowOptions } from './hooks';
 export type { TCubeGeometryOptions, TPlaneGeometryOptions, TCircleGeometryOptions, TUvSphereGeometryOptions, TIcoSphereGeometryOptions, TCylinderGeometryOptions, TConeGeometryOptions, TTorusGeometryOptions } from './hooks';

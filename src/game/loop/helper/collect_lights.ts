@@ -107,7 +107,7 @@ export const collectLighting = (scene: TBox): TSceneLighting => {
     // does not. There is one shadow map, so there is one point of view to spend, and it goes to
     // whoever asked first. Core keeps the first one too and says nothing, which leaves an author
     // turning `castShadow` on and off on a light that was never going to be the one.
-    const casters = lights.filter((light) => light.castShadow === true && light.type !== 'point');
+    const casters = lights.filter((light) => light.castShadow === true && light.type !== 'point' && light.type !== 'rect');
     if (casters.length > 1 && !warnedSecondCaster) {
         warnedSecondCaster = true;
         console.warn(`[NacatamalOn] ${casters.length} lights in a scene ask to cast shadows and one can. The first is used, the rest light the scene without casting.`);

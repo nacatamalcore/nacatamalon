@@ -19,7 +19,7 @@ export { useCamera2d, useCamera3d, useScreenSpace, useCameraFollow, useParallax 
 export type { TCameraFollow, TCameraFollowOptions, TCameraTarget } from './camera';
 export { useFog } from './fog';
 export { useTransform } from './transform';
-export { useDirectionalLight, usePointLight, useSpotLight, useAmbientLight, useBlobShadow } from './light';
+export { useDirectionalLight, usePointLight, useSpotLight, useRectLight, useAmbientLight, useBlobShadow } from './light';
 export { useParticleCollider2d, useParticleCollider3d } from './particles';
 export { useCubeGeometry, usePlaneGeometry, useCircleGeometry, useUvSphereGeometry, useIcoSphereGeometry, useCylinderGeometry, useConeGeometry, useTorusGeometry } from './geometry';
 export { useLoadTexture, useLoadAtlas, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadShader, useLoadPalette, useLoadLut, useLoadParticles, useLoadPack, useLoadAudio, useLoader, useLoadPixels, useLoadSong, useLoadMotion } from './loaders';

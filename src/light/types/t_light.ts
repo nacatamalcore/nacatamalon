@@ -99,6 +99,19 @@ export type TPointLight = TLightBase & { readonly type: 'point'; range: number }
 export type TSpotLight = TLightBase & { readonly type: 'spot'; range: number; angle: number; penumbra: number };
 
 /**
+ * A panel: a lamp shaped like a rectangle, which shines from its front only.
+ *
+ * `width` and `height` are its size, along its own X and Y. It shines along its own -Z, like a sun
+ * and a torch, and fades out by `range`, measured from the nearest point of the panel. A ceiling
+ * light, a window, a screen, a sign.
+ *
+ * @category Lighting
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TRectLight = TLightBase & { readonly type: 'rect'; range: number; width: number; height: number };
+
+/**
  * Light with no source: the level everything is lit to before any lamp reaches it.
  *
  * It has no place and no direction, so it never shades anything: it only decides how dark the dark
@@ -117,7 +130,7 @@ export type TAmbientLight = { readonly type: 'ambient'; id: string; color: TColo
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TLight = TDirectionalLight | TPointLight | TSpotLight | TAmbientLight;
+export type TLight = TDirectionalLight | TPointLight | TSpotLight | TRectLight | TAmbientLight;
 
 /**
  * The lights that actually shine on something: the ones with a place in the world, a direction, or
@@ -127,7 +140,7 @@ export type TLight = TDirectionalLight | TPointLight | TSpotLight | TAmbientLigh
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TPunctualLight = TDirectionalLight | TPointLight | TSpotLight;
+export type TPunctualLight = TDirectionalLight | TPointLight | TSpotLight | TRectLight;
 
 /**
  * How many lights shine on one frame.

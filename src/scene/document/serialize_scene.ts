@@ -576,7 +576,8 @@ const writeLight = (light: TLight): TComponentDoc => ({
         },
     } : {}),
     ...(light.type !== 'ambient' ? { ambient: light.ambient } : {}),
-    ...(light.type === 'point' || light.type === 'spot' ? { range: light.range } : {}),
+    ...(light.type === 'point' || light.type === 'spot' || light.type === 'rect' ? { range: light.range } : {}),
+    ...(light.type === 'rect' ? { width: light.width, height: light.height } : {}),
     ...(light.type === 'spot' ? { angle: light.angle, penumbra: light.penumbra } : {}),
     // Written for every kind that can carry them, a bulb included: what a light was told is what
     // comes back, and a writer deciding a bulb "cannot mean it" would quietly edit somebody's file.

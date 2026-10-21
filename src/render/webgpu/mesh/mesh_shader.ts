@@ -38,13 +38,15 @@ struct Uniforms {
 
 struct LightItem {
     // xyz = the way towards the light (a sun) or where it is (a lamp, a torch);
-    // w = which: 0 sun, 1 lamp, 2 torch.
+    // w = which: 0 sun, 1 lamp, 2 torch, 3 panel.
     vector: vec4<f32>,
     // rgb = colour times strength; a = how far it reaches.
     color: vec4<f32>,
     // xyz = the way the beam travels; w = the cosine of the outer angle. Torch only.
+    // For a panel, xyz = its half width along its own X.
     spotDirection: vec4<f32>,
     // x = the cosine of the inner angle, where the soft edge ends. Torch only.
+    // For a panel, xyz = its half height along its own Y.
     spotParams: vec4<f32>,
 };
 
@@ -153,12 +155,29 @@ fn sampleLight(index: u32, worldPos: vec3<f32>, normal: vec3<f32>, viewDir: vec3
 
     if (item.vector.w > 0.5) {
         // A lamp and a torch both have a place, and both fade out by their reach.
-        let toLight = item.vector.xyz - worldPos;
+        var toLight = item.vector.xyz - worldPos;
+        var facingPanel = 1.0;
+        if (item.vector.w > 2.5) {
+            // A panel shines from its nearest point, and only out of its front.
+            let halfX = item.spotDirection.xyz;
+            let halfY = item.spotParams.xyz;
+            let lenX = max(length(halfX), 0.0001);
+            let lenY = max(length(halfY), 0.0001);
+            let alongX = halfX / lenX;
+            let alongY = halfY / lenY;
+            let fromMiddle = worldPos - item.vector.xyz;
+            let nearest = item.vector.xyz
+                + alongX * clamp(dot(fromMiddle, alongX), -lenX, lenX)
+                + alongY * clamp(dot(fromMiddle, alongY), -lenY, lenY);
+            toLight = nearest - worldPos;
+            let front = normalize(cross(alongY, alongX));
+            facingPanel = max(dot(-normalize(toLight), front), 0.0);
+        }
         let dist = length(toLight);
         dir = toLight / max(dist, 0.0001);
-        attenuation = clamp(1.0 - dist / max(item.color.a, 0.0001), 0.0, 1.0);
+        attenuation = clamp(1.0 - dist / max(item.color.a, 0.0001), 0.0, 1.0) * facingPanel;
 
-        if (item.vector.w > 1.5) {
+        if (item.vector.w > 1.5 && item.vector.w < 2.5) {
             // A torch also narrows to its cone, softly at the rim.
             let cosAngle = dot(-dir, normalize(item.spotDirection.xyz));
             attenuation = attenuation * smoothstep(item.spotDirection.w, item.spotParams.x, cosAngle);

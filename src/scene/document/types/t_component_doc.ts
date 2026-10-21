@@ -623,7 +623,7 @@ export type TFogComponent = {
 export type TLightComponent = {
     type: 'light';
     id: string;
-    kind: 'directional' | 'point' | 'spot' | 'ambient';
+    kind: 'directional' | 'point' | 'spot' | 'rect' | 'ambient';
     color: TColor;
     intensity: number;
     /**
@@ -635,9 +635,14 @@ export type TLightComponent = {
      */
     ambient?: number;
     /**
-     * How far it reaches. Point and spot only.
+     * How far it reaches. Point, spot and rect only.
      */
     range?: number;
+    /**
+     * How big the panel is. Rect only.
+     */
+    width?: number;
+    height?: number;
     /**
      * How wide the cone is, and how soft its edge. Spot only.
      */
