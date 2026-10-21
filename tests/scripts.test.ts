@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, spyOn } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { parseSceneDoc, sceneFromDoc, serializeScene } from '../src/scene/document';
-import { provide, useApi } from '../src/hooks/script/use_api';
+import { useScriptApi } from '../src/hooks/script/use_script_api';
 import { registerScript, clearScripts, listScripts, getScriptFields, getScriptRequires, defaultScriptProps } from '../src/scripts';
 import { registerScene } from '../src/scene/register_scene';
 import { runHookUpdates } from '../src/game/loop/runHookUpdates';
@@ -240,18 +240,16 @@ describe("a scene built to be shown rather than played", () => {
 });
 
 describe('behaviours on one object talking to each other', () => {
-    it('reaches a provider listed after the consumer', () => {
+    it('reaches the api of a behaviour listed after it', () => {
         const seen: (string | null)[] = [];
 
         registerScript('toggle', () => {
             // Asked for here, used later: the order of the two attachments must not matter.
-            const spin = useApi<{ name(): string }>('spin');
+            const spin = useScriptApi<{ name(): string }>('spin');
             useUpdate(() => { seen.push(spin()?.name() ?? null); });
         }, { requires: ['spin'] });
 
-        registerScript('spin', () => {
-            provide('spin', { name: () => 'the spinner' });
-        });
+        registerScript('spin', () => ({ name: () => 'the spinner' }));
 
         const { store } = createTestGame();
         const root = startTestScene(store, 'Level', () => {
@@ -265,28 +263,31 @@ describe('behaviours on one object talking to each other', () => {
         expect(seen).toEqual(['the spinner']);
     });
 
-    it('answers nothing when nobody published that key', () => {
+    it('answers nothing for a behaviour not on the object, or one that returned nothing', () => {
         const seen: unknown[] = [];
+        registerScript('quiet', () => { /* returns nothing */ });
         registerScript('lonely', () => {
-            const missing = useApi('nobody');
-            useUpdate(() => { seen.push(missing()); });
+            const missing = useScriptApi('nobody');
+            const quiet = useScriptApi('quiet');
+            useUpdate(() => { seen.push(missing(), quiet()); });
         });
 
         const { store } = createTestGame();
         const root = startTestScene(store, 'Level', () => {
+            useScript('quiet');
             useScript('lonely');
             return createScene();
         });
 
         runHookUpdates(root, 0.016);
-        expect(seen).toEqual([null]);
+        expect(seen).toEqual([null, null]);
     });
 
     it('is the object, not the scene: a child does not see its parent', () => {
         const seen: unknown[] = [];
-        registerScript('publish', () => { provide('thing', 1); });
+        registerScript('publish', () => 1);
         registerScript('read', () => {
-            const thing = useApi('thing');
+            const thing = useScriptApi('publish');
             useUpdate(() => { seen.push(thing()); });
         });
 
@@ -297,7 +298,7 @@ describe('behaviours on one object talking to each other', () => {
             return createScene();
         });
 
-        // A second object of its own, built under the scene, asking for the same key.
+        // A second object of its own, built under the scene, asking for the same behaviour.
         const { store: other } = createTestGame();
         const otherRoot = startTestScene(other, 'Other', () => {
             useScript('read');
@@ -315,12 +316,8 @@ describe('outside a scene body', () => {
         expect(() => useScript('anything')).toThrow('useScript');
     });
 
-    it('provide throws', () => {
-        expect(() => provide('key', 1)).toThrow('provide');
-    });
-
-    it('useApi throws', () => {
-        expect(() => useApi('key')).toThrow('useApi');
+    it('useScriptApi throws', () => {
+        expect(() => useScriptApi('key')).toThrow('useScriptApi');
     });
 });
 

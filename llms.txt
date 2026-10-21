@@ -251,7 +251,7 @@ A game is small pieces made with `useSpawn`, and each way they talk has one job:
 | say something happened, for anyone to hear (`gameOver`) | `createGameSignal`, `useSignal` |
 | tell whoever placed you (an enemy dead, a button pressed) | a callback in your props: `useSpawn(Enemy)({ onDied })`. From a pack or a behaviour, which take only data: `useReport('pressed')` sends it up, `onReport(copy, 'pressed', h)` or a pack's `on` hears it |
 | tell a piece you made what to do (`hurt`, `open`) | the `api` it returns: `useSpawn(Bat)({ x }).api.hurt(1)` |
-| let two behaviours on the same box talk | `provide` and `useApi` |
+| let two behaviours on the same box talk | return an api from one, `useScriptApi(name)` in the other |
 | find everything of a kind (every coin left) | a tag: `useTag('coin').all()` |
 | reach something you did not make (a box of a saved scene) | `findObject(sceneOf(self), 'Score')` |
 

@@ -82,24 +82,19 @@ export type TBox = {
      */
     scripts: TScriptAttachment[];
     /**
-     * What the behaviours on this object published for each other, by key. Empty on almost every
-     * object. Written by `provide`, read by `useApi`.
+     * What each behaviour on this object returned, by its name: its api, read by `useScriptApi`.
+     * Empty on almost every object.
      *
-     * **Runtime only, and never written to a file**: these are functions. It does not need saving
-     * either, because the scripts are run again when the scene is opened and publish again as they
-     * go.
-     *
-     * This is the seam that lets behaviours written apart drive one another. Two on one object
-     * already share the object, which covers reading each other's *effects*, a placement or a
-     * colour. What it does not cover is calling into one another, and this does.
+     * **Runtime only, and never written to a file**: these are functions, and the scripts are run
+     * again when the scene is opened and return them again.
      */
-    provided: Map<string, unknown>;
+    scriptApis: Map<string, unknown>;
     /**
      * What its component gave back when `useSpawn` made it: usually a few functions for whoever
      * made it to call, such as `hurt`. `undefined` for anything else, and for a component that
      * gives back nothing.
      *
-     * **Runtime only, and never written to a file**, like `provided`, and for the same reason: the
+     * **Runtime only, and never written to a file**, like `scriptApis`, and for the same reason: the
      * component is run again when the scene is opened and gives it back again.
      */
     api: unknown;

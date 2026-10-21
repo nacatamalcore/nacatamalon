@@ -83,5 +83,8 @@ export const useScript = (ref: string, props?: TScriptProps, options: TUseScript
         return;
     }
 
-    fn(box, resolved);
+    const api = fn(box, resolved);
+    if (api !== undefined) {
+        box.scriptApis.set(ref, api);
+    }
 };

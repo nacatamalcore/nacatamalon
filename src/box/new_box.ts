@@ -31,7 +31,7 @@ export const newBox = (name: string): TBox => ({
     hitboxes: [],
     collisionCallbacks: [],
     scripts: [],
-    provided: new Map(),
+    scriptApis: new Map(),
     api: undefined,
     paused: false,
     held: false,

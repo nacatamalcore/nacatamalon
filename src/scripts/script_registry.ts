@@ -46,7 +46,8 @@ const reportedMissing = new Set<string>();
  * the ordinary thing would be the worse door.
  *
  * @param name What the behaviour is called. A saved scene stores this word.
- * @param fn The behaviour itself.
+ * @param fn The behaviour itself. Whatever it returns is its api, which the other behaviours on the
+ *   object reach with `useScriptApi(name)`.
  * @param fields Its settings, or the full options object.
  *
  * @example
@@ -73,7 +74,7 @@ const reportedMissing = new Set<string>();
  */
 export const registerScript = <TProps extends TScriptProps = TScriptProps>(
     name: string,
-    fn: (self: TGameObject, props: TProps) => void,
+    fn: (self: TGameObject, props: TProps) => unknown,
     fields: TScriptField[] | TScriptOptions = [],
 ): void => {
     const options = Array.isArray(fields) ? { fields } : fields;

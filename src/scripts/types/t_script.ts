@@ -27,11 +27,13 @@ export type TScriptProps = Record<string, string | number | boolean>;
  * again every time the scene is opened, so anything it built would be built twice. That line is
  * the same one the whole saved format rests on.
  *
+ * Whatever it returns is its api, for the other behaviours on the object: `useScriptApi(name)`.
+ *
  * @category Scripts
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TScriptFn = (self: TGameObject, props: TScriptProps) => void;
+export type TScriptFn = (self: TGameObject, props: TScriptProps) => unknown;
 
 /**
  * One setting a script declares about itself.

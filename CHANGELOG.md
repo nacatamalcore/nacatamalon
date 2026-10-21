@@ -82,6 +82,11 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- A behaviour shares with the others on its object the way a component does with `useSpawn`: what
+  its function returns is its api, and `useScriptApi('spin')` reaches it by the name it was
+  registered under, the same word as in `requires`. `provide` and `useApi` are gone: `provide('spin',
+  { stop })` is now `return { stop }`, and `useApi('spin')` is `useScriptApi('spin')`. `api` means one
+  thing, what something returns.
 - In `project.json`'s screen-effect chain, an effect of the game's own is named by `effect`, as code
   names it (`usePostProcess({ effect })`, a material's `effect`): `{ "effect": "shaders/crt.shader" }`
   rather than `"shader"`. A project written before is read the same and saved with the new name.
