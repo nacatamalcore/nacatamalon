@@ -128,7 +128,8 @@ describe('parseProject and the editor', () => {
     it('reads the full-screen effect chain, and drops an entry that names nothing', () => {
         const settings = parseProject({ post: [{ shader: 'shaders/crt.wgsl', uniforms: { curve: 0.3 } }, { uniforms: {} }] });
 
-        expect(settings.post).toEqual([{ shader: 'shaders/crt.wgsl', uniforms: { curve: 0.3 } }]);
+        // Written with the field's old name, read under its new one.
+        expect(settings.post).toEqual([{ effect: 'shaders/crt.wgsl', uniforms: { curve: 0.3 } }]);
         expect(gameOptionsFromProject(settings).post).toEqual(settings.post);
     });
 

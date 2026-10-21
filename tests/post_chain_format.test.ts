@@ -17,16 +17,23 @@ describe('reading a chain out of a file', () => {
         expect(chain.map((entry) => entry.builtin)).toEqual(['lutGrade', 'paletteMatch', 'dither']);
     });
 
+    it('reads the file of an entry written before the field was called effect', () => {
+        expect(normalizePostChain([{ shader: 'shaders/crt.wgsl', uniforms: { curve: 0.3 } }]))
+            .toEqual([{ effect: 'shaders/crt.wgsl', uniforms: { curve: 0.3 } }]);
+        // And the new name wins where both are written.
+        expect(normalizePostChain([{ shader: 'old.wgsl', effect: 'new.wgsl' }])[0]!.effect).toBe('new.wgsl');
+    });
+
     it('drops an entry naming neither a built-in nor a file', () => {
         expect(normalizePostChain([{ uniforms: { levels: 4 } }, { builtin: 'dither' }]))
-            .toEqual([{ shader: '', builtin: 'dither' }]);
+            .toEqual([{ effect: '', builtin: 'dither' }]);
     });
 
     it('lets a built-in win over a file, because a built-in cannot dangle', () => {
-        const [entry] = normalizePostChain([{ builtin: 'dither', shader: 'shaders/crt.wgsl' }]);
+        const [entry] = normalizePostChain([{ builtin: 'dither', effect: 'shaders/crt.wgsl' }]);
 
         expect(entry!.builtin).toBe('dither');
-        expect(entry!.shader).toBe('');
+        expect(entry!.effect).toBe('');
     });
 
     it('lets a palette win over a table, because an effect reads one data texture', () => {
@@ -124,7 +131,7 @@ describe('the chain a game is created with', () => {
     it('survives the tidying of the options, so `createGame({ post })` installs it', () => {
         // The options are copied field by field with their defaults, and this one was once left
         // out: every game created with a chain in code drew without it, and said nothing.
-        const chain = [{ shader: 'shaders/crt.wgsl', uniforms: { scanline: 0.1 } }];
+        const chain = [{ effect: 'shaders/crt.wgsl', uniforms: { scanline: 0.1 } }];
         expect(cleanGameOptions({ width: 256, height: 240, post: chain }).post).toEqual(chain);
     });
 });

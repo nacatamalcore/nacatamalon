@@ -7,7 +7,9 @@ import type { TUniformValues } from '../../materials/types/t_uniforms';
  *
  * - `builtin` is a key the engine already knows. There is no file to fetch and no path that can
  *   point at nothing, so a project that only reduces its colours needs no `shaders/` folder at all.
- * - `shader` is a path to a `.wgsl`, exactly as a material names one.
+ * - `effect` is a path to a `.shader` (or `.wgsl`) file, the code of an effect of the game's own: the
+ *   same word a material and `usePostProcess` use for it. A project written before says `shader`,
+ *   and is read the same.
  *
  * **The arithmetic the engine knows is a key; the look you invented is a file.**
  *
@@ -19,9 +21,9 @@ export type TPostChainEntry = {
     /**
      * Where the effect is written. Empty when `builtin` names one instead.
      */
-    shader: string;
+    effect: string;
     /**
-     * A key from `POST_BUILTINS`, the engine's own effects. Wins over `shader` if somebody wrote both.
+     * A key from `POST_BUILTINS`, the engine's own effects. Wins over `effect` if somebody wrote both.
      */
     builtin?: string;
     /**

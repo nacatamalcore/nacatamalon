@@ -73,6 +73,11 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- In `project.json`'s screen-effect chain, an effect of the game's own is named by `effect`, as code
+  names it (`usePostProcess({ effect })`, a material's `effect`): `{ "effect": "shaders/crt.shader" }`
+  rather than `"shader"`. A project written before is read the same and saved with the new name.
+  `shader` stays what it is elsewhere, the family the code is for (`shader: 'mesh3d'`, `// @shader
+  mesh3d`).
 - A screen effect is made with what a person writes, as `crt`'s `maskType` already was: points as `{ x,
   y }` (`distort`, `godrays`, `shockwave` and `zoomBlur`'s `center`, `motionBlur`'s `velocity`,
   `rgbSplit`'s channels), modes by name (`halftone({ mode: 'lines' })`, `wave({ axis: 'columns' })`)

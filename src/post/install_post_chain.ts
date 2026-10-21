@@ -88,9 +88,9 @@ export const installPostChain = (store: TRuntimeStore, chain: TPostChain): void 
                 enabled: entry.enabled ?? true,
             }, null, 'project');
         } else {
-            const shader = shaderFor(store, entry.shader);
+            const shader = shaderFor(store, entry.effect);
             effect = newPostEffect({
-                name: entry.name ?? entry.shader,
+                name: entry.name ?? entry.effect,
                 uniforms: asked,
                 enabled: entry.enabled ?? true,
             }, shader, 'project');

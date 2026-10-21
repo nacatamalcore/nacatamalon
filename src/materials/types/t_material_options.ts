@@ -71,6 +71,11 @@ export type TMaterialShaderOptions = {
  * @author Francisco Pereira Alvarado
  */
 export type TMeshMaterialOptions = TMaterialShaderOptions & {
+    /**
+     * Which of the engine's shaders it is built on, its family: `'mesh3d'`, the one that lights
+     * models. Not your code: that is `effect` (or `fragment`), and its file says the same family on
+     * its `// @shader mesh3d` line.
+     */
     shader: 'mesh3d';
     /**
      * A picture for the surface, from `useLoadTexture`.
@@ -174,7 +179,9 @@ export type TMeshMaterialOptions = TMaterialShaderOptions & {
  */
 export type TSpriteMaterialOptions = TMaterialShaderOptions & {
     /**
-     * Left out, a material is for sprites: that is the commoner of the two by a long way.
+     * Which of the engine's shaders it is built on, its family: `'sprite2d'`, the one that draws
+     * sprites and texts. Left out, it is this one, the commoner of the two by a long way. Not your
+     * code: that is `effect` (or `fragment`).
      */
     shader?: 'sprite2d';
 };

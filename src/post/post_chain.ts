@@ -158,12 +158,13 @@ export const normalizePostChain = (value: unknown): TPostChain => {
         const builtin = named === undefined ? undefined : asCurrentKey(named);
         // A built-in is arithmetic the engine already holds, so it wins: there is nothing to fetch
         // and nothing that can point at a file which is not there.
-        const shader = builtin === undefined ? asPath(read.shader) : undefined;
-        if (builtin === undefined && shader === undefined) {
+        // `shader` is what a project said before the field took the name code gives it.
+        const effect = builtin === undefined ? asPath(read.effect) ?? asPath(read.shader) : undefined;
+        if (builtin === undefined && effect === undefined) {
             continue;
         }
 
-        const entry: TPostChainEntry = { shader: shader ?? '' };
+        const entry: TPostChainEntry = { effect: effect ?? '' };
         if (builtin !== undefined) {
             entry.builtin = builtin;
         }
