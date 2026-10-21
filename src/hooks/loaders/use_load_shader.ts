@@ -1,3 +1,4 @@
+import { warnIfKeyTaken } from '../../loaders/key_taken';
 import { rootOf } from '../../box';
 import { getActiveBox, getActiveGame } from '../../store';
 import { trackLoad } from '../../loaders';
@@ -73,6 +74,7 @@ export const useLoadShader = ({ src, glslSrc, key }: TUseLoadShaderOptions): TSh
     const { shaders } = store.get('assets');
 
     let shader = shaders.get(cacheKey);
+    if (shader !== undefined) warnIfKeyTaken('useLoadShader', cacheKey, shader.src, src);
     if (shader === undefined) {
         shader = newShader(src, cacheKey, glslSrc ?? null);
         shaders.set(cacheKey, shader);

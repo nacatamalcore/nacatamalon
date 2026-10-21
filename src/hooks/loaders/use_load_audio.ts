@@ -1,3 +1,4 @@
+import { warnIfKeyTaken } from '../../loaders/key_taken';
 import { rootOf } from '../../box';
 import { getActiveBox, getActiveGame } from '../../store';
 import { getAudioManager } from '../../audio';
@@ -64,6 +65,7 @@ export const useLoadAudio = ({ src, key }: TUseLoadAudioOptions): TAudioClip => 
     const { sounds } = store.get('assets');
 
     let clip = sounds.get(cacheKey);
+    if (clip !== undefined) warnIfKeyTaken('useLoadAudio', cacheKey, clip.src, src);
     if (clip === undefined) {
         clip = newAudio(src, cacheKey);
         sounds.set(cacheKey, clip);

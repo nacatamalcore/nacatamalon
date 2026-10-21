@@ -1,3 +1,4 @@
+import { warnIfKeyTaken } from '../../loaders/key_taken';
 import { getActiveBox, getActiveGame } from '../../store';
 import { loadPalette, newPalette } from '../../loaders/palette';
 import { rootOf } from '../../box';
@@ -53,6 +54,7 @@ export const useLoadPalette = ({ src, key }: TUseLoadPaletteOptions): TPalette =
     const { palettes } = store.get('assets');
 
     let palette = palettes.get(cacheKey);
+    if (palette !== undefined) warnIfKeyTaken('useLoadPalette', cacheKey, palette.src, src);
     if (palette === undefined) {
         palette = newPalette(src, cacheKey);
         palettes.set(cacheKey, palette);

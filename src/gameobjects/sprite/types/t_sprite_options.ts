@@ -23,9 +23,10 @@ export type TSpriteOptions = T2dOptions & {
      */
     height?: number;
     /**
-     * A texture from `useLoadTexture`. Wins over `key`.
+     * Its picture: a texture from `useLoadTexture`, or the key it was loaded under (`'hero'`), the way a
+     * text names its font. Wins over `key`.
      */
-    texture?: TTexture;
+    texture?: TTexture | string;
     /**
      * The key a texture was loaded under, for a sprite built where the record is not at hand.
      */

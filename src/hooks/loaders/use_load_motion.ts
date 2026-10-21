@@ -1,3 +1,4 @@
+import { warnIfKeyTaken } from '../../loaders/key_taken';
 import { getActiveBox, getActiveGame } from '../../store';
 import { loadMotion, newMotionFile } from '../../loaders/motion';
 import { rootOf } from '../../box';
@@ -53,6 +54,7 @@ export const useLoadMotion = ({ src, key }: TUseLoadMotionOptions): TMotionFile 
     const { motions } = store.get('assets');
 
     let file = motions.get(cacheKey);
+    if (file !== undefined) warnIfKeyTaken('useLoadMotion', cacheKey, file.src, src);
     if (file === undefined) {
         file = newMotionFile(src, cacheKey);
         motions.set(cacheKey, file);

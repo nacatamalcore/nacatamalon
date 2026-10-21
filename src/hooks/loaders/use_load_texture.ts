@@ -1,3 +1,4 @@
+import { warnIfKeyTaken } from '../../loaders/key_taken';
 import { rootOf } from '../../box';
 import { getActiveBox, getActiveGame } from '../../store';
 import { loadTexture, newTexture, trackLoad } from '../../loaders';
@@ -17,7 +18,9 @@ export type TUseLoadTextureOptions = {
      */
     src: string;
     /**
-     * What to cache it under, so another scene can reach it with `createSprite({ key })`. Defaults to `src`.
+     * The name the game finds it by, here or in another scene: `createSprite({ texture: 'hero' })`.
+     * Defaults to `src`. One key names one file: another file asked for under a key already taken is
+     * not loaded, the first is handed back, and it is said.
      */
     key?: string;
 };
@@ -38,7 +41,7 @@ export type TUseLoadTextureOptions = {
  * ```
  *
  * @param options - Where the image is, and the name to keep it under (`key`), which a later
- * `createSprite({ key })` can find it by.
+ * `createSprite({ texture: 'hero' })` can find it by.
  * @returns The texture. Its `status` says whether it has arrived.
  *
  * @category Assets & loading
@@ -56,6 +59,7 @@ export const useLoadTexture = ({ src, key }: TUseLoadTextureOptions): TTexture =
     const { textures } = store.get('assets');
 
     let texture = textures.get(cacheKey);
+    if (texture !== undefined) warnIfKeyTaken('useLoadTexture', cacheKey, texture.src, src);
     if (texture === undefined) {
         texture = newTexture(src, cacheKey);
         textures.set(cacheKey, texture);

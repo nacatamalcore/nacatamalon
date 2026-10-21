@@ -1,3 +1,4 @@
+import { warnIfKeyTaken } from '../../loaders/key_taken';
 import { rootOf } from '../../box';
 import { loadBitmapFont, newBitmapFont, trackLoad } from '../../loaders';
 import { getActiveBox, getActiveGame } from '../../store';
@@ -65,6 +66,7 @@ export const useLoadBitmapFont = ({ json, atlas, key }: TUseLoadBitmapFontOption
     const { bitmapFonts } = store.get('assets');
 
     let font = bitmapFonts.get(cacheKey);
+    if (font !== undefined) warnIfKeyTaken('useLoadBitmapFont', cacheKey, font.src, json);
     if (font === undefined) {
         font = newBitmapFont(json, atlas, cacheKey);
         bitmapFonts.set(cacheKey, font);

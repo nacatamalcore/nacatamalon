@@ -1,3 +1,4 @@
+import { warnIfKeyTaken } from '../../loaders/key_taken';
 import { rootOf } from '../../box';
 import { loadGltf, newGltfModel, trackLoad } from '../../loaders';
 import { getActiveBox, getActiveGame } from '../../store';
@@ -92,6 +93,7 @@ export const useLoadGltf = ({ src, node, shading = 'auto', textures = true, key 
     const { gltf } = store.get('assets');
 
     let model = gltf.get(cacheKey);
+    if (model !== undefined) warnIfKeyTaken('useLoadGltf', cacheKey, model.src, src);
     if (model === undefined) {
         model = newGltfModel(src, cacheKey);
         gltf.set(cacheKey, model);

@@ -1,3 +1,4 @@
+import { warnIfKeyTaken } from '../../loaders/key_taken';
 import { rootOf } from '../../box';
 import { trackLoad } from '../../loaders/track_load';
 import { loadPack, newPack } from '../../loaders/pack';
@@ -64,6 +65,7 @@ export const useLoadPack = ({ src, key }: TUseLoadPackOptions): TLoadedPack => {
     const { packs } = store.get('assets');
 
     let pack = packs.get(cacheKey);
+    if (pack !== undefined) warnIfKeyTaken('useLoadPack', cacheKey, pack.src, folder);
     if (pack === undefined) {
         pack = newPack(folder, cacheKey);
         packs.set(cacheKey, pack);

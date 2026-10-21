@@ -1,3 +1,4 @@
+import { warnIfKeyTaken } from '../../loaders/key_taken';
 import { getActiveBox, getActiveGame } from '../../store';
 import { loadPixels, newLoadedPixels } from '../../loaders/pixels';
 import { rootOf } from '../../box';
@@ -65,6 +66,7 @@ export const useLoadPixels = ({ src, key }: TUseLoadPixelsOptions): TLoadedPixel
     const cache = store.get('assets').pixels;
 
     let record = cache.get(cacheKey);
+    if (record !== undefined) warnIfKeyTaken('useLoadPixels', cacheKey, record.src, src);
     if (record === undefined) {
         record = newLoadedPixels(src, cacheKey);
         cache.set(cacheKey, record);

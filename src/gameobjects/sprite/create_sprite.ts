@@ -1,3 +1,4 @@
+import { textureByKey } from '../../loaders/texture/texture_by_key';
 import { atlasFrame } from "../../atlas";
 import { showFrame } from "../../atlas/set_sprite_frame";
 import { whenLoaded } from "../../loaders";
@@ -18,23 +19,12 @@ import { listen } from "../../events/listen";
  */
 const resolveTexture = (options: TSpriteOptions): TTexture | null => {
     if (options.texture !== undefined) {
-        return options.texture;
+        return typeof options.texture === 'string' ? textureByKey('createSprite', options.texture) : options.texture;
     }
     if (options.atlas !== undefined) {
         return options.atlas.texture;
     }
-    if (options.key === undefined) {
-        return null;
-    }
-
-    const found = getActiveGame()?.get('assets').textures.get(options.key);
-    if (found === undefined) {
-        throw new Error(
-            `[NacatamalOn] createSprite: no texture loaded under key '${options.key}'. ` +
-            `Did you forget useLoadTexture({ src, key: '${options.key}' })?`,
-        );
-    }
-    return found;
+    return options.key === undefined ? null : textureByKey('createSprite', options.key);
 };
 
 /**

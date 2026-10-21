@@ -1,3 +1,4 @@
+import { warnIfKeyTaken } from '../../loaders/key_taken';
 import { rootOf } from '../../box';
 import { loadAtlas, newAtlas, trackLoad } from '../../loaders';
 import type { TLoadedAtlas } from '../../loaders';
@@ -66,6 +67,7 @@ export const useLoadAtlas = ({ src, key }: TUseLoadAtlasOptions): TLoadedAtlas =
     const { atlases } = store.get('assets');
 
     let atlas = atlases.get(cacheKey);
+    if (atlas !== undefined) warnIfKeyTaken('useLoadAtlas', cacheKey, atlas.src, src);
     if (atlas === undefined) {
         atlas = newAtlas(src, cacheKey);
         atlases.set(cacheKey, atlas);

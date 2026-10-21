@@ -1,3 +1,4 @@
+import { warnIfKeyTaken } from '../../loaders/key_taken';
 import { getActiveBox, getActiveGame } from '../../store';
 import { loadLut, newLut } from '../../loaders/lut';
 import { rootOf } from '../../box';
@@ -56,6 +57,7 @@ export const useLoadLut = ({ src, key }: TUseLoadLutOptions): TLut => {
     const { luts } = store.get('assets');
 
     let lut = luts.get(cacheKey);
+    if (lut !== undefined) warnIfKeyTaken('useLoadLut', cacheKey, lut.src, src);
     if (lut === undefined) {
         lut = newLut(src, cacheKey);
         luts.set(cacheKey, lut);

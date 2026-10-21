@@ -1,3 +1,4 @@
+import { warnIfKeyTaken } from '../../loaders/key_taken';
 import { getActiveBox, getActiveGame } from '../../store';
 import { loadSong, newSongFile } from '../../loaders/song';
 import { rootOf } from '../../box';
@@ -53,6 +54,7 @@ export const useLoadSong = ({ src, key }: TUseLoadSongOptions): TSongFile => {
     const { songs } = store.get('assets');
 
     let file = songs.get(cacheKey);
+    if (file !== undefined) warnIfKeyTaken('useLoadSong', cacheKey, file.src, src);
     if (file === undefined) {
         file = newSongFile(src, cacheKey);
         songs.set(cacheKey, file);

@@ -1,3 +1,4 @@
+import { warnIfKeyTaken } from '../../loaders/key_taken';
 import { getActiveBox, getActiveGame } from '../../store';
 import { loadParticles, newParticlesFile } from '../../loaders/particles';
 import { rootOf } from '../../box';
@@ -56,6 +57,7 @@ export const useLoadParticles = ({ src, key }: TUseLoadParticlesOptions): TParti
     const { particles } = store.get('assets');
 
     let file = particles.get(cacheKey);
+    if (file !== undefined) warnIfKeyTaken('useLoadParticles', cacheKey, file.src, src);
     if (file === undefined) {
         file = newParticlesFile(src, cacheKey);
         particles.set(cacheKey, file);

@@ -12,9 +12,10 @@ import type { TNineSliceBorders, TNineSliceMode } from './t_nine_slice';
  */
 export type TNineSliceOptions = T2dOptions & {
     /**
-     * A texture from `useLoadTexture`. Wins over `key` and `atlas`.
+     * Its picture: a texture from `useLoadTexture`, or the key it was loaded under (`'panel'`). Wins
+     * over `key` and `atlas`.
      */
-    texture?: TTexture;
+    texture?: TTexture | string;
     /**
      * The key a texture was loaded under.
      */

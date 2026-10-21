@@ -1,3 +1,4 @@
+import { warnIfKeyTaken } from '../../loaders/key_taken';
 import { rootOf } from '../../box';
 import { DEFAULT_FONT_ATLAS_SIZE, loadFont, newFont, trackLoad } from '../../loaders';
 import { getActiveBox, getActiveGame } from '../../store';
@@ -79,6 +80,7 @@ export const useLoadFont = ({ src, key, size, chars }: TUseLoadFontOptions): TFo
     const { fonts } = store.get('assets');
 
     let font = fonts.get(cacheKey);
+    if (font !== undefined) warnIfKeyTaken('useLoadFont', cacheKey, font.src, src);
     if (font === undefined) {
         const kept = Math.round(Math.min(128, Math.max(16, size ?? DEFAULT_FONT_ATLAS_SIZE)));
         font = newFont(src, cacheKey, kept);

@@ -7,6 +7,8 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- `createSprite({ texture: 'hero' })` and `createNineSlice({ texture: 'panel' })` name their picture by
+  the key it was loaded under, the way a text names its font; `key` stays.
 - `sizeOf(thing)` and `boundsOf(thing)`: how big a sprite, a text or a panel is, and the rectangle it
   covers. A sprite given no size measures its picture, and a text its letters, the moment it is made;
   `boundsOf` takes the anchor, the pivot and the scale into account, in the place its `transform` is
@@ -136,6 +138,9 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- A key that already names a file, asked for with another (`useLoadTexture({ src: '/b.png', key:
+  'hero' })` after `/a.png`), handed back the first without a word, in all fourteen `useLoad…`. It is
+  said now, once.
 - A maker from `useSpawn` called once its scene has stopped, from a `setTimeout` or a listener
   that outlived it, makes nothing and says so once, rather than building into a scene nobody draws,
   playing its sounds and starting its timers for no one. It gives back something already destroyed,

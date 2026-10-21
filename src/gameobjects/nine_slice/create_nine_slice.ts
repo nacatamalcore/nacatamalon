@@ -3,6 +3,7 @@ import { trackDrawableOwner } from '../../box';
 import { getActiveBox, getActiveGame } from '../../store';
 import { createRecord } from '../create_record';
 import { listen } from '../../events/listen';
+import { textureByKey } from '../../loaders/texture/texture_by_key';
 import type { TTexture } from '../../loaders';
 import type { TNineSlice } from './types/t_nine_slice';
 import type { TNineSliceOptions } from './types/t_nine_slice_options';
@@ -14,23 +15,15 @@ import type { TNineSliceOptions } from './types/t_nine_slice_options';
  */
 const resolveTexture = (options: TNineSliceOptions): TTexture => {
     if (options.texture !== undefined) {
-        return options.texture;
+        return typeof options.texture === 'string' ? textureByKey('createNineSlice', options.texture) : options.texture;
     }
     if (options.atlas !== undefined) {
         return options.atlas.texture;
     }
     if (options.key === undefined) {
-        throw new Error('[NacatamalOn] createNineSlice: it needs a picture to cut. Give it a texture, a key or an atlas.');
+        throw new Error('[NacatamalOn] createNineSlice: it needs a picture to cut. Give it a texture (or the key it was loaded under) or an atlas.');
     }
-
-    const found = getActiveGame()?.get('assets').textures.get(options.key);
-    if (found === undefined) {
-        throw new Error(
-            `[NacatamalOn] createNineSlice: no texture loaded under key '${options.key}'. ` +
-            `Did you forget useLoadTexture({ src, key: '${options.key}' })?`,
-        );
-    }
-    return found;
+    return textureByKey('createNineSlice', options.key);
 };
 
 /**

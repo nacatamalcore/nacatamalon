@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'bun:test';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
+import { createNineSlice } from '../src/gameobjects/nine_slice/create_nine_slice';
 import { createScene } from '../src/scene/create_scene';
 import { ownerOfDrawable } from '../src/box/drawable_owner';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import type { TSprite } from '../src/gameobjects/sprite/types/t_sprite';
+import type { TNineSlice } from '../src/gameobjects/nine_slice/types/t_nine_slice';
 import type { TTexture } from '../src/loaders';
 
 const tint = { r: 1, g: 1, b: 1, a: 1 };
@@ -93,6 +95,26 @@ describe('createSprite', () => {
         });
 
         expect(sprite.texture).toBe(given);
+    });
+
+    it('finds its picture by the key named as its texture, the way a text names its font', () => {
+        const { store } = createTestGame();
+        const texture = readyTexture('hero');
+        store.get('assets').textures.set('hero', texture);
+        let sprite!: TSprite;
+        let panel!: TNineSlice;
+        startTestScene(store, 'Level', () => {
+            sprite = createSprite({ texture: 'hero' });
+            panel = createNineSlice({ texture: 'hero', slice: 2, width: 20, height: 10 });
+            return createScene();
+        });
+        expect(sprite.texture).toBe(texture);
+        expect(panel.texture).toBe(texture);
+        // A key nobody loaded is said, by whoever asked.
+        expect(() => startTestScene(createTestGame().store, 'Other', () => {
+            createNineSlice({ texture: 'nobody', slice: 2, width: 20, height: 10 });
+            return createScene();
+        })).toThrow(/createNineSlice: no texture loaded under key 'nobody'/);
     });
 
     it('throws on a key nobody loaded, rather than drawing a white square', () => {
