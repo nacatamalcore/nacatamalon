@@ -194,14 +194,15 @@ describe('createNineSlice', () => {
         expect(drawn(store)[0].transform).toMatchObject({ x: 50, y: 60 });
     });
 
-    it('goes away when destroyed, and is left out of a saved scene', () => {
+    it('is kept in a saved scene, and goes away from it and from the screen when destroyed', () => {
         const { store, panel } = onePanel();
         const scene = store.get('world').scenes[0];
 
-        expect(serializeScene(scene).root.components ?? []).toEqual([]);
+        expect((serializeScene(scene).root.components ?? []).map((c) => c.type)).toEqual(['nine-slice']);
 
         destroy(panel);
         flushDestroyed(store);
         expect(drawn(store)).toHaveLength(0);
+        expect(serializeScene(scene).root.components ?? []).toEqual([]);
     });
 });

@@ -7,6 +7,11 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- A panel (`createNineSlice`) is kept in scene documents, as a `nine-slice` component with its
+  picture or sheet, its size, its four borders and how it fills, so a level saved from a running game
+  keeps its buttons and dialogue boxes instead of leaving them out. One whose picture is missing is
+  said and left out, and the rest of the scene opens. The editor shows it as a Panel, and turns a
+  sprite into a panel and back.
 - `T3dOptions`, the 3D side of `T2dOptions`: what a shape (`createMesh`) and a placed model
   (`createModel`) share, written once, with `TMeshSurfaceOptions` inside it for how the surface is
   painted. `TMeshOptions` and `TModelOptions` are it plus what is their own. Like `T2dOptions`, it is

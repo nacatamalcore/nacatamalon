@@ -12,6 +12,7 @@ export type {
     TMeshMaterialDoc,
     TMaterialMapDoc,
     TSpriteComponent,
+    TNineSliceComponent,
     TSpriteAnimationDoc,
     TTextComponent,
     TMeshComponent,

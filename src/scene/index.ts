@@ -11,6 +11,6 @@ export type { TSceneFn } from './types/t_scene_fn';
 export { boxFromDoc, copyBox, parseSceneDoc, sceneFromDoc, serializeScene, SCENE_FORMAT, SCENE_VERSION } from './document';
 export type {
     TSceneDoc, TBoxNode, TDataEntry, TAssetEntry, TGeometrySource, TComponentDoc, TMaterialDoc, TMeshMaterialDoc, TMaterialMapDoc,
-    TSpriteComponent, TTextComponent, TMeshComponent, TTilemapComponent, TTilemapLayerOverride, TParticlesComponent, TParticles3dComponent, TParticleCollider2dComponent, TParticleCollider3dComponent, TSpriteTextureComponent, TMusicComponent, TSongComponent, TMotionComponent, TAudioListenerComponent, TCamera2dComponent,
+    TSpriteComponent, TNineSliceComponent, TTextComponent, TMeshComponent, TTilemapComponent, TTilemapLayerOverride, TParticlesComponent, TParticles3dComponent, TParticleCollider2dComponent, TParticleCollider3dComponent, TSpriteTextureComponent, TMusicComponent, TSongComponent, TMotionComponent, TAudioListenerComponent, TCamera2dComponent,
     TCamera3dComponent, TFogComponent, TLightComponent, TSpriteAnimationDoc,
 } from './document';

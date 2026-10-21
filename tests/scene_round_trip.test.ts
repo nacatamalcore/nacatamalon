@@ -2,6 +2,9 @@ import { afterEach, describe, expect, it, spyOn } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { createText } from '../src/gameobjects/text/create_text';
+import { createNineSlice } from '../src/gameobjects/nine_slice/create_nine_slice';
+import { useLoadTexture } from '../src/hooks/loaders/use_load_texture';
+import { useLoadAtlas } from '../src/hooks/loaders/use_load_atlas';
 import { createMesh } from '../src/gameobjects/mesh/create_mesh';
 import { parseSceneDoc, SCENE_FORMAT, sceneFromDoc, serializeScene } from '../src/scene/document';
 import { registerScene } from '../src/scene/register_scene';
@@ -643,5 +646,68 @@ describe('the whole loop', () => {
         // a scene opened by an older engine does not come back with somebody's work missing.
         const back = rebuilt(withMystery);
         expect(back.root.components).toContainEqual(mystery as unknown as TComponentDoc);
+    });
+});
+
+describe('a panel', () => {
+    // Its picture never arrives here (there is no network), and the loader says so: not what this is about.
+    const quietly = <T>(run: () => T): T => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        try { return run(); } finally { warn.mockRestore(); }
+    };
+
+    it('is written, read and built as it was, with its borders, its fill and how it lands', () => {
+        const doc = quietly(() => written(() => {
+            const picture = useLoadTexture({ src: '/ui/panel.png', key: 'panel' });
+            createNineSlice({
+                texture: picture, slice: { left: 4, top: 6, right: 4, bottom: 8 }, width: 120, height: 40, mode: 'tile',
+                tint, anchor: { x: 0, y: 0 }, blend: 'additive', parallax: { x: 0.5, y: 1 }, zIndex: 2, transform: at(16, 24),
+            });
+        }).doc);
+
+        expect(doc.root.components[0]).toMatchObject({
+            type: 'nine-slice', texture: 'panel', width: 120, height: 40, slice: { left: 4, top: 6, right: 4, bottom: 8 },
+            mode: 'tile', anchor: { x: 0, y: 0 }, blend: 'additive', parallax: { x: 0.5, y: 1 }, zIndex: 2, transform: { x: 16, y: 24 },
+        });
+        expect(doc.assets).toContainEqual({ type: 'texture', key: 'panel', src: '/ui/panel.png' });
+        expect(parseSceneDoc(doc, '/scenes/level.scene')).toEqual(doc);
+        expect(quietly(() => rebuilt(doc))).toEqual(doc);
+    });
+
+    it('names a cell of a sheet by the sheet and the frame', () => {
+        const doc = quietly(() => written(() => {
+            createNineSlice({ atlas: useLoadAtlas({ src: '/ui/frames.atlas', key: 'frames' }), frame: 2, slice: 3, width: 48, height: 24 });
+        }).doc);
+        expect(doc.root.components[0]).toMatchObject({ type: 'nine-slice', texture: null, atlas: 'frames', frame: 2 });
+        expect(doc.assets).toContainEqual({ type: 'atlas', key: 'frames', src: '/ui/frames.atlas' });
+        expect(parseSceneDoc(doc, '/scenes/level.scene')).toEqual(doc);
+    });
+
+    it('writes nothing for what is as it would be anyway', () => {
+        const doc = quietly(() => written(() => {
+            createNineSlice({ texture: useLoadTexture({ src: '/ui/panel.png' }), slice: 4, width: 32, height: 32 });
+        }).doc);
+        const panel = doc.root.components[0]!;
+        // One number for the borders is kept as the four, the way the panel keeps them.
+        expect(panel).toMatchObject({ slice: { left: 4, top: 4, right: 4, bottom: 4 } });
+        for (const left of ['mode', 'blend', 'parallax', 'visible', 'zIndex', 'anchor', 'transform']) expect(panel).not.toHaveProperty(left);
+    });
+
+    it('is left out when it has no picture to cut, and the rest of the scene still opens', () => {
+        const doc = parseSceneDoc({
+            format: SCENE_FORMAT, version: 1, name: 'menu',
+            root: { id: 'r', name: 'menu', transform: null, components: [
+                { type: 'nine-slice', id: 'p', texture: null, width: 40, height: 20, slice: 4, tint: { r: 1, g: 1, b: 1, a: 1 } },
+                { type: 'sprite', id: 's', texture: null, width: 8, height: 8, tint: { r: 1, g: 1, b: 1, a: 1 } },
+            ], children: [] },
+            assets: [],
+        }, '/scenes/menu.scene');
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        let again!: TSceneDoc;
+        try { again = rebuilt(doc); } finally {
+            expect(warn.mock.calls.some((call) => String(call[0]).includes('a panel has no picture to cut'))).toBe(true);
+            warn.mockRestore();
+        }
+        expect(again.root.components.map((c) => c.type)).toEqual(['sprite']);
     });
 });

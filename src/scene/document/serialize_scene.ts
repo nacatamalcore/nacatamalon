@@ -23,6 +23,7 @@ import type { TParticles } from '../../gameobjects/particles/types/t_particles';
 import type { TParticles3d } from '../../gameobjects/particles/types/t_particles_3d';
 import type { TSprite } from '../../gameobjects/sprite/types/t_sprite';
 import type { TLoadedAtlas } from '../../loaders';
+import type { TNineSlice } from '../../gameobjects/nine_slice/types/t_nine_slice';
 import type { TText } from '../../gameobjects/text/types/t_text';
 import type { TTilemapLayer } from '../../gameobjects/tilemap';
 import type { TTransform2d } from '../../gameobjects/types/t_transform_2d';
@@ -270,6 +271,42 @@ const writeSprite = (sprite: TSprite, writing: TWriting): TComponentDoc => {
         ...unless('zIndex', sprite.zIndex, undefined),
         ...(sprite.material !== undefined ? { material: writeMaterial(sprite.material as TSpriteMaterial, writing) } : {}),
         ...(sprite.uniforms !== undefined ? { uniforms: { ...sprite.uniforms } } : {}),
+    };
+};
+
+const writeNineSlice = (panel: TNineSlice, writing: TWriting): TComponentDoc => {
+    // Named as a sprite's picture is: a sheet read from a file by that file and its frame, anything
+    // else by its picture.
+    const atlas = panel.atlas;
+    const file = atlas !== undefined && 'type' in atlas && atlas.type === 'atlas' ? atlas as TLoadedAtlas : undefined;
+    if (file !== undefined) {
+        writing.assets.set(file.key, { type: 'atlas', key: file.key, src: file.src });
+    } else {
+        listTexture(panel.texture, writing);
+    }
+    const place = writeFlatPlace(panel.transform);
+    const mode = panel.mode;
+    return {
+        type: 'nine-slice',
+        id: panel.id,
+        ...(place !== undefined ? { transform: place } : {}),
+        ...(file !== undefined
+            ? { texture: null, atlas: file.key, ...(panel.frame !== undefined ? { frame: panel.frame } : {}) }
+            : { texture: panel.texture.key }),
+        width: panel.width,
+        height: panel.height,
+        slice: { ...panel.slice },
+        ...(typeof mode === 'object' ? { mode: { ...mode } } : mode !== 'stretch' ? { mode } : {}),
+        tint: { ...panel.tint },
+        ...(point(panel.anchor) !== undefined ? { anchor: point(panel.anchor) } : {}),
+        ...(point(panel.pivot) !== undefined ? { pivot: point(panel.pivot) } : {}),
+        ...unless('smooth', panel.smooth, undefined),
+        ...(panel.blend === 'additive' ? { blend: 'additive' as const } : {}),
+        ...(panel.parallax !== undefined && (panel.parallax.x !== 1 || panel.parallax.y !== 1) ? { parallax: point(panel.parallax) } : {}),
+        ...unless('visible', panel.visible, true),
+        ...unless('zIndex', panel.zIndex, undefined),
+        ...(panel.material !== undefined ? { material: writeMaterial(panel.material as TSpriteMaterial, writing) } : {}),
+        ...(panel.uniforms !== undefined ? { uniforms: { ...panel.uniforms } } : {}),
     };
 };
 
@@ -561,9 +598,7 @@ const writeDrawable = (drawable: TDrawable, writing: TWriting): TComponentDoc | 
         case 'particles3d': return writeParticles(drawable, writing);
         // Handled together, above: a map is one component however many layers it put on the box.
         case 'tilemap': return null;
-        // Not in the document format yet: it comes with the editor, and until then a scene that has
-        // one is written without it rather than with a component nobody can read back.
-        case 'nine-slice': return null;
+        case 'nine-slice': return writeNineSlice(drawable, writing);
         // A debug drawing made by a helper in code: it is not part of what the scene is, and a
         // document that kept its corners would keep a picture of one moment of it.
         case 'lines': return null;

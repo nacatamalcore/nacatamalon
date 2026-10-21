@@ -5,6 +5,7 @@ import { createParticles3d } from '../../gameobjects/particles/create_particles_
 import { createScene } from '../create_scene';
 import { createSprite } from '../../gameobjects/sprite/create_sprite';
 import { createText } from '../../gameobjects/text/create_text';
+import { createNineSlice } from '../../gameobjects/nine_slice/create_nine_slice';
 import { isBuiltinFont } from '../../gameobjects/text/default_font';
 import { createTilemap } from '../../gameobjects/tilemap/create_tilemap';
 import { getActiveBox, getActiveGame } from '../../store';
@@ -332,6 +333,38 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                     useSpriteAnimation(sprite as TSprite, { clips: sheet.sequences, play: component.animation.autoplay, speed: component.animation.speed });
                 }
             }
+            break;
+        }
+        case 'nine-slice': {
+            const texture = component.texture === null ? undefined : found(assets.textures, component.texture, 'panel', src);
+            const sheet = component.atlas === undefined ? undefined : found(assets.atlases, component.atlas, 'panel', src);
+            // A panel cuts a picture and has nothing to cut without one: said, and left out, so a
+            // level with a panel whose picture went does not stop opening.
+            if (texture === undefined && sheet === undefined) {
+                console.warn(`[NacatamalOn] scene "${src}": a panel has no picture to cut, so it is left out. Give it a texture or an atlas.`);
+                break;
+            }
+            const panel = createNineSlice({
+                ...(component.transform !== undefined ? { transform: component.transform } : {}),
+                ...(texture !== undefined ? { texture } : {}),
+                ...(sheet !== undefined ? { atlas: sheet } : {}),
+                ...(component.frame !== undefined ? { frame: component.frame } : {}),
+                width: component.width,
+                height: component.height,
+                slice: { ...component.slice },
+                ...(component.mode !== undefined ? { mode: typeof component.mode === 'string' ? component.mode : { ...component.mode } } : {}),
+                tint: component.tint,
+                ...(component.anchor !== undefined ? { anchor: component.anchor } : {}),
+                ...(component.pivot !== undefined ? { pivot: component.pivot } : {}),
+                ...(component.smooth !== undefined ? { smooth: component.smooth } : {}),
+                ...(component.blend !== undefined ? { blend: component.blend } : {}),
+                ...(component.parallax !== undefined ? { parallax: { ...component.parallax } } : {}),
+                ...(component.visible !== undefined ? { visible: component.visible } : {}),
+                ...(component.zIndex !== undefined ? { zIndex: component.zIndex } : {}),
+                ...(component.material !== undefined ? { material: buildMaterial(component.material) } : {}),
+                ...(component.uniforms !== undefined ? { uniforms: component.uniforms } : {}),
+            });
+            panel.id = component.id;
             break;
         }
         case 'text': {

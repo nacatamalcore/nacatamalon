@@ -5,6 +5,7 @@ import type { TTransform2d } from '../../../gameobjects/types/t_transform_2d';
 import type { TPhysicsBody2d, TPhysicsBody3d, TPhysicsWorld2d, TPhysicsWorld3d } from '../../../physics';
 import type { TTransform3d } from '../../../gameobjects/types/t_transform_3d';
 import type { TTextStyle } from '../../../gameobjects/text/types/t_text_style';
+import type { TNineSliceBorders, TNineSliceMode } from '../../../gameobjects/nine_slice/types/t_nine_slice';
 import type { TUniformValues } from '../../../materials/types/t_uniforms';
 import type { TTextureWrap } from '../../../materials/types/t_material';
 import type { TParticleOverrides } from '../../../gameobjects/particles/types/t_particles';
@@ -142,6 +143,7 @@ export type TMeshMaterialDoc = TMaterialDoc & {
  */
 export type TComponentDoc =
     | TSpriteComponent
+    | TNineSliceComponent
     | TTextComponent
     | TMeshComponent
     | TTilemapComponent
@@ -244,6 +246,61 @@ export type TSpriteComponent = {
     /**
      * This sprite's own values for that material's knobs, laid over the material's own.
      */
+    uniforms?: TUniformValues;
+};
+
+/**
+ * A panel: a picture cut in nine, its corners kept and its edges and middle stretched (or repeated)
+ * to any size. A button, a dialogue box, a frame.
+ *
+ * Its picture is named as a sprite's is: a texture or a sheet and its frame, by asset key. Unlike a
+ * sprite, its `width` and `height` are always written, because stretching to a size is the point.
+ *
+ * @category Scenes
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TNineSliceComponent = {
+    type: 'nine-slice';
+    id: string;
+    /**
+     * Where it sits on its box, left out when that is the box's own corner.
+     */
+    transform?: TTransform2d;
+    /**
+     * The picture, by asset key.
+     */
+    texture: string | null;
+    /**
+     * A sheet, by asset key, and which cell of it to cut.
+     */
+    atlas?: string;
+    frame?: number;
+    width: number;
+    height: number;
+    /**
+     * How far in from each edge of the picture the corners end, in its pixels.
+     */
+    slice: TNineSliceBorders;
+    /**
+     * How the edges and the middle fill: left out for `'stretch'`.
+     */
+    mode?: TNineSliceMode | { x: TNineSliceMode; y: TNineSliceMode };
+    tint: TColor;
+    anchor?: { x: number; y: number };
+    pivot?: { x: number; y: number };
+    smooth?: boolean;
+    /**
+     * Left out for `'alpha'`, the ordinary way of covering what is behind.
+     */
+    blend?: 'additive';
+    /**
+     * How much it moves with the camera. Absent, `{ x: 1, y: 1 }`.
+     */
+    parallax?: { x: number; y: number };
+    visible?: boolean;
+    zIndex?: number;
+    material?: TMaterialDoc;
     uniforms?: TUniformValues;
 };
 

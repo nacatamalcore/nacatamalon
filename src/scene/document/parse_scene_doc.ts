@@ -11,10 +11,12 @@ import type {
     TComponentDoc,
     TMaterialDoc,
     TMeshMaterialDoc,
+    TNineSliceComponent,
     TSpriteAnimationDoc,
     TTilemapLayerOverride,
 } from './types/t_component_doc';
 import type { TTransform2d } from '../../gameobjects/types/t_transform_2d';
+import type { TNineSliceBorders } from '../../gameobjects/nine_slice/types/t_nine_slice';
 import type { TTransform3d } from '../../gameobjects/types/t_transform_3d';
 import type { TUniformValues } from '../../materials/types/t_uniforms';
 import type { TScriptProps } from '../../scripts';
@@ -477,6 +479,31 @@ const parseSurface = (raw: Record<string, unknown>): Partial<TPhysicsSurface> =>
     ...optionalNumber(raw, 'collidesWith'),
 });
 
+const NINE_SLICE_MODES = ['stretch', 'tile', 'tile-fit'] as const;
+
+/**
+ * How far in a panel's corners end: one number for every edge, or each edge. Four, whichever was
+ * written, as `createNineSlice` keeps them.
+ */
+const parseBorders = (raw: unknown): TNineSliceBorders => {
+    if (typeof raw === 'number' && Number.isFinite(raw)) return { left: raw, top: raw, right: raw, bottom: raw };
+    const edges = asRecord(raw) ?? {};
+    return { left: asNumber(edges.left, 0), top: asNumber(edges.top, 0), right: asNumber(edges.right, 0), bottom: asNumber(edges.bottom, 0) };
+};
+
+/**
+ * How a panel fills, one way for both axes or one each; left out for the plain stretch.
+ */
+const parseNineSliceMode = (raw: unknown): TNineSliceComponent['mode'] => {
+    if (typeof raw === 'string') {
+        const mode = asOneOf(raw, NINE_SLICE_MODES, 'stretch');
+        return mode === 'stretch' ? undefined : mode;
+    }
+    const axes = asRecord(raw);
+    if (axes === null) return undefined;
+    return { x: asOneOf(axes.x, NINE_SLICE_MODES, 'stretch'), y: asOneOf(axes.y, NINE_SLICE_MODES, 'stretch') };
+};
+
 /**
  * One component, or `null` when this version has no idea what it is.
  *
@@ -517,6 +544,34 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 ...(raw.blend === 'additive' ? { blend: 'additive' as const } : {}),
                 ...optionalBoolean(raw, 'repeat'),
                 ...(parsePoint(raw.repeatOffset) !== undefined ? { repeatOffset: parsePoint(raw.repeatOffset) } : {}),
+                ...(parsePoint(raw.parallax) !== undefined ? { parallax: parsePoint(raw.parallax) } : {}),
+                ...optionalBoolean(raw, 'visible'),
+                ...optionalNumber(raw, 'zIndex'),
+                ...(material !== undefined ? { material } : {}),
+                ...(uniforms !== undefined ? { uniforms } : {}),
+            };
+        }
+        case 'nine-slice': {
+            const material = parseMaterial(raw.material);
+            const uniforms = parseUniforms(raw.uniforms);
+            const place = parseTransform2d(raw.transform);
+            const mode = parseNineSliceMode(raw.mode);
+            return {
+                type: 'nine-slice',
+                id,
+                ...(place !== undefined ? { transform: place } : {}),
+                texture: typeof raw.texture === 'string' ? raw.texture : null,
+                ...optionalString(raw, 'atlas'),
+                ...optionalNumber(raw, 'frame'),
+                width: asNumber(raw.width, 32),
+                height: asNumber(raw.height, 32),
+                slice: parseBorders(raw.slice),
+                ...(mode !== undefined ? { mode } : {}),
+                tint: asColor(raw.tint, WHITE),
+                ...(parsePoint(raw.anchor) !== undefined ? { anchor: parsePoint(raw.anchor) } : {}),
+                ...(parsePoint(raw.pivot) !== undefined ? { pivot: parsePoint(raw.pivot) } : {}),
+                ...optionalBoolean(raw, 'smooth'),
+                ...(raw.blend === 'additive' ? { blend: 'additive' as const } : {}),
                 ...(parsePoint(raw.parallax) !== undefined ? { parallax: parsePoint(raw.parallax) } : {}),
                 ...optionalBoolean(raw, 'visible'),
                 ...optionalNumber(raw, 'zIndex'),
