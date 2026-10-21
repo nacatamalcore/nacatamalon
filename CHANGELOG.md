@@ -7,6 +7,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- `T3dOptions`, the 3D side of `T2dOptions`: what a shape (`createMesh`) and a placed model
+  (`createModel`) share, written once, with `TMeshSurfaceOptions` inside it for how the surface is
+  painted. `TMeshOptions` and `TModelOptions` are it plus what is their own. Like `T2dOptions`, it is
+  for its family only: particles and lines keep options of their own.
 - `createSprite({ texture: 'hero' })` and `createNineSlice({ texture: 'panel' })` name their picture by
   the key it was loaded under, the way a text names its font; `key` stays.
 - `sizeOf(thing)` and `boundsOf(thing)`: how big a sprite, a text or a panel is, and the rectangle it

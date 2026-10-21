@@ -201,6 +201,7 @@ export type {
 export type { TSprite, TSpriteOptions } from './gameobjects/sprite/types';
 export type { TTransform2d } from './gameobjects/types/t_transform_2d';
 export type { T2dOptions } from './gameobjects/types/t_2d_options';
+export type { T3dOptions, TMeshSurfaceOptions } from './gameobjects/types/t_3d_options';
 export type { TText, TTextStyle, TTextOptions } from './gameobjects/text';
 export type { TNineSlice, TNineSliceBorders, TNineSliceMode, TNineSliceOptions } from './gameobjects/nine_slice/types';
 export type { TTilemap, TTilemapLayer, TTilemapOptions } from './gameobjects/tilemap';

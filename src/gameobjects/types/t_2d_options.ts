@@ -4,8 +4,13 @@ import type { TSpriteMaterial, TUniformValues } from '../../materials';
 import type { TTransform2d } from './t_transform_2d';
 
 /**
- * What everything drawn flat is made with, whatever it is: a sprite, a text, a panel. Each adds
- * what is its own (a picture, the words, the borders); these mean the same on all of them.
+ * What the flat pictures share, a sprite, a text and a panel: a rectangle placed by its anchor, turned
+ * about its pivot, touched by the pointer. Each adds what is its own (a picture, the words, the
+ * borders); these mean the same on all three.
+ *
+ * Not everything drawn flat: a polygon, a tilemap and particles have options of their own, and
+ * something new that is not one of these pictures does not have to fit it. `T3dOptions` is the same
+ * for the lit models.
  *
  * @category Game objects
  * @since 1.0.0
