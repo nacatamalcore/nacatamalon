@@ -87,6 +87,11 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   world sits by its middle, the point it turns and grows on; a text by its corner, so it grows without
   moving (a score going from 9 to 10 does not shift). A panel (`createNineSlice`) sits by its middle,
   like a sprite. A label centred on a panel gives both the same anchor.
+- **How big, and where**: `sizeOf(thing)` is a sprite's, a text's or a panel's width and height with
+  its own scale (a sprite's picture when it was given no size, a text's letters, measured the moment
+  it is made); `boundsOf(thing)` the rectangle it covers, `{ x, y, width, height }` from its top-left
+  corner, anchor and pivot taken into account, in the place its `transform` is written: a box behind a
+  label, `coin.transform.x = boundsOf(score).x + boundsOf(score).width + 4`.
 - **Pivot**: a sprite, a text or a panel turns and grows about its anchor, unless `pivot` (0-1, like
   `anchor`) names another point. The anchor says where it sits, the pivot what it spins on: a bike
   anchored under its back wheel (`anchor: { x: 5 / 24, y: 1 }`) wheelies about it, and set

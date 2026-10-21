@@ -7,6 +7,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- `sizeOf(thing)` and `boundsOf(thing)`: how big a sprite, a text or a panel is, and the rectangle it
+  covers. A sprite given no size measures its picture, and a text its letters, the moment it is made;
+  `boundsOf` takes the anchor, the pivot and the scale into account, in the place its `transform` is
+  written, so things of one box line up: a box behind a label, a coin after a score.
 - A placed model is used like any other drawing: `tint`, `alpha`, `zIndex` and `castShadow` (new, also
   an option of `createModel`) on what `createModel` returns change every piece at once, the ones still
   on the way too, and each piece keeps its own colour under the tint; `destroy(model)` takes it all,

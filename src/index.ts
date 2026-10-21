@@ -121,6 +121,8 @@ export type {
 } from './physics';
 // Reaching a named part of something, the turret of a tank or the wheels of a car, from a behaviour.
 export { findObject, findObjects, sceneOf } from './box';
+export { boundsOf, sizeOf } from './gameobjects/size_of';
+export type { TMeasurable } from './gameobjects/size_of';
 // A point of the world measured on an object, and a point of an object found in the world: where a
 // hit landed on it, where a shot leaves it from.
 export { worldToLocal, localToWorld, worldToLocal3d, localToWorld3d } from './box';
