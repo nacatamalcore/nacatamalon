@@ -82,6 +82,10 @@ export type TMusicLayer = {
     name: string;
     clip: TAudioClip;
     volume: number;
+    /**
+     * Where between left (`-1`) and right (`1`) it is heard. Absent, in the middle.
+     */
+    pan?: number;
 };
 
 /**
@@ -149,9 +153,36 @@ export type TMusicHandle = {
     /**
      * Calls `listener` on every beat while it plays, with the beat of the bar and the bar, both from
      * `1`: a crowd that claps in time, a title that pulses with the tune. Going by the audio clock,
-     * not the frames. Needs `bpm`. Hands back what stops it; it stops on its own with the music's
+     * not the frames, on the frame the beat is **heard**: as late as the sound reaches the player
+     * (the device's delay and `useAudio().setOffset`). Needs `bpm`. Hands back what stops it; it stops on its own with the music's
      * object.
      */
     onBeat(listener: TBeatListener): () => void;
+    /**
+     * How far into the music the player is hearing now, in seconds, or `null` while it is stopped:
+     * by the audio clock, with the time the sound takes to reach the speaker and the player's offset
+     * (`useAudio().setOffset`) taken off. It goes back to `loopStart` when the music loops. The same
+     * as a song's: see `TSongHandle.position`.
+     */
+    readonly position: number | null;
+    /**
+     * How far into the music the player is hearing now, in beats from its first (`firstBeat`), or
+     * `null` while it is stopped or when it has no `bpm`: `3.5` is half way through the fourth beat,
+     * and before the first it is below `0`. What a thing moving with the music is placed by:
+     * `dancer.frame = beat - Math.floor(beat) < 0.2 ? 1 : 0`. Not the `beat` an `onBeat` listener
+     * is given, which is the beat of the bar.
+     */
+    readonly beat: number | null;
+    /**
+     * How long a sound started now takes to be heard, in seconds: the device's delay and the
+     * player's offset. What `position` takes off.
+     */
+    readonly latency: number;
+    /**
+     * Where the music was being heard at `moment`, a time on the page's clock such as a press gives
+     * (`keys.pressedAt`, `pointer.pressedAt`…), or `null` while it is stopped. See
+     * `TSongHandle.positionAt`.
+     */
+    positionAt(moment: number): number | null;
     readonly playing: boolean;
 };

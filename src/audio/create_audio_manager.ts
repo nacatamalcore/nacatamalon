@@ -116,6 +116,14 @@ export const createAudioManager = (): TAudioManager => {
         duckTargets: new Map(),
         voices,
         tickers: new Set(),
+        offset: 0,
+        // Under the frames' clock nothing reaches a speaker, so nothing is late.
+        heardDelay() {
+            if (clock === 'frames') {
+                return 0;
+            }
+            return Math.max(0, (context.outputLatency || 0) + (context.baseLatency || 0) + this.offset);
+        },
         listeners: [],
         warnedListeners: false,
         warnedZones: new WeakSet(),

@@ -237,6 +237,13 @@ come with it, named by key: `font: 'nacatamalon:square'` (square corners) and
 `.ttf` or `.woff` with `useLoadFont`, sharp at any size, or a bitmap font with
 `useLoadBitmapFont`, and hand it to `createText` as `font`.
 
+**Music** is written as notes and played by the engine's own synthesizer, as the
+NES, the SNES or the Genesis sounded, with instruments, echo and pan, and
+thirty-nine public domain songs ready to play by key. A song changes tempo, key and
+voices while it plays. The guide, from the first note to a full arrangement,
+ships with the package: `node_modules/nacatamalon/guides/music.md`, and in
+Spanish, `guides/music.es.md`.
+
 ## Physics
 
 Both physics adapters ship inside `nacatamalon`, and so do the engines they

@@ -576,6 +576,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                 ...(component.loopStart !== undefined ? { loopStart: component.loopStart } : {}),
                 ...(component.loopEnd !== undefined ? { loopEnd: component.loopEnd } : {}),
                 ...(component.rate !== undefined ? { rate: component.rate } : {}),
+                ...(component.pan !== undefined ? { pan: component.pan } : {}),
                 ...(component.channel !== undefined ? { channel: component.channel } : {}),
                 ...(component.autoplay !== undefined ? { autoplay: component.autoplay } : {}),
                 ...(component.spatial !== undefined ? { spatial: component.spatial } : {}),
@@ -624,6 +625,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                 ...(component.channel !== undefined ? { channel: component.channel } : {}),
                 ...(component.autoplay !== undefined ? { autoplay: component.autoplay } : {}),
                 ...(component.voices !== undefined ? { voices: { ...component.voices } } : {}),
+                ...(component.pan !== undefined ? { pan: { ...component.pan } } : {}),
                 ...(component.tempo !== undefined ? { tempo: component.tempo } : {}),
                 ...(component.transpose !== undefined ? { transpose: component.transpose } : {}),
             });

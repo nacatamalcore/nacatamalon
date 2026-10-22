@@ -468,6 +468,7 @@ const writeSound = (sound: TSoundAttachment, writing: TWriting): TComponentDoc =
         ...unless('loopStart', sound.loopStart, 0),
         ...unless('loopEnd', sound.loopEnd, 0),
         ...unless('rate', sound.rate, 1),
+        ...unless('pan', sound.pan, 0),
         ...unless('channel', sound.channel, DEFAULT_CHANNEL),
         ...unless('autoplay', sound.autoplay, false),
         ...unless('spatial', sound.spatial, false),
@@ -519,6 +520,7 @@ const writeSong = (song: TSongAttachment, writing: TWriting): TComponentDoc | nu
         ...unless('channel', song.channel, 'music'),
         ...unless('autoplay', song.autoplay, false),
         ...(Object.keys(voices).length > 0 ? { voices } : {}),
+        ...(Object.keys(song.pan).length > 0 ? { pan: { ...song.pan } } : {}),
         ...(song.tempo !== null ? { tempo: song.tempo } : {}),
         ...unless('transpose', song.transpose, 0),
     };

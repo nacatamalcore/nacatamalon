@@ -4,6 +4,7 @@ import { setAttachmentHandle } from '../../audio/attachment_players';
 import { isShowingOnly } from '../physics/is_showing_only';
 import { renderSfx } from '../../audio/synth';
 import { nanoId } from '../../utils';
+import { clampPan, stereoPannerOf } from '../../audio/stereo';
 import { whenLoaded } from '../../loaders';
 import { useLoadAudio } from '../loaders/use_load_audio';
 import type { TAudioClip } from '../../loaders';
@@ -142,6 +143,7 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
         loopStart: options.loopStart ?? 0,
         loopEnd: options.loopEnd ?? 0,
         rate,
+        pan: clampPan(options.pan ?? 0),
         channel,
         autoplay: options.autoplay ?? false,
         spatial: options.spatial ?? false,
@@ -183,10 +185,20 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
         const gain = audio.context.createGain();
         // Faded in once it has started (below), so a log of the game's sound hears the fade.
         gain.gain.value = fade > 0 ? 0 : volume;
-        gain.connect(audio.channelGain(channel));
-
         // An area wins over a point: a sound is heard from one place or all around, never both.
         const zoned = attachment.zone !== null;
+        // Where between left and right, when the audio engine can say it. A sound placed in space
+        // comes out of its placing in stereo; any other is as many channels as its file.
+        const inSpace = attachment.spatial && !zoned;
+        const pans = stereoPannerOf(audio.context, attachment.pan, !inSpace && clip.buffer.numberOfChannels === 1);
+        const stereo = pans?.stereo ?? null;
+        if (pans !== null) {
+            gain.connect(pans.input);
+            pans.stereo.connect(audio.channelGain(channel));
+        } else {
+            gain.connect(audio.channelGain(channel));
+        }
+
         let panner: PannerNode | null = null;
         let area: GainNode | null = null;
         if (zoned) {
@@ -212,6 +224,7 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
             gain,
             channel,
             panner,
+            stereo,
             area,
             box: placed ? box : null,
             sound: placed ? attachment : null,
@@ -349,6 +362,18 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
             for (const entry of playing) {
                 entry.voice.node.playbackRate.value = next;
             }
+        },
+        setPan: (next, fade = 0) => {
+            attachment.pan = clampPan(next);
+            for (const entry of playing) {
+                if (entry.voice.stereo) rampTo(entry.voice.stereo.pan, attachment.pan, audio.context.currentTime, fade);
+            }
+        },
+        get pan() {
+            return attachment.pan;
+        },
+        set pan(next) {
+            handle.setPan(next);
         },
         get playing() {
             return playing.some((entry) => !entry.paused);

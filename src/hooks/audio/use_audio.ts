@@ -25,7 +25,7 @@ import type { TAudioHandle } from '../../audio';
  * };
  * ```
  *
- * @returns The volumes: `setVolume`, `getVolume`, and `stopAll`.
+ * @returns The volumes: `setVolume`, `getVolume`, `stopAll`, and the player's offset: `setOffset`, `getOffset`.
  *
  * @category Audio
  * @since 1.0.0
@@ -44,6 +44,10 @@ export const useAudio = (): TAudioHandle => {
             rampTo(gain.gain, volume, audio.context.currentTime, fade);
         },
         getVolume: (channel) => (channel === undefined ? audio.master.gain.value : audio.channelGain(channel).gain.value),
+        setOffset: (seconds) => {
+            audio.offset = Number.isFinite(seconds) ? seconds : 0;
+        },
+        getOffset: () => audio.offset,
         stopAll: (channel) => {
             for (const voice of [...audio.voices]) {
                 if (channel !== undefined && voice.channel !== channel) {

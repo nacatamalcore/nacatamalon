@@ -25,6 +25,11 @@ export type TVoice = {
      */
     panner: PannerNode | null;
     /**
+     * Where between left and right it is heard, when it is not placed by its object: absent where
+     * the audio engine has no way to do it.
+     */
+    stereo?: StereoPannerNode | null;
+    /**
      * Set only for a sound that fills an area: how loud it is where the listener stands.
      */
     area: GainNode | null;
@@ -93,6 +98,18 @@ export type TAudioManager = {
      * What has to look at the audio clock once a frame: the tunes somebody is counting beats of.
      */
     tickers: Set<() => void>;
+    /**
+     * Seconds the game says sound reaches the player later than the device does, measured on the
+     * player's own speakers or headphones: see `TAudioHandle.setOffset`. `0` until it says.
+     */
+    offset: number;
+    /**
+     * How long a sound started now takes to be heard, in seconds: the delay the device reports on
+     * its way to the speaker, plus `offset`, never below `0`. What a tune's `position` and its beats
+     * take off, so they are what the player hears. `0` under the frames' clock, where nothing
+     * reaches a speaker.
+     */
+    heardDelay(): number;
     /**
      * The objects that carry ears, in the order they got them. The first one switched on is used.
      */
@@ -175,4 +192,18 @@ export type TAudioHandle = {
      * Stops every sound of a channel, or every sound of the game.
      */
     stopAll(channel?: string): void;
+    /**
+     * How much later than the device says the player hears sound, in seconds: what a calibration
+     * screen measures (the player taps along to a beat) and the game keeps, as it keeps a volume.
+     * Bluetooth headphones are often past 0.15; a device that reports more delay than there is
+     * takes a negative number.
+     *
+     * Every song's `position`, `positionAt` and `latency` count it, and every beat (`onBeat`) comes
+     * that much later, on the beat the player hears.
+     */
+    setOffset(seconds: number): void;
+    /**
+     * The offset set, `0` until one is.
+     */
+    getOffset(): number;
 };

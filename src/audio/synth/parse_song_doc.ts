@@ -1,6 +1,7 @@
 import { asRecord } from '../../utils';
-import { SONG_VOICES } from './render_song';
-import type { TSongDoc, TSongVoice, TSongVoiceName } from './types/t_song';
+import { builtinInstrument } from './builtin';
+import { SONG_CHIPS, songVoicesOf } from './chips';
+import type { TFmOperator, TSongChip, TSongDoc, TSongInstrument, TSongVoice, TSongVoiceName } from './types/t_song';
 
 /**
  * The format number a `.song` file written today carries.
@@ -14,6 +15,11 @@ import type { TSongDoc, TSongVoice, TSongVoiceName } from './types/t_song';
 export const SONG_FORMAT = 1;
 
 const DUTIES = new Set([0.125, 0.25, 0.5, 0.75]);
+
+/**
+ * An instrument's fields that are lists of numbers written as text.
+ */
+const INSTRUMENT_LISTS = new Set(['volume', 'duty', 'arpeggio', 'pitch']);
 
 /**
  * Every refusal goes through here, so the file always names itself.
@@ -61,11 +67,100 @@ export const parseSongDoc = (raw: unknown, src = 'song'): TSongDoc => {
         loop = { bar: bar as number };
     }
 
-    const voicesRaw = asRecord(file.voices) ?? fail(src, `"voices" has to be an object with ${SONG_VOICES.join(', ')}.`);
+    // Their lists are read, and their mistakes said, by `renderSong`, as the notes are: here only
+    // what could not be an instrument at all is refused.
+    const instruments: Record<string, TSongInstrument> = {};
+    if (file.instruments !== undefined) {
+        const instrumentsRaw = asRecord(file.instruments) ?? fail(src, '"instruments" has to be an object, each instrument by its name.');
+        for (const [name, value] of Object.entries(instrumentsRaw)) {
+            if (!/^[A-Za-z][\w-]*$/.test(name)) {
+                fail(src, `"${name}" cannot be an instrument's name: a name is a letter, then letters, digits, _ or -, so the notes can say @${name}.`);
+            }
+            const raw = asRecord(value) ?? fail(src, `the instrument "${name}" has to be an object.`);
+            const read: TSongInstrument = {};
+            for (const [key, field] of Object.entries(raw)) {
+                if (INSTRUMENT_LISTS.has(key)) {
+                    if (typeof field !== 'string') {
+                        fail(src, `the "${key}" of the instrument "${name}" has to be its numbers as text, like "15 12 9 | 6".`);
+                    }
+                    read[key as 'volume' | 'duty' | 'arpeggio' | 'pitch'] = field as string;
+                } else if (key === 'vibrato') {
+                    const vibrato = asRecord(field);
+                    if (vibrato === null || typeof vibrato.speed !== 'number' || typeof vibrato.depth !== 'number'
+                        || (vibrato.delay !== undefined && typeof vibrato.delay !== 'number')) {
+                        fail(src, `the "vibrato" of the instrument "${name}" has to be { "speed", "depth" } and maybe "delay", as numbers.`);
+                    }
+                    const { speed, depth, delay } = vibrato as { speed: number; depth: number; delay?: number };
+                    read.vibrato = { speed, depth, ...(delay !== undefined ? { delay } : {}) };
+                } else if (key === 'sample') {
+                    if (typeof field !== 'string' || field === '') {
+                        fail(src, `the "sample" of the instrument "${name}" has to name a sound: one of the engine's ("nacatamalon:kick") or a file of the game ("/samples/hit.wav").`);
+                    }
+                    read.sample = field as string;
+                } else if (key === 'adsr') {
+                    const adsr = asRecord(field);
+                    if (adsr === null || Object.entries(adsr).some(([part, value]) => !['attack', 'decay', 'sustain', 'release'].includes(part) || typeof value !== 'number')) {
+                        fail(src, `the "adsr" of the instrument "${name}" has to be { "attack", "decay", "sustain", "release" }, each a number.`);
+                    }
+                    read.adsr = { ...(adsr as Record<string, number>) };
+                } else if (key === 'echo') {
+                    if (typeof field !== 'boolean') fail(src, `the "echo" of the instrument "${name}" has to be true or false.`);
+                    read.echo = field as boolean;
+                } else if (key === 'root' || key === 'loop') {
+                    if (typeof field !== 'number') fail(src, `the "${key}" of the instrument "${name}" has to be a number.`);
+                    read[key] = field as number;
+                } else if (key === 'fm') {
+                    const fm = asRecord(field);
+                    const operators = fm?.operators;
+                    if (fm === null || typeof fm.algorithm !== 'number' || (fm.feedback !== undefined && typeof fm.feedback !== 'number')
+                        || !Array.isArray(operators) || operators.length !== 4
+                        || operators.some((operator) => asRecord(operator) === null || Object.values(asRecord(operator)!).some((value) => typeof value !== 'number'))) {
+                        fail(src, `the "fm" of the instrument "${name}" has to be { "algorithm", "feedback", "operators": four of { "multiple", "detune", "level", "attack", "decay", "sustain", "release" } }, as numbers.`);
+                    }
+                    const patch = fm as { algorithm: number; feedback?: number; operators: TFmOperator[] };
+                    read.fm = {
+                        algorithm: patch.algorithm,
+                        ...(patch.feedback !== undefined ? { feedback: patch.feedback } : {}),
+                        operators: patch.operators.map((operator) => ({ ...operator })) as [TFmOperator, TFmOperator, TFmOperator, TFmOperator],
+                    };
+                } else if (key === 'slide') {
+                    if (typeof field !== 'number') {
+                        fail(src, `the "slide" of the instrument "${name}" has to be a number of seconds.`);
+                    }
+                    read.slide = field as number;
+                } else {
+                    fail(src, `the instrument "${name}" has "${key}", and an instrument has ${[...INSTRUMENT_LISTS, 'vibrato', 'slide', 'sample', 'root', 'loop', 'adsr', 'echo', 'fm'].join(', ')}.`);
+                }
+            }
+            instruments[name] = read;
+        }
+    }
+
+    let chip: TSongChip | undefined;
+    if (file.chip !== undefined) {
+        if (!(SONG_CHIPS as unknown[]).includes(file.chip)) {
+            fail(src, `"chip" is the console it sounds like, ${SONG_CHIPS.map((known) => `"${known}"`).join(', ')}, and it is ${JSON.stringify(file.chip)}.`);
+        }
+        chip = file.chip as TSongChip;
+    }
+    const voicesOfChip = songVoicesOf(chip);
+
+    let echo: TSongDoc['echo'];
+    if (file.echo !== undefined) {
+        const raw = asRecord(file.echo);
+        if (raw === null || Object.entries(raw).some(([part, value]) => (part === 'filter'
+            ? !Array.isArray(value) || value.some((step) => typeof step !== 'number')
+            : !['delay', 'feedback', 'volume'].includes(part) || typeof value !== 'number'))) {
+            fail(src, '"echo" has to be { "delay", "feedback", "volume" } as numbers, and maybe "filter", eight numbers.');
+        }
+        echo = { ...(raw as TSongDoc['echo']), ...(Array.isArray(raw!.filter) ? { filter: [...(raw!.filter as number[])] } : {}) };
+    }
+
+    const voicesRaw = asRecord(file.voices) ?? fail(src, `"voices" has to be an object with ${voicesOfChip.join(', ')}.`);
     const voices: Partial<Record<TSongVoiceName, TSongVoice>> = {};
     for (const [name, value] of Object.entries(voicesRaw)) {
-        if (!(SONG_VOICES as readonly string[]).includes(name)) {
-            fail(src, `there is no voice called "${name}". The voices are ${SONG_VOICES.join(', ')}.`);
+        if (!(voicesOfChip as readonly string[]).includes(name)) {
+            fail(src, `there is no voice called "${name}"${chip !== undefined ? ` on the ${chip}` : ''}. The voices are ${voicesOfChip.join(', ')}.`);
         }
         const voice = asRecord(value);
         if (voice === null || typeof voice.notes !== 'string') {
@@ -85,6 +180,18 @@ export const parseSongDoc = (raw: unknown, src = 'song'): TSongDoc => {
             }
             read.duty = written.duty as TSongVoice['duty'];
         }
+        if (written.pan !== undefined) {
+            if (typeof written.pan !== 'number' || !Number.isFinite(written.pan)) {
+                fail(src, `the "pan" of "${name}" has to be a number from -1 (left) to 1 (right).`);
+            }
+            read.pan = Math.min(1, Math.max(-1, written.pan as number));
+        }
+        if (written.instrument !== undefined) {
+            if (typeof written.instrument !== 'string' || (instruments[written.instrument] === undefined && builtinInstrument(written.instrument) === undefined)) {
+                fail(src, `the voice "${name}" starts with the instrument ${JSON.stringify(written.instrument)}, and the song has ${Object.keys(instruments).length === 0 ? 'no instruments' : Object.keys(instruments).map((known) => `"${known}"`).join(', ')}.`);
+            }
+            read.instrument = written.instrument as string;
+        }
         voices[name as TSongVoiceName] = read;
     }
 
@@ -94,5 +201,8 @@ export const parseSongDoc = (raw: unknown, src = 'song'): TSongDoc => {
         meter: [(meter as number[])[0]!, (meter as number[])[1]!],
         ...(loop !== undefined ? { loop } : {}),
         voices,
+        ...(file.instruments !== undefined ? { instruments } : {}),
+        ...(chip !== undefined ? { chip } : {}),
+        ...(echo !== undefined ? { echo } : {}),
     };
 };

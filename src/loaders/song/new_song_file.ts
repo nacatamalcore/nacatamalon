@@ -14,6 +14,7 @@ export const newSongFile = (src: string, key: string): TSongFile => markWatchabl
     src,
     status: 'loading',
     doc: null,
+    samples: new Map(),
 });
 
 /**
@@ -30,4 +31,5 @@ export const songFileOf = (doc: TSongFile['doc'], key: string): TSongFile => mar
     src: '',
     status: 'ready',
     doc,
+    samples: new Map(),
 });

@@ -11,6 +11,7 @@ export { wrapPosition } from './loop_position';
 export { createLayeredPlayer } from './layered_player';
 export type { TLayeredPiece, TLayeredPlayer } from './layered_player';
 export { createBeatClock } from './beat_clock';
+export { heardPositionOf } from './heard_position';
 export { clipFromSamples } from './clip_from_samples';
 export type { TBeatListener } from './beat_clock';
 export { zoneVolume2d, zoneVolume3d } from './zone_volume';

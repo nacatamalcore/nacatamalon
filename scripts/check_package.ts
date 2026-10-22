@@ -11,8 +11,8 @@
  * - does the README's physics example compile against the physics engines it installs?
  * - do the doors in `exports` resolve, and does a deep import into the engine's files fail?
  * - how big is that game once bundled, and did anything only a tool uses end up inside it?
- * - do the files for coding assistants ship (`llms.txt`, `llms-full.txt`), and does the game in
- *   `llms.txt` compile too?
+ * - do the files for coding assistants and the guides ship (`llms.txt`, `llms-full.txt`,
+ *   `guides/`), and does the game in `llms.txt` compile too?
  *
  * Run it with `bun run check:package`. `--offline` skips the older TypeScript, which is fetched.
  */
@@ -28,6 +28,12 @@ const OLD_TYPESCRIPT = '5.4';
  * can load a `.shader` file at any time, and compiling one needs it.)
  */
 const TOOL_ONLY = ['serializeScene: the shape', 'atlasDocFrames: a grid needs', 'headless game: '];
+
+/**
+ * Strings of what a game carries only when it uses it, which the README's game does not: reading a
+ * tracker's export comes in with `useLoadTrackerSong`, not with every game.
+ */
+const ONLY_WHEN_USED = ['not a text export of FamiTracker'];
 
 const root = join(import.meta.dir, '..');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
@@ -101,7 +107,7 @@ const [example, physicsExample] = [...readme.matchAll(/```ts\n([\s\S]*?)```/g)].
 check(example !== undefined, 'the README has a TypeScript example');
 writeFileSync(join(work, 'src', 'game.ts'), example ?? '');
 
-for (const file of ['llms.txt', 'llms-full.txt']) {
+for (const file of ['llms.txt', 'llms-full.txt', 'guides/music.md', 'guides/music.es.md']) {
     check(existsSync(join(packageDir, file)), `${file} ships with the package`);
 }
 
@@ -156,6 +162,7 @@ if (built.code === 0) {
     console.log(`     ${(code.length / 1024).toFixed(0)} KB minified, ${(Bun.gzipSync(code).length / 1024).toFixed(0)} KB gzip`);
     const text = code.toString();
     for (const marker of TOOL_ONLY) check(!text.includes(marker), `the game carries no tool code ("${marker}")`);
+    for (const marker of ONLY_WHEN_USED) check(!text.includes(marker), `the game carries nothing it does not use ("${marker}")`);
 }
 
 rmSync(work, { recursive: true, force: true });

@@ -845,6 +845,7 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 ...optionalNumber(raw, 'loopStart'),
                 ...optionalNumber(raw, 'loopEnd'),
                 ...optionalNumber(raw, 'rate'),
+                ...optionalNumber(raw, 'pan'),
                 ...optionalString(raw, 'channel'),
                 ...optionalBoolean(raw, 'autoplay'),
                 ...optionalBoolean(raw, 'spatial'),
@@ -897,6 +898,14 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                     voices[name] = volume;
                 }
             }
+            const panRaw = asRecord(raw.pan);
+            const pan: Partial<Record<TSongVoiceName, number>> = {};
+            for (const name of SONG_VOICES) {
+                const value = panRaw?.[name];
+                if (typeof value === 'number' && Number.isFinite(value)) {
+                    pan[name] = value;
+                }
+            }
             return {
                 type: 'song',
                 id,
@@ -905,6 +914,7 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 ...optionalString(raw, 'channel'),
                 ...optionalBoolean(raw, 'autoplay'),
                 ...(Object.keys(voices).length > 0 ? { voices } : {}),
+                ...(Object.keys(pan).length > 0 ? { pan } : {}),
                 ...optionalNumber(raw, 'tempo'),
                 ...optionalNumber(raw, 'transpose'),
             };

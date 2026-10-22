@@ -1,5 +1,7 @@
 import { bumpVersion } from '../../store/record_version';
 import { parseSongDoc } from '../../audio/synth';
+import { loadBuiltinSong } from '../../audio/synth/builtin';
+import { loadSongSamples } from './load_song_samples';
 import type { TRuntimeStore } from '../../store';
 import type { TSongFile } from './types/t_song_file';
 
@@ -15,15 +17,30 @@ import type { TSongFile } from './types/t_song_file';
  */
 export const loadSong = async (store: TRuntimeStore, file: TSongFile): Promise<void> => {
     try {
-        const response = await fetch(file.src);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+        let doc;
+        if (file.src.startsWith('nacatamalon:')) {
+            // One of the engine's own, loaded the first time it is asked for.
+            const builtin = loadBuiltinSong(file.src);
+            if (builtin === null) {
+                throw new Error(`the engine has no song '${file.src}': see SONG_BUILTINS for the ones it has`);
+            }
+            doc = await builtin;
+        } else {
+            const response = await fetch(file.src);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            doc = parseSongDoc(await response.json(), file.src);
         }
-        const doc = parseSongDoc(await response.json(), file.src);
         if (store.get('loop').destroyed) {
             return;
         }
         file.doc = doc;
+        // Its samples before it is ready, so the first time it is played they are in it.
+        await loadSongSamples(store, file);
+        if (store.get('loop').destroyed) {
+            return;
+        }
         file.status = 'ready';
         bumpVersion(file);
     } catch (error: unknown) {

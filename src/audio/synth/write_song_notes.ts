@@ -1,5 +1,5 @@
-import { DRUM_PITCH } from './parse_song_notes';
-import type { TSongNote, TSongVoiceName } from './types/t_song';
+import { DEFAULT_SLIDE, DEFAULT_VIBRATO, DRUM_PITCH } from './parse_song_notes';
+import type { TSongNote, TSongNoteEffects, TSongVoiceName } from './types/t_song';
 
 /**
  * The finest step a note can start or last: a sixty-fourth of a whole note.
@@ -36,13 +36,39 @@ const BARS_PER_LINE = 4;
  * from the one middle C is in.
  */
 const pitchText = (pitch: number, voice: TSongVoiceName): string => {
-    if (voice === 'noise' && pitch === DRUM_PITCH) {
+    if ((voice === 'noise' || voice === 'psgNoise') && pitch === DRUM_PITCH) {
         return 'x';
     }
     const fromC = pitch - MIDDLE_C;
     const octave = Math.floor(fromC / 12);
     const name = NAMES[((fromC % 12) + 12) % 12]!;
     return name + (octave > 0 ? "'".repeat(octave) : ','.repeat(-octave));
+};
+
+/**
+ * What a note does on its own, written in brackets after it the way the notes read it, the
+ * defaults left short: `[slide]`, `[vib]`.
+ */
+const effectsText = (effects: TSongNoteEffects | undefined): string => {
+    if (effects === undefined) {
+        return '';
+    }
+    let text = '';
+    if (effects.slide !== undefined) {
+        text += effects.slide === DEFAULT_SLIDE ? '[slide]' : `[slide:${effects.slide}]`;
+    }
+    const vibrato = effects.vibrato;
+    if (vibrato !== undefined) {
+        const plain = vibrato.speed === DEFAULT_VIBRATO.speed && vibrato.depth === DEFAULT_VIBRATO.depth && vibrato.delay === undefined;
+        text += plain ? '[vib]' : `[vib:${[vibrato.speed, vibrato.depth, ...(vibrato.delay !== undefined ? [vibrato.delay] : [])].join(',')}]`;
+    }
+    if (effects.arpeggio !== undefined) {
+        text += `[arp:${effects.arpeggio.join(',')}]`;
+    }
+    if (effects.volume !== undefined) {
+        text += `[vol:${effects.volume}]`;
+    }
+    return text;
 };
 
 /**
@@ -71,11 +97,16 @@ const piecesOf = (steps: number): typeof PIECES => {
  * A voice plays one note at a time: where two overlap, the later one cuts the earlier short. Starts and
  * lengths are rounded to a sixty-fourth of a whole note, the finest the notes can say.
  *
+ * A note played with another instrument than the one before it is written after `@name`, or `@-`
+ * for none, and what a note does on its own goes in brackets after its first part: `c'2[vib]`.
+ *
  * Reading what this writes gives back the same notes.
  *
  * @param notes - What the voice plays. Only those of `voice` are written; the order does not matter.
  * @param voice - Which voice it is. In the noise voice a drum hit is written `x`.
  * @param meter - The song's bar, `[3, 4]` for three quarters.
+ * @param options - `first`: the instrument the voice starts with (its `instrument`), which needs no
+ * `@` before the notes that use it.
  * @returns The voice's notes as text.
  *
  * @example
@@ -91,7 +122,12 @@ const piecesOf = (steps: number): typeof PIECES => {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const writeSongNotes = (notes: readonly TSongNote[], voice: TSongVoiceName, meter: [number, number]): string => {
+export const writeSongNotes = (
+    notes: readonly TSongNote[],
+    voice: TSongVoiceName,
+    meter: [number, number],
+    options: { first?: string } = {},
+): string => {
     const [barBeats, beatUnit] = meter;
     const stepsPerBeat = STEPS_PER_WHOLE / beatUnit;
     const barSteps = Math.round(barBeats * stepsPerBeat);
@@ -100,7 +136,7 @@ export const writeSongNotes = (notes: readonly TSongNote[], voice: TSongVoiceNam
     // Rounded to what can be written, in order, each cut short by the next.
     const played = notes
         .filter((note) => note.voice === voice)
-        .map((note) => ({ start: toSteps(note.start), end: toSteps(note.start + note.beats), pitch: note.pitch }))
+        .map((note) => ({ start: toSteps(note.start), end: toSteps(note.start + note.beats), pitch: note.pitch, instrument: note.instrument, effects: note.effects }))
         .sort((a, b) => a.start - b.start);
     const kept: typeof played = [];
     for (const note of played) {
@@ -118,6 +154,7 @@ export const writeSongNotes = (notes: readonly TSongNote[], voice: TSongVoiceNam
 
     const words: string[] = [];
     let length = 4;
+    let instrument = options.first;
     let at = 0;
     let bars = 0;
 
@@ -125,7 +162,8 @@ export const writeSongNotes = (notes: readonly TSongNote[], voice: TSongVoiceNam
      * A note or a rest from where the voice is to `until`, cut at every bar and into lengths that
      * can be written, the parts of a note held into each other.
      */
-    const write = (until: number, pitch: number | null): void => {
+    const write = (until: number, pitch: number | null, effects = ''): void => {
+        let first = true;
         while (at < until) {
             const barEnd = (Math.floor(at / barSteps) + 1) * barSteps;
             const stop = Math.min(until, barEnd);
@@ -133,7 +171,8 @@ export const writeSongNotes = (notes: readonly TSongNote[], voice: TSongVoiceNam
                 const holds = pitch !== null && at + piece.steps < until;
                 const said = piece.length === length ? '' : String(piece.length);
                 length = piece.length;
-                words.push(`${pitch === null ? 'r' : pitchText(pitch, voice)}${said}${piece.dotted ? '.' : ''}${holds ? '~' : ''}`);
+                words.push(`${pitch === null ? 'r' : pitchText(pitch, voice)}${said}${piece.dotted ? '.' : ''}${holds ? '~' : ''}${first ? effects : ''}`);
+                first = false;
                 at += piece.steps;
             }
             if (at === barEnd) {
@@ -145,7 +184,11 @@ export const writeSongNotes = (notes: readonly TSongNote[], voice: TSongVoiceNam
 
     for (const note of kept) {
         write(note.start, null);
-        write(note.end, note.pitch);
+        if (note.instrument !== instrument) {
+            words.push(note.instrument === undefined ? '@-' : `@${note.instrument}`);
+            instrument = note.instrument;
+        }
+        write(note.end, note.pitch, effectsText(note.effects));
     }
     // The last bar filled, so it adds up.
     if (at % barSteps !== 0) {

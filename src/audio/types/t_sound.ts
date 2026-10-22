@@ -179,6 +179,11 @@ export type TSoundOptions = {
      */
     rate?: number;
     /**
+     * Where between left (`-1`) and right (`1`) it is heard. Default `0`, the middle. A sound placed
+     * by its object (`spatial`) is put there by where the object is, and this moves it further.
+     */
+    pan?: number;
+    /**
      * Which volume group it belongs to: `'sfx'` (the default) or `'music'` are there from the start,
      * and any other name works straight away. An options screen moves these with `useAudio`.
      */
@@ -263,6 +268,10 @@ export type TSoundAttachment = {
     loopStart: number;
     loopEnd: number;
     rate: number;
+    /**
+     * Where between left (`-1`) and right (`1`) it is heard.
+     */
+    pan: number;
     channel: string;
     autoplay: boolean;
     spatial: boolean;
@@ -316,6 +325,16 @@ export type TSoundHandle = {
      * Changes the speed and pitch, now and for the next time it plays.
      */
     setRate(rate: number): void;
+    /**
+     * Where between left (`-1`) and right (`1`) it is heard, now and for the next time it plays, over
+     * `fade` seconds if given.
+     */
+    setPan(pan: number, fade?: number): void;
+    /**
+     * Where between left (`-1`) and right (`1`) it is heard: written, it moves there at once, so a
+     * tween can carry it across, `tween({ target: sound, to: { pan: 1 }, duration: 2 })`.
+     */
+    pan: number;
     /**
      * Whether something of this sound is sounding right now.
      */

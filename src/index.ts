@@ -64,7 +64,7 @@ export type { TUseScriptOptions } from './hooks';
 export { registerScript } from './scripts';
 export type { TScriptFn, TScriptProps, TScriptField, TScriptOptions, TScriptRequirement, TScriptAttachment } from './scripts';
 export type { TDataRecord, TDataSetter, TWatchDep } from './hooks';
-export { useUpdate, useLateUpdate, useLoadTexture, useLoadAtlas, useLoader, useScene, useCleanup, useReady, useSpawn, useSelf, useKeyboard, useGame, useSpriteAnimation, getSpriteAnimation, useSkeletalAnimation, useTween, useTimer, useCamera2d, useScreenSpace, usePointer, useGamepad, useActions, useAction, useVector, useInputMap, useTouchAction, useRandom, useSignal, useStore, useStoreLink, usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadShader, useLoadPalette, useLoadLut, useLoadParticles, useLoadPack, useLoadAudio, useLoadPixels, useSound, useAudio, useMusic, useSong, useLoadSong, useMotion, useLoadMotion, useAudioListener, usePostProcess, useParticleCollider2d, useParticleCollider3d } from './hooks';
+export { useUpdate, useLateUpdate, useLoadTexture, useLoadAtlas, useLoader, useScene, useCleanup, useReady, useSpawn, useSelf, useKeyboard, useGame, useSpriteAnimation, getSpriteAnimation, useSkeletalAnimation, useTween, useTimer, useCamera2d, useScreenSpace, usePointer, useGamepad, useActions, useAction, useVector, useInputMap, useTouchAction, useRandom, useSignal, useStore, useStoreLink, usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadShader, useLoadPalette, useLoadLut, useLoadParticles, useLoadPack, useLoadAudio, useLoadPixels, useSound, useAudio, useMusic, useSong, useLoadSong, useLoadTrackerSong, useMotion, useLoadMotion, useAudioListener, usePostProcess, useParticleCollider2d, useParticleCollider3d } from './hooks';
 export { createMaterial } from './gameobjects/material';
 // Lines in space: the debug helpers (an axis gizmo, a floor grid) and any lines a game wants to draw.
 export { useHelperLines, useHelperAxis, useHelperGrid } from './hooks';
@@ -230,9 +230,9 @@ export type {
 export type { TRandomHandle } from './math/random';
 // Sound made from text rather than recorded: a song's tracks and an effect's samples, the same in a
 // game, in an editor and on the desktop runtime.
-export { renderSong, renderSfx, SFX_PRESETS, parseSongDoc, SONG_FORMAT } from './audio/synth';
+export { renderSong, renderSfx, SFX_PRESETS, SONG_INSTRUMENTS, SONG_SAMPLES, SONG_BUILTINS, songVoicesOf, parseSongDoc, SONG_FORMAT } from './audio/synth';
 export type {
-    TRenderedSong, TSfxOptions, TSfxPreset, TSongDoc, TSongError, TSongNote, TSongVoice, TSongVoiceName, TAudioMeasure,
+    TRenderedSong, TSfxOptions, TSfxPreset, TSongDoc, TSongError, TSongInstrument, TSongInstrumentError, TSongInstrumentInfo, TSongInstrumentList, TSongNote, TSongNoteEffects, TSongSample, TSongSampleInfo, TSongBuiltinInfo, TSongChip, TFmPatch, TFmOperator, TSongVoice, TSongVoiceName, TAudioMeasure,
 } from './audio/synth';
 // Values moved over time by keys, the `.motion` an editor's motion panel writes.
 export { parseMotionDoc, MOTION_FORMAT, MOTION_VERSION } from './motion';
@@ -288,7 +288,7 @@ export type { TShaderTarget } from './loaders/shader/types/t_shader_target';
 export type { TRendererType } from './render';
 export type { TCanvasScaling, TCanvasKeep } from './DOM';
 export type { TUseActionsOptions } from './hooks';
-export type { TUseLoadAudioOptions, TUseLoadBitmapFontOptions, TUseLoadFontOptions, TUseLoadLutOptions, TUseLoadPaletteOptions, TUseLoadParticlesOptions, TUseLoadPackOptions, TUseLoadSongOptions, TUseLoadMotionOptions } from './hooks/loaders';
+export type { TUseLoadAudioOptions, TUseLoadBitmapFontOptions, TUseLoadFontOptions, TUseLoadLutOptions, TUseLoadPaletteOptions, TUseLoadParticlesOptions, TUseLoadPackOptions, TUseLoadSongOptions, TUseLoadTrackerSongOptions, TUseLoadMotionOptions } from './hooks/loaders';
 export type { TSongFile } from './loaders/song';
 export type { TMotionFile } from './loaders/motion';
 export type { TLoadedPack } from './loaders/pack';

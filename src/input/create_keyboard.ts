@@ -1,3 +1,4 @@
+import { momentOf } from './moment';
 import { normalizeKey } from './normalize_key';
 import type { TKeyboardSource } from './types/t_keyboard';
 
@@ -31,6 +32,10 @@ export const createKeyboard = (canvas: HTMLCanvasElement): TKeyboardSource => {
     const down = new Map<string, string>();
     const pressed = new Set<string>();
     const released = new Set<string>();
+    /**
+     * When each key of `pressed` went down, by the event: the first press if there were two.
+     */
+    const pressedAt = new Map<string, number>();
 
     /**
      * Told about every key as it arrives, for whoever needs the event and not the frame.
@@ -70,8 +75,9 @@ export const createKeyboard = (canvas: HTMLCanvasElement): TKeyboardSource => {
         }
         down.set(code, key);
         const count = held.get(key) ?? 0;
-        if (count === 0) {
+        if (count === 0 && !pressed.has(key)) {
             pressed.add(key);
+            pressedAt.set(key, momentOf(keyEvent));
         }
         held.set(key, count + 1);
     };
@@ -107,6 +113,7 @@ export const createKeyboard = (canvas: HTMLCanvasElement): TKeyboardSource => {
         isDown: (key) => held.has(normalizeKey(key)),
         justPressed: (key) => pressed.has(normalizeKey(key)),
         justReleased: (key) => released.has(normalizeKey(key)),
+        pressedAt: (key) => pressedAt.get(normalizeKey(key)) ?? null,
         onKey: (listener) => {
             rawListeners.push(listener);
             return () => {
@@ -115,6 +122,7 @@ export const createKeyboard = (canvas: HTMLCanvasElement): TKeyboardSource => {
         },
         endFrame: () => {
             pressed.clear();
+            pressedAt.clear();
             released.clear();
         },
         destroy: () => {
@@ -125,6 +133,7 @@ export const createKeyboard = (canvas: HTMLCanvasElement): TKeyboardSource => {
             held.clear();
             down.clear();
             pressed.clear();
+            pressedAt.clear();
             released.clear();
         },
     };

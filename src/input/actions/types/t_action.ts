@@ -134,6 +134,16 @@ export type TActionsHandle = {
      */
     justPressed(name: TActionName): boolean;
     /**
+     * When it started, if it did this frame, in seconds on the page's clock: the moment of the
+     * hand, up to a frame before the frame that tells of it, from whatever pressed it first (a key,
+     * a button, a finger). A stick has no moment of its own and counts as now. `null` when
+     * `justPressed` is false.
+     *
+     * For a rhythm game whose controls the player can change:
+     * `song.positionAt(actions.pressedAt('hit'))`, after checking it is not `null`.
+     */
+    pressedAt(name: TActionName): number | null;
+    /**
      * How long it has been held, in seconds of game time, `0` while it is not. On the frame it is
      * let go it still says how long it was held, so a charged shot reads its charge right there:
      * `if (actions.justReleased('fire')) shoot(actions.heldFor('fire'))`. It stops with the game
@@ -184,6 +194,10 @@ export type TAction = {
     isDown(): boolean;
     justPressed(): boolean;
     justReleased(): boolean;
+    /**
+     * When it started, if it did this frame. See `TActionsHandle.pressedAt`.
+     */
+    pressedAt(): number | null;
     value(): number;
     /**
      * How long it has been held, in seconds. See `TActionsHandle.heldFor`.

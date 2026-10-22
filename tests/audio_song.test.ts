@@ -2,8 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
 import { useSong } from '../src/hooks/audio/use_song';
 import { useMusic } from '../src/hooks/audio/use_music';
+import { useAudio } from '../src/hooks/audio/use_audio';
 import { useLoadSong } from '../src/hooks/loaders/use_load_song';
-import { updateAudio } from '../src/audio';
+import { getAudioManager, updateAudio } from '../src/audio';
 import { SONG_FORMAT } from '../src/audio/synth';
 import { parseSceneDoc, sceneFromDoc, serializeScene } from '../src/scene/document';
 import { registerScene } from '../src/scene/register_scene';
@@ -94,7 +95,12 @@ describe('a song written as notes', () => {
         expect(voices.map((voice) => voice.loopStart)).toEqual([2, 2, 2]);
         // Three whole bars, every track the same length.
         expect(voices.map((voice) => (voice.buffer as TFakeBuffer).duration)).toEqual([6, 6, 6]);
-        const piece = voices[0]!.connectedTo!.connectedTo!;
+        // Its own volume, then where it is between left and right (a voice is mono, so lifted by √2
+        // first to stay as loud in the middle), then the whole song.
+        const lift = voices[0]!.connectedTo!.connectedTo! as unknown as TFakeGain;
+        expect(lift.gain.value).toBeCloseTo(Math.SQRT2, 9);
+        expect(lift.connectedTo!.kind).toBe('stereo');
+        const piece = lift.connectedTo!.connectedTo!;
         expect(piece.connectedTo).toBe(store.get('audio').manager!.channels.get('music') as unknown as TFakeGain);
         expect(song.playing).toBe(true);
         expect(song.errors).toEqual([]);
@@ -181,6 +187,35 @@ describe('following the beat', () => {
         }
 
         expect(heard).toEqual([[1, 1], [2, 1], [3, 1], [4, 1], [1, 2]]);
+    });
+
+    it('calls on the beat that is heard: as late as the device and the player\'s offset make the sound', async () => {
+        const { store } = createTestGame();
+        let song!: TSongHandle;
+        startTestScene(store, 'Rhythm', () => {
+            song = useSong(SONG, { autoplay: true });
+            useAudio().setOffset(0.1);
+            return createScene();
+        });
+        await settle();
+        const context = contextOf(store);
+        (context as unknown as { outputLatency: number }).outputLatency = 0.1;
+        const heard: Array<[number, number]> = [];
+        song.onBeat((beat, bar) => heard.push([beat, bar]));
+
+        // Played from 0, heard from 0.2: nothing of it reaches the player before then.
+        for (const time of [0, 0.1]) {
+            context.currentTime = time;
+            updateAudio(store);
+        }
+        expect(heard).toEqual([]);
+        for (const time of [0.25, 0.6, 0.75]) {
+            context.currentTime = time;
+            updateAudio(store);
+        }
+        expect(heard).toEqual([[1, 1], [2, 1]]);
+        expect(song.latency).toBeCloseTo(0.2, 6);
+        expect(song.position).toBeCloseTo(0.55, 6);
     });
 
     it('counts by the frames when a host steps the game, and plays on from there after', async () => {
@@ -287,6 +322,177 @@ describe('following the beat', () => {
 
         expect(heard).toEqual([[1, 1], [2, 1], [1, 2]]);
     });
+
+    it('and for music from files, on the beat that is heard', async () => {
+        const { store } = createTestGame();
+        let music!: TMusicHandle;
+        startTestScene(store, 'Level', () => {
+            music = useMusic({ layers: { main: { src: '/audio/theme.ogg' } }, bpm: 60 });
+            return createScene();
+        });
+        await Promise.all([...store.get('assets').sounds.values()].map((clip) => whenLoaded(clip)));
+        const context = contextOf(store);
+        (context as unknown as { outputLatency: number }).outputLatency = 0.3;
+        const heard: number[] = [];
+        music.onBeat((beat) => heard.push(beat));
+
+        music.play();
+        for (const time of [0, 0.2, 0.35, 1.2, 1.35]) {
+            context.currentTime = time;
+            updateAudio(store);
+            heard.push(-time);
+        }
+
+        // Each beat comes 0.3 s after it is played: the first at 0.35, the second at 1.35.
+        expect(heard).toEqual([-0, -0.2, 1, -0.35, -1.2, 2, -1.35]);
+    });
+
+    it('says where music from files is heard, in seconds and in beats from its first, and at a press', async () => {
+        const { store } = createTestGame();
+        let music!: TMusicHandle;
+        let plain!: TMusicHandle;
+        startTestScene(store, 'Level', () => {
+            music = useMusic({ layers: { main: { src: '/audio/theme.ogg' } }, bpm: 120, firstBeat: 0.5 });
+            plain = useMusic({ layers: { main: { src: '/audio/theme.ogg' } } });
+            return createScene();
+        });
+        await Promise.all([...store.get('assets').sounds.values()].map((clip) => whenLoaded(clip)));
+        const context = contextOf(store);
+        (context as unknown as { outputLatency: number }).outputLatency = 0.1;
+        expect([music.position, music.beat]).toEqual([null, null]);
+
+        music.play();
+        plain.play();
+        context.currentTime += 2.35;
+        // Heard: 2.25 s in, 0.1 s late. Its first beat is half a second in, two beats a second.
+        expect(music.latency).toBeCloseTo(0.1, 6);
+        expect(music.position).toBeCloseTo(2.25, 6);
+        expect(music.beat).toBeCloseTo(3.5, 6);
+        // Pressed a quarter of a second ago: what was heard then.
+        expect(music.positionAt(performance.now() / 1000 - 0.25)!).toBeCloseTo(2, 2);
+        // Without a tempo there are no beats to count, only seconds.
+        expect(plain.position).toBeCloseTo(2.25, 6);
+        expect(plain.beat).toBeNull();
+
+        context.currentTime -= 2.3;
+        // Heard before its first beat: below 0.
+        expect(music.beat).toBeCloseTo(-1, 6);
+    });
+});
+
+describe('where the song is heard', () => {
+    it('says it in beats too, counting on from the start, right after a change of tempo', async () => {
+        const { song, context } = await withSong();
+        expect(song.beat).toBeNull();
+
+        // 120 beats a minute: a beat each half second.
+        song.play();
+        context.currentTime += 1.75;
+        expect(song.beat).toBeCloseTo(3.5, 6);
+
+        // Twice as fast from here: on from the same beat, four beats a second.
+        song.setTempo(240);
+        expect(song.beat).toBeCloseTo(3.5, 6);
+        context.currentTime += 0.5;
+        expect(song.beat).toBeCloseTo(5.5, 6);
+    });
+
+    it('says how far into the song it is, by the audio clock, and null while stopped', async () => {
+        const { song, context } = await withSong();
+        expect(song.position).toBeNull();
+
+        song.play();
+        context.currentTime += 1.25;
+        expect(song.position).toBeCloseTo(1.25, 6);
+
+        song.stop();
+        expect(song.position).toBeNull();
+    });
+
+    it('takes off the time the sound takes to reach the speaker, and says how long that is', async () => {
+        const { song, context } = await withSong();
+        const late = context as unknown as { outputLatency: number; baseLatency: number };
+        late.outputLatency = 0.15;
+        late.baseLatency = 0.01;
+
+        song.play();
+        context.currentTime += 1;
+        expect(song.latency).toBeCloseTo(0.16, 6);
+        expect(song.position).toBeCloseTo(0.84, 6);
+        // Right after it starts nothing has been heard yet: never before the beginning.
+        context.currentTime -= 0.9;
+        expect(song.position).toBe(0);
+    });
+
+    it('counts the player\'s offset, which can take off what a device reports and is not there', async () => {
+        const { store } = createTestGame();
+        let song!: TSongHandle;
+        let offset!: () => number;
+        startTestScene(store, 'Rhythm', () => {
+            song = useSong(SONG);
+            const audio = useAudio();
+            audio.setOffset(-0.05);
+            offset = () => audio.getOffset();
+            return createScene();
+        });
+        await settle();
+        const context = contextOf(store);
+        (context as unknown as { outputLatency: number }).outputLatency = 0.2;
+        song.play();
+        context.currentTime += 1;
+        expect(offset()).toBe(-0.05);
+        expect(song.latency).toBeCloseTo(0.15, 6);
+        expect(song.position).toBeCloseTo(0.85, 6);
+    });
+
+    it('is not late under the frame clock, where nothing reaches a speaker', async () => {
+        const { store, song, context } = await withSong({ autoplay: true });
+        (context as unknown as { outputLatency: number }).outputLatency = 0.2;
+        store.get('audio').manager!.setClock('frames');
+        updateAudio(store, 0);
+        updateAudio(store, 0.5);
+        expect(song.latency).toBe(0);
+        expect(song.position).toBeCloseTo(0.5, 6);
+    });
+
+    it('goes back to the loop when the song goes round', async () => {
+        const { song, context } = await withSong();
+        song.play();
+        // Six seconds long and going back to bar two, at two seconds: seven seconds in is a second into bar two again.
+        context.currentTime += 7;
+        expect(song.position).toBeCloseTo(3, 6);
+    });
+
+    it('just after going round, is still at the end of the loop, where the sound heard is', async () => {
+        const { song, context } = await withSong();
+        (context as unknown as { outputLatency: number }).outputLatency = 0.16;
+        song.play();
+        // Played: 0.05 s back into bar two. Heard: the last 0.11 s of bar three, not the intro.
+        context.currentTime += 6.05;
+        expect(song.position).toBeCloseTo(5.89, 6);
+    });
+
+    it('says where it was heard at the moment of a press, taking off how long ago that was', async () => {
+        const { song, context } = await withSong();
+        (context as unknown as { outputLatency: number }).outputLatency = 0.1;
+        expect(song.positionAt(performance.now() / 1000)).toBeNull();
+
+        song.play();
+        context.currentTime += 6.05;
+        // Pressed 0.2 s ago: heard then, 0.1 s late, was 0.3 s before what plays now, across the loop.
+        const pressed = performance.now() / 1000 - 0.2;
+        expect(song.positionAt(pressed)!).toBeCloseTo(5.75, 2);
+        // A moment still to come is now: never ahead of what is heard.
+        expect(song.positionAt(performance.now() / 1000 + 5)).toBeCloseTo(song.position!, 6);
+    });
+
+    it('under the frame clock, a press is as early as its frame', async () => {
+        const { store, song } = await withSong({ autoplay: true });
+        store.get('audio').manager!.setClock('frames');
+        updateAudio(store, 0);
+        updateAudio(store, 0.5);
+        expect(song.positionAt(performance.now() / 1000 - 0.2)).toBeCloseTo(song.position!, 6);
+    });
 });
 
 describe('a song in a scene document', () => {
@@ -310,6 +516,40 @@ describe('a song in a scene document', () => {
         const again = createTestGame().store;
         registerScene(again, doc.name, sceneFromDoc(doc as TSceneDoc));
         expect(serializeScene(startScene(again, doc.name))).toEqual(doc);
+    });
+
+    it('is ready only once the sound files its instruments name are read, and plays them', async () => {
+        const WITH_SAMPLE: TSongDoc = {
+            ...SONG,
+            instruments: { hit: { sample: '/samples/hit.wav' } },
+            voices: { ...SONG.voices, dpcm: { notes: "@hit c'4 r r r | c'4 r r r | c'4 r r r |" } },
+        };
+        fetchSpy!.mockImplementation((async (url: string) => ({
+            ok: true,
+            json: async () => WITH_SAMPLE,
+            arrayBuffer: async () => new ArrayBuffer(String(url).length),
+        })) as unknown as typeof fetch);
+        const { store } = createTestGame();
+        const tone = new Float32Array(11025).map((_, i) => Math.sin(i / 4) * 0.8);
+        (getAudioManager(store).context as unknown as { decodeAudioData: unknown }).decodeAudioData = async () => ({
+            length: tone.length, sampleRate: 22050, numberOfChannels: 1, getChannelData: () => tone,
+        });
+        let song!: TSongHandle;
+        startTestScene(store, 'Ballpark', () => {
+            song = useSong(useLoadSong({ src: '/music/drums.song' }), { autoplay: true });
+            return createScene();
+        });
+        const file = store.get('assets').songs.get('/music/drums.song')!;
+        await whenLoaded(file);
+        await settle();
+
+        expect(fetchSpy!.mock.calls.map((call: unknown[]) => String(call[0]))).toContain('/samples/hit.wav');
+        expect(file.samples.get('/samples/hit.wav')?.sampleRate).toBe(22050);
+        expect(song.playing).toBe(true);
+        // pulse1, triangle, noise and the samples, each its own track.
+        const tracks = started(contextOf(store)).map((source) => source.buffer as TFakeBuffer);
+        expect(tracks).toHaveLength(4);
+        expect(tracks.every((buffer) => buffer.data.some((value) => value !== 0))).toBe(true);
     });
 
     it('takes its file saved again while it plays, carrying on from the same beat', async () => {

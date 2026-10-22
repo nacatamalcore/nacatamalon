@@ -1,5 +1,5 @@
 import type { TLoadStatus } from '../../types/t_load_status';
-import type { TSongDoc } from '../../../audio/synth';
+import type { TSongDoc, TSongSample } from '../../../audio/synth';
 
 /**
  * A `.song` file, on its way in or already here.
@@ -26,4 +26,9 @@ export type TSongFile = {
      * `null` until it is `'ready'`, and after an error.
      */
     doc: TSongDoc | null;
+    /**
+     * The sound files its instruments' `sample` name, read, by that name. The engine's own samples are
+     * not here: they are made when they are played.
+     */
+    samples: Map<string, TSongSample>;
 };

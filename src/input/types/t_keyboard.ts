@@ -24,6 +24,15 @@ export type TKeyboard = {
      * Whether the key came up during this frame: the mirror of `justPressed`.
      */
     justReleased(key: TKeyName): boolean;
+    /**
+     * When the key went down, if it did during this frame: the moment the hand pressed it, in
+     * seconds on the page's clock, up to a frame before the frame says so. `null` when `justPressed`
+     * is false.
+     *
+     * What a rhythm game judges a press by: `song.positionAt(keys.pressedAt('Space'))` is the
+     * moment of the song that was being heard.
+     */
+    pressedAt(key: TKeyName): number | null;
 };
 
 /**

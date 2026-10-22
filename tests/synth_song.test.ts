@@ -108,7 +108,7 @@ describe('a mistake in the notes', () => {
 
         expect(notes.map((note) => note.pitch)).toEqual([60, 62]);
         expect(errors.map((error) => error.column)).toEqual([4, 10, 13]);
-        expect(errors[1]!.message).toContain('only the noise voice plays drums');
+        expect(errors[1]!.message).toContain('only the noise voices (noise, psgNoise) play drums');
         expect(errors[2]!.message).toContain('1, 2, 4, 8, 16, 32 or 64');
     });
 

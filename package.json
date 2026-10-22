@@ -32,7 +32,8 @@
         "CHANGELOG.md",
         "LICENSE",
         "llms.txt",
-        "llms-full.txt"
+        "llms-full.txt",
+        "guides"
     ],
     "main": "./dist/index.js",
     "types": "./dist/types/index.d.ts",

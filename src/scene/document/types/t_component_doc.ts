@@ -737,6 +737,10 @@ export type TSoundComponent = {
      */
     rate?: number;
     /**
+     * Where between left (`-1`) and right (`1`) it is heard, absent for the middle.
+     */
+    pan?: number;
+    /**
      * Which volume group it belongs to, so an options screen can move all the music at once
      * without knowing what is in the level.
      *
@@ -838,6 +842,10 @@ export type TSongComponent = {
      * How loud each voice is, only those not at `1`.
      */
     voices?: Partial<Record<TSongVoiceName, number>>;
+    /**
+     * Where each voice is heard, left (`-1`) to right (`1`), only those changed from the file's.
+     */
+    pan?: Partial<Record<TSongVoiceName, number>>;
     /**
      * Beats per minute, absent for what the file says.
      */

@@ -1,3 +1,4 @@
+import { momentOf } from '../moment';
 import { deadzoneRadial, deadzoneScalar } from './deadzone';
 import { saysMilliseconds } from '../../utils/says_milliseconds';
 import { GAMEPAD_AXES, GAMEPAD_BUTTONS, gamepadAxisIndex, gamepadButtonIndex } from './gamepad_standard';
@@ -29,6 +30,11 @@ type TPort = {
     values: Float32Array;
     axes: Float32Array;
     connected: boolean;
+    /**
+     * When the pad last changed, as it says (`Gamepad.timestamp`), in seconds on the page's clock:
+     * when what `cur` holds happened, closer than the frame that read it.
+     */
+    changedAt: number;
     id: string;
     mapping: string;
     buttonCount: number;
@@ -56,6 +62,7 @@ const createPort = (): TPort => ({
     values: new Float32Array(GAMEPAD_BUTTONS.length),
     axes: new Float32Array(GAMEPAD_AXES.length),
     connected: false,
+    changedAt: 0,
     id: '',
     mapping: '',
     buttonCount: 0,
@@ -169,6 +176,7 @@ export const createGamepads = (canvas: HTMLCanvasElement): TGamepadSource => {
         }
 
         ensureCapacity(port, pad.buttons.length, pad.axes.length);
+        port.changedAt = momentOf({ timeStamp: pad.timestamp });
         // Cleared first, so a pad with fewer buttons than the buffer (no `guide`, say) reads as not
         // pressed there instead of inheriting whatever the previous pad left behind.
         port.cur.fill(0);
@@ -322,6 +330,10 @@ export const createGamepads = (canvas: HTMLCanvasElement): TGamepadSource => {
             justReleased: (button) => {
                 const i = gamepadButtonIndex[button];
                 return !rawDown(i) && wasDown(i);
+            },
+            pressedAt: (button) => {
+                const i = gamepadButtonIndex[button];
+                return rawDown(i) && !wasDown(i) ? portNow().changedAt : null;
             },
             value: (button) => rawValue(gamepadButtonIndex[button]),
 

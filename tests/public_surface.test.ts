@@ -144,6 +144,12 @@ describe('the tools door', () => {
             'textBlockSize',
             // A piano roll's: a voice's notes read, and written back as text after a click changed them.
             'parseSongNotes', 'writeSongNotes',
+            // A song's instruments, for a tool that shows their mistakes and offers their names.
+            'songInstrumentErrors', 'songInstrumentNames',
+            // A tracker's song brought in.
+            'importTrackerText', 'importFamiTrackerText', 'importFamiStudioText',
+            // One of the engine's songs, for an editor to show and play.
+            'loadBuiltinSong',
             // A timeline's: saving a motion after a key was moved by hand.
             'serializeMotionDoc',
         ].sort());

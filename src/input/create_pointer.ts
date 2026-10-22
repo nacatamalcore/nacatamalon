@@ -1,3 +1,4 @@
+import { momentOf } from './moment';
 import { pointerButtonName } from './pointer_buttons';
 import type { TPointerButtonName } from './pointer_buttons';
 // Straight from its file: the box barrel reaches the store, and the store creates this pointer.
@@ -39,6 +40,10 @@ type TQueuedEvent = {
     deltaY: number;
     movementX: number;
     movementY: number;
+    /**
+     * When it happened, in seconds on the page's clock (see `momentOf`).
+     */
+    time: number;
 };
 
 /**
@@ -118,6 +123,16 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
     const wentDown = new Set<TPointerButtonName>();
     const cameUp = new Set<TPointerButtonName>();
     /**
+     * When each button of `wentDown` went down, by its event: the first press if there were two.
+     */
+    const wentDownAt = new Map<TPointerButtonName, number>();
+    const goneDown = (button: TPointerButtonName, time: number): void => {
+        if (!wentDown.has(button)) {
+            wentDownAt.set(button, time);
+        }
+        wentDown.add(button);
+    };
+    /**
      * What is under each pressing pointer, worked out once per frame on the first question and kept
      * until the next frame's events: several buttons asking about the same fingers lay the scene out
      * once. Same order as `active`.
@@ -157,6 +172,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
             deltaY: 0,
             movementX: moved ? event.movementX ?? 0 : 0,
             movementY: moved ? event.movementY ?? 0 : 0,
+            time: momentOf(event),
         };
 
         // Many moves can arrive between two frames and only the last position matters, so a move
@@ -232,10 +248,10 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
         // is a notch, and a fast spin must not lose most of itself.
         const last = queue[queue.length - 1];
         if (last?.kind === 'wheel') {
-            queue[queue.length - 1] = { ...last, screenX: x, screenY: y, deltaX: last.deltaX + deltaX, deltaY: last.deltaY + deltaY };
+            queue[queue.length - 1] = { ...last, screenX: x, screenY: y, deltaX: last.deltaX + deltaX, deltaY: last.deltaY + deltaY, time: momentOf(wheel) };
             return;
         }
-        queue.push({ kind: 'wheel', pointerId: MOUSE_ID, pointerType: 'mouse', screenX: x, screenY: y, button: 'main', deltaX, deltaY, movementX: 0, movementY: 0 });
+        queue.push({ kind: 'wheel', pointerId: MOUSE_ID, pointerType: 'mouse', screenX: x, screenY: y, button: 'main', deltaX, deltaY, movementX: 0, movementY: 0, time: momentOf(wheel) });
     };
 
     canvas.addEventListener('pointerdown', onDown);
@@ -263,9 +279,11 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
      */
     const movement = { x: 0, y: 0 };
     /**
-     * Which pointer the event being handed on came from, for every listener and sprite that hears it.
+     * Which pointer the event being handed on came from, and when, for every listener and sprite
+     * that hears it. Outside an event (a sprite the pointer stopped being over, worked out after
+     * them) it is now.
      */
-    const current: { pointerId: number; pointerType: TPointerType } = { pointerId: MOUSE_ID, pointerType: 'mouse' };
+    const current: { pointerId: number; pointerType: TPointerType; time: number | null } = { pointerId: MOUSE_ID, pointerType: 'mouse', time: null };
 
     /**
      * What a listener belonging to `box` is told: the world through the camera of its own scene.
@@ -282,6 +300,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
             button,
             pointerId: current.pointerId,
             pointerType: current.pointerType,
+            time: current.time ?? momentOf({}),
             target: hits[0] ?? null,
             hits,
         };
@@ -522,6 +541,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
             // A new frame: what is under the fingers is asked again.
             underActive = null;
             wentDown.clear();
+            wentDownAt.clear();
             cameUp.clear();
 
             for (const event of events) {
@@ -533,13 +553,18 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
                 movement.y = event.movementY;
                 current.pointerId = pointerId;
                 current.pointerType = event.pointerType;
+                current.time = event.time;
 
                 if (kind === 'leave') {
                     lastPosition = null;
                     continue;
                 }
                 if (kind === 'pressed' || kind === 'released') {
-                    (kind === 'pressed' ? wentDown : cameUp).add(button);
+                    if (kind === 'pressed') {
+                        goneDown(button, event.time);
+                    } else {
+                        cameUp.add(button);
+                    }
                     continue;
                 }
                 lastPosition = { x: screenX, y: screenY };
@@ -548,7 +573,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
                 // hears the same as the event it is handling.
                 if (kind === 'down') {
                     active.set(pointerId, { pointerId, pointerType: event.pointerType, screenX, screenY });
-                    wentDown.add(button);
+                    goneDown(button, event.time);
                 } else if (kind === 'up') {
                     active.delete(pointerId);
                     cameUp.add(button);
@@ -624,6 +649,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
             }
             current.pointerId = MOUSE_ID;
             current.pointerType = 'mouse';
+            current.time = null;
 
             // Hover is worked out with the pointer still, so nothing it fires moved the mouse.
             movement.x = 0;
@@ -634,6 +660,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
         touches: () => [...active.values()],
         justPressed: (button) => (button === undefined ? wentDown.size > 0 : wentDown.has(button)),
         justReleased: (button) => (button === undefined ? cameUp.size > 0 : cameUp.has(button)),
+        pressedAt: (button) => (button === undefined ? (wentDownAt.size > 0 ? Math.min(...wentDownAt.values()) : null) : wentDownAt.get(button) ?? null),
         position: () => lastPosition,
         isPressing: (store, target) => {
             if (active.size === 0) {

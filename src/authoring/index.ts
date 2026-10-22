@@ -78,7 +78,12 @@ export {
 export { serializeSongDoc, mixSong, encodeWav, analyzeAudio } from '../audio/synth';
 export { serializeMotionDoc } from '../motion/serialize_motion_doc';
 // A voice's notes read, and written back as text, for a tool that changes them by hand (a piano roll).
-export { parseSongNotes, writeSongNotes } from '../audio/synth';
+export { parseSongNotes, writeSongNotes, songInstrumentErrors, songInstrumentNames } from '../audio/synth';
+// Songs from a tracker's text export, for an editor to bring them in.
+export { importTrackerText, importFamiTrackerText, importFamiStudioText } from './tracker';
+// One of the engine's songs by its key, for an editor to show and play it.
+export { loadBuiltinSong } from '../audio/synth/builtin';
+export type { TTrackerImport } from './tracker';
 
 // How big a text came out, for a tool to outline it and pick it by.
 export { textBlockSize } from '../gameobjects/text';

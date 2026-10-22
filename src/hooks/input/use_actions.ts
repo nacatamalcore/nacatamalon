@@ -88,7 +88,7 @@ export const useActions = (options: TUseActionsOptions = {}): TActionsHandle =>
  *
  * @param name - The action, as the input map names it.
  * @param options - Which player's devices to read, as for `useActions`.
- * @returns That one action: `isDown`, `justPressed`, `justReleased` and `value`.
+ * @returns That one action: `isDown`, `justPressed`, `justReleased`, `pressedAt` and `value`.
  *
  * @category Input
  * @since 1.0.0
@@ -101,6 +101,7 @@ export const useAction = (name: TActionName, options: TUseActionsOptions = {}): 
         isDown: () => handle.isDown(name),
         justPressed: () => handle.justPressed(name),
         justReleased: () => handle.justReleased(name),
+        pressedAt: () => handle.pressedAt(name),
         heldFor: () => handle.heldFor(name),
         value: () => handle.value(name),
     };

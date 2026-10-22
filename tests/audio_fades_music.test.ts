@@ -158,9 +158,11 @@ describe('music in layers', () => {
         expect([land.startAt, water.startAt]).toEqual([2.5, 2.5]);
         expect([land.loop, water.loop]).toEqual([true, true]);
         expect([layerGain(land).value, layerGain(water).value]).toEqual([1, 0]);
-        // Layer, then the piece, then the channel: gains[2] is 'music'.
-        const piece = land.connectedTo!.connectedTo!;
-        expect(water.connectedTo!.connectedTo).toBe(piece);
+        // Layer, then where it is between left and right, then the piece, then the channel: gains[2]
+        // is 'music'.
+        expect(land.connectedTo!.connectedTo!.kind).toBe('stereo');
+        const piece = land.connectedTo!.connectedTo!.connectedTo!;
+        expect(water.connectedTo!.connectedTo!.connectedTo).toBe(piece);
         expect(piece.connectedTo).toBe(context.gains[2]);
         expect(music.playing).toBe(true);
     });
@@ -218,7 +220,7 @@ describe('music in layers', () => {
         music.stop({ fade: 3 });
 
         const [land, water] = started(context);
-        expect(lastRamp((land.connectedTo!.connectedTo as unknown as TFakeGain).gain)).toEqual({ kind: 'ramp', value: 0, time: 9 });
+        expect(lastRamp((land.connectedTo!.connectedTo!.connectedTo as unknown as TFakeGain).gain)).toEqual({ kind: 'ramp', value: 0, time: 9 });
         expect([land.stopAt, water.stopAt]).toEqual([9, 9]);
         expect(music.playing).toBe(false);
         expect(store.get('audio').manager!.voices.size).toBe(0);

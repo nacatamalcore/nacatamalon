@@ -130,6 +130,12 @@ export type TGamepad = {
      */
     justReleased(button: TGamepadButtonName): boolean;
     /**
+     * When it went down, if it did this frame, in seconds on the page's clock: the moment the pad
+     * says it changed, closer than the frame that read it (a pad is read once a frame), though not
+     * as close as a key. `null` when `justPressed` is false.
+     */
+    pressedAt(button: TGamepadButtonName): number | null;
+    /**
      * How far it is pressed, 0 to 1. Only the triggers are analogue on a standard pad; every other
      * button is 0 or 1. **No dead zone here**: a trigger rests at exactly 0 and does not drift, so
      * trimming its first fifth would only shorten the travel.

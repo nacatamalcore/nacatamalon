@@ -1,5 +1,5 @@
 import { getActiveBox, getActiveGame } from '../../store';
-import { createBeatClock, createLayeredPlayer, getAudioManager } from '../../audio';
+import { createBeatClock, createLayeredPlayer, getAudioManager, heardPositionOf } from '../../audio';
 import { setAttachmentHandle } from '../../audio/attachment_players';
 import { isShowingOnly } from '../physics/is_showing_only';
 import { nanoId } from '../../utils';
@@ -90,7 +90,8 @@ export const useMusic = (options: TMusicOptions): TMusicHandle => {
 
     const player = createLayeredPlayer(audio, attachment);
     const beats = createBeatClock(audio, () => (attachment.bpm === null ? null : {
-        position: player.position(),
+        // The beat heard, not the one played: it comes as late as the sound does.
+        position: player.position(audio.heardDelay()),
         secondsPerBeat: 60 / attachment.bpm,
         firstBeat: attachment.firstBeat,
         beatsPerBar: attachment.beatsPerBar,
@@ -109,6 +110,8 @@ export const useMusic = (options: TMusicOptions): TMusicHandle => {
         }
         return layer;
     };
+
+    const heard = heardPositionOf(audio, player.position);
 
     const handle: TMusicHandle = {
         play: (play) => {
@@ -140,6 +143,17 @@ export const useMusic = (options: TMusicOptions): TMusicHandle => {
             }
             return beats.on(listener);
         },
+        get position() {
+            return heard.now();
+        },
+        get beat() {
+            const at = heard.now();
+            return at === null || attachment.bpm === null ? null : (at - attachment.firstBeat) / (60 / attachment.bpm);
+        },
+        get latency() {
+            return audio.heardDelay();
+        },
+        positionAt: (moment) => heard.at(moment),
         get playing() {
             return player.playing;
         },

@@ -101,6 +101,7 @@ export type TFakeBuffer = {
     duration: number;
     length: number;
     sampleRate: number;
+    numberOfChannels: number;
     data: Float32Array;
     copyToChannel(source: Float32Array, channel: number): void;
 };
@@ -126,6 +127,11 @@ export type TFakeContext = {
     resumes: number;
     suspends: number;
     createGain(): TFakeGain;
+    createStereoPanner(): TFakeStereoPanner;
+    /**
+     * Every stereo panner ever made, in order.
+     */
+    stereos: TFakeStereoPanner[];
     createBufferSource(): TFakeSource;
     createPanner(): TFakePanner;
     decodeAudioData(data: ArrayBuffer): Promise<unknown>;
@@ -133,6 +139,8 @@ export type TFakeContext = {
     suspend(): Promise<void>;
     close(): Promise<void>;
 };
+
+export type TFakeStereoPanner = TFakeNode & { pan: TFakeParam };
 
 const node = (kind: string): TFakeNode => ({
     kind,
@@ -151,11 +159,12 @@ export const createFakeAudioContext = (): TFakeContext => {
         currentTime: 0,
         sampleRate: 8000,
         buffers: [],
-        createBuffer: (_channels: number, length: number, sampleRate: number) => {
+        createBuffer: (channels: number, length: number, sampleRate: number) => {
             const buffer: TFakeBuffer = {
                 duration: length / sampleRate,
                 length,
                 sampleRate,
+                numberOfChannels: channels,
                 data: new Float32Array(length),
                 copyToChannel(source: Float32Array) { this.data.set(source); },
             };
@@ -175,6 +184,12 @@ export const createFakeAudioContext = (): TFakeContext => {
         panners: [],
         resumes: 0,
         suspends: 0,
+        stereos: [],
+        createStereoPanner: () => {
+            const stereo = { ...node('stereo'), pan: param(0) } as TFakeStereoPanner;
+            context.stereos.push(stereo);
+            return stereo;
+        },
         createGain: () => {
             const gain = { ...node('gain'), gain: param(1) } as TFakeGain;
             context.gains.push(gain);
@@ -226,7 +241,8 @@ export const createFakeAudioContext = (): TFakeContext => {
             context.panners.push(panner);
             return panner;
         },
-        decodeAudioData: async () => ({ duration: FAKE_DURATION }),
+        // A file, as most music is: in stereo.
+        decodeAudioData: async () => ({ duration: FAKE_DURATION, numberOfChannels: 2 }),
         resume: async () => { context.resumes += 1; context.state = 'running'; },
         suspend: async () => { context.suspends += 1; context.state = 'suspended'; },
         close: async () => { context.closed = true; },

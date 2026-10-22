@@ -113,6 +113,7 @@ export const usePointer = (): TPointerHandle => {
         isDown: () => pointer.touches().length > 0,
         justPressed: (button) => pointer.justPressed(button),
         justReleased: (button) => pointer.justReleased(button),
+        pressedAt: (button) => pointer.pressedAt(button),
         position: () => {
             const at = pointer.position();
             if (at === null) {

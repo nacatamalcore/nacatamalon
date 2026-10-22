@@ -1,4 +1,5 @@
 import { rampTo } from './ramp';
+import { clampPan, stereoPannerOf } from './stereo';
 import { wrapPosition } from './loop_position';
 import { logVoice } from './sound_log';
 import type { TAudioManager, TVoice } from './types/t_audio';
@@ -58,14 +59,22 @@ export type TLayeredPlayer = {
     setVolume(volume: number, fade: number): void;
     setLayer(layer: TMusicLayer, volume: number, fade: number): void;
     /**
+     * Where a layer is heard, from left (`-1`) to right (`1`), over `fade` seconds.
+     */
+    setLayerPan(layer: TMusicLayer, pan: number, fade: number): void;
+    /**
      * Started again from `offset` with the layers as they are now (new sounds after a change of
      * tempo, say), staying paused if it was. Does nothing when it is not playing.
      */
     restart(offset: number): void;
     /**
      * Seconds into the tune, wrapped round the loop. `null` when it is not playing.
+     *
+     * `lateBy` seconds earlier, for where the tune is heard rather than played: taken off before it
+     * is wrapped, so just after going round it is still at the end of the loop. Before anything of
+     * it has been heard it is below `0`.
      */
-    position(): number | null;
+    position(lateBy?: number): number | null;
     readonly playing: boolean;
 };
 
@@ -128,8 +137,16 @@ export const createLayeredPlayer = (audio: TAudioManager, piece: TLayeredPiece):
             const layerGain = audio.context.createGain();
             layerGain.gain.value = layer.volume;
             node.connect(layerGain);
-            layerGain.connect(gain);
-            return { voice: { node, gain: layerGain, channel: piece.channel, panner: null, area: null, box: null, sound: null, from: null }, layer };
+            // Where between left and right, when the audio engine can say it.
+            const pans = stereoPannerOf(audio.context, layer.pan ?? 0, layer.clip.buffer?.numberOfChannels === 1);
+            const stereo = pans?.stereo ?? null;
+            if (pans !== null) {
+                layerGain.connect(pans.input);
+                pans.stereo.connect(gain);
+            } else {
+                layerGain.connect(gain);
+            }
+            return { voice: { node, gain: layerGain, channel: piece.channel, panner: null, stereo, area: null, box: null, sound: null, from: null }, layer };
         });
 
         const current: TRunning = { parts, piece: gain, startedAt: audio.now(), offset, paused: false };
@@ -190,13 +207,13 @@ export const createLayeredPlayer = (audio: TAudioManager, piece: TLayeredPiece):
         }
     };
 
-    const position = (): number | null => {
+    const position = (lateBy = 0): number | null => {
         const current = running;
         if (current === null) {
             return null;
         }
         const played = current.paused ? current.offset : current.offset + audio.now() - current.startedAt;
-        return wrapPosition(played, duration(), piece.loopStart, piece.loopEnd);
+        return wrapPosition(played - lateBy, duration(), piece.loopStart, piece.loopEnd);
     };
 
     return {
@@ -228,6 +245,14 @@ export const createLayeredPlayer = (audio: TAudioManager, piece: TLayeredPiece):
             const part = running?.parts.find((candidate) => candidate.layer === layer);
             if (part !== undefined && running !== null && !running.paused) {
                 rampTo(part.voice.gain.gain, volume, audio.context.currentTime, fade);
+            }
+        },
+        setLayerPan: (layer, pan, fade) => {
+            layer.pan = clampPan(pan);
+            const part = running?.parts.find((candidate) => candidate.layer === layer);
+            const stereo = part?.voice.stereo;
+            if (stereo !== undefined && stereo !== null && running !== null && !running.paused) {
+                rampTo(stereo.pan, layer.pan, audio.context.currentTime, fade);
             }
         },
         restart: (offset) => {

@@ -3,6 +3,59 @@
 What changed in the current release of `nacatamalon`, and what is waiting for the next one. Earlier
 releases are in [changelog/](./changelog/), one file each.
 
+## Unreleased
+
+### Added
+
+- **Instruments** for a song's voices, the way an 8-bit tracker shapes a note: `volume`, `duty`,
+  `arpeggio` and `pitch` as lists of numbers read one a frame (a sixtieth of a second), with a `|`
+  where a list starts again, plus `vibrato` and `slide`. A song keeps them in `instruments`, a voice
+  starts with its `instrument`, and `@name` in its notes changes it (`@-` for none). What cannot be
+  read in them is in `instrumentErrors`, with the instrument, the field and the word, and
+  `songInstrumentErrors` finds the same without making the sound. A song with no instruments sounds
+  exactly as it did.
+- **What one note does on its own**, written in brackets after it: `[slide]`, `[vib]`,
+  `[arp:0,4,7]`, `[vol:8]`.
+- **The engine's instruments** (`SONG_INSTRUMENTS`), played by name with nothing to define: `@lead`,
+  `@pluck`, `@major`, `@bass`, `@kick`, `@snare`… A song's own of the same name is played instead;
+  `@nacatamalon:kick` always means the engine's.
+- **A fifth voice, `dpcm`**, that plays samples at the console's grain: the engine's (`SONG_SAMPLES`:
+  a drum kit, an orchestra hit, a zap, made by its own code) or a sound file of the game, which
+  `useLoadSong` loads before the song is ready.
+- **Two more consoles**, by a song's `chip`: `'snes'`, eight voices of samples in the console's BRR,
+  at its rate and smoothing, with envelopes (`adsr`) and an `echo` the instruments go into; and
+  `'genesis'`, six FM voices of four operators (`fm`: the eight algorithms and feedback) and the
+  squares and noise of its second chip. The engine has instruments for both: `@piano`, `@strings`,
+  `@choir`… and `@epiano`, `@slap-bass`, `@fm-brass`…
+- **Thirty-nine songs the engine has** (`SONG_BUILTINS`): public domain pieces (Beethoven, Grieg,
+  Mozart, Bach, Handel, Vivaldi, Wagner, Bizet, Satie, Joplin, Sousa, and folk songs and hymns)
+  arranged for the three consoles, asked for by key,
+  `useLoadSong({ src: 'nacatamalon:ode-to-joy' })`, and loaded only when a game asks for one.
+- **Pan**, where between left (`-1`) and right (`1`) a sound is heard: `useSound(clip, { pan })`, and
+  for a song each voice's `pan` in its file or `useSong(song, { pan: { pulse2: 0.6 } })`. Both
+  handles move it with a fade (`setPan`) and have a `pan` a tween can carry across:
+  `tween({ target: sound, to: { pan: 1 } })`, `tween({ target: song.pan, to: { pulse2: -1 } })`.
+  Scenes keep it.
+- **Where a song is heard**: `song.position`, the seconds into it that are reaching the speaker now,
+  by the audio clock and with the output's delay taken off, `song.beat`, the same in beats from the
+  start (`3.5`, right at any tempo), and `song.latency`, that delay: what a
+  rhythm game judges a press against, and how early to start a sound meant to land on a beat.
+  `onBeat`, a song's and a piece of music's, now comes on the beat heard, that much later than it is
+  played. `useAudio().setOffset(seconds)` adds the player's own delay (Bluetooth headphones), which a
+  game measures and keeps as it likes, and all of these count it. Music from files (`useMusic`) has
+  them too: `position`, `positionAt`, `latency`, and `beat` counted from its `firstBeat` at its `bpm`.
+- **When a press happened**: `keys.pressedAt(key)`, `pointer.pressedAt(button?)`,
+  `pad.pressedAt(button)` and `actions.pressedAt(name)` say when it went down, the frame it did, and every pointer event has its
+  `time`: the moment of the hand, from the event itself, up to a frame before the frame that tells of
+  it. `song.positionAt(moment)` is where the song was being heard then, for judging a press against
+  the beat.
+- **`importTrackerText`** in `nacatamalon/authoring`: a text export of FamiTracker or FamiStudio as one
+  of our songs, its instruments, its samples as sound files, and what could not be brought over. The
+  editor does it when one is dropped on it.
+- **`useLoadTrackerSong({ src })`**: the same export loaded by a game as it is, read when it lands,
+  its samples kept in memory: the song `useLoadSong` gives, for `useSong`. A game that does not call
+  it carries none of the reading.
+
 ## 0.2.6 — 2026-10-21
 
 ### Added

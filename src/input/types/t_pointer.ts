@@ -52,6 +52,12 @@ export type TPointerInfo = {
      */
     readonly pointerType: TPointerType;
     /**
+     * When it happened, in seconds on the page's clock: the moment the finger touched or the button
+     * went down, which can be up to a frame before the frame that tells of it. What a rhythm game
+     * judges a tap by: `song.positionAt(info.time)`.
+     */
+    readonly time: number;
+    /**
      * The sprite, text or nine-slice on top under the pointer, or `null` over empty space.
      */
     readonly target: TSprite | TText | TNineSlice | null;
@@ -188,6 +194,12 @@ export type TPointerHandle = {
      */
     justReleased(button?: TPointerButtonName): boolean;
     /**
+     * When `button` (any, when left out: the first) went down, if it did during this frame: the
+     * moment of the touch, in seconds on the page's clock. `null` when `justPressed` is false. See
+     * `TPointerInfo.time`.
+     */
+    pressedAt(button?: TPointerButtonName): number | null;
+    /**
      * Where the pointer was last seen over the game, or `null` once it left (or before it came).
      * For the mouse that is where it hovers, pressed or not; for touch, the last finger that moved.
      */
@@ -294,6 +306,10 @@ export type TPointerSource = {
      * Whether `button` (any, when left out) came up in the last `dispatch`.
      */
     justReleased(button?: TPointerButtonName): boolean;
+    /**
+     * When `button` (any, when left out: the first) went down in the last `dispatch`, or `null`.
+     */
+    pressedAt(button?: TPointerButtonName): number | null;
     /**
      * Where the pointer was last seen over the canvas, as of the last `dispatch`, or `null`.
      */

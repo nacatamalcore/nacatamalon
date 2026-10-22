@@ -1,5 +1,6 @@
 import { deadzoneRadial, deadzoneScalar, GAMEPAD_AXES, GAMEPAD_BUTTONS, gamepadAxisIndex } from '../gamepad';
 import { noteFoundByName } from '../../box/named_by_function';
+import { momentOf } from '../moment';
 import { bindingKey, DEFAULT_ACTION_DEADZONE, DEFAULT_ACTION_PRESS } from './normalize_action_map';
 import type { TBox } from '../../box';
 import type { TGamepad } from '../gamepad';
@@ -89,6 +90,11 @@ export type TActionSourceOptions = {
      * bindings. A game with no pointer (a test) has none.
      */
     touch?: () => ReadonlySet<TBox>;
+    /**
+     * When the first finger of this frame touched, for an action a touch started. See
+     * `TPointerSource.pressedAt`.
+     */
+    touchMoment?: () => number | null;
 };
 
 /**
@@ -353,6 +359,34 @@ export const createActions = (options: TActionSourceOptions): TActionSource => {
     };
 
     /**
+     * The earliest moment any of an action's sources says it went down this frame, or `null` when
+     * none says: a stick, or a trigger pulled past the action's `press` without a click.
+     */
+    const firstMoment = (action: TCompiled, row: TRow): number | null => {
+        let first: number | null = null;
+        const take = (moment: number | null): void => {
+            if (moment !== null && (first === null || moment < first)) {
+                first = moment;
+            }
+        };
+        for (const binding of action.bindings) {
+            if (binding.type === 'key' && row.keyboard) {
+                take(keyboard.pressedAt(binding.key));
+            } else if (binding.type === 'button') {
+                for (const pad of row.pads) {
+                    take(pad.pressedAt(binding.button));
+                }
+            } else if (binding.type === 'touch' && row.touch) {
+                take(options.touchMoment?.() ?? null);
+            }
+        }
+        if (row.touch && touchedActions.has(action.name)) {
+            take(options.touchMoment?.() ?? null);
+        }
+        return first;
+    };
+
+    /**
      * The dead zone a composed reading uses when none is given: the **strictest** of the actions
      * involved. Not their average: "the strictest of the four" is a sentence somebody can hold in
      * their head, and it is a number that really appears in one of the four actions.
@@ -398,6 +432,18 @@ export const createActions = (options: TActionSourceOptions): TActionSource => {
                 // action with a key keeps the keyboard's faithfulness and one on the pad alone
                 // inherits the pad's limit.
                 return rose || keyEdge(action, row, false);
+            },
+            pressedAt: (name) => {
+                const at = slotOf(name);
+                if (at === -1) {
+                    return null;
+                }
+                const action = plan[at];
+                const rose = row.cur[at] >= action.press && row.prev[at] < action.press;
+                if (!rose && !keyEdge(action, row, false)) {
+                    return null;
+                }
+                return firstMoment(action, row) ?? momentOf({});
             },
             justReleased: (name) => {
                 const at = slotOf(name);

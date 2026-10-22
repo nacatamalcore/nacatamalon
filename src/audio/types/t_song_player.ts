@@ -32,6 +32,11 @@ export type TSongOptions = {
      */
     voices?: Partial<Record<TSongVoiceName, number>>;
     /**
+     * Where between left (`-1`) and right (`1`) each voice is heard, only those not where the file
+     * puts them (the middle, unless it says).
+     */
+    pan?: Partial<Record<TSongVoiceName, number>>;
+    /**
      * Beats per minute, instead of what the file says.
      */
     tempo?: number;
@@ -56,6 +61,10 @@ export type TSongAttachment = {
     channel: string;
     autoplay: boolean;
     voices: Partial<Record<TSongVoiceName, number>>;
+    /**
+     * Where each voice is heard, left (`-1`) to right (`1`), only those changed from the file's.
+     */
+    pan: Partial<Record<TSongVoiceName, number>>;
     /**
      * `null` for what the file says.
      */
@@ -89,6 +98,16 @@ export type TSongHandle = {
     setVoice(voice: TSongVoiceName, volume: number, fade?: number): void;
     getVoice(voice: TSongVoiceName): number;
     /**
+     * Where one voice is heard, from left (`-1`) to right (`1`), over `fade` seconds if given: the
+     * bass to one side, the arpeggio to the other.
+     */
+    setPan(voice: TSongVoiceName, pan: number, fade?: number): void;
+    /**
+     * Where each voice is heard, left (`-1`) to right (`1`). Written, a voice moves there at once, so
+     * a tween can carry it across: `tween({ target: song.pan, to: { pulse2: 1 }, duration: 2 })`.
+     */
+    readonly pan: Record<TSongVoiceName, number>;
+    /**
      * Faster or slower, in beats per minute, carrying on from the same beat it was on.
      */
     setTempo(bpm: number): void;
@@ -102,8 +121,51 @@ export type TSongHandle = {
      */
     readonly tempo: number;
     /**
+     * How far into the song the player is hearing now, in seconds, or `null` while it is stopped.
+     *
+     * Read from the sound card's clock, not the game's, and with the time the sound takes to reach
+     * the speaker taken off: what a rhythm game times its notes against, so a press is judged
+     * against the beat that was heard. It goes back to the loop's start when the song loops.
+     */
+    readonly position: number | null;
+    /**
+     * How far into the song the player is hearing now, in beats from its start, or `null` while it
+     * is stopped: `position` counted in beats, with what is left of the beat after the point (`3.5`
+     * is half way through the fourth). Right at any tempo, `setTempo` included. It goes back to the
+     * loop's start when the song loops.
+     *
+     * Not the `beat` an `onBeat` listener is given, which is the beat of the bar (`1` to `4` in
+     * 4/4) and starts again every bar: this one counts on, and a whole song's notes are written
+     * by it, so it is what a note falling towards the line a player hits is placed by:
+     * `note.y = LINE - (note.beat - song.beat) * SPEED`.
+     */
+    readonly beat: number | null;
+    /**
+     * How long a sound started now takes to be heard, in seconds: the delay the device reports on
+     * its way to the speaker, plus the player's offset (`useAudio().setOffset`). What `position`
+     * takes off. A sound meant to land on a beat is started this much before it: the line a
+     * character sings over the song. `0` under the frame clock.
+     */
+    readonly latency: number;
+    /**
+     * Where the song was being heard at `moment`, a time on the page's clock such as a press gives
+     * (`keys.pressedAt`, `pointer.pressedAt`, `pad.pressedAt`, a pointer's `time`): `position` as it
+     * was then. `null` while it is stopped.
+     *
+     * What a rhythm game judges a press against, to the moment of the hand and not of the frame:
+     *
+     * ```ts
+     * const at = keys.pressedAt('Space');
+     * if (at !== null) judge(song.positionAt(at));
+     * ```
+     *
+     * Under the frame clock (tests, recordings) a press is as early as its frame: `position`.
+     */
+    positionAt(moment: number): number | null;
+    /**
      * Calls `listener` on every beat while it plays, with the beat of the bar and the bar, both
-     * from `1`. Hands back what stops it; it stops on its own with the song's object.
+     * from `1`, on the frame the beat is **heard**: `latency` after it is played. Hands back what
+     * stops it; it stops on its own with the song's object.
      */
     onBeat(listener: TBeatListener): () => void;
     /**

@@ -12,6 +12,10 @@ export type TFakePad = {
     connected: boolean;
     buttons: Array<{ pressed: boolean; value: number }>;
     axes: number[];
+    /**
+     * When it last changed, in milliseconds on the page's clock, as a browser says it.
+     */
+    timestamp?: number;
     vibrationActuator?: { playEffect?: (...args: unknown[]) => Promise<string>; reset?: () => Promise<void> };
     /**
      * Presses a button by its standard number.

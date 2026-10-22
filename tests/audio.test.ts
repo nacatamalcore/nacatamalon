@@ -144,9 +144,11 @@ describe('useSound', () => {
         const gain = source.connectedTo!;
         expect(gain.kind).toBe('gain');
         expect((gain as unknown as TFakeGain).gain.value).toBe(0.5);
-        // The voice goes through its channel, and the channel through the master.
-        // gains[0] is the master, [1] is 'sfx' and [2] is 'music': this sound asked for music.
-        const channel = gain.connectedTo!;
+        // The voice goes through where it is between left and right, then its channel, and the
+        // channel through the master. gains[0] is the master, [1] is 'sfx' and [2] is 'music': this
+        // sound asked for music.
+        expect(gain.connectedTo!.kind).toBe('stereo');
+        const channel = gain.connectedTo!.connectedTo!;
         expect(channel).toBe(context.gains[2]);
         expect(channel.connectedTo).toBe(context.gains[0]);
     });

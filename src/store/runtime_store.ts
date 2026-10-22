@@ -89,6 +89,7 @@ export const createRuntimeStore = (init: TRuntimeStoreInit): TRuntimeStore => {
         gamepad: (index) => gamepads.handle(index),
         actions: init.config.actions,
         touch: () => (self === null ? new Set<TBox>() : pointer.pressedBoxes(self)),
+        touchMoment: () => pointer.pressedAt(),
     });
 
     const state: TRuntimeState = {
