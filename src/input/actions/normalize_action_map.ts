@@ -3,28 +3,6 @@ import { normalizeKey } from '../normalize_key';
 import type { TActionBinding, TActionDef, TActionMap } from './types/t_action';
 
 /**
- * What an action's dead zone is when it does not say. The same as the stick's, on purpose.
- *
- * @category Input
- * @since 1.0.0
- * @author Francisco Pereira Alvarado
- */
-export const DEFAULT_ACTION_DEADZONE = 0.2;
-
-/**
- * How far an analogue source travels before it counts as pressed, when the action does not say.
- *
- * A different number from the dead zone on purpose. One number for both would mean 0.5 as the floor
- * for a stick, which is very high: movement through actions would feel dead next to reading the
- * stick, which here sits right beside it.
- *
- * @category Input
- * @since 1.0.0
- * @author Francisco Pereira Alvarado
- */
-export const DEFAULT_ACTION_PRESS = 0.5;
-
-/**
  * A binding as one short string, so two of them can be compared and repeats can be spotted. Used by
  * the controls screen to find conflicts as well.
  *

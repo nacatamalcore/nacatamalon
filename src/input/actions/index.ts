@@ -3,8 +3,6 @@ export { createInputMap, INPUT_MAP_STORAGE_KEY } from './create_input_map';
 export {
     bindingKey,
     normalizeActionMap,
-    DEFAULT_ACTION_DEADZONE,
-    DEFAULT_ACTION_PRESS,
 } from './normalize_action_map';
 export { describeBinding } from './describe_binding';
 

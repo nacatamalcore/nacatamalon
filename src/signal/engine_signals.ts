@@ -1,4 +1,6 @@
 import { createGameSignal } from './create_game_signal';
+// Named here so the published types say `TGameSignal` rather than `import(".")…`.
+import type { TGameSignal } from './types/t_game_signal';
 
 /**
  * What a scene pause signal carries: which scene it was.

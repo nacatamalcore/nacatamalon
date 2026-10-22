@@ -522,7 +522,7 @@ const writeGenesisNote = (
  * `instrumentErrors`.
  *
  * An instrument is the song's own when it has one of that name, and otherwise the engine's
- * (`SONG_INSTRUMENTS`); `nacatamalon:` in front of a name always means the engine's.
+ * (`BUILTIN.MUSIC.INSTRUMENTS`); `nacatamalon:` in front of a name always means the engine's.
  *
  * @param doc - The song.
  * @param sampleRate - Samples per second. Default `44100`.

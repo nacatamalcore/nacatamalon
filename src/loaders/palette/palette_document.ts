@@ -9,18 +9,9 @@ import type { TPaletteDoc } from './types/t_palette';
  */
 export const PALETTE_FORMAT = 1;
 
-/**
- * As many colours as a palette may hold.
- *
- * Two hundred and fifty-six, which is more than any machine of the era ever showed at once, and the
- * ceiling exists because matching walks every colour for every pixel: a palette of ten thousand
- * would be a frame that never finishes rather than an error anybody could see.
- *
- * @category Assets & loading
- * @since 1.0.0
- * @author Francisco Pereira Alvarado
- */
-export const MAX_PALETTE_COLORS = 256;
+import { MAX_PALETTE_COLORS } from '../../CONFIG';
+
+export { MAX_PALETTE_COLORS };
 
 const HEX = /^#[0-9a-f]{6}$/;
 

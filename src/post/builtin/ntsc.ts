@@ -16,7 +16,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @example
  * ```ts
  * usePostProcess(ntsc({ bleed: 0.8 }));
- * usePostProcess(crt(CRT_PRESETS.composite));
+ * usePostProcess(crt(POST.CRT_PRESETS.composite));
  * ```
  *
  * @category Post-processing

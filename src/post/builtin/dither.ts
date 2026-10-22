@@ -16,7 +16,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  *
  * @example
  * ```ts
- * usePostProcess({ ...dither({ levels: COLOR_LEVELS.genesis }) });
+ * usePostProcess({ ...dither({ levels: POST.COLOR_LEVELS.genesis }) });
  * ```
  * @returns The effect, for `usePostProcess`.
  *

@@ -14,7 +14,7 @@ export type TPointerButtonName = 'main' | 'middle' | 'right' | 'back' | 'forward
  * Every pointer button, in the order the browser numbers them: **the position in this list is the
  * number it reports**, `0` the main one to `4` forward.
  *
- * @category Input
+ * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */

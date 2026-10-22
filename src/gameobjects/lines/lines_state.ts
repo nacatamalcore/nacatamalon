@@ -32,7 +32,7 @@ export const linesStateOf = (lines: TLines): TLinesState => {
 };
 
 /**
- * Replaces the corners of `lines` with `vertices`: `LINE_VERTEX_FLOATS` numbers each, two corners to
+ * Replaces the corners of `lines` with `vertices`: `RENDER.LINE_VERTEX_FLOATS` numbers each, two corners to
  * a line.
  *
  * Copied in, so the caller is free to reuse its own array for the next frame. A run that does not

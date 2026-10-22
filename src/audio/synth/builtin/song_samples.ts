@@ -180,7 +180,7 @@ const MAKERS: Record<string, () => Float32Array> = {
 /**
  * The samples the engine has, by what an instrument's `sample` calls them after `nacatamalon:`.
  *
- * @category Audio
+ * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */

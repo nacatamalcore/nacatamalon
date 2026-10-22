@@ -8,7 +8,7 @@
  * Written once here and read by both backends and by whoever writes lines, so the three can never
  * count a corner differently.
  *
- * @category Render
+ * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */

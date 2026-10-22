@@ -1035,7 +1035,7 @@ const createColliderDesc = (rapier: TRapierModule, options: TBodyOptions): Colli
         // Collision layers. Rapier packs both halves into one u32 (membership in the high 16 bits,
         // the mask in the low 16) and tests them mutually: `((a >> 16) & b) && ((b >> 16) & a)`.
         // That 16-bit ceiling is why the format caps at 16 layers even though Box3D's filter is
-        // 64-bit wide; see core's `PHYSICS_LAYERS`.
+        // 64-bit wide; see core's `LIMITS.PHYSICS_LAYERS`.
         if (options.layer !== undefined || options.collidesWith !== undefined) {
             colliderDesc.setCollisionGroups(collisionGroupsOf(options.layer ?? 0, options.collidesWith ?? ALL_LAYERS));
         }

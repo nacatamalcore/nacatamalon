@@ -34,7 +34,7 @@ const SNES = ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8'] as const;
  * Grouped by the voice they are for: the squares carry the tune and the chords, the triangle the bass,
  * the noise the drums, and `dpcm` the drums recorded.
  *
- * @category Audio
+ * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */

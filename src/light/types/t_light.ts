@@ -142,20 +142,7 @@ export type TLight = TDirectionalLight | TPointLight | TSpotLight | TRectLight |
  */
 export type TPunctualLight = TDirectionalLight | TPointLight | TSpotLight | TRectLight;
 
-/**
- * How many lights shine on one frame.
- *
- * Eight is not a number picked out of the air: it is what the hardware of this engine's era
- * offered. The GameCube's GX had eight, each of them free to be a sun, a lamp or a torch; the
- * N64 did seven and an ambient; the fixed pipeline the Dreamcast era was written against also
- * stopped at eight. Past the eighth they are dropped in the order the scene made them, once, with
- * a warning. Ambient lights do not count against it.
- *
- * @category Lighting
- * @since 1.0.0
- * @author Francisco Pereira Alvarado
- */
-export const MAX_LIGHTS = 8;
+export { MAX_LIGHTS } from '../../CONFIG';
 
 /**
  * Whether this light takes part in the shading, which is everything but ambient.

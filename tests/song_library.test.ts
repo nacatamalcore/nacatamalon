@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test';
-import { renderSong, parseSongDoc, SONG_BUILTINS } from '../src';
+import { renderSong, parseSongDoc, BUILTIN } from '../src';
 import { analyzeAudio, mixSong, serializeSongDoc } from '../src/authoring';
 import { loadBuiltinSong } from '../src/audio/synth/builtin';
 import { createScene } from '../src/scene/create_scene';
@@ -16,11 +16,11 @@ import { installFakeAudio } from './helpers/test_audio';
 
 describe("the engine's songs", () => {
     it('are thirty-nine, each with its own key', () => {
-        expect(SONG_BUILTINS).toHaveLength(39);
-        expect(new Set(SONG_BUILTINS.map((info) => info.key)).size).toBe(39);
+        expect(BUILTIN.MUSIC.SONGS).toHaveLength(39);
+        expect(new Set(BUILTIN.MUSIC.SONGS.map((info) => info.key)).size).toBe(39);
     });
 
-    for (const info of SONG_BUILTINS) {
+    for (const info of BUILTIN.MUSIC.SONGS) {
         it(`${info.key} reads as a .song, plays with no mistakes, and does not distort`, async () => {
             const doc = await loadBuiltinSong(`nacatamalon:${info.key}`)!;
             expect(parseSongDoc(JSON.parse(serializeSongDoc(doc)), info.key)).toEqual(doc);

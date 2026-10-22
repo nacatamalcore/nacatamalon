@@ -5,7 +5,7 @@
  * thirty-two. `poster` is not a machine: it is the number that makes the effect obvious when you are
  * looking at what it does rather than trying to be a console.
  *
- * @category Post-processing
+ * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */

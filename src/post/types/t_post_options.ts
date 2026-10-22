@@ -17,7 +17,7 @@ import type { TPostPass } from './t_post_effect';
  *
  * usePostProcess({ fragment: CRT_WGSL, fragmentGlsl: CRT_GLSL, uniforms: { curve: 0.3 } });
  * usePostProcess({ effect: useLoadShader({ src: '/shaders/crt.wgsl' }) });
- * usePostProcess({ ...dither({ levels: COLOR_LEVELS.genesis }) });
+ * usePostProcess({ ...dither({ levels: POST.COLOR_LEVELS.genesis }) });
  * ```
  *
  * @typeParam U The knobs by name, worked out from `uniforms`: the effect `usePostProcess` returns

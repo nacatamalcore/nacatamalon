@@ -22,7 +22,6 @@ export type { TPixelTextureOptions, TPixelPaint } from './gameobjects/pixel_text
 export type { TLoadedPixels } from './loaders/pixels';
 export type { TUseLoadPixelsOptions } from './hooks';
 export type { TModel, TModelOptions } from './gameobjects/model';
-export { MAX_LIGHTS } from './light';
 export type { TLight, TDirectionalLight, TPointLight, TSpotLight, TRectLight, TAmbientLight, TLightOptionsBase } from './light';
 export { useCubeGeometry, usePlaneGeometry, useCircleGeometry, useUvSphereGeometry, useIcoSphereGeometry, useCylinderGeometry, useConeGeometry, useTorusGeometry } from './hooks';
 export type { TBlobShadowOptions } from './hooks';
@@ -71,7 +70,6 @@ export { useHelperLines, useHelperAxis, useHelperGrid } from './hooks';
 export type { TUseHelperLinesOptions, THelperLines, TUseHelperAxisOptions, THelperAxisColors, TUseHelperGridOptions } from './hooks';
 export type { TLines } from './gameobjects/lines';
 export type { TNewLinesOptions } from './gameobjects/lines';
-export { LINE_VERTEX_FLOATS } from './render/shared/line_vertex';
 export { createParticles, createParticles3d, playParticles, stopParticles, pauseParticles, clearParticles, particleCount, emitParticles } from './gameobjects/particles';
 export { parseParticlesDoc, PARTICLES_FORMAT } from './loaders/particles';
 export type { TParticles, TParticlesOptions, TParticleOverrides, TParticles3d, TParticles3dOptions } from './gameobjects/particles';
@@ -79,15 +77,15 @@ export type { TParticleCollider2d, TParticleCollider3d, TParticleColliderShape2d
 export type { TParticlesEffect, TParticlesEffect2d, TParticlesEffect3d, TParticleColorStopInput } from './loaders/particles';
 export type { TParticlesFile, TParticlesDoc, TParticlesDoc2d, TParticlesDoc3d, TParticleBlend, TEmitShape2d, TEmitShape3d, TParticleCollision, TParticleTrail, TParticlesBounds, TChildEmitter } from './loaders/particles';
 export {
-    dither, posterize, paletteMatch, lutGrade, COLOR_LEVELS,
-    crt, CRT_PRESETS, colorAdjust, mosaic, rgbSplit, wave, shockwave, distort, glitch, grain, oldFilm, halftone, ascii, ntsc, lcd, zoomBlur, motionBlur, blur, bloom, godrays, tiltShift, phosphor,
+    dither, posterize, paletteMatch, lutGrade,
+    crt, colorAdjust, mosaic, rgbSplit, wave, shockwave, distort, glitch, grain, oldFilm, halftone, ascii, ntsc, lcd, zoomBlur, motionBlur, blur, bloom, godrays, tiltShift, phosphor,
 } from './post';
 export type { TPostEffect, TPostPass, TPostChain, TPostChainEntry, TPostProcessOptions, TBuiltinPostEffect, TEffectField, TCrtOptions, TCrtUniforms } from './post';
 
 export { fade, wipe, iris, pixelate } from './transition';
 export type { TTransition, TSceneChangeOptions, TSceneLaunchOptions, TWipeDirection } from './transition';
 export type { TPalette, TPaletteDoc } from './loaders/palette';
-export { parsePaletteDoc, PALETTE_FORMAT, MAX_PALETTE_COLORS } from './loaders/palette';
+export { parsePaletteDoc, PALETTE_FORMAT } from './loaders/palette';
 export type { TLut } from './loaders/lut';
 export { createSprite } from './gameobjects/sprite/create_sprite';
 // The far layers of a level: a picture repeated endlessly across, moving with the camera only so much.
@@ -113,7 +111,7 @@ export { createGameSignal, scenePaused, sceneResumed, gamePaused, gameResumed } 
 // never simulates never pays for the WebAssembly and a tool can draw a collider's outline without
 // loading a physics engine at all. What does move them is installed with one call from its own door
 // (`installPhysics2d()` from `nacatamalon/physics2d`, `installPhysics3d()` from `nacatamalon/physics3d`).
-export { createPhysicsBody2d, createPhysicsBody3d, PHYSICS_LAYERS, ALL_LAYERS } from './physics';
+export { createPhysicsBody2d, createPhysicsBody3d } from './physics';
 export type { TPhysicsLayer, TPhysicsLayerOptions } from './physics';
 export type {
     TPhysicsBody, TPhysicsBody2d, TPhysicsBody3d, TPhysicsBodyType,
@@ -213,9 +211,8 @@ export type { TFog, TFogOptions } from './fog';
 export type { TKeyboard, TKeyName, TPointerInfo, TPointerHandle, TPointerType, TPointerTouch, TPointerListener, TPointerWheelInfo, TPointerWheelListener, TPointerLockOptions, TSpriteEvents } from './input';
 export type { TGamepad, TGamepadAxisName, TGamepadButtonName, TGamepadInfo, TGamepadListener, TGamepadTarget, TRumbleOptions, TUseGamepadOptions } from './input';
 export type { TAction, TActionBinding, TActionCaptureOptions, TActionDef, TActionDevice, TActionMap, TActionName, TActionOverrides, TActionPersist, TActionsHandle, TInputMapHandle } from './input';
-export { POINTER_BUTTONS } from './input';
 export type { TPointerButtonName } from './input';
-export { GAMEPAD_AXES, GAMEPAD_AXIS_LABELS, GAMEPAD_BUTTONS, GAMEPAD_BUTTON_LABELS, gamepadAxisDirectionLabel, normalizeActionMap, bindingKey, describeBinding, DEFAULT_ACTION_DEADZONE, DEFAULT_ACTION_PRESS } from './input';
+export { gamepadAxisDirectionLabel, normalizeActionMap, bindingKey, describeBinding } from './input';
 export { parseProject, gameOptionsFromProject } from './project';
 export type { TProjectSettings } from './project';
 
@@ -230,7 +227,7 @@ export type {
 export type { TRandomHandle } from './math/random';
 // Sound made from text rather than recorded: a song's tracks and an effect's samples, the same in a
 // game, in an editor and on the desktop runtime.
-export { renderSong, renderSfx, SFX_PRESETS, SONG_INSTRUMENTS, SONG_SAMPLES, SONG_BUILTINS, songVoicesOf, parseSongDoc, SONG_FORMAT } from './audio/synth';
+export { renderSong, renderSfx, songVoicesOf, parseSongDoc, SONG_FORMAT } from './audio/synth';
 export type {
     TRenderedSong, TSfxOptions, TSfxPreset, TSongDoc, TSongError, TSongInstrument, TSongInstrumentError, TSongInstrumentInfo, TSongInstrumentList, TSongNote, TSongNoteEffects, TSongSample, TSongSampleInfo, TSongBuiltinInfo, TSongChip, TFmPatch, TFmOperator, TSongVoice, TSongVoiceName, TAudioMeasure,
 } from './audio/synth';

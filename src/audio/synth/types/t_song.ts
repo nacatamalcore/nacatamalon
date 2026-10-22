@@ -100,7 +100,7 @@ export type TSongVoice = {
      * - `r` is a rest, and in the noise voice `x` is a drum hit.
      * - `|` marks where a bar ends, and it is checked: a bar that does not add up is an error.
      * - `@name` plays the notes after it with that instrument of the song's `instruments`, or one the
-     *   engine has (`@kick`, `@lead`: see `SONG_INSTRUMENTS`), and `@-` with none.
+     *   engine has (`@kick`, `@lead`: see `BUILTIN.MUSIC.INSTRUMENTS`), and `@-` with none.
      * - After a note, in brackets with no spaces, what only that note does: `[slide]` glides in from
      *   the note before (`[slide:0.1]` in that many seconds), `[vib]` wobbles (`[vib:6,0.3]`: times a
      *   second and semitones, `[vib:6,0.3,0.2]` after a delay), `[arp:0,4,7]` plays a chord one note a
@@ -198,7 +198,7 @@ export type TSongInstrument = {
     fm?: TFmPatch;
     /**
      * The recording the `dpcm` voice plays: a sample the engine has (`'nacatamalon:kick'`: see
-     * `SONG_SAMPLES`) or a sound file of the game (`'/samples/hit.wav'`). It is played at the console's
+     * `BUILTIN.MUSIC.SAMPLES`) or a sound file of the game (`'/samples/hit.wav'`). It is played at the console's
      * grain, one bit at a time, and the note's pitch chooses how fast: `c'` as it was recorded, lower
      * notes slower and deeper.
      */

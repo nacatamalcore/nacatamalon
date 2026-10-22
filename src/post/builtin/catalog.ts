@@ -272,7 +272,7 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
     {
         key: 'crt',
         label: 'CRT',
-        description: 'Lines, a phosphor mask, the bulge and glow of the glass and the faults of a real tube. Four presets in CRT_PRESETS.',
+        description: 'Lines, a phosphor mask, the bulge and glow of the glass and the faults of a real tube. Four presets in POST.CRT_PRESETS.',
         binds: null,
         fields: BUILTIN_FIELDS.crt!,
         renamed: { gamma: 'linearBlend' },

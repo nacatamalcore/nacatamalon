@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { renderSong, parseSongDoc, SONG_FORMAT, SONG_INSTRUMENTS, SONG_SAMPLES } from '../src';
+import { renderSong, parseSongDoc, SONG_FORMAT, BUILTIN } from '../src';
 import { analyzeAudio, mixSong, serializeSongDoc, songInstrumentNames, writeSongNotes } from '../src/authoring';
 import { parseSongNotes } from '../src/audio/synth/parse_song_notes';
 import type { TSongDoc } from '../src';
@@ -116,7 +116,7 @@ describe("the engine's instruments", () => {
     });
 
     it('are all readable, and every name the notes can say is offered', () => {
-        for (const info of SONG_INSTRUMENTS) {
+        for (const info of BUILTIN.MUSIC.INSTRUMENTS) {
             const rendered = renderSong(song({ [info.voices[0]!]: { notes: `@${info.key} c'4` } }));
             expect([info.key, rendered.errors, rendered.instrumentErrors]).toEqual([info.key, [], []]);
         }
@@ -189,7 +189,7 @@ describe('the dpcm voice', () => {
     });
 
     it('has every sample the engine lists', () => {
-        for (const sample of SONG_SAMPLES) {
+        for (const sample of BUILTIN.MUSIC.SAMPLES) {
             const rendered = renderSong(song({ dpcm: { notes: "@x c'4" } }, { instruments: { x: { sample: `nacatamalon:${sample.key}` } } }));
             expect([sample.key, rendered.instrumentErrors]).toEqual([sample.key, []]);
             expect(peakIn(rendered.voices.dpcm!, 0, RATE)).toBeGreaterThan(0.02);

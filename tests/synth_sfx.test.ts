@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { renderSfx, SFX_PRESETS } from '../src';
+import { renderSfx, BUILTIN } from '../src';
 import { analyzeAudio } from '../src/authoring';
 import type { TSfxPreset } from '../src';
 
@@ -62,7 +62,7 @@ describe('a sound effect', () => {
     });
 
     it('lists its presets for a tool to offer', () => {
-        expect(SFX_PRESETS).toEqual(PRESETS);
+        expect(BUILTIN.SOUNDS).toEqual(PRESETS);
     });
 
     it('makes a crowd as long as asked, and it murmurs rather than holding one level', () => {

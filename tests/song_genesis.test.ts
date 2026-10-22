@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { renderSong, parseSongDoc, SONG_FORMAT, SONG_INSTRUMENTS } from '../src';
+import { renderSong, parseSongDoc, SONG_FORMAT, BUILTIN } from '../src';
 import { serializeSongDoc } from '../src/authoring';
 import { psgFrequencyOf, psgGainOf } from '../src/audio/synth/genesis';
 import type { TFmPatch, TSongDoc } from '../src';
@@ -118,7 +118,7 @@ describe('a Genesis song file', () => {
     });
 
     it("plays every one of the engine's instruments meant for its voices", () => {
-        for (const info of SONG_INSTRUMENTS.filter((candidate) => candidate.voices.some((voice) => voice.startsWith('fm') || voice.startsWith('psg')))) {
+        for (const info of BUILTIN.MUSIC.INSTRUMENTS.filter((candidate) => candidate.voices.some((voice) => voice.startsWith('fm') || voice.startsWith('psg')))) {
             const voice = info.voices.find((candidate) => candidate.startsWith('fm') || candidate.startsWith('psg'))!;
             const rendered = renderSong(song({ [voice]: { notes: voice === 'psgNoise' ? `@${info.key} x4` : `@${info.key} c'4` } }));
             expect([info.key, rendered.errors, rendered.instrumentErrors]).toEqual([info.key, [], []]);

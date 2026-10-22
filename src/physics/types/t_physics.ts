@@ -113,7 +113,7 @@ export type TPhysicsSurface = {
      */
     layer: number;
     /**
-     * A mask of the layers this body collides with: `1 << n` per layer, so {@link ALL_LAYERS} is
+     * A mask of the layers this body collides with: `1 << n` per layer, so `PHYSICS.ALL_LAYERS` is
      * everything and `(1 << 0) | (1 << 2)` is layers 0 and 2.
      *
      * **It is mutual, and that is the rule that surprises people.** Two bodies meet only if each

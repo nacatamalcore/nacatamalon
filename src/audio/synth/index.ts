@@ -1,5 +1,6 @@
 export { renderSong, mixSong, songInstrumentErrors, SONG_VOICES } from './render_song';
-export { renderSfx, SFX_PRESETS } from './render_sfx';
+export { renderSfx } from './render_sfx';
+export { SFX_PRESETS } from './sfx_presets';
 export { parseSongNotes } from './parse_song_notes';
 export { writeSongNotes } from './write_song_notes';
 export { parseSongDoc, SONG_FORMAT } from './parse_song_doc';

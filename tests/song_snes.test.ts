@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { renderSong, parseSongDoc, SONG_FORMAT, SONG_INSTRUMENTS } from '../src';
+import { renderSong, parseSongDoc, SONG_FORMAT, BUILTIN } from '../src';
 import { mixSong, serializeSongDoc } from '../src/authoring';
 import { toSnes, SNES_RATE } from '../src/audio/synth/snes';
 import type { TSongDoc } from '../src';
@@ -133,7 +133,7 @@ describe('a SNES song file', () => {
     });
 
     it("plays every one of the engine's instruments meant for it", () => {
-        for (const info of SONG_INSTRUMENTS.filter((candidate) => candidate.voices.includes('s1'))) {
+        for (const info of BUILTIN.MUSIC.INSTRUMENTS.filter((candidate) => candidate.voices.includes('s1'))) {
             const rendered = renderSong(song({ s1: { notes: `@${info.key} c'4` } }));
             expect([info.key, rendered.errors, rendered.instrumentErrors]).toEqual([info.key, [], []]);
             expect(peakIn(rendered.voices.s1!, 0, RATE)).toBeGreaterThan(0.01);

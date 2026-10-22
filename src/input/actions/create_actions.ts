@@ -1,7 +1,8 @@
 import { deadzoneRadial, deadzoneScalar, GAMEPAD_AXES, GAMEPAD_BUTTONS, gamepadAxisIndex } from '../gamepad';
 import { noteFoundByName } from '../../box/named_by_function';
 import { momentOf } from '../moment';
-import { bindingKey, DEFAULT_ACTION_DEADZONE, DEFAULT_ACTION_PRESS } from './normalize_action_map';
+import { DEFAULT_ACTION_PRESS, DEFAULT_DEADZONE } from '../../CONFIG';
+import { bindingKey } from './normalize_action_map';
 import type { TBox } from '../../box';
 import type { TGamepad } from '../gamepad';
 import type { TKeyboardSource } from '../types/t_keyboard';
@@ -205,7 +206,7 @@ export const createActions = (options: TActionSourceOptions): TActionSource => {
         plan = defs.map((def) => ({
             name: def.name,
             bindings: overrideMap.get(def.name) ?? def.bindings,
-            deadzone: def.deadzone ?? DEFAULT_ACTION_DEADZONE,
+            deadzone: def.deadzone ?? DEFAULT_DEADZONE,
             press: def.press ?? DEFAULT_ACTION_PRESS,
         }));
         slots = new Map(plan.map((action, i) => [action.name, i]));

@@ -14,7 +14,7 @@
 export type TDrawLines = {
     readonly type: 'lines';
     /**
-     * `LINE_VERTEX_FLOATS` per corner, placed in the world. Reused between frames.
+     * `RENDER.LINE_VERTEX_FLOATS` per corner, placed in the world. Reused between frames.
      */
     readonly vertices: Float32Array;
     /**

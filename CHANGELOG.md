@@ -72,6 +72,22 @@ releases are in [changelog/](./changelog/), one file each.
   `tilemap-asset`. An old name is read as any type the engine does not have: a scene says so and
   leaves that component or asset out (kept, so saving loses nothing), and a `.particles` file is
   refused. Write the new name in its place.
+- **The engine's constants are on the root in groups**, read only and frozen all the way down, so
+  writing into one throws instead of changing it for every game on the page:
+  `import { LIMITS, BUILTIN } from 'nacatamalon'`. A game carries only the groups it reads.
+  - `RENDER`: `TYPE` (was `GAME_CONFIG.RENDER_TYPE`, which is gone) and `LINE_VERTEX_FLOATS`.
+  - `INPUT`: `GAMEPAD_BUTTONS`, `GAMEPAD_AXES`, `GAMEPAD_BUTTON_LABELS`, `GAMEPAD_AXIS_LABELS`,
+    `POINTER_BUTTONS`; `DEADZONE` (was `DEFAULT_ACTION_DEADZONE`, now also the pad's, one number
+    for both) and `ACTION_PRESS` (was `DEFAULT_ACTION_PRESS`).
+  - `LIMITS`: `LIGHTS` (was `MAX_LIGHTS`), `PHYSICS_LAYERS`, `PALETTE_COLORS` (was
+    `MAX_PALETTE_COLORS`).
+  - `PHYSICS`: `ALL_LAYERS`.
+  - `POST`: `CRT_PRESETS`, `COLOR_LEVELS`.
+  - `BUILTIN`, what the engine carries by kind: `FONTS` (new), `MUSIC.SONGS` (was `SONG_BUILTINS`),
+    `MUSIC.INSTRUMENTS` (was `SONG_INSTRUMENTS`), `MUSIC.SAMPLES` (was `SONG_SAMPLES`), `SOUNDS`
+    (was `SFX_PRESETS`), and the keys of the post effects (`POST`) and material looks (`LOOKS`).
+
+  The loose names are gone from the root.
 
 ## 0.2.6 — 2026-10-21
 

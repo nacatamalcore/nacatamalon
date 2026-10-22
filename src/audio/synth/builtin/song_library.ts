@@ -33,7 +33,7 @@ export type TSongBuiltinInfo = {
  * or `"song": "nacatamalon:ode-to-joy"` in a scene. Each is loaded only when a game asks for it, so a
  * game carries only the ones it plays.
  *
- * @category Audio
+ * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */

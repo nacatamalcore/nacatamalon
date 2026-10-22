@@ -197,15 +197,6 @@ const RECIPES: Record<TSfxPreset, TRecipe> = {
 };
 
 /**
- * The kinds of sound effect `renderSfx` makes, in order: what a tool offers to choose from.
- *
- * @category Audio
- * @since 1.0.0
- * @author Francisco Pereira Alvarado
- */
-export const SFX_PRESETS = Object.keys(RECIPES) as readonly TSfxPreset[];
-
-/**
  * How long a sound effect takes to come in, in seconds: just enough not to click.
  */
 const ATTACK = 0.002;

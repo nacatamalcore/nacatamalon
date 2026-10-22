@@ -1,3 +1,4 @@
+import { DEFAULT_DEADZONE } from '../../CONFIG';
 import { momentOf } from '../moment';
 import { deadzoneRadial, deadzoneScalar } from './deadzone';
 import { saysMilliseconds } from '../../utils/says_milliseconds';
@@ -12,7 +13,6 @@ const GAMEPAD_PORTS = 4;
  * Longer than this and the browser cuts the vibration without saying so.
  */
 const MAX_RUMBLE = 5;
-const DEFAULT_DEADZONE = 0.2;
 
 const clamp01 = (value: number): number => (value < 0 ? 0 : value > 1 ? 1 : value);
 

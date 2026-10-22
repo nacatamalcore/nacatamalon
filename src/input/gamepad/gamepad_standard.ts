@@ -43,7 +43,7 @@ export type TGamepadAxisName = 'leftX' | 'leftY' | 'rightX' | 'rightY';
  * `'guide'` is last because a pad is allowed not to have it, which makes it the only one a lookup
  * can fall off the end of. Reads are checked against the pad's real button count anyway.
  *
- * @category Input
+ * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
@@ -71,7 +71,7 @@ export const GAMEPAD_BUTTONS: readonly TGamepadButtonName[] = [
  * Every standard axis, in specification order: as with the buttons, the position is the number the
  * browser reports.
  *
- * @category Input
+ * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
@@ -101,7 +101,7 @@ export const gamepadAxisIndex: Readonly<Record<TGamepadAxisName, number>> =
  * would drift the first time a name changed, and it would drift in silence, since a wrong label
  * still looks fine.
  *
- * @category Input
+ * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
@@ -128,7 +128,7 @@ export const GAMEPAD_BUTTON_LABELS: Readonly<Record<TGamepadButtonName, string>>
 /**
  * What each axis is called when it is shown to a player.
  *
- * @category Input
+ * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */

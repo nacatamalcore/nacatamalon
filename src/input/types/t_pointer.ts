@@ -37,7 +37,7 @@ export type TPointerInfo = {
     readonly movementY: number;
     /**
      * Which button: `'main'` (the left, or a finger), `'middle'` (the wheel pressed), `'right'`,
-     * and `'back'` and `'forward'` on the side of some mice. All of them in `POINTER_BUTTONS`.
+     * and `'back'` and `'forward'` on the side of some mice. All of them in `INPUT.POINTER_BUTTONS`.
      */
     readonly button: TPointerButtonName;
     /**
@@ -182,7 +182,7 @@ export type TPointerHandle = {
     /**
      * Whether a finger touched or a mouse button went down **during this frame**: true for one frame
      * per press. For what happens once: shooting, jumping, placing a block. With `button`, only that
-     * one: `'main'` (the left, or a finger), `'right'`, `'middle'`... (`POINTER_BUTTONS`).
+     * one: `'main'` (the left, or a finger), `'right'`, `'middle'`... (`INPUT.POINTER_BUTTONS`).
      *
      * The pointer's answer to the keyboard's `justPressed`. It says nothing about what was pressed;
      * for that, `onDown` and its `target`, or `isPressing`.

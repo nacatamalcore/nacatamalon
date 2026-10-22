@@ -116,40 +116,6 @@ export type TCrtUniforms = {
 };
 
 /**
- * Four tubes to start from, for `crt(CRT_PRESETS.pvm)` or `crt({ ...CRT_PRESETS.consumer, noise: 0 })`.
- *
- * `consumer` is the television in the living room: slot mask, some glow, some noise. `pvm` is a
- * studio monitor: flat, sharp, deep lines. `arcade` is a cabinet: a strong bulge and a dot mask.
- * `composite` is a cheap cable: soft, smeared, the colours not quite on top of each other.
- *
- * @category Post-processing
- * @since 1.0.0
- * @author Francisco Pereira Alvarado
- */
-export const CRT_PRESETS = {
-    consumer: {
-        scanlines: 0.45, mask: 0.25, maskType: 'slot', maskScale: 1, curvature: 0.08, vignette: 0.3,
-        sharpness: 0.4, beam: 0.7, brightness: 1.25, linearBlend: true, halation: 0.2, convergence: 0.35,
-        noise: 0.04, flicker: 0.3, interlace: false, cornerRadius: 0.04,
-    },
-    pvm: {
-        scanlines: 0.6, mask: 0.2, maskType: 'aperture', maskScale: 1, curvature: 0.02, vignette: 0.1,
-        sharpness: 0.85, beam: 0.8, brightness: 1.3, linearBlend: true, halation: 0.06, convergence: 0,
-        noise: 0, flicker: 0, interlace: false, cornerRadius: 0.01,
-    },
-    arcade: {
-        scanlines: 0.5, mask: 0.35, maskType: 'shadow', maskScale: 1, curvature: 0.12, vignette: 0.35,
-        sharpness: 0.6, beam: 0.9, brightness: 1.35, linearBlend: true, halation: 0.25, convergence: 0.2,
-        noise: 0.02, flicker: 0.1, interlace: false, cornerRadius: 0.06,
-    },
-    composite: {
-        scanlines: 0.3, mask: 0.1, maskType: 'slot', maskScale: 1, curvature: 0.08, vignette: 0.3,
-        sharpness: 0.1, beam: 0.5, brightness: 1.15, linearBlend: true, halation: 0.3, convergence: 0.6,
-        noise: 0.06, flicker: 0.2, interlace: false, cornerRadius: 0.04,
-    },
-} as const satisfies Record<string, TCrtOptions>;
-
-/**
  * The glow, worked out at half the game's size in two passes: across, then down. Five taps each,
  * weighted 1 4 6 4 1, each a pass pixel apart, so the two together spread a bright pixel over about
  * ten game pixels for the cost of a picture a quarter of the game's area.
@@ -404,7 +370,7 @@ const MASK_TYPES = { aperture: 0, slot: 1, shadow: 2 } as const;
 /**
  * Makes the frame look as if it were on a CRT television: lines, a phosphor mask, the bulge and the
  * glow of the glass, and the small faults of a real tube. Each part is a number, and a part at `0` is
- * not there at all. {@link CRT_PRESETS} has four tubes to start from.
+ * not there at all. `POST.CRT_PRESETS` has four tubes to start from.
  *
  * **One line per row of the game, not of the screen.** The lines follow the game's own pixels, the
  * way a console's picture sat on the tube, so a game at 320 × 224 has 224 of them however large the
@@ -431,8 +397,8 @@ const MASK_TYPES = { aperture: 0, slot: 1, shadow: 2 } as const;
  * @example
  * ```ts
  * usePostProcess(crt());
- * usePostProcess(crt(CRT_PRESETS.pvm));
- * usePostProcess(crt({ ...CRT_PRESETS.consumer, noise: 0, curvature: 0 }));
+ * usePostProcess(crt(POST.CRT_PRESETS.pvm));
+ * usePostProcess(crt({ ...POST.CRT_PRESETS.consumer, noise: 0, curvature: 0 }));
  * // The corners the bulge leaves in the page's own colour instead of black
  * usePostProcess(crt({ curvature: 0.08, bezel: '#0b0710' }));
  * ```
