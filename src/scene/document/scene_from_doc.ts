@@ -11,7 +11,7 @@ import { createTilemap } from '../../gameobjects/tilemap/create_tilemap';
 import { getActiveBox, getActiveGame } from '../../store';
 import { rememberBoxExtra } from './serialize_scene';
 import { spawnBox } from '../../box';
-import { useAmbientLight, useDirectionalLight, usePointLight, useSpotLight } from '../../hooks/light';
+import { useAmbientLight, useDirectionalLight, usePointLight, useRectLight, useSpotLight } from '../../hooks/light';
 import { useCamera2d } from '../../hooks/camera/use_camera_2d';
 import { useData } from '../../hooks/state';
 import { useScript } from '../../hooks/script';
@@ -524,6 +524,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
             };
             const aimed = { ...shared, ...shadowing, ambient: component.ambient ?? 0, ...(component.transform !== undefined ? { transform: component.transform } : {}) };
             const lamp = component.kind === 'point' ? usePointLight({ ...aimed, range: component.range ?? 10 })
+                : component.kind === 'rect' ? useRectLight({ ...aimed, range: component.range ?? 10, width: component.width ?? 1, height: component.height ?? 1 })
                 : component.kind === 'spot' ? useSpotLight({ ...aimed, range: component.range ?? 10, angle: component.angle ?? Math.PI / 6, penumbra: component.penumbra ?? 0.1 })
                 : useDirectionalLight({
                     ...aimed,

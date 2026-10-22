@@ -21,7 +21,7 @@ type TLightPlacement = {
  * @author Francisco Pereira Alvarado
  */
 export type TDrawLight = {
-    readonly type: 'directional' | 'point' | 'spot';
+    readonly type: 'directional' | 'point' | 'spot' | 'rect';
     readonly color: TColor;
     readonly intensity: number;
     readonly transform: TLightPlacement;
@@ -34,6 +34,11 @@ export type TDrawLight = {
      */
     readonly angle?: number;
     readonly penumbra?: number;
+    /**
+     * How big a panel is, along its own X and Y. Only a panel has them.
+     */
+    readonly width?: number;
+    readonly height?: number;
     /**
      * Whether the scene's shadows are drawn from this one. Absent is no.
      *

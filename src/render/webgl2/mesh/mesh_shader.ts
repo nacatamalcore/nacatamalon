@@ -172,11 +172,28 @@ void sampleLight(int index, vec3 worldPos, vec3 normal, vec3 viewDir, out vec3 d
 
     if (item.vector.w > 0.5) {
         vec3 toLight = item.vector.xyz - worldPos;
+        float facingPanel = 1.0;
+        if (item.vector.w > 2.5) {
+            // A panel shines from its nearest point, and only out of its front.
+            vec3 halfX = item.spotDirection.xyz;
+            vec3 halfY = item.spotParams.xyz;
+            float lenX = max(length(halfX), 0.0001);
+            float lenY = max(length(halfY), 0.0001);
+            vec3 alongX = halfX / lenX;
+            vec3 alongY = halfY / lenY;
+            vec3 fromMiddle = worldPos - item.vector.xyz;
+            vec3 nearest = item.vector.xyz
+                + alongX * clamp(dot(fromMiddle, alongX), -lenX, lenX)
+                + alongY * clamp(dot(fromMiddle, alongY), -lenY, lenY);
+            toLight = nearest - worldPos;
+            vec3 front = normalize(cross(alongY, alongX));
+            facingPanel = max(dot(-normalize(toLight), front), 0.0);
+        }
         float dist = length(toLight);
         dir = toLight / max(dist, 0.0001);
-        attenuation = clamp(1.0 - dist / max(item.color.a, 0.0001), 0.0, 1.0);
+        attenuation = clamp(1.0 - dist / max(item.color.a, 0.0001), 0.0, 1.0) * facingPanel;
 
-        if (item.vector.w > 1.5) {
+        if (item.vector.w > 1.5 && item.vector.w < 2.5) {
             float cosAngle = dot(-dir, normalize(item.spotDirection.xyz));
             attenuation *= smoothstep(item.spotDirection.w, item.spotParams.x, cosAngle);
         }

@@ -712,7 +712,7 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
             };
         }
         case 'light': {
-            const kind = asOneOf(raw.kind, ['directional', 'point', 'spot', 'ambient'] as const, 'directional');
+            const kind = asOneOf(raw.kind, ['directional', 'point', 'spot', 'rect', 'ambient'] as const, 'directional');
             const place = asRecord(raw.transform);
             return {
                 type: 'light',
@@ -730,7 +730,8 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                     },
                 } : {}),
                 ...(kind !== 'ambient' ? { ambient: asNumber(raw.ambient, 0) } : {}),
-                ...(kind === 'point' || kind === 'spot' ? { range: asNumber(raw.range, 10) } : {}),
+                ...(kind === 'point' || kind === 'spot' || kind === 'rect' ? { range: asNumber(raw.range, 10) } : {}),
+                ...(kind === 'rect' ? { width: asNumber(raw.width, 1), height: asNumber(raw.height, 1) } : {}),
                 ...(kind === 'spot' ? { angle: asNumber(raw.angle, Math.PI / 6), penumbra: asNumber(raw.penumbra, 0.1) } : {}),
                 // Read for every kind, including a bulb that can never cast: what was written is
                 // what comes back. Dropping it here would rewrite somebody's file the first time

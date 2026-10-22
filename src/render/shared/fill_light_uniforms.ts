@@ -114,7 +114,40 @@ const DEFAULT_SHADOW_BIAS = 0.002;
 /**
  * What the shader branches on.
  */
-const LIGHT_KIND: Record<TDrawLight['type'], number> = { directional: 0, point: 1, spot: 2 };
+const LIGHT_KIND: Record<TDrawLight['type'], number> = { directional: 0, point: 1, spot: 2, rect: 3 };
+
+/**
+ * A panel's own X and Y, turned the way it is and as long as half of each side.
+ *
+ * The same turns `transformForward` reads, so the panel's front is the way it shines: X by the turn
+ * about Y, Y by the turn about X and then about Y, both turned by the roll.
+ */
+const rectHalfSides = (
+    transform: TDrawLight['transform'],
+    halfWidth: number,
+    halfHeight: number,
+): { right: { x: number; y: number; z: number }; up: { x: number; y: number; z: number } } => {
+    const cx = Math.cos(transform.rotationX);
+    const sx = Math.sin(transform.rotationX);
+    const cy = Math.cos(transform.rotationY);
+    const sy = Math.sin(transform.rotationY);
+    const right = { x: cy, y: 0, z: -sy };
+    const up = { x: sx * sy, y: cx, z: sx * cy };
+    const cr = Math.cos(transform.rotation);
+    const sr = Math.sin(transform.rotation);
+    return {
+        right: {
+            x: (right.x * cr + up.x * sr) * halfWidth,
+            y: (right.y * cr + up.y * sr) * halfWidth,
+            z: (right.z * cr + up.z * sr) * halfWidth,
+        },
+        up: {
+            x: (up.x * cr - right.x * sr) * halfHeight,
+            y: (up.y * cr - right.y * sr) * halfHeight,
+            z: (up.z * cr - right.z * sr) * halfHeight,
+        },
+    };
+};
 
 /**
  * Writes a frame's lights into the block every model reads.
@@ -180,6 +213,17 @@ export const fillLightUniforms = (
             const angle = light.angle ?? 0;
             out[base + 11] = Math.cos(angle);
             out[base + 12] = Math.cos(angle * (1 - (light.penumbra ?? 0)));
+        }
+
+        if (light.type === 'rect') {
+            // Its two half sides, as the ways along them: its own X and Y, turned like it is.
+            const half = rectHalfSides(light.transform, (light.width ?? 1) / 2, (light.height ?? 1) / 2);
+            out[base + 8] = half.right.x;
+            out[base + 9] = half.right.y * turn;
+            out[base + 10] = half.right.z;
+            out[base + 12] = half.up.x;
+            out[base + 13] = half.up.y * turn;
+            out[base + 14] = half.up.z;
         }
     });
 

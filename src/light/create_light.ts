@@ -1,6 +1,6 @@
 import { getColor } from '../color';
 import { createRecord } from '../gameobjects/create_record';
-import type { TAmbientLight, TDirectionalLight, TPointLight, TSpotLight } from './types/t_light';
+import type { TAmbientLight, TDirectionalLight, TPointLight, TRectLight, TSpotLight } from './types/t_light';
 import type { TTransform3d } from '../gameobjects/types/t_transform_3d';
 
 /**
@@ -109,6 +109,22 @@ export const createSpotLight = (options: TLightOptionsBase & { range?: number; a
     range: options.range ?? 10,
     angle: options.angle ?? Math.PI / 8,
     penumbra: options.penumbra ?? 0.2,
+    transform: { ...placement(options), rotationX: options.transform?.rotationX ?? -Math.PI / 2 },
+});
+
+/**
+ * @internal
+ */
+export const createRectLight = (options: TLightOptionsBase & { range?: number; width?: number; height?: number } = {}): TRectLight => createRecord('rect', {
+    // A panel has no single point to look from, so it does not cast either. What it was told is kept.
+    ...shadowing(options),
+    color: getColor(options.color ?? 'white'),
+    intensity: options.intensity ?? 1,
+    ambient: options.ambient ?? 0.35,
+    range: options.range ?? 10,
+    width: options.width ?? 1,
+    height: options.height ?? 1,
+    // Facing down, like a light in the ceiling.
     transform: { ...placement(options), rotationX: options.transform?.rotationX ?? -Math.PI / 2 },
 });
 
