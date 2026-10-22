@@ -121,7 +121,7 @@ describe('a scene with physics, written and read', () => {
             })();
         });
 
-        expect(doc.root.children[0].components.map((component) => component.type)).toEqual(['sprite', 'physics2d', 'script']);
+        expect(doc.root.children[0].components.map((component) => component.type)).toEqual(['sprite', 'physics-body-2d', 'script']);
 
         // And on the way back in: a behaviour asking the world for its object's body has to find
         // it already there.
@@ -200,11 +200,11 @@ describe('what a file can say wrongly', () => {
     });
 
     it('fills in what it leaves out rather than leaving it undecided', () => {
-        const doc = parseSceneDoc(level({ type: 'physics2d', id: 'b1', collider: { shape: 'rect', width: 10, height: 10 } }), 'test');
+        const doc = parseSceneDoc(level({ type: 'physics-body-2d', id: 'b1', collider: { shape: 'rect', width: 10, height: 10 } }), 'test');
 
         // No `body` and no surface at all: the defaults are the format's, not each adapter's.
         expect(doc.root.components[0]).toEqual({
-            type: 'physics2d', id: 'b1', name: 'Body', body: 'static',
+            type: 'physics-body-2d', id: 'b1', name: 'Body', body: 'static',
             collider: { shape: 'rect', width: 10, height: 10 },
             restitution: 0, friction: 0.5, density: 1, sensor: false, layer: 0, collidesWith: ALL_LAYERS,
         });
@@ -212,7 +212,7 @@ describe('what a file can say wrongly', () => {
 
     it('keeps a shape it cannot make instead of dropping or guessing it', () => {
         warn = spyOn(console, 'warn').mockImplementation(() => {});
-        const doc = parseSceneDoc(level({ type: 'physics2d', id: 'b1', collider: { shape: 'triangle-mesh-thing' } }), 'test');
+        const doc = parseSceneDoc(level({ type: 'physics-body-2d', id: 'b1', collider: { shape: 'triangle-mesh-thing' } }), 'test');
 
         // Out of the components and into the hole for what this version cannot read, so writing the
         // file out again gives it back untouched rather than quietly deleting somebody's work.
@@ -228,7 +228,7 @@ describe('what a file can say wrongly', () => {
 
     it('refuses a polygon with fewer than three corners', () => {
         warn = spyOn(console, 'warn').mockImplementation(() => {});
-        const doc = parseSceneDoc(level({ type: 'physics2d', id: 'b1', collider: { shape: 'polygon', vertices: [[0, 0], [10, 0]] } }), 'test');
+        const doc = parseSceneDoc(level({ type: 'physics-body-2d', id: 'b1', collider: { shape: 'polygon', vertices: [[0, 0], [10, 0]] } }), 'test');
 
         // Two points are a line, and a backend handed one either refuses or makes something nobody
         // asked for.

@@ -61,7 +61,7 @@ type TParticlesEffectCommon = {
  * @author Francisco Pereira Alvarado
  */
 export type TParticlesEffect2d = TParticlesEffectCommon & {
-    kind: 'particles2d';
+    kind: 'particles-2d';
     shape?: TEmitShape2d;
     direction?: number;
     gravity?: { x?: number; y?: number };
@@ -75,7 +75,7 @@ export type TParticlesEffect2d = TParticlesEffectCommon & {
  * @author Francisco Pereira Alvarado
  */
 export type TParticlesEffect3d = TParticlesEffectCommon & {
-    kind: 'particles3d';
+    kind: 'particles-3d';
     shape?: TEmitShape3d;
     direction?: { x: number; y: number; z: number };
     gravity?: { x?: number; y?: number; z?: number };

@@ -58,7 +58,7 @@ describe('a collider as a record', () => {
         // All six, because an absent one would mean "whatever the adapter does", and then what a
         // scene means would depend on who reads it.
         expect(body).toMatchObject({
-            _type: 'physics2d', body: 'dynamic',
+            _type: 'physics-body-2d', body: 'dynamic',
             restitution: 0, friction: 0.5, density: 1, sensor: false, layer: 0, collidesWith: ALL_LAYERS,
         });
         expect(body.id).not.toBe('');
@@ -110,7 +110,7 @@ describe('a scene with nothing to simulate it', () => {
         // And it writes out whole, which is what a tool that does not simulate has to be able to do.
         const doc = serializeScene(root);
         expect(doc.root.components[0]).toMatchObject({ type: 'physics-world-2d' });
-        expect(doc.root.children[0].components.map((component) => component.type)).toEqual(['sprite', 'physics2d']);
+        expect(doc.root.children[0].components.map((component) => component.type)).toEqual(['sprite', 'physics-body-2d']);
     });
 });
 
@@ -137,7 +137,7 @@ describe('both halves installed at once', () => {
             return createScene();
         });
 
-        expect(seen).toEqual(['flat:physics-world-2d', 'solid:physics-world-2d', 'flat:physics2d', 'solid:physics2d']);
+        expect(seen).toEqual(['flat:physics-world-2d', 'solid:physics-world-2d', 'flat:physics-body-2d', 'solid:physics-body-2d']);
     });
 
     it('installs the same one only once, so a scene is never simulated twice over', () => {
@@ -177,7 +177,7 @@ describe('an object in space that is not anywhere', () => {
         });
 
         // Kept, so a level authored in a tool that does not simulate still saves its collider.
-        expect(root.children[0].physics).toMatchObject({ _type: 'physics3d', body: 'dynamic' });
+        expect(root.children[0].physics).toMatchObject({ _type: 'physics-body-3d', body: 'dynamic' });
         // And never handed over, because there would be nowhere to write the answer back to.
         expect(bodies).toHaveLength(0);
         expect(said).toHaveBeenCalledTimes(1);

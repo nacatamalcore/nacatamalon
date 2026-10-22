@@ -145,7 +145,7 @@ describe('parallax', () => {
             return createScene();
         });
         // An editor panned far away and zoomed out: the far layer is where the game draws it.
-        store.setState('viewport', { camera2d: { type: 'camera2d', id: 'tool', transform: { x: -2000, y: -1400, rotation: 0 }, zoom: 0.25 } });
+        store.setState('viewport', { camera2d: { type: 'camera-2d', id: 'tool', transform: { x: -2000, y: -1400, rotation: 0 }, zoom: 0.25 } });
         frame(store);
         expect(drawnAt(far)[0]).toBe(50);
     });

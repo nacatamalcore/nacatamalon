@@ -283,7 +283,7 @@ export const drawText = (pixels: TPixels, text: string, x: number, y: number, op
     if (font.status !== 'ready') {
         return pixels;
     }
-    if (font.type === 'bitmapFont') {
+    if (font.type === 'bitmap-font') {
         drawBitmapText(pixels, text, x, y, font, options);
     } else {
         drawVectorText(pixels, text, x, y, font, options);

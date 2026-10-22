@@ -8,7 +8,7 @@ import type { TTransform2d } from '../../src/gameobjects/types/t_transform_2d';
  * An effect built from a partial description, with everything else at its default.
  */
 export const effectDoc = (fields: Record<string, unknown> = {}): TParticlesDoc2d =>
-    parseParticlesDoc({ kind: 'particles2d', texture: 'p.png', ...fields }, '/test.particles') as TParticlesDoc2d;
+    parseParticlesDoc({ kind: 'particles-2d', texture: 'p.png', ...fields }, '/test.particles') as TParticlesDoc2d;
 
 /**
  * An emitter's working state for one of those.

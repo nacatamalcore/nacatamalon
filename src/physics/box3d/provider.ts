@@ -163,7 +163,7 @@ export const box3dProvider: TPhysicsProvider = {
     },
 
     createBody: (box: TGameObject, record: TPhysicsBody) => {
-        if (record._type !== 'physics3d') return;
+        if (record._type !== 'physics-body-3d') return;
 
         // This game's world only: one left behind by a scene that was abandoned, or by the other
         // game on the page, is not where this body goes.

@@ -58,7 +58,7 @@ const one = (at: [number, number, number], speed: [number, number, number]): TPa
 };
 
 const deepDoc = (fields: Record<string, unknown> = {}): TParticlesDoc3d =>
-    parseParticlesDoc({ kind: 'particles3d', ...fields }, '/deep.particles') as TParticlesDoc3d;
+    parseParticlesDoc({ kind: 'particles-3d', ...fields }, '/deep.particles') as TParticlesDoc3d;
 
 let warn: ReturnType<typeof spyOn> | null = null;
 afterEach(() => {
@@ -84,7 +84,7 @@ describe('what the file says about colliding', () => {
         warn = spyOn(console, 'warn').mockImplementation(() => {});
         warn.mockClear();
         const fetchSpy = spyOn(globalThis, 'fetch').mockImplementation((async () => ({
-            ok: true, json: async () => ({ kind: 'particles2d', worldSpace: false, collision: { mode: 'die' } }),
+            ok: true, json: async () => ({ kind: 'particles-2d', worldSpace: false, collision: { mode: 'die' } }),
         })) as unknown as typeof fetch);
         const { store } = createTestGame();
 

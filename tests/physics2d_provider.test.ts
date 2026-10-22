@@ -53,7 +53,7 @@ describe('what a declared collider becomes', () => {
         const { calls, world } = fakeWorld();
 
         bodyIntoWorld(world, box('Crate'), {
-            _type: 'physics2d', id: 'b1', name: 'Crate', body: 'dynamic',
+            _type: 'physics-body-2d', id: 'b1', name: 'Crate', body: 'dynamic',
             collider: { shape: 'rect', width: 24, height: 16 },
             ...surface,
         } as TPhysicsBody2d);
@@ -70,11 +70,11 @@ describe('what a declared collider becomes', () => {
         const { calls, world } = fakeWorld();
 
         bodyIntoWorld(world, box('Ball'), {
-            _type: 'physics2d', id: 'b1', name: 'Ball', body: 'dynamic',
+            _type: 'physics-body-2d', id: 'b1', name: 'Ball', body: 'dynamic',
             collider: { shape: 'circle', radius: 8 }, ...surface,
         } as TPhysicsBody2d);
         bodyIntoWorld(world, box('Ramp'), {
-            _type: 'physics2d', id: 'b2', name: 'Ramp', body: 'static',
+            _type: 'physics-body-2d', id: 'b2', name: 'Ramp', body: 'static',
             collider: { shape: 'polygon', vertices: [[0, 0], [40, 0], [40, 20]] }, ...surface,
         } as TPhysicsBody2d);
 
@@ -87,7 +87,7 @@ describe('what a declared collider becomes', () => {
         const { calls } = fakeWorld();
 
         rapier2dProvider.createBody(box('Player'), {
-            _type: 'physics3d', id: 'b1', name: 'Player', body: 'dynamic',
+            _type: 'physics-body-3d', id: 'b1', name: 'Player', body: 'dynamic',
             collider: { shape: 'capsule', radius: 0.3, height: 1.8 }, offset: [0, 0, 0], ...surface,
         } as TPhysicsBody);
 
@@ -100,7 +100,7 @@ describe('what a declared collider becomes', () => {
         const said = silence();
 
         const body = {
-            _type: 'physics2d', id: 'b1', name: 'Crate', body: 'dynamic',
+            _type: 'physics-body-2d', id: 'b1', name: 'Crate', body: 'dynamic',
             collider: { shape: 'rect', width: 8, height: 8 }, ...surface,
         } as TPhysicsBody;
         rapier2dProvider.createBody(box('One'), body);

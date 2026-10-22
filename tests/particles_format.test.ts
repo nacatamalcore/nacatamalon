@@ -8,7 +8,7 @@ import { parseParticlesDoc, PARTICLES_FORMAT } from '../src/loaders/particles';
  * pinned here is a contract with things that are not this engine.
  */
 
-const read = (fields: Record<string, unknown>) => parseParticlesDoc({ kind: 'particles2d', ...fields }, '/fx.particles');
+const read = (fields: Record<string, unknown>) => parseParticlesDoc({ kind: 'particles-2d', ...fields }, '/fx.particles');
 
 describe('what it refuses, and how it says so', () => {
     it('names the file every time, because a game loads a dozen of these', () => {
@@ -17,7 +17,7 @@ describe('what it refuses, and how it says so', () => {
     });
 
     it('says which kinds of effect there are, rather than failing strangely', () => {
-        expect(() => parseParticlesDoc({ kind: 'particles4d' }, '/fx.particles')).toThrow(/It goes particles2d or particles3d/);
+        expect(() => parseParticlesDoc({ kind: 'particles4d' }, '/fx.particles')).toThrow(/It goes particles-2d or particles-3d/);
     });
 
     it('refuses a file written by a newer engine, and says which format it reads', () => {

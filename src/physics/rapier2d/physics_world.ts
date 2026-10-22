@@ -829,7 +829,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
                 // is built on the new layers when it lands.
                 shape.layer = layer;
                 shape.collidesWith = mask;
-                if (box.physics?._type === 'physics2d') {
+                if (box.physics?._type === 'physics-body-2d') {
                     box.physics.layer = layer;
                     box.physics.collidesWith = mask;
                 }

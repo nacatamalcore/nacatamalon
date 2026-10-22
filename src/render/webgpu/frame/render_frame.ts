@@ -254,7 +254,7 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
                 spritesReady = false;
                 continue;
             }
-            if (item.type === 'particles3d') {
+            if (item.type === 'particles-3d') {
                 drawParticles3d(gpu.device, gpuPass, gpu.particles!, gpu.sprites, item, viewIndex[i] ?? -1);
                 spritesReady = false;
                 continue;

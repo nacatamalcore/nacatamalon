@@ -16,7 +16,7 @@
  * @author Francisco Pereira Alvarado
  */
 export type TCamera2d = {
-    readonly type: 'camera2d';
+    readonly type: 'camera-2d';
     id: string;
     /**
      * Where the camera is and how it is turned. No scale: a camera does not stretch, and a field

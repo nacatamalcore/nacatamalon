@@ -527,7 +527,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
                 // Kept on the spec as well as applied, so a body still waiting for the WebAssembly
                 // is built on the new layers when it lands.
                 spec.material = { ...spec.material, layer, collidesWith: mask };
-                if (spec.box.physics?._type === 'physics3d') {
+                if (spec.box.physics?._type === 'physics-body-3d') {
                     spec.box.physics.layer = layer;
                     spec.box.physics.collidesWith = mask;
                 }

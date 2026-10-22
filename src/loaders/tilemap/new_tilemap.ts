@@ -14,7 +14,7 @@ import type { TTilemap } from '../../gameobjects/tilemap/types/t_tilemap';
  * @author Francisco Pereira Alvarado
  */
 export const newTilemap = (src: string): TTilemap => markWatchable({
-    type: 'tilemapAsset',
+    type: 'tilemap-asset',
     src,
     status: 'loading',
     transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },

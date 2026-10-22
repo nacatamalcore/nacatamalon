@@ -149,7 +149,7 @@ const rectOf = (bounds: TTilemap | TRect | null): TRect | null => {
     if (bounds === null) {
         return null;
     }
-    if ('type' in bounds && bounds.type === 'tilemapAsset') {
+    if ('type' in bounds && bounds.type === 'tilemap-asset') {
         if (bounds.status !== 'ready') {
             return null;
         }

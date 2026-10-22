@@ -312,7 +312,7 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
                 spritesReady = false;
                 continue;
             }
-            if (item.type === 'particles3d') {
+            if (item.type === 'particles-3d') {
                 drawParticles3d(gl, state.particles!, state.sprites, item, spaces[viewIndex[i] ?? -1] ?? null);
                 spritesReady = false;
                 continue;

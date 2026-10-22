@@ -10,7 +10,7 @@ import type { TBitmapFont } from './types/t_bitmap_font';
  * @author Francisco Pereira Alvarado
  */
 export const newBitmapFont = (src: string, atlas: string, key: string): TBitmapFont => markWatchable({
-    type: 'bitmapFont',
+    type: 'bitmap-font',
     key,
     src,
     status: 'loading',

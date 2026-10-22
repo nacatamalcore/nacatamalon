@@ -527,7 +527,7 @@ export type TParticlesComponent = {
  * @author Francisco Pereira Alvarado
  */
 export type TParticles3dComponent = Omit<TParticlesComponent, 'type' | 'transform'> & {
-    type: 'particles3d';
+    type: 'particles-3d';
     /**
      * Where the emitter sits on its box, in three dimensions, left out when that is the box's own origin.
      */
@@ -547,7 +547,7 @@ export type TParticles3dComponent = Omit<TParticlesComponent, 'type' | 'transfor
  * @author Francisco Pereira Alvarado
  */
 export type TCamera2dComponent = {
-    type: 'camera2d';
+    type: 'camera-2d';
     id: string;
     transform: { x: number; y: number; rotation: number };
     zoom: number;
@@ -562,7 +562,7 @@ export type TCamera2dComponent = {
  * @author Francisco Pereira Alvarado
  */
 export type TCamera3dComponent = {
-    type: 'camera3d';
+    type: 'camera-3d';
     id: string;
     projection: 'perspective' | 'orthographic';
     transform: TTransform3d;
@@ -951,7 +951,7 @@ export type TStoreComponent = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TPhysicsBody2dComponent = { type: 'physics2d' } & Omit<TPhysicsBody2d, '_type'>;
+export type TPhysicsBody2dComponent = { type: 'physics-body-2d' } & Omit<TPhysicsBody2d, '_type'>;
 
 /**
  * A collider in three dimensions, written down: the sibling of {@link TPhysicsBody2dComponent},
@@ -961,7 +961,7 @@ export type TPhysicsBody2dComponent = { type: 'physics2d' } & Omit<TPhysicsBody2
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TPhysicsBody3dComponent = { type: 'physics3d' } & Omit<TPhysicsBody3d, '_type'>;
+export type TPhysicsBody3dComponent = { type: 'physics-body-3d' } & Omit<TPhysicsBody3d, '_type'>;
 
 /**
  * The flat simulation's settings, written down. Lives on the scene's **root**: gravity belongs to

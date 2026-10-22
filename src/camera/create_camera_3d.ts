@@ -8,7 +8,7 @@ import type { TCamera3d, TCamera3dOptions } from './types/t_camera_3d';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const createCamera3d = (options: TCamera3dOptions = {}): TCamera3d => createRecord('camera3d', {
+export const createCamera3d = (options: TCamera3dOptions = {}): TCamera3d => createRecord('camera-3d', {
     projection: options.projection ?? 'orthographic',
     transform: {
         x: options.transform?.x ?? 0,

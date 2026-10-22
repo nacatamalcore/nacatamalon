@@ -78,7 +78,7 @@ const worldOfBox = (parent: TWorld, box: TBox, depth: number): TWorld => {
 const placeDrawable = (drawable: TDrawable, world: TWorld): void => {
     // An emitter in depth, and a set of lines, are placed like a model: a turn in three dimensions
     // is only a matrix.
-    if (drawable.type === 'mesh' || drawable.type === 'particles3d' || drawable.type === 'lines') {
+    if (drawable.type === 'mesh' || drawable.type === 'particles-3d' || drawable.type === 'lines') {
         if (world === null) {
             // Cleared rather than left behind, for the reason below.
             drawable.worldMatrix = undefined;
@@ -115,7 +115,7 @@ const placeDrawable = (drawable: TDrawable, world: TWorld): void => {
  * screen it goes by more slowly. Written into where it is drawn and touched, never into its placement.
  */
 const applyParallax = (drawable: TDrawable, factor: { x: number; y: number }, camera: TCamera2d): void => {
-    if (drawable.type === 'mesh' || drawable.type === 'particles3d' || drawable.type === 'lines' || drawable.type === 'particles') {
+    if (drawable.type === 'mesh' || drawable.type === 'particles-3d' || drawable.type === 'lines' || drawable.type === 'particles') {
         return;
     }
     const base = drawable.worldTransform ?? drawable.transform;

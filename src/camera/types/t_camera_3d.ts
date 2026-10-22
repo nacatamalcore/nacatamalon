@@ -21,7 +21,7 @@ import type { TTransform3d } from '../../gameobjects/types/t_transform_3d';
  * @author Francisco Pereira Alvarado
  */
 export type TCamera3d = {
-    readonly type: 'camera3d';
+    readonly type: 'camera-3d';
     id: string;
     projection: 'perspective' | 'orthographic';
     /**

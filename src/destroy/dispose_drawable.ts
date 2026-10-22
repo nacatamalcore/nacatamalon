@@ -46,7 +46,7 @@ export const disposeDrawable = (store: TRuntimeStore, drawable: TDrawable): void
             return;
         }
         case 'particles':
-        case 'particles3d': {
+        case 'particles-3d': {
             // An emitter **does** own something: its particles and its own stream of chance. Its
             // effect file and the picture in it belong to the cache, so two torches are left burning
             // when the third goes out.

@@ -47,7 +47,7 @@ const surface = (options: Partial<TPhysicsSurface>): TPhysicsSurface => ({
 export const createPhysicsBody2d = (
     options: { id?: string; name?: string; body: TPhysicsBodyType; collider: TCollider2d } & Partial<TPhysicsSurface>,
 ): TPhysicsBody2d => ({
-    _type: 'physics2d',
+    _type: 'physics-body-2d',
     id: options.id ?? nanoId(),
     name: options.name ?? 'Body',
     body: options.body,
@@ -74,7 +74,7 @@ export const createPhysicsBody3d = (
         offset?: [number, number, number];
     } & Partial<TPhysicsSurface>,
 ): TPhysicsBody3d => ({
-    _type: 'physics3d',
+    _type: 'physics-body-3d',
     id: options.id ?? nanoId(),
     name: options.name ?? 'Body',
     body: options.body,

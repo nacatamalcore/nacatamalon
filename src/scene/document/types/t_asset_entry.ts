@@ -31,7 +31,7 @@ export type TAssetEntry =
      * rather than one guessed from the other, because the loader takes both and guessing which
      * extension goes with which is the sort of rule that works until somebody names a file oddly.
      */
-    | { type: 'bitmapFont'; key: string; json: string; atlas: string }
+    | { type: 'bitmap-font'; key: string; json: string; atlas: string }
     /**
      * A vector font: one `.ttf` or `.woff`. `size` is how finely its letters are kept, left out when
      * it is the default of 48.

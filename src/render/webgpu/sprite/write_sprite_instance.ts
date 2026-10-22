@@ -212,7 +212,7 @@ export const writeSpriteInstances = (
             case 'mesh':
             case 'tilemap':
             case 'particles':
-            case 'particles3d':
+            case 'particles-3d':
             case 'lines': {
                 // Drawn by its own pipeline, in `renderFrame`, where the two lists are walked
                 // together. Here it only cuts the batch.

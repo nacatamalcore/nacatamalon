@@ -23,7 +23,7 @@ export const stillColliders2d = (root: TBox, except: TBox): TBlock[] => {
     const out: TBlock[] = [];
     const visit = (box: TBox): void => {
         const body = box.physics;
-        if (box !== except && !box.destroyed && body !== null && body._type === 'physics2d' && body.body === 'static' && !body.sensor) {
+        if (box !== except && !box.destroyed && body !== null && body._type === 'physics-body-2d' && body.body === 'static' && !body.sensor) {
             const at = worldPlacementOf(box);
             const c = body.collider;
             const [w, h] = c.shape === 'rect'

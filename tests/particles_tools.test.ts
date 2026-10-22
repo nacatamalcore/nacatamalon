@@ -55,7 +55,7 @@ describe('writing an effect back out', () => {
 
 describe('a new effect', () => {
     it('is one the reader accepts, in either dimension, and shows something at once', () => {
-        for (const kind of ['particles2d', 'particles3d'] as const) {
+        for (const kind of ['particles-2d', 'particles-3d'] as const) {
             const doc = emptyParticlesDoc({ kind, texture: 'p.png' });
 
             expect(parseParticlesDoc(JSON.parse(serializeParticlesDoc(doc)), 'new.particles')).toEqual(doc);

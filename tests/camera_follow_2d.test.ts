@@ -126,7 +126,7 @@ describe('a scene whose 3D camera follows its 2D one', () => {
             format: SCENE_FORMAT, version: 1, name: 'Level', assets: [],
             root: {
                 id: 'root', name: 'Level', transform: null, children: [],
-                components: [{ type: 'camera3d', id: 'eye', projection: 'orthographic', transform: { x: 0, y: 0, z: 800 }, fov: 60, near: 0.1, far: 2000, zoom: 1, ...(follow ? { follow2d: true } : {}) }],
+                components: [{ type: 'camera-3d', id: 'eye', projection: 'orthographic', transform: { x: 0, y: 0, z: 800 }, fov: 60, near: 0.1, far: 2000, zoom: 1, ...(follow ? { follow2d: true } : {}) }],
             },
         }, 'scenes/level.scene.json');
         for (const follow of [true, false]) {
@@ -136,7 +136,7 @@ describe('a scene whose 3D camera follows its 2D one', () => {
                 return createScene();
             });
             expect(scene.camera3d?.follow2d === true).toBe(follow);
-            const written = serializeScene(scene).root.components.find((c) => c.type === 'camera3d') as Record<string, unknown>;
+            const written = serializeScene(scene).root.components.find((c) => c.type === 'camera-3d') as Record<string, unknown>;
             expect('follow2d' in written).toBe(follow);
         }
     });

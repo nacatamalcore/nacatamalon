@@ -64,7 +64,7 @@ export const measureParticlesBounds = (
 ): TParticlesBounds | null => {
     const state = createParticleState(doc, options.seed ?? 1);
     const padding = options.padding ?? 0.05;
-    const flat = doc.kind === 'particles2d';
+    const flat = doc.kind === 'particles-2d';
     const x = flat ? PARTICLE_OFFSET.x : PARTICLE_3D_OFFSET.x;
     const y = flat ? PARTICLE_OFFSET.y : PARTICLE_3D_OFFSET.y;
     const size = flat ? PARTICLE_OFFSET.size : PARTICLE_3D_OFFSET.size;
@@ -75,7 +75,7 @@ export const measureParticlesBounds = (
 
     const steps = Math.ceil(runLength(doc) / STEP);
     for (let step = 0; step < steps; step++) {
-        if (doc.kind === 'particles2d') {
+        if (doc.kind === 'particles-2d') {
             simulateParticles(state, doc, STEP, HERE_2D, true, WHITE, 0);
         } else {
             simulateParticles3d(state, doc, STEP, HERE_3D, true, WHITE);

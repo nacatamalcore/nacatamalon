@@ -125,7 +125,9 @@ const LOADERS: Record<string, () => Promise<TSongDoc>> = {
  * One of the engine's songs by its key, with or without `nacatamalon:` in front, loaded the first
  * time, or `null` when there is none of that name.
  *
- * @internal
+ * @category Audio
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
  */
 export const loadBuiltinSong = (key: string): Promise<TSongDoc> | null => {
     const name = key.startsWith('nacatamalon:') ? key.slice('nacatamalon:'.length) : key;

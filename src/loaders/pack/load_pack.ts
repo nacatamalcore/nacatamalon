@@ -56,7 +56,7 @@ const placeInPack = (pack: TLoadedPack, doc: TSceneDoc): TSceneDoc => {
             case 'tilemap':
                 asset.src = inPack(pack, asset.src);
                 break;
-            case 'bitmapFont':
+            case 'bitmap-font':
                 asset.json = inPack(pack, asset.json);
                 asset.atlas = inPack(pack, asset.atlas);
                 break;

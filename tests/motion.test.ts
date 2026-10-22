@@ -48,7 +48,7 @@ const FIELD = parseSceneDoc({
     format: 'nacatamalon-scene', version: 1, name: 'field', assets: [],
     root: {
         id: 'field-root', name: 'Field', transform: null,
-        components: [{ type: 'camera2d', id: 'cam', transform: { x: 0, y: 0, rotation: 0 }, zoom: 1 }],
+        components: [{ type: 'camera-2d', id: 'cam', transform: { x: 0, y: 0, rotation: 0 }, zoom: 1 }],
         children: [{
             id: 'crate', name: 'Crate', transform: { x: 0, y: 0 },
             components: [{ type: 'sprite', id: 'crate-art', texture: null, tint: { r: 1, g: 1, b: 1, a: 1 }, width: 8, height: 8, transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 } }],

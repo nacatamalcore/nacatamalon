@@ -76,7 +76,7 @@ export type TEditorHandle = TGameHandle & {
      * @example
      * ```ts
      * // The game's screen shown at 3×, its top-left corner 120 pixels into the view.
-     * handle.setScreenCamera2d({ type: 'camera2d', id: 'editor-screen', transform: { x: -40, y: -40, rotation: 0 }, zoom: 3 });
+     * handle.setScreenCamera2d({ type: 'camera-2d', id: 'editor-screen', transform: { x: -40, y: -40, rotation: 0 }, zoom: 3 });
      * ```
      */
     setScreenCamera2d(camera: TCamera2d | null): void;

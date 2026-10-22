@@ -263,7 +263,7 @@ export type TChildEmitter = {
  */
 export type TParticlesDoc2d = {
     format: number;
-    kind: 'particles2d';
+    kind: 'particles-2d';
     /**
      * The picture every particle shows, relative to the file rather than to the page.
      */
@@ -366,7 +366,7 @@ export type TParticlesDoc2d = {
  * @author Francisco Pereira Alvarado
  */
 export type TParticlesDoc3d = Omit<TParticlesDoc2d, 'kind' | 'shape' | 'direction' | 'gravity'> & {
-    kind: 'particles3d';
+    kind: 'particles-3d';
     shape: TEmitShape3d;
     /**
      * The middle of the direction they fly, one unit long. Straight up unless the file says otherwise.

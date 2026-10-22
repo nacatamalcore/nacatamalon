@@ -237,7 +237,7 @@ const wrongKind = new WeakSet<TParticlesFile>();
  * on its way, past `MAX_CHILD_DEPTH`, or when its file is for the other dimension, which is said
  * once. Seeded from the parent's own stream, so a run that replays replays its sparks too.
  */
-const particlesOf = (child: TChildParticles, kind: 'particles2d' | 'particles3d', parent: TParticleState, depth: number): TParticleState | null => {
+const particlesOf = (child: TChildParticles, kind: 'particles-2d' | 'particles-3d', parent: TParticleState, depth: number): TParticleState | null => {
     if (child.state !== null) {
         return child.state;
     }
@@ -277,7 +277,7 @@ const setOff2d = (state: TParticleState, doc: TParticlesDoc2d, placement: TTrans
     setOffAt2d.y = y;
     setOffAt2d.rotation = placement.rotation;
     for (const child of state.children) {
-        const own = child.on === when ? particlesOf(child, 'particles2d', state, depth) : null;
+        const own = child.on === when ? particlesOf(child, 'particles-2d', state, depth) : null;
         if (own === null) {
             continue;
         }
@@ -318,7 +318,7 @@ const setOff3d = (state: TParticleState, doc: TParticlesDoc3d, matrix: Float32Ar
     setOffAt3d[14] = world.z;
     setOffAt3d[15] = 1;
     for (const child of state.children) {
-        const own = child.on === when ? particlesOf(child, 'particles3d', state, depth) : null;
+        const own = child.on === when ? particlesOf(child, 'particles-3d', state, depth) : null;
         if (own === null) {
             continue;
         }
@@ -435,7 +435,7 @@ export const simulateParticles = (
     // 0. The effects it sets off move first: one set off this frame is then not aged by a whole
     // frame the moment it is born. Each is born where it was set off, so each is simulated nowhere.
     for (const child of state.children) {
-        const own = particlesOf(child, 'particles2d', state, depth);
+        const own = particlesOf(child, 'particles-2d', state, depth);
         if (own !== null) {
             simulateParticles(own, child.file.doc as TParticlesDoc2d, delta, NOWHERE_2D, false, tint, view, undefined, colliders, depth + 1);
         }
@@ -519,7 +519,7 @@ export const simulateParticles3d = (
     const { pool } = state;
 
     for (const child of state.children) {
-        const own = particlesOf(child, 'particles3d', state, depth);
+        const own = particlesOf(child, 'particles-3d', state, depth);
         if (own !== null) {
             simulateParticles3d(own, child.file.doc as TParticlesDoc3d, delta, NOWHERE_3D, false, tint, undefined, colliders, depth + 1);
         }

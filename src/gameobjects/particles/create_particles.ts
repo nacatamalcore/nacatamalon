@@ -22,7 +22,7 @@ import type { TParticlesOptions } from './types/t_particles_options';
  */
 export const resolveEffect = (
     effect: TParticlesFile | TParticlesEffect | string,
-    kind: 'particles2d' | 'particles3d',
+    kind: 'particles-2d' | 'particles-3d',
     caller: string,
 ): TParticlesFile => {
     let found: TParticlesFile | undefined;
@@ -86,7 +86,7 @@ export const createParticles = (options: TParticlesOptions): TParticles => {
         throw new Error('[NacatamalOn] createParticles: call it inside a scene body.');
     }
 
-    const file = resolveEffect(options.effect, 'particles2d', 'createParticles');
+    const file = resolveEffect(options.effect, 'particles-2d', 'createParticles');
     const autoplay = options.autoplay ?? true;
 
     const emitter = createRecord('particles', {

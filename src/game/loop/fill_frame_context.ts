@@ -50,7 +50,7 @@ import * as mat from '../../math/mat4';
  * Whether a drawable is seen through its scene's camera in depth: a model, particles or lines in space.
  */
 const inDepth = (drawable: TDrawable | TDrawSprite): boolean =>
-    drawable.type === 'mesh' || drawable.type === 'particles3d' || drawable.type === 'lines';
+    drawable.type === 'mesh' || drawable.type === 'particles-3d' || drawable.type === 'lines';
 
 /**
  * Which half of the engine a drawable belongs to: models and lines first, everything 2D over them.
@@ -364,7 +364,7 @@ const gatherTree = (
         for (let i = start; i < drawables.length; i++) {
             const drawable = drawables[i] as TDrawable;
             if (!layers.includes(drawable.type)) {
-                if (drawable.type === 'particles' || drawable.type === 'particles3d') {
+                if (drawable.type === 'particles' || drawable.type === 'particles-3d') {
                     hidden.push(drawable);
                     hiddenCameras.push(cameraIndex[i]!);
                 }

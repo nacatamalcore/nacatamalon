@@ -79,7 +79,7 @@ describe('a document the reader cannot use', () => {
 describe('what the reader keeps', () => {
     it('keeps a component it has never heard of, beside its box', () => {
         silence();
-        const mystery = { type: 'physics2d', id: 'body', shape: 'circle', radius: 8 };
+        const mystery = { type: 'physics-body-2d', id: 'body', shape: 'circle', radius: 8 };
         const read = parseSceneDoc(doc({
             root: { id: 'root', name: 'Level', transform: null, components: [mystery], children: [] },
         }), '/scenes/x.scene');
@@ -87,7 +87,7 @@ describe('what the reader keeps', () => {
         // Not drawn, not pretended to be understood, and not lost.
         expect(read.root.components).toHaveLength(0);
         expect(read.root.extra?.[UNSUPPORTED_COMPONENTS]).toEqual([mystery]);
-        expect(said()).toContain('physics2d');
+        expect(said()).toContain('physics-body-2d');
     });
 
     it('keeps a field on a box that belongs to somebody else', () => {
@@ -107,7 +107,7 @@ describe('what the reader keeps', () => {
         parseSceneDoc(doc({
             root: {
                 id: 'root', name: 'Level', transform: null, children: [],
-                components: [{ type: 'physics2d' }, { type: 'physics2d' }, { type: 'script' }],
+                components: [{ type: 'physics-body-2d' }, { type: 'physics-body-2d' }, { type: 'script' }],
             },
         }), '/scenes/x.scene');
 
@@ -169,7 +169,7 @@ describe('what the reader fills in', () => {
         const read = parseSceneDoc(doc({
             assets: [
                 { type: 'texture', key: '/assets/hero.png' },
-                { type: 'bitmapFont', key: 'pac', json: '/f.json', atlas: '/f.png' },
+                { type: 'bitmap-font', key: 'pac', json: '/f.json', atlas: '/f.png' },
                 { type: 'font', key: 'inter', src: '/fonts/inter.ttf', size: 48 },
                 { type: 'font', key: '/fonts/plain.woff' },
                 { type: 'geometry', key: 'cube:1:1:1', source: { kind: 'cube' } },
@@ -180,7 +180,7 @@ describe('what the reader fills in', () => {
         silence();
         expect(read.assets).toHaveLength(5);
         expect(read.assets[0]).toEqual({ type: 'texture', key: '/assets/hero.png', src: '/assets/hero.png' });
-        expect(read.assets[1]).toEqual({ type: 'bitmapFont', key: 'pac', json: '/f.json', atlas: '/f.png' });
+        expect(read.assets[1]).toEqual({ type: 'bitmap-font', key: 'pac', json: '/f.json', atlas: '/f.png' });
         expect(read.assets[2]).toEqual({ type: 'font', key: 'inter', src: '/fonts/inter.ttf', size: 48 });
         expect(read.assets[3]).toEqual({ type: 'font', key: '/fonts/plain.woff', src: '/fonts/plain.woff' });
         // A recipe, not the corners: `{ kind: 'cube' }` is the cube `useCubeGeometry({})` makes.
@@ -199,9 +199,9 @@ describe('the eight components', () => {
         expect(one({ type: 'mesh', id: 'm', geometry: 'cube' }).type).toBe('mesh');
         expect(one({ type: 'tilemap', id: 'l', map: 'level' }).type).toBe('tilemap');
         expect(one({ type: 'particles', id: 'p', effect: 'fire' }).type).toBe('particles');
-        expect(one({ type: 'particles3d', id: 'p', effect: 'fire', transform: { z: 2 } })).toMatchObject({ type: 'particles3d', transform: { z: 2 } });
-        expect(one({ type: 'camera2d', id: 'c' }).type).toBe('camera2d');
-        expect(one({ type: 'camera3d', id: 'c' }).type).toBe('camera3d');
+        expect(one({ type: 'particles-3d', id: 'p', effect: 'fire', transform: { z: 2 } })).toMatchObject({ type: 'particles-3d', transform: { z: 2 } });
+        expect(one({ type: 'camera-2d', id: 'c' }).type).toBe('camera-2d');
+        expect(one({ type: 'camera-3d', id: 'c' }).type).toBe('camera-3d');
         expect(one({ type: 'light', id: 'l', kind: 'point' }).type).toBe('light');
     });
 
@@ -228,7 +228,7 @@ describe('the eight components', () => {
     });
 
     it('gives a camera and a lamp their own placement, and an ambient lamp none', () => {
-        const camera = one({ type: 'camera2d', id: 'c', transform: { x: 10, y: 20 }, zoom: 2 });
+        const camera = one({ type: 'camera-2d', id: 'c', transform: { x: 10, y: 20 }, zoom: 2 });
         const lamp = one({ type: 'light', id: 'l', kind: 'point', transform: { x: 10, rotationY: 0.5 } });
         const ambient = one({ type: 'light', id: 'l', kind: 'ambient', transform: { x: 10 } });
 

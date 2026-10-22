@@ -56,7 +56,7 @@ const surface = {
 };
 
 const body3d = (collider: TPhysicsBody3d['collider'], body: TPhysicsBody3d['body'] = 'dynamic'): TPhysicsBody3d => ({
-    _type: 'physics3d', id: 'b1', name: 'Thing', body, collider, offset: [0, 0.5, 0], ...surface,
+    _type: 'physics-body-3d', id: 'b1', name: 'Thing', body, collider, offset: [0, 0.5, 0], ...surface,
 } as TPhysicsBody3d);
 
 describe('what a declared collider becomes', () => {
@@ -91,7 +91,7 @@ describe('what a declared collider becomes', () => {
         const { calls } = fakeWorld();
 
         box3dProvider.createBody(box('Crate'), {
-            _type: 'physics2d', id: 'b1', name: 'Crate', body: 'dynamic',
+            _type: 'physics-body-2d', id: 'b1', name: 'Crate', body: 'dynamic',
             collider: { shape: 'rect', width: 24, height: 16 }, ...surface,
         } as TPhysicsBody);
 

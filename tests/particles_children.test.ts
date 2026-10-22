@@ -52,8 +52,8 @@ const settle = () => new Promise((done) => setTimeout(done, 10));
 describe('loading an effect that sets off others', () => {
     it('finds the child next to the file that names it, through the game\'s cache', async () => {
         const asked = serve({
-            '/fx/rocket.particles': { kind: 'particles2d', children: [{ on: 'death', src: 'sparks.particles', count: 3 }] },
-            '/fx/sparks.particles': { kind: 'particles2d' },
+            '/fx/rocket.particles': { kind: 'particles-2d', children: [{ on: 'death', src: 'sparks.particles', count: 3 }] },
+            '/fx/sparks.particles': { kind: 'particles-2d' },
         });
         const { store } = createTestGame();
         const file = newParticlesFile('/fx/rocket.particles', 'rocket');
@@ -68,8 +68,8 @@ describe('loading an effect that sets off others', () => {
     it('refuses a file that leads back to itself, instead of loading for ever', async () => {
         const warn = quiet();
         serve({
-            '/a.particles': { kind: 'particles2d', children: [{ on: 'death', src: 'b.particles' }] },
-            '/b.particles': { kind: 'particles2d', children: [{ on: 'death', src: 'a.particles' }] },
+            '/a.particles': { kind: 'particles-2d', children: [{ on: 'death', src: 'b.particles' }] },
+            '/b.particles': { kind: 'particles-2d', children: [{ on: 'death', src: 'a.particles' }] },
         });
         const { store } = createTestGame();
         const a = newParticlesFile('/a.particles', '/a.particles');
@@ -161,7 +161,7 @@ describe('a child file for the other dimension', () => {
         const warn = quiet();
         const { state, step } = rocketWithSparks('birth');
         const wrong = newParticlesFile('/deep.particles', 'deep') as TParticlesFile;
-        wrong.doc = { ...effectDoc(), kind: 'particles3d' } as never;
+        wrong.doc = { ...effectDoc(), kind: 'particles-3d' } as never;
         state.children[0]!.file = wrong;
         step();
         step();

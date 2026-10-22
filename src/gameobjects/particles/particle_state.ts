@@ -31,8 +31,8 @@ const mismatched = new WeakSet<TParticles | TParticles3d>();
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const wrongDimension = (src: string, kind: 'particles2d' | 'particles3d'): string =>
-    `'${src}' is a ${kind} effect, so it is made with ${kind === 'particles3d' ? 'createParticles3d' : 'createParticles'}.`;
+export const wrongDimension = (src: string, kind: 'particles-2d' | 'particles-3d'): string =>
+    `'${src}' is a ${kind} effect, so it is made with ${kind === 'particles-3d' ? 'createParticles3d' : 'createParticles'}.`;
 
 /**
  * Gives an emitter its working state, which can only happen once its file says how big to make it.
@@ -49,7 +49,7 @@ export const openParticleState = (emitter: TParticles | TParticles3d): TParticle
     // Made for the other dimension. When the file was already here the emitter was refused as it
     // was made; this is the one that arrived later, so all that can be done is say so and draw
     // nothing, rather than scatter a flat effect through space or flatten a deep one.
-    const wanted = emitter.type === 'particles3d' ? 'particles3d' : 'particles2d';
+    const wanted = emitter.type === 'particles-3d' ? 'particles-3d' : 'particles-2d';
     if (doc.kind !== wanted) {
         if (!mismatched.has(emitter)) {
             mismatched.add(emitter);

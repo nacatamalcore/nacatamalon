@@ -326,7 +326,7 @@ const writeText = (text: TText, writing: TWriting): TComponentDoc => {
     if (font.type === 'font') {
         writing.assets.set(font.key, { type: 'font', key: font.key, src: font.src, ...(font.size !== DEFAULT_FONT_ATLAS_SIZE ? { size: font.size } : {}) });
     } else if (!isBuiltinFont(font.key)) {
-        writing.assets.set(font.key, { type: 'bitmapFont', key: font.key, json: font.src, atlas: font.texture.src });
+        writing.assets.set(font.key, { type: 'bitmap-font', key: font.key, json: font.src, atlas: font.texture.src });
     }
     const place = writeFlatPlace(text.transform);
     return {
@@ -441,9 +441,9 @@ const writeParticles = (emitter: TParticles | TParticles3d, writing: TWriting): 
     };
     // Only the placement differs between the two dimensions, and it is written where it always has
     // been, after the id, so a file saved again keeps its order.
-    if (emitter.type === 'particles3d') {
+    if (emitter.type === 'particles-3d') {
         const place = writeDeepPlace(emitter.transform);
-        return { type: 'particles3d', id: emitter.id, ...(place !== undefined ? { transform: place } : {}), ...fields };
+        return { type: 'particles-3d', id: emitter.id, ...(place !== undefined ? { transform: place } : {}), ...fields };
     }
     const place = writeFlatPlace(emitter.transform);
     return { type: 'particles', id: emitter.id, ...(place !== undefined ? { transform: place } : {}), ...fields };
@@ -527,14 +527,14 @@ const writeSong = (song: TSongAttachment, writing: TWriting): TComponentDoc | nu
 };
 
 const writeCamera2d = (camera: TCamera2d): TComponentDoc => ({
-    type: 'camera2d',
+    type: 'camera-2d',
     id: camera.id,
     transform: { x: camera.transform.x, y: camera.transform.y, rotation: camera.transform.rotation },
     zoom: camera.zoom,
 });
 
 const writeCamera3d = (camera: TCamera3d): TComponentDoc => ({
-    type: 'camera3d',
+    type: 'camera-3d',
     id: camera.id,
     projection: camera.projection,
     transform: { ...camera.transform },
@@ -606,7 +606,7 @@ const writeDrawable = (drawable: TDrawable, writing: TWriting): TComponentDoc | 
         case 'text': return writeText(drawable, writing);
         case 'mesh': return writeMesh(drawable, writing);
         case 'particles':
-        case 'particles3d': return writeParticles(drawable, writing);
+        case 'particles-3d': return writeParticles(drawable, writing);
         // Handled together, above: a map is one component however many layers it put on the box.
         case 'tilemap': return null;
         case 'nine-slice': return writeNineSlice(drawable, writing);

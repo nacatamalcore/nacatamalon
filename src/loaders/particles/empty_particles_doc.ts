@@ -19,7 +19,7 @@ import type { TParticleRange, TParticlesDoc } from './types/t_particles_doc';
  * @author Francisco Pereira Alvarado
  */
 export const emptyParticlesDoc = (options: {
-    kind: 'particles2d' | 'particles3d';
+    kind: 'particles-2d' | 'particles-3d';
     /**
      * A sheet to draw from, relative to the new file.
      */
@@ -29,7 +29,7 @@ export const emptyParticlesDoc = (options: {
      */
     texture?: string;
 }): TParticlesDoc => {
-    const flat = options.kind === 'particles2d';
+    const flat = options.kind === 'particles-2d';
     const white = { r: 1, g: 1, b: 1, a: 1 };
     const base = {
         format: PARTICLES_FORMAT,
@@ -56,6 +56,6 @@ export const emptyParticlesDoc = (options: {
         unsupported: {},
     };
     return flat
-        ? { ...base, kind: 'particles2d', shape: { kind: 'point' }, direction: -Math.PI / 2, gravity: { x: 0, y: 120 } }
-        : { ...base, kind: 'particles3d', shape: { kind: 'point' }, direction: { x: 0, y: 1, z: 0 }, gravity: { x: 0, y: -2, z: 0 } };
+        ? { ...base, kind: 'particles-2d', shape: { kind: 'point' }, direction: -Math.PI / 2, gravity: { x: 0, y: 120 } }
+        : { ...base, kind: 'particles-3d', shape: { kind: 'point' }, direction: { x: 0, y: 1, z: 0 }, gravity: { x: 0, y: -2, z: 0 } };
 };

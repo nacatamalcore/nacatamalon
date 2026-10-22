@@ -158,7 +158,7 @@ const asShape2d = (value: unknown, src: string): TEmitShape2d => {
             // A real shape in the wrong dimension gets its own answer. "unknown shape" would send
             // somebody looking for a typo in a word they spelled correctly.
             if (typeof kind === 'string' && SHAPES_3D.has(kind)) {
-                return fail(src, `"${kind}" is a shape for three dimensions, and this is a particles2d effect`);
+                return fail(src, `"${kind}" is a shape for three dimensions, and this is a particles-2d effect`);
             }
             return fail(src, `"${String(kind)}" is not a birth shape. It goes point, circle, rect or line`);
     }
@@ -185,7 +185,7 @@ const asShape3d = (value: unknown, src: string): TEmitShape3d => {
             return { kind: 'cone', radius: Math.max(0, asNumber(read.radius, 0)), angle: asNumber(read.angle, 0) };
         default:
             if (typeof kind === 'string' && SHAPES_2D.has(kind)) {
-                return fail(src, `"${kind}" is a flat shape, and this is a particles3d effect`);
+                return fail(src, `"${kind}" is a flat shape, and this is a particles-3d effect`);
             }
             return fail(src, `"${String(kind)}" is not a birth shape. It goes point, sphere, box or cone`);
     }
@@ -323,10 +323,10 @@ export const parseParticlesDoc = (value: unknown, src: string): TParticlesDoc =>
     if (format > PARTICLES_FORMAT) {
         return fail(src, `it is written in format ${format} and this engine reads up to ${PARTICLES_FORMAT}`);
     }
-    if (read.kind !== undefined && read.kind !== 'particles2d' && read.kind !== 'particles3d') {
-        return fail(src, `"${String(read.kind)}" is not a kind of effect. It goes particles2d or particles3d`);
+    if (read.kind !== undefined && read.kind !== 'particles-2d' && read.kind !== 'particles-3d') {
+        return fail(src, `"${String(read.kind)}" is not a kind of effect. It goes particles-2d or particles-3d`);
     }
-    const flat = read.kind !== 'particles3d';
+    const flat = read.kind !== 'particles-3d';
 
     const life = asRange(read.life, [0.6, 1.2], src, 'life');
     if (life[0] <= 0) {
@@ -372,7 +372,7 @@ export const parseParticlesDoc = (value: unknown, src: string): TParticlesDoc =>
     if (!flat) {
         return {
             ...common,
-            kind: 'particles3d',
+            kind: 'particles-3d',
             shape: asShape3d(read.shape, src),
             direction: asDirection3d(read.direction, src),
             gravity: asVec3(read.gravity, { x: 0, y: 0, z: 0 }),
@@ -383,7 +383,7 @@ export const parseParticlesDoc = (value: unknown, src: string): TParticlesDoc =>
 
     return {
         ...common,
-        kind: 'particles2d',
+        kind: 'particles-2d',
         shape: asShape2d(read.shape, src),
         // Straight up by default, which with y growing downwards is a negative quarter turn. A
         // fountain is what somebody who wrote no direction almost certainly meant.

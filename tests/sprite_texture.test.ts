@@ -490,7 +490,7 @@ describe('a picture in a scene document', () => {
         const written = doc.root.children.find((node) => node.components.some((c) => c.type === 'sprite-texture'))!;
 
         // First on its object, ahead of the camera it owns.
-        expect(written.components.map((c) => c.type)).toEqual(['sprite-texture', 'camera2d', 'sprite']);
+        expect(written.components.map((c) => c.type)).toEqual(['sprite-texture', 'camera-2d', 'sprite']);
         expect(written.components[0]).toEqual({ type: 'sprite-texture', id: expect.any(String), key: 'tv', width: 32, height: 16, background: { r: 1, g: 0, b: 0, a: 1 }, sees: 'scene' });
 
         const again = createTestGame().store;
@@ -521,7 +521,7 @@ describe('a picture in a scene document', () => {
         const screen = doc.root.children[0];
         // The camera first, the way somebody editing the file by hand could leave it.
         screen.components.reverse();
-        expect(screen.components.map((c) => c.type)).toEqual(['camera2d', 'sprite-texture']);
+        expect(screen.components.map((c) => c.type)).toEqual(['camera-2d', 'sprite-texture']);
 
         const again = createTestGame().store;
         registerScene(again, 'x', sceneFromDoc(parseSceneDoc(doc, 'x.scene')));

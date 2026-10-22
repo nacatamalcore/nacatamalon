@@ -170,7 +170,7 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   arrives (its pieces arrive so); `destroy(model)` takes it all. `parts` is for one piece alone (the
   glass of a car).
 - **Particle effects that depend on the game** (dust the colour of the ground, a tint per level):
-  write the effect in code, `createParticles({ effect: { kind: 'particles2d', emission: { rate: 30 },
+  write the effect in code, `createParticles({ effect: { kind: 'particles-2d', emission: { rate: 30 },
   colorOverLife: [{ t: 0, color: lerpColor(a, b, t) }], texture: createPixelTexture(puff) } })`, with
   the fields of a `.particles` file; it is ready at once. Pass the same object to share one effect.
 - **Angles** are radians.

@@ -15,7 +15,7 @@ import type { TTransform3d } from '../../types/t_transform_3d';
  * @author Francisco Pereira Alvarado
  */
 export type TParticles3d = Omit<TParticles, 'type' | 'transform' | 'worldTransform'> & {
-    readonly type: 'particles3d';
+    readonly type: 'particles-3d';
     /**
      * Where the emitter is on its box. Particles are born here, turned and scaled by everything above it.
      */

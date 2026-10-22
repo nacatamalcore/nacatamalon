@@ -32,7 +32,7 @@ import type { TRuntimeStore } from '../src/store';
 const FRAME = 1 / 60;
 
 const deep = (fields: Record<string, unknown> = {}): TParticlesDoc3d =>
-    parseParticlesDoc({ kind: 'particles3d', ...fields }, '/deep.particles') as TParticlesDoc3d;
+    parseParticlesDoc({ kind: 'particles-3d', ...fields }, '/deep.particles') as TParticlesDoc3d;
 
 /**
  * Where an emitter is, as the matrix its box's composition would leave it.
@@ -74,7 +74,7 @@ describe('the file, for three dimensions', () => {
     it('reads with defaults in units rather than pixels, straight up, and falls nowhere', () => {
         const doc = deep();
 
-        expect(doc.kind).toBe('particles3d');
+        expect(doc.kind).toBe('particles-3d');
         // Pixel defaults of forty to ninety would send every particle a hundred metres a second.
         expect(doc.speed).toEqual([1, 2]);
         expect(doc.size).toEqual([0.1, 0.25]);
@@ -94,7 +94,7 @@ describe('the file, for three dimensions', () => {
     });
 
     it('tells a shape of the other dimension apart, both ways round', () => {
-        expect(() => deep({ shape: { kind: 'circle', radius: 1 } })).toThrow(/flat shape, and this is a particles3d/);
+        expect(() => deep({ shape: { kind: 'circle', radius: 1 } })).toThrow(/flat shape, and this is a particles-3d/);
         expect(() => effectDoc({ shape: { kind: 'sphere' } })).toThrow(/for three dimensions/);
         expect(() => deep({ shape: { kind: 'blob' } })).toThrow(/point, sphere, box or cone/);
     });
@@ -104,7 +104,7 @@ describe('the file, for three dimensions', () => {
         const effects = join(import.meta.dir, 'fixtures/effects');
         for (const name of ['geyser', 'dust']) {
             const doc = parseParticlesDoc(JSON.parse(readFileSync(join(effects, `${name}.particles`), 'utf8')), name);
-            expect(doc.kind).toBe('particles3d');
+            expect(doc.kind).toBe('particles-3d');
             expect(doc.bounds).not.toBeNull();
             expect(doc.unsupported).toEqual({});
         }
@@ -284,8 +284,8 @@ describe('an emitter handed the other dimension', () => {
         landed(store, 'deep', deep());
 
         startTestScene(store, 'S', () => {
-            expect(() => createParticles3d({ effect: 'flat' })).toThrow(/particles2d effect, so it is made with createParticles\./);
-            expect(() => createParticles({ effect: 'deep' })).toThrow(/particles3d effect, so it is made with createParticles3d/);
+            expect(() => createParticles3d({ effect: 'flat' })).toThrow(/particles-2d effect, so it is made with createParticles\./);
+            expect(() => createParticles({ effect: 'deep' })).toThrow(/particles-3d effect, so it is made with createParticles3d/);
             return createScene();
         });
     });
@@ -337,7 +337,7 @@ describe('on its way to the frame', () => {
         });
 
         const pass = frame(store);
-        expect(pass.drawables!.map((item) => item.type)).toEqual(['particles3d']);
+        expect(pass.drawables!.map((item) => item.type)).toEqual(['particles-3d']);
         expect(pass.views3d!.length).toBe(1);
         expect(pass.viewIndex![0]).toBe(0);
         // The stand-in went, never the record: it carries the packed particles.
@@ -359,7 +359,7 @@ describe('on its way to the frame', () => {
         });
 
         const pass = frame(store);
-        expect(pass.drawables!.map((item) => item.type)).toEqual(['mesh', 'particles3d']);
+        expect(pass.drawables!.map((item) => item.type)).toEqual(['mesh', 'particles-3d']);
         expect(pass.viewIndex).toEqual([0, 0]);
     });
 

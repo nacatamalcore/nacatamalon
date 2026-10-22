@@ -1,6 +1,6 @@
 {
     "format": 1,
-    "kind": "particles3d",
+    "kind": "particles-3d",
     "texture": "../assets/textures/spark.png",
     "max": 220,
     "blend": "additive",

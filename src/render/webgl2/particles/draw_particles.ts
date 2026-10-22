@@ -25,7 +25,7 @@ const countWithChildren = (item: TDrawParticles | TDrawParticles3d): number => {
 export const countParticles = (drawables: readonly TDrawItem[]): number => {
     let total = 0;
     for (const item of drawables) {
-        if (item.type === 'particles' || item.type === 'particles3d') {
+        if (item.type === 'particles' || item.type === 'particles-3d') {
             total += countWithChildren(item);
         }
     }

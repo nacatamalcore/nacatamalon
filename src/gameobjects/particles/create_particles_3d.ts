@@ -20,7 +20,7 @@ const NOWHERE = { x: 0, y: 0, z: 0, rotation: 0, rotationX: 0, rotationY: 0, sca
  * particle is drawn as a square that **always faces the camera**, however the camera turns, and
  * hides behind the models in front of it without hiding the other particles.
  *
- * Its effect has to be a `particles3d` file. Handing it a flat one is refused, because every number
+ * Its effect has to be a `particles-3d` file. Handing it a flat one is refused, because every number
  * in that file is a pixel.
  *
  * @param options The effect to follow, and what this emitter decides for itself.
@@ -48,10 +48,10 @@ export const createParticles3d = (options: TParticles3dOptions): TParticles3d =>
         throw new Error('[NacatamalOn] createParticles3d: call it inside a scene body.');
     }
 
-    const file = resolveEffect(options.effect, 'particles3d', 'createParticles3d');
+    const file = resolveEffect(options.effect, 'particles-3d', 'createParticles3d');
     const autoplay = options.autoplay ?? true;
 
-    const emitter = createRecord('particles3d', {
+    const emitter = createRecord('particles-3d', {
         name: options.name ?? file.src,
         file,
         transform: { ...NOWHERE, ...options.transform },

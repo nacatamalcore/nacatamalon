@@ -18,7 +18,7 @@ import type { TTexture } from '../src/loaders';
  */
 
 const BURST: TParticlesEffect2d = {
-    kind: 'particles2d',
+    kind: 'particles-2d',
     max: 30,
     life: 5,
     emission: { rate: 0, burst: 12, loop: false },
@@ -50,11 +50,11 @@ describe('an effect written in code', () => {
     it('fills in what it leaves out, exactly as a file would', () => {
         let emitter!: TParticles;
         running(() => {
-            emitter = createParticles({ effect: { kind: 'particles2d', speed: 50 } });
+            emitter = createParticles({ effect: { kind: 'particles-2d', speed: 50 } });
         });
 
         const doc = emitter.file.doc!;
-        expect(doc.kind).toBe('particles2d');
+        expect(doc.kind).toBe('particles-2d');
         expect(doc.speed).toEqual([50, 50]);
         expect(doc.max).toBe(100);
         expect(doc.texture).toBeNull();
@@ -66,7 +66,7 @@ describe('an effect written in code', () => {
         let emitter!: TParticles;
         running(() => {
             emitter = createParticles({
-                effect: { kind: 'particles2d', colorOverLife: [{ t: 0, color: lerpColor(dusk, night, 0.5) }, { t: 1, color: '#ffffff', alpha: 0 }] },
+                effect: { kind: 'particles-2d', colorOverLife: [{ t: 0, color: lerpColor(dusk, night, 0.5) }, { t: 1, color: '#ffffff', alpha: 0 }] },
             });
         });
 
@@ -104,18 +104,18 @@ describe('an effect written in code', () => {
     it('works in three dimensions, and refuses the wrong dimension on the line that asked', () => {
         let deep!: TParticles3d;
         running(() => {
-            deep = createParticles3d({ effect: { kind: 'particles3d', direction: { x: 0, y: 1, z: 0 } } });
+            deep = createParticles3d({ effect: { kind: 'particles-3d', direction: { x: 0, y: 1, z: 0 } } });
         });
-        expect(deep.file.doc!.kind).toBe('particles3d');
+        expect(deep.file.doc!.kind).toBe('particles-3d');
 
         expect(() => running(() => {
             createParticles3d({ effect: BURST });
-        })).toThrow('particles2d');
+        })).toThrow('particles-2d');
     });
 
     it('says what is wrong with it at once, like a file that will not read', () => {
         expect(() => running(() => {
-            createParticles({ effect: { kind: 'particles2d', life: 0 } });
+            createParticles({ effect: { kind: 'particles-2d', life: 0 } });
         })).toThrow('[NacatamalOn] particles "(effect in code)"');
     });
 

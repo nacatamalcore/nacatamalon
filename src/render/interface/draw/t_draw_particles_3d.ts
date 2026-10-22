@@ -12,7 +12,7 @@ import type { TDrawParticles } from './t_draw_particles';
  * @author Francisco Pereira Alvarado
  */
 export type TDrawParticles3d = Omit<TDrawParticles, 'type' | 'children'> & {
-    readonly type: 'particles3d';
+    readonly type: 'particles-3d';
     /**
      * The effects its particles set off, in depth like it. See `TDrawParticles.children`.
      */

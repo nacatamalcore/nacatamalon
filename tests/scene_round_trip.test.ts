@@ -237,7 +237,7 @@ describe('the manifest', () => {
             createText({ text: 'AB', font: createTestFont(), tint });
         });
 
-        const fonts = doc.assets.filter((asset) => asset.type === 'bitmapFont');
+        const fonts = doc.assets.filter((asset) => asset.type === 'bitmap-font');
         expect(fonts).toHaveLength(1);
         // A font is its metrics and its sheet. One entry, two paths, and its sheet is not also
         // registered as a texture of its own.
@@ -253,7 +253,7 @@ describe('the manifest', () => {
         });
 
         expect(doc.assets.filter((asset) => asset.type === 'font')).toEqual([{ type: 'font', key: 'test-sans.ttf', src: 'test-sans.ttf' }]);
-        expect(doc.assets.filter((asset) => asset.type === 'bitmapFont')).toHaveLength(1);
+        expect(doc.assets.filter((asset) => asset.type === 'bitmap-font')).toHaveLength(1);
         // Its atlas is drawn in the game, so there is no file to name.
         expect(doc.assets.filter((asset) => asset.type === 'texture')).toHaveLength(0);
         expect(parseSceneDoc(doc, '/scenes/level.scene')).toEqual(doc);
@@ -378,7 +378,7 @@ describe('where a drawable is', () => {
         });
 
         expect(doc.root.components[0]).toMatchObject({
-            type: 'particles3d', effect: '/fx/geyser.particles', seed: 4, transform: { z: 3, rotationY: 0.5, scaleZ: 2 },
+            type: 'particles-3d', effect: '/fx/geyser.particles', seed: 4, transform: { z: 3, rotationY: 0.5, scaleZ: 2 },
         });
         expect(Object.keys(doc.root.components[0]!).slice(0, 3)).toEqual(['type', 'id', 'transform']);
         expect(parseSceneDoc(doc, '/scenes/level.scene')).toEqual(doc);
@@ -636,7 +636,7 @@ describe('the whole loop', () => {
 
     it('carries a component it cannot build straight through, in its place', () => {
         warn = spyOn(console, 'warn').mockImplementation(() => {});
-        const mystery = { type: 'physics2d', id: 'body', shape: 'circle', radius: 8 };
+        const mystery = { type: 'physics-body-2d', id: 'body', shape: 'circle', radius: 8 };
         const { doc } = written(() => { createSprite({ width: 8, height: 8, tint }); });
         const withMystery = parseSceneDoc({
             ...doc,

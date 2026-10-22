@@ -117,7 +117,7 @@ export type TTilemapLayer = {
  * @author Francisco Pereira Alvarado
  */
 export type TTilemap = {
-    readonly type: 'tilemapAsset';
+    readonly type: 'tilemap-asset';
     /**
      * Where the file is.
      */

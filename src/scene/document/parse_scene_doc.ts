@@ -639,7 +639,7 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
             };
         }
         case 'particles':
-        case 'particles3d': {
+        case 'particles-3d': {
             const overrides = asRecord(raw.overrides);
             const scales = overrides === null ? undefined : {
                 ...optionalNumber(overrides, 'rateScale'),
@@ -660,25 +660,25 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 ...optionalBoolean(raw, 'visible'),
                 ...optionalNumber(raw, 'zIndex'),
             };
-            if (raw.type === 'particles3d') {
+            if (raw.type === 'particles-3d') {
                 const place = raw.transform === undefined ? null : parseTransform(raw.transform);
-                return { type: 'particles3d', id, ...(place !== null ? { transform: place } : {}), ...emitter };
+                return { type: 'particles-3d', id, ...(place !== null ? { transform: place } : {}), ...emitter };
             }
             const place = parseTransform2d(raw.transform);
             return { type: 'particles', id, ...(place !== undefined ? { transform: place } : {}), ...emitter };
         }
-        case 'camera2d': {
+        case 'camera-2d': {
             const place = asRecord(raw.transform) ?? {};
             return {
-                type: 'camera2d',
+                type: 'camera-2d',
                 id,
                 transform: { x: asNumber(place.x, 0), y: asNumber(place.y, 0), rotation: asNumber(place.rotation, 0) },
                 zoom: asNumber(raw.zoom, 1),
             };
         }
-        case 'camera3d': {
+        case 'camera-3d': {
             return {
-                type: 'camera3d',
+                type: 'camera-3d',
                 id,
                 projection: asOneOf(raw.projection, ['perspective', 'orthographic'] as const, 'perspective'),
                 transform: parseTransform(raw.transform) ?? parseTransform({})!,
@@ -770,7 +770,7 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 ...(raw.sees === 'scene' ? { sees: 'scene' as const } : {}),
             };
         }
-        case 'physics2d': {
+        case 'physics-body-2d': {
             const collider = parseCollider2d(raw.collider);
             // A shape nothing can make goes to the hole for what this version cannot read, so it
             // comes back out of the file untouched instead of being dropped or guessed at.
@@ -787,9 +787,9 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 collider,
                 ...parseSurface(raw),
             });
-            return { type: 'physics2d', ...rest };
+            return { type: 'physics-body-2d', ...rest };
         }
-        case 'physics3d': {
+        case 'physics-body-3d': {
             const collider = parseCollider3d(raw.collider);
             if (collider === null) {
                 return null;
@@ -805,7 +805,7 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                     : {}),
                 ...parseSurface(raw),
             });
-            return { type: 'physics3d', ...rest };
+            return { type: 'physics-body-3d', ...rest };
         }
         case 'physics-world-2d': {
             const gravity = asRecord(raw.gravity) ?? {};
@@ -995,8 +995,8 @@ const parseAsset = (value: unknown): TAssetEntry | null => {
         const src = asString(raw.src, key);
         return typeof raw.size === 'number' && Number.isFinite(raw.size) ? { type: 'font', key, src, size: raw.size } : { type: 'font', key, src };
     }
-    if (raw.type === 'bitmapFont') {
-        return { type: 'bitmapFont', key, json: asString(raw.json, ''), atlas: asString(raw.atlas, '') };
+    if (raw.type === 'bitmap-font') {
+        return { type: 'bitmap-font', key, json: asString(raw.json, ''), atlas: asString(raw.atlas, '') };
     }
     if (raw.type === 'texture' || raw.type === 'atlas' || raw.type === 'shader' || raw.type === 'particles' || raw.type === 'tilemap' || raw.type === 'audio' || raw.type === 'song' || raw.type === 'motion') {
         // `src` defaults to the key, because for most of these they are the same string and a file

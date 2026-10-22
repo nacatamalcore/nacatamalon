@@ -49,7 +49,7 @@ describe('useCamera2d', () => {
             return createScene();
         });
 
-        expect(camera.type).toBe('camera2d');
+        expect(camera.type).toBe('camera-2d');
         expect(camera.transform).toEqual({ x: 0, y: 0, rotation: 0 });
         expect(camera.zoom).toBe(1);
     });

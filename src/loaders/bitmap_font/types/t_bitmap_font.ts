@@ -64,7 +64,7 @@ export type TBitmapFontMeta = {
  * @author Francisco Pereira Alvarado
  */
 export type TBitmapFont = {
-    readonly type: 'bitmapFont';
+    readonly type: 'bitmap-font';
     /**
      * What it is cached under in this game. The description's path unless a `key` was given.
      */

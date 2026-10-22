@@ -35,7 +35,7 @@ const childStand = new WeakMap<TChildParticles, { -readonly [K in keyof TDrawPar
  */
 const childrenDrawn = (
     state: TParticleState,
-    type: 'particles' | 'particles3d',
+    type: 'particles' | 'particles-3d',
     smooth: boolean | undefined,
 ): TDrawParticles[] | undefined => {
     if (state.children.length === 0) {
@@ -102,7 +102,7 @@ export const stepSceneParticles = (
 ): void => {
     for (let i = start; i < drawables.length; i++) {
         const emitter = drawables[i];
-        if (emitter.type !== 'particles' && emitter.type !== 'particles3d') {
+        if (emitter.type !== 'particles' && emitter.type !== 'particles-3d') {
             continue;
         }
 
@@ -131,15 +131,15 @@ export const stepSceneParticles = (
         const tint = { r: emitter.tint.r, g: emitter.tint.g, b: emitter.tint.b, a: emitter.tint.a * emitter.alpha };
         const step = emitter.paused ? 0 : delta;
 
-        if (emitter.type === 'particles3d') {
+        if (emitter.type === 'particles-3d') {
             // `openParticleState` has already refused a flat file for this one.
-            if (doc.kind !== 'particles3d') {
+            if (doc.kind !== 'particles-3d') {
                 continue;
             }
             const matrix = emitter.worldMatrix ?? computeModelMatrix(emitter.transform, ownMatrix);
             simulateParticles3d(state, doc, step, matrix, emitter.emitting, tint, emitter.overrides, colliders.deep);
         } else {
-            if (doc.kind !== 'particles2d') {
+            if (doc.kind !== 'particles-2d') {
                 continue;
             }
             // Slot 0 of the views is the screen, so camera `c` is in slot `c + 1`: the rule the
@@ -188,7 +188,7 @@ const seenThrough = (drawn: TDrawParticles, view: number): TDrawParticles => {
 export const lookAgainAtParticles = (drawables: TDrawable[], cameraIndex: number[], start: number): void => {
     for (let i = start; i < drawables.length; i++) {
         const emitter = drawables[i];
-        if (emitter.type !== 'particles' && emitter.type !== 'particles3d') {
+        if (emitter.type !== 'particles' && emitter.type !== 'particles-3d') {
             continue;
         }
         const drawn = stand.get(emitter);
@@ -198,7 +198,7 @@ export const lookAgainAtParticles = (drawables: TDrawable[], cameraIndex: number
             drawables[i] = { type: emitter.type, instances: EMPTY, count: 0, texture: null, blend: 'alpha' } as unknown as TDrawable;
             continue;
         }
-        if (emitter.type === 'particles3d') {
+        if (emitter.type === 'particles-3d') {
             drawables[i] = drawn as unknown as TDrawable;
             continue;
         }

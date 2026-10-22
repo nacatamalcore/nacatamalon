@@ -64,7 +64,7 @@ const loadAssets = (assets: readonly TAssetEntry[], src: string): void => {
             case 'audio': useLoadAudio({ src: asset.src, key: asset.key }); break;
             case 'song': useLoadSong({ src: asset.src, key: asset.key }); break;
             case 'motion': useLoadMotion({ src: asset.src, key: asset.key }); break;
-            case 'bitmapFont': useLoadBitmapFont({ json: asset.json, atlas: asset.atlas, key: asset.key }); break;
+            case 'bitmap-font': useLoadBitmapFont({ json: asset.json, atlas: asset.atlas, key: asset.key }); break;
             case 'font': useLoadFont({ src: asset.src, key: asset.key, ...(asset.size !== undefined ? { size: asset.size } : {}) }); break;
             // A map is asked for by the thing that shows it, because `createTilemap` is what puts
             // its layers on a box. The entry is here so the manifest still lists the file.
@@ -460,7 +460,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
             buildTilemap(component);
             break;
         case 'particles':
-        case 'particles3d': {
+        case 'particles-3d': {
             const file = found(assets.particles, component.effect, 'effect', src);
             if (file === undefined) {
                 break;
@@ -477,16 +477,16 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                 ...(component.visible !== undefined ? { visible: component.visible } : {}),
                 ...(component.zIndex !== undefined ? { zIndex: component.zIndex } : {}),
             };
-            const emitter = component.type === 'particles3d'
+            const emitter = component.type === 'particles-3d'
                 ? createParticles3d({ ...(component.transform !== undefined ? { transform: component.transform } : {}), ...options })
                 : createParticles({ ...(component.transform !== undefined ? { transform: component.transform } : {}), ...options });
             emitter.id = component.id;
             break;
         }
-        case 'camera2d':
+        case 'camera-2d':
             useCamera2d({ transform: component.transform, zoom: component.zoom }).id = component.id;
             break;
-        case 'camera3d': {
+        case 'camera-3d': {
             const place = component.transform;
             useCamera3d({
                 projection: component.projection,
@@ -534,12 +534,12 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
             lamp.id = component.id;
             break;
         }
-        case 'physics2d': {
+        case 'physics-body-2d': {
             const { type, ...rest } = component;
             usePhysicsBody2d(rest);
             break;
         }
-        case 'physics3d': {
+        case 'physics-body-3d': {
             const { type, ...rest } = component;
             usePhysicsBody3d(rest);
             break;

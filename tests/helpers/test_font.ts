@@ -26,7 +26,7 @@ export const TEST_FONT_META: TBitmapFontMeta = {
  * A font record that is ready to draw, with a texture the renderer would accept.
  */
 export const createTestFont = (key = 'test-font'): TBitmapFont => ({
-    type: 'bitmapFont',
+    type: 'bitmap-font',
     key,
     src: `${key}.json`,
     status: 'ready',

@@ -136,7 +136,7 @@ export type TPhysicsSurface = {
  * @author Francisco Pereira Alvarado
  */
 export type TPhysicsBody2d = {
-    _type: 'physics2d';
+    _type: 'physics-body-2d';
     id: string;
     name: string;
     body: TPhysicsBodyType;
@@ -151,7 +151,7 @@ export type TPhysicsBody2d = {
  * @author Francisco Pereira Alvarado
  */
 export type TPhysicsBody3d = {
-    _type: 'physics3d';
+    _type: 'physics-body-3d';
     id: string;
     name: string;
     body: TPhysicsBodyType;

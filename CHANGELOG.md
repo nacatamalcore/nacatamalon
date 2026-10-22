@@ -60,6 +60,19 @@ releases are in [changelog/](./changelog/), one file each.
   its samples kept in memory: the song `useLoadSong` gives, for `useSong`. A game that does not call
   it carries none of the reading.
 
+### Changed
+
+- **One way to write every type's name**: small letters, words joined by a hyphen, and `2d` or `3d`
+  after a hyphen too, as `physics-world-2d` and `particle-collider-2d` already were. In scenes and
+  boxes: `camera2d` is now `camera-2d`, `camera3d` `camera-3d`, `particles3d` `particles-3d`, and a
+  body is called what it is, `physics2d` now `physics-body-2d` and `physics3d` `physics-body-3d`,
+  as `usePhysicsBody2d` says. Among assets, and in packs, `bitmapFont` is now `bitmap-font`. A
+  `.particles` file's `kind` is `particles-2d` or `particles-3d`. The records a game holds say the
+  same in their `type` (`_type` for a body), and a font's or a map's: `bitmap-font`,
+  `tilemap-asset`. An old name is read as any type the engine does not have: a scene says so and
+  leaves that component or asset out (kept, so saving loses nothing), and a `.particles` file is
+  refused. Write the new name in its place.
+
 ## 0.2.6 — 2026-10-21
 
 ### Added
