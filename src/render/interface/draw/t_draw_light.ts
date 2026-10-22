@@ -1,4 +1,5 @@
 import type { TColor } from '../../../color';
+import type { TQuat } from '../../../math/quat';
 
 /**
  * Where a light is and which way it faces. Scale is ignored: a light does not stretch.
@@ -7,6 +8,11 @@ type TLightPlacement = {
     x: number; y: number; z: number;
     rotation: number; rotationX: number; rotationY: number;
     scaleX: number; scaleY: number; scaleZ: number;
+    /**
+     * Its turn as a whole, when the light's placement says it that way: then the three angles are
+     * not read, as for anything else placed in space.
+     */
+    quaternion?: TQuat | null;
 };
 
 /**

@@ -119,14 +119,33 @@ const LIGHT_KIND: Record<TDrawLight['type'], number> = { directional: 0, point: 
 /**
  * A panel's own X and Y, turned the way it is and as long as half of each side.
  *
- * The same turns `transformForward` reads, so the panel's front is the way it shines: X by the turn
- * about Y, Y by the turn about X and then about Y, both turned by the roll.
+ * The same turns `transformForward` reads, so the panel's front is the way it shines: its quaternion
+ * when it has one, and otherwise X by the turn about Y, Y by the turn about X and then about Y, both
+ * turned by the roll.
  */
 const rectHalfSides = (
     transform: TDrawLight['transform'],
     halfWidth: number,
     halfHeight: number,
 ): { right: { x: number; y: number; z: number }; up: { x: number; y: number; z: number } } => {
+    const q = transform.quaternion;
+    if (q !== undefined && q !== null) {
+        // (1, 0, 0) and (0, 1, 0) turned by the quaternion, written out, as `transformForward` turns
+        // (0, 0, -1).
+        const [qx, qy, qz, qw] = q;
+        return {
+            right: {
+                x: (1 - 2 * (qy * qy + qz * qz)) * halfWidth,
+                y: 2 * (qx * qy + qw * qz) * halfWidth,
+                z: 2 * (qx * qz - qw * qy) * halfWidth,
+            },
+            up: {
+                x: 2 * (qx * qy - qw * qz) * halfHeight,
+                y: (1 - 2 * (qx * qx + qz * qz)) * halfHeight,
+                z: 2 * (qy * qz + qw * qx) * halfHeight,
+            },
+        };
+    }
     const cx = Math.cos(transform.rotationX);
     const sx = Math.sin(transform.rotationX);
     const cy = Math.cos(transform.rotationY);
@@ -216,11 +235,14 @@ export const fillLightUniforms = (
         }
 
         if (light.type === 'rect') {
-            // Its two half sides, as the ways along them: its own X and Y, turned like it is.
+            // Its two half sides, as the ways along them: its own X and Y, turned like it is. The
+            // shader takes its front across them, so a flat camera, which turns them upside down and
+            // with them the way across, has X the other way along too: the same panel, the same
+            // nearest point, and its front still the way it shines.
             const half = rectHalfSides(light.transform, (light.width ?? 1) / 2, (light.height ?? 1) / 2);
-            out[base + 8] = half.right.x;
-            out[base + 9] = half.right.y * turn;
-            out[base + 10] = half.right.z;
+            out[base + 8] = half.right.x * turn;
+            out[base + 9] = half.right.y;
+            out[base + 10] = half.right.z * turn;
             out[base + 12] = half.up.x;
             out[base + 13] = half.up.y * turn;
             out[base + 14] = half.up.z;

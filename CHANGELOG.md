@@ -7,6 +7,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **`useRectLight`**, a panel: a lamp shaped like a rectangle that shines from its front only, its
+  `width` and `height` along its own X and Y and its `range` from the nearest point of the panel. It
+  faces down unless turned, like a light in the ceiling: a strip light, a window, a screen, a sign.
+  It casts no shadows. Scenes keep it (`kind: 'rect'`).
 - **Instruments** for a song's voices, the way an 8-bit tracker shapes a note: `volume`, `duty`,
   `arpeggio` and `pitch` as lists of numbers read one a frame (a sixtieth of a second), with a `|`
   where a list starts again, plus `vibrato` and `slide`. A song keeps them in `instruments`, a voice
