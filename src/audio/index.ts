@@ -23,4 +23,4 @@ export type {
 } from './types/t_sound';
 export type { TMusicAttachment, TMusicHandle, TMusicLayer, TMusicLayerOptions, TMusicOptions } from './types/t_music';
 export type { TAudioListener } from './types/t_audio_listener';
-export type { TSongAttachment, TSongHandle, TSongOptions } from './types/t_song_player';
+export type { TSongAccompaniment, TSongAttachment, TSongHandle, TSongOptions } from './types/t_song_player';

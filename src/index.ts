@@ -240,7 +240,7 @@ export { soundOf } from './audio';
 export type {
     TSoundAttachment, TSoundHandle, TSoundOptions, TSoundSource, TSampledSound, TAudioHandle, TSoundCone, TSoundDuck, TSoundFade, TSoundZone,
     TSoundZoneShape, TMusicAttachment, TMusicHandle, TMusicLayer, TMusicLayerOptions, TMusicOptions, TAudioListener,
-    TSongAttachment, TSongHandle, TSongOptions, TBeatListener,
+    TSongAccompaniment, TSongAttachment, TSongHandle, TSongOptions, TBeatListener,
 } from './audio';
 export type { TGameStore, TGameStoreConfig, TStoreActionsFactory, TStoreGet, TStoreListener, TStoreSelector, TStoreSet, TStorePersistence, TStorePersist } from './game_store';
 // The format's vocabulary, which stays on the root the way `TSceneDoc` does: it describes a file,

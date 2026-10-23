@@ -13,6 +13,13 @@ releases are in [changelog/](./changelog/), one file each.
   both hand back a sound for `useSound`. Spanish is read by rules (`textToPhonemes` shows how);
   any other language is written as phonemes. A door of its own, so a game that never speaks carries
   none of it.
+- **A song sung over, `accompany(vocal, song)`**, from `nacatamalon/speech`: a song's voice written
+  apart, as a vocal part (a `.vocal` file, loaded with `useLoadVocal`, or a `TVocalDoc` in code), and
+  sung over any `.song` by `useSong`. The part is made as it plays, like the song, in a lane of its
+  own (`vocal`), at the song's tempo and in its key, following them when they change, round its loop.
+  A part can have several singers, each line sung by some of them, each one's voice and range their
+  own. `lyricsAt(vocal, song.beat)` says the line being sung, its words so far and who sings it, for
+  words that come up in time. The `.song` format is unchanged.
 - **`useRectLight`**, a panel: a lamp shaped like a rectangle that shines from its front only, its
   `width` and `height` along its own X and Y and its `range` from the nearest point of the panel. It
   faces down unless turned, like a light in the ceiling: a strip light, a window, a screen, a sign.

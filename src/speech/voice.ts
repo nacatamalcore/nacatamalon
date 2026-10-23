@@ -191,18 +191,51 @@ const MOUTH_KEYS = ['f1', 'f2', 'f3', 'b1', 'b2', 'b3', 'noiseAt', 'noiseWidth',
 const LOUDNESS_KEYS = ['voice', 'aspiration', 'noise'] as const;
 
 /**
- * Plays the segments one after another at the pitch `pitchAt` gives for each moment, in Hz, and
- * hands back the samples, their loudest at `volume`.
- *
- * `pitchAt` is asked for every sample in order, so it may keep its own state.
+ * The voice made a stretch at a time: `write` makes the next `count` samples, into `out` from `at`,
+ * or with no `out` only works them out, which is how it is brought to a place in its middle. Its
+ * samples are as the throat and the mouth make them, before any level is set: `renderVoice` brings
+ * the loudest to a volume, a voice heard as it is made has a level of its own.
  *
  * @internal
  */
-export const renderVoice = (segments: readonly TVoiceSegment[], pitchAt: (time: number) => number, settings: TVoiceSettings): Float32Array => {
-    const { sampleRate, throat, breath, volume } = settings;
+export type TVoiceWriter = {
+    /** How many samples it makes in all. */
+    readonly length: number;
+    /** The next sample it makes. */
+    readonly position: number;
+    write(out: Float32Array | null, at: number, count: number): void;
+};
+
+/**
+ * Starts the voice on the segments, from the one at `first`, which begins `from` seconds in: the
+ * place a voice can start again from silence. `pitchAt` is asked for every sample in order, so it
+ * may keep its own state.
+ *
+ * @internal
+ */
+export const createVoice = (
+    segments: readonly TVoiceSegment[],
+    pitchAt: (time: number) => number,
+    settings: TVoiceSettings,
+    first = 0,
+    from = 0,
+): TVoiceWriter => {
+    const { sampleRate, throat, breath } = settings;
     const total = segments.reduce((sum, segment) => sum + segment.length, 0);
-    const out = new Float32Array(Math.max(1, Math.ceil(total * sampleRate)));
-    if (segments.length === 0) return out;
+    const length = segments.length === 0 ? 1 : Math.max(1, Math.ceil(total * sampleRate));
+    let i = Math.min(length, Math.round(from * sampleRate));
+    if (segments.length === 0) {
+        return {
+            length,
+            get position() {
+                return i;
+            },
+            write: (out, at, count) => {
+                if (out !== null) out.fill(0, at, at + count);
+                i += count;
+            },
+        };
+    }
 
     const formants = [createResonator(), createResonator(), createResonator(), createResonator(), createResonator()];
     const nosePole = createResonator();
@@ -218,14 +251,17 @@ export const renderVoice = (segments: readonly TVoiceSegment[], pitchAt: (time: 
     formants[4]!.tune(F5 * throat, 200, sampleRate);
     nosePole.tune(NOSE, 100, sampleRate);
 
-    const now: TVoiceTarget = { ...segments[0]!.from, voice: 0, aspiration: 0, noise: 0 };
+    const now: TVoiceTarget = { ...segments[first]!.from, voice: 0, aspiration: 0, noise: 0 };
     const target: TVoiceTarget = { ...now };
-    let index = 0;
-    let start = 0;
+    let index = first;
+    let start = from;
     let phase = 0;
     let flowBefore = 0;
+    // What takes away any offset from zero: the sample before, and what came out for it.
+    let before = 0;
+    let after = 0;
 
-    for (let i = 0; i < out.length; i += 1) {
+    const sample = (): number => {
         const time = i / sampleRate;
         while (index < segments.length - 1 && time >= start + segments[index]!.length) {
             start += segments[index]!.length;
@@ -260,28 +296,51 @@ export const renderVoice = (segments: readonly TVoiceSegment[], pitchAt: (time: 
         let throatOut = now.voice * buzz + breathe * air * ASPIRATION_GAIN;
         throatOut = noseZero.run(nosePole.run(throatOut));
         for (const formant of formants) throatOut = formant.run(throatOut);
-        out[i] = throatOut + band.run(hiss()) * now.noise * HISS_GAIN;
-    }
+        const raw = throatOut + band.run(hiss()) * now.noise * HISS_GAIN;
+        const value = raw - before + 0.995 * after;
+        before = raw;
+        after = value;
+        return value;
+    };
 
-    finish(out, sampleRate, volume);
+    return {
+        length,
+        get position() {
+            return i;
+        },
+        write: (out, at, count) => {
+            for (let n = 0; n < count; n += 1) {
+                const value = i < length ? sample() : 0;
+                if (out !== null) out[at + n] = value;
+                if (i < length) i += 1;
+            }
+        },
+    };
+};
+
+/**
+ * Plays the segments one after another at the pitch `pitchAt` gives for each moment, in Hz, and
+ * hands back the samples, their loudest at `volume`.
+ *
+ * `pitchAt` is asked for every sample in order, so it may keep its own state.
+ *
+ * @internal
+ */
+export const renderVoice = (segments: readonly TVoiceSegment[], pitchAt: (time: number) => number, settings: TVoiceSettings): Float32Array => {
+    const voice = createVoice(segments, pitchAt, settings);
+    const out = new Float32Array(voice.length);
+    voice.write(out, 0, out.length);
+    finish(out, settings.sampleRate, settings.volume);
     return out;
 };
 
 /**
- * Takes away any offset from zero, brings the loudest sample to `volume`, and fades the ends so the
- * sound starts and stops without a click.
+ * Brings the loudest sample to `volume`, and fades the ends so the sound starts and stops without a
+ * click.
  */
 const finish = (out: Float32Array, sampleRate: number, volume: number): void => {
-    let before = 0;
-    let after = 0;
     let peak = 0;
-    for (let i = 0; i < out.length; i += 1) {
-        const value = out[i]! - before + 0.995 * after;
-        before = out[i]!;
-        after = value;
-        out[i] = value;
-        peak = Math.max(peak, Math.abs(value));
-    }
+    for (let i = 0; i < out.length; i += 1) peak = Math.max(peak, Math.abs(out[i]!));
     const gain = peak > 0 ? volume / peak : 0;
     const fade = Math.min(out.length >> 1, Math.round(sampleRate * 0.004));
     for (let i = 0; i < out.length; i += 1) {

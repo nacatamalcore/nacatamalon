@@ -15,6 +15,8 @@ const READERS: Readonly<Record<TSpeechLanguage, (text: string) => string>> = {
  *
  * @example
  * ```ts
+ * import { textToPhonemes } from 'nacatamalon/speech';
+ *
  * textToPhonemes('¿Qué hora es?'); // 'K E1 O1 DX A0 E1 S ?'
  * ```
  *

@@ -9,7 +9,7 @@ import type { TSongDoc, TSongError, TSongInstrumentError, TSongSample, TSongVoic
  * @internal
  */
 export type TSongStretch = {
-    voices: Partial<Record<TSongVoiceName, Float32Array>>;
+    voices: Partial<Record<string, Float32Array>>;
     echo: Float32Array | null;
 };
 
@@ -32,7 +32,10 @@ export type TSongStream = {
      */
     readonly length: number;
     readonly loopSample: number;
-    readonly voices: readonly TSongVoiceName[];
+    /**
+     * Its voices, each a lane of its own: the song's, and any that goes over it (`vocal`).
+     */
+    readonly voices: readonly string[];
     readonly hasEcho: boolean;
     readonly errors: TSongError[];
     readonly instrumentErrors: TSongInstrumentError[];

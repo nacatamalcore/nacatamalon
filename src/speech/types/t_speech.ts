@@ -97,11 +97,13 @@ export type TSungNote = {
     beats?: number;
     /**
      * The syllable sung on it, read by the rules of the language. Absent on a note with a pitch, the
-     * syllable before is held over onto it.
+     * syllable before is held over onto it. A hyphen at its end (`'can-'`) says the word goes on in
+     * the next syllable: it is not sung, and `lyricsAt` joins the two without a space.
      */
     lyric?: string;
     /**
-     * Or the syllable as phonemes (`'D EY1'`). Wins over `lyric`.
+     * Or the syllable as phonemes (`'D EY1'`). Wins over `lyric` for what is sung; `lyric` is still
+     * what `lyricsAt` shows.
      */
     phonemes?: string;
 };

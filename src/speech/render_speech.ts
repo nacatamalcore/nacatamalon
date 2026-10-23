@@ -25,6 +25,9 @@ const LEAD = 0.03;
  *
  * @example
  * ```ts
+ * import { createScene, useSound } from 'nacatamalon';
+ * import { renderSpeech } from 'nacatamalon/speech';
+ *
  * const Level = () => {
  *     const greeting = useSound(renderSpeech({ text: '¡Hola, jugador!', pitch: 48 }));
  *     greeting.play();

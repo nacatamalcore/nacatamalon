@@ -3,6 +3,7 @@ import { parsePhonemes } from './parse_phonemes';
 import { PHONEMES, isVowel } from './phonemes';
 import { textToPhonemes } from './text_to_phonemes';
 import { renderVoice } from './voice';
+import type { TVoiceSettings } from './voice';
 import { hertzOf, voiceSettingsOf } from './voice_settings';
 import type { TSingingOptions, TSungNote, TSungSound } from './types/t_speech';
 import type { TVoiceSegment, TVoiceTarget } from './voice';
@@ -53,6 +54,8 @@ type TGroup = { names: string[]; notes: { pitch: number; start: number }[]; star
  *
  * @example
  * ```ts
+ * import { renderSinging } from 'nacatamalon/speech';
+ *
  * const song = renderSinging({
  *     tempo: 100,
  *     notes: [
@@ -67,13 +70,45 @@ type TGroup = { names: string[]; notes: { pitch: number; start: number }[]; star
  * @author Francisco Pereira Alvarado
  */
 export const renderSinging = (options: TSingingOptions): TSungSound => {
+    const plan = planSinging(options);
+    const samples = renderVoice(plan.segments, singingPitch(plan.notes, plan.settings.sampleRate, plan.vibrato), plan.settings);
+    return { samples, sampleRate: plan.settings.sampleRate, key: 'singing', start: plan.offset };
+};
+
+/**
+ * A sung line worked out but not yet made: what the mouth does, segment by segment, the notes its
+ * pitch follows, and where in it the first beat lands. Working it out is quick; making it is what
+ * takes time, and can be done a stretch at a time.
+ *
+ * @internal
+ */
+export type TSingingPlan = {
+    segments: TVoiceSegment[];
+    notes: { pitch: number; start: number }[];
+    /** Where the first beat lands, in seconds. */
+    offset: number;
+    settings: TVoiceSettings;
+    vibrato: number;
+    /**
+     * Where the voice can start again from silence, at the start of a rest: the segment it starts
+     * on, and when, in seconds.
+     */
+    restarts: { segment: number; time: number }[];
+};
+
+/**
+ * Works out how a line is sung, without making it.
+ *
+ * @internal
+ */
+export const planSinging = (options: TSingingOptions): TSingingPlan => {
     const settings = voiceSettingsOf(options);
     const beat = 60 / Math.max(1, options.tempo ?? 120);
     const vibrato = options.vibrato ?? 0.25;
     const transpose = options.transpose ?? 0;
 
     const groups = groupsOf(options.notes, beat, transpose, (note) =>
-        parsePhonemes(note.phonemes ?? textToPhonemes(note.lyric ?? '', options.language)).flatMap((token) => ('name' in token ? [token.name === 'AH' && token.stress === 0 ? 'AX' : token.name] : [])));
+        parsePhonemes(note.phonemes ?? textToPhonemes(spokenOf(note.lyric ?? ''), options.language)).flatMap((token) => ('name' in token ? [token.name === 'AH' && token.stress === 0 ? 'AX' : token.name] : [])));
 
     // Each syllable's opening consonants, built once to know how long they take.
     const onsets = groups.map((group, g) => {
@@ -88,12 +123,14 @@ export const renderSinging = (options: TSingingOptions): TSungSound => {
     const offset = lead[0]! + 0.04;
 
     const segments: TVoiceSegment[] = [pauseSegment(offset - lead[0]!, mouthOf(PHONEMES.AX!))];
+    const restarts = [{ segment: 0, time: 0 }];
     let mouth: TVoiceTarget = segments[0]!.from;
     groups.forEach((group, g) => {
         const from = group.start - lead[g]! + offset;
         const to = (groups[g + 1] ? groups[g + 1]!.start - lead[g + 1]! : group.end) + offset;
         const span = Math.max(0.01, to - from);
         if ('rest' in group) {
+            restarts.push({ segment: segments.length, time: segments.reduce((sum, segment) => sum + segment.length, 0) });
             segments.push(pauseSegment(span, mouth));
             return;
         }
@@ -135,9 +172,13 @@ export const renderSinging = (options: TSingingOptions): TSungSound => {
     segments.push(pauseSegment(0.1, mouth));
 
     const notes = groups.flatMap((group) => ('rest' in group ? [] : group.notes.map((note) => ({ pitch: note.pitch, start: note.start + offset }))));
-    const samples = renderVoice(segments, singingPitch(notes, settings.sampleRate, vibrato), settings);
-    return { samples, sampleRate: settings.sampleRate, key: 'singing', start: offset };
+    return { segments, notes, offset, settings, vibrato, restarts };
 };
+
+/**
+ * A syllable's lyric as it is read: a hyphen at its end only says the word goes on in the next one.
+ */
+const spokenOf = (lyric: string): string => lyric.replace(/-$/, '');
 
 /**
  * The notes as syllables with the notes each is held over, and rests, placed in seconds.
@@ -169,8 +210,10 @@ const scaled = (segments: readonly TVoiceSegment[], by: number): TVoiceSegment[]
 /**
  * The pitch of a sung line over time: each note from its start, slid into from the one before, with
  * vibrato growing on a held one. Asked in order, so the slide keeps its own state.
+ *
+ * @internal
  */
-const singingPitch = (notes: readonly { pitch: number; start: number }[], sampleRate: number, vibrato: number): ((time: number) => number) => {
+export const singingPitch = (notes: readonly { pitch: number; start: number }[], sampleRate: number, vibrato: number): ((time: number) => number) => {
     let index = 0;
     let now = notes[0]?.pitch ?? 57;
     const slide = 1 - Math.exp(-1 / (SLIDE_TIME * sampleRate));

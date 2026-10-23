@@ -2,6 +2,38 @@ import type { TSoundFade } from './t_sound';
 import type { TBeatListener } from '../beat_clock';
 import type { TSongError, TSongVoiceName } from '../synth/types/t_song';
 import type { TSongFile } from '../../loaders/song/types/t_song_file';
+import type { TSongDoc } from '../synth/types/t_song';
+import type { TSongStream } from '../synth/song_stream';
+
+/**
+ * A song with something sung or played over it, made into sound with it as it plays: what
+ * `accompany` from `nacatamalon/speech` hands to `useSong`. The song is played as it always is, and
+ * what goes over it comes in a voice of its own, at the song's tempo and in its key, following them
+ * when they change.
+ *
+ * @category Audio
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TSongAccompaniment = {
+    readonly type: 'song-accompaniment';
+    /**
+     * The song played under it.
+     */
+    readonly song: TSongFile | TSongDoc;
+    /**
+     * Settles once what goes over the song has loaded.
+     *
+     * @internal
+     */
+    ready(): Promise<void>;
+    /**
+     * The song's sound with what goes over it, at the tempo and in the key the song is made at.
+     *
+     * @internal
+     */
+    over(stream: TSongStream, how: { tempo: number; transpose: number }): TSongStream;
+};
 
 /**
  * How a song written as notes plays.

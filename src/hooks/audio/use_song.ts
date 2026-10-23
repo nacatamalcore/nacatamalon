@@ -10,7 +10,7 @@ import { clampPan } from '../../audio/stereo';
 import { whenLoaded } from '../../loaders';
 import { getVersion } from '../../store/record_version';
 import { loadSongSamples, missingSongSamples, songFileOf } from '../../loaders/song';
-import type { TSongAttachment, TSongHandle, TSongOptions } from '../../audio';
+import type { TSongAccompaniment, TSongAttachment, TSongHandle, TSongOptions } from '../../audio';
 import type { TSongStream } from '../../audio/synth/song_stream';
 import type { TSongDoc, TSongError, TSongVoiceName } from '../../audio/synth';
 import type { TSongFile } from '../../loaders/song';
@@ -37,11 +37,16 @@ import type { TSongFile } from '../../loaders/song';
  * the channel `'music'` unless it says otherwise, and it stops with the scene or the object that
  * asked for it.
  *
+ * A song can be sung over: `accompany(vocal, song)` from `nacatamalon/speech` hands it here with a
+ * vocal part, which is made with it as it plays, in a voice of its own (`vocal`), at its tempo and in
+ * its key.
+ *
  * A song laid out in a scene document (a `song` component, chosen in an editor) is made by this same
  * hook; a behaviour gets its controls with `soundOf(box, name)`. In a scene shown rather than played
  * (an editor's viewport), `autoplay` waits for the game to play.
  *
- * @param song A song from `useLoadSong`, or a `TSongDoc` written in code.
+ * @param song A song from `useLoadSong`, a `TSongDoc` written in code, or either with a vocal part
+ * over it, from `accompany`.
  * @param options Its volume, channel, each voice's volume, tempo and key, and whether it starts on
  * its own.
  * @returns The controls: play, stop and pause it, move a voice, the tempo and the key, and follow
@@ -67,7 +72,7 @@ import type { TSongFile } from '../../loaders/song';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const useSong = (song: TSongFile | TSongDoc, options: TSongOptions = {}): TSongHandle => {
+export const useSong = (song: TSongFile | TSongDoc | TSongAccompaniment, options: TSongOptions = {}): TSongHandle => {
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
@@ -75,7 +80,9 @@ export const useSong = (song: TSongFile | TSongDoc, options: TSongOptions = {}):
     }
     const audio = getAudioManager(store);
     const id = options.id ?? nanoId();
-    const file = 'type' in song && song.type === 'song-file' ? song : songFileOf(song as TSongDoc, `song:${id}`);
+    const accompaniment = 'type' in song && song.type === 'song-accompaniment' ? song : null;
+    const under = accompaniment?.song ?? (song as TSongFile | TSongDoc);
+    const file = 'type' in under && under.type === 'song-file' ? under : songFileOf(under as TSongDoc, `song:${id}`);
 
     const attachment: TSongAttachment = {
         type: 'song',
@@ -141,7 +148,8 @@ export const useSong = (song: TSongFile | TSongDoc, options: TSongOptions = {}):
         if (doc === null) {
             return null;
         }
-        const stream = createSongStream({ ...doc, tempo: tempoNow() }, audio.context.sampleRate, { transpose: attachment.transpose, samples: file.samples });
+        const played = createSongStream({ ...doc, tempo: tempoNow() }, audio.context.sampleRate, { transpose: attachment.transpose, samples: file.samples });
+        const stream = accompaniment === null ? played : accompaniment.over(played, { tempo: tempoNow(), transpose: attachment.transpose });
         if (errors.length === 0 && stream.errors.length > 0) {
             const first = stream.errors[0]!;
             console.warn(
@@ -247,7 +255,7 @@ export const useSong = (song: TSongFile | TSongDoc, options: TSongOptions = {}):
     // its own, and saves so, but nothing sounds until the game plays.
     const showingOnly = isShowingOnly();
     // A song written in code fetches the samples it names here; one from a file has them already.
-    void whenLoaded(file).then(() => loadSongSamples(store, file)).then(() => {
+    void whenLoaded(file).then(() => accompaniment?.ready()).then(() => loadSongSamples(store, file)).then(() => {
         if (box.destroyed || file.status !== 'ready') {
             return;
         }
