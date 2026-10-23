@@ -17,8 +17,9 @@ falta ningún programa de música ni saber teoría musical para seguirla.
 - [7. Recetas](#7-recetas)
 - [8. Las canciones que trae el motor](#8-las-canciones-que-trae-el-motor)
 - [9. Tocarla en un juego](#9-tocarla-en-un-juego)
-- [10. Traer música de FamiTracker o FamiStudio](#10-traer-música-de-famitracker-o-famistudio)
-- [11. Cuando algo está mal](#11-cuando-algo-está-mal)
+- [10. Una voz que la canta](#10-una-voz-que-la-canta)
+- [11. Traer música de FamiTracker o FamiStudio](#11-traer-música-de-famitracker-o-famistudio)
+- [12. Cuando algo está mal](#12-cuando-algo-está-mal)
 
 ---
 
@@ -398,7 +399,83 @@ Un sonido (`useSound`) también tiene `pan`: `tween({ target: sound, to: { pan: 
 
 ---
 
-## 10. Traer música de FamiTracker o FamiStudio
+## 10. Una voz que la canta
+
+El motor tiene su propia voz, hecha como la música en lugar de grabada: una garganta y una boca,
+como hablaban las máquinas de los ochenta. Está en `nacatamalon/speech`, así que un juego que nunca
+habla no lleva nada de ella.
+
+La voz de una canción se escribe aparte de la canción, en un archivo **`.vocal`**: sus versos, cada
+uno una lista de notas con su sílaba, y quién los canta.
+
+```json
+{
+    "format": 1,
+    "start": 8,
+    "singers": { "robot": { "throat": 1.15, "vibrato": 0.1 } },
+    "lines": [
+        { "notes": [
+            { "pitch": "E4", "beats": 2, "lyric": "Que-" },
+            { "pitch": "D4", "beats": 1, "lyric": "da-" },
+            { "pitch": "C4", "beats": 1, "lyric": "te" },
+            { "pitch": "D4", "beats": 2, "lyric": "aquí" }
+        ] }
+    ]
+}
+```
+
+- `start`: el pulso de la canción donde empieza el primer verso, contando desde `0`.
+- `pitch` es un nombre (`'C4'`, `'F#5'`) o un número MIDI; sin `pitch` es un silencio; sin `lyric`
+  la sílaba anterior se alarga sobre la nota. Un guion al final (`'que-'`) dice que la palabra
+  sigue.
+- `language`: la letra se lee por reglas; hoy, `'es'`. Cualquier otro idioma se escribe con
+  `phonemes` en cada nota (`'D EY1'`).
+- `singers`: cada uno con su `throat` (`1` un hombre, `1.15` una mujer, `1.3` un niño), `breath`,
+  `vibrato` y `transpose` (`-12`, una octava más grave). Un verso con `who` lo cantan solo algunos.
+
+`accompany` la canta sobre una canción, y `useSong` toca las dos:
+
+```ts
+import { createScene, createText, useLoadSong, useSong, useUpdate, type TBitmapFont } from 'nacatamalon';
+import { accompany, lyricsAt, useLoadVocal } from 'nacatamalon/speech';
+
+declare const font: TBitmapFont;
+
+const Stage = () => {
+    const vocal = useLoadVocal({ src: '/music/daisy.vocal' });
+    const song = useSong(accompany(vocal, useLoadSong({ src: '/music/daisy.song' })), { autoplay: true });
+
+    // La letra a medida que se canta.
+    const words = createText({ text: '', font, transform: { x: 20, y: 20 } });
+    useUpdate(() => {
+        words.text = lyricsAt(vocal, song.beat)?.words ?? '';
+    });
+
+    return createScene();
+};
+```
+
+- La voz se hace **mientras suena**, con la canción, en una voz propia, `vocal`. Se canta al tempo
+  y en el tono de la canción, sigue a `setTempo` y `setTranspose`, y da la vuelta al bucle.
+- El `.song` no cambia: la misma canción suena con su voz o sin ella.
+- `accompany(vocal, song, { singers: { robot: { throat: 1.3 } } })` cambia cómo suena un cantante
+  sin volver a escribir la parte.
+- `lyricsAt(vocal, beat)` da el verso (`line`), sus palabras hasta ahora (`words`) y enteras
+  (`whole`), quién lo canta (`who`) y `singing`, para una boca que se abre y se cierra.
+
+Las palabras habladas y una línea cantada sueltas son sonidos como cualquier otro:
+
+```ts
+import { useSound } from 'nacatamalon';
+import { renderSinging, renderSpeech } from 'nacatamalon/speech';
+
+const hello = useSound(renderSpeech({ text: '¡Hola, mundo!' }));
+const tune = useSound(renderSinging({ notes: [{ pitch: 'C4', lyric: 'la' }, { pitch: 'E4', lyric: 'la' }], tempo: 100 }));
+```
+
+---
+
+## 11. Traer música de FamiTracker o FamiStudio
 
 Si compones en un tracker, exporta la canción como **texto**: en FamiTracker, *File, Export text*;
 en FamiStudio, *File, Export, FamiStudio Text*. Suelta el `.txt` en el editor: se convierte en
@@ -431,7 +508,7 @@ terminado, el `.song` que hace el editor carga más rápido. Un juego que no lo 
 
 ---
 
-## 11. Cuando algo está mal
+## 12. Cuando algo está mal
 
 El motor nunca para una canción por un error: toca lo que puede leer y avisa del resto.
 

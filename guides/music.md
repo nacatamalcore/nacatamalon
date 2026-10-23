@@ -17,8 +17,9 @@ need no music software and no music theory to follow it.
 - [7. Recipes](#7-recipes)
 - [8. The songs the engine has](#8-the-songs-the-engine-has)
 - [9. Playing it in a game](#9-playing-it-in-a-game)
-- [10. Bringing music from FamiTracker or FamiStudio](#10-bringing-music-from-famitracker-or-famistudio)
-- [11. When something is wrong](#11-when-something-is-wrong)
+- [10. A voice that sings it](#10-a-voice-that-sings-it)
+- [11. Bringing music from FamiTracker or FamiStudio](#11-bringing-music-from-famitracker-or-famistudio)
+- [12. When something is wrong](#12-when-something-is-wrong)
 
 ---
 
@@ -390,7 +391,82 @@ A sound (`useSound`) has a `pan` too: `tween({ target: sound, to: { pan: 1 }, du
 
 ---
 
-## 10. Bringing music from FamiTracker or FamiStudio
+## 10. A voice that sings it
+
+The engine has a voice of its own, made like the music rather than recorded: a throat and a mouth,
+the way the machines of the eighties talked. It lives in `nacatamalon/speech`, so a game that never
+speaks carries none of it.
+
+A song's voice is written apart from the song, in a **`.vocal`** file: its lines, each a list of
+notes with a syllable each, and who sings them.
+
+```json
+{
+    "format": 1,
+    "start": 8,
+    "singers": { "robot": { "throat": 1.15, "vibrato": 0.1 } },
+    "lines": [
+        { "notes": [
+            { "pitch": "E4", "beats": 2, "lyric": "Stay," },
+            { "pitch": "D4", "beats": 1, "lyric": "my" },
+            { "pitch": "C4", "beats": 1, "lyric": "can-" },
+            { "pitch": "D4", "beats": 2, "lyric": "dle" }
+        ] }
+    ]
+}
+```
+
+- `start`: the beat of the song where the first line begins, counted from `0`.
+- `pitch` is a name (`'C4'`, `'F#5'`) or a MIDI number; no `pitch` is a rest; no `lyric` holds the
+  syllable before over the note. A hyphen at the end (`'can-'`) says the word goes on.
+- `language`: the lyrics are read by rules; `'es'` today. Any other language is written as
+  `phonemes` on each note (`'D EY1'`).
+- `singers`: each with its `throat` (`1` a man, `1.15` a woman, `1.3` a child), `breath`,
+  `vibrato` and `transpose` (`-12` an octave under). A line with `who` is sung by some of them.
+
+`accompany` sings it over a song, and `useSong` plays both:
+
+```ts
+import { createScene, createText, useLoadSong, useSong, useUpdate, type TBitmapFont } from 'nacatamalon';
+import { accompany, lyricsAt, useLoadVocal } from 'nacatamalon/speech';
+
+declare const font: TBitmapFont;
+
+const Stage = () => {
+    const vocal = useLoadVocal({ src: '/music/daisy.vocal' });
+    const song = useSong(accompany(vocal, useLoadSong({ src: '/music/daisy.song' })), { autoplay: true });
+
+    // The words as they are sung.
+    const words = createText({ text: '', font, transform: { x: 20, y: 20 } });
+    useUpdate(() => {
+        words.text = lyricsAt(vocal, song.beat)?.words ?? '';
+    });
+
+    return createScene();
+};
+```
+
+- The voice is made **as it plays**, with the song, in a voice of its own, `vocal`. It is sung at
+  the song's tempo and in its key, follows `setTempo` and `setTranspose`, and goes round the loop.
+- The `.song` is untouched: the same song plays with or without its voice.
+- `accompany(vocal, song, { singers: { robot: { throat: 1.3 } } })` changes how a singer sounds
+  without writing the part again.
+- `lyricsAt(vocal, beat)` gives the `line`, its `words` so far and `whole`, `who` sings it, and
+  `singing`, for a mouth that opens and shuts.
+
+Spoken words and a sung line on their own are sounds like any other:
+
+```ts
+import { useSound } from 'nacatamalon';
+import { renderSinging, renderSpeech } from 'nacatamalon/speech';
+
+const hello = useSound(renderSpeech({ text: '¡Hola, mundo!' }));
+const tune = useSound(renderSinging({ notes: [{ pitch: 'C4', lyric: 'la' }, { pitch: 'E4', lyric: 'la' }], tempo: 100 }));
+```
+
+---
+
+## 11. Bringing music from FamiTracker or FamiStudio
 
 If you compose in a tracker, export your song as **text**: in FamiTracker, *File, Export text*; in
 FamiStudio, *File, Export, FamiStudio Text*. Drop the `.txt` on the editor: it becomes
@@ -423,7 +499,7 @@ the `.song` the editor makes is quicker to load. A game that never calls it carr
 
 ---
 
-## 11. When something is wrong
+## 12. When something is wrong
 
 The engine never stops a song for a mistake: it plays what it can read and says the rest.
 
