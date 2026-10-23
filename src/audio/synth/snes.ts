@@ -135,11 +135,48 @@ export const snesValueAt = (sample: TSnesSample, position: number): number => {
 export const SNES_MOST = 4;
 
 /**
- * The echo: what the voices sent into it, played again `delay` later, filtered by eight steps, and
- * fed back into itself by `feedback`, at `volume`.
+ * What the echo is set to, as a song says it.
+ *
+ * @internal
+ */
+export type TEchoSettings = { delay?: number; feedback?: number; volume?: number; filter?: number[] };
+
+/**
+ * The echo as it goes: what the voices send into it comes back `delay` later, filtered by eight
+ * steps and fed back into itself by `feedback`, at `volume`. It keeps what it is holding between
+ * one stretch and the next, so a song made as it plays echoes on round its loop as the console did.
+ *
+ * @internal
+ */
+export const createEchoStream = (sampleRate: number, settings: TEchoSettings | undefined): ((input: Float32Array, output: Float32Array) => void) => {
+    // The console set its delay in steps of 16 ms, up to 240.
+    const delay = Math.max(1, Math.round(Math.min(0.24, Math.max(0.016, Math.round((settings?.delay ?? 0.12) / 0.016) * 0.016)) * sampleRate));
+    const feedback = Math.max(-1, Math.min(1, settings?.feedback ?? 0.4));
+    const volume = Math.max(0, Math.min(1, settings?.volume ?? 0.25));
+    const filter = Array.from({ length: 8 }, (_, i) => Math.max(-1, Math.min(1, settings?.filter?.[i] ?? (i === 0 ? 1 : 0))));
+    const buffer = new Float32Array(delay);
+    const recent = new Float32Array(8);
+    let slot = 0;
+    return (input, output) => {
+        for (let i = 0; i < input.length; i += 1) {
+            // The newest of the eight it filters over is what comes back now.
+            recent.copyWithin(1, 0, 7);
+            recent[0] = buffer[slot]!;
+            let filtered = 0;
+            for (let k = 0; k < 8; k += 1) filtered += filter[k]! * recent[k]!;
+            buffer[slot] = input[i]! + filtered * feedback;
+            output[i] = filtered * volume;
+            slot = slot + 1 === delay ? 0 : slot + 1;
+        }
+    };
+};
+
+/**
+ * The echo of a whole song made at once.
  *
  * What it does past the song's end is carried round to where the loop goes back to, so a song that
- * goes round does not lose its echo at the seam.
+ * goes round does not lose its echo at the seam. A song made as it plays has no seam to carry it
+ * over: its echo goes on round the loop by itself.
  *
  * @internal
  */
@@ -147,29 +184,15 @@ export const renderEcho = (
     send: Float32Array,
     sampleRate: number,
     loopSample: number,
-    settings: { delay?: number; feedback?: number; volume?: number; filter?: number[] } | undefined,
+    settings: TEchoSettings | undefined,
 ): Float32Array => {
-    // The console set its delay in steps of 16 ms, up to 240.
-    const delay = Math.max(1, Math.round(Math.min(0.24, Math.max(0.016, Math.round((settings?.delay ?? 0.12) / 0.016) * 0.016)) * sampleRate));
-    const feedback = Math.max(-1, Math.min(1, settings?.feedback ?? 0.4));
-    const volume = Math.max(0, Math.min(1, settings?.volume ?? 0.25));
-    const filter = Array.from({ length: 8 }, (_, i) => Math.max(-1, Math.min(1, settings?.filter?.[i] ?? (i === 0 ? 1 : 0))));
     const length = send.length;
     const total = length + (length - loopSample);
-    const buffer = new Float32Array(delay);
-    const recent = new Float32Array(8);
+    const input = new Float32Array(total);
+    input.set(send);
+    input.set(send.subarray(loopSample), length);
     const out = new Float32Array(total);
-    for (let i = 0; i < total; i += 1) {
-        const input = i < length ? send[i]! : send[loopSample + (i - length)]!;
-        const slot = i % delay;
-        // The newest of the eight it filters over is what comes back now.
-        recent.copyWithin(1, 0, 7);
-        recent[0] = buffer[slot]!;
-        let filtered = 0;
-        for (let k = 0; k < 8; k += 1) filtered += filter[k]! * recent[k]!;
-        buffer[slot] = input + filtered * feedback;
-        out[i] = filtered * volume;
-    }
+    createEchoStream(sampleRate, settings)(input, out);
     const echo = out.slice(0, length);
     for (let i = length; i < total; i += 1) echo[loopSample + (i - length)]! += out[i]!;
     return echo;

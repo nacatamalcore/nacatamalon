@@ -68,6 +68,24 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- **A hidden page holds the game's sound too** (`pauseOnBlur`, on by default): every sound and song
+  stops where it is while the page cannot be seen and carries on from there when it is back, where
+  until now the game stopped and its music played on unseen. An editor holding the sound still while
+  it runs the game a frame at a time keeps it so when the page comes back.
+
+- **A song is made into sound as it plays**, half a second ahead of what is heard, the way the
+  console played it, instead of all at once before it starts. It starts at once, holds a moment of
+  sound rather than tens of megabytes, and a change of tempo or key is heard at once (20 ms on) and
+  costs a few milliseconds where it cost a quarter of a second. What it plays is, sample for sample,
+  what `renderSong` makes, round its loop as many times as it goes. The SNES's echo goes on round the
+  loop by itself rather than having what spills past the end carried back to where it starts.
+  A game that stops for longer than half a second (a frame of seconds) hears a silence and goes on
+  from where the song is by then, never what it missed all at once. On the native runtimes, where
+  the game's code is interpreted, it is what makes a song playable at all: a Genesis song that took
+  seconds of a frozen game to make costs a few milliseconds a frame. `useSong` and everything it
+  hands back are as they were. A log of the game's sound (a clip with its sound) counts a voice of a
+  song as one sound heard, however many stretches it took.
+
 - **One way to write every type's name**: small letters, words joined by a hyphen, and `2d` or `3d`
   after a hyphen too, as `physics-world-2d` and `particle-collider-2d` already were. In scenes and
   boxes: `camera2d` is now `camera-2d`, `camera3d` `camera-3d`, `particles3d` `particles-3d`, and a
@@ -96,6 +114,15 @@ releases are in [changelog/](./changelog/), one file each.
   The loose names are gone from the root.
 
 ### Fixed
+
+- **A FamiTracker song keeps how its notes die away.** A row with no note that only changes the
+  volume (how a tracker writes a note fading, a row at a time, and how songs taken from a game are
+  written almost throughout) was read for the next note only, so every note sounded at the volume it
+  started at until the next one: the last notes of a song held loud until it went round. Each note
+  whose volume moves now plays with an instrument of its own whose `volume` list says the same a
+  frame at a time, its instrument's own list taken along; notes that die away alike share one. On
+  songs taken from games, how loud each voice is goes from following the tracker's a third of the
+  way to all the way.
 
 - **A song's change of tempo or key carries on from where it is**, not from where it was when the
   change was asked: making the new tracks takes a moment (a quarter of a second on a fast machine),

@@ -47,8 +47,12 @@ export type TVoice = {
     /**
      * What a log of the game's sound (`startSoundLog`) needs of it: where in its sound it is now, in
      * seconds, and the volumes it goes through after its node. Left out by a voice nobody logs.
+     * `startsAt`, on the clock the music counts by, for a voice started ahead of when it is heard (a
+     * stretch of a song made as it plays): logged as starting then, from its beginning. `group`, the
+     * one sound it is a piece of (a voice of a song, heard a stretch at a time): logged with it, so a
+     * count of what was heard counts the voice once.
      */
-    track?: { position(): number; gains: AudioParam[] };
+    track?: { position(): number; gains: AudioParam[]; startsAt?: number; group?: object };
 };
 
 /**
@@ -142,6 +146,12 @@ export type TAudioManager = {
      * Moves the frames' clock on by one frame's game time. Nothing on the audio clock.
      */
     advance(dt: number): void;
+    /**
+     * The page hidden, for a game whose sound stops while it cannot be seen (`pauseOnBlur`): the
+     * audio engine is held still, every sound where it is, and runs on from there when the page is
+     * seen again. Held still for the frames' clock or before the page is touched, it stays so.
+     */
+    setHidden(hidden: boolean): void;
     /**
      * The log of what the game sounds like being kept, or `null`: what a clip made a frame at a time
      * gets its sound from. See `startSoundLog`.

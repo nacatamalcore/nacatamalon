@@ -27,6 +27,11 @@ them by topic, each with an id, and `https://nacatamalon.com/llms/examples/<id>.
   handle with methods: `keys.isDown('ArrowLeft')`, `useScene().change('Level')`.
 - Files load in the background. `useLoadTexture` and the other loaders return at once, and what uses
   the file appears when it arrives. `useLoader()` reports progress.
+- **A game with music or several scenes starts with a loading scene**: a `Preload` scene asks for
+  what the game uses (`useLoader([useLoadTexture(...), useLoadSong(...)])`), shows its bar, and
+  changes to the first real scene when `loader.done`. What is loaded is the game's, not the scene's:
+  a later scene asks for the same file by the same name and has it at once, so no scene after it
+  waits.
 - **It looks like React and is not.** Nothing is rendered again: a scene, or a piece made with
   `useSpawn`, runs its body once, and changing its state or its props does not run it again. What
   changes over time is done by hand, in `useUpdate`, or in `useWatch(fn, [data])` when a value

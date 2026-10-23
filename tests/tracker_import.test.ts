@@ -57,6 +57,40 @@ describe('a FamiTracker text export', () => {
         expect(doc.instruments![notesOf(doc, 'dpcm')[0]!.instrument!]).toEqual({ sample: '/samples/kick.wav' });
     });
 
+    it('takes a note dying away a row at a time into the note, through an instrument of its own', () => {
+        // The chord on the second voice goes to 8, then 4, then silent, on rows with no note.
+        const fading = [
+            [row(4, { 0: 'E-4 .. 8 ...', 3: '4-# .. . ...' }), row(4, { 0: 'E-4 .. 8 ...', 1: '... .. 8 ...', 3: '4-# .. . ...' })],
+            [row(8, { 0: 'G-4 .. . 4A3', 3: '4-# .. . ...' }), row(8, { 0: 'G-4 .. . 4A3', 1: '... .. 4 ...', 3: '4-# .. . ...' })],
+            [row(12, { 0: '--- .. . ...', 3: '4-# .. . 1A0' }), row(12, { 0: '--- .. . ...', 1: '... .. 0 ...', 3: '4-# .. . 1A0' })],
+        ];
+        const text = fading.reduce((all, [from, to]) => all.replace(from!, to!), FAMITRACKER);
+        const { doc } = importFamiTrackerText(text);
+        const chord = notesOf(doc, 'pulse2');
+
+        // Still one note: a change of volume does not end it.
+        expect(chord.map((note) => [note.start, note.beats])).toEqual([[0, 4], [4, 4]]);
+        // Six frames a row (speed 6 at 150). Its instrument's list, 15 12 then 9 6 round again, at
+        // full for four rows, then times 8/15, then 4/15, then nothing, held.
+        const own = (frame: number) => (frame < 2 ? [15, 12][frame]! : [9, 6][(frame - 2) % 2]!);
+        const expected = Array.from({ length: 73 }, (_, frame) => {
+            const volume = frame < 24 ? 15 : frame < 48 ? 8 : frame < 72 ? 4 : 0;
+            return Math.round(((own(frame) * volume) / 15) * 100) / 100;
+        });
+        const fade = doc.instruments![chord[0]!.instrument!]!;
+        expect(chord[0]!.instrument).toBe('chord-fade');
+        expect(fade.volume!.split(' ').map(Number)).toEqual(expected);
+        expect(fade.arpeggio).toBe(doc.instruments!.chord!.arpeggio);
+        // The note after it was never quieted: it plays with the chord as it is.
+        expect(chord[1]!.instrument).toBe('chord');
+
+        // And it is heard so: nothing in the last beat of the note, where its volume is 0.
+        const rendered = renderSong(doc, 8000, {});
+        const beat = Math.round((60 / 150) * 8000);
+        expect(rendered.voices.pulse2!.subarray(3 * beat + 10, 4 * beat - 10).every((sample) => sample === 0)).toBe(true);
+        expect(rendered.voices.pulse2!.subarray(10, beat).some((sample) => sample !== 0)).toBe(true);
+    });
+
     it('says, once each, what it could not bring over', () => {
         expect(warnings).toEqual([
             'it uses slide up (1xx), which has no equal here: left out.',

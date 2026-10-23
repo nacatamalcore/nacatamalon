@@ -1,15 +1,17 @@
 import { getActiveBox, getActiveGame } from '../../store';
-import { clipFromSamples, createBeatClock, createLayeredPlayer, getAudioManager, heardPositionOf } from '../../audio';
+import { createBeatClock, getAudioManager, heardPositionOf } from '../../audio';
+import { createStreamedPlayer } from '../../audio/streamed_player';
 import { setAttachmentHandle } from '../../audio/attachment_players';
 import { isShowingOnly } from '../physics/is_showing_only';
-import { renderSong, SONG_VOICES } from '../../audio/synth';
+import { SONG_VOICES } from '../../audio/synth';
+import { createSongStream } from '../../audio/synth/song_stream';
 import { nanoId } from '../../utils';
 import { clampPan } from '../../audio/stereo';
-import { wrapPosition } from '../../audio/loop_position';
 import { whenLoaded } from '../../loaders';
 import { getVersion } from '../../store/record_version';
 import { loadSongSamples, missingSongSamples, songFileOf } from '../../loaders/song';
-import type { TLayeredPiece, TMusicLayer, TSongAttachment, TSongHandle, TSongOptions } from '../../audio';
+import type { TSongAttachment, TSongHandle, TSongOptions } from '../../audio';
+import type { TSongStream } from '../../audio/synth/song_stream';
 import type { TSongDoc, TSongError, TSongVoiceName } from '../../audio/synth';
 import type { TSongFile } from '../../loaders/song';
 
@@ -24,11 +26,12 @@ import type { TSongFile } from '../../loaders/song';
  * It does not load the file: `useLoadSong({ src })` does, and its result is given here,
  * `useSong(useLoadSong({ src: '/music/title.song' }))`.
  *
- * The song is turned into sound here, in the game, one track per voice of an 8-bit console, and the
- * tracks play together like the layers of `useMusic`. So a whole tune weighs a few kilobytes instead
- * of megabytes, and what a recording cannot do, this can: it can **speed up** for the last inning,
- * **change key** to build tension and come back, and **drop a voice** without a file per voice. Each
- * change carries on from the beat it was on.
+ * The song is turned into sound here, in the game, as it plays: a moment ahead of what is heard, one
+ * voice of an 8-bit console at a time, the way the console played it. So a whole tune weighs a few
+ * kilobytes instead of megabytes, starts at once and holds almost nothing while it plays, and what a
+ * recording cannot do, this can: it can **speed up** for the last inning, **change key** to build
+ * tension and come back, and **drop a voice** without a file per voice. Each change is heard at
+ * once, carrying on from the beat it was on.
  *
  * The file says where the loop goes back to, so a song can have an intro that plays once. It is in
  * the channel `'music'` unless it says otherwise, and it stops with the scene or the object that
@@ -88,24 +91,20 @@ export const useSong = (song: TSongFile | TSongDoc, options: TSongOptions = {}):
     };
     box.sounds.push(attachment);
 
-    const piece: TLayeredPiece = {
-        layers: [],
-        get volume() { return attachment.volume; },
-        channel: attachment.channel,
-        loopStart: 0,
-        loopEnd: 0,
-    };
-    const player = createLayeredPlayer(audio, piece);
     let errors: TSongError[] = [];
     /**
-     * The tempo the tracks were last made at, to carry a change on from the same beat.
+     * The tempo its sound is being made at, to carry a change on from the same beat.
      */
     let madeAt = 0;
     /**
-     * Which version of the file the tracks were made from: a newer one is the file changed (saved
+     * Which version of the file its sound is being made from: a newer one is the file changed (saved
      * again in the editor), and is made again from the same beat.
      */
     let madeFrom = -1;
+    /**
+     * Whether it has been made into sound at all yet: nothing is, until its file is in.
+     */
+    let made = false;
 
     const tempoNow = (): number => attachment.tempo ?? file.doc?.tempo ?? 120;
 
@@ -113,6 +112,13 @@ export const useSong = (song: TSongFile | TSongDoc, options: TSongOptions = {}):
      * Where a voice is heard: as it was set here, or as its file puts it.
      */
     const panOf = (voice: TSongVoiceName): number => attachment.pan[voice] ?? file.doc?.voices[voice]?.pan ?? 0;
+
+    const player = createStreamedPlayer(audio, {
+        volume: () => attachment.volume,
+        channel: attachment.channel,
+        voiceVolume: (voice) => attachment.voices[voice as TSongVoiceName] ?? 1,
+        voicePan: (voice) => panOf(voice as TSongVoiceName),
+    });
 
     /**
      * Each voice's place between left and right, to read and to write, so a tween can move it.
@@ -127,56 +133,39 @@ export const useSong = (song: TSongFile | TSongDoc, options: TSongOptions = {}):
     }
 
     /**
-     * Turns the song into tracks at the tempo and key asked for now. Said once if the notes have
-     * mistakes: what can be read is still played.
+     * The song, ready to be made into sound as it plays, at the tempo and in the key asked for now.
+     * Said once if the notes have mistakes: what can be read is still played.
      */
-    const make = (): boolean => {
+    const make = (): TSongStream | null => {
         const doc = file.doc;
         if (doc === null) {
-            return false;
+            return null;
         }
-        const sampleRate = audio.context.sampleRate;
-        const rendered = renderSong({ ...doc, tempo: tempoNow() }, sampleRate, { transpose: attachment.transpose, samples: file.samples });
-        if (errors.length === 0 && rendered.errors.length > 0) {
-            const first = rendered.errors[0]!;
+        const stream = createSongStream({ ...doc, tempo: tempoNow() }, audio.context.sampleRate, { transpose: attachment.transpose, samples: file.samples });
+        if (errors.length === 0 && stream.errors.length > 0) {
+            const first = stream.errors[0]!;
             console.warn(
-                `[NacatamalOn] useSong: '${file.src}' has ${rendered.errors.length} mistake(s) in its notes, played without them. ` +
+                `[NacatamalOn] useSong: '${file.src}' has ${stream.errors.length} mistake(s) in its notes, played without them. ` +
                 `The first, in ${first.voice} at ${first.line}:${first.column}: ${first.message}`,
             );
         }
-        errors = rendered.errors;
-        piece.layers = SONG_VOICES.flatMap((voice): TMusicLayer[] => {
-            const track = rendered.voices[voice];
-            return track === undefined ? [] : [{ name: voice, clip: clipFromSamples(audio, track, sampleRate, `${file.key}#${voice}`), volume: attachment.voices[voice] ?? 1, pan: panOf(voice) }];
-        });
-        // The SNES's echo plays beside its voices, a track of its own.
-        if (rendered.echo !== undefined) {
-            piece.layers.push({ name: 'echo', clip: clipFromSamples(audio, rendered.echo, sampleRate, `${file.key}#echo`), volume: 1 });
-        }
-        piece.loopStart = rendered.loopStart;
+        errors = stream.errors;
         madeAt = tempoNow();
         madeFrom = getVersion(file);
-        return true;
+        made = true;
+        return stream;
     };
 
     /**
-     * Makes the tracks again and carries on from the same beat, which at a new tempo is a new
-     * number of seconds.
+     * Goes on with the song made again (at a new tempo, in a new key, or from the file changed) from
+     * the same beat, which at a new tempo is a new number of seconds.
      */
     const remake = (): void => {
-        const before = player.position();
-        const askedAt = audio.now();
         const oldTempo = madeAt;
-        // The old tracks, which go on sounding while the new ones are made.
-        const { loopStart, loopEnd } = piece;
-        const duration = piece.layers[0]?.clip.duration ?? 0;
-        if (!make() || before === null) {
-            return;
+        const stream = make();
+        if (stream !== null) {
+            player.replace(stream, (seconds) => seconds * (oldTempo / madeAt));
         }
-        // Where it is now, not where it was when asked: making the tracks takes a while, and the old
-        // ones played on meanwhile. Starting from `before` would hear that while twice.
-        const now = wrapPosition(before + (audio.now() - askedAt), duration, loopStart, loopEnd);
-        player.restart(now * (oldTempo / tempoNow()));
     };
 
     // The beat heard, not the one played: it comes as late as the sound does.
@@ -189,15 +178,13 @@ export const useSong = (song: TSongFile | TSongDoc, options: TSongOptions = {}):
 
     const heard = heardPositionOf(audio, player.position);
 
-    const layerOf = (voice: TSongVoiceName): TMusicLayer | undefined => piece.layers.find((layer) => layer.name === voice);
-
     const handle: TSongHandle = {
         play: (play) => {
             player.stop(0);
-            if (piece.layers.length === 0) {
-                make();
+            const stream = make();
+            if (stream !== null) {
+                player.start(stream, 0, play?.fade ?? 0);
             }
-            player.start(0, play?.fade ?? 0);
         },
         stop: (fading) => player.stop(fading?.fade ?? 0),
         pause: () => player.pause(),
@@ -210,19 +197,12 @@ export const useSong = (song: TSongFile | TSongDoc, options: TSongOptions = {}):
         },
         setVoice: (voice, volume, fade = 0) => {
             attachment.voices[voice] = volume;
-            const layer = layerOf(voice);
-            if (layer !== undefined) {
-                layer.volume = volume;
-                player.setLayer(layer, volume, fade);
-            }
+            player.setLayer(voice, volume, fade);
         },
         getVoice: (voice) => attachment.voices[voice] ?? 1,
         setPan: (voice, next, fade = 0) => {
             attachment.pan[voice] = clampPan(next);
-            const layer = layerOf(voice);
-            if (layer !== undefined) {
-                player.setLayerPan(layer, attachment.pan[voice]!, fade);
-            }
+            player.setLayerPan(voice, attachment.pan[voice]!, fade);
         },
         pan,
         setTempo: (bpm) => {
@@ -245,7 +225,7 @@ export const useSong = (song: TSongFile | TSongDoc, options: TSongOptions = {}):
         get position() {
             return heard.now();
         },
-        // In beats of the tempo its sound was made at, which is the tempo `position` is counted in.
+        // In beats of the tempo its sound is made at, which is the tempo `position` is counted in.
         get beat() {
             const at = heard.now();
             return at === null ? null : at / (60 / madeAt);
@@ -271,7 +251,8 @@ export const useSong = (song: TSongFile | TSongDoc, options: TSongOptions = {}):
         if (box.destroyed || file.status !== 'ready') {
             return;
         }
-        if (piece.layers.length === 0) {
+        if (!made) {
+            // Read once now, so what its notes get wrong is said when it arrives, not when it plays.
             make();
         }
         if (attachment.autoplay && !showingOnly) {
@@ -279,12 +260,12 @@ export const useSong = (song: TSongFile | TSongDoc, options: TSongOptions = {}):
         }
     });
 
-    // The file changed after the tracks were made: made again, carrying on from the same beat, once
-    // any sample it names now is in.
+    // The file changed after its sound began to be made: made again, carrying on from the same beat,
+    // once any sample it names now is in.
     let fetchingFor = -1;
     box.updateCallbacks.push(() => {
         const version = getVersion(file);
-        if (piece.layers.length === 0 || file.status !== 'ready' || version === madeFrom || version === fetchingFor) {
+        if (!made || file.status !== 'ready' || version === madeFrom || version === fetchingFor) {
             return;
         }
         if (missingSongSamples(file).length === 0) {

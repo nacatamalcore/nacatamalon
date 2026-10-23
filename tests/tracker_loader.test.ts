@@ -68,8 +68,9 @@ describe('a song loaded from a tracker\'s export', () => {
 
         song.play();
         const context = store.get('audio').manager!.context as unknown as TFakeContext;
-        const started = context.sources.filter((source) => source.started);
-        expect(started.length).toBe(Object.keys(file.doc!.voices).length);
+        // Every voice through a lane of its own, each made as it plays, a stretch at a time.
+        const lanes = new Set(context.sources.filter((source) => source.started).map((source) => source.connectedTo));
+        expect(lanes.size).toBe(Object.keys(file.doc!.voices).length);
         expect(song.errors).toEqual([]);
     });
 

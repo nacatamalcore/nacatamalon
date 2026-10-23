@@ -13,7 +13,7 @@ import { isHostClaimed, openHost } from "../handle/editor_handle_of";
 import { isDevelopmentPage, shouldShowSplash } from "../../splash/should_show_splash";
 import { createGameEvents } from "./create_game_events";
 import { createGameHandle } from "../handle/create_game_handle";
-import { watchVisibility } from "./watch_visibility";
+import { holdingSound, watchVisibility } from "./watch_visibility";
 import { VERSION } from "../../version";
 import { settleCapture } from "../capture";
 import type { TRendererBackend } from "../../render/interface";
@@ -240,8 +240,9 @@ export const createGame = (target: TGameTarget, game_options: TGameOptions) => {
                     events.emit('error', error);
                 }
             });
-            // `pauseOnBlur`: the browser holds the loop while the page is hidden, beside any other hold.
-            const unwatchVisibility = pauseOnBlur ? watchVisibility(createGameHandle(runtime)) : () => {};
+            // `pauseOnBlur`: the browser holds the loop while the page is hidden, beside any other hold,
+            // and its sound with it, every sound where it was, as a console's did when it was paused.
+            const unwatchVisibility = pauseOnBlur ? watchVisibility(holdingSound(createGameHandle(runtime), runtime)) : () => {};
             unwatchConfig = () => {
                 unwatchSmooth();
                 unwatchFailure();

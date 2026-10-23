@@ -1,4 +1,5 @@
 import type { TRuntimeStore } from '../store';
+import { BROWSER_PAUSE } from '../game/bootstrap/watch_visibility';
 import type { TAudioClock, TAudioManager, TVoice } from './types/t_audio';
 
 /**
@@ -82,14 +83,24 @@ export const createAudioManager = (): TAudioManager => {
     let frameTime = 0;
     // Whether the person has touched the page, so the audio engine may run.
     let unlocked = false;
+    // Whether the page cannot be seen and the game asked for its sound to stop meanwhile.
+    let hidden = false;
     const resyncs = new Set<() => () => void>();
+
+    // The audio engine runs when the person has touched the page, the clock is its own (not the
+    // frames', where it is held still) and the page can be seen: asked in one place, so coming back
+    // to the page never sets running what an editor holds still, nor the other way round.
+    const settle = (): void => {
+        if (unlocked && clock === 'audio' && !hidden) {
+            void context.resume();
+        } else if (clock === 'frames' || hidden) {
+            void context.suspend();
+        }
+    };
 
     const unlock = (): void => {
         unlocked = true;
-        // Held still while the frames count: it runs when the clock goes back to it.
-        if (clock === 'audio') {
-            void context.resume();
-        }
+        settle();
         removeUnlock();
     };
     // Guarded because a test has no page: everything else about sound can be checked without one.
@@ -138,18 +149,23 @@ export const createAudioManager = (): TAudioManager => {
             if (next === 'frames') {
                 frameTime = context.currentTime;
                 clock = 'frames';
-                void context.suspend();
+                settle();
                 return;
             }
             // Where every tune is, read on the frames' clock before it stops counting.
             const after = [...resyncs].map((resync) => resync());
             clock = 'audio';
-            if (unlocked) {
-                void context.resume();
-            }
+            settle();
             for (const put of after) {
                 put();
             }
+        },
+        setHidden: (next) => {
+            if (next === hidden) {
+                return;
+            }
+            hidden = next;
+            settle();
         },
         advance: (dt) => {
             if (clock === 'frames') {
@@ -189,6 +205,10 @@ export const getAudioManager = (store: TRuntimeStore): TAudioManager => {
     }
     const manager = createAudioManager();
     manager.setClock(store.get('audio').clock);
+    // Opened while the browser holds the game for a hidden page: held still with it.
+    if (store.get('loop').pausedBy.includes(BROWSER_PAUSE)) {
+        manager.setHidden(true);
+    }
     store.setState('audio', { manager });
     return manager;
 };

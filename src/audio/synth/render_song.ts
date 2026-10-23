@@ -286,22 +286,45 @@ const shapeOf = (note: TSongNote, instrument: TReadInstrument | null, bits: Floa
 };
 
 /**
- * Writes one note into its voice's track.
+ * One note on its way into its voice's track, written a stretch at a time. What it was making is
+ * kept between stretches, so a note written in one go and one written in a hundred come out sample
+ * for sample the same: it is what lets a song be made as it plays rather than all at once.
+ *
+ * @internal
+ */
+export type TNoteWriter = {
+    /**
+     * The first sample of the song it writes, and one past the last it may: it can be over sooner,
+     * when its sample runs out or its sound has died away, and then it is `done`.
+     */
+    readonly from: number;
+    readonly end: number;
+    done: boolean;
+    /**
+     * Writes on up to `upto`, a place in the song, into `track` (and into `send`, for a SNES note
+     * that goes into the echo), where the song's sample `base` is the track's first. With no track
+     * it only works out what it would have written: how a note is brought to a place in its middle.
+     */
+    run(upto: number, track: Float32Array | null, send: Float32Array | null, base: number): void;
+};
+
+/**
+ * One note of a NES voice.
  *
  * Its pitch, loudness and colour are worked out again at every frame, from its instrument and what
  * it does on its own, as the console's music did, and its wave is drawn sample by sample in between.
  */
-const writeNote = (
-    track: Float32Array,
+const nesNote = (
     note: TSongNote,
     from: number,
     to: number,
+    limit: number,
     sampleRate: number,
     level: number,
     duty: number,
     shape: TShape,
     before: number | null,
-): void => {
+): TNoteWriter => {
     const noise = note.voice === 'noise' ? createShiftRegister() : null;
     const span = to - from;
     const attack = Math.max(1, Math.round(ATTACK * sampleRate));
@@ -313,51 +336,62 @@ const writeNote = (
     let step = 0;
     let gain = shape.gain;
     let width = duty;
-    for (let i = 0; i < span && from + i < track.length; i += 1) {
-        const now = Math.floor(i / samplesPerFrame);
-        if (now !== frame) {
-            frame = now;
-            const seconds = i / sampleRate;
-            let pitch = note.pitch;
-            if (slide > 0) {
-                pitch = before! + (note.pitch - before!) * Math.min(1, seconds / slide);
+    let i = 0;
+    const writer: TNoteWriter = {
+        from,
+        end: from + Math.max(0, Math.min(span, limit - from)),
+        done: false,
+        run: (upto, track, _send, base) => {
+            for (; i < span && from + i < limit && from + i < upto; i += 1) {
+                const now = Math.floor(i / samplesPerFrame);
+                if (now !== frame) {
+                    frame = now;
+                    const seconds = i / sampleRate;
+                    let pitch = note.pitch;
+                    if (slide > 0) {
+                        pitch = before! + (note.pitch - before!) * Math.min(1, seconds / slide);
+                    }
+                    if (shape.arpeggio !== null) pitch += valueAt(shape.arpeggio, frame);
+                    if (shape.pitch !== null) pitch += valueAt(shape.pitch, frame);
+                    const vibrato = shape.vibrato;
+                    if (vibrato !== null && seconds > vibrato.delay) {
+                        pitch += vibrato.depth * Math.sin(2 * Math.PI * vibrato.speed * (seconds - vibrato.delay));
+                    }
+                    gain = shape.gain * (shape.volume !== null ? Math.min(15, Math.max(0, valueAt(shape.volume, frame))) / 15 : 1);
+                    if (shape.duty !== null) {
+                        width = DUTY_STEPS[Math.min(3, Math.max(0, Math.round(valueAt(shape.duty, frame))))]!;
+                    }
+                    step = noise !== null ? noiseRateOf(pitch) / sampleRate
+                        : shape.bits !== null ? dpcmRateOf(pitch) / sampleRate
+                            : frequencyOf(pitch) / sampleRate;
+                }
+                let wave: number;
+                if (shape.bits !== null) {
+                    // A sample plays once, to its end or the note's, whichever comes first.
+                    const at = Math.floor(phase);
+                    if (at >= shape.bits.length) {
+                        writer.done = true;
+                        return;
+                    }
+                    wave = shape.bits[at]!;
+                } else if (noise !== null) {
+                    wave = noise(step);
+                    if (shape.volume === null) {
+                        wave *= Math.exp(-i / (DRUM_DECAY * sampleRate));
+                    }
+                } else if (note.voice === 'triangle') {
+                    wave = triangle(phase);
+                } else {
+                    wave = pulse(phase, width);
+                }
+                phase += step;
+                const envelope = Math.min(1, i / attack, (span - i) / release);
+                if (track !== null) track[from + i - base] = wave * envelope * level * gain;
             }
-            if (shape.arpeggio !== null) pitch += valueAt(shape.arpeggio, frame);
-            if (shape.pitch !== null) pitch += valueAt(shape.pitch, frame);
-            const vibrato = shape.vibrato;
-            if (vibrato !== null && seconds > vibrato.delay) {
-                pitch += vibrato.depth * Math.sin(2 * Math.PI * vibrato.speed * (seconds - vibrato.delay));
-            }
-            gain = shape.gain * (shape.volume !== null ? Math.min(15, Math.max(0, valueAt(shape.volume, frame))) / 15 : 1);
-            if (shape.duty !== null) {
-                width = DUTY_STEPS[Math.min(3, Math.max(0, Math.round(valueAt(shape.duty, frame))))]!;
-            }
-            step = noise !== null ? noiseRateOf(pitch) / sampleRate
-                : shape.bits !== null ? dpcmRateOf(pitch) / sampleRate
-                    : frequencyOf(pitch) / sampleRate;
-        }
-        let wave: number;
-        if (shape.bits !== null) {
-            // A sample plays once, to its end or the note's, whichever comes first.
-            const at = Math.floor(phase);
-            if (at >= shape.bits.length) {
-                break;
-            }
-            wave = shape.bits[at]!;
-        } else if (noise !== null) {
-            wave = noise(step);
-            if (shape.volume === null) {
-                wave *= Math.exp(-i / (DRUM_DECAY * sampleRate));
-            }
-        } else if (note.voice === 'triangle') {
-            wave = triangle(phase);
-        } else {
-            wave = pulse(phase, width);
-        }
-        phase += step;
-        const envelope = Math.min(1, i / attack, (span - i) / release);
-        track[from + i] = wave * envelope * level * gain;
-    }
+            if (i >= span || from + i >= limit) writer.done = true;
+        },
+    };
+    return writer;
 };
 
 /**
@@ -379,26 +413,26 @@ const envelopeAt = (adsr: TAdsr, i: number, span: number, sampleRate: number): n
 };
 
 /**
- * Writes one note of a SNES voice: its sample at the pitch the frame says, stepped at the console's
- * rate and smoothed as it smoothed, its envelope dying away after the note until the next one starts
- * (`until`), and as much again into the echo when its instrument goes into it.
+ * One note of a SNES voice: its sample at the pitch the frame says, stepped at the console's rate
+ * and smoothed as it smoothed, its envelope dying away after the note until the next one starts
+ * (`until`), and as much again into the echo when its instrument goes into it (`echoes`).
  */
-const writeSnesNote = (
-    track: Float32Array,
-    send: Float32Array | null,
+const snesNote = (
     note: TSongNote,
     from: number,
     to: number,
     until: number,
+    limit: number,
+    echoes: boolean,
     sampleRate: number,
     level: number,
     shape: TShape,
     before: number | null,
     sample: TSnesSample,
     adsr: TAdsr,
-): void => {
+): TNoteWriter => {
     const span = to - from;
-    const total = Math.min(until, track.length) - from;
+    const total = Math.min(until, limit) - from;
     const attack = Math.max(1, Math.round(ATTACK * sampleRate));
     const release = Math.max(1, Math.round(RELEASE * sampleRate));
     const samplesPerFrame = sampleRate / FRAMES;
@@ -410,57 +444,73 @@ const writeSnesNote = (
     let clock = 0;
     let position = 0;
     let value = snesValueAt(sample, 0);
-    for (let i = 0; i < total; i += 1) {
-        const now = Math.floor(i / samplesPerFrame);
-        if (now !== frame) {
-            frame = now;
-            const seconds = i / sampleRate;
-            let pitch = note.pitch;
-            if (slide > 0) pitch = before! + (note.pitch - before!) * Math.min(1, seconds / slide);
-            if (shape.arpeggio !== null) pitch += valueAt(shape.arpeggio, frame);
-            if (shape.pitch !== null) pitch += valueAt(shape.pitch, frame);
-            const vibrato = shape.vibrato;
-            if (vibrato !== null && seconds > vibrato.delay) pitch += vibrato.depth * Math.sin(2 * Math.PI * vibrato.speed * (seconds - vibrato.delay));
-            ratio = Math.min(SNES_MOST, 2 ** ((pitch - sample.root) / 12));
-            gain = shape.gain * (shape.volume !== null ? Math.min(15, Math.max(0, valueAt(shape.volume, frame))) / 15 : 1);
-        }
-        // One step of the console's at a time, the value held in between.
-        clock += tick;
-        while (clock >= 1) {
-            clock -= 1;
-            position += ratio;
-            value = snesValueAt(sample, position);
-        }
-        if (sample.loop < 0 && position >= sample.data.length + 2) break;
-        const envelope = envelopeAt(adsr, i, span, sampleRate);
-        if (i >= span && envelope === 0) break;
-        // Never a click where it comes in, nor where the next note cuts it.
-        const edges = Math.min(1, i / attack, (total - i) / release);
-        const out = value * envelope * edges * level * gain;
-        track[from + i] = out;
-        if (send !== null) send[from + i]! += out;
-    }
+    let i = 0;
+    const writer: TNoteWriter = {
+        from,
+        end: from + Math.max(0, total),
+        done: false,
+        run: (upto, track, send, base) => {
+            for (; i < total && from + i < upto; i += 1) {
+                const now = Math.floor(i / samplesPerFrame);
+                if (now !== frame) {
+                    frame = now;
+                    const seconds = i / sampleRate;
+                    let pitch = note.pitch;
+                    if (slide > 0) pitch = before! + (note.pitch - before!) * Math.min(1, seconds / slide);
+                    if (shape.arpeggio !== null) pitch += valueAt(shape.arpeggio, frame);
+                    if (shape.pitch !== null) pitch += valueAt(shape.pitch, frame);
+                    const vibrato = shape.vibrato;
+                    if (vibrato !== null && seconds > vibrato.delay) pitch += vibrato.depth * Math.sin(2 * Math.PI * vibrato.speed * (seconds - vibrato.delay));
+                    ratio = Math.min(SNES_MOST, 2 ** ((pitch - sample.root) / 12));
+                    gain = shape.gain * (shape.volume !== null ? Math.min(15, Math.max(0, valueAt(shape.volume, frame))) / 15 : 1);
+                }
+                // One step of the console's at a time, the value held in between.
+                clock += tick;
+                while (clock >= 1) {
+                    clock -= 1;
+                    position += ratio;
+                    value = snesValueAt(sample, position);
+                }
+                if (sample.loop < 0 && position >= sample.data.length + 2) {
+                    writer.done = true;
+                    return;
+                }
+                const envelope = envelopeAt(adsr, i, span, sampleRate);
+                if (i >= span && envelope === 0) {
+                    writer.done = true;
+                    return;
+                }
+                // Never a click where it comes in, nor where the next note cuts it.
+                const edges = Math.min(1, i / attack, (total - i) / release);
+                const out = value * envelope * edges * level * gain;
+                if (track !== null) track[from + i - base] = out;
+                if (echoes && send !== null) send[from + i - base]! += out;
+            }
+            if (i >= total) writer.done = true;
+        },
+    };
+    return writer;
 };
 
 /**
- * Writes one note of a Genesis voice: an FM voice with its four operators, or a square or the noise
- * of the second chip, at the pitch the frame says. An FM note rings on by its operators' envelopes
- * after it ends, until the next one starts (`until`).
+ * One note of a Genesis voice: an FM voice with its four operators, or a square or the noise of the
+ * second chip, at the pitch the frame says. An FM note rings on by its operators' envelopes after it
+ * ends, until the next one starts (`until`).
  */
-const writeGenesisNote = (
-    track: Float32Array,
+const genesisNote = (
     note: TSongNote,
     from: number,
     to: number,
     until: number,
+    limit: number,
     sampleRate: number,
     level: number,
     shape: TShape,
     before: number | null,
     fm: TFmPatch | null,
-): void => {
+): TNoteWriter => {
     const span = to - from;
-    const total = (fm === null ? Math.min(to, track.length) : Math.min(until, track.length)) - from;
+    const total = (fm === null ? Math.min(to, limit) : Math.min(until, limit)) - from;
     const attack = Math.max(1, Math.round(ATTACK * sampleRate));
     const release = Math.max(1, Math.round(RELEASE * sampleRate));
     const samplesPerFrame = sampleRate / FRAMES;
@@ -471,86 +521,69 @@ const writeGenesisNote = (
     let hz = 0;
     let gain = shape.gain;
     let phase = 0;
-    for (let i = 0; i < total; i += 1) {
-        const now = Math.floor(i / samplesPerFrame);
-        if (now !== frame) {
-            frame = now;
-            const seconds = i / sampleRate;
-            let pitch = note.pitch;
-            if (slide > 0) pitch = before! + (note.pitch - before!) * Math.min(1, seconds / slide);
-            if (shape.arpeggio !== null) pitch += valueAt(shape.arpeggio, frame);
-            if (shape.pitch !== null) pitch += valueAt(shape.pitch, frame);
-            const vibrato = shape.vibrato;
-            if (vibrato !== null && seconds > vibrato.delay) pitch += vibrato.depth * Math.sin(2 * Math.PI * vibrato.speed * (seconds - vibrato.delay));
-            const volume = shape.volume !== null ? Math.min(15, Math.max(0, valueAt(shape.volume, frame))) : 15;
-            if (voice !== null) {
-                hz = frequencyOf(pitch);
-                gain = shape.gain * (volume / 15);
-            } else {
-                hz = noise !== null ? psgNoiseRateOf(pitch) : psgFrequencyOf(frequencyOf(pitch));
-                // The second chip's volume goes in steps of two decibels.
-                gain = shape.gain * psgGainOf(volume);
+    let i = 0;
+    const writer: TNoteWriter = {
+        from,
+        end: from + Math.max(0, total),
+        done: false,
+        run: (upto, track, _send, base) => {
+            for (; i < total && from + i < upto; i += 1) {
+                const now = Math.floor(i / samplesPerFrame);
+                if (now !== frame) {
+                    frame = now;
+                    const seconds = i / sampleRate;
+                    let pitch = note.pitch;
+                    if (slide > 0) pitch = before! + (note.pitch - before!) * Math.min(1, seconds / slide);
+                    if (shape.arpeggio !== null) pitch += valueAt(shape.arpeggio, frame);
+                    if (shape.pitch !== null) pitch += valueAt(shape.pitch, frame);
+                    const vibrato = shape.vibrato;
+                    if (vibrato !== null && seconds > vibrato.delay) pitch += vibrato.depth * Math.sin(2 * Math.PI * vibrato.speed * (seconds - vibrato.delay));
+                    const volume = shape.volume !== null ? Math.min(15, Math.max(0, valueAt(shape.volume, frame))) : 15;
+                    if (voice !== null) {
+                        hz = frequencyOf(pitch);
+                        gain = shape.gain * (volume / 15);
+                    } else {
+                        hz = noise !== null ? psgNoiseRateOf(pitch) : psgFrequencyOf(frequencyOf(pitch));
+                        // The second chip's volume goes in steps of two decibels.
+                        gain = shape.gain * psgGainOf(volume);
+                    }
+                }
+                let wave: number;
+                if (voice !== null) {
+                    const sound = voice(hz, i < span);
+                    if (!sound.sounding) {
+                        writer.done = true;
+                        return;
+                    }
+                    wave = sound.out;
+                } else if (noise !== null) {
+                    wave = noise(hz / sampleRate);
+                    if (shape.volume === null) wave *= Math.exp(-i / (DRUM_DECAY * sampleRate));
+                } else {
+                    wave = phase % 1 < 0.5 ? 1 : -1;
+                    phase += hz / sampleRate;
+                }
+                const edges = Math.min(1, i / attack, (total - i) / release);
+                if (track !== null) track[from + i - base] = wave * edges * level * gain;
             }
-        }
-        let wave: number;
-        if (voice !== null) {
-            const sound = voice(hz, i < span);
-            if (!sound.sounding) break;
-            wave = sound.out;
-        } else if (noise !== null) {
-            wave = noise(hz / sampleRate);
-            if (shape.volume === null) wave *= Math.exp(-i / (DRUM_DECAY * sampleRate));
-        } else {
-            wave = phase % 1 < 0.5 ? 1 : -1;
-            phase += hz / sampleRate;
-        }
-        const edges = Math.min(1, i / attack, (total - i) / release);
-        track[from + i] = wave * edges * level * gain;
-    }
+            if (i >= total) writer.done = true;
+        },
+    };
+    return writer;
 };
 
 /**
- * Turns a song into sound: one track per voice, of samples between `-1` and `1`, all the same length
- * so they play together as layers and can be mixed into one.
+ * Reads a song: its notes, its instruments and samples, how long it is and where it loops, and each
+ * voice's notes as writers that make their sound, a stretch at a time. What `renderSong` makes the
+ * whole song from at once, and a song played as it is made makes from as it goes.
  *
- * It needs nothing of the browser, so the same song sounds the same in a game, in the editor that
- * wrote it, and in a test that measures it. Given the same song it gives back the same samples,
- * every time.
- *
- * Whatever in the text could not be read is in `errors`, with where it was, and the rest is played:
- * a wrong note costs that note, not the song. What could not be read in its instruments is in
- * `instrumentErrors`.
- *
- * An instrument is the song's own when it has one of that name, and otherwise the engine's
- * (`BUILTIN.MUSIC.INSTRUMENTS`); `nacatamalon:` in front of a name always means the engine's.
- *
- * @param doc - The song.
- * @param sampleRate - Samples per second. Default `44100`.
- * @param options - `transpose`: semitones up (or down, below zero) for every voice but the noise and
- * the samples, which play drums and have no key. `samples`: the sound files its instruments' `sample`
- * name, already read, by that name; the engine's own (`nacatamalon:kick`) need not be given.
- * @returns The tracks, how long they are, where the loop goes back to, every note, and the errors.
- *
- * @example
- * ```ts
- * const song = renderSong({
- *     format: SONG_FORMAT,
- *     tempo: 120,
- *     meter: [3, 4],
- *     voices: { pulse1: { notes: "d'4 g8 a b c' | d'4 g g |" } },
- * });
- * song.errors; // [] when every bar adds up
- * ```
- *
- * @category Audio
- * @since 1.0.0
- * @author Francisco Pereira Alvarado
+ * @internal
  */
-export const renderSong = (
+export const readSong = (
     doc: TSongDoc,
     sampleRate = 44100,
     options: { transpose?: number; samples?: ReadonlyMap<string, TSongSample> } = {},
-): TRenderedSong => {
+): TReadSong => {
     const transpose = options.transpose ?? 0;
     const secondsPerBeat = 60 / doc.tempo;
     const samplesPerBeat = secondsPerBeat * sampleRate;
@@ -674,31 +707,32 @@ export const renderSong = (
     };
 
     const scale = doc.voices.dpcm === undefined || chip !== 'nes' ? 1 : WITH_DPCM;
-    const voices: Partial<Record<TSongVoiceName, Float32Array>> = {};
-    const send = chip === 'snes' ? new Float32Array(length) : null;
+    const voices: TReadVoice[] = [];
     let sent = false;
     for (const voice of voicesHere) {
         const written = doc.voices[voice];
         if (written === undefined) {
             continue;
         }
-        const track = new Float32Array(length);
         const level = LEVELS[voice] * scale * Math.min(1, Math.max(0, written.volume ?? 1));
         const duty = written.duty ?? 0.5;
         const own = notes.filter((note) => note.voice === voice);
+        const writers: Array<() => TNoteWriter> = [];
         // The note before in this voice, which a slide starts from.
         let before: number | null = null;
         own.forEach((note, index) => {
             const from = Math.round(note.start * samplesPerBeat);
             const to = Math.round((note.start + note.beats) * samplesPerBeat);
             const instrument = note.instrument === undefined ? null : instrumentOf(note.instrument);
+            const slideFrom = before;
             if (chip === 'genesis') {
                 const isFm = voice.startsWith('fm');
                 const patch = isFm ? fmOf(note.instrument) : null;
                 if (!isFm || patch !== null) {
                     const next = own[index + 1];
                     const until = next === undefined ? length : Math.round(next.start * samplesPerBeat);
-                    writeGenesisNote(track, note, from, to, until, sampleRate, level, shapeOf(note, instrument, null), before, patch);
+                    const shape = shapeOf(note, instrument, null);
+                    writers.push(() => genesisNote(note, from, to, until, length, sampleRate, level, shape, slideFrom, patch));
                 }
             } else if (chip === 'snes') {
                 const sample = snesOf(note.instrument);
@@ -708,19 +742,121 @@ export const renderSong = (
                     const until = next === undefined ? length : Math.round(next.start * samplesPerBeat);
                     const echoes = instrument?.echo === true;
                     sent ||= echoes;
-                    writeSnesNote(track, echoes ? send : null, note, from, to, until, sampleRate, level, shapeOf(note, instrument, null), before, sample, instrument?.adsr ?? DEFAULT_ADSR);
+                    const shape = shapeOf(note, instrument, null);
+                    const adsr = instrument?.adsr ?? DEFAULT_ADSR;
+                    writers.push(() => snesNote(note, from, to, until, length, echoes, sampleRate, level, shape, slideFrom, sample, adsr));
                 }
             } else {
                 const bits = voice === 'dpcm' ? bitsOf(note.instrument) : null;
                 if (voice !== 'dpcm' || bits !== null) {
-                    writeNote(track, note, from, to, sampleRate, level, duty, shapeOf(note, instrument, bits), before);
+                    const shape = shapeOf(note, instrument, bits);
+                    writers.push(() => nesNote(note, from, to, length, sampleRate, level, duty, shape, slideFrom));
                 }
             }
             before = note.pitch;
         });
+        voices.push({ voice, notes: writers.map((make) => ({ make, ...spanOf(make()) })) });
+    }
+
+    return {
+        sampleRate,
+        length,
+        loopSample,
+        voices,
+        echo: chip === 'snes' && sent ? doc.echo ?? {} : null,
+        notes,
+        errors,
+        instrumentErrors,
+    };
+};
+
+/**
+ * Where a note writes, read off one made for the purpose.
+ */
+const spanOf = (writer: TNoteWriter): { from: number; end: number } => ({ from: writer.from, end: writer.end });
+
+/**
+ * One voice of a read song: its notes in order, each with where it writes and a way to make it,
+ * fresh, as often as it is needed.
+ *
+ * @internal
+ */
+export type TReadVoice = {
+    voice: TSongVoiceName;
+    notes: Array<{ from: number; end: number; make: () => TNoteWriter }>;
+};
+
+/**
+ * A song read and ready to be made into sound: how long it is, where it loops, what each voice
+ * plays, and the echo's settings when the SNES's echo has anything going into it.
+ *
+ * @internal
+ */
+export type TReadSong = {
+    sampleRate: number;
+    length: number;
+    loopSample: number;
+    voices: TReadVoice[];
+    echo: NonNullable<TSongDoc['echo']> | null;
+    notes: TSongNote[];
+    errors: TSongError[];
+    instrumentErrors: TSongInstrumentError[];
+};
+
+/**
+ * Turns a song into sound: one track per voice, of samples between `-1` and `1`, all the same length
+ * so they play together as layers and can be mixed into one.
+ *
+ * It needs nothing of the browser, so the same song sounds the same in a game, in the editor that
+ * wrote it, and in a test that measures it. Given the same song it gives back the same samples,
+ * every time.
+ *
+ * Whatever in the text could not be read is in `errors`, with where it was, and the rest is played:
+ * a wrong note costs that note, not the song. What could not be read in its instruments is in
+ * `instrumentErrors`.
+ *
+ * An instrument is the song's own when it has one of that name, and otherwise the engine's
+ * (`BUILTIN.MUSIC.INSTRUMENTS`); `nacatamalon:` in front of a name always means the engine's.
+ *
+ * @param doc - The song.
+ * @param sampleRate - Samples per second. Default `44100`.
+ * @param options - `transpose`: semitones up (or down, below zero) for every voice but the noise and
+ * the samples, which play drums and have no key. `samples`: the sound files its instruments' `sample`
+ * name, already read, by that name; the engine's own (`nacatamalon:kick`) need not be given.
+ * @returns The tracks, how long they are, where the loop goes back to, every note, and the errors.
+ *
+ * @example
+ * ```ts
+ * const song = renderSong({
+ *     format: SONG_FORMAT,
+ *     tempo: 120,
+ *     meter: [3, 4],
+ *     voices: { pulse1: { notes: "d'4 g8 a b c' | d'4 g g |" } },
+ * });
+ * song.errors; // [] when every bar adds up
+ * ```
+ *
+ * @category Audio
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const renderSong = (
+    doc: TSongDoc,
+    sampleRate = 44100,
+    options: { transpose?: number; samples?: ReadonlyMap<string, TSongSample> } = {},
+): TRenderedSong => {
+    const read = readSong(doc, sampleRate, options);
+    const { length, loopSample } = read;
+    const voices: Partial<Record<TSongVoiceName, Float32Array>> = {};
+    const send = read.echo !== null ? new Float32Array(length) : null;
+    for (const { voice, notes } of read.voices) {
+        const track = new Float32Array(length);
+        for (const note of notes) {
+            note.make().run(length, track, send, 0);
+        }
         voices[voice] = track;
     }
-    const echo = send !== null && sent ? renderEcho(send, sampleRate, loopSample, doc.echo) : undefined;
+    const echo = send !== null ? renderEcho(send, sampleRate, loopSample, read.echo ?? undefined) : undefined;
 
     return {
         sampleRate,
@@ -730,9 +866,9 @@ export const renderSong = (
         loopStart: loopSample / sampleRate,
         voices,
         ...(echo !== undefined ? { echo } : {}),
-        notes,
-        errors,
-        instrumentErrors,
+        notes: read.notes,
+        errors: read.errors,
+        instrumentErrors: read.instrumentErrors,
     };
 };
 

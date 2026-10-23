@@ -1,4 +1,5 @@
 import type { TGameHandle } from '../handle/t_game_handle';
+import type { TRuntimeStore } from '../../store';
 
 /**
  * The tag the browser holds the loop with while the page cannot be seen. One of the holders of
@@ -53,3 +54,21 @@ export const watchVisibility = (
         page.removeEventListener('visibilitychange', onChange);
     };
 };
+
+/**
+ * The game's holds with its sound held with them: a hidden page stops every sound where it is, the
+ * way a console paused, and they carry on from there when it is seen again. Without it a song made
+ * as it plays would run out a moment after the page went, and be found further on when it came back.
+ * @returns What `watchVisibility` holds and lets go.
+ * @internal
+ */
+export const holdingSound = (game: Pick<TGameHandle, 'pause' | 'resume'>, store: TRuntimeStore): Pick<TGameHandle, 'pause' | 'resume'> => ({
+    pause: (reason) => {
+        game.pause(reason);
+        store.get('audio').manager?.setHidden(true);
+    },
+    resume: (reason) => {
+        game.resume(reason);
+        store.get('audio').manager?.setHidden(false);
+    },
+});

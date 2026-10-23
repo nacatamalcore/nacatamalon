@@ -387,7 +387,11 @@ const Level = () => {
 - `play`, `stop({ fade })`, `pause` y `resume`.
 - `setVolume`, `setVoice(voz, volumen, fundido)`, `setPan(voz, paneo, fundido)` y `song.pan` para un
   tween.
-- `setTempo(bpm)` y `setTranspose(semitonos)` siguen desde el mismo pulso.
+- `setTempo(bpm)` y `setTranspose(semitonos)` siguen desde el mismo pulso, y se oyen al momento.
+- La canción se convierte en sonido **mientras suena**, un instante por delante de lo que oyes,
+  como la tocaba la consola: empieza en cuanto llega su archivo (unos kilobytes), casi no ocupa
+  memoria mientras suena, y cambiar el tempo o la tonalidad cuesta unos milisegundos. Con la
+  página oculta se para donde está, con el resto del juego, y sigue desde ahí.
 - `onBeat` te avisa en cada pulso mientras suena.
 
 Un sonido (`useSound`) también tiene `pan`: `tween({ target: sound, to: { pan: 1 }, duration: 2 })`.

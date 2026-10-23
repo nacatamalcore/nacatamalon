@@ -5,7 +5,7 @@ import { useMusic } from '../src/hooks/audio/use_music';
 import { useAudio } from '../src/hooks/audio/use_audio';
 import { useLoadSong } from '../src/hooks/loaders/use_load_song';
 import { getAudioManager, updateAudio } from '../src/audio';
-import { SONG_FORMAT } from '../src/audio/synth';
+import { renderSong, SONG_FORMAT } from '../src/audio/synth';
 import { parseSceneDoc, sceneFromDoc, serializeScene } from '../src/scene/document';
 import { registerScene } from '../src/scene/register_scene';
 import { startScene } from '../src/scene/start_scene';
@@ -74,20 +74,32 @@ const settle = async (): Promise<void> => {
 };
 
 /**
- * Makes the next tracks take `seconds` of the audio clock to make, as they do on a real machine:
- * the clock moves on when the first of them is made.
+ * What one voice played from `from` on, its stretches put together in the order they start: a song
+ * is made as it plays, a stretch at a time, each voice of a stretch a sound of its own, in the order
+ * its file lists them.
  */
-const takesWhileMade = (context: ReturnType<typeof contextOf>, seconds: number): void => {
-    const make = context.createBuffer.bind(context);
-    let moved = false;
-    context.createBuffer = (channels, length, sampleRate) => {
-        if (!moved) {
-            moved = true;
-            context.currentTime += seconds;
-        }
-        return make(channels, length, sampleRate);
-    };
+const playedFrom = (context: TFakeContext, from: number, voice: number, voices: number): Float32Array => {
+    const own = context.sources
+        // Let go before it began (stopped at once), it was never heard.
+        .filter((source) => source.started && source.startAt >= from - 1e-6 && (!source.stopped || source.stopAt > source.startAt))
+        .filter((_, index) => index % voices === voice);
+    const track = new Float32Array(own.reduce((sum, source) => sum + (source.buffer as TFakeBuffer).length, 0));
+    let at = 0;
+    for (const source of own) {
+        track.set((source.buffer as TFakeBuffer).data, at);
+        at += (source.buffer as TFakeBuffer).length;
+    }
+    return track;
 };
+
+/** The first sample two tracks differ at, over the shorter, or `-1`. */
+const firstDifference = (a: Float32Array, b: Float32Array): number => {
+    for (let i = 0; i < Math.min(a.length, b.length); i += 1) if (a[i] !== b[i]) return i;
+    return -1;
+};
+
+/** The lanes a song plays through: one gain per voice, every stretch of the voice going into it. */
+const lanesOf = (context: TFakeContext): TFakeGain[] => [...new Set(started(context).map((source) => source.connectedTo as unknown as TFakeGain))];
 
 const withSong = async (options: TSongOptions = {}, song: TSongDoc = SONG) => {
     const { store } = createTestGame();
@@ -101,27 +113,27 @@ const withSong = async (options: TSongOptions = {}, song: TSongDoc = SONG) => {
 };
 
 describe('a song written as notes', () => {
-    it('plays one voice per track, together, looping on the bar it says, through the music channel', async () => {
+    it('plays each voice through a lane of its own, together, made as it plays, through the music channel', async () => {
         const { store, song, context } = await withSong({ autoplay: true });
 
-        const voices = started(context);
-        expect(voices).toHaveLength(3);
-        expect(voices.every((voice) => voice.loop && voice.startAt === 0)).toBe(true);
-        // The second bar starts two seconds in.
-        expect(voices.map((voice) => voice.loopStart)).toEqual([2, 2, 2]);
-        // Three whole bars, every track the same length.
-        expect(voices.map((voice) => (voice.buffer as TFakeBuffer).duration)).toEqual([6, 6, 6]);
+        const lanes = lanesOf(context);
+        expect(lanes).toHaveLength(3);
+        // The first stretch of every voice starts at once, together.
+        expect(started(context).slice(0, 3).every((voice) => voice.startAt < 1 / context.sampleRate)).toBe(true);
         // Its own volume, then where it is between left and right (a voice is mono, so lifted by √2
         // first to stay as loud in the middle), then the whole song.
-        const lift = voices[0]!.connectedTo!.connectedTo! as unknown as TFakeGain;
+        const lift = lanes[0]!.connectedTo! as unknown as TFakeGain;
         expect(lift.gain.value).toBeCloseTo(Math.SQRT2, 9);
         expect(lift.connectedTo!.kind).toBe('stereo');
         const piece = lift.connectedTo!.connectedTo!;
         expect(piece.connectedTo).toBe(store.get('audio').manager!.channels.get('music') as unknown as TFakeGain);
+        // What it plays is the song made at once, sample for sample.
+        const whole = renderSong(SONG, context.sampleRate);
+        expect(firstDifference(playedFrom(context, 0, 0, 3), whole.voices.pulse1!)).toBe(-1);
+        expect(firstDifference(playedFrom(context, 0, 2, 3), whole.voices.noise!)).toBe(-1);
         expect(song.playing).toBe(true);
         expect(song.errors).toEqual([]);
     });
-
     it('is sound, not silence', async () => {
         const { context } = await withSong({ autoplay: true });
 
@@ -132,78 +144,60 @@ describe('a song written as notes', () => {
 
     it('starts each voice at the volume asked, and moves one without losing its place', async () => {
         const { song, context } = await withSong({ autoplay: true, voices: { noise: 0 } });
-        const gainOf = (index: number) => (started(context)[index]!.connectedTo as unknown as TFakeGain).gain;
-        expect(gainOf(2).value).toBe(0);
+        const noise = () => lanesOf(context)[2]!.gain;
+        expect(noise().value).toBe(0);
 
         context.currentTime = 3;
         song.setVoice('noise', 1, 0.5);
 
-        expect(lastRamp(gainOf(2))).toEqual({ kind: 'ramp', value: 1, time: 3.5 });
+        expect(lastRamp(noise())).toEqual({ kind: 'ramp', value: 1, time: 3.5 });
         expect(song.getVoice('noise')).toBe(1);
-        expect(started(context)).toHaveLength(3);
+        expect(lanesOf(context)).toHaveLength(3);
     });
-
-    it('speeds up carrying on from the same beat', async () => {
+    it('speeds up carrying on from the same beat, a moment after it is asked', async () => {
         const { song, context } = await withSong({ autoplay: true });
         // A second and a half in: the fourth beat.
         context.currentTime = 1.5;
 
         song.setTempo(240);
 
-        const voices = started(context);
-        expect(voices).toHaveLength(3);
-        // The fourth beat at 240 is three quarters of a second in, and the tracks are half as long.
-        expect(voices.map((voice) => voice.startOffset)).toEqual([0.75, 0.75, 0.75]);
-        expect(voices.map((voice) => (voice.buffer as TFakeBuffer).duration)).toEqual([3, 3, 3]);
+        // Taken over 20 ms on, at 1.52: the beat there at 240 is 0.76 seconds in.
+        const fast = renderSong({ ...SONG, tempo: 240 }, context.sampleRate);
+        expect(firstDifference(playedFrom(context, 1.52, 0, 3), fast.voices.pulse1!.subarray(Math.round(0.76 * context.sampleRate)))).toBe(-1);
         expect(song.tempo).toBe(240);
     });
-
-    it('carries on from where it is once the new tracks are made, not from where it was asked', async () => {
+    it('carries on round its loop when it speeds up just before the end of it', async () => {
         const { song, context } = await withSong({ autoplay: true });
-        // Making the tracks takes a quarter of a second, and the old ones play on meanwhile.
-        context.currentTime = 1.5;
-        takesWhileMade(context, 0.25);
+        // Just before the end of three bars that loop back to the second.
+        context.currentTime = 5.99;
 
         song.setTempo(240);
 
-        // 1.75 seconds at 120 is 0.875 at 240, not the 0.75 of where it was asked: that quarter of
-        // a second is not heard twice.
-        expect(started(context).map((voice) => voice.startOffset)).toEqual([0.875, 0.875, 0.875]);
+        // Taken over at 6.01, which is 2.01 into the loop: at twice the speed, 1.005.
+        const fast = renderSong({ ...SONG, tempo: 240 }, context.sampleRate);
+        expect(firstDifference(playedFrom(context, 6.01, 0, 3), fast.voices.pulse1!.subarray(Math.round(1.005 * context.sampleRate)))).toBe(-1);
     });
-
-    it('carries on round its loop when the new tracks are made across the end of it', async () => {
-        const { song, context } = await withSong({ autoplay: true });
-        // A tenth of a second before the end of three bars that loop back to the second.
-        context.currentTime = 5.9;
-        takesWhileMade(context, 0.25);
-
-        song.setTempo(240);
-
-        // 6.15 is 2.15 into the loop, which at twice the speed is 1.075.
-        for (const voice of started(context)) expect(voice.startOffset).toBeCloseTo(1.075, 9);
-    });
-
     it('changes key carrying on from where it was, and leaves the drums alone', async () => {
         const { song, context } = await withSong({ autoplay: true });
-        const before = started(context).map((voice) => (voice.buffer as TFakeBuffer).data);
         context.currentTime = 1;
 
         song.setTranspose(12);
 
-        const after = started(context);
-        expect(after.map((voice) => voice.startOffset)).toEqual([1, 1, 1]);
-        expect(after[0]!.buffer).not.toBe(before[0]);
-        expect((after[0]!.buffer as TFakeBuffer).data).not.toEqual(before[0]!);
-        expect((after[2]!.buffer as TFakeBuffer).data).toEqual(before[2]!);
+        // Taken over at 1.02, the same place in a song as long as before.
+        const at = Math.round(1.02 * context.sampleRate);
+        const higher = renderSong(SONG, context.sampleRate, { transpose: 12 });
+        const before = renderSong(SONG, context.sampleRate);
+        expect(firstDifference(playedFrom(context, 1.02, 0, 3), higher.voices.pulse1!.subarray(at))).toBe(-1);
+        expect(firstDifference(playedFrom(context, 1.02, 0, 3), before.voices.pulse1!.subarray(at))).not.toBe(-1);
+        expect(firstDifference(playedFrom(context, 1.02, 2, 3), before.voices.noise!.subarray(at))).toBe(-1);
     });
-
     it('says what in its notes it could not read, and plays the rest', async () => {
         warn = spyOn(console, 'warn').mockImplementation(() => {});
         const { song, context } = await withSong({ autoplay: true }, { ...SONG, voices: { pulse1: { notes: 'c4 d e |' } } });
 
         expect(song.errors).toHaveLength(1);
         expect(warn).toHaveBeenCalledTimes(1);
-        expect(started(context)).toHaveLength(1);
+        expect(lanesOf(context)).toHaveLength(1);
     });
 
     it('stops with the scene', async () => {
@@ -280,7 +274,8 @@ describe('following the beat', () => {
 
         // Heard again from where the frames got it to, and counted by the audio clock from there.
         manager.setClock('audio');
-        expect(started(context).map((voice) => voice.startOffset)).toEqual([2, 2, 2]);
+        const whole = renderSong(SONG, context.sampleRate);
+        expect(firstDifference(playedFrom(context, 30, 0, 3), whole.voices.pulse1!.subarray(2 * context.sampleRate))).toBe(-1);
         context.currentTime += 0.5;
         updateAudio(store);
         expect(heard.at(-1)).toEqual([2, 2]);
@@ -431,11 +426,12 @@ describe('where the song is heard', () => {
         context.currentTime += 1.75;
         expect(song.beat).toBeCloseTo(3.5, 6);
 
-        // Twice as fast from here: on from the same beat, four beats a second.
+        // Twice as fast from here: on from the same beat, four beats a second once it is heard,
+        // 20 ms on. Half a second later it has gone 0.02 s at two beats a second and 0.48 at four.
         song.setTempo(240);
         expect(song.beat).toBeCloseTo(3.5, 6);
         context.currentTime += 0.5;
-        expect(song.beat).toBeCloseTo(5.5, 6);
+        expect(song.beat).toBeCloseTo(3.5 + 0.02 * 2 + 0.48 * 4, 6);
     });
 
     it('says how far into the song it is, by the audio clock, and null while stopped', async () => {
@@ -587,10 +583,12 @@ describe('a song in a scene document', () => {
         expect(fetchSpy!.mock.calls.map((call: unknown[]) => String(call[0]))).toContain('/samples/hit.wav');
         expect(file.samples.get('/samples/hit.wav')?.sampleRate).toBe(22050);
         expect(song.playing).toBe(true);
-        // pulse1, triangle, noise and the samples, each its own track.
-        const tracks = started(contextOf(store)).map((source) => source.buffer as TFakeBuffer);
-        expect(tracks).toHaveLength(4);
-        expect(tracks.every((buffer) => buffer.data.some((value) => value !== 0))).toBe(true);
+        // pulse1, triangle, noise and the samples, each through its own lane, and each heard.
+        const context = contextOf(store);
+        expect(lanesOf(context)).toHaveLength(4);
+        for (let voice = 0; voice < 4; voice += 1) {
+            expect(playedFrom(context, 0, voice, 4).some((value) => value !== 0)).toBe(true);
+        }
     });
 
     it('takes its file saved again while it plays, carrying on from the same beat', async () => {
@@ -612,10 +610,12 @@ describe('a song in a scene document', () => {
         expect(replaceSongDoc(store, '/music/other.song', faster)).toBe(0);
         for (const update of root.updateCallbacks) update(1 / 60, 0);
 
-        const voices = started(context);
-        expect(voices).toHaveLength(2);
-        // The same fourth beat, at the new tempo.
-        expect(voices.map((voice) => voice.startOffset)).toEqual([0.75, 0.75]);
+        // Taken over 20 ms on, at 1.52, through the two voices it has now: the same place at the new
+        // tempo is 0.76 seconds in.
+        const after = context.sources.filter((source) => source.startAt >= 1.52 - 1e-6);
+        expect(new Set(after.map((source) => source.connectedTo)).size).toBe(2);
+        const whole = renderSong(faster, context.sampleRate);
+        expect(firstDifference(playedFrom(context, 1.52, 0, 2), whole.voices.pulse1!.subarray(Math.round(0.76 * context.sampleRate)))).toBe(-1);
         expect(song.tempo).toBe(240);
 
         // Nothing new: nothing made again.

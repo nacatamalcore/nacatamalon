@@ -312,6 +312,12 @@ export const importFamiTrackerText = (text: string, options: { samplesFolder?: s
                 }
                 if (note === '...') {
                     if (effectTexts.some((effect) => /^[04]/.test(effect))) once('mid', 'an arpeggio or a vibrato starts partway through a note (0xy, 4xy on a row with no note): here it starts with the next note.');
+                    // The note sounding gets louder or quieter here: how a tracker writes a note dying
+                    // away, a row at a time. The triangle has no volume to change, and a sample none
+                    // either.
+                    if (volumeText !== '.' && now.pitch !== null && voice !== 'triangle' && voice !== 'dpcm') {
+                        (voices[voice] ??= []).push({ row, volume: now.volume, change: true });
+                    }
                     return;
                 }
                 const events = (voices[voice] ??= []);

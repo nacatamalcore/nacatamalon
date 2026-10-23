@@ -46,6 +46,11 @@ export type TLoggedSound = {
      * the end (or ran out on its own).
      */
     end: number | null;
+    /**
+     * The one sound it is a piece of, when it is heard in pieces (a voice of a song, made as it
+     * plays): pieces of the same sound share it, so what was heard is counted by these.
+     */
+    group?: object;
 };
 
 /**
@@ -158,7 +163,8 @@ export const logVoice = (audio: TAudioManager, voice: TVoice): void => {
         return;
     }
     const now = (): number => audio.now() - log.from;
-    const at = now();
+    const ahead = track.startsAt !== undefined && track.startsAt > audio.now();
+    const at = ahead ? track.startsAt! - log.from : now();
     const volumes = track.gains.map((param) => {
         const points: TSoundLogPoint[] = [{ at, value: param.value, ramp: false }];
         followed.set(param, [...(followed.get(param) ?? []), { points, now, log }]);
@@ -168,12 +174,13 @@ export const logVoice = (audio: TAudioManager, voice: TVoice): void => {
     const sound: TLoggedSound = {
         buffer,
         at,
-        offset: track.position(),
+        offset: ahead ? 0 : track.position(),
         rate: node.playbackRate.value,
         loop: node.loop ? { start: node.loopStart, end: node.loopEnd } : null,
         volumes,
         level: audio.channelGain(voice.channel).gain.value * audio.master.gain.value,
         end: null,
+        ...(track.group !== undefined ? { group: track.group } : {}),
     };
     log.sounds.push(sound);
     log.open.set(voice, sound);

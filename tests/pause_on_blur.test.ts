@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it } from 'bun:test';
-import { BROWSER_PAUSE, watchVisibility } from '../src/game/bootstrap/watch_visibility';
+import { BROWSER_PAUSE, holdingSound, watchVisibility } from '../src/game/bootstrap/watch_visibility';
+import { getAudioManager } from '../src/audio';
+import { installFakeAudio } from './helpers/test_audio';
+import type { TFakeContext } from './helpers/test_audio';
 import { createGameHandle } from '../src/game/handle/create_game_handle';
 import { gamePaused, gameResumed } from '../src/signal/engine_signals';
 import { createTestGame } from './helpers/test_game';
@@ -95,5 +98,74 @@ describe('a hidden page', () => {
         frames.run();
         // Nothing listens any more, so nothing was released.
         expect(store.get('loop').pausedBy).toEqual([BROWSER_PAUSE]);
+    });
+});
+
+describe('the sound of a hidden page', () => {
+    // A page the person has touched, so the audio engine may run: what a browser asks before it.
+    const touched = () => {
+        const audio = installFakeAudio();
+        const page = new EventTarget();
+        (globalThis as { window?: unknown }).window = page;
+        off.push(() => {
+            delete (globalThis as { window?: unknown }).window;
+            audio.restore();
+        });
+        return () => page.dispatchEvent(new Event('pointerdown'));
+    };
+
+    it('is held still while the page is hidden, and runs on when it is seen again', () => {
+        const touch = touched();
+        const { store } = createTestGame();
+        const audio = getAudioManager(store);
+        const context = audio.context as unknown as TFakeContext;
+        touch();
+        const { page, setHidden } = fakePage();
+        const frames = fakeFrames();
+        off.push(watchVisibility(holdingSound(createGameHandle(store), store), page, frames.next));
+        expect(context.state).toBe('running');
+
+        setHidden(true);
+        expect(context.state).toBe('suspended');
+
+        setHidden(false);
+        frames.run();
+        expect(context.state).toBe('running');
+    });
+
+    it('stays held when the page comes back while an editor runs the game a frame at a time', () => {
+        const touch = touched();
+        const { store } = createTestGame();
+        const audio = getAudioManager(store);
+        const context = audio.context as unknown as TFakeContext;
+        touch();
+        const { page, setHidden } = fakePage();
+        const frames = fakeFrames();
+        off.push(watchVisibility(holdingSound(createGameHandle(store), store), page, frames.next));
+
+        audio.setClock('frames');
+        setHidden(true);
+        setHidden(false);
+        frames.run();
+        expect(context.state).toBe('suspended');
+
+        // And the frames' clock let go while the page is hidden runs nothing until it is seen.
+        setHidden(true);
+        audio.setClock('audio');
+        expect(context.state).toBe('suspended');
+        setHidden(false);
+        frames.run();
+        expect(context.state).toBe('running');
+    });
+
+    it('starts held when it is opened while the page is hidden', () => {
+        const touch = touched();
+        const { store } = createTestGame();
+        const { page } = fakePage(true);
+        off.push(watchVisibility(holdingSound(createGameHandle(store), store), page, fakeFrames().next));
+
+        const audio = getAudioManager(store);
+        touch();
+        expect((audio.context as unknown as TFakeContext).state).toBe('suspended');
     });
 });
