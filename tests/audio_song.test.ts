@@ -73,6 +73,22 @@ const settle = async (): Promise<void> => {
     }
 };
 
+/**
+ * Makes the next tracks take `seconds` of the audio clock to make, as they do on a real machine:
+ * the clock moves on when the first of them is made.
+ */
+const takesWhileMade = (context: ReturnType<typeof contextOf>, seconds: number): void => {
+    const make = context.createBuffer.bind(context);
+    let moved = false;
+    context.createBuffer = (channels, length, sampleRate) => {
+        if (!moved) {
+            moved = true;
+            context.currentTime += seconds;
+        }
+        return make(channels, length, sampleRate);
+    };
+};
+
 const withSong = async (options: TSongOptions = {}, song: TSongDoc = SONG) => {
     const { store } = createTestGame();
     let handle!: TSongHandle;
@@ -140,6 +156,31 @@ describe('a song written as notes', () => {
         expect(voices.map((voice) => voice.startOffset)).toEqual([0.75, 0.75, 0.75]);
         expect(voices.map((voice) => (voice.buffer as TFakeBuffer).duration)).toEqual([3, 3, 3]);
         expect(song.tempo).toBe(240);
+    });
+
+    it('carries on from where it is once the new tracks are made, not from where it was asked', async () => {
+        const { song, context } = await withSong({ autoplay: true });
+        // Making the tracks takes a quarter of a second, and the old ones play on meanwhile.
+        context.currentTime = 1.5;
+        takesWhileMade(context, 0.25);
+
+        song.setTempo(240);
+
+        // 1.75 seconds at 120 is 0.875 at 240, not the 0.75 of where it was asked: that quarter of
+        // a second is not heard twice.
+        expect(started(context).map((voice) => voice.startOffset)).toEqual([0.875, 0.875, 0.875]);
+    });
+
+    it('carries on round its loop when the new tracks are made across the end of it', async () => {
+        const { song, context } = await withSong({ autoplay: true });
+        // A tenth of a second before the end of three bars that loop back to the second.
+        context.currentTime = 5.9;
+        takesWhileMade(context, 0.25);
+
+        song.setTempo(240);
+
+        // 6.15 is 2.15 into the loop, which at twice the speed is 1.075.
+        for (const voice of started(context)) expect(voice.startOffset).toBeCloseTo(1.075, 9);
     });
 
     it('changes key carrying on from where it was, and leaves the drums alone', async () => {

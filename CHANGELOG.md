@@ -7,6 +7,12 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **A synthetic voice, `nacatamalon/speech`**, that speaks and sings, made sample by sample the way
+  the machines of the eighties talked: a throat, five formants, noise for the s, the stops and the
+  nose. `renderSpeech` says text or phonemes, `renderSinging` sings notes with a syllable each, and
+  both hand back a sound for `useSound`. Spanish is read by rules (`textToPhonemes` shows how);
+  any other language is written as phonemes. A door of its own, so a game that never speaks carries
+  none of it.
 - **`useRectLight`**, a panel: a lamp shaped like a rectangle that shines from its front only, its
   `width` and `height` along its own X and Y and its `range` from the nearest point of the panel. It
   faces down unless turned, like a light in the ceiling: a strip light, a window, a screen, a sign.
@@ -88,6 +94,12 @@ releases are in [changelog/](./changelog/), one file each.
     (was `SFX_PRESETS`), and the keys of the post effects (`POST`) and material looks (`LOOKS`).
 
   The loose names are gone from the root.
+
+### Fixed
+
+- **A song's change of tempo or key carries on from where it is**, not from where it was when the
+  change was asked: making the new tracks takes a moment (a quarter of a second on a fast machine),
+  the old ones play on meanwhile, and that moment was heard twice.
 
 ## 0.2.6 — 2026-10-21
 

@@ -66,6 +66,10 @@
             "types": "./dist/types/headless/index.d.ts",
             "default": "./dist/headless/index.js"
         },
+        "./speech": {
+            "types": "./dist/types/speech/index.d.ts",
+            "default": "./dist/speech/index.js"
+        },
         "./package.json": "./package.json"
     },
     "typesVersions": {
@@ -87,6 +91,9 @@
             ],
             "headless": [
                 "./dist/types/headless/index.d.ts"
+            ],
+            "speech": [
+                "./dist/types/speech/index.d.ts"
             ]
         }
     },
@@ -97,7 +104,7 @@
         "typecheck": "tsc --noEmit",
         "clean": "rm -rf dist",
         "build": "bun run clean && bun run build:js && bun run build:strip && bun run build:types && bun run build:llms",
-        "build:js": "esbuild src/index.ts src/authoring/index.ts src/extend/index.ts src/react/index.ts src/headless/index.ts physics2d=src/physics/rapier2d/index.ts physics3d=src/physics/box3d/index.ts --bundle --splitting --format=esm --outdir=dist --packages=external --sourcemap --log-level=warning",
+        "build:js": "esbuild src/index.ts src/authoring/index.ts src/extend/index.ts src/react/index.ts src/headless/index.ts src/speech/index.ts physics2d=src/physics/rapier2d/index.ts physics3d=src/physics/box3d/index.ts --bundle --splitting --format=esm --outdir=dist --packages=external --sourcemap --log-level=warning",
         "build:strip": "bun scripts/strip_bare_imports.ts",
         "build:types": "tsc -p tsconfig.build.json",
         "build:llms": "bun scripts/build_llms.ts",

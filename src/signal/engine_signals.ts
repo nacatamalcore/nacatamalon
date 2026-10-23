@@ -1,5 +1,4 @@
 import { createGameSignal } from './create_game_signal';
-// Named here so the published types say `TGameSignal` rather than `import(".")…`.
 import type { TGameSignal } from './types/t_game_signal';
 
 /**
@@ -44,7 +43,7 @@ export type TGamePauseEvent = { reason: string };
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const scenePaused = createGameSignal<TScenePauseEvent>();
+export const scenePaused: TGameSignal<TScenePauseEvent> = createGameSignal<TScenePauseEvent>();
 
 /**
  * A scene that was paused is running again. The other half of {@link scenePaused}.
@@ -56,7 +55,7 @@ export const scenePaused = createGameSignal<TScenePauseEvent>();
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const sceneResumed = createGameSignal<TScenePauseEvent>();
+export const sceneResumed: TGameSignal<TScenePauseEvent> = createGameSignal<TScenePauseEvent>();
 
 /**
  * The whole game has been paused: no scene updates at all. Fired for the **first** hold only, so a
@@ -66,7 +65,7 @@ export const sceneResumed = createGameSignal<TScenePauseEvent>();
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const gamePaused = createGameSignal<TGamePauseEvent>();
+export const gamePaused: TGameSignal<TGamePauseEvent> = createGameSignal<TGamePauseEvent>();
 
 /**
  * The game is running again, once the **last** hold has been let go: while anything still holds it
@@ -76,4 +75,4 @@ export const gamePaused = createGameSignal<TGamePauseEvent>();
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const gameResumed = createGameSignal<TGamePauseEvent>();
+export const gameResumed: TGameSignal<TGamePauseEvent> = createGameSignal<TGamePauseEvent>();

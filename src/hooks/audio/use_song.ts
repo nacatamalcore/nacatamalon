@@ -5,6 +5,7 @@ import { isShowingOnly } from '../physics/is_showing_only';
 import { renderSong, SONG_VOICES } from '../../audio/synth';
 import { nanoId } from '../../utils';
 import { clampPan } from '../../audio/stereo';
+import { wrapPosition } from '../../audio/loop_position';
 import { whenLoaded } from '../../loaders';
 import { getVersion } from '../../store/record_version';
 import { loadSongSamples, missingSongSamples, songFileOf } from '../../loaders/song';
@@ -164,11 +165,18 @@ export const useSong = (song: TSongFile | TSongDoc, options: TSongOptions = {}):
      */
     const remake = (): void => {
         const before = player.position();
+        const askedAt = audio.now();
         const oldTempo = madeAt;
+        // The old tracks, which go on sounding while the new ones are made.
+        const { loopStart, loopEnd } = piece;
+        const duration = piece.layers[0]?.clip.duration ?? 0;
         if (!make() || before === null) {
             return;
         }
-        player.restart(before * (oldTempo / tempoNow()));
+        // Where it is now, not where it was when asked: making the tracks takes a while, and the old
+        // ones played on meanwhile. Starting from `before` would hear that while twice.
+        const now = wrapPosition(before + (audio.now() - askedAt), duration, loopStart, loopEnd);
+        player.restart(now * (oldTempo / tempoNow()));
     };
 
     // The beat heard, not the one played: it comes as late as the sound does.

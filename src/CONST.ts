@@ -13,7 +13,6 @@ import { SONG_BUILTINS } from './audio/synth/builtin/song_library';
 import { SONG_INSTRUMENTS } from './audio/synth/builtin/song_instruments';
 import { SONG_SAMPLES } from './audio/synth/builtin/song_samples';
 import type { TRendererType } from './render';
-// Named here so the published types say `TGamepadButtonName` rather than `import("./input")…`.
 import type { TGamepadAxisName, TGamepadButtonName } from './input/gamepad/gamepad_standard';
 import type { TPointerButtonName } from './input/pointer_buttons';
 import type { TSfxPreset } from './audio/synth/types/t_song';
@@ -84,11 +83,11 @@ export const RENDER = /* @__PURE__ */ frozen({
  * @author Francisco Pereira Alvarado
  */
 export const INPUT = /* @__PURE__ */ frozen({
-    GAMEPAD_BUTTONS,
-    GAMEPAD_AXES,
+    GAMEPAD_BUTTONS: GAMEPAD_BUTTONS as readonly TGamepadButtonName[],
+    GAMEPAD_AXES: GAMEPAD_AXES as readonly TGamepadAxisName[],
     GAMEPAD_BUTTON_LABELS,
     GAMEPAD_AXIS_LABELS,
-    POINTER_BUTTONS,
+    POINTER_BUTTONS: POINTER_BUTTONS as readonly TPointerButtonName[],
     DEADZONE: DEFAULT_DEADZONE,
     ACTION_PRESS: DEFAULT_ACTION_PRESS,
 });
@@ -170,11 +169,11 @@ export const POST = /* @__PURE__ */ frozen({
 export const BUILTIN = /* @__PURE__ */ frozen({
     FONTS: FONT_KEYS,
     MUSIC: {
-        SONGS: SONG_BUILTINS,
-        INSTRUMENTS: SONG_INSTRUMENTS,
-        SAMPLES: SONG_SAMPLES,
+        SONGS: SONG_BUILTINS as readonly TSongBuiltinInfo[],
+        INSTRUMENTS: SONG_INSTRUMENTS as readonly TSongInstrumentInfo[],
+        SAMPLES: SONG_SAMPLES as readonly TSongSampleInfo[],
     },
-    SOUNDS: SFX_PRESETS,
+    SOUNDS: SFX_PRESETS as readonly TSfxPreset[],
     POST: POST_KEYS,
     LOOKS: LOOK_KEYS,
 });
