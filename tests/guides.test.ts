@@ -27,9 +27,17 @@ const OPTIONS: ts.CompilerOptions = {
     skipLibCheck: true,
     types: ['@webgpu/types'],
     typeRoots: [join(import.meta.dir, '..', 'node_modules'), join(import.meta.dir, '..', 'node_modules', '@types')],
+    // Every door to its source, as `package.json` opens them: the package's own `dist/` is not
+    // there to fall back on when the tests run before a build (CI does).
     paths: {
         nacatamalon: [join(ROOT, 'index.ts')],
         'nacatamalon/authoring': [join(ROOT, 'authoring', 'index.ts')],
+        'nacatamalon/extend': [join(ROOT, 'extend', 'index.ts')],
+        'nacatamalon/react': [join(ROOT, 'react', 'index.ts')],
+        'nacatamalon/headless': [join(ROOT, 'headless', 'index.ts')],
+        'nacatamalon/speech': [join(ROOT, 'speech', 'index.ts')],
+        'nacatamalon/physics2d': [join(ROOT, 'physics', 'rapier2d', 'index.ts')],
+        'nacatamalon/physics3d': [join(ROOT, 'physics', 'box3d', 'index.ts')],
     },
 };
 

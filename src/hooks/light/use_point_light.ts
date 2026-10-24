@@ -9,8 +9,10 @@ import type { TPointLight } from '../../light';
  * `range` is how far it reaches; past that it lights nothing. A torch on a wall, a fire, a bulb.
  *
  * The light belongs to this object, so putting it inside something that moves means it moves with
- * it: a lamp carried by a character, headlights on a car. One light per object; asking for a second
- * one here replaces it, and says so.
+ * it: a lamp carried by a character, headlights on a car. One light per object, as a lamp is one
+ * thing: a car's two headlights are an object each, inside the car, placed by their own
+ * `transform`: `useSpawn(function LeftLight() { usePointLight({ transform: { x: -0.6 } }); })()`, and
+ * the same for the right. Asking for a second one here replaces the first, and says so.
  *
  * A scene can hold as many as it has objects with one, up to eight at a time. Past that they are
  * dropped in the order they were made, with a warning.
@@ -40,7 +42,8 @@ export const usePointLight = (options: TLightOptionsBase & { range?: number } = 
     }
 
     if (box.light !== null) {
-        console.warn('[NacatamalOn] usePointLight: this object already has a light, so the one it had is replaced. Put the second one on its own object.');
+        console.warn('[NacatamalOn] usePointLight: this object already has a light, so the one it had is replaced. One light per object: give each its own object inside this one, ' +
+            'useSpawn(function Lamp() { usePointLight({ transform: { x: 1 } }); })().');
     }
 
     const light = createPointLight(options);

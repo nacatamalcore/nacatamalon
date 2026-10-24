@@ -9,8 +9,10 @@ import type { TSpotLight } from '../../light';
  * `angle` is half the width of the cone and `penumbra` is how soft its edge is, from a hard rim at `0` to a beam that fades all the way in at `1`. Like a sun it is aimed by turning it.
  *
  * The light belongs to this object, so putting it inside something that moves means it moves with
- * it: a lamp carried by a character, headlights on a car. One light per object; asking for a second
- * one here replaces it, and says so.
+ * it: a lamp carried by a character, headlights on a car. One light per object, as a lamp is one
+ * thing: a car's two headlights are an object each, inside the car, placed by their own
+ * `transform`: `useSpawn(function LeftLight() { useSpotLight({ transform: { x: -0.6 } }); })()`, and
+ * the same for the right. Asking for a second one here replaces the first, and says so.
  *
  * A scene can hold as many as it has objects with one, up to eight at a time. Past that they are
  * dropped in the order they were made, with a warning.
@@ -40,7 +42,8 @@ export const useSpotLight = (options: TLightOptionsBase & { range?: number; angl
     }
 
     if (box.light !== null) {
-        console.warn('[NacatamalOn] useSpotLight: this object already has a light, so the one it had is replaced. Put the second one on its own object.');
+        console.warn('[NacatamalOn] useSpotLight: this object already has a light, so the one it had is replaced. One light per object: give each its own object inside this one, ' +
+            'useSpawn(function Lamp() { useSpotLight({ transform: { x: 1 } }); })().');
     }
 
     const light = createSpotLight(options);

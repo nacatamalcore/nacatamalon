@@ -24,6 +24,13 @@ releases are in [changelog/](./changelog/), one file each.
   it (`"pivot"` in a transform, written only when set). Pictures and lights inside still turn about
   the origin, as with `quaternion`.
 
+### Changed
+
+- **One light per object, said with how to have two.** The five `use…Light` docs, their warning when
+  an object asks for a second light, and `llms.txt` now show the way: an object each inside the
+  thing, placed by its own `transform`, as a car's two headlights. What a second light on one
+  object does is unchanged: it replaces the first.
+
 ## 0.2.7 — 2026-10-23
 
 ### Added

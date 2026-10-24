@@ -134,6 +134,20 @@ describe('a light inside something that moves', () => {
         expect(lighting.lights[0].type).toBe('point');
         expect(said).toBe(1);
     });
+
+    it('gives two to one thing by an object each inside it, as the warning says: a car\'s headlights', () => {
+        const lighting = lit(() => {
+            useSpawn(function Car() {
+                useTransform({ x: 50, y: 10 });
+                useSpawn(function LeftLight() { useSpotLight({ transform: { x: -0.6 } }); })();
+                useSpawn(function RightLight() { useSpotLight({ transform: { x: 0.6 } }); })();
+            })();
+        });
+
+        expect(lighting.lights.map((light) => light.type)).toEqual(['spot', 'spot']);
+        expect(lighting.lights.map((light) => light.transform.x)).toEqual([49.4, 50.6]);
+        expect(lighting.lights.every((light) => light.transform.y === 10)).toBe(true);
+    });
 });
 
 describe('the numbers that reach the card', () => {

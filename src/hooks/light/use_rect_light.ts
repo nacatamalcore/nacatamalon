@@ -13,8 +13,10 @@ import type { TRectLight } from '../../light';
  * It does not cast shadows: a panel has no single point to look from.
  *
  * The light belongs to this object, so putting it inside something that moves means it moves with
- * it. One light per object; asking for a second one here replaces it, and says so. It counts
- * against the eight a scene draws at a time.
+ * it. One light per object, as a lamp is one thing: two (a pair of panels) are an object each,
+ * inside this one, `useSpawn(function Left() { useRectLight({ transform: { x: -1 } }); })()`.
+ * Asking for a second one here replaces the first, and says so. It counts against the eight a
+ * scene draws at a time.
  *
  * @param options Its colour, how strong it is, its size, and where it points.
  * @returns The light, to read and to change.
@@ -41,7 +43,8 @@ export const useRectLight = (options: TLightOptionsBase & { range?: number; widt
     }
 
     if (box.light !== null) {
-        console.warn('[NacatamalOn] useRectLight: this object already has a light, so the one it had is replaced. Put the second one on its own object.');
+        console.warn('[NacatamalOn] useRectLight: this object already has a light, so the one it had is replaced. One light per object: give each its own object inside this one, ' +
+            'useSpawn(function Lamp() { useRectLight({ transform: { x: 1 } }); })().');
     }
 
     const light = createRectLight(options);

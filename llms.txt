@@ -153,6 +153,8 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
 - **Where something is goes in `transform`**, for everything placed in the world, lights and cameras
   too: `useCamera3d({ transform: { z: 5 }, fov: 60 })`, `useSpotLight({ transform: { y: 4, rotationX:
   -1.2 }, range: 8 })`, read back as `camera.transform.z`. A light with none is where its object is.
+  One light per object: two (a car's headlights) are an object each inside it, each placed by its own
+  `transform`: `useSpawn(function LeftLight() { useSpotLight({ transform: { x: -0.6 } }); })()`.
 - **An asset's `key`** (every `useLoad…`) is the name the game finds it by, here or in a later scene;
   without one, its `src`. `createSprite({ texture: 'hero' })` and `createText({ font: 'title' })` name
   it. One key names one file: asking for another file under a key already taken says so and hands back
