@@ -109,6 +109,82 @@ export type TPointerTouch = {
 export type TPointerListener = (info: TPointerInfo) => void;
 
 /**
+ * What a drag listener is told: everything a pointer listener is, and where the drag began.
+ *
+ * `target` and `hits` are what is **under** the thing being dragged, never the thing itself or its
+ * pieces: what it would be dropped on, which is what `onDragEnd` wants to know. A drag the system
+ * takes back (a gesture of the browser's) ends over nothing, with `target` `null`.
+ *
+ * @category Input
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TPointerDragInfo = TPointerInfo & {
+    /**
+     * Where the press began, as a place in the world through the camera as it is now: the point
+     * the pointer held it by, before it moved far enough to be a drag.
+     */
+    readonly startX: number;
+    readonly startY: number;
+    /**
+     * How far the pointer is from where the press began, in the world: `worldX - startX`. What a
+     * slingshot pulls back by, or a slider slides.
+     */
+    readonly deltaX: number;
+    readonly deltaY: number;
+    /**
+     * The drop zone (`useDropZone`) under the pointer that accepts what is being dragged, or `null`:
+     * what it would be dropped into if it were let go now.
+     */
+    readonly zone: TSprite | TText | TNineSlice | TBox | null;
+};
+
+/**
+ * A function a drop zone calls with what is being dragged into it, and the drag.
+ *
+ * @category Input
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TDropZoneListener = (dragged: TSprite | TText | TNineSlice | TBox, info: TPointerDragInfo) => void;
+
+/**
+ * What a drop zone accepts and is told, as the pointer holds it.
+ *
+ * @internal
+ */
+export type TDropZoneSpec = {
+    /**
+     * The tags of what it accepts: what is dragged, or an object it sits in, carrying one of them.
+     * Everything, when left out.
+     */
+    accepts?: string | readonly string[];
+    onEnter?: TDropZoneListener;
+    onLeave?: TDropZoneListener;
+    onDrop?: TDropZoneListener;
+};
+
+/**
+ * A drop zone as the pointer holds it: whether a drag is over it, and whether one could be.
+ *
+ * @internal
+ */
+export type TDropZoneState = {
+    isOver(): boolean;
+    canDrop(): boolean;
+    remove(): void;
+};
+
+/**
+ * A function that is told about a drag.
+ *
+ * @category Input
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TPointerDragListener = (info: TPointerDragInfo) => void;
+
+/**
  * What a wheel listener is told: everything a pointer listener is, and how far the wheel turned.
  *
  * In pixels whichever way the browser counted them (some mice count lines, some pages), so one
@@ -323,6 +399,11 @@ export type TPointerSource = {
      * touch (`{ type: 'touch', box }`) asks, by the object or by its name.
      */
     pressedBoxes(store: TRuntimeStore): ReadonlySet<TBox>;
+    /**
+     * Makes `target` a place things can be dragged into, on behalf of `box`: forgotten when the box
+     * goes away. Returns its state, and the function that forgets it earlier.
+     */
+    dropZone(target: TSprite | TText | TNineSlice | TBox, box: TBox, spec: TDropZoneSpec): TDropZoneState;
     /**
      * Captures the mouse on this canvas. See `TPointerHandle.lock`.
      */

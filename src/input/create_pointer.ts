@@ -14,7 +14,8 @@ import type { TText } from '../gameobjects/text/types/t_text';
 import type { TNineSlice } from '../gameobjects/nine_slice/types/t_nine_slice';
 import type { TRuntimeStore } from '../store';
 import type { TListeningSprite, TPointerTarget } from './topmost_listening';
-import type { TPointerInfo, TPointerKind, TPointerListener, TPointerLockOptions, TPointerSource, TPointerType, TPointerWheelListener } from './types/t_pointer';
+import { DRAG_SLOP } from '../CONFIG';
+import type { TDropZoneSpec, TPointerDragInfo, TPointerInfo, TPointerKind, TPointerListener, TPointerLockOptions, TPointerSource, TPointerType, TPointerWheelListener } from './types/t_pointer';
 import type { TSpriteEvents } from './types/t_sprite_events';
 
 /**
@@ -69,6 +70,24 @@ const LOCK_ANSWER_MS = 1000;
 type TRegistration = { kind: TPointerKind; box: TBox; listener: TPointerListener | TPointerWheelListener };
 
 /**
+ * A drop zone: what it is, the part of the scene it belongs to, and what it accepts and is told.
+ */
+type TZone = { target: TPointerTarget; box: TBox; spec: TDropZoneSpec };
+
+/**
+ * A press on something that can be dragged: what, where it went down and where it is now (game
+ * pixels), how far it must go to be a drag (game pixels too), whether it went that far, and the
+ * drop zone under it.
+ */
+type TDrag = { target: TPointerTarget; startX: number; startY: number; x: number; y: number; slop: number; started: boolean; over: TZone | null };
+
+/**
+ * Whether a set of events reacts to being dragged.
+ */
+const draggable = (connection: TSpriteEvents): boolean =>
+    connection.onDragStart !== undefined || connection.onDrag !== undefined || connection.onDragEnd !== undefined;
+
+/**
  * How many pixels one of the browser's other units stands for: a line of text, and a page. The
  * numbers are the ones browsers themselves use when they have to convert.
  */
@@ -110,6 +129,16 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
      * One per pointer: a second finger landing does not take the first one's click away.
      */
     const pressed = new Map<number, TPointerTarget | null>();
+    /**
+     * A press on something that can be dragged, by pointer: what, where it went down (game pixels),
+     * how far it must go to be a drag (game pixels too), and whether it went that far. One per
+     * pointer, so two fingers drag two things.
+     */
+    const drags = new Map<number, TDrag>();
+    /**
+     * Every place things can be dragged into, in the order they were made.
+     */
+    let zones: TZone[] = [];
     /**
      * Every pointer pressing, as of the last frame that handed events on, in the order they started:
      * the state `isDown`, `touches` and `isPressing` read. Kept by the frame and not by the DOM, so
@@ -153,6 +182,15 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
             x: (event.clientX - rect.left) * (size.width / rect.width),
             y: (event.clientY - rect.top) * (size.height / rect.height),
         };
+    };
+
+    /**
+     * `DRAG_SLOP`, from pixels of the page to the game's, for a pointer of this kind.
+     */
+    const slopFor = (pointerType: TPointerType): number => {
+        const rect = canvas.getBoundingClientRect();
+        const size = screenSizeOf(canvas);
+        return DRAG_SLOP[pointerType] * (rect.width > 0 ? size.width / rect.width : 1);
     };
 
     /** Each button's bit in a pointer event's `buttons`, by its number in `button`. */
@@ -375,7 +413,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
      * Calls one of a sprite's own events on every connection that has it, in the order they were
      * made. Over a copy: a connection removed by an earlier one does not hear this same event.
      */
-    const fireSprite = (sprite: TPointerTarget | null, name: keyof TSpriteEvents, screenX: number, screenY: number, button: TPointerButtonName, hits: Array<TSprite | TText | TNineSlice>): void => {
+    const fireSprite = (sprite: TPointerTarget | null, name: Exclude<keyof TSpriteEvents, 'onDragStart' | 'onDrag' | 'onDragEnd'>, screenX: number, screenY: number, button: TPointerButtonName, hits: Array<TSprite | TText | TNineSlice>): void => {
         if (sprite === null) {
             return;
         }
@@ -398,9 +436,129 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
         if (canvas.style === undefined) {
             return;
         }
-        const clickable = hovered !== null
-            && (listening.get(hovered)?.connections.some((connection) => connection.onClick !== undefined) ?? false);
-        canvas.style.cursor = clickable ? 'pointer' : '';
+        const has = (test: (connection: TSpriteEvents) => boolean): boolean =>
+            hovered !== null && (listening.get(hovered)?.connections.some(test) ?? false);
+        const dragging = [...drags.values()].some((drag) => drag.started);
+        canvas.style.cursor = dragging ? 'grabbing' : has(draggable) ? 'grab' : has((connection) => connection.onClick !== undefined) ? 'pointer' : '';
+    };
+
+    /**
+     * Whether `zone` takes `dragged`: it, or an object it sits in, carries one of the tags the zone
+     * accepts.
+     */
+    const accepts = (zone: TZone, dragged: TPointerTarget): boolean => {
+        const wanted = zone.spec.accepts;
+        if (wanted === undefined) {
+            return true;
+        }
+        const names: readonly string[] = typeof wanted === 'string' ? [wanted] : wanted;
+        const carries = (thing: { tags?: string[] }): boolean => names.some((name) => thing.tags?.includes(name) === true);
+        if (carries(dragged)) {
+            return true;
+        }
+        for (let box = ('children' in dragged ? dragged.parent : ownerOfDrawable(dragged)?.box ?? null); box !== null; box = box.parent) {
+            if (carries(box)) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    /**
+     * Whether a zone is still there to be dropped into: not gone, in a scene that runs and shows.
+     */
+    const zoneAnswers = (zone: TZone): boolean => {
+        if (zone.target.destroyed || zone.box.destroyed) {
+            return false;
+        }
+        const scene = rootOf(zone.box);
+        return !scene.paused && !scene.held;
+    };
+
+    /**
+     * The zone on top under a drag that takes what it drags: for each hit, the hit itself or the
+     * nearest object it sits in, as with what listens.
+     */
+    const zoneUnder = (dragged: TPointerTarget, under: ReadonlyArray<TSprite | TText | TNineSlice>): TZone | null => {
+        if (zones.length === 0) {
+            return null;
+        }
+        for (const hit of under) {
+            let candidate: TPointerTarget | null = hit;
+            let box = ownerOfDrawable(hit)?.box ?? null;
+            while (candidate !== null) {
+                const found = zones.find((zone) => zone.target === candidate && zoneAnswers(zone) && accepts(zone, dragged));
+                if (found !== undefined) {
+                    return found;
+                }
+                candidate = box;
+                box = box?.parent ?? null;
+            }
+        }
+        return null;
+    };
+
+    /**
+     * What is under a drag: every hit but the dragged thing and its pieces.
+     */
+    const underOf = (drag: TDrag, hits: Array<TSprite | TText | TNineSlice>): Array<TSprite | TText | TNineSlice> =>
+        hits.filter((hit) => hit !== drag.target && !sitsIn(hit, drag.target));
+
+    /**
+     * What a drag listener belonging to `box` is told.
+     */
+    const dragInfo = (box: TBox, drag: TDrag, screenX: number, screenY: number, button: TPointerButtonName, under: Array<TSprite | TText | TNineSlice>): TPointerDragInfo => {
+        const pointerInfo = infoFor(box, screenX, screenY, button, under);
+        const start = unapplyView2d(rootOf(box).camera2d, { x: drag.startX, y: drag.startY });
+        return {
+            ...pointerInfo,
+            startX: start.x,
+            startY: start.y,
+            deltaX: pointerInfo.worldX - start.x,
+            deltaY: pointerInfo.worldY - start.y,
+            zone: drag.over?.target ?? null,
+        };
+    };
+
+    /**
+     * Moves a drag over another zone, or off every one: the one it leaves is told first.
+     */
+    const setOver = (drag: TDrag, next: TZone | null, screenX: number, screenY: number, button: TPointerButtonName, under: Array<TSprite | TText | TNineSlice>): void => {
+        const before = drag.over;
+        if (before === next) {
+            return;
+        }
+        drag.over = next;
+        if (before !== null && zones.includes(before) && zoneAnswers(before)) {
+            before.spec.onLeave?.(drag.target, dragInfo(before.box, drag, screenX, screenY, button, under));
+        }
+        if (next !== null) {
+            next.spec.onEnter?.(drag.target, dragInfo(next.box, drag, screenX, screenY, button, under));
+        }
+    };
+
+    /**
+     * Calls one of the drag events of what `drag` holds, told what is under it, never itself, and
+     * settles the zone it is over first. Not when it was destroyed, or its scene paused or held:
+     * then nothing reacts, as with any event.
+     */
+    const fireDrag = (drag: TDrag, name: 'onDragStart' | 'onDrag' | 'onDragEnd', screenX: number, screenY: number, button: TPointerButtonName, hits: Array<TSprite | TText | TNineSlice>): void => {
+        const entry = listening.get(drag.target);
+        if (entry === undefined || drag.target.destroyed) {
+            return;
+        }
+        const scene = rootOf(entry.box);
+        if (scene.paused || scene.held) {
+            return;
+        }
+        const under = underOf(drag, hits);
+        setOver(drag, zoneUnder(drag.target, under), screenX, screenY, button, under);
+        const info = dragInfo(entry.box, drag, screenX, screenY, button, under);
+        for (const connection of [...entry.connections]) {
+            if (entry.connections.includes(connection)) {
+                connection[name]?.(info);
+            }
+        }
     };
 
     /**
@@ -469,6 +627,11 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
             for (const [id, target] of pressed) {
                 if (target === sprite) {
                     pressed.set(id, null);
+                }
+            }
+            for (const [id, drag] of drags) {
+                if (drag.target === sprite) {
+                    drags.delete(id);
                 }
             }
         } else if (hovered === sprite) {
@@ -621,6 +784,18 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
                 const topmost = topmostListening(hits, listening);
 
                 if (kind === 'move') {
+                    const drag = drags.get(pointerId);
+                    if (drag !== undefined) {
+                        drag.x = screenX;
+                        drag.y = screenY;
+                        if (!drag.started && Math.hypot(screenX - drag.startX, screenY - drag.startY) >= drag.slop) {
+                            drag.started = true;
+                            fireDrag(drag, 'onDragStart', screenX, screenY, button, hits);
+                        }
+                        if (drag.started) {
+                            fireDrag(drag, 'onDrag', screenX, screenY, button, hits);
+                        }
+                    }
                     // Which sprite is under it is settled first: a move that leaves the button is
                     // an out for the button, not one last move over it.
                     if (topmost !== hovered) {
@@ -635,14 +810,33 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
 
                 if (kind === 'down') {
                     pressed.set(pointerId, topmost);
+                    // Only the main button drags: the right one opens a menu, the middle one pans.
+                    if (topmost !== null && button === 'main' && (listening.get(topmost)?.connections.some(draggable) ?? false)) {
+                        drags.set(pointerId, { target: topmost, startX: screenX, startY: screenY, x: screenX, y: screenY, slop: slopFor(event.pointerType), started: false, over: null });
+                    }
                     fireSprite(topmost, 'onPointerDown', screenX, screenY, button, hits);
                     continue;
                 }
 
-                // A release: tell whatever is under it, and it is a click only if this same pointer's
-                // press started on that same sprite, and the system did not take the press back.
+                // A release ends the drag first, over nothing when the system took it back.
+                const drag = drags.get(pointerId);
+                drags.delete(pointerId);
+                if (drag?.started === true) {
+                    const released = cancelled ? [] : hits;
+                    fireDrag(drag, 'onDragEnd', screenX, screenY, button, released);
+                    // Then the zone it was let go over takes it, and is left.
+                    const zone = drag.over;
+                    if (zone !== null && zones.includes(zone) && zoneAnswers(zone)) {
+                        zone.spec.onDrop?.(drag.target, dragInfo(zone.box, drag, screenX, screenY, button, underOf(drag, released)));
+                    }
+                    setOver(drag, null, screenX, screenY, button, []);
+                }
+
+                // Then tell whatever is under it, and it is a click only if this same pointer's
+                // press started on that same sprite, it was not dragged, and the system did not take
+                // the press back.
                 fireSprite(topmost, 'onPointerUp', screenX, screenY, button, hits);
-                if (!cancelled && topmost !== null && topmost === pressed.get(pointerId)) {
+                if (!cancelled && drag?.started !== true && topmost !== null && topmost === pressed.get(pointerId)) {
                     fireSprite(topmost, 'onClick', screenX, screenY, button, hits);
                 }
                 pressed.delete(pointerId);
@@ -655,6 +849,17 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
             movement.x = 0;
             movement.y = 0;
             refreshHover(store);
+
+            // And so is the zone under each drag: a zone that slides under a card held still is
+            // entered all the same.
+            if (zones.length > 0) {
+                for (const drag of drags.values()) {
+                    if (drag.started && listening.has(drag.target)) {
+                        const under = underOf(drag, pickTargets(store, drag.x, drag.y));
+                        setOver(drag, zoneUnder(drag.target, under), drag.x, drag.y, 'main', under);
+                    }
+                }
+            }
         },
 
         touches: () => [...active.values()],
@@ -683,6 +888,27 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
             return boxes;
         },
 
+        dropZone: (target, box, spec) => {
+            const zone: TZone = { target, box, spec };
+            zones.push(zone);
+            const remove = (): void => {
+                zones = zones.filter((existing) => existing !== zone);
+                // Gone without a word: what it would say belongs to something no longer there.
+                for (const drag of drags.values()) {
+                    if (drag.over === zone) {
+                        drag.over = null;
+                    }
+                }
+            };
+            box.cleanups.push(remove);
+            return {
+                remove,
+                isOver: () => [...drags.values()].some((drag) => drag.started && drag.over === zone),
+                canDrop: () => zones.includes(zone) && zoneAnswers(zone)
+                    && [...drags.values()].some((drag) => drag.started && listening.has(drag.target) && accepts(zone, drag.target)),
+            };
+        },
+
         lock,
         unlock,
         isLocked: lockedHere,
@@ -701,6 +927,8 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
             listening.clear();
             hovered = null;
             pressed.clear();
+            drags.clear();
+            zones = [];
             active.clear();
             underActive = null;
             setCursor();

@@ -23,6 +23,20 @@ releases are in [changelog/](./changelog/), one file each.
   Physics, sound in space and `worldToLocal3d` find it where it is drawn, and a scene document keeps
   it (`"pivot"` in a transform, written only when set). Pictures and lights inside still turn about
   the origin, as with `quaternion`.
+- **Dragging.** Every sprite, text, nine-slice and object (`listen(self, …)`) has `onDragStart`,
+  `onDrag` and `onDragEnd`: pressed with the main button or a finger and moved a few pixels of the
+  page (more for a finger), the press is a drag and no longer a click, followed wherever the pointer
+  goes, one per finger. They give where it began and how far it went (`startX`, `deltaX`…), and
+  `target` and `hits` are what is under it, never itself: what it was let go over. The cursor is an
+  open hand over what can be dragged and a closed one while it is. **`useDraggable(target, options)`**
+  moves it: held where it was taken, along an `axis`, on a `grid`, inside `bounds`, dropped on what
+  carries one of the tags `dropOn`, or into a drop zone (said in `dropped`), and back home with
+  `snapBack`. It returns `enable`, `disable`, `isEnabled` and `isDragging`, to let something be
+  dragged later. **`useDropZone(target, { accepts })`** makes a place to drop into, accepting one tag
+  or several: `canDrop()` while something it accepts is dragged anywhere and `isOver()` while it is
+  over it, read every frame to light the places a card can go, off by themselves when the drag ends;
+  `onEnter`, `onLeave` and `onDrop` for the same as events, and `enable`/`disable` for a slot that
+  fills. The drag events give the zone under them in `zone`.
 
 ### Changed
 

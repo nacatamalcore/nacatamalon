@@ -63,7 +63,7 @@ export type { TUseScriptOptions } from './hooks';
 export { registerScript } from './scripts';
 export type { TScriptFn, TScriptProps, TScriptField, TScriptOptions, TScriptRequirement, TScriptAttachment } from './scripts';
 export type { TDataRecord, TDataSetter, TWatchDep } from './hooks';
-export { useUpdate, useLateUpdate, useLoadTexture, useLoadAtlas, useLoader, useScene, useCleanup, useReady, useSpawn, useSelf, useKeyboard, useGame, useSpriteAnimation, getSpriteAnimation, useSkeletalAnimation, useTween, useTimer, useCamera2d, useScreenSpace, usePointer, useGamepad, useActions, useAction, useVector, useInputMap, useTouchAction, useRandom, useSignal, useStore, useStoreLink, usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadShader, useLoadPalette, useLoadLut, useLoadParticles, useLoadPack, useLoadAudio, useLoadPixels, useSound, useAudio, useMusic, useSong, useLoadSong, useLoadTrackerSong, useMotion, useLoadMotion, useAudioListener, usePostProcess, useParticleCollider2d, useParticleCollider3d } from './hooks';
+export { useUpdate, useLateUpdate, useLoadTexture, useLoadAtlas, useLoader, useScene, useCleanup, useReady, useSpawn, useSelf, useKeyboard, useGame, useSpriteAnimation, getSpriteAnimation, useSkeletalAnimation, useTween, useTimer, useCamera2d, useScreenSpace, usePointer, useGamepad, useActions, useAction, useVector, useInputMap, useTouchAction, useDraggable, useDropZone, useRandom, useSignal, useStore, useStoreLink, usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadShader, useLoadPalette, useLoadLut, useLoadParticles, useLoadPack, useLoadAudio, useLoadPixels, useSound, useAudio, useMusic, useSong, useLoadSong, useLoadTrackerSong, useMotion, useLoadMotion, useAudioListener, usePostProcess, useParticleCollider2d, useParticleCollider3d } from './hooks';
 export { createMaterial } from './gameobjects/material';
 // Lines in space: the debug helpers (an axis gizmo, a floor grid) and any lines a game wants to draw.
 export { useHelperLines, useHelperAxis, useHelperGrid } from './hooks';
@@ -208,7 +208,7 @@ export { TILEMAP_FORMAT, parseTilemapDoc } from './loaders';
 export type { TSpriteAtlas, TSpriteAtlasOptions } from './atlas';
 export type { TCamera2d, TCamera2dOptions, TCamera3d, TCamera3dOptions } from './camera';
 export type { TFog, TFogOptions } from './fog';
-export type { TKeyboard, TKeyName, TPointerInfo, TPointerHandle, TPointerType, TPointerTouch, TPointerListener, TPointerWheelInfo, TPointerWheelListener, TPointerLockOptions, TSpriteEvents } from './input';
+export type { TKeyboard, TKeyName, TPointerInfo, TPointerDragInfo, TPointerDragListener, TDropZoneListener, TPointerHandle, TPointerType, TPointerTouch, TPointerListener, TPointerWheelInfo, TPointerWheelListener, TPointerLockOptions, TSpriteEvents } from './input';
 export type { TGamepad, TGamepadAxisName, TGamepadButtonName, TGamepadInfo, TGamepadListener, TGamepadTarget, TRumbleOptions, TUseGamepadOptions } from './input';
 export type { TAction, TActionBinding, TActionCaptureOptions, TActionDef, TActionDevice, TActionMap, TActionName, TActionOverrides, TActionPersist, TActionsHandle, TInputMapHandle } from './input';
 export type { TPointerButtonName } from './input';
@@ -284,7 +284,7 @@ export type { TParticleRange, TParticleColorStop, TParticleScaleStop, TEmissionD
 export type { TShaderTarget } from './loaders/shader/types/t_shader_target';
 export type { TRendererType } from './render';
 export type { TCanvasScaling, TCanvasKeep } from './DOM';
-export type { TUseActionsOptions } from './hooks';
+export type { TUseActionsOptions, TUseDraggableOptions, TDraggableHandle, TDraggableDropInfo, TUseDropZoneOptions, TDropZoneHandle } from './hooks';
 export type { TUseLoadAudioOptions, TUseLoadBitmapFontOptions, TUseLoadFontOptions, TUseLoadLutOptions, TUseLoadPaletteOptions, TUseLoadParticlesOptions, TUseLoadPackOptions, TUseLoadSongOptions, TUseLoadTrackerSongOptions, TUseLoadMotionOptions } from './hooks/loaders';
 export type { TSongFile } from './loaders/song';
 export type { TMotionFile } from './loaders/motion';

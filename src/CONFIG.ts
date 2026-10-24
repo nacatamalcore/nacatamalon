@@ -113,3 +113,14 @@ export const DEFAULT_DEADZONE = 0.2;
  * @author Francisco Pereira Alvarado
  */
 export const DEFAULT_ACTION_PRESS = 0.5;
+
+/**
+ * How far a press has to move, in pixels of the page, before it is a drag and no longer a click.
+ * Measured on the page and not in the game's pixels, so a game shown four times its size does not
+ * need the hand to travel four times as far. A finger gets more room: it shakes as it lands.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const DRAG_SLOP = { mouse: 4, pen: 4, touch: 10 } as const;

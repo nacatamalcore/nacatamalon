@@ -91,7 +91,7 @@ export const listen = (sprite: TSprite | TText | TNineSlice | TBox, events: TSpr
     for (const name of SPRITE_EVENT_NAMES) {
         const handler = events[name];
         if (handler !== undefined) {
-            picked[name] = handler;
+            (picked as Record<string, unknown>)[name] = handler;
             any = true;
         }
     }
