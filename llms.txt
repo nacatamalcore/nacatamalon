@@ -110,6 +110,11 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   `bike.pivot = undefined` turns it about the wheel again. Unturned and ungrown it sits as its anchor
   says. It turns about it when its own transform turns or its box's (a behaviour turning `self`);
   boxes further up carry it as one. No sine, cosine or offset by hand, and no extra box.
+  In 3D the pivot is on the transform, in its own units from its origin: `useTransform({ pivot:
+  { x: 0, y: -1, z: 0 } })` (or a mesh's or model's `transform.pivot`) turns and grows it, and all
+  it holds, about its feet, so a runner stumbles forward over them with `rotationX` alone, no
+  quaternions composed by hand. Setting it moves nothing; flat pictures and lights inside still turn
+  about the origin.
 - **Sprite size**: a sprite created with both `width` and `height` has them as numbers. A sprite
   sized by its picture (a `texture`, no `width`/`height`) has them `undefined`, and they stay so: it
   is drawn at the size of what it shows, which is `texture.width * (uvScale?.x ?? 1)` (and the same

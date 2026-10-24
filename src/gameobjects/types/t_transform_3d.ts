@@ -44,4 +44,17 @@ export type TTransform3d = TTransform2d & {
      * in space taken flat.
      */
     quaternion?: TQuat | null;
+    /**
+     * The point it turns and grows about, in its own units from its origin, when that is not the
+     * origin: a model's feet, `{ x: 0, y: -1, z: 0 }`, for one that stumbles forward over them; a
+     * door's hinge. Left out, it turns about its origin as it always did.
+     *
+     * Setting it does not move anything: unturned and at its own size, every point of it is where
+     * it was. Only a turn or a growth then goes about the pivot, the way a sprite's `pivot` does in
+     * the plane, and what it holds turns and grows about it too.
+     *
+     * **It only speaks for three dimensions**, as `quaternion` does: a picture or a piece of writing
+     * inside this one, and a light, still turn about the origin, by `rotation`.
+     */
+    pivot?: { x: number; y: number; z: number } | null;
 };

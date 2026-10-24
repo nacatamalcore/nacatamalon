@@ -63,7 +63,16 @@ const parseTransform = (value: unknown): TTransform3d | null => {
         scaleX: asNumber(raw.scaleX, 1),
         scaleY: asNumber(raw.scaleY, 1),
         scaleZ: asNumber(raw.scaleZ, 1),
+        ...pivotOf(raw.pivot),
     };
+};
+
+/**
+ * The point a placement turns about, kept only when it is written as one: absent is the origin.
+ */
+const pivotOf = (value: unknown): { pivot?: { x: number; y: number; z: number } } => {
+    const raw = asRecord(value);
+    return raw === null ? {} : { pivot: { x: asNumber(raw.x, 0), y: asNumber(raw.y, 0), z: asNumber(raw.z, 0) } };
 };
 
 const parseTransform2d = (value: unknown): TTransform2d | undefined => {

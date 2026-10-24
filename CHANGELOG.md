@@ -15,6 +15,14 @@ releases are in [changelog/](./changelog/), one file each.
   rhythm game lays out its notes from the song itself rather than writing them a second time, and
   places one falling towards the line by `note.start - song.beat`. Its pitches follow
   `setTranspose`; its beats stay put at another tempo.
+- **A pivot in 3D**, `transform.pivot`: the point a placement turns and grows about, in its own
+  units from its origin, as a sprite's `pivot` is in the plane. On a box (`useTransform({ pivot })`),
+  a mesh or a model: a runner that stumbles forward over its feet with `pivot: { x: 0, y: -1, z: 0 }`
+  and `rotationX`, a door on its hinge, with no parent box and no quaternions composed by hand.
+  Setting it moves nothing; a turn or a growth goes about it, and what the box holds goes with it.
+  Physics, sound in space and `worldToLocal3d` find it where it is drawn, and a scene document keeps
+  it (`"pivot"` in a transform, written only when set). Pictures and lights inside still turn about
+  the origin, as with `quaternion`.
 
 ## 0.2.7 — 2026-10-23
 

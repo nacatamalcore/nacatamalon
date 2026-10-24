@@ -38,11 +38,31 @@ const turnOf = (place: TTransform3d): TQuat =>
 /**
  * A placement on its own, before anything above it has been applied.
  */
-const poseOf = (place: TTransform3d): TPose3d => ({
-    position: { x: place.x, y: place.y, z: place.z },
-    quaternion: turnOf(place),
-    scale: { x: place.scaleX, y: place.scaleY, z: place.scaleZ },
-});
+const poseOf = (place: TTransform3d): TPose3d => {
+    const quaternion = turnOf(place);
+    const shift = pivotShiftOf(place, quaternion);
+    return {
+        position: { x: place.x + shift.x, y: place.y + shift.y, z: place.z + shift.z },
+        quaternion,
+        scale: { x: place.scaleX, y: place.scaleY, z: place.scaleZ },
+    };
+};
+
+/**
+ * How far a `pivot` moves where a placement's origin ends up, turned by `turn`: turning and growing
+ * about the pivot is turning and growing about the origin from a place moved by the pivot, less the
+ * pivot turned and grown. Nothing, with no pivot.
+ *
+ * @internal
+ */
+export const pivotShiftOf = (place: TTransform3d, turn: TQuat): { x: number; y: number; z: number } => {
+    const pivot = place.pivot ?? null;
+    if (pivot === null) {
+        return { x: 0, y: 0, z: 0 };
+    }
+    const moved = rotateVec3(turn, { x: pivot.x * place.scaleX, y: pivot.y * place.scaleY, z: pivot.z * place.scaleZ });
+    return { x: pivot.x - moved.x, y: pivot.y - moved.y, z: pivot.z - moved.z };
+};
 
 const nowhere = (): TPose3d => ({
     position: { x: 0, y: 0, z: 0 },

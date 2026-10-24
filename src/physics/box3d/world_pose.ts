@@ -1,4 +1,5 @@
-import { localPosition3dFrom, localQuaternionFrom, placement3dOf, worldPlacement3dOf } from '../../box';
+import { localPosition3dFrom, localQuaternionFrom, pivotShiftOf, placement3dOf, worldPlacement3dOf } from '../../box';
+import { fromEuler } from '../../math/quat';
 import type { TQuat } from '../../math/quat';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
 import type { TPose3d } from '../../box';
@@ -41,10 +42,12 @@ export const writeWorldPose = (box: TGameObject, position: TVec3, rotation: TQua
         return;
     }
     const local = localPosition3dFrom(box, position);
-    place.x = local.x;
-    place.y = local.y;
-    place.z = local.z;
     place.quaternion = localQuaternionFrom(box, rotation);
+    // The body is where the origin ends up; one turned about a pivot is written that far back.
+    const shift = pivotShiftOf(place, place.quaternion);
+    place.x = local.x - shift.x;
+    place.y = local.y - shift.y;
+    place.z = local.z - shift.z;
 };
 
 /**
@@ -57,7 +60,9 @@ export const writeWorldPosition = (box: TGameObject, position: TVec3): void => {
         return;
     }
     const local = localPosition3dFrom(box, position);
-    place.x = local.x;
-    place.y = local.y;
-    place.z = local.z;
+    const turn = place.quaternion ?? fromEuler(place.rotationX, place.rotationY, place.rotation);
+    const shift = pivotShiftOf(place, turn);
+    place.x = local.x - shift.x;
+    place.y = local.y - shift.y;
+    place.z = local.z - shift.z;
 };

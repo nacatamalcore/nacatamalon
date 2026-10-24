@@ -74,16 +74,28 @@ export const normalMatrixOf = (model: Mat4, dst?: Mat4): Mat4 => {
 /**
  * Where something is, as a matrix: move, then turn, then scale.
  *
+ * With a `pivot`, the turn and the scale go about it: moved to where the pivot is, turned and
+ * scaled, and moved back by the pivot from there. Unturned and at its own size, that is the same
+ * matrix as without one.
+ *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
 export const computeModelMatrix = (transform: TTransform3d, dst?: Mat4): Mat4 => {
     const out = dst ?? mat.create();
+    const pivot = transform.pivot ?? null;
     mat.identity(out);
-    mat.translate(out, { x: transform.x, y: transform.y, z: transform.z }, out);
+    if (pivot === null) {
+        mat.translate(out, { x: transform.x, y: transform.y, z: transform.z }, out);
+    } else {
+        mat.translate(out, { x: transform.x + pivot.x, y: transform.y + pivot.y, z: transform.z + pivot.z }, out);
+    }
     mat.multiply(out, rotationMatrix(transform, modelTurn), out);
     mat.scale(out, { x: transform.scaleX, y: transform.scaleY, z: transform.scaleZ }, out);
+    if (pivot !== null) {
+        mat.translate(out, { x: -pivot.x, y: -pivot.y, z: -pivot.z }, out);
+    }
     return out;
 };
 

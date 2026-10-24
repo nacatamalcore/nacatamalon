@@ -65,6 +65,9 @@ const writeTransform = (transform: TTransform3d | null): TTransform3d | null => 
         scaleX: transform.scaleX,
         scaleY: transform.scaleY,
         scaleZ: transform.scaleZ,
+        ...(transform.pivot !== undefined && transform.pivot !== null
+            ? { pivot: { x: transform.pivot.x, y: transform.pivot.y, z: transform.pivot.z } }
+            : {}),
     };
 };
 
@@ -99,7 +102,7 @@ const writeFlatPlace = (place: TTransform2d): TTransform2d | undefined => (isOri
  * The same for something placed in three dimensions, which today is a model.
  */
 const writeDeepPlace = (place: TTransform3d): TTransform3d | undefined => (
-    isOrigin(place) && place.z === 0 && place.rotationX === 0 && place.rotationY === 0 && place.scaleZ === 1
+    isOrigin(place) && place.z === 0 && place.rotationX === 0 && place.rotationY === 0 && place.scaleZ === 1 && (place.pivot ?? null) === null
         ? undefined
         : writeTransform(place) ?? undefined
 );
