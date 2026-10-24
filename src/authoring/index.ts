@@ -1,28 +1,22 @@
 /**
- * `nacatamalon/authoring`: the half of the public surface a **tool** needs and a **game** never
- * runs.
+ * `nacatamalon/authoring`: what a **tool** uses to make a game's files, and a **game** never runs.
  *
- * The engine holds the format and the tool holds the tooling. That line is already everywhere in
- * this codebase, and this file is where it finally shows in the import path. Everything here
- * writes, lists or looks inside: turning a live scene back into a document, asking which
- * behaviours are registered and what settings they declare. A published game does none of it. It
- * reads a document, registers its behaviours and runs.
+ * A build script that saves a picture it painted, a generator that writes levels, a converter that
+ * brings in music from a tracker: everything here writes, measures or lists. Turning a scene back
+ * into a document, saving a PNG or a WAV, asking which behaviours are registered and what settings
+ * they declare. A published game does none of it. It reads its documents, registers its behaviours
+ * and runs.
  *
- * Two reasons it is a door of its own rather than a tidier front one:
+ * Two reasons it is a door of its own rather than part of the front one:
  *
- * - **Versions.** Anything that lives on the front door is part of the promise made to whoever
- *   writes a game. A name used only by an editor sitting there means renaming it breaks the
- *   engine's public surface for people who never called it.
- * - **It reads at the call site.** A line importing from here says it belongs to an editor, a
- *   build step or a generator, and not to a game.
- *
- * It is not a wall and nothing here is secret: the visual editor is the product, this is the
- * vocabulary it speaks. Anything that needs to write a scene by hand is welcome to it.
+ * - **Versions.** Anything on the front door is part of the promise made to whoever writes a game,
+ *   and a name only a tool uses should be free to change without touching it.
+ * - **It reads at the call site.** A line importing from here says it belongs to a build step, a
+ *   script or a generator, and not to a game.
  *
  * **The split is tools, not vocabulary: the values move and the types of the format stay.**
  * `TSceneDoc` and `TScriptField` describe the format, and the format is the engine's, so a game
- * that types a variable never has to reach in here. A tool's own types (`TEditorHandle`, the node
- * catalogue's) come here with it.
+ * that types a variable never has to reach in here. A tool's own types come here with it.
  *
  * **And reading is not authoring.** Every `parse*` stays on the front door, because opening a
  * document is something a running game legitimately does; its `serialize*` twin comes here.
@@ -53,8 +47,8 @@ export {
     defaultStoreFieldValue, isProvisionalStore, resetStores,
 } from '../game_store';
 
-// The `.atlas` format's tooling: saving one, starting one for an image, and the cut a sheet editor
-// draws over the image. A game only reads them.
+// The `.atlas` format's tooling: saving one, starting one for an image, and the frames a sheet is
+// cut into. A game only reads them.
 export { serializeAtlasDoc, emptyAtlasDoc, atlasDocFrames } from '../atlas/document';
 
 // The same for maps and palettes: saving one and starting a new one.
@@ -67,7 +61,7 @@ export { encodePng } from '../pixels/encode_png';
 export { decodePng } from '../pixels/decode_png';
 
 // The effects' tooling: saving one and starting one, the footprint and reach a tool draws around an
-// emitter, and the curves its gradient editor has to draw exactly as the particles are baked.
+// emitter, and its colour and size curves sampled exactly as the particles are baked.
 export { serializeParticlesDoc, emptyParticlesDoc } from '../loaders/particles';
 export {
     particlesShapeExtent, sampleParticleColor, sampleParticleScale, measureParticlesBounds, applyParticlesDoc,
@@ -77,11 +71,11 @@ export {
 // and measured by whoever cannot hear it. A game plays the tracks; it never writes a file.
 export { serializeSongDoc, mixSong, encodeWav, analyzeAudio } from '../audio/synth';
 export { serializeMotionDoc } from '../motion/serialize_motion_doc';
-// A voice's notes read, and written back as text, for a tool that changes them by hand (a piano roll).
+// A voice's notes read, and written back as text, for a tool that changes them.
 export { parseSongNotes, writeSongNotes, songInstrumentErrors, songInstrumentNames } from '../audio/synth';
-// Songs from a tracker's text export, for an editor to bring them in.
+// Songs from a tracker's text export, brought in as `.song` documents.
 export { importTrackerText, importFamiTrackerText, importFamiStudioText } from './tracker';
-// One of the engine's songs by its key, for an editor to show and play it.
+// One of the engine's songs by its key, as a document.
 export { loadBuiltinSong } from '../audio/synth/builtin';
 export type { TTrackerImport } from './tracker';
 
@@ -92,8 +86,8 @@ export { textBlockSize } from '../gameobjects/text';
 // scene's structure and never the file's.
 export { readGltfNodes } from '../loaders';
 
-// Driving a running game from outside it: replacing its scene every time the document being edited
-// changes. A published game never does that; it changes scene from inside, by name.
+// Driving a running game from outside it, as a test or a preview does: replacing its scene when
+// its document changes. A published game never does that; it changes scene from inside, by name.
 export { editorHandleOf } from '../game/handle';
 export type { TEditorHandle } from '../game/handle';
 export type { TLoggedSound, TSoundLog, TSoundLogPoint } from '../audio';

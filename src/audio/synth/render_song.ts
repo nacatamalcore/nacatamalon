@@ -573,29 +573,17 @@ const genesisNote = (
 };
 
 /**
- * Reads a song: its notes, its instruments and samples, how long it is and where it loops, and each
- * voice's notes as writers that make their sound, a stretch at a time. What `renderSong` makes the
- * whole song from at once, and a song played as it is made makes from as it goes.
+ * Reads the notes of every voice a song's console has, voice after voice, each moved by `transpose`
+ * but the drums: what the song plays, without making any of its sound.
  *
  * @internal
  */
-export const readSong = (
-    doc: TSongDoc,
-    sampleRate = 44100,
-    options: { transpose?: number; samples?: ReadonlyMap<string, TSongSample> } = {},
-): TReadSong => {
-    const transpose = options.transpose ?? 0;
-    const secondsPerBeat = 60 / doc.tempo;
-    const samplesPerBeat = secondsPerBeat * sampleRate;
-    const barBeats = doc.meter[0];
+export const readSongNotes = (doc: TSongDoc, transpose = 0): { notes: TSongNote[]; errors: TSongError[]; end: number } => {
     const names = songInstrumentNames(doc.instruments);
-    const chip = doc.chip ?? 'nes';
-    const voicesHere = songVoicesOf(chip);
-
     const notes: TSongNote[] = [];
     const errors: TSongError[] = [];
     let end = 0;
-    for (const voice of voicesHere) {
+    for (const voice of songVoicesOf(doc.chip ?? 'nes')) {
         const written = doc.voices[voice];
         if (written === undefined) {
             continue;
@@ -613,6 +601,27 @@ export const readSong = (
         errors.push(...read.errors);
         end = Math.max(end, read.end);
     }
+    return { notes, errors, end };
+};
+
+/**
+ * Reads a song: its notes, its instruments and samples, how long it is and where it loops, and each
+ * voice's notes as writers that make their sound, a stretch at a time. What `renderSong` makes the
+ * whole song from at once, and a song played as it is made makes from as it goes.
+ *
+ * @internal
+ */
+export const readSong = (
+    doc: TSongDoc,
+    sampleRate = 44100,
+    options: { transpose?: number; samples?: ReadonlyMap<string, TSongSample> } = {},
+): TReadSong => {
+    const secondsPerBeat = 60 / doc.tempo;
+    const samplesPerBeat = secondsPerBeat * sampleRate;
+    const barBeats = doc.meter[0];
+    const chip = doc.chip ?? 'nes';
+
+    const { notes, errors, end } = readSongNotes(doc, options.transpose ?? 0);
 
     // Whole bars, at least one, and at least up to the bar the loop goes back to.
     const loopBar = doc.loop?.bar ?? 1;
@@ -709,7 +718,7 @@ export const readSong = (
     const scale = doc.voices.dpcm === undefined || chip !== 'nes' ? 1 : WITH_DPCM;
     const voices: TReadVoice[] = [];
     let sent = false;
-    for (const voice of voicesHere) {
+    for (const voice of songVoicesOf(chip)) {
         const written = doc.voices[voice];
         if (written === undefined) {
             continue;

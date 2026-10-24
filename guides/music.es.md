@@ -397,6 +397,39 @@ const Level = () => {
 
 Un sonido (`useSound`) también tiene `pan`: `tween({ target: sound, to: { pan: 1 }, duration: 2 })`.
 
+**Un juego de ritmo** se hace con las propias notas de la canción: `song.notes` son las de todas las
+voces, en el orden en que empiezan, cada una con su voz (`voice`), su comienzo (`start`) y su
+duración (`beats`) en pulsos, y su altura (`pitch`). Están en cuanto llega el archivo, antes de que
+suene, y una nota que cae hacia la línea donde golpea el jugador se coloca por lo lejos que está de
+`song.beat`:
+
+```ts
+import { createScene, useLoadSong, useSong, useUpdate, type TSprite } from 'nacatamalon';
+
+declare const dots: TSprite[]; // uno por cada golpe de batería
+const LINE = 200; // donde golpea el jugador
+const SPEED = 40; // píxeles por pulso
+
+const Stage = () => {
+    const song = useSong(useLoadSong({ src: '/music/stage.song' }), { autoplay: true });
+
+    useUpdate(() => {
+        const beat = song.beat;
+        if (beat === null) return;
+        const hits = song.notes.filter((note) => note.voice === 'noise');
+        hits.forEach((note, i) => {
+            dots[i]!.transform.y = LINE - (note.start - beat) * SPEED;
+        });
+    });
+
+    return createScene();
+};
+```
+
+Una nota se queda en su pulso cuando cambia el tempo, y su `pitch` se mueve con `setTranspose`,
+salvo la de la batería. Cuando la canción da la vuelta al bucle, `beat` vuelve a donde empieza el
+bucle y vuelven las mismas notas.
+
 ---
 
 ## 10. Una voz que la canta

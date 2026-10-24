@@ -1,6 +1,6 @@
 import type { TSoundFade } from './t_sound';
 import type { TBeatListener } from '../beat_clock';
-import type { TSongError, TSongVoiceName } from '../synth/types/t_song';
+import type { TSongError, TSongNote, TSongVoiceName } from '../synth/types/t_song';
 import type { TSongFile } from '../../loaders/song/types/t_song_file';
 import type { TSongDoc } from '../synth/types/t_song';
 import type { TSongStream } from '../synth/song_stream';
@@ -169,7 +169,7 @@ export type TSongHandle = {
      * Not the `beat` an `onBeat` listener is given, which is the beat of the bar (`1` to `4` in
      * 4/4) and starts again every bar: this one counts on, and a whole song's notes are written
      * by it, so it is what a note falling towards the line a player hits is placed by:
-     * `note.y = LINE - (note.beat - song.beat) * SPEED`.
+     * `note.y = LINE - (note.start - song.beat) * SPEED`, a note of `notes`.
      */
     readonly beat: number | null;
     /**
@@ -204,5 +204,23 @@ export type TSongHandle = {
      * What in the notes could not be read. Empty until the song is ready, and when it is right.
      */
     readonly errors: readonly TSongError[];
+    /**
+     * The notes it plays, every voice's, in the order they start: each with its `voice`, its
+     * `start` and length (`beats`) in beats from the start of the song, its `pitch` as a MIDI
+     * number (a drum hit is `72`), and its `instrument` and `effects` when it has them. Silences are
+     * not notes. Empty until the song is ready; there before it plays, to lay out a level from.
+     *
+     * One pass of the song: when it goes round its loop, `beat` goes back to the loop's start and
+     * the same notes come again. Counted in beats, a note stays where it is when `setTempo` changes
+     * the tempo; its `pitch` moves with `setTranspose`, as what is heard does, but a drum's.
+     *
+     * What a rhythm game is built from, without writing the song a second time:
+     * ```ts
+     * for (const note of song.notes) {
+     *     if (note.voice === 'noise') place(note.start);
+     * }
+     * ```
+     */
+    readonly notes: readonly TSongNote[];
     readonly playing: boolean;
 };

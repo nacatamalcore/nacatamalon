@@ -5,6 +5,7 @@ import { setAttachmentHandle } from '../../audio/attachment_players';
 import { isShowingOnly } from '../physics/is_showing_only';
 import { SONG_VOICES } from '../../audio/synth';
 import { createSongStream } from '../../audio/synth/song_stream';
+import { readSongNotes } from '../../audio/synth/render_song';
 import { nanoId } from '../../utils';
 import { clampPan } from '../../audio/stereo';
 import { whenLoaded } from '../../loaders';
@@ -12,7 +13,7 @@ import { getVersion } from '../../store/record_version';
 import { loadSongSamples, missingSongSamples, songFileOf } from '../../loaders/song';
 import type { TSongAccompaniment, TSongAttachment, TSongHandle, TSongOptions } from '../../audio';
 import type { TSongStream } from '../../audio/synth/song_stream';
-import type { TSongDoc, TSongError, TSongVoiceName } from '../../audio/synth';
+import type { TSongDoc, TSongError, TSongNote, TSongVoiceName } from '../../audio/synth';
 import type { TSongFile } from '../../loaders/song';
 
 /**
@@ -186,6 +187,22 @@ export const useSong = (song: TSongFile | TSongDoc | TSongAccompaniment, options
 
     const heard = heardPositionOf(audio, player.position);
 
+    // Its notes in the order they start, read when they are asked for, and again only when the file
+    // or the key has changed since.
+    let notes: TSongNote[] = [];
+    let notesOf = '';
+    const notesNow = (): readonly TSongNote[] => {
+        if (file.doc === null) {
+            return [];
+        }
+        const of = `${getVersion(file)}:${attachment.transpose}`;
+        if (of !== notesOf) {
+            notes = readSongNotes(file.doc, attachment.transpose).notes.sort((a, b) => a.start - b.start);
+            notesOf = of;
+        }
+        return notes;
+    };
+
     const handle: TSongHandle = {
         play: (play) => {
             player.stop(0);
@@ -245,6 +262,9 @@ export const useSong = (song: TSongFile | TSongDoc | TSongAccompaniment, options
         onBeat: (listener) => beats.on(listener),
         get errors() {
             return errors;
+        },
+        get notes() {
+            return notesNow();
         },
         get playing() {
             return player.playing;

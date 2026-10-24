@@ -210,6 +210,66 @@ describe('a song written as notes', () => {
     });
 });
 
+describe('the notes it plays', () => {
+    it('lists every voice\'s notes in the order they start, before it plays, without its silences', async () => {
+        const { song } = await withSong();
+
+        expect(song.playing).toBe(false);
+        expect(song.notes.slice(0, 8)).toEqual([
+            { voice: 'pulse1', start: 0, beats: 1, pitch: 60 },
+            { voice: 'triangle', start: 0, beats: 4, pitch: 48 },
+            { voice: 'noise', start: 0, beats: 1, pitch: 72 },
+            { voice: 'pulse1', start: 1, beats: 1, pitch: 62 },
+            { voice: 'pulse1', start: 2, beats: 1, pitch: 64 },
+            { voice: 'noise', start: 2, beats: 1, pitch: 72 },
+            { voice: 'pulse1', start: 3, beats: 1, pitch: 65 },
+            { voice: 'pulse1', start: 4, beats: 4, pitch: 67 },
+        ]);
+        // Six notes of the pulse, three of the triangle, two hits a bar of the noise.
+        expect(song.notes).toHaveLength(15);
+        expect(song.notes.filter((note) => note.voice === 'noise').map((note) => note.start)).toEqual([0, 2, 4, 6, 8, 10]);
+    });
+
+    it('has none until its file is in', async () => {
+        const { store } = createTestGame();
+        let song!: TSongHandle;
+        startTestScene(store, 'Ballpark', () => {
+            song = useSong(useLoadSong({ src: '/music/minuet.song' }));
+            return createScene();
+        });
+
+        expect(song.notes).toEqual([]);
+        await whenLoaded(store.get('assets').songs.get('/music/minuet.song')!);
+        expect(song.notes).toHaveLength(15);
+    });
+
+    it('stays on its beats at another tempo, and moves its pitch with the key but the drums\'', async () => {
+        const { song } = await withSong({ autoplay: true });
+        const before = song.notes;
+
+        song.setTempo(180);
+        expect(song.notes.map((note) => note.start)).toEqual(before.map((note) => note.start));
+
+        song.setTranspose(2);
+        expect(song.notes.map((note) => note.pitch)).toEqual(before.map((note) => (note.voice === 'noise' ? 72 : note.pitch + 2)));
+    });
+
+    it('is read once, and again when its file is saved again', async () => {
+        const { store } = createTestGame();
+        let song!: TSongHandle;
+        startTestScene(store, 'Ballpark', () => {
+            song = useSong(useLoadSong({ src: '/music/minuet.song' }));
+            return createScene();
+        });
+        await whenLoaded(store.get('assets').songs.get('/music/minuet.song')!);
+        await settle();
+        expect(song.notes).toBe(song.notes);
+
+        replaceSongDoc(store, 'music/minuet.song', { ...SONG, voices: { triangle: SONG.voices.triangle } });
+        expect(song.notes.map((note) => note.voice)).toEqual(['triangle', 'triangle', 'triangle']);
+    });
+});
+
 describe('following the beat', () => {
     it('calls on every beat of the song, by the audio clock, with the beat of the bar and the bar', async () => {
         const { store, song, context } = await withSong({ autoplay: true });

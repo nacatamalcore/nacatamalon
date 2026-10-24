@@ -9,6 +9,12 @@ releases are in [changelog/](./changelog/), one file each.
 
 - **`×` in the fonts built into the engine** (Nacatamal Arcade, Square and Thin), at the height of
   `+`: a score's `×3`, a size's `2×2`. It was drawn as the missing glyph.
+- **`song.notes`**, on what `useSong` hands back: the notes it plays, every voice's, in the order
+  they start, each with its `voice`, its `start` and `beats` in beats, its `pitch`, and its
+  `instrument` and `effects` when it has them. There once the file is in, before it plays, so a
+  rhythm game lays out its notes from the song itself rather than writing them a second time, and
+  places one falling towards the line by `note.start - song.beat`. Its pitches follow
+  `setTranspose`; its beats stay put at another tempo.
 
 ## 0.2.7 — 2026-10-23
 

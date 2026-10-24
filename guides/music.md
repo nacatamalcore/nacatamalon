@@ -389,6 +389,38 @@ const Level = () => {
 
 A sound (`useSound`) has a `pan` too: `tween({ target: sound, to: { pan: 1 }, duration: 2 })`.
 
+**A rhythm game** is built from the song's own notes: `song.notes` is every voice's, in the order
+they start, each with its `voice`, its `start` and length (`beats`) in beats, and its `pitch`. It is
+there as soon as the file is in, before the song plays, and a note falling towards the line the
+player hits is placed by how far it is from `song.beat`:
+
+```ts
+import { createScene, useLoadSong, useSong, useUpdate, type TSprite } from 'nacatamalon';
+
+declare const dots: TSprite[]; // one for each drum hit
+const LINE = 200; // where the player hits
+const SPEED = 40; // pixels a beat
+
+const Stage = () => {
+    const song = useSong(useLoadSong({ src: '/music/stage.song' }), { autoplay: true });
+
+    useUpdate(() => {
+        const beat = song.beat;
+        if (beat === null) return;
+        const hits = song.notes.filter((note) => note.voice === 'noise');
+        hits.forEach((note, i) => {
+            dots[i]!.transform.y = LINE - (note.start - beat) * SPEED;
+        });
+    });
+
+    return createScene();
+};
+```
+
+A note stays on its beat when the tempo changes, and its `pitch` moves with `setTranspose`, but a
+drum's. When the song goes round its loop, `beat` goes back to where the loop starts and the same
+notes come again.
+
 ---
 
 ## 10. A voice that sings it
