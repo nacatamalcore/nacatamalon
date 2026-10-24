@@ -3,6 +3,13 @@
 What changed in the current release of `nacatamalon`, and what is waiting for the next one. Earlier
 releases are in [changelog/](./changelog/), one file each.
 
+## Unreleased
+
+### Added
+
+- **`×` in the fonts built into the engine** (Nacatamal Arcade, Square and Thin), at the height of
+  `+`: a score's `×3`, a size's `2×2`. It was drawn as the missing glyph.
+
 ## 0.2.7 — 2026-10-23
 
 ### Added

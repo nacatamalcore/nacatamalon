@@ -64,8 +64,8 @@ describe('the font itself', () => {
         const meta = await (await fetch(text.font.src)).json() as TBitmapFontMeta;
 
         expect(meta.glyphHeight).toBe(8);
-        expect(meta.chars).toHaveLength(138);
-        for (const char of 'ñÑ¿¡áéíóúü←→↑↓▲▼◀▶ⒶⒷⓍⓎ★♥●■') {
+        expect(meta.chars).toHaveLength(139);
+        for (const char of 'ñÑ¿¡áéíóúü×←→↑↓▲▼◀▶ⒶⒷⓍⓎ★♥●■') {
             expect(meta.chars.some((glyph) => glyph.char === char)).toBe(true);
         }
         // The last character sits inside the image it is cut from.
