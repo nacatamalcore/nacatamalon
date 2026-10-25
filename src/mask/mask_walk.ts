@@ -7,8 +7,8 @@ import type { TMask } from './types/t_mask';
  * One masked object, as the frame found it: its mask, the masks around it, which camera it is seen
  * through and where it is. What a drawable under it is kept to is this and its `parent`s.
  *
- * Kept per object between frames and written over, so a masked scene allocates nothing once it has
- * been drawn once.
+ * One per masked object and walk, made fresh for each walk: a few per frame, for the objects that
+ * are masked.
  *
  * @internal
  */
@@ -38,20 +38,24 @@ export type TShapeList = { drawables: TDrawable[]; cameraIndex: number[] };
 export type TMaskWalk = {
     levels: Array<TMaskLevel | null>;
     shapes: Map<TMask, TShapeList>;
+    /**
+     * Each masked object's level in this walk. Per walk and not per object: a capture or a preview
+     * walks the same tree again in the same frame, through cameras of its own, and must not move
+     * the screen's masks while doing so.
+     */
+    found: Map<TBox, TMaskLevel>;
 };
 
-const levelOfBox = new WeakMap<TBox, TMaskLevel>();
-
 /**
- * The level for a masked object this frame, written into the one it had last frame.
+ * The level for a masked object in this walk: one per object, however many times the walk asks.
  *
  * @internal
  */
-export const maskLevelFor = (box: TBox, mask: TMask, parent: TMaskLevel | null, camera: number, place: TTransform2d): TMaskLevel => {
-    let level = levelOfBox.get(box);
+export const maskLevelFor = (walk: TMaskWalk, box: TBox, mask: TMask, parent: TMaskLevel | null, camera: number, place: TTransform2d): TMaskLevel => {
+    let level = walk.found.get(box);
     if (level === undefined) {
         level = { mask, parent, camera, place: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 } };
-        levelOfBox.set(box, level);
+        walk.found.set(box, level);
     }
     level.mask = mask;
     level.parent = parent;

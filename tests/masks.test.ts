@@ -15,6 +15,8 @@ import { createTestGame, startTestScene } from './helpers/test_game';
 import { createTestFont } from './helpers/test_font';
 import { boxFromDoc, parseSceneDoc, sceneFromDoc, serializeScene } from '../src/scene/document';
 import { registerScene } from '../src/scene/register_scene';
+import { setCameraPreview } from '../src/game/preview';
+import { createCamera2d } from '../src/camera/create_camera_2d';
 import { startScene } from '../src/scene/start_scene';
 import type { TFrameContext, TRenderPass } from '../src/render';
 import type { TDrawItem, TDrawStencil } from '../src/render/interface';
@@ -356,6 +358,46 @@ describe('a soft mask', () => {
         const first = frame(store).passes[0]!.renderTarget;
         expect(frame(store).passes[0]!.renderTarget).toBe(first);
         expect(renderer.destroyedTextures).toHaveLength(0);
+    });
+});
+
+describe('masks found twice in a frame', () => {
+    it('a soft mask inside another: each pass that lays one over carries what draws it', () => {
+        const { store } = createTestGame();
+        startTestScene(store, 'Level', () => {
+            let inner!: TGameObject;
+            const outer = useSpawn(() => {
+                useTransform(block(0, 0));
+                createSprite({ width: 10, height: 10 });
+                inner = square(0, 0);
+            })();
+            useMask({ rect: { x: 0, y: 0, width: 50, height: 50 }, soft: true }).add(outer);
+            useMask({ rect: { x: 0, y: 0, width: 20, height: 20 }, soft: true }).add(inner);
+            return createScene();
+        });
+        const ctx = frame(store);
+        // The inner pair first, then the outer pair, whose picture holds the inner one laid over.
+        for (const pass of ctx.passes) {
+            if (pass.drawables!.some((item) => item.type === 'mask-layer')) {
+                expect(pass.stencil).toBeDefined();
+            }
+        }
+        expect(ctx.passes.filter((pass) => pass.renderTarget !== undefined)).toHaveLength(4);
+    });
+
+    it('a preview of another camera does not move the screen\'s masks', () => {
+        const { store } = createTestGame();
+        startTestScene(store, 'Level', () => {
+            const box = square(100, 60);
+            useMask({ rect: { x: -20, y: -10, width: 40, height: 30 } }).add(box);
+            return createScene();
+        });
+        store.setState('viewport', { screen2d: createCamera2d({ transform: { x: 300, y: 0 } }) });
+        // Pinned to the screen, so the screen's pass sees it through the tool's camera for that.
+        store.get('world').scenes[0]!.children[0]!.screenSpace = true;
+        const alone = screenOf(frame(store)).stencil![0]!.scissor;
+        setCameraPreview(store, { canvas: { width: 320, height: 240 } as HTMLCanvasElement, camera2d: createCamera2d({ transform: { x: 500, y: 500 } }) });
+        expect(screenOf(frame(store)).stencil![0]!.scissor).toEqual(alone);
     });
 });
 

@@ -251,7 +251,9 @@ const softLayer = (context: TContext, level: TMaskLevel, group: TEntry[], depth:
         cameraIndex: inner.cameraIndex,
         views3d: lists.views3d,
         viewIndex: inner.viewIndex,
-        ...(inner.stencil.some((state) => state.ref !== 0 || state.write !== 'none' || state.scissor !== null) ? { stencil: inner.stencil } : {}),
+        // Always carried, even when nothing in it keeps to anything: a soft mask inside this one is
+        // laid over it, and that is drawn by what a pass with masks makes.
+        stencil: inner.stencil,
     }, {
         clearColor: CLEAR,
         renderTarget: shape,

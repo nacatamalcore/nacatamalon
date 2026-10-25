@@ -261,7 +261,7 @@ export const collectDrawables = (
     let shapes = shapeOf;
     if (masks !== null) {
         if (masksNow(box.mask)) {
-            here = maskLevelFor(box, box.mask, level, view, world?.flat ?? NOWHERE_FLAT);
+            here = maskLevelFor(masks, box, box.mask, level, view, world?.flat ?? NOWHERE_FLAT);
         }
         const roles = shapeRolesOf(box);
         if (roles !== undefined) {

@@ -253,7 +253,7 @@ type TPassLists = {
     masks: TMaskWalk | null;
 };
 
-const newLists = (): TPassLists => ({ drawables: [], cameraIndex: [], cameras: [], views3d: [], viewIndex: [], masks: anyMasks() ? { levels: [], shapes: new Map() } : null });
+const newLists = (): TPassLists => ({ drawables: [], cameraIndex: [], cameras: [], views3d: [], viewIndex: [], masks: anyMasks() ? { levels: [], shapes: new Map(), found: new Map() } : null });
 
 /**
  * The passes each pass needs drawn before it: what its soft masks draw into. Kept per pass and
@@ -293,17 +293,23 @@ const finishPass = (pass: TRenderPass, lists: TPassLists, target: TMaskTarget): 
     passesBefore.delete(pass);
     rememberMaskedPass(pass, null);
     const masks = lists.masks;
-    if (masks === null || drawingWith === null) {
+    if (masks === null) {
         return;
     }
+    // Noted before anything is drawn, so the pointer keeps to the masks with no renderer at all.
     const sources = new Map<unknown, { drawables: TDrawable[]; cameraIndex: number[] }>();
     for (const [mask, shape] of masks.shapes) {
         sources.set(mask, { drawables: [...shape.drawables], cameraIndex: [...shape.cameraIndex] });
+    }
+    rememberMaskedPass(pass, { drawables: lists.drawables, cameraIndex: lists.cameraIndex, levels: masks.levels, shapes: sources as never });
+    if (drawingWith === null) {
+        return;
+    }
+    for (const shape of masks.shapes.values()) {
         stepSceneTilemaps(shape.drawables, 0);
         stepScenePolygons(shape.drawables, 0, drawingWith);
         expandSceneIntoSprites(shape.drawables, shape.cameraIndex, 0, shape.drawables.map(() => -1));
     }
-    rememberMaskedPass(pass, { drawables: lists.drawables, cameraIndex: lists.cameraIndex, levels: masks.levels, shapes: sources as never });
     const masked = applyMasks({
         drawables: lists.drawables,
         cameraIndex: lists.cameraIndex,

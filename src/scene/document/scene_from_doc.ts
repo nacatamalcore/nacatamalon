@@ -874,6 +874,8 @@ export const sceneFromDoc = (doc: TSceneDoc, src = doc.name, options: TSceneFrom
         buildBox(doc.root, store, src);
         findShapes(masks);
     } finally {
+        // A build that threw leaves its masks unfound, not waiting for the next build to find them.
+        shapesToFind.length = Math.min(shapesToFind.length, masks);
         store.setState('world', { buildScripts: before });
     }
 
@@ -960,8 +962,12 @@ export const boxFromDoc = (doc: TSceneDoc, place: { x?: number; y?: number; z?: 
     loadAssets(doc.assets, src);
     makePictures(node, store);
     const masks = shapesToFind.length;
-    buildBox(node, store, src);
-    findShapes(masks);
+    try {
+        buildBox(node, store, src);
+        findShapes(masks);
+    } finally {
+        shapesToFind.length = Math.min(shapesToFind.length, masks);
+    }
 };
 
 /**
@@ -1002,8 +1008,12 @@ export const copyBox = (box: TBox, place: { x?: number; y?: number; z?: number }
     placeNode(node, place);
     makePictures(node, store);
     const masks = shapesToFind.length;
-    buildBox(node, store, from.src);
-    findShapes(masks);
+    try {
+        buildBox(node, store, from.src);
+        findShapes(masks);
+    } finally {
+        shapesToFind.length = Math.min(shapesToFind.length, masks);
+    }
 };
 
 export type { TBox };
