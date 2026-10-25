@@ -218,10 +218,11 @@ ${normal}${skinned ? SKIN : STILL}
     vec3 shine = vec3(0.0);
     vec3 casterDiffuse = vec3(0.0);
     vec3 casterShine = vec3(0.0);
-    int count = int(lights.ambient.w);
     int caster = int(lights.shadowParams.w);
-    for (int i = 0; i < ${MAX_LIGHTS}; i++) {
-        if (i >= count) break;
+    for (int k = 0; k < ${MAX_LIGHTS}; k++) {
+        int named = meshLight(k);
+        if (named == 0) break;
+        int i = named - 1;
         vec3 d;
         vec3 s;
         sampleLight(i, worldPos, worldNormal, viewDir, d, s);

@@ -1,5 +1,5 @@
 import { composeTransform2d } from '../../../render/shared/compose_transform_2d';
-import { isPunctualLight, MAX_LIGHTS } from '../../../light';
+import { isPunctualLight, MAX_SCENE_LIGHTS } from '../../../light';
 import type { TBox } from '../../../box';
 import type { TColor } from '../../../color';
 import type { TLight, TPunctualLight } from '../../../light';
@@ -24,6 +24,7 @@ const DEFAULT_LIGHT: TPunctualLight = {
 
 let warnedBudget = false;
 let warnedSecondCaster = false;
+let warnedSecondAmbient = false;
 
 /**
  * Forgets that the warnings below were already given. For the tests, like `resetShadowWarnings`.
@@ -35,6 +36,7 @@ let warnedSecondCaster = false;
 export const resetLightWarnings = (): void => {
     warnedBudget = false;
     warnedSecondCaster = false;
+    warnedSecondAmbient = false;
 };
 
 /**
@@ -65,8 +67,7 @@ const gather = (box: TBox, out: TLight[], parent: TTransform3d | null, top = tru
         world = parent === null ? box.transform : compose(parent, box.transform);
     }
 
-    if (box.light !== null) {
-        const light = box.light;
+    for (const light of box.lights) {
         out.push(isPunctualLight(light) && world !== null ? { ...light, transform: compose(world, light.transform) } : light);
     }
     for (const child of box.children) {
@@ -82,9 +83,10 @@ const gather = (box: TBox, out: TLight[], parent: TTransform3d | null, top = tru
  * - **A scene with no lights is lit anyway**, by a sun of the engine's own. A new scene that draws
  *   a black silhouette is a scene that looks broken, and the first thing anyone does is start
  *   turning things off to find out why.
- * - **Eight at a time**, which is what the hardware of this era offered. Past the eighth they are
- *   dropped in the order they were made, once, with a warning.
- * - **The level of the dark side** is whatever `useAmbientLight` says when a scene says it, and
+ * - **Thirty-two at a time** (`MAX_SCENE_LIGHTS`), from which each model is lit by the eight that
+ *   reach it most, as the hardware of this era lit each thing it drew. Past the thirty-second they
+ *   are dropped in the order they were made, once, with a warning.
+ * - **The level of the dark side** is whatever the last `useAmbientLight` says when a scene says it, and
  *   otherwise the brightest that any single light asks for. Summing instead would mean that adding
  *   a fourth lamp washed the whole scene flat.
  *
@@ -97,11 +99,11 @@ export const collectLighting = (scene: TBox): TSceneLighting => {
     gather(scene, found, null);
 
     const punctual = found.filter(isPunctualLight);
-    if (punctual.length > MAX_LIGHTS && !warnedBudget) {
+    if (punctual.length > MAX_SCENE_LIGHTS && !warnedBudget) {
         warnedBudget = true;
-        console.warn(`[NacatamalOn] a scene has ${punctual.length} lights and ${MAX_LIGHTS} are drawn. The rest are ignored, in the order they were made.`);
+        console.warn(`[NacatamalOn] a scene has ${punctual.length} lights and holds ${MAX_SCENE_LIGHTS} at a time. The rest are ignored, in the order they were made.`);
     }
-    const lights = punctual.slice(0, MAX_LIGHTS);
+    const lights = punctual.slice(0, MAX_SCENE_LIGHTS);
 
     // Said out loud, once, because the alternative is a light that was asked to cast and silently
     // does not. There is one shadow map, so there is one point of view to spend, and it goes to
@@ -113,17 +115,16 @@ export const collectLighting = (scene: TBox): TSceneLighting => {
         console.warn(`[NacatamalOn] ${casters.length} lights in a scene ask to cast shadows and one can. The first is used, the rest light the scene without casting.`);
     }
 
+    // One level for the scene: the last one asked for, so a part of it can set its own over the
+    // rest. Said once when there are more, since summing them is what anyone would guess.
     const declared = found.filter((light) => light.type === 'ambient');
     if (declared.length > 0) {
-        const ambient = declared.reduce(
-            (sum, light) => ({
-                r: sum.r + light.color.r * light.intensity,
-                g: sum.g + light.color.g * light.intensity,
-                b: sum.b + light.color.b * light.intensity,
-                a: 1,
-            }),
-            { r: 0, g: 0, b: 0, a: 1 },
-        );
+        if (declared.length > 1 && !warnedSecondAmbient) {
+            warnedSecondAmbient = true;
+            console.warn(`[NacatamalOn] a scene has ${declared.length} ambient lights and one sets how dark its shade is: the last one made.`);
+        }
+        const last = declared[declared.length - 1]!;
+        const ambient = { r: last.color.r * last.intensity, g: last.color.g * last.intensity, b: last.color.b * last.intensity, a: 1 };
         return { lights: lights.length > 0 ? lights : [], ambient };
     }
 

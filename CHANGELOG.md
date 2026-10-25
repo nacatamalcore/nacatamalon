@@ -52,10 +52,18 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
-- **One light per object, said with how to have two.** The five `use…Light` docs, their warning when
-  an object asks for a second light, and `llms.txt` now show the way: an object each inside the
-  thing, placed by its own `transform`, as a car's two headlights. What a second light on one
-  object does is unchanged: it replaces the first.
+- **An object gives off as many lights as it asks for.** Each `use…Light` call adds one, placed by
+  its own `transform`, as `createMesh` adds a model: a car's two headlights and two tail lights are
+  four calls in the car, the lamps of a room calls in the scene, with no `useSpawn` for each. A
+  second light used to replace the first. `box.light` is now `box.lights`, a list, and a scene
+  document keeps every light of a box as a component of its own. The ambient light stays one level
+  for the scene: when there are several, the last one made sets it, said once (they used to add up).
+- **Eight lights per model, thirty-two per scene.** A scene used to draw its first eight lights and
+  drop the rest; now it holds thirty-two (`LIMITS.SCENE_LIGHTS`), and each model is lit by the eight
+  that reach it most (`LIMITS.LIGHTS`), as the consoles of the era lit each thing they drew: a sun
+  always, a lamp when its `range` touches the box around the model, the strongest first. A corridor
+  of torches, a street of lamps or a level of fires is lit all along, and what a corner costs to
+  light is still eight lights at most. A scene of eight lights or fewer looks exactly as it did.
 
 ### Fixed
 

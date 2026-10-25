@@ -65,7 +65,7 @@ describe('one model, sixty-four numbers', () => {
         // Not a number picked: the card only points at offsets that are multiples of 256 bytes, and
         // sixty-four numbers is exactly that. Nothing is wasted and nothing has to be padded.
         expect(MESH_UNIFORM_FLOATS * 4).toBe(MESH_STRIDE);
-        // The lights are bigger than one slot, so theirs rounds up to three.
+        // The lights are bigger than one slot, so theirs rounds up to the slots they need.
         expect(LIGHT_UNIFORM_FLOATS * 4).toBeLessThanOrEqual(LIGHT_STRIDE);
         expect(LIGHT_STRIDE % 256).toBe(0);
     });

@@ -301,7 +301,7 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
                     writeMeshLights(gl, state.meshes, view, shadowUniforms);
                     litView = index;
                 }
-                drawMesh(gl, state.meshes, item, spaces[index] ?? flatSpace, width, height, ctx.time, state.shadow?.texture ?? null);
+                drawMesh(gl, state.meshes, item, spaces[index] ?? flatSpace, view?.lights ?? [], width, height, ctx.time, state.shadow?.texture ?? null);
                 // Its program left none of the sprite state set.
                 spritesReady = false;
                 continue;

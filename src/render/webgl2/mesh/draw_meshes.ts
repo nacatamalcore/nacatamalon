@@ -5,7 +5,7 @@ import { toGlBuffer } from '../resources';
 import { toGlTexture } from '../texture';
 import { MESH_EMISSIVE_UNIT, MESH_JOINTS_UNIT, MESH_LIGHTS_BINDING, MESH_MAP_UNITS, MESH_SHADOW_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
 import type { TCameraSpace } from '../../shared/compute_mvp_3d';
-import type { TDrawMesh, TDrawView3d } from '../../interface';
+import type { TDrawLight, TDrawMesh, TDrawView3d } from '../../interface';
 import type { TShadowUniforms } from '../../shared/fill_light_uniforms';
 import type { TMeshPipeline } from './types/t_mesh_pipeline';
 
@@ -118,6 +118,7 @@ export const drawMesh = (
     meshes: TMeshPipeline,
     mesh: TDrawMesh,
     space: TCameraSpace,
+    lights: readonly TDrawLight[],
     width: number,
     height: number,
     time: number,
@@ -134,7 +135,7 @@ export const drawMesh = (
     // The depth range is already dealt with: this card's runs from -1 to 1 where the other's runs
     // from 0 to 1, and the fix is a multiplication from the left, so it was folded into the camera
     // once for the whole pass instead of being applied to every model's matrix in turn.
-    fillMeshUniforms(meshes.uniformData, 0, mesh, space);
+    fillMeshUniforms(meshes.uniformData, 0, mesh, space, lights);
 
     gl.bindBuffer(gl.UNIFORM_BUFFER, meshes.uniforms);
     gl.bufferSubData(gl.UNIFORM_BUFFER, 0, meshes.uniformData);

@@ -241,7 +241,7 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
             const item = drawables[i];
             if (item.type === 'mesh') {
                 const view = viewIndex[i] ?? -1;
-                if (drawMesh(gpu.device, gpuPass, gpu.meshes, item, spaces[view] ?? flatSpace, view, meshSlot, width, height, ctx.time)) {
+                if (drawMesh(gpu.device, gpuPass, gpu.meshes, item, spaces[view] ?? flatSpace, views3d[view]?.lights ?? [], view, meshSlot, width, height, ctx.time)) {
                     meshSlot++;
                 }
                 // Its pipeline left none of the sprite state set.

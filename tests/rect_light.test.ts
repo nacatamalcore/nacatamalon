@@ -5,7 +5,7 @@ import { useDirectionalLight, usePointLight, useRectLight } from '../src/hooks/l
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { fillLightUniforms, LIGHT_FLOATS_PER_ITEM, LIGHT_UNIFORM_FLOATS } from '../src/render/shared';
 import { transformForward } from '../src/render/shared/transform_basis';
-import { MAX_LIGHTS } from '../src/light';
+import { MAX_SCENE_LIGHTS } from '../src/light';
 import { parseSceneDoc, serializeScene, SCENE_FORMAT } from '../src/scene/document';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { getColor } from '../src/color';
@@ -68,15 +68,15 @@ describe('a panel in a scene', () => {
         expect(transformForward(light.transform).y).toBeCloseTo(-1, 9);
     });
 
-    it('counts against the eight a scene draws', () => {
+    it('counts against the thirty-two a scene holds', () => {
         const warn = spyOn(console, 'warn').mockImplementation(() => {});
         const { lighting } = lit(() => {
-            for (let i = 0; i < MAX_LIGHTS; i++) useSpawn(() => { usePointLight({ transform: { x: i } }); })();
-            useSpawn(() => { useRectLight(); })();
+            for (let i = 0; i < MAX_SCENE_LIGHTS; i++) usePointLight({ transform: { x: i } });
+            useRectLight();
         });
         warn.mockRestore();
 
-        expect(lighting.lights).toHaveLength(MAX_LIGHTS);
+        expect(lighting.lights).toHaveLength(MAX_SCENE_LIGHTS);
         expect(lighting.lights.some((light) => light.type === 'rect')).toBe(false);
     });
 

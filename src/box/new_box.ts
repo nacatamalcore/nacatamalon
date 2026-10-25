@@ -43,7 +43,7 @@ export const newBox = (name: string): TBox => ({
     camera3d: null,
     fog: null,
     transform: null,
-    light: null,
+    lights: [],
     particleCollider: null,
     audioListener: null,
     spriteTexture: null,

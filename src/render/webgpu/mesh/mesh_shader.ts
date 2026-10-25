@@ -1,4 +1,4 @@
-import { MAX_LIGHTS } from '../../../light';
+import { MAX_LIGHTS, MAX_SCENE_LIGHTS } from '../../../light';
 
 /**
  * What draws a model.
@@ -7,8 +7,9 @@ import { MAX_LIGHTS } from '../../../light';
  * each triangle in between. That is Gouraud shading, and it is what the consoles of this engine's
  * era did: none of them lit per pixel. It shows, in the right way, on a low-polygon model.
  *
- * Up to eight lights shine at once, each a sun, a lamp or a torch, and they are read from a block
- * written once a frame rather than handed over with every model.
+ * Up to eight lights shine on each model, each a sun, a lamp or a torch: the eight of the scene's
+ * that reach it most, named in its own block and read from one block of the scene's lights written
+ * once a frame rather than handed over with every model.
  *
  * The level everything is lit to is applied **once to the total**, not once per light. With several
  * lights it stops being a property of any one of them and becomes one of the scene, and adding it
@@ -53,7 +54,8 @@ struct LightItem {
 struct Lights {
     // rgb = the level everything is lit to; w = how many of the items below are real.
     ambient: vec4<f32>,
-    items: array<LightItem, ${MAX_LIGHTS}>,
+    // Every light of the scene; each model reads the ones its own block names.
+    items: array<LightItem, ${MAX_SCENE_LIGHTS}>,
     // The matrix the shadow map was drawn with, and how to read it.
     shadowMatrix: mat4x4<f32>,
     // x = how far off the surface to test; y = how dark it goes; z = one step of the map;
@@ -206,6 +208,13 @@ struct LitSurface {
     casterShine: vec3<f32>,
 };
 
+// The k-th of the lights this model is lit by, as its place in the scene's block plus one, 0 once
+// the list has ended. Two spare numbers of its block carry the list, four lights of six bits each.
+fn meshLight(k: u32) -> u32 {
+    let lane = select(uniforms.normalMatrix[3].y, uniforms.normalMatrix[3].x, k < 4u);
+    return (u32(lane) >> ((k % 4u) * 6u)) & 63u;
+}
+
 // Every light on this surface, with the casting one's share also kept on its own.
 fn litBy(worldPos: vec3<f32>, normal: vec3<f32>, viewDir: vec3<f32>) -> LitSurface {
     var out: LitSurface;
@@ -214,9 +223,13 @@ fn litBy(worldPos: vec3<f32>, normal: vec3<f32>, viewDir: vec3<f32>) -> LitSurfa
     out.casterDiffuse = vec3<f32>(0.0);
     out.casterShine = vec3<f32>(0.0);
 
-    let count = u32(lights.ambient.w);
     let caster = i32(lights.shadowParams.w);
-    for (var i = 0u; i < count; i = i + 1u) {
+    for (var k = 0u; k < ${MAX_LIGHTS}u; k = k + 1u) {
+        let named = meshLight(k);
+        if (named == 0u) {
+            break;
+        }
+        let i = named - 1u;
         let contribution = sampleLight(i, worldPos, normal, viewDir);
         out.diffuse = out.diffuse + contribution.diffuse;
         out.shine = out.shine + contribution.specular;

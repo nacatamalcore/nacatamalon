@@ -237,13 +237,14 @@ export type TBox = {
      */
     transform: TTransform3d | null;
     /**
-     * The light this box gives off, or `null`. One per box: a lamp is a thing in the world, and two
-     * lamps are two things.
+     * The lights this box gives off, in the order they were asked for: as many as it asks for, as a
+     * box carries as many pictures as it draws. A car's two headlights are two of them, each placed
+     * by its own `transform`.
      *
      * Unlike a camera, a light **moves with the box it is in**, so a lantern carried by a character
      * goes where the character goes without anything keeping the two in step.
      */
-    light: TLight | null;
+    lights: TLight[];
     /**
      * What this box is to particles: something solid, or `null`. One per box, like its light, and
      * placed by the box the same way, so a step of a staircase is a box and its collider moves with it.

@@ -46,19 +46,33 @@ export const MIN_STEP_RATE = 10;
 export const MAX_STEP_RATE = 240;
 
 /**
- * How many lights shine on one frame.
+ * How many lights shine on one thing drawn: each model is lit by the eight that reach it most.
  *
  * Eight is not a number picked out of the air: it is what the hardware of this engine's era
- * offered. The GameCube's GX had eight, each of them free to be a sun, a lamp or a torch; the
- * N64 did seven and an ambient; the fixed pipeline the Dreamcast era was written against also
- * stopped at eight. Past the eighth they are dropped in the order the scene made them, once, with
- * a warning. Ambient lights do not count against it.
+ * offered, and it offered it per thing drawn, not per scene. The GameCube's GX had eight, each of
+ * them free to be a sun, a lamp or a torch; the N64 did seven and an ambient; the fixed pipeline the
+ * Dreamcast era was written against also stopped at eight. A level could hold dozens of torches,
+ * because each model only saw the ones near it. Ambient lights do not count against it.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
 export const MAX_LIGHTS = 8;
+
+/**
+ * How many lights a scene holds at a time, from which each model takes the eight that reach it
+ * most (`MAX_LIGHTS`): enough for a long corridor of torches or a street of lamps. Past it the rest
+ * are dropped in the order they were made, once, with a warning. Ambient lights do not count.
+ *
+ * What it costs is a block of the scene's lights sent once a frame (two kilobytes) and choosing each
+ * model's eight on the way; what a corner of a model costs to light stays eight lights at most.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const MAX_SCENE_LIGHTS = 32;
 
 /**
  * How many collision layers a scene has: **the smaller of the two backends**, not a number chosen

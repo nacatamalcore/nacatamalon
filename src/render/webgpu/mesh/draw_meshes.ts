@@ -5,7 +5,7 @@ import { toGpuBuffer } from '../resources';
 import { toGpuTexture } from '../texture';
 import { LIGHT_STRIDE, MESH_STRIDE } from './create_mesh_pipeline';
 import type { TCameraSpace } from '../../shared/compute_mvp_3d';
-import type { TDrawMesh, TDrawView3d } from '../../interface';
+import type { TDrawLight, TDrawMesh, TDrawView3d } from '../../interface';
 import type { TShadowUniforms } from '../../shared/fill_light_uniforms';
 import type { TMeshPipeline } from './types/t_mesh_pipeline';
 
@@ -182,6 +182,7 @@ export const drawMesh = (
     meshes: TMeshPipeline,
     mesh: TDrawMesh,
     space: TCameraSpace,
+    lights: readonly TDrawLight[],
     viewSlot: number,
     slot: number,
     width: number,
@@ -201,7 +202,7 @@ export const drawMesh = (
     const at = slot * MESH_STRIDE / 4;
     // Written at an offset rather than through a slice of it: a slice is an object, and one per
     // model per frame is the last thing this path was still making.
-    fillMeshUniforms(meshes.meshes.data, at, mesh, space);
+    fillMeshUniforms(meshes.meshes.data, at, mesh, space, lights);
     device.queue.writeBuffer(meshes.meshes.buffer, slot * MESH_STRIDE, meshes.meshes.data, at, MESH_UNIFORM_FLOATS);
 
     if (meshes.meshes.bindGroups[slot] === undefined) {

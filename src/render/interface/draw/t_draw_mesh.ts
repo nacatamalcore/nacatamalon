@@ -64,6 +64,11 @@ export type TDrawMesh = {
          * Each corner's tangent and second picture coordinate, read only by a material's shader.
          */
         readonly detailBuffer: IBuffer | null;
+        /**
+         * The box around the shape in its own space, which the lights that reach it are found by.
+         * Left out, the model is taken as the point it stands on.
+         */
+        readonly bounds?: { min: { x: number; y: number; z: number }; max: { x: number; y: number; z: number } } | null;
     } | null;
     /**
      * Where it is, how it is turned, how big. Read when nothing above it moved it.

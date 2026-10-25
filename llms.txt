@@ -153,8 +153,14 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
 - **Where something is goes in `transform`**, for everything placed in the world, lights and cameras
   too: `useCamera3d({ transform: { z: 5 }, fov: 60 })`, `useSpotLight({ transform: { y: 4, rotationX:
   -1.2 }, range: 8 })`, read back as `camera.transform.z`. A light with none is where its object is.
-  One light per object: two (a car's headlights) are an object each inside it, each placed by its own
-  `transform`: `useSpawn(function LeftLight() { useSpotLight({ transform: { x: -0.6 } }); })()`.
+  An object gives off as many lights as it asks for, each placed by its own `transform`: a car's two
+  headlights are two `useSpotLight` calls in the car, the lamps of a room two `usePointLight` calls in
+  the scene; `useSpawn` only for a lamp that is a thing of its own (one that breaks or swings). The
+  ambient light is one level for the scene: the last one made sets it. A scene holds 32 lights at a
+  time (`LIMITS.SCENE_LIGHTS`) and each model is lit by the 8 that reach it most (`LIMITS.LIGHTS`):
+  a sun always, a lamp when its `range` touches the box around the model. Give lamps a realistic
+  `range`, and make a long floor or road of pieces rather than one huge mesh, so each piece takes the
+  lamps near it; lighting is worked out at the corners, so a big floor needs subdivisions anyway.
 - **An asset's `key`** (every `useLoad…`) is the name the game finds it by, here or in a later scene;
   without one, its `src`. `createSprite({ texture: 'hero' })` and `createText({ font: 'title' })` name
   it. One key names one file: asking for another file under a key already taken says so and hands back

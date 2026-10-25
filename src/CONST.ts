@@ -1,4 +1,4 @@
-import { DEFAULT_ACTION_PRESS, DEFAULT_DEADZONE, MAX_LIGHTS, MAX_PALETTE_COLORS, PHYSICS_LAYERS } from './CONFIG';
+import { DEFAULT_ACTION_PRESS, DEFAULT_DEADZONE, MAX_LIGHTS, MAX_PALETTE_COLORS, MAX_SCENE_LIGHTS, PHYSICS_LAYERS } from './CONFIG';
 import { GAMEPAD_AXES, GAMEPAD_AXIS_LABELS, GAMEPAD_BUTTONS, GAMEPAD_BUTTON_LABELS } from './input/gamepad/gamepad_standard';
 import { POINTER_BUTTONS } from './input/pointer_buttons';
 import { ALL_LAYERS } from './physics/layers';
@@ -95,8 +95,10 @@ export const INPUT = /* @__PURE__ */ frozen({
 /**
  * How far the engine goes, fixed by what it draws and simulates with: a game cannot raise them.
  *
- * - `LIGHTS`: how many lights shine on one frame, eight, as the consoles of the era had. Past
- *   them they are dropped with a warning; an ambient light does not count.
+ * - `LIGHTS`: how many lights shine on one thing drawn, eight, as the consoles of the era had:
+ *   each model is lit by the eight that reach it most. An ambient light does not count.
+ * - `SCENE_LIGHTS`: how many a scene holds at a time, thirty-two, which each model takes its eight
+ *   from. Past them they are dropped with a warning.
  * - `PHYSICS_LAYERS`: how many collision layers a scene has, sixteen, the most both physics
  *   backends can tell apart.
  * - `PALETTE_COLORS`: as many colours as a palette may hold, 256.
@@ -107,6 +109,7 @@ export const INPUT = /* @__PURE__ */ frozen({
  */
 export const LIMITS = /* @__PURE__ */ frozen({
     LIGHTS: MAX_LIGHTS,
+    SCENE_LIGHTS: MAX_SCENE_LIGHTS,
     PHYSICS_LAYERS,
     PALETTE_COLORS: MAX_PALETTE_COLORS,
 });

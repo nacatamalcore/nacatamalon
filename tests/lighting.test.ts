@@ -1,14 +1,17 @@
 import { describe, expect, it, spyOn } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
-import { collectLighting } from '../src/game/loop/helper/collect_lights';
+import { collectLighting, resetLightWarnings } from '../src/game/loop/helper/collect_lights';
 import { useAmbientLight, useDirectionalLight, usePointLight, useSpotLight } from '../src/hooks/light';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useSelf } from '../src/hooks/spawn/use_self';
 import { useTransform } from '../src/hooks/transform/use_transform';
 import { fillLightUniforms, LIGHT_FLOATS_PER_ITEM, LIGHT_UNIFORM_FLOATS } from '../src/render/shared';
-import { MAX_LIGHTS } from '../src/light';
+import { MAX_SCENE_LIGHTS } from '../src/light';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { getColor } from '../src/color';
+import { parseSceneDoc, sceneFromDoc, serializeScene } from '../src/scene/document';
+import { registerScene } from '../src/scene/register_scene';
+import { startScene } from '../src/scene/start_scene';
 
 /**
  * What lights a scene, and the numbers that reach the card.
@@ -53,19 +56,19 @@ describe('what lights a scene', () => {
         expect(lighting.lights.map((light) => light.type)).toEqual(['directional', 'point']);
     });
 
-    it('stops at eight, with one warning', () => {
+    it('holds thirty-two at a time, with one warning', () => {
         const warn = spyOn(console, 'warn').mockImplementation(() => {});
         const lighting = lit(() => {
-            for (let i = 0; i < MAX_LIGHTS + 3; i++) {
-                useSpawn(() => { usePointLight({ transform: { x: i } }); })();
-            }
+            for (let i = 0; i < MAX_SCENE_LIGHTS + 3; i++) usePointLight({ transform: { x: i } });
         });
+        const said = warn.mock.calls.length;
         warn.mockRestore();
 
-        expect(lighting.lights).toHaveLength(MAX_LIGHTS);
-        // The first eight, in the order they were made: dropping the last ones is at least
-        // predictable, which "some eight of them" would not be.
-        expect(lighting.lights.map((light) => light.transform.x)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+        expect(lighting.lights).toHaveLength(MAX_SCENE_LIGHTS);
+        // The first ones, in the order they were made: dropping the last ones is at least
+        // predictable, which "some of them" would not be. Each model takes its eight from these.
+        expect(lighting.lights.map((light) => light.transform.x)).toEqual([...Array(MAX_SCENE_LIGHTS).keys()]);
+        expect(said).toBe(1);
     });
 });
 
@@ -89,6 +92,20 @@ describe('the level of the dark side', () => {
 
         // Summing would mean that adding a fourth lamp to a room washed the whole thing flat.
         expect(lighting.ambient.r).toBeCloseTo(0.5, 5);
+    });
+
+    it('is the last ambient light made when there are several, and says so once', () => {
+        resetLightWarnings();
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        const lighting = lit(() => {
+            useAmbientLight({ intensity: 0.4 });
+            useSpawn(function Cave() { useAmbientLight({ intensity: 0.05 }); })();
+        });
+        const said = warn.mock.calls.map((call) => String(call[0]));
+        warn.mockRestore();
+
+        expect(lighting.ambient.r).toBeCloseTo(0.05, 5);
+        expect(said.filter((line) => line.includes('ambient'))).toHaveLength(1);
     });
 });
 
@@ -120,33 +137,35 @@ describe('a light inside something that moves', () => {
         expect(lighting.lights[0].intensity).toBe(3);
     });
 
-    it('replaces the one an object already had, and says so', () => {
+    it('gives off as many as an object asks for, without a word: the lamps of a room, in the scene', () => {
         const warn = spyOn(console, 'warn').mockImplementation(() => {});
         const lighting = lit(() => {
             useDirectionalLight();
             usePointLight({ transform: { x: 2 } });
+            usePointLight({ transform: { x: 8 } });
         });
         const said = warn.mock.calls.length;
         warn.mockRestore();
 
-        // One object, one light: a lamp is a thing in the world and two lamps are two things.
-        expect(lighting.lights).toHaveLength(1);
-        expect(lighting.lights[0].type).toBe('point');
-        expect(said).toBe(1);
+        expect(lighting.lights.map((light) => light.type)).toEqual(['directional', 'point', 'point']);
+        expect(lighting.lights.map((light) => light.transform.x)).toEqual([0, 2, 8]);
+        expect(said).toBe(0);
     });
 
-    it('gives two to one thing by an object each inside it, as the warning says: a car\'s headlights', () => {
+    it('gives a car its headlights and its tail lights, each where it is placed, moving with it', () => {
         const lighting = lit(() => {
             useSpawn(function Car() {
                 useTransform({ x: 50, y: 10 });
-                useSpawn(function LeftLight() { useSpotLight({ transform: { x: -0.6 } }); })();
-                useSpawn(function RightLight() { useSpotLight({ transform: { x: 0.6 } }); })();
+                useSpotLight({ transform: { x: -0.6 } });
+                useSpotLight({ transform: { x: 0.6 } });
+                usePointLight({ range: 1.5, transform: { x: -0.6, y: 2 } });
+                usePointLight({ range: 1.5, transform: { x: 0.6, y: 2 } });
             })();
         });
 
-        expect(lighting.lights.map((light) => light.type)).toEqual(['spot', 'spot']);
-        expect(lighting.lights.map((light) => light.transform.x)).toEqual([49.4, 50.6]);
-        expect(lighting.lights.every((light) => light.transform.y === 10)).toBe(true);
+        expect(lighting.lights.map((light) => light.type)).toEqual(['spot', 'spot', 'point', 'point']);
+        expect(lighting.lights.map((light) => light.transform.x)).toEqual([49.4, 50.6, 49.4, 50.6]);
+        expect(lighting.lights.map((light) => light.transform.y)).toEqual([10, 10, 12, 12]);
     });
 });
 
@@ -198,7 +217,7 @@ describe('the numbers that reach the card', () => {
 
         // The shader stops at the count, but a leftover from a frame with more lights in it is the
         // kind of thing that shows up as one stray highlight and nowhere else.
-        const lightsEnd = 4 + MAX_LIGHTS * LIGHT_FLOATS_PER_ITEM;
+        const lightsEnd = 4 + MAX_SCENE_LIGHTS * LIGHT_FLOATS_PER_ITEM;
         for (let i = 4 + LIGHT_FLOATS_PER_ITEM; i < lightsEnd; i++) {
             expect(out[i]).toBe(0);
         }
@@ -206,11 +225,31 @@ describe('the numbers that reach the card', () => {
 
     it('say there is no shadow to read, which is what every scene until one asks says', () => {
         const out = packed([{ type: 'directional', color: white, intensity: 1, transform: { x: 0, y: 0, z: 0, rotation: 0, rotationX: -1, rotationY: 0, scaleX: 1, scaleY: 1, scaleZ: 1 } }]);
-        const shadowAt = 4 + MAX_LIGHTS * LIGHT_FLOATS_PER_ITEM;
+        const shadowAt = 4 + MAX_SCENE_LIGHTS * LIGHT_FLOATS_PER_ITEM;
 
         // `-1` is the whole of how the shader is told to sample nothing, so it is worth asserting
         // rather than assuming: zero would mean "the first light casts", which is a real answer.
         expect(out[shadowAt + 19]).toBe(-1);
         expect(out.length).toBe(LIGHT_UNIFORM_FLOATS);
+    });
+});
+
+describe('several lights on one object, written down', () => {
+    it('are each a component of their box, and come back the same', () => {
+        const { store } = createTestGame();
+        const root = startTestScene(store, 'Street', () => {
+            useAmbientLight({ intensity: 0.2 });
+            usePointLight({ range: 5, transform: { x: -8, y: 3 } });
+            usePointLight({ range: 5, transform: { x: 8, y: 3 } });
+            return createScene();
+        });
+        const doc = serializeScene(root);
+        const lights = doc.root.components.filter((component) => component.type === 'light');
+        expect(lights.map((light) => (light as { kind: string }).kind)).toEqual(['ambient', 'point', 'point']);
+        expect(parseSceneDoc(doc, '/scenes/street.scene.json')).toEqual(doc);
+
+        const { store: again } = createTestGame();
+        registerScene(again, doc.name, sceneFromDoc(doc));
+        expect(serializeScene(startScene(again, doc.name))).toEqual(doc);
     });
 });

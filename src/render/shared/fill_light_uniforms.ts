@@ -1,4 +1,4 @@
-import { MAX_LIGHTS } from '../../light/types/t_light';
+import { MAX_SCENE_LIGHTS } from '../../light/types/t_light';
 import { transformForward } from './transform_basis';
 import type { TColor } from '../../color';
 import type { TDrawLight } from '../interface/draw/t_draw_light';
@@ -89,12 +89,12 @@ export const FOG_FLOATS = 8;
  */
 export const VIEW_FLOATS = 4;
 
-export const LIGHT_UNIFORM_FLOATS = 4 + MAX_LIGHTS * LIGHT_FLOATS_PER_ITEM + SHADOW_FLOATS + FOG_FLOATS + VIEW_FLOATS;
+export const LIGHT_UNIFORM_FLOATS = 4 + MAX_SCENE_LIGHTS * LIGHT_FLOATS_PER_ITEM + SHADOW_FLOATS + FOG_FLOATS + VIEW_FLOATS;
 
 /**
  * Where the shadow's share starts, just past the lights.
  */
-const SHADOW_AT = 4 + MAX_LIGHTS * LIGHT_FLOATS_PER_ITEM;
+const SHADOW_AT = 4 + MAX_SCENE_LIGHTS * LIGHT_FLOATS_PER_ITEM;
 
 /**
  * Where the fog's share starts, just past the shadow's.
@@ -169,10 +169,11 @@ const rectHalfSides = (
 };
 
 /**
- * Writes a frame's lights into the block every model reads.
+ * Writes a frame's lights into the block every model reads: all of the scene's, up to
+ * `MAX_SCENE_LIGHTS`, from which each model reads the eight it was given (`fillMeshUniforms`).
  *
  * **Once per frame, not once per model**: the lights are the same for everything in it, and sending
- * eight of them with every single draw is what this layout exists to avoid.
+ * them with every single draw is what this layout exists to avoid.
  *
  * It packs exactly what it is handed and substitutes nothing. A scene with no lights at all is a
  * real state, and deciding what to do about it belongs upstream, where a scene lit only by ambient
@@ -261,7 +262,7 @@ export const fillLightUniforms = (
         out[SHADOW_AT + 16] = shadow.light.shadowBias ?? DEFAULT_SHADOW_BIAS;
         out[SHADOW_AT + 17] = shadow.light.shadowStrength ?? 1;
         out[SHADOW_AT + 18] = 1 / shadow.mapSize;
-        // Which of the eight it is, so only that one's share of the light is taken away. A thing in
+        // Which of the scene's it is, so only that one's share of the light is taken away. A thing in
         // the sun's shadow is still lit by the lamp beside it, and that is the difference between a
         // shadow and a dark smudge.
         out[SHADOW_AT + 19] = shadow.lightIndex;

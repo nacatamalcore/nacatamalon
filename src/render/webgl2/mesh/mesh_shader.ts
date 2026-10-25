@@ -1,4 +1,4 @@
-import { MAX_LIGHTS } from '../../../light';
+import { MAX_LIGHTS, MAX_SCENE_LIGHTS } from '../../../light';
 
 /**
  * The twin of `webgpu/mesh/mesh_shader.ts`, in the other language.
@@ -44,7 +44,7 @@ struct LightItem {
 
 layout(std140) uniform Lights {
     vec4 ambient;
-    LightItem items[${MAX_LIGHTS}];
+    LightItem items[${MAX_SCENE_LIGHTS}];
     // The matrix the shadow map was drawn with, and how to read it. Same place, same order and same
     // meaning as its twin in WGSL, because one packer fills both.
     mat4 shadowMatrix;
@@ -165,6 +165,13 @@ out float vFog;
  * @author Francisco Pereira Alvarado
  */
 export const MESH_SAMPLE_LIGHT_GLSL = /* glsl */ `
+// The k-th of the lights this model is lit by, as its place in the scene's block plus one, 0 once
+// the list has ended. Two spare numbers of its block carry the list, four lights of six bits each.
+int meshLight(int k) {
+    float lane = k < 4 ? uniforms.normalMatrix[3].x : uniforms.normalMatrix[3].y;
+    return int((uint(lane) >> uint((k % 4) * 6)) & 63u);
+}
+
 void sampleLight(int index, vec3 worldPos, vec3 normal, vec3 viewDir, out vec3 diffuse, out vec3 shine) {
     LightItem item = lights.items[index];
     vec3 dir = normalize(item.vector.xyz);
@@ -234,10 +241,11 @@ export const MESH_VERTEX_LIGHT_GLSL = /* glsl */ `
     vec3 shine = vec3(0.0);
     vec3 casterDiffuse = vec3(0.0);
     vec3 casterShine = vec3(0.0);
-    int count = int(lights.ambient.w);
     int caster = int(lights.shadowParams.w);
-    for (int i = 0; i < ${MAX_LIGHTS}; i++) {
-        if (i >= count) break;
+    for (int k = 0; k < ${MAX_LIGHTS}; k++) {
+        int named = meshLight(k);
+        if (named == 0) break;
+        int i = named - 1;
         vec3 d;
         vec3 s;
         sampleLight(i, worldPos, worldNormal, viewDir, d, s);

@@ -60,7 +60,7 @@ export const findMotionBox = (roots: readonly TBox[], id: string, name: string |
  * What a box carries that has an id of its own.
  */
 const partsOf = (box: TBox): Array<{ id: string } | null> => [
-    box.camera2d, box.camera3d, box.light, box.fog, box.particleCollider, box.audioListener, ...box.drawables,
+    box.camera2d, box.camera3d, ...box.lights, box.fog, box.particleCollider, box.audioListener, ...box.drawables,
 ];
 
 /**

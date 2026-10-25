@@ -18,11 +18,12 @@ import type { TTextureWrap } from '../../../materials/types/t_material';
 export const MESH_STRIDE = 256;
 
 /**
- * The same for a scene's lights: 132 numbers is 528 bytes, which rounds up to three slots' worth.
+ * The same for a scene's lights: its block rounded up to the next 256 bytes, worked out from its size
+ * so the two cannot drift apart. Thirty-two lights and the rest are 2192 bytes, nine slots' worth.
  *
  * @internal
  */
-export const LIGHT_STRIDE = 768;
+export const LIGHT_STRIDE = Math.ceil((LIGHT_UNIFORM_FLOATS * 4) / 256) * 256;
 
 const INITIAL_MESHES = 16;
 
@@ -43,7 +44,7 @@ const INITIAL_VIEWS = 2;
  *
  * Three groups, and each one changes at a different rate: the lights once a scene, the picture once
  * a run of models that share one, and the placement once a model. Splitting them that way is what
- * keeps eight lights costing one upload a frame instead of one per model.
+ * keeps a scene's lights costing one upload a frame instead of one per model.
  *
  * @internal
  * @since 1.0.0

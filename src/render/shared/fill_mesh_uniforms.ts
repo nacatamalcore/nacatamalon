@@ -1,7 +1,9 @@
 import * as mat from '../../math/mat4';
 import { computeModelMatrix, normalMatrixOf } from './compute_mvp_3d';
 import type { TCameraSpace } from './compute_mvp_3d';
+import { pickMeshLights } from './pick_mesh_lights';
 import type { TDrawMesh } from '../interface/draw/t_draw_mesh';
+import type { TDrawLight } from '../interface/draw/t_draw_light';
 
 /**
  * How many numbers one model's block holds. Sixteen apiece for three matrices, four apiece after.
@@ -27,8 +29,8 @@ const UPRIGHT = { x: 1, y: -1, z: 1 };
  * world, which way its surfaces face, and what its surface is like.
  *
  * **The lights are deliberately not here.** They are the same for every model in the frame, so they
- * live in their own block written once. That is what makes eight lights cost the same to send as
- * one, instead of eight times as much per model drawn.
+ * live in their own block written once. What is here is which of them light this one: the eight of
+ * `lights` that reach it most (`pickMeshLights`), as their places in that block.
  *
  * Three matrices and not one, because each answers a different question. The combined one puts the
  * corner on screen. The world one is needed as well, because a lamp shines from a place and the
@@ -42,7 +44,7 @@ const UPRIGHT = { x: 1, y: -1, z: 1 };
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const fillMeshUniforms = (out: Float32Array, at: number, mesh: TDrawMesh, space: TCameraSpace): void => {
+export const fillMeshUniforms = (out: Float32Array, at: number, mesh: TDrawMesh, space: TCameraSpace, lights: readonly TDrawLight[] = []): void => {
     const surface = mesh.material;
     // Its own placement, worked out here only when nothing above it did: a model inside a box that
     // moved already had this done while the tree was walked.
@@ -63,6 +65,11 @@ export const fillMeshUniforms = (out: Float32Array, at: number, mesh: TDrawMesh,
     // so its last number carries whether the picture is stretched straight across the screen, the
     // PlayStation's swimming textures: one for `affine`, zero for held true to the surface.
     out[at + 47] = surface.affine === true ? 1 : 0;
+    // The other three of that column are free the same way, and two of them carry which of the
+    // scene's lights reach this model: eight places in its block, four to a number.
+    const [first, second] = pickMeshLights(lights, model, mesh.geometry?.bounds ?? null);
+    out[at + 44] = first;
+    out[at + 45] = second;
 
     out[at + 48] = surface.tint.r;
     out[at + 49] = surface.tint.g;

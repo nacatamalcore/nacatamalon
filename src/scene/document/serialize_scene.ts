@@ -664,7 +664,7 @@ const writeBox = (box: TBox, writing: TWriting): TBoxNode => {
     if (box.camera2d !== null) components.push(writeCamera2d(box.camera2d));
     if (box.camera3d !== null) components.push(writeCamera3d(box.camera3d));
     if (box.fog !== null) components.push(writeFog(box.fog));
-    if (box.light !== null) components.push(writeLight(box.light));
+    for (const light of box.lights) components.push(writeLight(light));
 
     // The simulation first of all: a scene read from the top says how it falls before it says what
     // is in it.
