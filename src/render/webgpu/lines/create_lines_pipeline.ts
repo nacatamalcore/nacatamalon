@@ -1,4 +1,4 @@
-import { DEPTH_FORMAT } from '../frame/depth';
+import { DEPTH_FORMAT, STENCIL_TEST } from '../frame/depth';
 import { LINE_VERTEX_FLOATS } from '../../shared/line_vertex';
 import { LINES_SHADER } from './lines_shader';
 import type { TCameraSpace } from '../../shared/compute_mvp_3d';
@@ -38,6 +38,7 @@ const LINE_DEPTH: GPUDepthStencilState = {
     format: DEPTH_FORMAT,
     depthWriteEnabled: true,
     depthCompare: 'less',
+    ...STENCIL_TEST,
 };
 
 /**

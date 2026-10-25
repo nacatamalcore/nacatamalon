@@ -11,6 +11,8 @@ import { canvasTargetFor, presentToCanvas, releaseUnusedCanvasTargets } from './
 import { bindMultisampled, releaseUnusedMultisampled, resolveMultisampled } from './multisample';
 import { writeFrameUniforms } from './write_frame_uniforms';
 import { drawMesh, writeMeshLights } from '../mesh/draw_meshes';
+import { applyStencil, beginStencil, createMaskPrograms, drawMaskLayer, drawMaskRun, endStencil } from '../mask/mask_programs';
+import type { TDrawStencil } from '../../interface/draw/t_draw_stencil';
 import { createShadowMap } from '../shadow/shadow_map';
 import { createShadowPipeline } from '../shadow/shadow_pipeline';
 import { computeModelMatrix } from '../../shared/compute_mvp_3d';
@@ -48,8 +50,8 @@ const bindTarget = (state: TWebGL2State, pass: TRenderPass): { width: number; he
         // one would draw meshes in whatever order they happened to come in.
         const depth = gl.createRenderbuffer();
         gl.bindRenderbuffer(gl.RENDERBUFFER, depth);
-        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, size.width, size.height);
-        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depth);
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, size.width, size.height);
+        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, depth);
         gl.bindRenderbuffer(gl.RENDERBUFFER, null);
         state.framebuffers.set(handle, framebuffer);
     } else {
@@ -76,8 +78,8 @@ const bindUpright = (state: TWebGL2State, width: number, height: number): void =
         gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, color);
         const depth = gl.createRenderbuffer();
         gl.bindRenderbuffer(gl.RENDERBUFFER, depth);
-        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, width, height);
-        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depth);
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, width, height);
+        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, depth);
         gl.bindRenderbuffer(gl.RENDERBUFFER, null);
         state.upright.set(key, framebuffer);
         return;
@@ -98,7 +100,7 @@ export const releaseUnusedUpright = (state: TWebGL2State): void => {
         }
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
         const color = gl.getFramebufferAttachmentParameter(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.FRAMEBUFFER_ATTACHMENT_OBJECT_NAME) as WebGLRenderbuffer | null;
-        const depth = gl.getFramebufferAttachmentParameter(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.FRAMEBUFFER_ATTACHMENT_OBJECT_NAME) as WebGLRenderbuffer | null;
+        const depth = gl.getFramebufferAttachmentParameter(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.FRAMEBUFFER_ATTACHMENT_OBJECT_NAME) as WebGLRenderbuffer | null;
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.deleteRenderbuffer(color);
         gl.deleteRenderbuffer(depth);
@@ -243,7 +245,8 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
         // viewport, depth, samples and pictures above are the buffer's size; everything placed in
         // it (cameras, sprites, maps, a material's `resolution`) measures in the game's. Only the
         // screen's pass: a texture or another canvas is its own size.
-        const ratio = asked.renderTarget === undefined && canvas === null ? ctx.pixelRatio ?? 1 : 1;
+        // A soft mask's picture is drawn as large as the screen's buffer, so it says its own.
+        const ratio = asked.pixelRatio ?? (asked.renderTarget === undefined && canvas === null ? ctx.pixelRatio ?? 1 : 1);
         const width = target.width / ratio;
         const height = target.height / ratio;
 
@@ -253,7 +256,11 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
         // draw turns it off again when it is done, and a clear with it off does nothing at all.
         gl.clearDepth(1);
         gl.depthMask(true);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        // The stencil too, which only masks write: back to 0, with nothing keeping the clear out.
+        gl.clearStencil(0);
+        gl.stencilMask(0xff);
+        gl.disable(gl.SCISSOR_TEST);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
 
         writeFrameUniforms(state, width, height, drawn.cameras ?? []);
 
@@ -271,7 +278,14 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
         fillCameraSpace(flatSpace, null, width, height);
         toGlClip(flatSpace.viewProjection);
 
-        writeSpriteInstances(gl, state.sprites, drawables, cameraIndex);
+        // Only a pass with something masked in it carries these, and only then is the stencil on.
+        const stencil = drawn.stencil ?? null;
+        if (stencil !== null) {
+            state.masks ??= createMaskPrograms(gl);
+            beginStencil(gl);
+        }
+        let masking: TDrawStencil | null = null;
+        writeSpriteInstances(gl, state.sprites, drawables, cameraIndex, stencil);
 
         // Counted and reserved before anything is drawn, so the buffer cannot be swapped out from
         // under a draw that was already pointed at it.
@@ -294,6 +308,17 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
         let litView = -1;
         for (let i = 0; i < drawables.length; i++) {
             const item = drawables[i];
+            if (stencil !== null) {
+                masking = applyStencil(gl, stencil[i]!, masking, ratio, target.width, target.height);
+            }
+            if (item.type === 'mask-layer') {
+                if (spritesReady) {
+                    gl.bindVertexArray(null);
+                }
+                drawMaskLayer(gl, state.sprites, state.masks!, item);
+                spritesReady = false;
+                continue;
+            }
             if (item.type === 'mesh') {
                 const index = viewIndex[i] ?? -1;
                 const view = views3d[index] ?? null;
@@ -324,13 +349,26 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
                 continue;
             }
             if (item.type === 'tilemap') {
-                drawTilemapLayer(gl, state.tilemaps, item, cameraIndex[i] ?? -1, ctx.time, width, height);
+                // A mask's shape drawn as a layer writes the stencil instead of colour.
+                const writes = masking !== null && masking.write !== 'none' ? masking : null;
+                if (writes !== null) {
+                    gl.useProgram(state.masks!.tilemap.program);
+                    gl.uniform1i(state.masks!.tilemap.reading, writes.channel === 'luminance' ? 1 : 0);
+                }
+                drawTilemapLayer(gl, state.tilemaps, item, cameraIndex[i] ?? -1, ctx.time, width, height, writes === null ? null : state.masks!.tilemap);
                 // The layer's program left none of the sprite state set.
                 spritesReady = false;
                 continue;
             }
             // Only the sprite that opens a batch draws it; the rest of the batch went with it.
             if (run >= state.sprites.runCount || state.sprites.runs[run].firstDrawable !== i) {
+                continue;
+            }
+            const opened = state.sprites.runs[run];
+            if (opened.stencil !== null && opened.stencil.write !== 'none') {
+                drawMaskRun(gl, state.sprites, state.masks!, opened);
+                spritesReady = false;
+                run++;
                 continue;
             }
             if (!spritesReady) {
@@ -345,6 +383,10 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
 
         if (spritesReady) {
             gl.bindVertexArray(null);
+        }
+        // Before anything copies the picture: a box left on would keep the copy inside it.
+        if (stencil !== null) {
+            endStencil(gl);
         }
         if (state.samples > 1) {
             resolveMultisampled(state, into, target.width, target.height);

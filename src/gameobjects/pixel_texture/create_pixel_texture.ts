@@ -18,6 +18,14 @@ import type { TTexture } from '../../loaders';
 const painted = new WeakMap<TTexture, { pixels: TPixels; store: TRuntimeStore }>();
 
 /**
+ * The pixels a painted texture shows, as they are now, or `undefined` for one that was not painted:
+ * what the pointer reads to tell what of a mask's shape is there.
+ *
+ * @internal
+ */
+export const paintedPixelsOf = (texture: TTexture): TPixels | undefined => painted.get(texture)?.pixels;
+
+/**
  * Every texture made here, ready or still waiting for its picture: what a key may be taken over by.
  */
 const ours = new WeakSet<TTexture>();

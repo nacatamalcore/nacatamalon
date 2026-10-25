@@ -10,7 +10,7 @@ import type { TPolygon } from '../../../gameobjects/polygon';
  */
 const whites = new WeakMap<IRenderer, TDrawTexture>();
 
-const whiteFor = (renderer: IRenderer): TDrawTexture => {
+export const whiteFor = (renderer: IRenderer): TDrawTexture => {
     let white = whites.get(renderer);
     if (white === undefined) {
         white = { status: 'ready', gpu: renderer.createDataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1), width: 1, height: 1 };

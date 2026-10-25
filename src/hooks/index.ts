@@ -1,6 +1,7 @@
 export { useUpdate, useLateUpdate } from './loop';
 export { useHitbox, useCollisionBetween, useCollisionWith } from './hitbox';
 export { useTag } from './tags';
+export { useMask } from './mask';
 export type { TCollisionWithOptions } from './hitbox';
 export type { THitboxOptions } from './hitbox';
 export { useColor } from './color';

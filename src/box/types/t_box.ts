@@ -13,6 +13,7 @@ import type { TCamera3d } from '../../camera/types/t_camera_3d';
 import type { TSpriteTexture } from '../../gameobjects/sprite_texture/types/t_sprite_texture';
 import type { TMotionAttachment } from '../../motion/types/t_motion';
 import type { THitbox, TCollisionListener } from '../../hitbox/types/t_hitbox';
+import type { TMask } from '../../mask/types/t_mask';
 
 /**
  * One box at runtime: the engine's single composition primitive, a node in the tree. A scene
@@ -267,6 +268,11 @@ export type TBox = {
      * Inherited downwards, so marking a HUD once covers every piece of it however deep.
      */
     screenSpace: boolean;
+    /**
+     * The mask that keeps this box, and everything under it, to a rectangle or a shape, or `null`.
+     * Set by the mask's `add` (`useMask`), never by hand.
+     */
+    mask: TMask | null;
     /**
      * How much this box, and everything under it, moves with the camera: `useParallax`. `null` moves
      * as everything does. A drawable's own `parallax` wins over it.

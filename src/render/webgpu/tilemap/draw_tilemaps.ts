@@ -109,6 +109,7 @@ export const drawTilemapLayer = (
     time: number,
     width: number,
     height: number,
+    mask: GPURenderPipeline | null = null,
 ): void => {
     // Not drawn until the sheet is there, exactly like a sprite: a map of white squares for one
     // frame is worse than a map that appears a moment later.
@@ -123,11 +124,12 @@ export const drawTilemapLayer = (
 
     // An effect of its own runs a different pipeline over the same cells. One that would not
     // compile falls through: the layer keeps its sheet, its colour and its place.
-    const material = layer.material ?? null;
+    // A mask's shape is only its cells, so it is written without the layer's effect.
+    const material = mask !== null ? null : layer.material ?? null;
     const compiled = material !== null && material.fragment !== null ? tilemaps.materials.get(material) : null;
     const effect = compiled !== null && !compiled.failed && compiled.pipeline !== null ? compiled : null;
 
-    gpuPass.setPipeline(effect !== null ? effect.pipeline! : tilemaps.pipeline);
+    gpuPass.setPipeline(mask ?? (effect !== null ? effect.pipeline! : tilemaps.pipeline));
     gpuPass.setBindGroup(0, tilemaps.frameBindGroup);
     gpuPass.setBindGroup(1, textureBindGroup(device, tilemaps, toGpuTexture(texture.gpu), layer.smooth ?? tilemaps.defaultSmooth));
     // Slot 0 of the views is the screen, so camera `c` is in slot `c + 1`: the same rule the

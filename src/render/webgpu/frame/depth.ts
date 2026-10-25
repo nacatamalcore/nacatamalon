@@ -11,7 +11,27 @@ import type { TWebGPUState } from '../types/t_webgpu_state';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const DEPTH_FORMAT: GPUTextureFormat = 'depth24plus';
+export const DEPTH_FORMAT: GPUTextureFormat = 'depth24plus-stencil8';
+
+/**
+ * What every pipeline drawing into a pass says about the stencil: drawn where it equals the pass's
+ * reference, and left as it is. The reference is set per entry (`TDrawStencil.ref`), and is 0 with
+ * the stencil cleared to 0 whenever nothing is masked, so it passes everywhere. Only the pipelines
+ * that write a mask's shape say otherwise.
+ *
+ * Declared by all of them, models included, because a pass with a stencil only takes pipelines that
+ * agree on it, and because an entry that is not masked has to stay out of where a mask still is.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const STENCIL_TEST: Pick<GPUDepthStencilState, 'stencilFront' | 'stencilBack' | 'stencilReadMask' | 'stencilWriteMask'> = {
+    stencilFront: { compare: 'equal', failOp: 'keep', depthFailOp: 'keep', passOp: 'keep' },
+    stencilBack: { compare: 'equal', failOp: 'keep', depthFailOp: 'keep', passOp: 'keep' },
+    stencilReadMask: 0xff,
+    stencilWriteMask: 0,
+};
 
 /**
  * What the 2D pipelines declare so they can share a pass with meshes: they neither test nor write
@@ -26,6 +46,7 @@ export const FLAT_DEPTH: GPUDepthStencilState = {
     format: DEPTH_FORMAT,
     depthWriteEnabled: false,
     depthCompare: 'always',
+    ...STENCIL_TEST,
 };
 
 /**

@@ -48,6 +48,7 @@ export const createWebGL2Renderer = async (
         // The same, for the first frame that draws an emitter.
         particles: null,
         lines: null,
+        masks: null,
         framebuffers: new Map(),
         upright: new Map(),
         uprightUsed: new Set(),

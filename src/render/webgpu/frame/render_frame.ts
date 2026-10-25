@@ -17,6 +17,9 @@ import { computeModelMatrix } from '../../shared/compute_mvp_3d';
 import { findShadowSource, lightSpaceMatrix, reportCastersOutside } from '../../shared/light_space';
 import { cameraSpacesFor, fillCameraSpace, newCameraSpace } from '../../shared/compute_mvp_3d';
 import { drawMesh, reserveMeshSlots, writeMeshLights } from '../mesh/draw_meshes';
+import { createMaskPipelines } from '../mask/mask_pipelines';
+import { applyStencil, drawMaskLayer, drawMaskRun } from '../mask/draw_masks';
+import type { TDrawStencil } from '../../interface/draw/t_draw_stencil';
 import type { TFrameContext, TRenderPass } from '../../interface';
 import type { TShadowUniforms } from '../../shared/fill_light_uniforms';
 import type { TWebGPUState } from '../types/t_webgpu_state';
@@ -148,7 +151,8 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         // depth, the samples and the effects' pictures are the buffer's size; everything placed in
         // it (cameras, sprites, maps, a material's `resolution`) measures in the game's. Only the
         // screen's pass: a texture or another canvas is its own size.
-        const ratio = pass.renderTarget === undefined && pass.targetCanvas === undefined ? ctx.pixelRatio ?? 1 : 1;
+        // A soft mask's picture is drawn as large as the screen's buffer, so it says its own.
+        const ratio = pass.pixelRatio ?? (pass.renderTarget === undefined && pass.targetCanvas === undefined ? ctx.pixelRatio ?? 1 : 1);
         const width = target.width / ratio;
         const height = target.height / ratio;
         // With `msaa`, drawn into a picture with several samples per pixel and resolved into the
@@ -168,11 +172,15 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
                 clearValue: drawn.clearColor ?? gpu.clearColor,
             }],
             // Cleared to the far plane: everything is in front of nothing.
+            // The stencil, which only masks write, starts at 0 and is not kept: nothing reads it after.
             depthStencilAttachment: {
                 view: depthViewFor(gpu, target.width, target.height),
                 depthClearValue: 1,
                 depthLoadOp: 'clear',
                 depthStoreOp: 'store',
+                stencilClearValue: 0,
+                stencilLoadOp: 'clear',
+                stencilStoreOp: 'discard',
             },
         });
 
@@ -191,7 +199,13 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         // as many times as there were models.
         const spaces = cameraSpacesFor(views3d, width, height);
         fillCameraSpace(flatSpace, null, width, height);
-        const spriteCount = writeSpriteInstances(gpu.device, gpu.sprites, drawables, cameraIndex);
+        // Only a pass with something masked in it carries these, and only then is anything set.
+        const stencil = drawn.stencil ?? null;
+        if (stencil !== null) {
+            gpu.masks ??= createMaskPipelines(gpu.device, gpu.format, gpu.samples, gpu.sprites, gpu.tilemaps);
+        }
+        let state: TDrawStencil | null = null;
+        const spriteCount = writeSpriteInstances(gpu.device, gpu.sprites, drawables, cameraIndex, stencil);
 
         // All three before anything is drawn: growing any of these buffers throws away the slots
         // already written, so the room has to be there first.
@@ -239,6 +253,14 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         let spritesReady = false;
         for (let i = 0; i < drawables.length; i++) {
             const item = drawables[i];
+            if (stencil !== null) {
+                state = applyStencil(gpuPass, stencil[i]!, state, ratio, target.width, target.height);
+            }
+            if (item.type === 'mask-layer') {
+                drawMaskLayer(gpuPass, gpu.masks!, item);
+                spritesReady = false;
+                continue;
+            }
             if (item.type === 'mesh') {
                 const view = viewIndex[i] ?? -1;
                 if (drawMesh(gpu.device, gpuPass, gpu.meshes, item, spaces[view] ?? flatSpace, views3d[view]?.lights ?? [], view, meshSlot, width, height, ctx.time)) {
@@ -266,7 +288,10 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
                 continue;
             }
             if (item.type === 'tilemap') {
-                drawTilemapLayer(gpu.device, gpuPass, gpu.tilemaps, item, cameraIndex[i] ?? -1, layerSlot, ctx.time, width, height);
+                // A mask's shape drawn as a layer writes the stencil instead of colour.
+                const writes = state !== null && state.write !== 'none' && state.write !== 'reset' ? state : null;
+                drawTilemapLayer(gpu.device, gpuPass, gpu.tilemaps, item, cameraIndex[i] ?? -1, layerSlot, ctx.time, width, height,
+                    writes === null ? null : gpu.masks!.tilemap(writes.channel, writes.write as 'add' | 'sub'));
                 layerSlot++;
                 // The layer's pipeline left none of the sprite state set.
                 spritesReady = false;
@@ -274,6 +299,13 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
             }
             // Only the sprite that opens a batch draws it; the rest of the batch went with it.
             if (run >= gpu.sprites.runCount || gpu.sprites.runs[run].firstDrawable !== i) {
+                continue;
+            }
+            const opened = gpu.sprites.runs[run];
+            if (opened.stencil !== null && opened.stencil.write !== 'none') {
+                drawMaskRun(gpuPass, gpu.sprites, gpu.masks!, opened);
+                spritesReady = false;
+                run++;
                 continue;
             }
             if (!spritesReady) {

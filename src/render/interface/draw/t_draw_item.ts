@@ -4,6 +4,7 @@ import type { TDrawMesh } from './t_draw_mesh';
 import type { TDrawParticles } from './t_draw_particles';
 import type { TDrawParticles3d } from './t_draw_particles_3d';
 import type { TDrawLines } from './t_draw_lines';
+import type { TDrawMaskLayer } from './t_draw_mask_layer';
 
 /**
  * Anything a backend can be asked to draw. It grows by adding members
@@ -16,4 +17,4 @@ import type { TDrawLines } from './t_draw_lines';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TDrawItem = TDrawSprite | TDrawTilemapLayer | TDrawMesh | TDrawParticles | TDrawParticles3d | TDrawLines;
+export type TDrawItem = TDrawSprite | TDrawTilemapLayer | TDrawMesh | TDrawParticles | TDrawParticles3d | TDrawLines | TDrawMaskLayer;

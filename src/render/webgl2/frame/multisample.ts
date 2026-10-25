@@ -29,8 +29,8 @@ export const bindMultisampled = (state: TWebGL2State, width: number, height: num
         gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, color);
         const depth = gl.createRenderbuffer();
         gl.bindRenderbuffer(gl.RENDERBUFFER, depth);
-        gl.renderbufferStorageMultisample(gl.RENDERBUFFER, state.samples, gl.DEPTH_COMPONENT24, width, height);
-        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depth);
+        gl.renderbufferStorageMultisample(gl.RENDERBUFFER, state.samples, gl.DEPTH24_STENCIL8, width, height);
+        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, depth);
         gl.bindRenderbuffer(gl.RENDERBUFFER, null);
         state.multisampled.set(key, framebuffer);
     }
@@ -68,7 +68,7 @@ export const releaseUnusedMultisampled = (state: TWebGL2State): void => {
         }
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
         const color = gl.getFramebufferAttachmentParameter(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.FRAMEBUFFER_ATTACHMENT_OBJECT_NAME) as WebGLRenderbuffer | null;
-        const depth = gl.getFramebufferAttachmentParameter(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.FRAMEBUFFER_ATTACHMENT_OBJECT_NAME) as WebGLRenderbuffer | null;
+        const depth = gl.getFramebufferAttachmentParameter(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.FRAMEBUFFER_ATTACHMENT_OBJECT_NAME) as WebGLRenderbuffer | null;
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.deleteRenderbuffer(color);
         gl.deleteRenderbuffer(depth);

@@ -164,6 +164,7 @@ export type TComponentDoc =
     | TSongComponent
     | TMotionComponent
     | TAudioListenerComponent
+    | TMaskComponent
     | TStoreComponent
     | TPhysicsBody2dComponent
     | TPhysicsBody3dComponent
@@ -890,6 +891,33 @@ export type TMotionComponent = {
      * Absent for `1`.
      */
     speed?: number;
+};
+
+/**
+ * A mask on this object: it, and everything under it, kept to a rectangle in its own space or to
+ * the shape of another object of the scene, named by its `id`.
+ *
+ * Written on the object it masks. A mask the game adds to several objects is written on each of
+ * them, with the same `id`. What is left out is the default: `channel` is written only for
+ * `'luminance'`, and the four switches only when they are not what a mask is made with.
+ *
+ * @category Scenes
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TMaskComponent = {
+    type: 'mask';
+    id: string;
+    /** The rectangle it keeps to, in this object's space. */
+    rect?: { x: number; y: number; width: number; height: number };
+    /** The `id` of the object whose shape it keeps to. Wins over `rect`. */
+    by?: string;
+    channel?: 'alpha' | 'luminance';
+    soft?: boolean;
+    invert?: boolean;
+    showShape?: boolean;
+    /** Left out when on. */
+    enabled?: boolean;
 };
 
 /**

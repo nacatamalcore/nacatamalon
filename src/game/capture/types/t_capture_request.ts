@@ -34,6 +34,9 @@ export type TCaptureRequest = {
     /** Whether the screen effects are run over it, as they are over the screen. */
     effects: boolean;
     target: ITexture;
+    /** The size `target` was made at, which is what a soft mask's pictures are made at for it. */
+    width: number;
+    height: number;
     /**
      * With nothing when the frame drew it, with the error when the frame did not. Called once.
      */

@@ -7,6 +7,10 @@ import type { TPlacedCollider2d, TPlacedCollider3d, TSceneColliders } from '../.
 import type { TDrawable } from '../../../gameobjects/types';
 import type { TTransform2d } from '../../../gameobjects/types/t_transform_2d';
 import type { TCamera2d } from '../../../camera';
+import { shapeRolesOf } from '../../../mask/create_mask';
+import { maskLevelFor, masksNow, noteShape } from '../../../mask/mask_walk';
+import type { TMask } from '../../../mask/types/t_mask';
+import type { TMaskLevel, TMaskWalk } from '../../../mask/mask_walk';
 
 /**
  * A placement to put children inside, or `null` for "nothing above has moved anything".
@@ -203,6 +207,11 @@ const placeCollider = (box: TBox, world: TWorld, colliders: TSceneColliders): vo
  * skip them. The walk stops at such a box: what is under it belongs to the picture, not to this view.
  * @param screenCamera The index of the camera what is pinned to the screen is drawn through, or `-1`
  * for screen pixels, which is what a game always has (see `TRuntimeState.viewport.screen2d`).
+ * @param masks Where to note each drawable's innermost mask and each mask's shape, or `null` when no
+ * object anywhere is masked, which is most games: they pay nothing for masks.
+ * @param level The innermost mask of the boxes above this one, or `null`.
+ * @param shapeOf The masks a box above this one is the shape of, or `null`. What a shape draws is
+ * noted as the shape, and drawn only when one of them says `showShape`.
  *
  * Hidden boxes and hidden drawables are left out here, so nothing further down the frame has to ask
  * again: what comes out is what is drawn. Each drawable is also placed as it is collected, since
@@ -222,6 +231,9 @@ export const collectDrawables = (
     camera: TCamera2d | null = null,
     inherited: { x: number; y: number } | null = null,
     snap = false,
+    masks: TMaskWalk | null = null,
+    level: TMaskLevel | null = null,
+    shapeOf: readonly TMask[] | null = null,
 ): void => {
     // Before the check for hidden, because a hidden screen is a screen switched off: its picture is
     // still drawn, with nothing in it. The top of the walk is the picture's own, and is not stopped.
@@ -243,6 +255,20 @@ export const collectDrawables = (
     if (colliders !== null) {
         placeCollider(box, world, colliders);
     }
+    // A mask on this box keeps everything below it, inside the masks above. Where the box is now is
+    // what its rectangle is measured from.
+    let here = level;
+    let shapes = shapeOf;
+    if (masks !== null) {
+        if (masksNow(box.mask)) {
+            here = maskLevelFor(box, box.mask, level, view, world?.flat ?? NOWHERE_FLAT);
+        }
+        const roles = shapeRolesOf(box);
+        if (roles !== undefined) {
+            shapes = shapes === null ? roles : [...shapes, ...roles];
+        }
+    }
+    const shown = shapes === null || shapes.some((mask) => mask.showShape);
     // What is pinned to the screen does not see the camera, so it has no parallax either.
     const parallax = pinned ? null : box.parallax ?? inherited;
     for (const drawable of box.drawables) {
@@ -259,10 +285,17 @@ export const collectDrawables = (
         if (drawable.visible === false) {
             continue;
         }
+        if (shapes !== null) {
+            noteShape(masks!, shapes, drawable, view);
+            if (!shown) {
+                continue;
+            }
+        }
         out.push(drawable);
         cameraIndex.push(view);
+        masks?.levels.push(here);
     }
     for (const child of box.children) {
-        collectDrawables(child, out, cameraIndex, sceneCamera, pinned, world, depth + 1, colliders, pictures, screenCamera, camera, parallax, snap);
+        collectDrawables(child, out, cameraIndex, sceneCamera, pinned, world, depth + 1, colliders, pictures, screenCamera, camera, parallax, snap, masks, here, shapes);
     }
 };

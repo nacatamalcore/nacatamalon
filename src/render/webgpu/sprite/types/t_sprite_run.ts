@@ -35,6 +35,12 @@ export type TSpriteRun = {
     /**
      * Index of the run's first sprite in the instance buffer.
      */
+    /**
+     * Where these sprites may draw and what they do to the stencil, or `null` in a pass where
+     * nothing is masked. A run never mixes two: a mask's shape and what it keeps in are told apart
+     * here.
+     */
+    stencil: TDrawStencil | null;
     start: number;
     /**
      * Where that first sprite sat in the frame's list of things to draw.
@@ -51,4 +57,5 @@ export type TSpriteRun = {
 };
 
 import type { TDrawShader } from '../../../interface/draw/t_draw_material';
+import type { TDrawStencil } from '../../../interface/draw/t_draw_stencil';
 import type { TUniformValues } from '../../../../materials/types/t_uniforms';

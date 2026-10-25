@@ -49,8 +49,26 @@ releases are in [changelog/](./changelog/), one file each.
   a screen or a sign made in code; a picture drawn into (`createSpriteTexture`) makes a monitor that
   glows with what a camera sees. A scene document keeps it by asset key (`"emissiveTexture"`, written
   only when there is one).
+- **Masks.** `useMask` keeps objects, and everything under them, to a rectangle or to the shape of
+  another object: a list scrolling in a window, a torch over a dark level, a hole cut in a wall, a
+  wipe. It masks nothing until it is added (`mask.add(box)`, as many as want it, `remove`), so one
+  mask can keep a map and its enemies and leave the HUD alone. A rectangle is in the masked object's
+  own space and, square to the screen, costs nothing (a scissor). A shape (`by`) is everything
+  another object draws, sprites by their pictures, shapes and texts, added together; it moves, turns
+  and is tweened like any object, and is not drawn unless `showShape`. `channel: 'luminance'` reads a
+  black and white cut-out, `invert` draws only outside, and `soft` fades by the shape instead of
+  cutting at half way. A hard mask is written into the stencil in the pass, with no picture of its
+  own; only a soft one draws into pictures. A mask inside another keeps to both, `zIndex` sorts what
+  is masked as it always did, and what a mask keeps out is not touched by the pointer. The same
+  frame on WebGPU and WebGL2. A scene document keeps it as a `mask` component on the masked object,
+  its shape named by id, and the editor edits it in the inspector and outlines it on the selection.
 
 ### Changed
+
+- **The depth of every pass has a stencil**: `depth24plus-stencil8` on WebGPU, `DEPTH24_STENCIL8`
+  and a canvas with `stencil: true` on WebGL2, which is what masks write. Most cards already keep 24
+  bits of depth in 32, so it costs little or nothing; the stencil is not stored after a pass, and a
+  frame with nothing masked draws exactly as before.
 
 - **An object gives off as many lights as it asks for.** Each `use…Light` call adds one, placed by
   its own `transform`, as `createMesh` adds a model: a car's two headlights and two tail lights are

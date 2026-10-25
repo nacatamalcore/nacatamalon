@@ -39,6 +39,9 @@ import type { TGltfModel } from '../../loaders';
 import type { TGeometry } from '../../geometry';
 import type { TAssetEntry } from './types/t_asset_entry';
 import type { TBox } from '../../box';
+import { rootOf } from '../../box/root_of';
+import { createMask, releaseMask } from '../../mask/create_mask';
+import type { TMask } from '../../mask/types/t_mask';
 import type { TBoxNode, TSceneDoc } from './types/t_scene_doc';
 import type { TComponentDoc, TMaterialDoc, TSpriteTextureComponent, TTilemapComponent } from './types/t_component_doc';
 import type { TMaterialMap, TMeshMaterial, TSpriteMaterial } from '../../materials';
@@ -294,6 +297,39 @@ const buildModelMesh = (
  * the engine has, so a tool's remembered selection, a link between two boxes and an undo step all
  * break quietly if it changes on every load.
  */
+/**
+ * The masks built so far whose shape is another object, named by its id: found once everything the
+ * document describes has been built, since the shape can come later in the file than what it masks.
+ */
+const shapesToFind: Array<{ mask: TMask; id: string; box: TBox }> = [];
+
+const findById = (box: TBox, id: string): TBox | null => {
+    if (box.id === id) {
+        return box;
+    }
+    for (const child of box.children) {
+        const found = findById(child, id);
+        if (found !== null) {
+            return found;
+        }
+    }
+    return null;
+};
+
+/**
+ * Gives each mask built since `from` the object it names as its shape, looked for in the scene the
+ * masked object is in. A shape that is not there leaves the mask with none, which keeps everything
+ * out, as a shape taken away does.
+ */
+const findShapes = (from: number): void => {
+    for (const { mask, id, box } of shapesToFind.splice(from)) {
+        mask.by = findById(rootOf(box), id);
+        if (mask.by === null) {
+            console.warn(`[NacatamalOn] sceneFromDoc: the mask on '${box.name}' keeps to the shape of '${id}', and there is no object with that id in its scene. It keeps everything out until it is given one.`);
+        }
+    }
+};
+
 const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: string): void => {
     const assets = store.get('assets');
 
@@ -657,6 +693,25 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
             useScript(component.ref, component.props, { id: component.id });
             break;
         }
+        case 'mask': {
+            // Owned by the object it masks, so it goes when that object goes. Its shape is found once
+            // the whole document is built.
+            const box = getActiveBox()!;
+            const mask = createMask({
+                ...(component.rect !== undefined ? { rect: component.rect } : {}),
+                ...(component.channel !== undefined ? { channel: component.channel } : {}),
+                ...(component.soft !== undefined ? { soft: component.soft } : {}),
+                ...(component.invert !== undefined ? { invert: component.invert } : {}),
+                ...(component.showShape !== undefined ? { showShape: component.showShape } : {}),
+                ...(component.enabled !== undefined ? { enabled: component.enabled } : {}),
+            }, component.id);
+            box.cleanups.push(() => releaseMask(mask));
+            mask.add(box);
+            if (component.by !== undefined) {
+                shapesToFind.push({ mask, id: component.by, box });
+            }
+            break;
+        }
         default: {
             const never: never = component;
             return never;
@@ -811,11 +866,13 @@ export const sceneFromDoc = (doc: TSceneDoc, src = doc.name, options: TSceneFrom
     // are both here, and building a scene is one unbroken run with nothing awaited in the middle.
     const before = store.get('world').buildScripts;
     store.setState('world', { buildScripts: options.scripts ?? 'run' });
+    const masks = shapesToFind.length;
     try {
         // Everything the scene needs fetched, before anything that will want it exists.
         loadAssets(doc.assets, src);
         makePictures(doc.root, store);
         buildBox(doc.root, store, src);
+        findShapes(masks);
     } finally {
         store.setState('world', { buildScripts: before });
     }
@@ -841,11 +898,24 @@ const placeNode = (node: TBoxNode, place: { x?: number; y?: number; z?: number }
  */
 const withNewIds = (node: TBoxNode): TBoxNode => {
     const copy = structuredClone(node);
+    const renewed = new Map<string, string>();
     const renew = (box: TBoxNode): void => {
-        box.id = nanoId();
+        const id = nanoId();
+        renewed.set(box.id, id);
+        box.id = id;
         box.children.forEach(renew);
     };
     renew(copy);
+    // A mask keeping to a shape inside the copy keeps to the copy's shape, not the first one's.
+    const relink = (box: TBoxNode): void => {
+        for (const component of box.components) {
+            if (component.type === 'mask' && component.by !== undefined && renewed.has(component.by)) {
+                component.by = renewed.get(component.by)!;
+            }
+        }
+        box.children.forEach(relink);
+    };
+    relink(copy);
     return copy;
 };
 
@@ -889,7 +959,9 @@ export const boxFromDoc = (doc: TSceneDoc, place: { x?: number; y?: number; z?: 
     placeNode(node, place);
     loadAssets(doc.assets, src);
     makePictures(node, store);
+    const masks = shapesToFind.length;
     buildBox(node, store, src);
+    findShapes(masks);
 };
 
 /**
@@ -929,7 +1001,9 @@ export const copyBox = (box: TBox, place: { x?: number; y?: number; z?: number }
     const node = withNewIds(from.node);
     placeNode(node, place);
     makePictures(node, store);
+    const masks = shapesToFind.length;
     buildBox(node, store, from.src);
+    findShapes(masks);
 };
 
 export type { TBox };

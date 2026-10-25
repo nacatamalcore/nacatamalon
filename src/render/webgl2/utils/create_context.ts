@@ -8,7 +8,8 @@
  *   gets them too, and without it pixel art lands on the same pixels as on WebGPU.
  * - `depth: true`: meshes need it, so one thing in front of another hides it whatever order they
  *   were drawn in. The 2D neither tests nor writes it, so it costs 2D nothing but the memory.
- * - `stencil` off: nothing reads it yet, and it costs memory on every frame.
+ * - `stencil: true`: masks write their shapes into it. Most cards keep 24 bits of depth in 32
+ *   anyway, so it costs little or nothing, and a pass with nothing masked never touches it.
  * - `preserveDrawingBuffer: false`: like WebGPU, the picture is not kept after it is shown.
  *
  * Throws if the browser gives no context, which is also what happens on a canvas that already
@@ -23,7 +24,7 @@ export const createContext = (canvas: HTMLCanvasElement): WebGL2RenderingContext
         alpha: false,
         antialias: false,
         depth: true,
-        stencil: false,
+        stencil: true,
         premultipliedAlpha: false,
         preserveDrawingBuffer: false,
         powerPreference: 'high-performance',

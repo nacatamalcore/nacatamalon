@@ -24,7 +24,7 @@ export const destroyWebGL2Texture = (state: TWebGL2State, texture: ITexture): vo
     const framebuffer = state.framebuffers.get(handle);
     if (framebuffer !== undefined) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-        const depth = gl.getFramebufferAttachmentParameter(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.FRAMEBUFFER_ATTACHMENT_OBJECT_NAME) as WebGLRenderbuffer | null;
+        const depth = gl.getFramebufferAttachmentParameter(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.FRAMEBUFFER_ATTACHMENT_OBJECT_NAME) as WebGLRenderbuffer | null;
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.deleteRenderbuffer(depth);
         gl.deleteFramebuffer(framebuffer);

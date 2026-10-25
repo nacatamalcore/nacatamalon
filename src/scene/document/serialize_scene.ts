@@ -730,6 +730,23 @@ const writeBox = (box: TBox, writing: TWriting): TBoxNode => {
         });
     }
 
+    // Before the behaviours too: one that reaches for this object's mask finds it there. What it
+    // keeps to is written as it is; a default is left out.
+    const mask = box.mask;
+    if (mask !== null) {
+        components.push({
+            type: 'mask',
+            id: mask.id,
+            ...(mask.rect !== null ? { rect: { ...mask.rect } } : {}),
+            ...(mask.by !== null ? { by: mask.by.id } : {}),
+            ...(mask.channel === 'luminance' ? { channel: 'luminance' as const } : {}),
+            ...unless('soft', mask.soft, false),
+            ...unless('invert', mask.invert, false),
+            ...unless('showShape', mask.showShape, false),
+            ...unless('enabled', mask.enabled, true),
+        });
+    }
+
     // Before the behaviours, because that is the order they have to be read back in: a behaviour
     // asking its object for a store has to find the link already there.
     for (const key of box.stores) {

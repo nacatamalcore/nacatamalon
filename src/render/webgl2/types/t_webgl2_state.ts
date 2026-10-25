@@ -9,6 +9,7 @@ import type { TParticlesPipeline } from '../particles/create_particles_pipeline'
 import type { TLinesPipeline } from '../lines/create_lines_pipeline';
 import type { TShadowMap } from '../shadow/shadow_map';
 import type { TShadowPipeline } from '../shadow/shadow_pipeline';
+import type { TMaskPrograms } from '../mask/mask_programs';
 
 /**
  * Everything the WebGL2 backend holds between frames.
@@ -111,4 +112,6 @@ export type TWebGL2State = {
      * What draws into it: two programs. Made with the map and goes with it when the context does.
      */
     shadowPipeline: TShadowPipeline | null;
+    /** What writes masks and lays soft ones over a pass, made the first time a frame has one. */
+    masks: TMaskPrograms | null;
 };

@@ -1,5 +1,6 @@
 // Per frame
 import type { TDrawItem } from '../../interface';
+import type { TDrawStencil } from '../../interface/draw/t_draw_stencil';
 import { toGpuTexture } from '../texture';
 import { getTextureBindGroup } from './get_texture_bind_group';
 import { spriteSize } from '../../shared/sprite_size';
@@ -79,6 +80,7 @@ const addToRun = (
     index: number,
     drawable: number,
     broken: boolean,
+    stencil: TDrawStencil | null,
 ): void => {
     const last = sprites.runCount > 0 ? sprites.runs[sprites.runCount - 1] : undefined;
     const joins = !broken
@@ -87,6 +89,7 @@ const addToRun = (
         && last.material === material
         && last.distanceField === distanceField
         && last.additive === additive
+        && last.stencil === stencil
         && last.uniforms === null
         && uniforms === null;
     if (joins) {
@@ -96,13 +99,14 @@ const addToRun = (
 
     const run = sprites.runs[sprites.runCount];
     if (run === undefined) {
-        sprites.runs.push({ bindGroup, material, uniforms, distanceField, additive, start: index, count: 1, firstDrawable: drawable });
+        sprites.runs.push({ bindGroup, material, uniforms, distanceField, additive, stencil, start: index, count: 1, firstDrawable: drawable });
     } else {
         run.bindGroup = bindGroup;
         run.material = material;
         run.distanceField = distanceField;
         run.additive = additive;
         run.uniforms = uniforms;
+        run.stencil = stencil;
         run.start = index;
         run.count = 1;
         run.firstDrawable = drawable;
@@ -129,6 +133,7 @@ export const writeSpriteInstances = (
     sprites: TSpritePipeline,
     drawables: readonly TDrawItem[],
     cameraIndex: readonly number[],
+    stencil: readonly TDrawStencil[] | null = null,
 ): number => {
     if (drawables.length > sprites.capacity) {
         growInstances(device, sprites, drawables.length);
@@ -204,7 +209,7 @@ export const writeSpriteInstances = (
                 data[o + 20] = repeat.shiftX;
                 data[o + 21] = repeat.shiftY;
 
-                addToRun(sprites, bindGroup, item.material ?? null, item.uniforms ?? null, item.distanceField === true, item.blend === 'additive', count, i, broken);
+                addToRun(sprites, bindGroup, item.material ?? null, item.uniforms ?? null, item.distanceField === true, item.blend === 'additive', count, i, broken, stencil?.[i] ?? null);
                 broken = false;
                 count++;
                 break;
@@ -213,7 +218,8 @@ export const writeSpriteInstances = (
             case 'tilemap':
             case 'particles':
             case 'particles-3d':
-            case 'lines': {
+            case 'lines':
+            case 'mask-layer': {
                 // Drawn by its own pipeline, in `renderFrame`, where the two lists are walked
                 // together. Here it only cuts the batch.
                 broken = true;

@@ -26,6 +26,7 @@ export const drawTilemapLayer = (
     time: number,
     width: number,
     height: number,
+    mask: { program: WebGLProgram; uniforms: TTilemapPipeline['uniforms'] } | null = null,
 ): void => {
     // Not drawn until the sheet is there, exactly like a sprite.
     const texture = layer.texture;
@@ -39,7 +40,8 @@ export const drawTilemapLayer = (
 
     // An effect of its own runs a different program over the same cells, and brings its own places
     // to keep a layer's numbers, because on this card those are loose uniforms rather than a block.
-    const material = layer.material ?? null;
+    // A mask's shape is only its cells, so it is written without the layer's effect.
+    const material = mask !== null ? null : layer.material ?? null;
     let effect: ReturnType<TTilemapPipeline['materials']['get']> | null = null;
     if (material !== null && material.fragment !== null) {
         tilemaps.materials.warnIfWgpuOnly(material);
@@ -50,9 +52,9 @@ export const drawTilemapLayer = (
             }
         }
     }
-    const places = effect !== null ? effect.locations : tilemaps.uniforms;
+    const places = mask !== null ? mask.uniforms : effect !== null ? effect.locations : tilemaps.uniforms;
 
-    gl.useProgram(effect !== null ? effect.program! : tilemaps.program);
+    gl.useProgram(mask !== null ? mask.program : effect !== null ? effect.program! : tilemaps.program);
     gl.bindVertexArray(tilemaps.vao);
     gl.enable(gl.BLEND);
     gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);

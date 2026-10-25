@@ -1,5 +1,5 @@
 import { ADDITIVE_BLEND, ALPHA_BLEND } from '../frame/blend';
-import { DEPTH_FORMAT, FLAT_DEPTH } from '../frame/depth';
+import { DEPTH_FORMAT, FLAT_DEPTH, STENCIL_TEST } from '../frame/depth';
 import { PARTICLE_3D_OFFSET, PARTICLE_FLOATS } from '../../shared/particle_instance';
 import { PARTICLES_SHADER } from './particles_shader';
 import { PARTICLES_3D_SHADER } from './particles_3d_shader';
@@ -52,6 +52,7 @@ const DEEP_DEPTH: GPUDepthStencilState = {
     format: DEPTH_FORMAT,
     depthWriteEnabled: false,
     depthCompare: 'less',
+    ...STENCIL_TEST,
 };
 
 /**

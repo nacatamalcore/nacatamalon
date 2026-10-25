@@ -947,6 +947,26 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
         }
         case 'audio-listener':
             return { type: 'audio-listener', id, ...optionalBoolean(raw, 'enabled') };
+        case 'mask': {
+            // A rectangle with a number missing is no rectangle, and a mask with neither one nor a
+            // shape is kept as it is: it masks nothing until one is given.
+            const area = asRecord(raw.rect);
+            const sides = area === null ? [] : [area.x, area.y, area.width, area.height];
+            const rect = sides.length === 4 && sides.every((side) => typeof side === 'number' && Number.isFinite(side))
+                ? { x: sides[0] as number, y: sides[1] as number, width: sides[2] as number, height: sides[3] as number }
+                : undefined;
+            return {
+                type: 'mask',
+                id,
+                ...(rect !== undefined ? { rect } : {}),
+                ...(typeof raw.by === 'string' && raw.by !== '' ? { by: raw.by } : {}),
+                ...(raw.channel === 'alpha' || raw.channel === 'luminance' ? { channel: raw.channel } : {}),
+                ...optionalBoolean(raw, 'soft'),
+                ...optionalBoolean(raw, 'invert'),
+                ...optionalBoolean(raw, 'showShape'),
+                ...optionalBoolean(raw, 'enabled'),
+            };
+        }
         case 'script': {
             // A behaviour with no name is not an attachment to anything, so it falls through to the
             // hole where unreadable entries are kept and is written back out untouched.

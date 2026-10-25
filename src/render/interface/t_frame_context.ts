@@ -4,6 +4,7 @@ import type { TDrawCamera2d } from './draw/t_draw_camera_2d';
 import type { TDrawView3d } from './draw/t_draw_view_3d';
 import type { ITexture } from './i_texture';
 import type { TPostEffect } from '../../post/types/t_post_effect';
+import type { TDrawStencil } from './draw/t_draw_stencil';
 
 /**
  * One draw of the world into one target.
@@ -65,6 +66,19 @@ export type TRenderPass = {
      * anything that is not a model, which is most of the list.
      */
     viewIndex?: readonly number[];
+    /**
+     * One entry per drawable, in the same order: where it may draw and what it does to the stencil,
+     * which is how masks reach a backend (see `TDrawStencil`).
+     * **Left out when nothing in the pass is masked**, and then every drawable is drawn exactly as
+     * it was before masks existed: everywhere, and leaving the stencil alone.
+     */
+    stencil?: readonly TDrawStencil[];
+    /**
+     * How many real pixels each of the pass's pixels is drawn with, for a picture drawn as large as
+     * the screen's buffer: a soft mask's. Left out, it is `TFrameContext.pixelRatio` for the
+     * screen's pass and 1 for everything else.
+     */
+    pixelRatio?: number;
 };
 
 /**

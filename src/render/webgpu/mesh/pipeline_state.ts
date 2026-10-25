@@ -1,4 +1,4 @@
-import { DEPTH_FORMAT } from '../frame/depth';
+import { DEPTH_FORMAT, STENCIL_TEST } from '../frame/depth';
 
 /**
  * The state every model pipeline is built with: how it blends, what it throws away, and what it does
@@ -44,7 +44,7 @@ export const describeMeshPipeline = (
     primitive: { topology: 'triangle-list', cullMode: 'back' },
     // The one thing in the frame that really uses depth: nearer wins, and it says so for the
     // ones behind it. A see-through one only asks.
-    depthStencil: { format: DEPTH_FORMAT, depthWriteEnabled: writesDepth, depthCompare: 'less' },
+    depthStencil: { format: DEPTH_FORMAT, depthWriteEnabled: writesDepth, depthCompare: 'less', ...STENCIL_TEST },
     multisample: { count: samples },
 });
 

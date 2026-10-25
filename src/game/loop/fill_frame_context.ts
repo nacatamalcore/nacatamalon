@@ -5,7 +5,14 @@ import { collectDrawables } from './helper/collect_drawables';
 import { lookAgainAtParticles, stepSceneParticles } from './helper/step_scene_particles';
 import { stepSceneTilemaps } from './helper/step_scene_tilemaps';
 import type { IRenderer } from '../../render';
-import { stepScenePolygons } from './helper/step_scene_polygons';
+import { stepScenePolygons, whiteFor } from './helper/step_scene_polygons';
+import { anyMasks } from '../../mask/create_mask';
+import { applyMasks } from '../../mask/apply_masks';
+import { beginSoftTargets, endSoftTargets } from '../../mask/soft_targets';
+import { rememberMaskedPass } from '../../mask/masked_pick';
+import type { TMaskLevel, TMaskWalk } from '../../mask/mask_walk';
+import type { TMaskTarget } from '../../mask/apply_masks';
+import type { TDrawItem } from '../../render/interface';
 import { stepSceneLines } from './helper/step_scene_lines';
 import type { TFrameContext } from '../../render';
 import type { TDrawSprite } from '../../render/interface';
@@ -79,7 +86,7 @@ const viewDepth = (drawable: TDrawable, view: Float32Array): number => {
     return view[2] * x + view[6] * y + view[10] * z + view[14];
 };
 
-const sortSceneByZIndex = (drawables: TDrawable[], cameraIndex: number[], start: number, camera: TCamera3d | null): void => {
+const sortSceneByZIndex = (drawables: TDrawable[], cameraIndex: number[], start: number, camera: TCamera3d | null, levels: Array<TMaskLevel | null> | null): void => {
     let needed = false;
     let models = false;
     for (let i = start; i < drawables.length; i++) {
@@ -128,9 +135,14 @@ const sortSceneByZIndex = (drawables: TDrawable[], cameraIndex: number[], start:
             || (glass[a - start] ? depth[a - start] - depth[b - start] : 0));
     const sortedDrawables = order.map((i) => drawables[i]);
     const sortedCameras = order.map((i) => cameraIndex[i]);
+    // A drawable's masks go with it, like its camera.
+    const sortedLevels = levels === null ? null : order.map((i) => levels[i] ?? null);
     for (let i = 0; i < order.length; i++) {
         drawables[start + i] = sortedDrawables[i];
         cameraIndex[start + i] = sortedCameras[i];
+        if (sortedLevels !== null) {
+            levels![start + i] = sortedLevels[i]!;
+        }
     }
 };
 
@@ -139,7 +151,7 @@ const sortSceneByZIndex = (drawables: TDrawable[], cameraIndex: number[], start:
  * each one drawn through the camera of what it came from. Only rebuilds the stretch when it holds
  * one, so a scene of sprites alone pays one pass over it and nothing else.
  */
-const expandSceneIntoSprites = (drawables: Array<TDrawable | TDrawSprite>, cameraIndex: number[], start: number, viewIndex: number[]): void => {
+const expandSceneIntoSprites = (drawables: Array<TDrawable | TDrawSprite>, cameraIndex: number[], start: number, viewIndex: number[], levels: Array<TMaskLevel | null> | null = null): void => {
     let found = false;
     for (let i = start; i < drawables.length; i++) {
         if (drawables[i].type === 'text' || drawables[i].type === 'nine-slice') {
@@ -156,13 +168,17 @@ const expandSceneIntoSprites = (drawables: Array<TDrawable | TDrawSprite>, camer
     // Cut alongside the others: every list here is one entry per drawable, and one growing while
     // another does not is how a HUD ends up drawn through the world's camera.
     const tailViews = viewIndex.splice(start);
+    // And the masks, which each part keeps from what it is part of.
+    const tailLevels = levels?.splice(start) ?? null;
     for (let i = 0; i < tailDrawables.length; i++) {
         const drawable = tailDrawables[i];
+        const level = tailLevels?.[i] ?? null;
         if (drawable.type === 'nine-slice') {
             for (const piece of expandNineSlice(drawable)) {
                 drawables.push(piece);
                 cameraIndex.push(tailCameras[i]);
                 viewIndex.push(-1);
+                levels?.push(level);
             }
             continue;
         }
@@ -170,6 +186,7 @@ const expandSceneIntoSprites = (drawables: Array<TDrawable | TDrawSprite>, camer
             drawables.push(drawable);
             cameraIndex.push(tailCameras[i]);
             viewIndex.push(tailViews[i]);
+            levels?.push(level);
             continue;
         }
         for (const glyph of expandText(drawable as TText)) {
@@ -177,6 +194,7 @@ const expandSceneIntoSprites = (drawables: Array<TDrawable | TDrawSprite>, camer
             cameraIndex.push(tailCameras[i]);
             // A character is a sprite, so it belongs to no 3D view.
             viewIndex.push(-1);
+            levels?.push(level);
         }
     }
 };
@@ -228,9 +246,82 @@ type TPassLists = {
     cameras: TCamera2d[];
     views3d: TDrawView3d[];
     viewIndex: number[];
+    /**
+     * Each drawable's innermost mask and each mask's shape, or `null` when nothing anywhere is
+     * masked: a game with no masks keeps no list for them.
+     */
+    masks: TMaskWalk | null;
 };
 
-const newLists = (): TPassLists => ({ drawables: [], cameraIndex: [], cameras: [], views3d: [], viewIndex: [] });
+const newLists = (): TPassLists => ({ drawables: [], cameraIndex: [], cameras: [], views3d: [], viewIndex: [], masks: anyMasks() ? { levels: [], shapes: new Map() } : null });
+
+/**
+ * The passes each pass needs drawn before it: what its soft masks draw into. Kept per pass and
+ * written over every frame.
+ */
+const passesBefore = new WeakMap<TRenderPass, TRenderPass[]>();
+
+/**
+ * Puts a pass in the frame, after the passes it needs drawn first.
+ */
+const pushPass = (passes: TRenderPass[], pass: TRenderPass): void => {
+    for (const first of passesBefore.get(pass) ?? []) {
+        passes.push(first);
+    }
+    passes.push(pass);
+};
+
+/**
+ * Hands a pass its lists, with its masks worked in when anything in it is masked.
+ *
+ * Each mask's shape is made into what a backend draws, as the scene's own drawables were (a text
+ * into its letters, a shape into its triangles), and then everything is handed to `applyMasks`.
+ * What the lists were before that is noted for the pointer, which has to find what is masked where
+ * it is drawn, a soft mask's included, and ask the masks whether it is seen there.
+ *
+ * @param target What the pass draws on, which is what a soft mask's pictures are made to match.
+ */
+const finishPass = (pass: TRenderPass, lists: TPassLists, target: TMaskTarget): void => {
+    pass.drawables = lists.drawables as TDrawSprite[];
+    pass.cameras = lists.cameras;
+    pass.cameraIndex = lists.cameraIndex;
+    pass.views3d = lists.views3d;
+    pass.viewIndex = lists.viewIndex;
+    if (pass.stencil !== undefined) {
+        delete pass.stencil;
+    }
+    passesBefore.delete(pass);
+    rememberMaskedPass(pass, null);
+    const masks = lists.masks;
+    if (masks === null || drawingWith === null) {
+        return;
+    }
+    const sources = new Map<unknown, { drawables: TDrawable[]; cameraIndex: number[] }>();
+    for (const [mask, shape] of masks.shapes) {
+        sources.set(mask, { drawables: [...shape.drawables], cameraIndex: [...shape.cameraIndex] });
+        stepSceneTilemaps(shape.drawables, 0);
+        stepScenePolygons(shape.drawables, 0, drawingWith);
+        expandSceneIntoSprites(shape.drawables, shape.cameraIndex, 0, shape.drawables.map(() => -1));
+    }
+    rememberMaskedPass(pass, { drawables: lists.drawables, cameraIndex: lists.cameraIndex, levels: masks.levels, shapes: sources as never });
+    const masked = applyMasks({
+        drawables: lists.drawables,
+        cameraIndex: lists.cameraIndex,
+        viewIndex: lists.viewIndex,
+        levels: masks.levels,
+        shapes: masks.shapes,
+        cameras: lists.cameras,
+        views3d: lists.views3d,
+    }, target, drawingWith, whiteFor(drawingWith));
+    if (masked === null) {
+        return;
+    }
+    pass.drawables = masked.drawables as unknown as TDrawItem[];
+    pass.cameraIndex = masked.cameraIndex;
+    pass.viewIndex = masked.viewIndex;
+    pass.stencil = masked.stencil;
+    passesBefore.set(pass, masked.before);
+};
 
 /**
  * What a picture that watches the world around it is shown of that world: its models and particles
@@ -328,6 +419,7 @@ const gatherTree = (
     again = false,
 ): TWorldSeen => {
     const { drawables, cameraIndex, cameras, views3d, viewIndex } = lists;
+    const levels = lists.masks?.levels ?? null;
 
     // The camera itself goes over, not a copy: moving it between two frames needs nothing
     // rebuilt. A scene without one draws in screen pixels, which is `-1`. A tool looking at the
@@ -353,7 +445,7 @@ const gatherTree = (
     // Parallax is measured against the scene's own camera, where the game has it, even when a tool
     // looks through one of its own: a far layer is where the game would draw it, and panning the
     // tool's view moves it with everything else rather than sliding it away by most of the pan.
-    collectDrawables(root, drawables as TDrawable[], cameraIndex, sceneCamera, false, null, 0, colliders, pictures, screenCamera, root.camera2d, null, snapping);
+    collectDrawables(root, drawables as TDrawable[], cameraIndex, sceneCamera, false, null, 0, colliders, pictures, screenCamera, root.camera2d, null, snapping, lists.masks);
     // A tool showing only some kinds: dropped before anything else is worked out for them, so a kind
     // nobody is looking at costs no sorting, no lamps and no particles stepped.
     const layers = viewport?.layers ?? null;
@@ -372,10 +464,12 @@ const gatherTree = (
             }
             drawables[kept] = drawables[i];
             cameraIndex[kept] = cameraIndex[i];
+            if (levels !== null) levels[kept] = levels[i] ?? null;
             kept++;
         }
         drawables.length = kept;
         cameraIndex.length = kept;
+        if (levels !== null) levels.length = kept;
         // A kind the screen does not show is still going on in the game, so its particles still move:
         // a capture of the game has to find them where they got to, and they must not all start
         // again the moment the screen shows them. A second look moves nothing (see below).
@@ -394,12 +488,14 @@ const gatherTree = (
             }
             drawables[kept] = drawables[i];
             cameraIndex[kept] = cameraIndex[i];
+            if (levels !== null) levels[kept] = levels[i] ?? null;
             kept++;
         }
         drawables.length = kept;
         cameraIndex.length = kept;
+        if (levels !== null) levels.length = kept;
     }
-    sortSceneByZIndex(drawables as TDrawable[], cameraIndex, start, viewport?.camera3d ?? root.camera3d);
+    sortSceneByZIndex(drawables as TDrawable[], cameraIndex, start, viewport?.camera3d ?? root.camera3d, levels);
 
     // The scene's own way of seeing and lighting its models, worked out only when it has any:
     // a 2D game never pays for a walk looking for lamps it does not have.
@@ -435,7 +531,7 @@ const gatherTree = (
     stepSceneLines(drawables as TDrawable[], start);
 
     // After the sort, so a text or a nine-slice moves as one block and its parts stay together.
-    expandSceneIntoSprites(drawables, cameraIndex, start, viewIndex);
+    expandSceneIntoSprites(drawables, cameraIndex, start, viewIndex, levels);
 
     return { models: drawables.slice(start).filter(inDepth), camera: root.camera3d, lighting, fog: root.fog };
 };
@@ -505,6 +601,7 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
             lists.drawables.push(model);
             lists.cameraIndex.push(-1);
             lists.viewIndex.push(view);
+            lists.masks?.levels.push(null);
         }
     }
 
@@ -524,11 +621,7 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
     pass.clearColor = picture.background;
     pass.renderTarget = picture.texture.gpu;
     pass.postProcess = false;
-    pass.drawables = lists.drawables as TDrawSprite[];
-    pass.cameras = lists.cameras;
-    pass.cameraIndex = lists.cameraIndex;
-    pass.views3d = lists.views3d;
-    pass.viewIndex = lists.viewIndex;
+    finishPass(pass, lists, { width: picture.texture.width, height: picture.texture.height, pixelRatio: 1 });
     (picture.sees === 'scene' ? watching : inside).push(pass);
 
     for (const inner of found) {
@@ -546,34 +639,33 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
  * Walking the tree a second time leaves the screen's pass as it was. Particles are not stepped
  * again: see `lookAgainAtParticles` for why that matters.
  */
-const secondPass = (store: TRuntimeStore, seenThrough: TSeenThrough, clearColor: TColor, effects = true): TRenderPass => {
+const secondPass = (store: TRuntimeStore, seenThrough: TSeenThrough, clearColor: TColor, target: TMaskTarget, effects = true): TRenderPass => {
     const lists = newLists();
     for (const scene of store.get('world').scenes) {
         if (!scene.held) {
             gatherTree(scene, lists, 0, { flat: [], deep: [] }, [], seenThrough, true);
         }
     }
-    return {
+    const pass: TRenderPass = {
         clearColor,
         // A picture of the game stands in for looking at the screen, so it wants the screen's look,
         // unless the game asked for it without (`useCapture`'s `effects: false`).
         postProcess: effects,
-        drawables: lists.drawables as TDrawSprite[],
-        cameras: lists.cameras,
-        cameraIndex: lists.cameraIndex,
-        views3d: lists.views3d,
-        viewIndex: lists.viewIndex,
     };
+    finishPass(pass, lists, target);
+    return pass;
 };
 
 export const fillFrameContext = (store: TRuntimeStore, ctx: TFrameContext, delta = 0): void => {
     pass++;
     snapping = store.get('config').pixelSnap;
     drawingWith = store.get('screen').renderer;
+    if (drawingWith !== null) {
+        beginSoftTargets(drawingWith);
+    }
 
     // Game objects while collecting and sorting; only sprites once texts are expanded.
     const lists = newLists();
-    const { drawables, cameraIndex, cameras, views3d, viewIndex } = lists;
     const scenes = store.get('world').scenes;
     inside.length = 0;
     watching.length = 0;
@@ -608,34 +700,34 @@ export const fillFrameContext = (store: TRuntimeStore, ctx: TFrameContext, delta
     }
     ctx.passes.length = 0;
     for (let i = inside.length - 1; i >= 0; i--) {
-        ctx.passes.push(inside[i]);
+        pushPass(ctx.passes, inside[i]);
     }
     for (let i = watching.length - 1; i >= 0; i--) {
-        ctx.passes.push(watching[i]);
+        pushPass(ctx.passes, watching[i]);
     }
     // After the pictures, like the screen, so they show them as they are this frame.
     const capture = store.get('capture').request;
     if (capture !== null) {
-        const pass = secondPass(store, capture, capture.background, capture.effects);
+        const pass = secondPass(store, capture, capture.background, { width: capture.width, height: capture.height, pixelRatio: 1 }, capture.effects);
         pass.renderTarget = capture.target;
-        ctx.passes.push(pass);
+        pushPass(ctx.passes, pass);
     }
     const preview = store.get('viewport').preview;
     if (preview !== null) {
-        const pass = secondPass(store, preview, store.get('config').background);
+        const pass = secondPass(store, preview, store.get('config').background, { width: preview.canvas.width, height: preview.canvas.height, pixelRatio: 1 });
         pass.targetCanvas = preview.canvas;
-        ctx.passes.push(pass);
+        pushPass(ctx.passes, pass);
     }
-    ctx.passes.push(screen);
 
     screen.clearColor = store.get('config').background;
-    screen.drawables = drawables as TDrawSprite[];
-    screen.cameras = cameras;
-    screen.cameraIndex = cameraIndex;
-    screen.views3d = views3d;
-    screen.viewIndex = viewIndex;
+    const canvas = store.get('screen').canvas;
+    finishPass(screen, lists, { width: canvas.width, height: canvas.height, pixelRatio: screenSizeOf(canvas).pixelRatio });
     // This is the pass a person is looking at, whether or not anything is laid over it.
     screen.postProcess = true;
+    pushPass(ctx.passes, screen);
+    if (drawingWith !== null) {
+        endSoftTargets(drawingWith);
+    }
 
     // How far through its half the scene change is, and which half. Zero and zero when there is no
     // change, which is the right answer to "nothing is covering the screen" and is what every

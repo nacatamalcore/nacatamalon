@@ -59,6 +59,8 @@ export const captureScreen = async (
                     only: boxes.only ?? null,
                     effects: boxes.effects ?? true,
                     target,
+                    width,
+                    height,
                     settle: (error) => (error === undefined ? resolve() : reject(error)),
                 },
             });

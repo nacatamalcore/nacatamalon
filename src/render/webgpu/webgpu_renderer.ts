@@ -94,6 +94,7 @@ export const createWebGPURenderer = async (
         particles: null,
         // And for the first frame that draws a line.
         lines: null,
+        masks: null,
         frameUniforms,
         sprites: createSpritePipeline(device, format, samples, frameUniforms.buffer, samplers, defaultSmooth, white),
         tilemaps: createTilemapPipeline(device, format, samples, frameUniforms.buffer, samplers, defaultSmooth),

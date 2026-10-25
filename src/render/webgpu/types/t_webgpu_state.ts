@@ -7,6 +7,7 @@ import type { TParticlesPipeline } from "../particles/create_particles_pipeline"
 import type { TLinesPipeline } from "../lines/create_lines_pipeline";
 import type { TShadowMap } from "../shadow/shadow_map";
 import type { TShadowPipeline } from "../shadow/shadow_pipeline";
+import type { TMaskPipelines } from "../mask/mask_pipelines";
 
 // render/webgpu/types/t_webgpu_state.ts
 export type TWebGPUState = {
@@ -91,4 +92,6 @@ export type TWebGPUState = {
      * What draws into it: two pipelines and a slot per caster. Made with the map and dies with it.
      */
     shadowPipeline: TShadowPipeline | null;
+    /** What writes masks and lays soft ones over a pass, made the first time a frame has one. */
+    masks: TMaskPipelines | null;
 };

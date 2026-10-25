@@ -25,6 +25,7 @@ export type {
     TSpriteTextureComponent,
     TMusicComponent, TSongComponent, TMotionComponent,
     TAudioListenerComponent,
+    TMaskComponent,
     TCamera2dComponent,
     TCamera3dComponent,
     TFogComponent,

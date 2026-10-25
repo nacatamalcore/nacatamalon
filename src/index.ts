@@ -130,6 +130,8 @@ export type { TRect, TCollisionTarget, THitbox } from './hitbox';
 export type { TCollisionWhen } from './hitbox/types/t_hitbox';
 export { useHitbox, useCollisionBetween, useCollisionWith, useTag } from './hooks';
 export type { TTag, TTaggable } from './tags';
+export { useMask } from './hooks';
+export type { TMask, TMaskOptions, TMaskRect, TMaskChannel } from './mask';
 export type { TCollisionWithOptions } from './hooks';
 // Photos of the game taken by the game: a photography game, an album, a sticker.
 export { useCapture } from './hooks';
@@ -221,7 +223,7 @@ export type { TProjectSettings } from './project';
 export { boxFromDoc, copyBox, parseSceneDoc, sceneFromDoc, SCENE_FORMAT, SCENE_VERSION } from './scene';
 export type {
     TSceneDoc, TBoxNode, TDataEntry, TAssetEntry, TGeometrySource, TComponentDoc, TMaterialDoc, TMeshMaterialDoc, TMaterialMapDoc,
-    TSpriteComponent, TNineSliceComponent, TTextComponent, TMeshComponent, TTilemapComponent, TTilemapLayerOverride, TParticlesComponent, TParticles3dComponent, TParticleCollider2dComponent, TParticleCollider3dComponent, TSpriteTextureComponent, TMusicComponent, TSongComponent, TMotionComponent, TAudioListenerComponent, TCamera2dComponent,
+    TSpriteComponent, TNineSliceComponent, TTextComponent, TMeshComponent, TTilemapComponent, TTilemapLayerOverride, TParticlesComponent, TParticles3dComponent, TParticleCollider2dComponent, TParticleCollider3dComponent, TSpriteTextureComponent, TMusicComponent, TSongComponent, TMotionComponent, TAudioListenerComponent, TMaskComponent, TCamera2dComponent,
     TCamera3dComponent, TFogComponent, TLightComponent, TSpriteAnimationDoc,
 } from './scene';
 export type { TRandomHandle } from './math/random';

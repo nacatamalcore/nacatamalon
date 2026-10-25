@@ -59,6 +59,7 @@ export const watchContextLoss = (canvas: HTMLCanvasElement, state: TWebGL2State)
         state.lines = null;
         state.shadow = null;
         state.shadowPipeline = null;
+        state.masks = null;
         for (const texture of state.textures) {
             texture.glTexture = restoreTexture(gl, texture);
         }
