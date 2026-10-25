@@ -78,6 +78,8 @@ struct Lights {
 @group(0) @binding(2) var shadowSampler: sampler_comparison;
 @group(1) @binding(0) var meshSampler: sampler;
 @group(1) @binding(1) var meshTexture: texture_2d<f32>;
+// The picture the glow comes through, read with the colour's sampler. White when there is none.
+@group(1) @binding(2) var meshEmissive: texture_2d<f32>;
 @group(2) @binding(0) var<uniform> uniforms: Uniforms;
 
 // The way from a point towards whoever is looking, which the shine and the fresnel need. An
@@ -316,7 +318,10 @@ export const MESH_SHADER_COMMON = MESH_SHADER_TYPES + MESH_VERTEX_OUTPUT;
 export const MESH_SHADER_FRAGMENT = /* wgsl */ `
 @fragment
 fn fs(in: VertexOutput) -> @location(0) vec4<f32> {
-    let texColor = textureSample(meshTexture, meshSampler, in.uv.xy / in.uv.z);
+    let uv = in.uv.xy / in.uv.z;
+    let texColor = textureSample(meshTexture, meshSampler, uv);
+    // Its glow, through its picture when it has one: lit windows on a dark wall.
+    let glow = uniforms.emissive.rgb * textureSample(meshEmissive, meshSampler, uv).rgb;
     // The floor is a floor and not an addition: a surface facing away is dim, never brighter than
     // one facing the light.
     // Only the casting light's share is taken away, so a thing in the sun's shadow is still lit by
@@ -331,7 +336,7 @@ fn fs(in: VertexOutput) -> @location(0) vec4<f32> {
     // bouncing off the surface, not part of what is painted on it.
     let shine = litWithShadow(in.shine, in.casterShine, in.shadowCoord);
     // The fog last, over everything, glow included: a lamp far off in the fog is lost in it too.
-    return vec4<f32>(mix(color.rgb + shine + uniforms.emissive.rgb, lights.fog.rgb, in.fog), color.a);
+    return vec4<f32>(mix(color.rgb + shine + glow, lights.fog.rgb, in.fog), color.a);
 }
 `;
 

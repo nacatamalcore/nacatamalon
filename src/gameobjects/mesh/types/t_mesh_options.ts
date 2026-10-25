@@ -37,4 +37,9 @@ export type TMeshOptions = T3dOptions & {
      * Light it gives off by itself. Default none.
      */
     emissive?: TColorOption;
+    /**
+     * A picture the glow comes through, multiplied by `emissive`: white where it glows, black where
+     * it does not. Default none, the glow the same all over.
+     */
+    emissiveTexture?: TTexture;
 };

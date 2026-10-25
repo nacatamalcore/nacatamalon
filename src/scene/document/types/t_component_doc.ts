@@ -82,6 +82,11 @@ export type TMeshMaterialDoc = TMaterialDoc & {
     texture: string | null;
     tint: TColor;
     emissive: TColor;
+    /**
+     * The picture the glow comes through, by asset key. Left out when there is none, and for a
+     * piece of a model file, which brings its own.
+     */
+    emissiveTexture?: string;
     specular: TColor;
     shininess: number;
     alpha: number;

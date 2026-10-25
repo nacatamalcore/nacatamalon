@@ -6,7 +6,7 @@ import { SKINNED_VERTEX_GLSL } from './skinned_shader';
 import { createJointTextures } from './joint_texture';
 import { TEXTURE_WRAPS, wrapKey } from '../../shared/texture_wrap';
 import type { TMeshPipeline } from './types/t_mesh_pipeline';
-import { MESH_JOINTS_UNIT, MESH_LIGHTS_BINDING, MESH_SHADOW_UNIT, MESH_TEXTURE_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
+import { MESH_EMISSIVE_UNIT, MESH_JOINTS_UNIT, MESH_LIGHTS_BINDING, MESH_SHADOW_UNIT, MESH_TEXTURE_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
 
 /**
  * Creates the program that draws models, its vertex array and the two blocks it reads.
@@ -69,11 +69,13 @@ export const createMeshPipeline = (gl: WebGL2RenderingContext, samplers: { neare
     // model draws, so they cannot tread on each other.
     gl.uniform1i(gl.getUniformLocation(program, 'meshTexture'), MESH_TEXTURE_UNIT);
     gl.uniform1i(gl.getUniformLocation(program, 'shadowMap'), MESH_SHADOW_UNIT);
+    gl.uniform1i(gl.getUniformLocation(program, 'meshEmissive'), MESH_EMISSIVE_UNIT);
 
     gl.useProgram(skinnedProgram);
     gl.uniform1i(gl.getUniformLocation(skinnedProgram, 'meshTexture'), MESH_TEXTURE_UNIT);
     gl.uniform1i(gl.getUniformLocation(skinnedProgram, 'uJoints'), MESH_JOINTS_UNIT);
     gl.uniform1i(gl.getUniformLocation(skinnedProgram, 'shadowMap'), MESH_SHADOW_UNIT);
+    gl.uniform1i(gl.getUniformLocation(skinnedProgram, 'meshEmissive'), MESH_EMISSIVE_UNIT);
     gl.useProgram(null);
 
     // Every way a model's picture can be read, made now rather than in the middle of a frame.

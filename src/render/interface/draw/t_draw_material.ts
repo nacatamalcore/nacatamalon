@@ -64,6 +64,10 @@ export type TDrawMaterial = TDrawShader & {
     readonly texture: TDrawTexture | null;
     readonly tint: TColor;
     readonly emissive: TColor;
+    /**
+     * The picture the glow comes through. Omitted, the glow is the same all over.
+     */
+    readonly emissiveTexture?: TDrawTexture | null;
     readonly specular: TColor;
     readonly shininess: number;
     readonly alpha: number;

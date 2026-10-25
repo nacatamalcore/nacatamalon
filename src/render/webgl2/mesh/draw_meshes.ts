@@ -3,7 +3,7 @@ import { isTransparentMesh } from '../../shared/is_transparent_mesh';
 import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
 import { toGlBuffer } from '../resources';
 import { toGlTexture } from '../texture';
-import { MESH_JOINTS_UNIT, MESH_LIGHTS_BINDING, MESH_MAP_UNITS, MESH_SHADOW_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
+import { MESH_EMISSIVE_UNIT, MESH_JOINTS_UNIT, MESH_LIGHTS_BINDING, MESH_MAP_UNITS, MESH_SHADOW_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
 import type { TCameraSpace } from '../../shared/compute_mvp_3d';
 import type { TDrawMesh, TDrawView3d } from '../../interface';
 import type { TShadowUniforms } from '../../shared/fill_light_uniforms';
@@ -202,7 +202,18 @@ export const drawMesh = (
     gl.bindTexture(gl.TEXTURE_2D, texture ?? meshes.whiteTexture);
     // Read the way it asked: its filter, and what it does past its edge each way.
     const { u, v } = textureWrapOf(mesh.material);
-    gl.bindSampler(0, meshes.wrapSamplers.get(wrapKey((mesh.material.smooth ?? meshes.defaultSmooth) ? 'linear' : 'nearest', u, v))!);
+    const sampler = meshes.wrapSamplers.get(wrapKey((mesh.material.smooth ?? meshes.defaultSmooth) ? 'linear' : 'nearest', u, v))!;
+    gl.bindSampler(0, sampler);
+
+    // The picture its glow comes through, read the same way. White when there is none or it has
+    // not arrived; in that second case the glow was already written as black with the uniforms, so
+    // the white never spreads it over the whole model.
+    const glow = mesh.material.emissiveTexture;
+    const glowReady = glow !== null && glow !== undefined && glow.status === 'ready' && glow.gpu !== null;
+    gl.activeTexture(gl.TEXTURE0 + MESH_EMISSIVE_UNIT);
+    gl.bindTexture(gl.TEXTURE_2D, glowReady ? toGlTexture(glow.gpu!) : meshes.whiteTexture);
+    gl.bindSampler(MESH_EMISSIVE_UNIT, sampler);
+    gl.activeTexture(gl.TEXTURE0);
 
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LESS);

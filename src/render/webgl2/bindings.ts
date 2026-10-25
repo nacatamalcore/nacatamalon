@@ -49,3 +49,11 @@ export const MESH_SHADOW_UNIT = 2;
  * @author Francisco Pereira Alvarado
  */
 export const MESH_MAP_UNITS: readonly number[] = [3, 4, 5, 6];
+
+/**
+ * Where the picture a model's glow comes through is bound, after the maps. Set on every model
+ * program by name, for the same reason they are: left unset it would read unit 0.
+ *
+ * @internal
+ */
+export const MESH_EMISSIVE_UNIT = 7;

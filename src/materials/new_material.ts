@@ -116,6 +116,10 @@ export const newMaterial = (
             texture,
             tint: getColor((options as TMeshMaterialOptions).tint ?? 'white'),
             emissive: getColor((options as TMeshMaterialOptions).emissive ?? 'black'),
+            // Left out when not asked for, so a material that never had one saves as before.
+            ...((options as TMeshMaterialOptions).emissiveTexture !== undefined
+                ? { emissiveTexture: (options as TMeshMaterialOptions).emissiveTexture }
+                : {}),
             specular: getColor((options as TMeshMaterialOptions).specular ?? 'black'),
             shininess: (options as TMeshMaterialOptions).shininess ?? 32,
             alpha: (options as TMeshMaterialOptions).alpha ?? 1,

@@ -228,18 +228,42 @@ describe('pictures', () => {
         served.restore();
     });
 
-    it('drops a glow that a picture was meant to mask, rather than lighting the whole model up', async () => {
+    it('keeps a glow and the picture that masks it, so only the masked part lights up', async () => {
         const lit = await load({
             nodes: [{ name: 'Sign', primitives: [{ ...TEST_QUAD, material: 0 }] }],
             materials: [{ emissiveFactor: [1, 1, 1] }],
         });
         expect(lit.model.parts[0].emissive).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+        expect(lit.model.parts[0].emissiveTexture).toBeNull();
 
-        const masked = await load({
-            nodes: [{ name: 'Bottle', primitives: [{ ...TEST_QUAD, material: 0 }] }],
-            materials: [{ emissiveFactor: [1, 1, 1], emissiveMask: true }],
-        });
-        expect(masked.model.parts[0].emissive).toEqual({ r: 0, g: 0, b: 0, a: 1 });
+        const masked = await load(
+            {
+                nodes: [{ name: 'Bottle', primitives: [{ ...TEST_QUAD, material: 0 }] }],
+                materials: [{ image: 'bottle.png', emissiveFactor: [1, 1, 1], emissiveImage: 'logo.png' }],
+            },
+            {},
+            { 'bottle.png': 'png', 'logo.png': 'png' },
+        );
+        const [bottle] = masked.model.parts;
+        expect(bottle.emissive).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+        expect(bottle.emissiveTexture).not.toBeNull();
+        expect(bottle.emissiveTexture).not.toBe(bottle.texture);
+        expect(masked.asked.filter((url) => url.endsWith('.png')).sort()).toEqual(['/bottle.png', '/logo.png']);
+    });
+
+    it('fetches no glow picture when asked for no pictures, and drops the glow it masked', async () => {
+        const { model, asked } = await load(
+            {
+                nodes: [{ name: 'Bottle', primitives: [{ ...TEST_QUAD, material: 0 }] }],
+                materials: [{ emissiveFactor: [1, 1, 1], emissiveImage: 'logo.png' }],
+            },
+            { textures: false },
+            { 'logo.png': 'png' },
+        );
+        expect(model.parts[0].emissiveTexture).toBeNull();
+        // And the glow it masked is dropped, rather than lighting the whole bottle.
+        expect(model.parts[0].emissive).toEqual({ r: 0, g: 0, b: 0, a: 1 });
+        expect(asked.filter((url) => url.endsWith('.png'))).toEqual([]);
     });
 
     it('scales a glow by the strength the file asks for', async () => {

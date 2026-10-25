@@ -143,6 +143,7 @@ const parseMeshMaterial = (value: unknown): TMeshMaterialDoc => {
         texture: typeof raw.texture === 'string' ? raw.texture : null,
         tint: asColor(raw.tint, WHITE),
         emissive: asColor(raw.emissive, BLACK),
+        ...(typeof raw.emissiveTexture === 'string' ? { emissiveTexture: raw.emissiveTexture } : {}),
         specular: asColor(raw.specular, BLACK),
         shininess: asNumber(raw.shininess, 32),
         alpha: asNumber(raw.alpha, 1),

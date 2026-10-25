@@ -37,6 +37,18 @@ releases are in [changelog/](./changelog/), one file each.
   over it, read every frame to light the places a card can go, off by themselves when the drag ends;
   `onEnter`, `onLeave` and `onDrop` for the same as events, and `enable`/`disable` for a slot that
   fills. The drag events give the zone under them in `zone`.
+- **Glow maps in model files.** A glTF material's `emissiveTexture` is read with its colour picture
+  and its glow comes through it: lit windows on a dark wall, a screen, a logo, after the lighting
+  and so lit in the dark, in both renderers and through a material's looks (`ctx.emissive`). It
+  ends up on `material.emissiveTexture` of every piece. Read with the colour picture's edges and its
+  first set of coordinates. A glow picture that is not fetched (`textures: false`), still on the
+  way, or one the engine cannot read (only an extension names it) leaves the piece with no glow,
+  rather than with the glow over all of it. Until now such a glow was always dropped.
+- **`emissiveTexture` on a material built in code**: `createMaterial({ shader: 'mesh3d',
+  emissiveTexture })` and `createMesh({ emissiveTexture })`, the same picture a model file gives, for
+  a screen or a sign made in code; a picture drawn into (`createSpriteTexture`) makes a monitor that
+  glows with what a camera sees. A scene document keeps it by asset key (`"emissiveTexture"`, written
+  only when there is one).
 
 ### Changed
 
@@ -44,6 +56,14 @@ releases are in [changelog/](./changelog/), one file each.
   an object asks for a second light, and `llms.txt` now show the way: an object each inside the
   thing, placed by its own `transform`, as a car's two headlights. What a second light on one
   object does is unchanged: it replaces the first.
+
+### Fixed
+
+- **A model whose picture is kept inside its `.glb` lost it when its scene was saved and opened
+  again.** Saving wrote that picture under the name the engine gives it inside the file
+  (`car.glb#image:0`) and listed it to be fetched; opening the scene fetched that name, failed, and
+  the piece was drawn without its picture. A piece of a model file now writes no picture at all: the
+  file brings it back.
 
 ## 0.2.7 — 2026-10-23
 

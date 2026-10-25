@@ -277,7 +277,8 @@ void main() {
     ctx.worldPos = vWorldPos;
     ctx.light = lit;
     ctx.shine = litWithShadow(vShine, vCasterShine, coord);
-    ctx.emissive = uniforms.emissive.rgb;
+    // The glow through its picture, so a shader of your own adds it the way the built-in one does.
+    ctx.emissive = uniforms.emissive.rgb * textureLod(meshEmissive, uv, 0.0).rgb;
     ctx.viewDir = vViewDir;
     ctx.color = vColor;
     ctx.screen = screenOf(vScreen);

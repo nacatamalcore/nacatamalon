@@ -298,7 +298,8 @@ fn fs(in: VertexOutput) -> @location(0) vec4<f32> {
     ctx.worldPos = in.worldPos;
     ctx.light = lit;
     ctx.shine = litWithShadow(in.shine, in.casterShine, coord);
-    ctx.emissive = uniforms.emissive.rgb;
+    // The glow through its picture, so a shader of your own adds it the way the built-in one does.
+    ctx.emissive = uniforms.emissive.rgb * textureSampleLevel(meshEmissive, meshSampler, uv, 0.0).rgb;
     ctx.viewDir = in.viewDir;
     ctx.color = in.color;
     ctx.screen = screenOf(in.screen);

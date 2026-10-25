@@ -92,6 +92,7 @@ const buildPart = (
                 shader: 'mesh3d',
                 tint: multiply(part.tint, state.tint),
                 emissive: part.emissive,
+                emissiveTexture: part.emissiveTexture ?? undefined,
                 specular: options.specular === undefined ? undefined : getColor(options.specular),
                 shininess: options.shininess,
                 vertexSnap: options.vertexSnap,

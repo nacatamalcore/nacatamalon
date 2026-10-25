@@ -331,6 +331,8 @@ precision highp float;
 ${MESH_UNIFORMS_GLSL}
 
 uniform sampler2D meshTexture;
+// The picture the glow comes through, read the colour's way. White when there is none.
+uniform sampler2D meshEmissive;
 ${MESH_SHADOW_GLSL}
 `;
 
@@ -353,7 +355,10 @@ in float vFog;
 out vec4 fragColor;
 
 void main() {
-    vec4 texColor = texture(meshTexture, vUv.xy / vUv.z);
+    vec2 uv = vUv.xy / vUv.z;
+    vec4 texColor = texture(meshTexture, uv);
+    // Its glow, through its picture when it has one: lit windows on a dark wall.
+    vec3 glow = uniforms.emissive.rgb * texture(meshEmissive, uv).rgb;
     // Only the casting light's share is taken away, so a thing in the sun's shadow is still lit by
     // the lamp beside it.
     vec3 lit = max(litWithShadow(vLight, vCasterLight, vShadowCoord), lights.ambient.rgb);
@@ -361,6 +366,6 @@ void main() {
     vec4 color = texColor * uniforms.tint * vColor * vec4(lit, 1.0);
     vec3 shine = litWithShadow(vShine, vCasterShine, vShadowCoord);
     // The fog last, over everything, glow included.
-    fragColor = vec4(mix(color.rgb + shine + uniforms.emissive.rgb, lights.fog.rgb, vFog), color.a);
+    fragColor = vec4(mix(color.rgb + shine + glow, lights.fog.rgb, vFog), color.a);
 }
 `;

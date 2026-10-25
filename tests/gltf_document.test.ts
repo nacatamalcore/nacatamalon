@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, it, spyOn } from 'bun:test';
-import { parseSceneDoc, sceneFromDoc, SCENE_FORMAT } from '../src/scene/document';
+import { parseSceneDoc, sceneFromDoc, serializeScene, SCENE_FORMAT } from '../src/scene/document';
+import { createScene } from '../src/scene/create_scene';
+import { createModel } from '../src/gameobjects/model/create_model';
+import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
+import { whenLoaded } from '../src/loaders';
 import { createTestGame, startTestScene } from './helpers/test_game';
-import { asGltf, serveGltf, TEST_QUAD } from './helpers/test_gltf';
+import { asGlb, asGltf, serveGltf, TEST_QUAD } from './helpers/test_gltf';
+import type { TGltfModel } from '../src/loaders';
 import type { TMesh } from '../src/gameobjects/mesh/types/t_mesh';
 
 /**
@@ -136,5 +141,41 @@ describe('a mesh whose shape comes from a model file', () => {
 
         expect(meshesOf(store).get('door-mesh')!.geometry?.status).toBe('loading');
         expect(String(warn.mock.calls.at(-1)?.[0])).toContain('"Body", "Wheel"');
+    });
+});
+
+describe('a model file in a scene that is saved and opened again', () => {
+    it('leaves the pictures to the file, so one kept inside it is not fetched by a name of its own', async () => {
+        const glb = asGlb({
+            nodes: [{ name: 'Bottle', primitives: [{ ...TEST_QUAD, material: 0 }] }],
+            materials: [{ embeddedImage: 'png-bytes', emissiveFactor: [1, 1, 1], embeddedEmissiveImage: 'glow-bytes' }],
+        });
+        served = serveGltf({ 'bottle.glb': glb });
+        const { store } = createTestGame();
+        let model!: TGltfModel;
+        startTestScene(store, 'Loading', () => {
+            model = useLoadGltf({ src: 'bottle.glb' });
+            return createScene();
+        });
+        await whenLoaded(model);
+        const shelf = startTestScene(store, 'Shelf', () => {
+            createModel({ model });
+            return createScene();
+        });
+
+        const doc = JSON.parse(JSON.stringify(serializeScene(shelf)));
+        // Nothing but the shape is listed: the pictures come with it.
+        expect(doc.assets.map((asset: { type: string }) => asset.type)).toEqual(['geometry']);
+        expect(doc.root.components[0].material.texture).toBeNull();
+        expect(doc.root.components[0].material.emissiveTexture).toBeUndefined();
+
+        const opened = createTestGame();
+        startTestScene(opened.store, 'Shelf', sceneFromDoc(parseSceneDoc(doc, '/scenes/shelf.scene')));
+        await arrive();
+
+        const bottle = meshesOf(opened.store).values().next().value!;
+        expect(bottle.material.texture?.status).toBe('ready');
+        expect(bottle.material.emissiveTexture?.status).toBe('ready');
+        expect(served.asked.filter((url) => url.includes('#image'))).toEqual([]);
     });
 });

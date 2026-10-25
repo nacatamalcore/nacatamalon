@@ -77,6 +77,9 @@ export const createMeshPipeline = (
         entries: [
             { binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
             { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: {} },
+            // The picture the glow comes through, read with the same sampler as the colour. White
+            // when there is none, so the glow is its colour all over, as it was before pictures.
+            { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: {} },
         ],
     });
     const uniformsLayout = device.createBindGroupLayout({
@@ -148,11 +151,11 @@ export const createMeshPipeline = (
     const textureGroups = (texture: GPUTexture) => ({
         nearest: device.createBindGroup({
             layout: textureLayout,
-            entries: [{ binding: 0, resource: samplers.nearest }, { binding: 1, resource: texture.createView() }],
+            entries: [{ binding: 0, resource: samplers.nearest }, { binding: 1, resource: texture.createView() }, { binding: 2, resource: texture.createView() }],
         }),
         linear: device.createBindGroup({
             layout: textureLayout,
-            entries: [{ binding: 0, resource: samplers.linear }, { binding: 1, resource: texture.createView() }],
+            entries: [{ binding: 0, resource: samplers.linear }, { binding: 1, resource: texture.createView() }, { binding: 2, resource: texture.createView() }],
         }),
     });
 

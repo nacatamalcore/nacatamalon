@@ -60,9 +60,10 @@ export type TMeshPipeline = {
      */
     wrapSamplers: Map<string, GPUSampler>;
     /**
-     * Each picture's groups, one per way it has been read, made the first time that way is drawn.
+     * Each picture's groups, by the picture its glow comes through (white for none) and then by the
+     * way it is read, made the first time that pairing is drawn.
      */
-    textureBindGroups: WeakMap<GPUTexture, Map<string, GPUBindGroup>>;
+    textureBindGroups: WeakMap<GPUTexture, WeakMap<GPUTexture, Map<string, GPUBindGroup>>>;
     whiteBindGroups: { nearest: GPUBindGroup; linear: GPUBindGroup };
     /**
      * One slot per scene that has models: what shines on it and how dark its dark side is.

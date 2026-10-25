@@ -175,9 +175,23 @@ const writeMaps = (maps: TMeshMaterial['maps'], writing: TWriting): Pick<TMeshMa
     return { maps: written };
 };
 
-const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting): TMeshMaterialDoc => {
-    if (material.texture !== null) {
-        listTexture(material.texture, writing);
+/**
+ * A model's surface, as the document keeps it.
+ *
+ * `fromFile` is a piece of a model file. **Its picture is not written**: the file brings it back
+ * when the scene opens, and only a shader of its own is taken from the document (see
+ * `buildModelMesh`). Written, it would name a picture kept inside the file (`car.glb#image:0`) as if
+ * it were one of its own, and opening the scene would fetch that name, fail, and leave the error
+ * where the file's picture would be looked for, drawing the piece without it.
+ */
+const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting, fromFile: boolean): TMeshMaterialDoc => {
+    const texture = fromFile ? null : material.texture;
+    if (texture !== null) {
+        listTexture(texture, writing);
+    }
+    const glow = fromFile ? null : material.emissiveTexture ?? null;
+    if (glow !== null) {
+        listTexture(glow, writing);
     }
     // A material made by looks writes the looks and not the colour hook they made: the recipe is
     // the truth, and the shader is made again from it, by whatever version opens the scene.
@@ -207,9 +221,10 @@ const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting): TMeshMat
         ...written,
         uniforms,
         ...(looked ? { fragment: null, fragmentGlsl: null } : {}),
-        texture: material.texture === null ? null : material.texture.key,
+        texture: texture === null ? null : texture.key,
         tint: { ...material.tint },
         emissive: { ...material.emissive },
+        ...(glow !== null ? { emissiveTexture: glow.key } : {}),
         specular: { ...material.specular },
         shininess: material.shininess,
         alpha: material.alpha,
@@ -370,7 +385,7 @@ const writeMesh = (mesh: TMesh, writing: TWriting): TComponentDoc | null => {
         id: mesh.id,
         ...(place !== undefined ? { transform: place } : {}),
         geometry: geometry.key,
-        material: writeMeshMaterial(mesh.material, writing),
+        material: writeMeshMaterial(mesh.material, writing, geometry.source.kind === 'gltf'),
         ...unless('visible', mesh.visible, true),
         ...unless('zIndex', mesh.zIndex, undefined),
         // Only `false` is ever written: absent means it casts, so writing `true` would put a

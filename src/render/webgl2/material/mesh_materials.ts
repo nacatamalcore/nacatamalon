@@ -2,7 +2,7 @@ import { buildMeshMaterialShaderGlsl } from './mesh_material_shader';
 import { buildUniformLayout, writeUniformValues } from '../../shared/material_uniforms';
 import { compileProgram } from '../utils/compile_program';
 import { MATERIAL_UNIFORMS_BINDING } from './uniform_block';
-import { MESH_JOINTS_UNIT, MESH_LIGHTS_BINDING, MESH_MAP_UNITS, MESH_SHADOW_UNIT, MESH_TEXTURE_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
+import { MESH_EMISSIVE_UNIT, MESH_JOINTS_UNIT, MESH_LIGHTS_BINDING, MESH_MAP_UNITS, MESH_SHADOW_UNIT, MESH_TEXTURE_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
 import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import type { TDrawShader } from '../../interface/draw/t_draw_material';
 import type { TUniformLayout } from '../../shared/material_uniforms';
@@ -91,6 +91,7 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
             MESH_MAP_UNITS.forEach((unit, i) => {
                 gl.uniform1i(gl.getUniformLocation(program, `meshMap${i}`), unit);
             });
+            gl.uniform1i(gl.getUniformLocation(program, 'meshEmissive'), MESH_EMISSIVE_UNIT);
             // A model that bends reads its bones from the unit the built-in bending reads them from.
             if (skinned) {
                 gl.uniform1i(gl.getUniformLocation(program, 'uJoints'), MESH_JOINTS_UNIT);

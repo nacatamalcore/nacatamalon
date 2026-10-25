@@ -272,6 +272,9 @@ const buildModelMesh = (
         mesh.material.texture = part.texture;
         mesh.material.tint = part.tint;
         mesh.material.emissive = part.emissive;
+        if (part.emissiveTexture !== null) {
+            mesh.material.emissiveTexture = part.emissiveTexture;
+        }
         // Only ever switched on: a document has no word for it, so a file saying so is the only say.
         if (part.transparent) {
             mesh.material.transparent = true;
@@ -410,6 +413,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
             }
             const surface = component.material;
             const texture = surface.texture === null ? undefined : found(assets.textures, surface.texture, 'model', src);
+            const emissiveTexture = surface.emissiveTexture === undefined ? undefined : found(assets.textures, surface.emissiveTexture, 'model', src);
             // Each map by its picture's key; one whose picture is not there is left out and reads white.
             const maps: Record<string, TMaterialMap> = {};
             for (const [name, map] of Object.entries(surface.maps ?? {})) {
@@ -437,6 +441,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                     ...(texture !== undefined ? { texture } : {}),
                     tint: surface.tint,
                     emissive: surface.emissive,
+                    ...(emissiveTexture !== undefined ? { emissiveTexture } : {}),
                     specular: surface.specular,
                     shininess: surface.shininess,
                     alpha: surface.alpha,

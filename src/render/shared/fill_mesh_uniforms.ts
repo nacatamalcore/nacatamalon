@@ -80,9 +80,13 @@ export const fillMeshUniforms = (out: Float32Array, at: number, mesh: TDrawMesh,
     const snap = rows > 0;
     const columns = rows * (space.width / space.height);
 
-    out[at + 52] = surface.emissive.r;
-    out[at + 53] = surface.emissive.g;
-    out[at + 54] = surface.emissive.b;
+    // A glow picture that is not on the card yet, or never will be, reads as white there: the glow
+    // would cover the whole model rather than its windows. No glow is wrong in a smaller place.
+    const glow = surface.emissiveTexture;
+    const dark = glow !== null && glow !== undefined && (glow.status !== 'ready' || glow.gpu === null);
+    out[at + 52] = dark ? 0 : surface.emissive.r;
+    out[at + 53] = dark ? 0 : surface.emissive.g;
+    out[at + 54] = dark ? 0 : surface.emissive.b;
     out[at + 55] = snap ? columns : 0;
 
     // Where it is looked at from, which the shine needs: a highlight is where the light bounces

@@ -140,7 +140,7 @@ export type TGltfMaterial = {
      */
     alphaMode?: 'OPAQUE' | 'MASK' | 'BLEND';
     /**
-     * A picture masking where the glow actually is. Not read, but its presence matters.
+     * A picture masking where the glow actually is: the factor multiplies it.
      */
     emissiveTexture?: { index: number };
     extensions?: { KHR_materials_emissive_strength?: { emissiveStrength?: number } };

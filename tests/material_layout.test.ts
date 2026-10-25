@@ -131,8 +131,12 @@ describe('the two model material shaders', () => {
 
         expect(wgsl).toContain('surface.rgb * ctx.light + ctx.shine + ctx.emissive');
         expect(glsl).toContain('surface.rgb * ctx.light + ctx.shine + ctx.emissive');
-        // And the built-in ending really does add those three the same way.
-        expect(MESH_SHADER_FRAGMENT).toContain('color.rgb + shine + uniforms.emissive.rgb');
+        // And the built-in ending really does add those three the same way, the glow through its
+        // picture in both.
+        expect(MESH_SHADER_FRAGMENT).toContain('color.rgb + shine + glow');
+        expect(MESH_SHADER_FRAGMENT).toContain('uniforms.emissive.rgb * textureSample(meshEmissive');
+        expect(wgsl).toContain('ctx.emissive = uniforms.emissive.rgb * textureSampleLevel(meshEmissive');
+        expect(glsl).toContain('ctx.emissive = uniforms.emissive.rgb * textureLod(meshEmissive');
     });
 
     it('only measures the surface again when a corner hook actually moved it', () => {

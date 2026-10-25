@@ -36,6 +36,10 @@ export type TGltfPart = {
     tint: TColor;
     emissive: TColor;
     /**
+     * The picture its glow comes through, or `null` when the glow is the same all over.
+     */
+    emissiveTexture: TTexture | null;
+    /**
      * Whether the file says it is seen through, whatever its colour's alpha: a picture with
      * see-through parts is the usual reason, and nothing else would tell.
      */

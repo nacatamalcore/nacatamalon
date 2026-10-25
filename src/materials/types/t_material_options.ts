@@ -94,6 +94,12 @@ export type TMeshMaterialOptions = TMaterialShaderOptions & {
      */
     emissive?: TColorOption;
     /**
+     * A picture the glow comes through, multiplied by `emissive`: white where it glows, black where
+     * it does not, the lit windows of a building or the screen of an arcade cabinet. Read with the
+     * same edges and corners as `texture`. Default none, the glow the same all over.
+     */
+    emissiveTexture?: TTexture;
+    /**
      * The colour of its shine. Default none, which is matt.
      */
     specular?: TColorOption;

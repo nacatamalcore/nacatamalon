@@ -56,3 +56,35 @@ describe('readMaterial colours', () => {
         expect(emissive).toEqual({ r: 0, g: 0, b: 0, a: 1 });
     });
 });
+
+describe('readMaterial glow picture', () => {
+    const withImages = (material: NonNullable<TGltfDoc['materials']>[number]): TGltfDoc => ({
+        asset: { version: '2.0' },
+        materials: [material],
+        textures: [{ source: 0 }, { source: 1 }],
+        images: [{ uri: 'wall.png' }, { uri: 'windows.png' }],
+    }) as TGltfDoc;
+
+    it('keeps the glow and the picture it comes through', () => {
+        const surface = readMaterial(withImages({
+            pbrMetallicRoughness: { baseColorTexture: { index: 0 } },
+            emissiveFactor: [1, 1, 1],
+            emissiveTexture: { index: 1 },
+        }), 0);
+
+        expect(surface.emissive).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+        expect(surface.image?.uri).toBe('wall.png');
+        expect(surface.emissiveImage?.uri).toBe('windows.png');
+    });
+
+    it('leaves a picture with no factor dark, as the format says', () => {
+        const { emissive, emissiveImage } = readMaterial(withImages({ emissiveTexture: { index: 1 } }), 0);
+
+        expect(emissive).toEqual({ r: 0, g: 0, b: 0, a: 1 });
+        expect(emissiveImage?.uri).toBe('windows.png');
+    });
+
+    it('has no glow picture when the file names none', () => {
+        expect(readMaterial(withImages({ emissiveFactor: [1, 0, 0] }), 0).emissiveImage).toBeNull();
+    });
+});

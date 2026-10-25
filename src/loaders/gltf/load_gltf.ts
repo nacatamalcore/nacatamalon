@@ -8,6 +8,7 @@ import { newTexture } from '../texture/new_texture';
 import { loadTexture } from '../texture/load_texture';
 import { readBufferView } from './read_accessors';
 import { readMaterial } from './read_material';
+import type { TGltfImage } from './read_material';
 import { resolveAssetPath } from '../resolve_asset_path';
 import { uploadGeometry } from '../../geometry/upload_geometry';
 import { uploadTexture } from '../texture/upload_texture';
@@ -18,6 +19,9 @@ import type { TGltfModel, TGltfPart } from './types/t_gltf_model';
 import type { TRuntimeStore } from '../../store';
 import type { TShading } from './shading';
 import type { TTexture } from '../texture/types/t_texture';
+
+/** No light of its own. */
+const NO_GLOW = { r: 0, g: 0, b: 0, a: 1 };
 
 /**
  * What the loader was asked for beyond the file itself.
@@ -60,7 +64,7 @@ const readBuffers = async (doc: TGltfDoc, src: string, embedded: ArrayBuffer | n
     }));
 
 /**
- * The picture a piece wears, shared through the game's own store of them.
+ * A picture a piece wears, its colour or its glow, shared through the game's own store of them.
  *
  * A model and a sprite showing the same file end up on one upload, and so do two pieces of one
  * model sharing a sheet, which is the ordinary case: an exported prop usually paints every part of
@@ -71,14 +75,18 @@ const surfaceTexture = async (
     model: TGltfModel,
     doc: TGltfDoc,
     buffers: ArrayBuffer[],
-    surface: ReturnType<typeof readMaterial>,
+    image: TGltfImage | null,
 ): Promise<TTexture | null> => {
     const { textures } = store.get('assets');
 
-    if (surface.imageBufferView !== undefined) {
+    if (image === null) {
+        return null;
+    }
+
+    if (image.bufferView !== undefined) {
         // Kept inside the model. Its name is the model's plus where in the file it sits, because it
         // has no name of its own and two models must not collide over it.
-        const key = `${model.key}#image:${surface.imageBufferView}`;
+        const key = `${model.key}#image:${image.bufferView}`;
         const cached = textures.get(key);
         if (cached !== undefined) {
             return cached;
@@ -87,7 +95,7 @@ const surfaceTexture = async (
         const texture = newTexture(key, key);
         textures.set(key, texture);
         try {
-            await uploadTexture(store, texture, new Blob([readBufferView(doc, buffers, surface.imageBufferView)], { type: surface.imageType }));
+            await uploadTexture(store, texture, new Blob([readBufferView(doc, buffers, image.bufferView)], { type: image.type }));
         } catch (error) {
             texture.status = 'error';
             bumpVersion(texture);
@@ -96,11 +104,11 @@ const surfaceTexture = async (
         return texture;
     }
 
-    if (surface.imageUri === null) {
+    if (image.uri === null) {
         return null;
     }
 
-    const src = isDataUri(surface.imageUri) ? surface.imageUri : resolveAssetPath(model.src, surface.imageUri);
+    const src = isDataUri(image.uri) ? image.uri : resolveAssetPath(model.src, image.uri);
     const cached = textures.get(src);
     if (cached !== undefined) {
         // In the store is not the same as arrived: another piece may have asked for it a moment ago
@@ -164,7 +172,8 @@ export const loadGltf = async (store: TRuntimeStore, model: TGltfModel, options:
         for (let i = 0; i < built.length; i++) {
             const piece = built[i];
             const surface = readMaterial(doc, piece.materialIndex);
-            const texture = options.textures ? await surfaceTexture(store, model, doc, buffers, surface) : null;
+            const texture = options.textures ? await surfaceTexture(store, model, doc, buffers, surface.image) : null;
+            const emissiveTexture = options.textures ? await surfaceTexture(store, model, doc, buffers, surface.emissiveImage) : null;
             if (store.get('loop').destroyed) {
                 return;
             }
@@ -182,7 +191,13 @@ export const loadGltf = async (store: TRuntimeStore, model: TGltfModel, options:
                 ),
                 texture,
                 tint: surface.tint,
-                emissive: surface.emissive,
+                // **A glow meant to come through a picture is dropped when there is no picture to
+                // put on, not applied unmasked**: not fetched, or one this engine cannot read. The
+                // factor is usually white and the picture black everywhere but a label: the factor
+                // alone turns a bottle with a glowing logo into a bottle made of light. No glow is
+                // wrong in one small place, an unmasked one all over.
+                emissive: surface.emissiveMasked && emissiveTexture === null ? NO_GLOW : surface.emissive,
+                emissiveTexture,
                 transparent: surface.transparent,
                 wrap: surface.wrap,
                 skeleton: piece.skeleton === undefined ? null : skeletons[piece.skeleton] ?? null,

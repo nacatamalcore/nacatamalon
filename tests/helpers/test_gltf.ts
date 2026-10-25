@@ -82,9 +82,18 @@ export type TTestMaterial = {
     emissiveFactor?: [number, number, number];
     emissiveStrength?: number;
     /**
-     * Declares a picture masking the glow, which the engine does not read but must notice.
+     * A picture masking the glow, beside the file: the factor multiplies it.
      */
-    emissiveMask?: boolean;
+    emissiveImage?: string;
+    /**
+     * A picture masking the glow, kept inside the file itself.
+     */
+    embeddedEmissiveImage?: string;
+    /**
+     * A glow picture the engine cannot read: a texture whose picture only an extension names, the
+     * way a model squeezed to WebP or KTX2 says it.
+     */
+    emissiveUnreadable?: boolean;
     /**
      * What the picture does past its edge each way, in the format's numbers. Left out, no sampler.
      */
@@ -302,7 +311,20 @@ const assemble = (model: TTestModel) => {
         const out: Record<string, unknown> = { pbrMetallicRoughness: pbr };
         if (material.name !== undefined) out.name = material.name;
         if (material.emissiveFactor !== undefined) out.emissiveFactor = material.emissiveFactor;
-        if (material.emissiveMask === true) out.emissiveTexture = { index: 0 };
+        if (material.emissiveImage !== undefined) {
+            images.push({ uri: material.emissiveImage });
+            textures.push({ source: images.length - 1 });
+            out.emissiveTexture = { index: textures.length - 1 };
+        }
+        if (material.embeddedEmissiveImage !== undefined) {
+            images.push({ bufferView: putRaw(new TextEncoder().encode(material.embeddedEmissiveImage)), mimeType: 'image/png' });
+            textures.push({ source: images.length - 1 });
+            out.emissiveTexture = { index: textures.length - 1 };
+        }
+        if (material.emissiveUnreadable === true) {
+            textures.push({ extensions: { EXT_texture_webp: { source: 0 } } });
+            out.emissiveTexture = { index: textures.length - 1 };
+        }
         if (material.emissiveStrength !== undefined) {
             out.extensions = { KHR_materials_emissive_strength: { emissiveStrength: material.emissiveStrength } };
         }

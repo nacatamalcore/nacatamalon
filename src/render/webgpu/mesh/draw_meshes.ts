@@ -10,30 +10,47 @@ import type { TShadowUniforms } from '../../shared/fill_light_uniforms';
 import type { TMeshPipeline } from './types/t_mesh_pipeline';
 
 /**
- * The picture of a model, read the way it asked (its filter, and what it does past its edge), made
- * the first time that pairing is drawn.
+ * The card's copy of a picture, or `null` while it is missing or still on the way.
+ */
+const gpuOf = (texture: TDrawMesh['material']['texture'] | undefined): GPUTexture | null =>
+    texture !== null && texture !== undefined && texture.status === 'ready' && texture.gpu !== null ? toGpuTexture(texture.gpu) : null;
+
+/**
+ * The pictures of a model, its colour and its glow, read the way it asked (its filter, and what
+ * they do past their edge), made the first time that pairing is drawn.
  */
 const textureBindGroup = (device: GPUDevice, meshes: TMeshPipeline, mesh: TDrawMesh): GPUBindGroup => {
     const filter = (mesh.material.smooth ?? meshes.defaultSmooth) ? 'linear' : 'nearest';
-    const ready = mesh.material.texture !== null && mesh.material.texture.status === 'ready' && mesh.material.texture.gpu !== null;
-    const gpuTexture = ready ? toGpuTexture(mesh.material.texture!.gpu!) : null;
-    if (gpuTexture === null) {
+    const picture = gpuOf(mesh.material.texture);
+    const glow = gpuOf(mesh.material.emissiveTexture);
+    if (picture === null && glow === null) {
         // One white pixel reads the same whatever it does past its edge.
         return meshes.whiteBindGroups[filter];
     }
 
+    const color = picture ?? meshes.whiteTexture;
+    const lit = glow ?? meshes.whiteTexture;
     const { u, v } = textureWrapOf(mesh.material);
     const key = wrapKey(filter, u, v);
-    let cached = meshes.textureBindGroups.get(gpuTexture);
+    let byGlow = meshes.textureBindGroups.get(color);
+    if (byGlow === undefined) {
+        byGlow = new WeakMap();
+        meshes.textureBindGroups.set(color, byGlow);
+    }
+    let cached = byGlow.get(lit);
     if (cached === undefined) {
         cached = new Map();
-        meshes.textureBindGroups.set(gpuTexture, cached);
+        byGlow.set(lit, cached);
     }
     let group = cached.get(key);
     if (group === undefined) {
         group = device.createBindGroup({
             layout: meshes.layouts.texture,
-            entries: [{ binding: 0, resource: meshes.wrapSamplers.get(key)! }, { binding: 1, resource: gpuTexture.createView() }],
+            entries: [
+                { binding: 0, resource: meshes.wrapSamplers.get(key)! },
+                { binding: 1, resource: color.createView() },
+                { binding: 2, resource: lit.createView() },
+            ],
         });
         cached.set(key, group);
     }

@@ -142,6 +142,12 @@ export type TMeshMaterial = TShaderHalf & {
      */
     emissive: TColor;
     /**
+     * A picture the glow comes through, multiplied by `emissive`: white where it glows, black where
+     * it does not, the lit windows of a building or the screen of an arcade cabinet. Read with the
+     * same edges and corners as `texture`. Omitted, the glow is the same all over.
+     */
+    emissiveTexture?: TTexture | null;
+    /**
      * The colour of its shine. Black is a surface that does not shine at all.
      */
     specular: TColor;
