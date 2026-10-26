@@ -445,12 +445,13 @@ void main() {${CORNER_CONTEXT}${bend}
             VERT_CONTEXT,
             vertex ?? DEFAULT_VERTEX,
             /* glsl */ `
-void main() {${CORNER_CONTEXT}${bend}
-    // Turned as the model is, by its own placement: what the hook reads of the surface.
+void main() {${CORNER_CONTEXT}${vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL}${bend}
+    // Turned as the model is, by its own placement, and measured again where the hook moved it, as
+    // the drawn model's is: what the colour hook reads of the surface.
     mat3 turn = ${skinned ? 'mat3(skin)' : 'mat3(1.0)'};
     gl_Position = uLightViewProj * uModel * placed;
     vUv = aUv;
-    vNormal = normalize((uModel * vec4(turn * aNormal, 0.0)).xyz);
+    vNormal = normalize((uModel * vec4(turn * shaped, 0.0)).xyz);
     vWorldPos = (uModel * placed).xyz;
     vColor = aColor;
     vTangent = vec4(normalize((uModel * vec4(turn * aTangent.xyz, 0.0)).xyz), aTangent.w);

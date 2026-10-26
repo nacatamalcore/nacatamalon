@@ -18,6 +18,8 @@ import { buildMeshMaterialShader } from '../src/render/webgpu/material/mesh_mate
 import { meshFragmentGlsl } from '../src/render/webgl2/mesh/mesh_shader';
 import { buildMeshMaterialShaderGlsl } from '../src/render/webgl2/material/mesh_material_shader';
 import { castsThroughHook } from '../src/render/webgpu/shadow/shadow_pipeline';
+import { buildMeshMaterialShadowShader } from '../src/render/webgpu/material/mesh_material_shader';
+import { buildMeshMaterialShadowShaderGlsl } from '../src/render/webgl2/material/mesh_material_shader';
 import { SHADOW_CUT_SKINNED_WGSL, SHADOW_CUT_WGSL, SHADOW_WGSL } from '../src/render/webgpu/shadow/shadow_shader';
 import { SHADOW_CUT_FRAGMENT_GLSL, SHADOW_CUT_SKINNED_VERTEX_GLSL, SHADOW_CUT_VERTEX_GLSL } from '../src/render/webgl2/shadow/shadow_shader';
 import { createTestGame, startTestScene } from './helpers/test_game';
@@ -237,5 +239,31 @@ describe('the casters that take a material\'s slot in the shadow', () => {
         // Not cut, its colour hook is not run in the shadow.
         expect(castsThroughHook(material({ fragment: 'fn effect() {}' }))).toBe(false);
         expect(castsThroughHook(material({ alphaCutoff: 0.5 }))).toBe(false);
+    });
+});
+
+describe('the surface a cut shadow tells its colour hook', () => {
+    const WAVE = 'fn vertex(pos: vec3<f32>, ctx: VertContext) -> vec3<f32> { return pos + ctx.normal * sin(pos.x); }';
+    const WAVE_GLSL = 'vec3 vertex(vec3 pos, VertContext ctx) { return pos + ctx.normal * sin(pos.x); }';
+    const FACING = 'fn effect(surface: vec4<f32>, ctx: FragContext) -> vec4<f32> { return vec4<f32>(surface.rgb, ctx.normal.y); }';
+    const FACING_GLSL = 'vec4 effect(vec4 surface, FragContext ctx) { return vec4(surface.rgb, ctx.normal.y); }';
+
+    it('is measured again where the hook moved it, as the drawn model\'s is', () => {
+        for (const skinned of [false, true]) {
+            const wgsl = buildMeshMaterialShadowShader(WAVE, {}, [], skinned, { fragment: FACING });
+            expect(wgsl).toContain('let moved1 = vertex(position + tangent');
+            expect(wgsl).toContain('turn * shaped');
+            const glsl = buildMeshMaterialShadowShaderGlsl(WAVE_GLSL, {}, skinned, { fragment: FACING_GLSL, mapNames: [] }).vertex;
+            expect(glsl).toContain('vec3 moved1 = vertex(aPosition + tangent');
+            expect(glsl).toContain('turn * shaped');
+        }
+    });
+
+    it('is the file\'s own when nothing moves the corners', () => {
+        const wgsl = buildMeshMaterialShadowShader(null, {}, [], false, { fragment: FACING });
+        expect(wgsl).toContain('let shaped = ctx.normal;');
+        expect(wgsl).not.toContain('moved1');
+        const glsl = buildMeshMaterialShadowShaderGlsl(null, {}, false, { fragment: FACING_GLSL, mapNames: [] }).vertex;
+        expect(glsl).toContain('vec3 shaped = ctx.normal;');
     });
 });

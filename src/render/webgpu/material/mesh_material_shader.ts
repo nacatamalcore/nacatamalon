@@ -479,13 +479,14 @@ struct CutOutput {
 };
 
 @vertex
-fn vs(${cornerInputs(skinned)}) -> CutOutput {${CORNER_CONTEXT}${bend}
-    // Turned as the model is, by its own placement: what the hook reads of the surface.
+fn vs(${cornerInputs(skinned)}) -> CutOutput {${CORNER_CONTEXT}${vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL}${bend}
+    // Turned as the model is, by its own placement, and measured again where the hook moved it, as
+    // the drawn model's is: what the colour hook reads of the surface.
     let turn = ${skinned ? 'mat3x3<f32>(skin[0].xyz, skin[1].xyz, skin[2].xyz)' : 'mat3x3<f32>(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)'};
     var out: CutOutput;
     out.position = shadow.lightViewProj * shadow.model * placed;
     out.uv = uv;
-    out.normal = normalize((shadow.model * vec4<f32>(turn * normal, 0.0)).xyz);
+    out.normal = normalize((shadow.model * vec4<f32>(turn * shaped, 0.0)).xyz);
     out.worldPos = (shadow.model * placed).xyz;
     out.color = color;
     out.tangent = vec4<f32>(normalize((shadow.model * vec4<f32>(turn * cornerTangent.xyz, 0.0)).xyz), cornerTangent.w);
