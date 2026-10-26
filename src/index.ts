@@ -23,10 +23,10 @@ export type { TLoadedPixels } from './loaders/pixels';
 export type { TUseLoadPixelsOptions } from './hooks';
 export type { TModel, TModelOptions } from './gameobjects/model';
 export type { TLight, TDirectionalLight, TPointLight, TSpotLight, TRectLight, TAmbientLight, TLightOptionsBase } from './light';
-export { useCubeGeometry, usePlaneGeometry, useCircleGeometry, useUvSphereGeometry, useIcoSphereGeometry, useCylinderGeometry, useConeGeometry, useTorusGeometry } from './hooks';
+export { useCubeGeometry, usePlaneGeometry, useCircleGeometry, useUvSphereGeometry, useIcoSphereGeometry, useCylinderGeometry, useConeGeometry, useTorusGeometry, useLatheGeometry } from './hooks';
 export type { TBlobShadowOptions } from './hooks';
-export type { TCubeGeometryOptions, TPlaneGeometryOptions, TCircleGeometryOptions, TUvSphereGeometryOptions, TIcoSphereGeometryOptions, TCylinderGeometryOptions, TConeGeometryOptions, TTorusGeometryOptions } from './hooks';
-export type { TGeometry } from './geometry';
+export type { TCubeGeometryOptions, TPlaneGeometryOptions, TCircleGeometryOptions, TUvSphereGeometryOptions, TIcoSphereGeometryOptions, TCylinderGeometryOptions, TConeGeometryOptions, TTorusGeometryOptions, TLatheGeometryOptions } from './hooks';
+export type { TGeometry, TGeometryData, TUvProjection } from './geometry';
 export type { TDrawable } from './gameobjects/types';
 // A turn as a whole, and the one way of building one that a scene written by hand needs: an object
 // tilted off the axes (a ramp, a banked corner) is authored with three angles and stored as this.
@@ -149,7 +149,7 @@ export type { THitboxOptions } from './hooks';
 export { screenToRay, worldToScreen, cameraLookAt } from './camera';
 export type { TRay, TScreenPoint } from './camera';
 // A shape by the name it is kept under, which is how a collider names one.
-export { getGeometry } from './geometry';
+export { getGeometry, createGeometry, updateGeometry } from './geometry';
 export { createGameStore, localStorageAdapter, indexedDbAdapter } from './game_store';
 // Reaching a store and reading its file: both of these a published game does. It resolves the
 // store an object was given, and it installs what its `.store` files author over what the code

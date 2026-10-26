@@ -26,7 +26,7 @@ import { newSpriteTexture } from '../../gameobjects/sprite_texture';
 import type { TSpriteTexture } from '../../gameobjects/sprite_texture';
 import {
     useCircleGeometry, useConeGeometry, useCubeGeometry, useCylinderGeometry,
-    useIcoSphereGeometry, usePlaneGeometry, useTorusGeometry, useUvSphereGeometry,
+    useIcoSphereGeometry, useLatheGeometry, usePlaneGeometry, useTorusGeometry, useUvSphereGeometry,
 } from '../../hooks/geometry';
 import { useLoadAtlas, useLoadAudio, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadParticles, useLoadShader, useLoadSong, useLoadMotion, useLoadTexture } from '../../hooks/loaders';
 import { useMotion } from '../../hooks/motion';
@@ -136,6 +136,7 @@ const loadGeometry = (asset: Extract<TAssetEntry, { type: 'geometry' }>, src: st
         case 'cylinder': useCylinderGeometry({ key, ...source }); break;
         case 'cone': useConeGeometry({ key, ...source }); break;
         case 'torus': useTorusGeometry({ key, ...source }); break;
+        case 'lathe': useLatheGeometry({ key, ...source }); break;
         case 'gltf': {
             // The whole file, as one call: its parts land in the model cache under keys of their
             // own, and a mesh names the one it wants.

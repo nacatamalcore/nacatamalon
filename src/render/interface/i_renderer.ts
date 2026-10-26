@@ -58,7 +58,7 @@ export type IRenderer = {
      * for nothing. What is written has to fit: whoever owns the buffer keeps count and asks for a
      * bigger one when it stops fitting.
      */
-    updateBuffer(buffer: IBuffer, data: Float32Array | Uint16Array): void;
+    updateBuffer(buffer: IBuffer, data: Float32Array | Uint16Array | Uint32Array): void;
     /**
      * Lets a buffer go. Anything still pointing at it is pointing at nothing.
      */

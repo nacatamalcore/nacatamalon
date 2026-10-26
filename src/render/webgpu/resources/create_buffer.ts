@@ -83,12 +83,14 @@ export const paddedUpload = padded;
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const updateWebGPUBuffer = (device: GPUDevice, buffer: IBuffer, data: Float32Array | Uint16Array): void => {
+export const updateWebGPUBuffer = (device: GPUDevice, buffer: IBuffer, data: Float32Array | Uint16Array | Uint32Array): void => {
     const target = buffer as TWebGPUBuffer;
     if (data.byteLength > target.capacity) {
         throw new Error(`[NacatamalOn] updateBuffer: ${data.byteLength} bytes do not fit in a buffer of ${target.capacity}. Make a bigger one.`);
     }
-    device.queue.writeBuffer(target.gpuBuffer, 0, data);
+    // Rounded up as an upload is, and for the same reason: an odd number of 16 bit triangle points
+    // is refused otherwise. The room was rounded up when the buffer was made, so it still fits.
+    device.queue.writeBuffer(target.gpuBuffer, 0, padded(data));
 };
 
 /**

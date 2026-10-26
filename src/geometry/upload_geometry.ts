@@ -11,7 +11,7 @@ import type { TGeometry } from './types/t_geometry';
  *
  * @internal
  */
-const boundsOf = (vertices: Float32Array): TGeometry['bounds'] => {
+export const boundsOf = (vertices: Float32Array): TGeometry['bounds'] => {
     if (vertices.length < GEOMETRY_STRIDE) {
         return null;
     }
@@ -33,8 +33,10 @@ const boundsOf = (vertices: Float32Array): TGeometry['bounds'] => {
 
 /**
  * The corners' places on their own, for anything that has to measure the shape later.
+ *
+ * @internal
  */
-const positionsOf = (vertices: Float32Array): Float32Array | null => {
+export const positionsOf = (vertices: Float32Array): Float32Array | null => {
     if (vertices.length < GEOMETRY_STRIDE) {
         return null;
     }
@@ -52,8 +54,10 @@ const positionsOf = (vertices: Float32Array): Float32Array | null => {
  * The painted colours as the card takes them: four bytes a corner, handed over four at a time as one
  * number, which is how a run of bytes fits the buffer calls every backend already has. A shape with
  * none is painted white, which multiplies into nothing.
+ *
+ * @internal
  */
-const colorsFor = (count: number, colors: Uint8Array | null | undefined): Uint32Array => {
+export const colorsFor = (count: number, colors: Uint8Array | null | undefined): Uint32Array => {
     const bytes = new Uint8Array(count * COLOR_STRIDE);
     if (colors === undefined || colors === null) {
         bytes.fill(255);

@@ -7,6 +7,26 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **Shapes of your own.** `createGeometry({ positions, indices?, normals?, uvs?, colors?, flat? })`
+  makes one corner by corner: a terrain from a height map, a ramp, a trail, anything the shape hooks
+  do not make. Only `positions` has to be there: without `indices` every three corners are a
+  triangle, without `normals` the facings are worked out (smooth, or one per triangle with `flat`),
+  without `uvs` the picture's top left, without `colors` white. Each list is checked and refused in
+  its own terms. `uvs` can also be the name of a way to work the picture out from where the corners
+  are: `'box'`, each face from the side it faces most (a rock, a building); `'planar'`, from above (a
+  terrain); `'cylinder'`, once round and down (a barrel, a column); `'sphere'` (a planet). A corner
+  two faces want at two places of the picture is split, so a box or a seam needs no corner given
+  twice. The picture is stretched once over the shape, or laid `uvScale` times a unit of the world,
+  so a long wall and a short one get bricks of one size and shapes side by side carry on each
+  other's; round an axis it goes a whole number of times, so the seam meets itself. It belongs to the object that made it and goes with it, unlike a shape hook's,
+  which is shared. `updateGeometry(geometry, data)` changes it while the game runs, from a
+  `useUpdate`: written over what the card holds while it fits, in new room with some to spare when
+  it grows past it. A shape hook's shape is shared, so it is refused.
+- **`useLatheGeometry({ profile, segments })`**: half an outline, from the bottom up, turned on a
+  lathe into a round solid: a bottle, a glass, a vase, a chess piece, a column, a bowling pin, in a
+  handful of points. A point on the axis closes it; a point given twice in a row is a hard edge, as
+  the rim of a base. The same profile is the same shape, shared like the other shape hooks, and a
+  scene document writes it as its recipe (`{ "kind": "lathe", "profile", "segments" }`).
 - **`cull` on a model's material**: which side of its triangles is thrown away. `'back'`, the
   default, is a shape seen from outside, as before. `'none'` draws both sides, for a leaf, a sheet,
   a flag or the top of a liquid, with no second plane turned round; each side is lit as the side it
@@ -19,6 +39,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **Rewriting an odd number of 16 bit triangle points works on WebGPU.** Writing over a buffer sent
+  what it was given as it was, and this card takes only whole fours of bytes, so a shape with an odd
+  number of triangles that was changed was refused there and stopped changing. It is rounded up as
+  the first upload already was.
 - **A shader that does not compile no longer takes whole frames down on WebGPU.** This card says a
   shader is broken a moment after it is made, and a pipeline used in that moment throws away every
   draw of its pass: one bad material blanked the frame for the first frame or two, and one bad

@@ -60,7 +60,7 @@ export const createWebGL2Buffer = (gl: WebGL2RenderingContext, data: Float32Arra
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const updateWebGL2Buffer = (gl: WebGL2RenderingContext, buffer: IBuffer, data: Float32Array | Uint16Array): void => {
+export const updateWebGL2Buffer = (gl: WebGL2RenderingContext, buffer: IBuffer, data: Float32Array | Uint16Array | Uint32Array): void => {
     const target = buffer as TWebGL2Buffer;
     if (data.byteLength > target.capacity) {
         throw new Error(`[NacatamalOn] updateBuffer: ${data.byteLength} bytes do not fit in a buffer of ${target.capacity}. Make a bigger one.`);

@@ -1052,6 +1052,16 @@ const parseGeometrySource = (value: unknown): TGeometrySource | null => {
         case 'cylinder': return { kind: 'cylinder', ...optionalNumber(raw, 'radius'), ...optionalNumber(raw, 'height'), ...optionalNumber(raw, 'segments') };
         case 'cone': return { kind: 'cone', ...optionalNumber(raw, 'radius'), ...optionalNumber(raw, 'height'), ...optionalNumber(raw, 'segments') };
         case 'torus': return { kind: 'torus', ...optionalNumber(raw, 'radius'), ...optionalNumber(raw, 'tube'), ...optionalNumber(raw, 'radialSegments'), ...optionalNumber(raw, 'tubularSegments') };
+        case 'lathe': {
+            // Each point a pair of numbers, the distance from the axis not below 0: a profile with
+            // one that is not is not the shape it says, and is dropped whole rather than in part.
+            const points = Array.isArray(raw.profile) ? raw.profile.map((point) => asRecord(point)) : [];
+            const profile = points.flatMap((point) =>
+                point !== null && typeof point.x === 'number' && typeof point.y === 'number' && Number.isFinite(point.x) && Number.isFinite(point.y) && point.x >= 0
+                    ? [{ x: point.x, y: point.y }]
+                    : []);
+            return profile.length >= 2 && profile.length === points.length ? { kind: 'lathe', profile, ...optionalNumber(raw, 'segments') } : null;
+        }
         case 'gltf': return typeof raw.src === 'string' ? { kind: 'gltf', src: raw.src, ...optionalString(raw, 'node') } : null;
         default: return null;
     }

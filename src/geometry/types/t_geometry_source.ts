@@ -28,4 +28,5 @@ export type TGeometrySource =
     /**
      * A shape read out of a model file. `node` picks one part of it; left out, the file is taken whole.
      */
+    | { kind: 'lathe'; profile: Array<{ x: number; y: number }>; segments?: number }
     | { kind: 'gltf'; src: string; node?: string };
