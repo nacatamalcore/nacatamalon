@@ -7,7 +7,8 @@ import type { TLook } from '../surface/types';
  * What `compileShader` is handed: the family the shader is for, and up to two results.
  *
  * `color` is what the colour hook returns and `position` is where the vertex hook moves a corner
- * to (models only). Leave one out and that stage keeps the engine's own.
+ * to (models only), and `carry` what the vertex hook hands on to the colour hook. Leave one out and
+ * that stage keeps the engine's own.
  *
  * The family is kept in the type, so what comes out is known to be a sprite's or a model's.
  *
@@ -19,6 +20,16 @@ export type TShaderGraph<S extends TGraphTarget = TGraphTarget> = {
     shader: S;
     color?: TComposerNode;
     position?: TComposerNode;
+    /**
+     * Up to four numbers worked out at each corner and handed to the colour stage, which reads them
+     * with `composerCarry()`, smeared across the triangle: how high a wave lifted the water, for
+     * foam on its crests; a light of the graph's own worked out at the corners; where the point was
+     * in the model's own space (`composerVec4(composerVertexPosition(), 0)`), for bands or a fill line
+     * that stay on the model as it moves.
+     * A number, a `vec2`, a `vec3` or a `vec4`, filled out with zeros. Written with `position`, so
+     * what the two have in common is worked out once. Models only.
+     */
+    carry?: TComposerNode;
     /**
      * How a model's surface is lit, in place of the engine's light: `toonLighting()` or `unlitLighting()`. With
      * `steps`, it makes the colour, so it is never given with `color`. Models only.

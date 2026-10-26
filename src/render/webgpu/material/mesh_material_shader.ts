@@ -43,6 +43,12 @@ struct VertContext {
     // A second picture coordinate: the file's own, or the first again.
     uv2: vec2<f32>,
 };
+
+// Four numbers the corner hook hands on to the colour hook, smeared across the triangle like
+// everything else a corner carries: how high a wave lifted it, a light of its own worked out at the
+// corner, its place before it was moved. Written by the hook as carry = vec4<f32>(...), read as
+// ctx.carry. Nothing written, it is nothing.
+var<private> carry: vec4<f32>;
 `;
 
 /**
@@ -77,6 +83,8 @@ struct FragContext {
     // Whether this is the side of the triangle facing the camera. Only ever false on a material that
     // keeps the other side (cull 'front' or 'none'): a liquid seen from below in another colour.
     frontFacing: bool,
+    // What the corner hook put in carry, smeared across the triangle. Nothing put, nothing.
+    carry: vec4<f32>,
 };
 `;
 
@@ -98,7 +106,9 @@ struct VertexOutput {
     @location(1) light: vec3<f32>,
     @location(2) shine: vec3<f32>,
     @location(3) normal: vec3<f32>,
-    @location(4) worldPos: vec3<f32>,
+    // Where it is in the world, and in w how far into the fog: one number did not earn a place of
+    // its own once carry needed one.
+    @location(4) worldPos: vec4<f32>,
 ${cull === 'none' ? '' : `    @location(5) viewDir: vec3<f32>,
 `}    // The casting light's own share of the two above, so the ending can take that one away and no
     // other. Where the corner falls in the map is **not** carried: this one already carries the
@@ -107,7 +117,8 @@ ${cull === 'none' ? '' : `    @location(5) viewDir: vec3<f32>,
     @location(6) casterLight: vec3<f32>,
     @location(7) casterShine: vec3<f32>,
     @location(8) color: vec4<f32>,
-    @location(9) fog: f32,
+    // What the corner hook put in carry, in the place the fog left.
+    @location(9) carry: vec4<f32>,
     // Where the corner lands on the screen, before the card divides by its depth (x, y and w).
     // Divided at the pixel instead: the card smears every number for depth, so the three arrive as
     // they are at that pixel and the division gives exactly where it is. See screenOf.
@@ -254,6 +265,8 @@ const CORNER_CONTEXT = /* wgsl */ `
     ctx.uv2 = cornerUv2;
 
     let local = vertex(position, ctx);
+    // Kept now: a surface measured again calls the hook twice more, at corners beside this one.
+    let carried = carry;
 `;
 
 const body = (normal: string, skinned: boolean, cull: TCullMode): string => {
@@ -278,14 +291,14 @@ fn vs(${cornerInputs(skinned)}) -> VertexOutput {${CORNER_CONTEXT}${normal}${ski
     out.casterShine = surface.casterShine;${cull === 'none' ? TWO_SIDED_WRITE : ''}
     out.uv = affineUv(uv, out.position);
     out.normal = worldNormal;
-    out.worldPos = worldPos;${cull === 'none' ? '' : `
+    out.worldPos = vec4<f32>(worldPos, fogAt(worldPos));${cull === 'none' ? '' : `
     out.viewDir = viewDir;`}
     out.color = color;
-    out.fog = fogAt(worldPos);
     out.screen = out.position.xyw;
     // A direction, so it is moved by the model's own turn and stretch rather than the facing's.
     out.tangent = vec4<f32>(normalize((uniforms.model * vec4<f32>(across, 0.0)).xyz), cornerTangent.w);
     out.uv2 = cornerUv2;
+    out.carry = carried;
     return out;
 }
 
@@ -307,7 +320,7 @@ fn fs(in: VertexOutput, @builtin(front_facing) front: bool) -> @location(0) vec4
     // material out of the shadow on purpose, and the consequence is awkward enough to be worth
     // avoiding: a blob shadow's own disc is a material, so it would not receive either. There is
     // one model here, and it is that a model is a model.
-    let coord = shadowCoordOf(in.worldPos);
+    let coord = shadowCoordOf(in.worldPos.xyz);
     // The floor is a floor and not an addition, exactly as the built-in ending has it.
     let lit = max(litWithShadow(${lit}.light, ${lit}.casterLight, coord), lights.ambient.rgb);
 
@@ -317,28 +330,30 @@ fn fs(in: VertexOutput, @builtin(front_facing) front: bool) -> @location(0) vec4
     var ctx: FragContext;
     ctx.uv = uv;
     ctx.normal = ${cull === 'none' ? 'normal' : 'in.normal'};
-    ctx.worldPos = in.worldPos;
+    ctx.worldPos = in.worldPos.xyz;
     ctx.light = lit;
     ctx.shine = litWithShadow(${lit}.shine, ${lit}.casterShine, coord);
     // The glow through its picture, so a shader of your own adds it the way the built-in one does.
     ctx.emissive = uniforms.emissive.rgb * textureSampleLevel(meshEmissive, meshSampler, uv, 0.0).rgb;
-    ctx.viewDir = ${cull === 'none' ? 'viewDirOf(in.worldPos)' : 'in.viewDir'};
+    ctx.viewDir = ${cull === 'none' ? 'viewDirOf(in.worldPos.xyz)' : 'in.viewDir'};
     ctx.color = in.color;
     ctx.screen = screenOf(in.screen);
     ctx.tangent = normalize(in.tangent.xyz);
     ctx.bitangent = cross(normalize(ctx.normal), ctx.tangent) * in.tangent.w;
     ctx.uv2 = in.uv2;
     ctx.frontFacing = front;
+    ctx.carry = in.carry;
 
     // The painted colour is part of the surface, as it is in the built-in ending. The fog goes over
     // what the hook made, so a shader of your own sits in the scene's fog without asking for it.
     let shaded = effect(sampleTexture(uv) * uniforms.tint * in.color, ctx);
-    // Cut out rather than blended: below the material's cutoff, by the alpha the hook made, the pixel is not there at all, and
-    // above it is solid. It rides in a spare number of the turning matrix; zero cuts nothing.
+    // Cut out rather than blended: below the material's cutoff, by the alpha the hook made, the
+    // pixel is not there at all, and above it is solid. It rides in a spare number of the turning
+    // matrix; zero cuts nothing.
     if (shaded.a < uniforms.normalMatrix[3].z) {
         discard;
     }
-    return vec4<f32>(mix(shaded.rgb, lights.fog.rgb, in.fog), shaded.a);
+    return vec4<f32>(mix(shaded.rgb, lights.fog.rgb, in.worldPos.w), shaded.a);
 }
 `;
 };
@@ -460,6 +475,7 @@ struct CutOutput {
     @location(3) color: vec4<f32>,
     @location(4) tangent: vec4<f32>,
     @location(5) uv2: vec2<f32>,
+    @location(6) carry: vec4<f32>,
 };
 
 @vertex
@@ -474,6 +490,7 @@ fn vs(${cornerInputs(skinned)}) -> CutOutput {${CORNER_CONTEXT}${bend}
     out.color = color;
     out.tangent = vec4<f32>(normalize((shadow.model * vec4<f32>(turn * cornerTangent.xyz, 0.0)).xyz), cornerTangent.w);
     out.uv2 = cornerUv2;
+    out.carry = carried;
     return out;
 }
 
@@ -493,6 +510,7 @@ fn fs(in: CutOutput, @builtin(front_facing) front: bool) {
     ctx.bitangent = cross(ctx.normal, ctx.tangent) * in.tangent.w;
     ctx.uv2 = in.uv2;
     ctx.frontFacing = front;
+    ctx.carry = in.carry;
     // The alpha the drawn model is cut by: its tint's colour does not change it, its alpha does.
     let shaded = effect(sampleTexture(in.uv) * vec4<f32>(1.0, 1.0, 1.0, shadow.cut.y) * in.color, ctx);
     if (shaded.a < shadow.cut.x) {

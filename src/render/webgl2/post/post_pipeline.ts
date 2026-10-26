@@ -249,8 +249,8 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
         warned.add(source);
         console.warn(
             `[NacatamalOn] the effect "${effect.name ?? 'post'}" is written in WGSL only, which ` +
-            'this card cannot compile. The frame is shown unchanged. Write the effect again after ' +
-            'a // @glsl line to have it on both.',
+            'this card cannot compile. The frame is shown unchanged. Give it fragmentGlsl too (in a ' +
+            'shader file, the same again after a // @glsl line) to have it on both.',
         );
     };
 

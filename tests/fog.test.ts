@@ -187,7 +187,8 @@ describe('the shaders', () => {
         expect(MESH_VERTEX_GLSL).toContain('vFog = fogAt(worldPos);');
         expect(SKINNED_VERTEX_GLSL).toContain('vFog = fogAt(worldPos);');
         const source = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
-        expect(source('../src/render/webgpu/material/mesh_material_shader.ts')).toContain('out.fog = fogAt(worldPos);');
+        // A material's rides in the world position's fourth number, to leave a place for carry.
+        expect(source('../src/render/webgpu/material/mesh_material_shader.ts')).toContain('out.worldPos = vec4<f32>(worldPos, fogAt(worldPos));');
         expect(source('../src/render/webgl2/material/mesh_material_shader.ts')).toContain('vFog = fogAt(worldPos);');
     });
 
@@ -195,7 +196,7 @@ describe('the shaders', () => {
         expect(MESH_SHADER).toContain('lights.fog.rgb, in.fog)');
         expect(MESH_FRAGMENT_GLSL).toContain('lights.fog.rgb, vFog)');
         const source = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
-        expect(source('../src/render/webgpu/material/mesh_material_shader.ts')).toContain('mix(shaded.rgb, lights.fog.rgb, in.fog)');
+        expect(source('../src/render/webgpu/material/mesh_material_shader.ts')).toContain('mix(shaded.rgb, lights.fog.rgb, in.worldPos.w)');
         expect(source('../src/render/webgl2/material/mesh_material_shader.ts')).toContain('mix(shaded.rgb, lights.fog.rgb, vFog)');
     });
 });

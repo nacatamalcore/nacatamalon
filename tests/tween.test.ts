@@ -113,7 +113,7 @@ describe('useTween', () => {
         const { tween, tick } = scened();
         let completed = 0;
 
-        tween({ from: 0, to: 10, duration: 1, repeat: 1, onUpdate: () => {}, onComplete: () => { completed += 1; } });
+        tween({ from: 0, to: 10, duration: 1, repeat: 1, onUpdate: () => {} }).onEnd(() => { completed += 1; });
 
         tick(1);
         expect(completed).toBe(0);
@@ -129,8 +129,8 @@ describe('useTween', () => {
         const handle = tween({
             from: 0, to: 10, duration: 0.1, repeat: -1,
             onUpdate: () => {},
-            onComplete: () => { completed += 1; },
         });
+        handle.onEnd(() => { completed += 1; });
 
         for (let i = 0; i < 100; i += 1) {
             tick(0.1);
@@ -160,7 +160,7 @@ describe('useTween', () => {
         const { tween, tick } = scened();
         let completed = 0;
 
-        tween({ from: 0, to: 1, duration: 0.5, onUpdate: () => {}, onComplete: () => { completed += 1; } });
+        tween({ from: 0, to: 1, duration: 0.5, onUpdate: () => {} }).onEnd(() => { completed += 1; });
 
         tick(0.5);
         tick(0.5);
@@ -174,7 +174,8 @@ describe('useTween', () => {
         const seen = recorder();
         let completed = 0;
 
-        const handle = tween({ from: 0, to: 100, duration: 1, onUpdate: seen.onUpdate, onComplete: () => { completed += 1; } });
+        const handle = tween({ from: 0, to: 100, duration: 1, onUpdate: seen.onUpdate });
+        handle.onEnd(() => { completed += 1; });
 
         tick(0.5);
         const atCancel = seen.values.length;
@@ -191,7 +192,8 @@ describe('useTween', () => {
         const seen = recorder();
         let completed = 0;
 
-        const handle = tween({ from: 0, to: 100, duration: 10, onUpdate: seen.onUpdate, onComplete: () => { completed += 1; } });
+        const handle = tween({ from: 0, to: 100, duration: 10, onUpdate: seen.onUpdate });
+        handle.onEnd(() => { completed += 1; });
         handle.finish();
 
         expect(seen.values.at(-1)).toBe(100);
@@ -203,7 +205,8 @@ describe('useTween', () => {
         const { tween, tick } = scened();
         let completed = 0;
 
-        const handle = tween({ from: 0, to: 1, duration: 0.5, onUpdate: () => {}, onComplete: () => { completed += 1; } });
+        const handle = tween({ from: 0, to: 1, duration: 0.5, onUpdate: () => {} });
+        handle.onEnd(() => { completed += 1; });
 
         tick(0.5);
         handle.finish();
@@ -238,16 +241,12 @@ describe('useTween', () => {
         expect(seen.values).toEqual([42]);
     });
 
-    it('starts a tween chained from onComplete on the next frame, not this one', () => {
+    it('starts a tween chained from onEnd on the next frame, not this one', () => {
         const { tween, tick } = scened();
         const second = recorder();
 
-        tween({
-            from: 0, to: 1, duration: 0.5,
-            onUpdate: () => {},
-            onComplete: () => {
-                tween({ from: 100, to: 200, duration: 1, onUpdate: second.onUpdate });
-            },
+        tween({ from: 0, to: 1, duration: 0.5, onUpdate: () => {} }).onEnd(() => {
+            tween({ from: 100, to: 200, duration: 1, onUpdate: second.onUpdate });
         });
 
         tick(0.5);
@@ -440,11 +439,11 @@ describe('onEnd and onCancel on a tween', () => {
         expect(heard).toEqual(['finished', 'arrived']);
     });
 
-    it('runs after onComplete, every listener once, and stops for one that stopped listening', () => {
+    it('runs every listener once, in order, and stops for one that stopped listening', () => {
         const { tween, tick } = scened();
         const heard: string[] = [];
 
-        const handle = tween({ from: 0, to: 1, duration: 0.5, onUpdate: () => {}, onComplete: () => heard.push('complete') });
+        const handle = tween({ from: 0, to: 1, duration: 0.5, onUpdate: () => {} });
         handle.onEnd(() => heard.push('a'));
         const stop = handle.onEnd(() => heard.push('b'));
         handle.onEnd(() => heard.push('c'));
@@ -453,7 +452,7 @@ describe('onEnd and onCancel on a tween', () => {
         tick(0.5);
         tick(0.5);
 
-        expect(heard).toEqual(['complete', 'a', 'c']);
+        expect(heard).toEqual(['a', 'c']);
     });
 
     it('hears a cancel once, and not one after it already ended', () => {

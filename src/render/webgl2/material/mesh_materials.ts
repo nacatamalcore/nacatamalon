@@ -208,7 +208,8 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
             console.warn(
                 `[NacatamalOn] the material "${material.name ?? 'mesh material'}" is written in WGSL only, ` +
                 'which this card cannot compile. It is drawing with the built-in shader instead. ' +
-                'Write the effect again after a // @glsl line to have it on both.',
+                'Built with compileShader it is written in both at once; by hand, give it fragmentGlsl too ' +
+                '(in a shader file, the same again after a // @glsl line).',
             );
         },
         /**

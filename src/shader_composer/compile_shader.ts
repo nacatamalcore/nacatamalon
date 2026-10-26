@@ -1,5 +1,6 @@
 import { composerFloat, composerVec4 } from './constructors';
-import { collectHelpers, collectUniforms, emitBody } from './emit';
+import { composerVertexPosition } from './inputs';
+import { collectHelpers, collectUniforms, emitBodies, emitBody } from './emit';
 import { WGSL_TARGET } from './targets/wgsl';
 import { GLSL_TARGET } from './targets/glsl';
 import { composeSurface } from './surface/compose_surface';
@@ -28,10 +29,24 @@ const asColor = (n: TComposerNode): TComposerNode => {
 };
 
 /**
+ * What a graph carries, as the `vec4` the shader keeps it in: a smaller one is filled out with zeros,
+ * anything else is refused.
+ */
+const asCarry = (n: TComposerNode): TComposerNode => {
+    switch (n.type) {
+        case 'vec4<f32>': return n;
+        case 'vec3<f32>': return composerVec4(n, 0);
+        case 'vec2<f32>': return composerVec4(n, 0, 0);
+        case 'f32': return composerVec4(n, 0, 0, 0);
+        default: throw new Error(`[NacatamalOn] shader composer: "carry" is up to four numbers (a number, a vec2, a vec3 or a vec4), got a ${n.type}.`);
+    }
+};
+
+/**
  * Writes the graph out in one language.
  */
 const emitShader = (graph: TShaderGraph, target: TShaderTarget): TEmitted => {
-    const { color, position } = graph;
+    const { color, carry } = graph;
     // Read as the wider family on purpose: the type already keeps `'post'` out, and this is for
     // whoever calls it from plain JavaScript.
     const shader: string = graph.shader;
@@ -40,16 +55,21 @@ const emitShader = (graph: TShaderGraph, target: TShaderTarget): TEmitted => {
         throw new Error('[NacatamalOn] shader composer: a screen-wide effect cannot be composed yet. Use sprite2d or mesh3d.');
     }
     if (shader === 'sprite2d') {
-        if (position !== undefined) {
+        if (graph.position !== undefined) {
             throw new Error('[NacatamalOn] shader composer: a sprite2d shader has no vertex stage, so it takes no "position".');
+        }
+        if (carry !== undefined) {
+            throw new Error('[NacatamalOn] shader composer: a sprite2d shader has no vertex stage, so it carries nothing: it takes no "carry".');
         }
         if (color === undefined) {
             throw new Error('[NacatamalOn] shader composer: a sprite2d shader needs a "color".');
         }
-    } else if (color === undefined && position === undefined) {
+    } else if (color === undefined && graph.position === undefined) {
         throw new Error('[NacatamalOn] shader composer: a mesh3d shader needs a "color", a "position" or both.');
     }
 
+    // Carried with no corner moved, the corner stays where it is: the hook is there to carry.
+    const position = graph.position ?? (carry === undefined ? undefined : composerVertexPosition());
     if (position !== undefined && position.type !== 'vec3<f32>') {
         throw new Error(`[NacatamalOn] shader composer: "position" must be a vec3, got a ${position.type}.`);
     }
@@ -58,10 +78,20 @@ const emitShader = (graph: TShaderGraph, target: TShaderTarget): TEmitted => {
 
     const colorBody = color === undefined ? null : emitBody(asColor(color), colorStage, target);
     let fragment = colorBody === null ? null : target.fn(colorStage, colorBody.lines, colorBody.result);
-    const positionBody = position === undefined ? null : emitBody(position, 'mesh3d.vert', target);
-    let vertex = positionBody === null ? null : target.fn('mesh3d.vert', positionBody.lines, positionBody.result);
+    // The corner and what it carries, written together so a wave they both come from is worked out
+    // once; what it carries is put in the shader's carry before the corner is handed back.
+    const carried = carry === undefined ? undefined : asCarry(carry);
+    const vertexRoots = [position, carried].filter((root): root is TComposerNode => root !== undefined);
+    const vertexBody = position === undefined ? null : emitBodies(vertexRoots, 'mesh3d.vert', target);
+    let vertex = vertexBody === null
+        ? null
+        : target.fn(
+            'mesh3d.vert',
+            carried === undefined ? vertexBody.lines : [...vertexBody.lines, `    carry = ${vertexBody.results[1]};`],
+            vertexBody.results[0],
+        );
 
-    const roots = [color, position].filter((root): root is TComposerNode => root !== undefined);
+    const roots = [color, position, carried].filter((root): root is TComposerNode => root !== undefined);
 
     // In GLSL the two hooks are two programs, compiled apart, and the vertex cannot see a function
     // written in the fragment: each hook takes the helpers its own half of the graph calls.
@@ -70,7 +100,11 @@ const emitShader = (graph: TShaderGraph, target: TShaderTarget): TEmitted => {
             const text = root === undefined || hook === null ? '' : collectHelpers([root], target).join('\n\n');
             return text.length > 0 ? `${text}\n\n${hook}` : hook;
         };
-        return { fragment: prepend(color, fragment), vertex: prepend(position, vertex), uniforms: collectUniforms(roots) };
+        const vertexHelpers = (hook: string | null): string | null => {
+            const text = hook === null ? '' : collectHelpers(vertexRoots, target).join('\n\n');
+            return text.length > 0 ? `${text}\n\n${hook}` : hook;
+        };
+        return { fragment: prepend(color, fragment), vertex: vertexHelpers(vertex), uniforms: collectUniforms(roots) };
     }
 
     // The helpers go in once. Both hooks end up in one shader, where a function anywhere can be called

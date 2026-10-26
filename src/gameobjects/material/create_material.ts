@@ -57,26 +57,28 @@ const resolveEffect = (options: TMaterialOptions): TShader | null => {
 };
 
 /**
- * Every option either kind of material takes, so one neither takes is refused where it is written.
- */
-type TMaterialKeys = TMaterialOptions extends infer U ? (U extends unknown ? keyof U : never) : never;
-
-/**
- * The two ways to call `createMaterial`: which kind of material comes back follows from `shader`,
- * so a model's material can only be handed to a model and a sprite's only to a sprite.
+ * The ways to call `createMaterial`: which kind of material comes back follows from `shader`, so a
+ * model's material can only be handed to a model and a sprite's only to a sprite.
  *
  * Given `uniforms` (which `compileShader` always gives), the material's `uniforms` is typed as
  * there, so a parameter is animated with `material.uniforms.glow = 1` and no `?? {}`.
+ *
+ * Plain overloads and no type parameter, so it is called from inside a function of your own that
+ * takes its options as a type parameter, or with options typed as any kind of material, as readily
+ * as with the options written in place; an option it does not have is still refused there. Options
+ * that could be either kind give a material that could be either, to narrow by its `shader`.
  *
  * @category Materials
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TCreateMaterial = <const O extends TMaterialOptions = TSpriteMaterialOptions>(
-    options?: O & { [K in Exclude<keyof O, TMaterialKeys>]: { [P in `'${K & string}' is not an option of createMaterial`]: never } },
-) =>
-    (O extends { shader: 'mesh3d' } ? TMeshMaterial : TSpriteMaterial) &
-    (O extends { uniforms: TUniformValues } ? { uniforms: TUniformValues } : unknown);
+export type TCreateMaterial = {
+    (options: TMeshMaterialOptions & { uniforms: TUniformValues }): TMeshMaterial & { uniforms: TUniformValues };
+    (options: TMeshMaterialOptions): TMeshMaterial;
+    (options: TSpriteMaterialOptions & { uniforms: TUniformValues }): TSpriteMaterial & { uniforms: TUniformValues };
+    (options?: TSpriteMaterialOptions): TSpriteMaterial;
+    (options: TMaterialOptions): TMaterial;
+};
 
 /**
  * Makes a material: a shader of your own, and for models the surface it is drawn over.

@@ -32,7 +32,6 @@ type TRunningTween = {
     ease: TEaseFn;
     repeatsLeft: number;
     yoyo: boolean;
-    onComplete?: () => void;
     ends: Set<() => void>;
     cancels: Set<() => void>;
     /**
@@ -75,7 +74,6 @@ const listen = (listeners: Set<() => void>, listener: () => void): (() => void) 
  */
 const end = (tween: TRunningTween): void => {
     tween.state = 'ended';
-    tween.onComplete?.();
     announce(tween.ends);
 };
 
@@ -284,7 +282,7 @@ export const useTween = (): TTweenStarter => {
     // frame however many are in flight.
     box.updateCallbacks.push((delta) => {
         // A copy, taken before any of them moves, so a tween started from another one's
-        // `onComplete` waits for the next frame. That is the same rule the tree of objects
+        // `onEnd` waits for the next frame. That is the same rule the tree of objects
         // already follows, and it is what keeps a chain of tweens from collapsing into one frame.
         for (const tween of [...running]) {
             if (tween.paused || tween.state !== 'running') {
@@ -314,7 +312,6 @@ export const useTween = (): TTweenStarter => {
             ease: options.ease ?? linear,
             repeatsLeft: repeat < 0 ? Infinity : repeat,
             yoyo: options.yoyo ?? false,
-            onComplete: options.onComplete,
             ends: new Set(),
             cancels: new Set(),
             elapsed: 0,

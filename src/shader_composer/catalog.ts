@@ -2,7 +2,7 @@ import { composerFloat, composerSwizzle, composerVec2, composerVec3, composerVec
 import {
     composerEmissive, composerEnvUv, composerLight, composerMapSample, composerShine, composerResolution, composerSurface, composerTextureSample, composerTime,
     composerUniform, composerUv, composerVertexColor, composerVertexNormal, composerVertexPosition, composerViewDir, composerWorldNormal,
-    composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent, composerFrontFacing,
+    composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent, composerFrontFacing, composerCarry,
     composerWorldPos,
 } from './inputs';
 import {
@@ -201,6 +201,7 @@ const DEFS: TNodeDef[] = [
     inputNode('worldBitangent', 'World Bitangent', V3, 'Which way down the surface the texture runs, in world space.', ['mesh3d']),
     inputNode('vertexTangent', 'Vertex Tangent', V3, 'The vertex\'s tangent in the model\'s own space. Vertex stage only.', ['mesh3d']),
     inputNode('vertexBitangent', 'Vertex Bitangent', V3, 'The vertex\'s bitangent in the model\'s own space. Vertex stage only.', ['mesh3d']),
+    inputNode('carry', 'Carry', V4, 'What the Carry Output worked out at each corner, smeared across the triangle: a wave\'s height, a light of your own, the local position. Zeros when nothing is carried.', ['mesh3d']),
     inputNode('frontFacing', 'Front Facing', F32, '1 on the side of the triangle facing the camera, 0 on the other: only ever 0 when the material keeps the other side (cull front or none).', ['mesh3d']),
 
     {
@@ -549,6 +550,20 @@ const DEFS: TNodeDef[] = [
         throw new Error('unreachable');
     },
     },
+    {
+        type: 'output.carry',
+        label: 'Carry Output',
+        category: 'output',
+        summary: 'Up to four numbers worked out at each vertex and handed to the color stage, read there with Carry.',
+        inputs: [port('carry', null)],
+        outputs: [],
+        params: [],
+        role: 'output',
+        targets: ['mesh3d'],
+        build: () => {
+        throw new Error('unreachable');
+    },
+    },
 ];
 
 /**
@@ -581,6 +596,7 @@ export const INPUT_BUILDERS: Record<string, () => TComposerNode> = {
     vertexTangent: composerVertexTangent,
     vertexBitangent: composerVertexBitangent,
     frontFacing: composerFrontFacing,
+    carry: composerCarry,
 };
 
 /**

@@ -28,21 +28,34 @@ export type TMaterialShaderOptions = {
      * `uv`; `normal`, `worldPos` and `viewDir` in the world; `light`, `shine` and `emissive`, the
      * light reaching it already worked out; `color`, the colour painted on the corners; `screen`,
      * where it is on the screen in the game's pixels, `(0, 0)` at the top left; `tangent` and
-     * `bitangent`, the way across and down the surface the picture runs, in the world; and `uv2`, a
-     * second picture coordinate (the file's own, or `uv` again). The corner hook's `VertContext`
-     * has `normal`, `uv`, `color`, `tangent`, `bitangent` and `uv2`, before anything is moved.
+     * `bitangent`, the way across and down the surface the picture runs, in the world; `uv2`, a
+     * second picture coordinate (the file's own, or `uv` again); `frontFacing`; and `carry`, what the
+     * corner hook carried here (see `vertex`). The corner hook's `VertContext` has `normal`, `uv`,
+     * `color`, `tangent`, `bitangent` and `uv2`, before anything is moved.
      */
     fragment?: string;
     /**
-     * The same hook in GLSL, without which the effect is WebGPU only.
+     * The same hook in GLSL, without which the effect is WebGPU only: on WebGL2 the material draws
+     * with the built-in shader and says so once. To write it once for both cards, build it with the
+     * shader composer (`compileShader`), which gives `fragment` and `fragmentGlsl` together.
      */
     fragmentGlsl?: string;
     /**
-     * The vertex hook, in WGSL. 3D only: a sprite is a flat square and has nothing to move.
+     * The vertex hook, in WGSL: `fn vertex(pos: vec3<f32>, ctx: VertContext) -> vec3<f32>`, where the
+     * corner ends up. 3D only: a sprite is a flat square and has nothing to move.
+     *
+     * It can also hand four numbers on to the fragment hook by writing them into `carry`
+     * (`carry = vec4<f32>(lift, 0.0, 0.0, 0.0);`, the same in GLSL), which reads them as
+     * `ctx.carry`, smeared across the triangle: how high a wave lifted a corner, for foam on its
+     * crests; a light of its own worked out at the corners, the look of the era; `pos` itself, where
+     * the corner is in the model's own space, for bands or a fill line that stay on the model as it
+     * moves and turns.
+     * Nothing written is zeros.
      */
     vertex?: string;
     /**
-     * The same, in GLSL.
+     * The same, in GLSL, without which the corners are not moved on WebGL2. `compileShader` gives
+     * both from one graph, as for `fragmentGlsl`.
      */
     vertexGlsl?: string;
     /**

@@ -51,10 +51,6 @@ export type TTweenOptions = {
      * Called every frame with the value right now. This is where you put it to use.
      */
     onUpdate: (value: number) => void;
-    /**
-     * Called once when the last trip ends. Never called if it repeats for ever.
-     */
-    onComplete?: () => void;
 };
 
 /**
@@ -135,10 +131,6 @@ export type TTweenTargetOptions<T extends object> = {
      * Whether each repeat comes back the other way, there and back. Default `false`.
      */
     yoyo?: boolean;
-    /**
-     * Called once when the last trip ends. Never called if it repeats for ever.
-     */
-    onComplete?: () => void;
 };
 
 /**
@@ -158,18 +150,19 @@ export type TTweenHandle = {
      */
     resume(): void;
     /**
-     * Stops it in silence, wherever it had got to. `onComplete` does **not** run: nothing finished,
+     * Stops it in silence, wherever it had got to. `onEnd` does **not** run: nothing finished,
      * so nothing is announced. This is how you throw a tween away. Only `onCancel` hears it.
      */
     cancel(): void;
     /**
-     * Jumps straight to the end value, runs `onComplete` and stops.
+     * Jumps straight to the end value, runs `onEnd` and stops.
      */
     finish(): void;
     /**
-     * Calls `listener` when it ends: by arriving or by `finish`, never by `cancel`. Can be called
-     * more than once, and from anywhere, which is what lets `all` wait for tweens someone else
-     * started. Hands back what stops listening.
+     * Calls `listener` when it ends: by arriving or by `finish`, never by `cancel`, and never if it
+     * repeats for ever. It is how what comes after a tween is chained, as it is for an animation
+     * or a motion. Can be called more than once, and from anywhere, which is what lets `all` wait
+     * for tweens someone else started. Hands back what stops listening.
      */
     onEnd(listener: () => void): () => void;
     /**

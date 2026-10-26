@@ -100,8 +100,27 @@ export const emitBody = (
     stage: TStageCtx,
     target: TShaderTarget,
 ): { lines: string[]; result: string } => {
+    const { lines, results } = emitBodies([root], stage, target);
+    return { lines, result: results[0] };
+};
+
+/**
+ * The same for several results of one function, written together so what they have in common is
+ * worked out once: a vertex hook's corner and what it carries, both from the same wave.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const emitBodies = (
+    roots: readonly TComposerNode[],
+    stage: TStageCtx,
+    target: TShaderTarget,
+): { lines: string[]; results: string[] } => {
     const counts = new Map<TComposerNode, number>();
-    countRefs(root, counts);
+    for (const root of roots) {
+        countRefs(root, counts);
+    }
 
     const lines: string[] = [];
     const nameOf = new Map<TComposerNode, string>();
@@ -125,8 +144,8 @@ export const emitBody = (
         return name;
     };
 
-    const result = refOf(root);
-    return { lines, result };
+    const results = roots.map(refOf);
+    return { lines, results };
 };
 
 /**

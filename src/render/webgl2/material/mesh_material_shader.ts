@@ -25,6 +25,9 @@ struct VertContext {
     vec3 bitangent;
     vec2 uv2;
 };
+
+// Four numbers the corner hook hands on to the colour hook, as its twin keeps them.
+vec4 carry = vec4(0.0);
 `;
 
 /**
@@ -45,6 +48,7 @@ struct FragContext {
     vec3 bitangent;
     vec2 uv2;
     bool frontFacing;
+    vec4 carry;
 };
 `;
 
@@ -71,6 +75,8 @@ ${direction} vec3 vScreen;
 // The tangent in the world, with its hand in w.
 ${direction} vec4 vTangent;
 ${direction} vec2 vUv2;
+// What the corner hook put in carry.
+${direction} vec4 vCarry;
 ${cull === 'none' ? TWO_SIDED_VARYINGS_GLSL(direction) : ''}`;
 
 /**
@@ -213,6 +219,8 @@ const CORNER_CONTEXT = /* glsl */ `
     ctx.uv2 = aUv2;
 
     vec3 local = vertex(aPosition, ctx);
+    // Kept now: a surface measured again calls the hook twice more, at corners beside this one.
+    vec4 carried = carry;
 `;
 
 const vertexBody = (normal: string, skinned: boolean, cull: TCullMode): string => /* glsl */ `
@@ -257,6 +265,7 @@ ${cull === 'none' ? '' : `    vViewDir = viewDir;
     // A direction, so it is moved by the model's own turn and stretch rather than the facing's.
     vTangent = vec4(normalize((uniforms.model * vec4(across, 0.0)).xyz), aTangent.w);
     vUv2 = aUv2;
+    vCarry = carried;
 }
 `;
 
@@ -303,12 +312,14 @@ void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     ctx.bitangent = cross(normalize(ctx.normal), ctx.tangent) * vTangent.w;
     ctx.uv2 = vUv2;
     ctx.frontFacing = gl_FrontFacing;
+    ctx.carry = vCarry;
 
     // The painted colour is part of the surface, as it is in the built-in ending. The fog goes over
     // what the hook made, so a shader of your own sits in the scene's fog without asking for it.
     vec4 shaded = effect(sampleTexture(uv) * uniforms.tint * vColor, ctx);
-    // Cut out rather than blended: below the material's cutoff, by the alpha the hook made, the pixel is not there at all, and
-    // above it is solid. It rides in a spare number of the turning matrix; zero cuts nothing.
+    // Cut out rather than blended: below the material's cutoff, by the alpha the hook made, the
+    // pixel is not there at all, and above it is solid. It rides in a spare number of the turning
+    // matrix; zero cuts nothing.
     if (shaded.a < uniforms.normalMatrix[3].z) {
         discard;
     }
@@ -430,7 +441,7 @@ void main() {${CORNER_CONTEXT}${bend}
             skinned ? SKIN_HEAD : '',
             glslUniformBlock(sig),
             'uniform mat4 uLightViewProj;\nuniform mat4 uModel;',
-            'out vec2 vUv;\nout vec3 vNormal;\nout vec3 vWorldPos;\nout vec4 vColor;\nout vec4 vTangent;\nout vec2 vUv2;',
+            'out vec2 vUv;\nout vec3 vNormal;\nout vec3 vWorldPos;\nout vec4 vColor;\nout vec4 vTangent;\nout vec2 vUv2;\nout vec4 vCarry;',
             VERT_CONTEXT,
             vertex ?? DEFAULT_VERTEX,
             /* glsl */ `
@@ -444,6 +455,7 @@ void main() {${CORNER_CONTEXT}${bend}
     vColor = aColor;
     vTangent = vec4(normalize((uModel * vec4(turn * aTangent.xyz, 0.0)).xyz), aTangent.w);
     vUv2 = aUv2;
+    vCarry = carried;
 }
 `,
         ].join('\n'),
@@ -451,7 +463,7 @@ void main() {${CORNER_CONTEXT}${bend}
             '#version 300 es\nprecision highp float;',
             'uniform sampler2D meshTexture;\nuniform vec2 uCut;',
             glslUniformBlock(sig),
-            'in vec2 vUv;\nin vec3 vNormal;\nin vec3 vWorldPos;\nin vec4 vColor;\nin vec4 vTangent;\nin vec2 vUv2;',
+            'in vec2 vUv;\nin vec3 vNormal;\nin vec3 vWorldPos;\nin vec4 vColor;\nin vec4 vTangent;\nin vec2 vUv2;\nin vec4 vCarry;',
             FRAG_CONTEXT,
             SAMPLE,
             maps(cut.mapNames),
@@ -472,6 +484,7 @@ void main() {
     ctx.bitangent = cross(ctx.normal, ctx.tangent) * vTangent.w;
     ctx.uv2 = vUv2;
     ctx.frontFacing = gl_FrontFacing;
+    ctx.carry = vCarry;
     // The alpha the drawn model is cut by: its tint's colour does not change it, its alpha does.
     vec4 shaded = effect(sampleTexture(vUv) * vec4(1.0, 1.0, 1.0, uCut.y) * vColor, ctx);
     if (shaded.a < uCut.x) {

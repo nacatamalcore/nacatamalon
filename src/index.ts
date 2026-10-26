@@ -183,7 +183,7 @@ export {
     composerFloat, composerVec2, composerVec3, composerVec4, composerSwizzle, composerX, composerY, composerZ, composerW,
     composerUv, composerTime, composerResolution, composerSurface, composerWorldNormal, composerWorldPos,
     composerViewDir, composerLight, composerEmissive, composerShine, composerEnvUv, composerVertexPosition, composerVertexNormal, composerVertexColor,
-    composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent, composerFrontFacing,
+    composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent, composerFrontFacing, composerCarry,
     composerTextureSample, composerMapSample, composerUniform,
     composerAdd, composerSub, composerMul, composerDiv, composerAbs, composerFloor, composerFract, composerSin,
     composerCos, composerSqrt, composerSign, composerNormalize, composerLength, composerDistance, composerDot,

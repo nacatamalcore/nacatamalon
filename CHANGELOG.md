@@ -27,6 +27,17 @@ releases are in [changelog/](./changelog/), one file each.
   handful of points. A point on the axis closes it; a point given twice in a row is a hard edge, as
   the rim of a base. The same profile is the same shape, shared like the other shape hooks, and a
   scene document writes it as its recipe (`{ "kind": "lathe", "profile", "segments" }`).
+- **`carry`: four numbers a model material's vertex hook hands on to its colour hook.** The vertex
+  hook writes them, `carry = vec4<f32>(lift, 0.0, 0.0, 0.0);` (the same in GLSL), and the colour hook
+  reads them as `ctx.carry`, smeared across the triangle like everything else a corner carries: how
+  high a wave lifted the water, for foam on its crests; a light of the game's own worked out at the
+  corners, the look of the era; `pos`, where the corner is in the model's own space, so bands or a
+  bottle's fill line stay on the model as it moves and turns. Nothing written is zeros. In the shader composer, `carry` on
+  `compileShader` (a number up to a `vec4`, filled out with zeros), written with `position` so what
+  they share is worked out once, and read with `composerCarry()`; in a `.shader` graph, the Carry
+  Output and Carry nodes. On both cards and every `cull`, in the shadow of a material cut out of its
+  picture too. A material's fog rides in the fourth number of its world position now, to leave
+  the place, and draws exactly as before.
 - **`cull` on a model's material**: which side of its triangles is thrown away. `'back'`, the
   default, is a shape seen from outside, as before. `'none'` draws both sides, for a leaf, a sheet,
   a flag or the top of a liquid, with no second plane turned round; each side is lit as the side it
@@ -56,6 +67,17 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- **A tween's end is heard only with `onEnd`: the `onComplete` option is gone.** There were two
+  ways to hear the same moment, and an animation or a motion has only the handle's `onEnd`, so the
+  tween now has the same: `tween({ from, to, duration, onUpdate }).onEnd(() => …)`. It runs when
+  `onComplete` ran, by arriving or by `finish`, never by `cancel`, never while it repeats for ever,
+  and a tween started from it still waits for the next frame. Code passing `onComplete` has to
+  move it to `.onEnd(…)`; TypeScript says where.
+- **A shader written in WGSL alone says how to have it on both cards.** On WebGL2 such a material
+  draws with the built-in shader, and the warning only told to write it again after a `// @glsl`
+  line, which is how a shader file says it; it names the shader composer now (`compileShader`
+  writes both from one graph) and `fragmentGlsl` for one written by hand in code, and so do the
+  docs of `fragmentGlsl` and `vertexGlsl` and the guide for coding assistants (`llms.txt`).
 - **`createGame({ renderer })` is read in capitals whatever way it is written**: `'webgl2'` is
   `'WEBGL2'` and `'webgpu'` is `'WEBGPU'`. A lowercase name used to stop the game with "Unknown
   renderer requested". A name that is none of `'AUTO'`, `'WEBGPU'` or `'WEBGL2'` is refused at
@@ -63,6 +85,12 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **`createMaterial` is typed for a game of some size.** Called from a function of the game's own
+  that takes its options as a type parameter, it did not compile, with an error a screen long; with
+  options of any type it gave a material that could not be handed to `createMesh` without a cast.
+  It is plain overloads now: options for a model give a model's material however they arrive, a
+  sprite's a sprite's, options that could be either a material that could be either, to narrow by
+  its `shader`, and an option it does not have is still refused where it is written.
 - **A torch's shadow no longer lets light through a thin wall along its edges.** `shadowBias`, how
   far the shadow test is pushed off a surface so it does not shadow itself, was taken off the depth
   in the shadow map, and a torch's depth is not even: the default was a few centimetres near it and

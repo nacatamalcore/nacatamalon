@@ -4,7 +4,7 @@ export {
 export {
     composerUv, composerTime, composerResolution, composerSurface, composerWorldNormal, composerWorldPos,
     composerViewDir, composerLight, composerEmissive, composerShine, composerEnvUv, composerVertexPosition, composerVertexNormal, composerVertexColor,
-    composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent, composerFrontFacing,
+    composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent, composerFrontFacing, composerCarry,
     composerTextureSample, composerMapSample, composerUniform,
 } from './inputs';
 export {

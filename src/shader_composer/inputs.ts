@@ -268,6 +268,32 @@ export const composerUv2 = (): TComposerNode => newNode('input', 'vec2<f32>', []
 export const composerFrontFacing = (): TComposerNode => newNode('input', 'f32', [], { input: 'frontFacing' });
 
 /**
+ * What the vertex stage carried to this pixel (`vec4`): the graph's `carry`, worked out at each
+ * corner and smeared across the triangle. How high a wave lifted the water here, for foam on its
+ * crests; a light of the graph's own worked out at the corners, the look of the era; where the point
+ * was in the model's own space, for bands or a fill line that stay on the model as it moves. A `carry`
+ * smaller than four numbers is filled out with zeros, and none at all reads as zeros. Models only,
+ * colour stage.
+ * @returns The node, to use as the input of another.
+ *
+ * @example
+ * ```ts
+ * const lift = composerMul(composerSin(composerAdd(composerX(composerVertexPosition()), composerTime())), 0.2);
+ * const sea = compileShader({
+ *     shader: 'mesh3d',
+ *     position: composerAdd(composerVertexPosition(), composerMul(composerVertexNormal(), lift)),
+ *     carry: lift,
+ *     color: composerMix(composerSurface(), composerVec4(1, 1, 1, 1), composerSmoothstep(0.12, 0.2, composerX(composerCarry()))),
+ * });
+ * ```
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const composerCarry = (): TComposerNode => newNode('input', 'vec4<f32>', [], { input: 'carry' });
+
+/**
  * Which way across the surface the picture runs, in the world (`vec3`, one long, square to the
  * normal). With the bitangent and the normal it is the frame a relief or a ripple moves the picture
  * in. Models only, colour stage.

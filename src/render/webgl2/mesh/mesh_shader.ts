@@ -49,7 +49,8 @@ layout(std140) uniform Lights {
     // The matrix the shadow map was drawn with, and how to read it. Same place, same order and same
     // meaning as its twin in WGSL, because one packer fills both.
     mat4 shadowMatrix;
-    // x = how far off the surface to test, towards the light in the world's units; y = how dark it goes; z = one step of the map;
+    // x = how far off the surface to test, towards the light in the world's units; y = how dark it
+    // goes; z = one step of the map;
     // w = which of the items above casts, or -1 for a scene that casts none.
     vec4 shadowParams;
     // rgb = what things fade into, w = which kinds are on (0 none, 1 by distance, 2 by height, 3

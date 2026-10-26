@@ -6,7 +6,7 @@ import { createScene } from '../src/scene';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { compileShader } from '../src/shader_composer/compile_shader';
 import { composerSurface } from '../src/shader_composer/inputs';
-import type { TMeshMaterial, TSpriteMaterial } from '../src/materials';
+import type { TMaterial, TMaterialOptions, TMeshMaterial, TMeshMaterialOptions, TSpriteMaterial } from '../src/materials';
 
 /**
  * What a material is, and the split that decides it: in three dimensions the material owns the
@@ -198,6 +198,27 @@ describe('which kind of material comes back', () => {
 
     it('is decided by the family asked for, and the compiler holds each to it', () => {
         expect(typeof typeOnly).toBe('function');
+    });
+
+    // The same, called the ways a game of some size calls it: from a function of its own, with
+    // options built elsewhere, with options of either kind.
+    const typeOnlyAtLarge = () => {
+        const glass = <O extends TMeshMaterialOptions>(options: O): TMeshMaterial => createMaterial(options);
+        const built: TMeshMaterialOptions = { shader: 'mesh3d', alpha: 0.5 };
+        const fromBuilt: TMeshMaterial = createMaterial(built);
+        const either = (options: TMaterialOptions): TMaterial => createMaterial(options);
+        const kept = either({ shader: 'mesh3d' });
+        // Either kind of options, either kind of material: narrowed by its shader.
+        const narrowed: TMeshMaterial | null = kept.shader === 'mesh3d' ? kept : null;
+        // @ts-expect-error until it is narrowed, it could be a sprite's.
+        const unnarrowed: TMeshMaterial = kept;
+        // @ts-expect-error an option it does not have is still refused where it is written.
+        const typo = createMaterial({ shader: 'mesh3d', tintt: 1 });
+        return [glass({ shader: 'mesh3d' }), fromBuilt, narrowed, unnarrowed, typo];
+    };
+
+    it('holds when called from a function of the game\'s own, or with options built elsewhere', () => {
+        expect(typeof typeOnlyAtLarge).toBe('function');
     });
 });
 

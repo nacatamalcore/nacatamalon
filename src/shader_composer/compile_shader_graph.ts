@@ -61,6 +61,7 @@ export const compileShaderGraph = (doc: TShaderGraphDoc, src = '<inline>'): TPar
 
     const color = rootOf('output.color');
     const position = doc.target === 'mesh3d' ? rootOf('output.position') : undefined;
+    const carry = doc.target === 'mesh3d' ? rootOf('output.carry') : undefined;
 
     // Nothing wired is how every new file starts. It is not an error: it is a material with no
     // hooks of its own, which draws with the engine's shader like a `.wgsl` nobody assigned yet.
@@ -69,7 +70,7 @@ export const compileShaderGraph = (doc: TShaderGraphDoc, src = '<inline>'): TPar
     }
 
     try {
-        const compiled = compileShader({ shader: doc.target, color, position });
+        const compiled = compileShader({ shader: doc.target, color, position, carry });
         return {
             shader: compiled.shader,
             fragment: compiled.fragment ?? null,
