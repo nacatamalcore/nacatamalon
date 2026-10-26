@@ -1,10 +1,12 @@
 import { MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import {
-    MESH_FRAGMENT_HEAD_GLSL, MESH_SAMPLE_LIGHT_GLSL, MESH_VERTEX_ATTRIBUTES_GLSL,
+    FACED_LIGHT_GLSL, LIT_BY_GLSL, MESH_FRAGMENT_HEAD_GLSL, MESH_SAMPLE_LIGHT_GLSL, MESH_VERTEX_ATTRIBUTES_GLSL,
+    TWO_SIDED_VARYINGS_GLSL, TWO_SIDED_WRITE_GLSL, worldNormalOfGlsl,
 } from '../mesh/mesh_shader';
 import { MAX_LIGHTS } from '../../../light';
 import { glslUniformBlock } from './uniform_block';
-import type { TUniformSignature } from '../../../materials';
+import { SHADOW_FRAGMENT_GLSL } from '../shadow/shadow_shader';
+import type { TCullMode, TUniformSignature } from '../../../materials';
 
 /**
  * How far apart the two samples are taken when a moved surface has to be re-measured.
@@ -42,20 +44,21 @@ struct FragContext {
     vec3 tangent;
     vec3 bitangent;
     vec2 uv2;
+    bool frontFacing;
 };
 `;
 
 /**
  * What a material's vertex carries on: wider than the built-in one, and it pays for the extra.
  */
-const VARYINGS = (direction: 'out' | 'in'): string => /* glsl */ `
+const VARYINGS = (direction: 'out' | 'in', cull: TCullMode): string => /* glsl */ `
 ${direction} vec3 vUv;
 ${direction} vec3 vLight;
 ${direction} vec3 vShine;
 ${direction} vec3 vNormal;
 ${direction} vec3 vWorldPos;
-${direction} vec3 vViewDir;
-// The casting light's own share of vLight and vShine, so the ending can take that one away and no
+${cull === 'none' ? '' : `${direction} vec3 vViewDir;
+`}// The casting light's own share of vLight and vShine, so the ending can take that one away and no
 // other. Where the corner falls in the map is not carried: this one already carries the world
 // position, so the ending works it out from that and saves a number across every triangle.
 ${direction} vec3 vCasterLight;
@@ -68,7 +71,7 @@ ${direction} vec3 vScreen;
 // The tangent in the world, with its hand in w.
 ${direction} vec4 vTangent;
 ${direction} vec2 vUv2;
-`;
+${cull === 'none' ? TWO_SIDED_VARYINGS_GLSL(direction) : ''}`;
 
 /**
  * Reading the picture, in a form a hook may call from inside a branch.
@@ -196,8 +199,11 @@ const STILL = /* glsl */ `
     vec3 across = aTangent.xyz;
 `;
 
-const vertexBody = (normal: string, skinned: boolean): string => /* glsl */ `
-void main() {
+/**
+ * What the corner hook is told, and the corner it gives back: the same in the pass that draws the
+ * model and in the one that draws its shadow, so the hook moves the corner the same way in both.
+ */
+const CORNER_CONTEXT = /* glsl */ `
     VertContext ctx;
     ctx.normal = aNormal;
     ctx.uv = aUv;
@@ -207,11 +213,14 @@ void main() {
     ctx.uv2 = aUv2;
 
     vec3 local = vertex(aPosition, ctx);
-${normal}${skinned ? SKIN : STILL}
+`;
+
+const vertexBody = (normal: string, skinned: boolean, cull: TCullMode): string => /* glsl */ `
+void main() {${CORNER_CONTEXT}${normal}${skinned ? SKIN : STILL}
     gl_Position = snapToPixels(uniforms.mvp * placed);
 
     vec3 worldPos = (uniforms.model * placed).xyz;
-    vec3 worldNormal = normalize((uniforms.normalMatrix * vec4(facing, 0.0)).xyz);
+    vec3 worldNormal = ${worldNormalOfGlsl(cull, 'facing')};
     vec3 viewDir = viewDirOf(worldPos);
 
     vec3 diffuse = vec3(0.0);
@@ -237,12 +246,12 @@ ${normal}${skinned ? SKIN : STILL}
     vLight = diffuse;
     vShine = shine;
     vCasterLight = casterDiffuse;
-    vCasterShine = casterShine;
+    vCasterShine = casterShine;${cull === 'none' ? TWO_SIDED_WRITE_GLSL : ''}
     vUv = affineUv(aUv, gl_Position);
     vNormal = worldNormal;
     vWorldPos = worldPos;
-    vViewDir = viewDir;
-    vColor = aColor;
+${cull === 'none' ? '' : `    vViewDir = viewDir;
+`}    vColor = aColor;
     vFog = fogAt(worldPos);
     vScreen = gl_Position.xyw;
     // A direction, so it is moved by the model's own turn and stretch rather than the facing's.
@@ -251,7 +260,12 @@ ${normal}${skinned ? SKIN : STILL}
 }
 `;
 
-const FRAGMENT_BODY = /* glsl */ `
+const fragmentBody = (cull: TCullMode): string => {
+    // A model drawn on both sides reads the light of the side it is, and faces the way that side does.
+    const [light, shine, casterLight, casterShine] = cull === 'none'
+        ? ['sideLight', 'sideShine', 'sideCasterLight', 'sideCasterShine']
+        : ['vLight', 'vShine', 'vCasterLight', 'vCasterShine'];
+    return /* glsl */ `
 out vec4 fragColor;
 
 // Where a pixel is on the screen, in the game's pixels with (0, 0) at the top left. The twin of
@@ -263,29 +277,32 @@ vec2 screenOf(vec3 clip) {
     return vec2(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5) * mu.resolution;
 }
 
-void main() {
+void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     // A shader you wrote yourself receives shadow, and receives it without being told about it:
     // ctx.light simply arrives already darkened where the casting light cannot see.
     vec4 coord = lights.shadowMatrix * vec4(vWorldPos, 1.0);
-    vec3 lit = max(litWithShadow(vLight, vCasterLight, coord), lights.ambient.rgb);
+    vec3 lit = max(litWithShadow(${light}, ${casterLight}, coord), lights.ambient.rgb);
 
     // Divided here, once: a shader of your own receives the picture already stretched when the
     // material is affine, and the corrected one when it is not (see affineUv).
     vec2 uv = vUv.xy / vUv.z;
     FragContext ctx;
     ctx.uv = uv;
-    ctx.normal = vNormal;
+    ctx.normal = ${cull === 'none' ? '(gl_FrontFacing ? vNormal : -vNormal)' : 'vNormal'};
     ctx.worldPos = vWorldPos;
     ctx.light = lit;
-    ctx.shine = litWithShadow(vShine, vCasterShine, coord);
+    ctx.shine = litWithShadow(${shine}, ${casterShine}, coord);
     // The glow through its picture, so a shader of your own adds it the way the built-in one does.
     ctx.emissive = uniforms.emissive.rgb * textureLod(meshEmissive, uv, 0.0).rgb;
-    ctx.viewDir = vViewDir;
+    // Drawn on both sides, worked out again at the pixel rather than carried, as its twin does to make
+    // room for the light of the other side.
+    ctx.viewDir = ${cull === 'none' ? 'viewDirOf(vWorldPos)' : 'vViewDir'};
     ctx.color = vColor;
     ctx.screen = screenOf(vScreen);
     ctx.tangent = normalize(vTangent.xyz);
-    ctx.bitangent = cross(normalize(vNormal), ctx.tangent) * vTangent.w;
+    ctx.bitangent = cross(normalize(ctx.normal), ctx.tangent) * vTangent.w;
     ctx.uv2 = vUv2;
+    ctx.frontFacing = gl_FrontFacing;
 
     // The painted colour is part of the surface, as it is in the built-in ending. The fog goes over
     // what the hook made, so a shader of your own sits in the scene's fog without asking for it.
@@ -293,6 +310,7 @@ void main() {
     fragColor = vec4(mix(shaded.rgb, lights.fog.rgb, vFog), shaded.a);
 }
 `;
+};
 
 /**
  * Builds a model material's two halves for this backend.
@@ -314,26 +332,82 @@ export const buildMeshMaterialShaderGlsl = (
     sig: TUniformSignature,
     mapNames: readonly string[] = [],
     skinned = false,
+    cull: TCullMode = 'back',
 ): { vertex: string; fragment: string } => ({
     vertex: [
         MESH_VERTEX_ATTRIBUTES_GLSL,
         DETAIL_HEAD,
         skinned ? SKIN_HEAD : '',
         glslUniformBlock(sig),
-        VARYINGS('out'),
+        VARYINGS('out', cull),
         MESH_SAMPLE_LIGHT_GLSL,
+        ...(cull === 'none' ? [LIT_BY_GLSL] : []),
         VERT_CONTEXT,
         vertex ?? DEFAULT_VERTEX,
-        vertexBody(vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL, skinned),
+        vertexBody(vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL, skinned, cull),
     ].join('\n'),
     fragment: [
         MESH_FRAGMENT_HEAD_GLSL,
         glslUniformBlock(sig),
-        VARYINGS('in'),
+        VARYINGS('in', cull),
         FRAG_CONTEXT,
         SAMPLE,
         maps(mapNames),
         fragment ?? DEFAULT_EFFECT,
-        FRAGMENT_BODY,
+        fragmentBody(cull),
     ].join('\n'),
+});
+
+/**
+ * What a corner reads in a material's shadow: the same places as the drawn model, and none of its
+ * blocks. The model's own numbers and the scene's lights are the drawn model's, bound for whichever
+ * model was drawn last, so a hook that reads them is refused here, as it is on the other card,
+ * rather than given another model's.
+ */
+const SHADOW_CORNERS_GLSL = /* glsl */ `#version 300 es
+precision highp float;
+
+layout(location = 0) in vec3 aPosition;
+layout(location = 1) in vec3 aNormal;
+layout(location = 2) in vec2 aUv;
+layout(location = 5) in vec4 aColor;
+`;
+
+/**
+ * The shadow of a model material on this card: its corner hook moving each corner as it does when
+ * the model is drawn, then the corner seen from the light. The twin of buildMeshMaterialShadowShader
+ * in webgpu/material/mesh_material_shader.ts; its colour stage colours nothing, as the built-in
+ * shadow's does.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const buildMeshMaterialShadowShaderGlsl = (
+    vertex: string,
+    sig: TUniformSignature,
+    skinned = false,
+): { vertex: string; fragment: string } => ({
+    vertex: [
+        SHADOW_CORNERS_GLSL,
+        DETAIL_HEAD,
+        skinned ? SKIN_HEAD : '',
+        glslUniformBlock(sig),
+        'uniform mat4 uLightViewProj;\nuniform mat4 uModel;',
+        VERT_CONTEXT,
+        vertex,
+        /* glsl */ `
+void main() {${CORNER_CONTEXT}${skinned ? `
+    mat4 skin =
+        aWeights.x * boneMatrix(int(aBones.x)) +
+        aWeights.y * boneMatrix(int(aBones.y)) +
+        aWeights.z * boneMatrix(int(aBones.z)) +
+        aWeights.w * boneMatrix(int(aBones.w));
+    vec4 placed = skin * vec4(local, 1.0);` : `
+    vec4 placed = vec4(local, 1.0);`}
+    gl_Position = uLightViewProj * uModel * placed;
+}
+`,
+    ].join('\n'),
+    fragment: SHADOW_FRAGMENT_GLSL,
 });

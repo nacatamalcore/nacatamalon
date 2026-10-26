@@ -140,6 +140,10 @@ export type TGltfMaterial = {
      */
     alphaMode?: 'OPAQUE' | 'MASK' | 'BLEND';
     /**
+     * Whether both sides of its triangles are seen. Absent is `false`: only the front.
+     */
+    doubleSided?: boolean;
+    /**
      * A picture masking where the glow actually is: the factor multiplies it.
      */
     emissiveTexture?: { index: number };

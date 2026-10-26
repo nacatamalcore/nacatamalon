@@ -169,7 +169,7 @@ export type { TDestroyOptions } from './destroy';
 export type { TLoader, TLoadStatus, TTexture, TLoadedAtlas, TBitmapFont, TFont, TAudioClip, TGltfModel, TGltfPart, TShading } from './loaders';
 export type { TSkeleton, TSkeletalClip, TJointPose, TClipEvent } from './animation';
 export type {
-    TMaterial, TSpriteMaterial, TMeshMaterial, TMaterialMap, TTextureWrap, TMaterialShader, TMaterialOptions,
+    TMaterial, TSpriteMaterial, TMeshMaterial, TMaterialMap, TTextureWrap, TCullMode, TMaterialShader, TMaterialOptions,
     TSpriteMaterialOptions, TMeshMaterialOptions, TUniformType, TUniformValues, TUniformSignature,
 } from './materials';
 export type { TShader, TParsedShader } from './loaders/shader';
@@ -183,7 +183,7 @@ export {
     composerFloat, composerVec2, composerVec3, composerVec4, composerSwizzle, composerX, composerY, composerZ, composerW,
     composerUv, composerTime, composerResolution, composerSurface, composerWorldNormal, composerWorldPos,
     composerViewDir, composerLight, composerEmissive, composerShine, composerEnvUv, composerVertexPosition, composerVertexNormal, composerVertexColor,
-    composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent,
+    composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent, composerFrontFacing,
     composerTextureSample, composerMapSample, composerUniform,
     composerAdd, composerSub, composerMul, composerDiv, composerAbs, composerFloor, composerFract, composerSin,
     composerCos, composerSqrt, composerSign, composerNormalize, composerLength, composerDistance, composerDot,

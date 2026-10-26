@@ -5,8 +5,27 @@ releases are in [changelog/](./changelog/), one file each.
 
 ## Unreleased
 
+### Added
+
+- **`cull` on a model's material**: which side of its triangles is thrown away. `'back'`, the
+  default, is a shape seen from outside, as before. `'none'` draws both sides, for a leaf, a sheet,
+  a flag or the top of a liquid, with no second plane turned round; each side is lit as the side it
+  is, since the light is worked out at the corners for both, and casts its shadow. `'front'` shows a
+  shape from inside, a dome of sky or a room, lit from inside. On `createMaterial({ shader: 'mesh3d' })`,
+  `createMesh` and `createModel`, in a scene document (`"cull"`, written only when not `"back"`) and
+  in the editor's inspector. A glTF material marked `doubleSided` is drawn with `'none'` unless the
+  game says otherwise. A colour hook tells the two sides apart with `ctx.frontFacing`, and the shader
+  composer with `composerFrontFacing()`. A model that keeps the usual side is drawn exactly as before.
+
 ### Fixed
 
+- **A material whose `vertex` hook moves its corners casts the shape it moves them into.** The
+  shadow map drew every model as its file or geometry made it, so a flag waved by its hook cast a
+  flat sheet, and that flat ghost shadowed the cloth itself wherever the wave took it behind: a dark
+  band across the flag. The shadow is drawn now with the material's own hook, told the same things
+  (`ctx`, its `uniforms`, `mu.time`, its bones on a model that bends), on both cards and on the side
+  its `cull` keeps, shader composer graphs and their noise included. A hook that reads what only the
+  drawn model has casts the file's shape, as before, and says so once.
 - **`quatFromAxisAngle` turns by the whole angle about an axis of any length**, as its docs always
   said. The axis was taken as a unit, so one a little short of it gave a quaternion that was not a
   unit and turned by less than asked: a plane meant to lean 42° about `(0, 0, 0.669)` leaned 26°.

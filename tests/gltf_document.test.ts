@@ -179,3 +179,31 @@ describe('a model file in a scene that is saved and opened again', () => {
         expect(served.asked.filter((url) => url.includes('#image'))).toEqual([]);
     });
 });
+
+describe('a model piece the file keeps both sides of', () => {
+    const serveLeaf = (): void => {
+        const { json, bin } = asGltf({
+            nodes: [{ name: 'Leaf', primitives: [{ ...TEST_QUAD, material: 0 }] }],
+            materials: [{ doubleSided: true }],
+        });
+        served = serveGltf({ '/models/car.gltf': json, '/models/model.bin': bin });
+    };
+
+    it('is drawn on both sides from a document too, as from code', async () => {
+        serveLeaf();
+        const { store } = createTestGame();
+        startTestScene(store, 'Garage', sceneFromDoc(carScene([{ key: 'leaf' }], [mesh('leaf-mesh', 'leaf')])));
+        await arrive();
+
+        expect(meshesOf(store).get('leaf-mesh')!.material.cull).toBe('none');
+    });
+
+    it('keeps the side the document asks for', async () => {
+        serveLeaf();
+        const { store } = createTestGame();
+        startTestScene(store, 'Garage', sceneFromDoc(carScene([{ key: 'leaf' }], [mesh('leaf-mesh', 'leaf', { cull: 'back' })])));
+        await arrive();
+
+        expect(meshesOf(store).get('leaf-mesh')!.material.cull).toBe('back');
+    });
+});

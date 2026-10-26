@@ -120,9 +120,11 @@ describe('what it writes', () => {
         expect(compiled.fragmentGlsl).toContain('float sgFbm3o3(');
         // Only what each half calls: the vertex has no use for the colour's fractal noise.
         expect(compiled.vertexGlsl).not.toContain('sgFbm3o3');
-        // WGSL is one module, so the helpers still go in once, before the colour hook.
-        expect(compiled.fragment!.match(/fn sgNoise3\(/g)).toHaveLength(1);
-        expect(compiled.vertex).not.toContain('fn sgNoise3(');
+        // WGSL is one module, so the helpers still go in once: with the corner hook, which is drawn on
+        // its own for the model's shadow and has to bring what it calls.
+        expect(compiled.vertex!.match(/fn sgNoise3\(/g)).toHaveLength(1);
+        expect(compiled.fragment).not.toContain('fn sgNoise3(');
+        expect(compiled.vertex).toContain('fn sgFbm3o3(');
     });
 
     it('leaves a GLSL hook that calls no helper as it was', () => {

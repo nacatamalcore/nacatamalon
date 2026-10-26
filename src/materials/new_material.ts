@@ -10,6 +10,12 @@ import type { TShader } from '../loaders/shader/types/t_shader';
 import type { TTexture } from '../loaders';
 
 /**
+ * Whether a cull was asked for in a word the engine knows. Anything else is left out, and draws as
+ * `'back'`, which is what it would have done before the option existed.
+ */
+const isCullMode = (value: unknown): value is 'back' | 'front' | 'none' => value === 'back' || value === 'front' || value === 'none';
+
+/**
  * Whether a `vertexSnap` asks for anything: `true`, or a row count above zero.
  */
 const isSnapping = (value: boolean | number | undefined): boolean =>
@@ -133,6 +139,9 @@ export const newMaterial = (
             // The same: left out unless asked, so a material that never mentioned it saves as before.
             ...(isSnapping((options as TMeshMaterialOptions).vertexSnap) ? { vertexSnap: (options as TMeshMaterialOptions).vertexSnap } : {}),
             ...((options as TMeshMaterialOptions).affine === true ? { affine: true } : {}),
+            // The same: left out unless asked. Asked for, even `'back'` is kept, because it is then a
+            // decision: the side a scene keeps of a model piece whose file says both.
+            ...(isCullMode((options as TMeshMaterialOptions).cull) ? { cull: (options as TMeshMaterialOptions).cull } : {}),
             // Kept as asked so a document can write the recipe rather than the shader it made.
             ...((options as TMeshMaterialOptions).lighting !== undefined ? { lighting: (options as TMeshMaterialOptions).lighting } : {}),
             ...((options as TMeshMaterialOptions).steps !== undefined && (options as TMeshMaterialOptions).steps!.length > 0

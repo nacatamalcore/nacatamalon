@@ -1,4 +1,5 @@
-import { MESH_SHADER_COMMON, MESH_SHADER_FRAGMENT } from './mesh_shader';
+import { meshFragment, meshShaderCommon, TWO_SIDED_WRITE, worldNormalOf } from './mesh_shader';
+import type { TCullMode } from '../../../materials/types/t_material';
 
 /**
  * What draws a model that bends around its bones.
@@ -21,7 +22,7 @@ import { MESH_SHADER_COMMON, MESH_SHADER_FRAGMENT } from './mesh_shader';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const SKINNED_SHADER = MESH_SHADER_COMMON + /* wgsl */ `
+export const skinnedShaderFor = (cull: TCullMode): string => meshShaderCommon(cull) + /* wgsl */ `
 @group(3) @binding(0) var<storage, read> joints: array<mat4x4<f32>>;
 
 @vertex
@@ -51,14 +52,14 @@ fn vs(
     out.position = snapToPixels(uniforms.mvp * bent);
 
     let worldPos = (uniforms.model * bent).xyz;
-    let worldNormal = normalize((uniforms.normalMatrix * vec4<f32>(bentNormal, 0.0)).xyz);
+    let worldNormal = ${worldNormalOf(cull, 'bentNormal')};
     let viewDir = viewDirOf(worldPos);
 
     let surface = litBy(worldPos, worldNormal, viewDir);
     out.light = surface.diffuse;
     out.shine = surface.shine;
     out.casterLight = surface.casterDiffuse;
-    out.casterShine = surface.casterShine;
+    out.casterShine = surface.casterShine;${cull === 'none' ? TWO_SIDED_WRITE : ''}
     // The pose it is in, exactly as the map was drawn from it.
     out.shadowCoord = shadowCoordOf(worldPos);
     out.uv = affineUv(uv, out.position);
@@ -66,4 +67,6 @@ fn vs(
     out.fog = fogAt(worldPos);
     return out;
 }
-` + MESH_SHADER_FRAGMENT;
+` + meshFragment(cull);
+
+export const SKINNED_SHADER = skinnedShaderFor('back');

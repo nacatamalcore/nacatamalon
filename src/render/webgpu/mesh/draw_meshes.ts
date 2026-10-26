@@ -1,4 +1,5 @@
 import { fillLightUniforms, fillMeshUniforms, LIGHT_UNIFORM_FLOATS, MESH_UNIFORM_FLOATS } from '../../shared';
+import { cullOf } from '../../shared/cull_of';
 import { isTransparentMesh } from '../../shared/is_transparent_mesh';
 import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
 import { toGpuBuffer } from '../resources';
@@ -221,7 +222,7 @@ export const drawMesh = (
     // corner after the corner hook has moved it.
     const surface = mesh.material;
     const custom = surface.fragment !== null || surface.vertex !== null
-        ? meshes.materials.get(surface, bends)
+        ? meshes.materials.get(surface, bends, cullOf(mesh))
         : null;
     // A shape with no detail run cannot feed a material's pipeline, which reads one: it is drawn
     // the built-in way instead.
@@ -230,11 +231,14 @@ export const drawMesh = (
     // A see-through model takes the twin that writes no depth. The frame already put it after the
     // solid ones, furthest first; this is the half of that only the card can do.
     const glass = isTransparentMesh(mesh);
+    // Which side of its triangles is thrown away. The usual one is the set made at the start.
+    const cull = cullOf(mesh);
+    const set = cull === 'back' ? meshes : meshes.sided(cull);
     const pipeline = effect !== null
         ? (glass ? effect.transparentPipeline : effect.pipeline)!
         : bends
-            ? (glass ? meshes.transparentSkinnedPipeline : meshes.skinnedPipeline)
-            : (glass ? meshes.transparentPipeline : meshes.pipeline);
+            ? (glass ? set.transparentSkinnedPipeline : set.skinnedPipeline)
+            : (glass ? set.transparentPipeline : set.pipeline);
     pass.setPipeline(pipeline);
     // Its own scene's lights. A model always belongs to one: a scene with models had its lighting
     // worked out when the frame was put together.

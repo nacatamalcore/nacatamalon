@@ -1,8 +1,8 @@
 import { compileProgram } from '../utils/compile_program';
 import { createMeshMaterials } from '../material/mesh_materials';
 import { LIGHT_UNIFORM_FLOATS, MESH_UNIFORM_FLOATS } from '../../shared';
-import { MESH_FRAGMENT_GLSL, MESH_VERTEX_GLSL } from './mesh_shader';
-import { SKINNED_VERTEX_GLSL } from './skinned_shader';
+import { MESH_FRAGMENT_GLSL, MESH_VERTEX_GLSL, meshFragmentGlsl, meshVertexGlsl } from './mesh_shader';
+import { SKINNED_VERTEX_GLSL, skinnedVertexGlsl } from './skinned_shader';
 import { createJointTextures } from './joint_texture';
 import { TEXTURE_WRAPS, wrapKey } from '../../shared/texture_wrap';
 import type { TMeshPipeline } from './types/t_mesh_pipeline';
@@ -50,10 +50,40 @@ export const createMeshPipeline = (gl: WebGL2RenderingContext, samplers: { neare
     // card is told that once, when the program is built.
     const skinnedProgram = compileProgram(gl, SKINNED_VERTEX_GLSL, MESH_FRAGMENT_GLSL, 'skinned mesh');
 
-    for (const p of [program, skinnedProgram]) {
+    // Where each program finds its two blocks and its pictures, said once when it is built.
+    const prepare = (p: WebGLProgram, skinned: boolean): void => {
         gl.uniformBlockBinding(p, gl.getUniformBlockIndex(p, 'Uniforms'), MESH_UNIFORMS_BINDING);
         gl.uniformBlockBinding(p, gl.getUniformBlockIndex(p, 'Lights'), MESH_LIGHTS_BINDING);
-    }
+        gl.useProgram(p);
+        // The picture goes in unit 0, which is where the 2D puts its own: nothing else is bound while
+        // a model draws, so they cannot tread on each other.
+        gl.uniform1i(gl.getUniformLocation(p, 'meshTexture'), MESH_TEXTURE_UNIT);
+        if (skinned) {
+            gl.uniform1i(gl.getUniformLocation(p, 'uJoints'), MESH_JOINTS_UNIT);
+        }
+        gl.uniform1i(gl.getUniformLocation(p, 'shadowMap'), MESH_SHADOW_UNIT);
+        gl.uniform1i(gl.getUniformLocation(p, 'meshEmissive'), MESH_EMISSIVE_UNIT);
+        gl.useProgram(null);
+    };
+    prepare(program, false);
+    prepare(skinnedProgram, true);
+
+    // The other sides, built the first time a model asks for one: one seen from inside is lit from
+    // inside, and one seen from both sides is lit on both.
+    const sides = new Map<'front' | 'none', { program: WebGLProgram; skinnedProgram: WebGLProgram }>();
+    const sided = (cull: 'front' | 'none'): { program: WebGLProgram; skinnedProgram: WebGLProgram } => {
+        let made = sides.get(cull);
+        if (made === undefined) {
+            made = {
+                program: compileProgram(gl, meshVertexGlsl(cull), meshFragmentGlsl(cull), `mesh, cull ${cull}`),
+                skinnedProgram: compileProgram(gl, skinnedVertexGlsl(cull), meshFragmentGlsl(cull), `skinned mesh, cull ${cull}`),
+            };
+            prepare(made.program, false);
+            prepare(made.skinnedProgram, true);
+            sides.set(cull, made);
+        }
+        return made;
+    };
 
     const uniforms = gl.createBuffer();
     gl.bindBuffer(gl.UNIFORM_BUFFER, uniforms);
@@ -63,20 +93,6 @@ export const createMeshPipeline = (gl: WebGL2RenderingContext, samplers: { neare
     gl.bindBuffer(gl.UNIFORM_BUFFER, lights);
     gl.bufferData(gl.UNIFORM_BUFFER, LIGHT_UNIFORM_FLOATS * 4, gl.DYNAMIC_DRAW);
     gl.bindBuffer(gl.UNIFORM_BUFFER, null);
-
-    gl.useProgram(program);
-    // The picture goes in unit 0, which is where the 2D puts its own: nothing else is bound while a
-    // model draws, so they cannot tread on each other.
-    gl.uniform1i(gl.getUniformLocation(program, 'meshTexture'), MESH_TEXTURE_UNIT);
-    gl.uniform1i(gl.getUniformLocation(program, 'shadowMap'), MESH_SHADOW_UNIT);
-    gl.uniform1i(gl.getUniformLocation(program, 'meshEmissive'), MESH_EMISSIVE_UNIT);
-
-    gl.useProgram(skinnedProgram);
-    gl.uniform1i(gl.getUniformLocation(skinnedProgram, 'meshTexture'), MESH_TEXTURE_UNIT);
-    gl.uniform1i(gl.getUniformLocation(skinnedProgram, 'uJoints'), MESH_JOINTS_UNIT);
-    gl.uniform1i(gl.getUniformLocation(skinnedProgram, 'shadowMap'), MESH_SHADOW_UNIT);
-    gl.uniform1i(gl.getUniformLocation(skinnedProgram, 'meshEmissive'), MESH_EMISSIVE_UNIT);
-    gl.useProgram(null);
 
     // Every way a model's picture can be read, made now rather than in the middle of a frame.
     const wrapSamplers = new Map<string, WebGLSampler>();
@@ -99,6 +115,7 @@ export const createMeshPipeline = (gl: WebGL2RenderingContext, samplers: { neare
         materials: createMeshMaterials(gl),
         program,
         skinnedProgram,
+        sided,
         joints: createJointTextures(gl),
         skinnedVertexArrays: new WeakMap(),
         vertexArrays: new WeakMap(),

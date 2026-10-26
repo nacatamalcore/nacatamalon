@@ -2,7 +2,7 @@ import { composerFloat, composerSwizzle, composerVec2, composerVec3, composerVec
 import {
     composerEmissive, composerEnvUv, composerLight, composerMapSample, composerShine, composerResolution, composerSurface, composerTextureSample, composerTime,
     composerUniform, composerUv, composerVertexColor, composerVertexNormal, composerVertexPosition, composerViewDir, composerWorldNormal,
-    composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent,
+    composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent, composerFrontFacing,
     composerWorldPos,
 } from './inputs';
 import {
@@ -201,6 +201,7 @@ const DEFS: TNodeDef[] = [
     inputNode('worldBitangent', 'World Bitangent', V3, 'Which way down the surface the texture runs, in world space.', ['mesh3d']),
     inputNode('vertexTangent', 'Vertex Tangent', V3, 'The vertex\'s tangent in the model\'s own space. Vertex stage only.', ['mesh3d']),
     inputNode('vertexBitangent', 'Vertex Bitangent', V3, 'The vertex\'s bitangent in the model\'s own space. Vertex stage only.', ['mesh3d']),
+    inputNode('frontFacing', 'Front Facing', F32, '1 on the side of the triangle facing the camera, 0 on the other: only ever 0 when the material keeps the other side (cull front or none).', ['mesh3d']),
 
     {
         type: 'textureSample',
@@ -579,6 +580,7 @@ export const INPUT_BUILDERS: Record<string, () => TComposerNode> = {
     worldBitangent: composerWorldBitangent,
     vertexTangent: composerVertexTangent,
     vertexBitangent: composerVertexBitangent,
+    frontFacing: composerFrontFacing,
 };
 
 /**

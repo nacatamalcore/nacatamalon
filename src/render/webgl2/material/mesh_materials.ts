@@ -1,4 +1,4 @@
-import { buildMeshMaterialShaderGlsl } from './mesh_material_shader';
+import { buildMeshMaterialShaderGlsl, buildMeshMaterialShadowShaderGlsl } from './mesh_material_shader';
 import { buildUniformLayout, writeUniformValues } from '../../shared/material_uniforms';
 import { compileProgram } from '../utils/compile_program';
 import { MATERIAL_UNIFORMS_BINDING } from './uniform_block';
@@ -6,7 +6,7 @@ import { MESH_EMISSIVE_UNIT, MESH_JOINTS_UNIT, MESH_LIGHTS_BINDING, MESH_MAP_UNI
 import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import type { TDrawShader } from '../../interface/draw/t_draw_material';
 import type { TUniformLayout } from '../../shared/material_uniforms';
-import type { TUniformValues } from '../../../materials';
+import type { TCullMode, TUniformValues } from '../../../materials';
 
 type TCompiled = {
     program: WebGLProgram | null;
@@ -47,7 +47,7 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
 
     let parameters: WebGLBuffer | null = null;
 
-    const build = (material: TDrawShader, skinned: boolean): TCompiled => {
+    const build = (material: TDrawShader, skinned: boolean, cull: TCullMode): TCompiled => {
         const layout = buildUniformLayout(material.uniformSig ?? {});
         const mapNames = mapNamesOf(material.fragmentGlsl);
         if (mapNames.length > MAX_MATERIAL_MAPS) {
@@ -63,6 +63,7 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
             material.uniformSig ?? {},
             mapNames,
             skinned,
+            cull,
         );
 
         try {
@@ -108,7 +109,52 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
         }
     };
 
+    /**
+     * The shadows of materials that move their corners, by the same key as the effects: the program
+     * once built, or `null` once it has failed, so a hook that cannot cast is drawn flat instead.
+     */
+    const shadows = new Map<string, { program: WebGLProgram; lightViewProj: WebGLUniformLocation | null; model: WebGLUniformLocation | null } | null>();
+
     return {
+        /**
+         * The shadow of a material with a corner hook: the hook moving the corners as it does when
+         * the model is drawn, seen from the light. `null` when it did not compile: the model then
+         * casts its file's shape, as it always did, and says so once.
+         */
+        shadow: (material: TDrawShader, skinned = false): { program: WebGLProgram; lightViewProj: WebGLUniformLocation | null; model: WebGLUniformLocation | null } | null => {
+            if (material.vertexGlsl === null) {
+                return null;
+            }
+            const key = `${skinned ? 'skinned ' : ''}${JSON.stringify(material.uniformSig ?? {})} ${material.fragmentGlsl ?? ''} ${material.vertexGlsl}`;
+            let held = shadows.get(key);
+            if (held === undefined) {
+                try {
+                    const sources = buildMeshMaterialShadowShaderGlsl(material.vertexGlsl, material.uniformSig ?? {}, skinned);
+                    const program = compileProgram(gl, sources.vertex, sources.fragment, `${skinned ? 'skinned ' : ''}mesh material shadow ${material.name ?? material.id}`);
+                    // Only if the hook reads its knobs: asking for a block the card left out is an
+                    // error of its own.
+                    const knobs = gl.getUniformBlockIndex(program, 'MaterialUniforms');
+                    if (knobs !== gl.INVALID_INDEX) {
+                        gl.uniformBlockBinding(program, knobs, MATERIAL_UNIFORMS_BINDING);
+                    }
+                    if (skinned) {
+                        gl.useProgram(program);
+                        gl.uniform1i(gl.getUniformLocation(program, 'uJoints'), MESH_JOINTS_UNIT);
+                        gl.useProgram(null);
+                    }
+                    held = { program, lightViewProj: gl.getUniformLocation(program, 'uLightViewProj'), model: gl.getUniformLocation(program, 'uModel') };
+                } catch (error) {
+                    console.warn(
+                        `[NacatamalOn] the shadow of the material "${material.name ?? 'mesh material'}" did not compile on WebGL2, so it casts the shape of its file. ` +
+                        'Its corner hook reads something only the drawn model has.',
+                        error,
+                    );
+                    held = null;
+                }
+                shadows.set(key, held);
+            }
+            return held;
+        },
         /**
          * Says once that a shader reads a map its material does not carry, which then reads white.
          */
@@ -137,14 +183,14 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
             );
         },
         /**
-         * The compiled effect, for a model that bends (`skinned`) or one that does not: two programs,
-         * each built the first time it is wanted.
+         * The compiled effect, for a model that bends (`skinned`) or one that does not, and for the
+         * side of its triangles thrown away: each built the first time it is wanted.
          */
-        get: (material: TDrawShader, skinned = false): TCompiled => {
-            const key = `${skinned ? 'skinned ' : ''}${JSON.stringify(material.uniformSig ?? {})} ${material.fragmentGlsl ?? ''} ${material.vertexGlsl ?? ''}`;
+        get: (material: TDrawShader, skinned = false, cull: TCullMode = 'back'): TCompiled => {
+            const key = `${skinned ? 'skinned ' : ''}${cull === 'back' ? '' : `cull ${cull} `}${JSON.stringify(material.uniformSig ?? {})} ${material.fragmentGlsl ?? ''} ${material.vertexGlsl ?? ''}`;
             let entry = compiled.get(key);
             if (entry === undefined) {
-                entry = build(material, skinned);
+                entry = build(material, skinned, cull);
                 compiled.set(key, entry);
             }
             return entry;
@@ -178,6 +224,12 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
                 }
             }
             compiled.clear();
+            for (const held of shadows.values()) {
+                if (held !== null) {
+                    gl.deleteProgram(held.program);
+                }
+            }
+            shadows.clear();
             if (parameters !== null) {
                 gl.deleteBuffer(parameters);
                 parameters = null;

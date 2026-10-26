@@ -1,4 +1,5 @@
 import { MAX_LIGHTS, MAX_SCENE_LIGHTS } from '../../../light';
+import type { TCullMode } from '../../../materials/types/t_material';
 
 /**
  * What draws a model.
@@ -288,7 +289,7 @@ fn litWithShadow(light: vec3<f32>, casterLight: vec3<f32>, coord: vec4<f32>) -> 
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const MESH_VERTEX_OUTPUT = /* wgsl */ `struct VertexOutput {
+const meshVertexOutput = (cull: TCullMode): string => /* wgsl */ `struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     // Where in the picture, times a depth to undo the card's correction with (see affineUv).
     @location(0) uv: vec3<f32>,
@@ -303,10 +304,79 @@ export const MESH_VERTEX_OUTPUT = /* wgsl */ `struct VertexOutput {
     // The colour painted on the corner, smeared across the triangle like the light is.
     @location(6) color: vec4<f32>,
     // How much of the corner the fog has taken, smeared like the light.
-    @location(7) fog: f32,
+    @location(7) fog: f32,${cull === 'none' ? twoSidedOutput(8) : ''}
 };
 
 `;
+
+export const MESH_VERTEX_OUTPUT = meshVertexOutput('back');
+
+/**
+ * The light of the side facing away, for a model drawn on both sides: the four colours a side is lit
+ * with, packed into three runs of four numbers from `first` on. Packed because a material already
+ * carries nearly as many as a card promises to carry, and three is what is left.
+ *
+ * @internal
+ */
+export const twoSidedOutput = (first: number): string => `
+    // The light of the side facing away (see FacedLight), packed: a model drawn on both sides is lit
+    // on both, and the fragment takes the side it is.
+    @location(${first}) back0: vec4<f32>,
+    @location(${first + 1}) back1: vec4<f32>,
+    @location(${first + 2}) back2: vec4<f32>,`;
+
+/**
+ * What the corner works out for the side facing away, and packs: the same lights, with the surface
+ * turned the other way. Twice the light for a model drawn on both sides, and only for that one.
+ *
+ * @internal
+ */
+export const TWO_SIDED_WRITE = /* wgsl */ `
+    let back = litBy(worldPos, -worldNormal, viewDir);
+    out.back0 = vec4<f32>(back.diffuse, back.shine.x);
+    out.back1 = vec4<f32>(back.shine.yz, back.casterDiffuse.xy);
+    out.back2 = vec4<f32>(back.casterDiffuse.z, back.casterShine);
+`;
+
+/**
+ * The light of the side being drawn, read from the corner's two: what the fragment uses in place of
+ * the corner's own for a model drawn on both sides.
+ *
+ * @internal
+ */
+export const FACED_LIGHT = /* wgsl */ `
+struct FacedLight {
+    light: vec3<f32>,
+    shine: vec3<f32>,
+    casterLight: vec3<f32>,
+    casterShine: vec3<f32>,
+};
+
+fn facedLight(in: VertexOutput, front: bool) -> FacedLight {
+    var out: FacedLight;
+    if (front) {
+        out.light = in.light;
+        out.shine = in.shine;
+        out.casterLight = in.casterLight;
+        out.casterShine = in.casterShine;
+        return out;
+    }
+    out.light = in.back0.xyz;
+    out.shine = vec3<f32>(in.back0.w, in.back1.xy);
+    out.casterLight = vec3<f32>(in.back1.zw, in.back2.x);
+    out.casterShine = in.back2.yzw;
+    return out;
+}
+`;
+
+/**
+ * The way a corner's surface faces in the world, for the side that is drawn: turned round when only
+ * the inside is, so a dome of sky is lit from within.
+ *
+ * @internal
+ */
+export const worldNormalOf = (cull: TCullMode, facing: string): string =>
+    `${cull === 'front' ? '-' : ''}normalize((uniforms.normalMatrix * vec4<f32>(${facing}, 0.0)).xyz)`;
 
 /**
  * Everything both mesh shaders declare before either of them draws anything.
@@ -315,7 +385,10 @@ export const MESH_VERTEX_OUTPUT = /* wgsl */ `struct VertexOutput {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const MESH_SHADER_COMMON = MESH_SHADER_TYPES + MESH_VERTEX_OUTPUT;
+export const meshShaderCommon = (cull: TCullMode): string =>
+    MESH_SHADER_TYPES + meshVertexOutput(cull) + (cull === 'none' ? FACED_LIGHT : '');
+
+export const MESH_SHADER_COMMON = meshShaderCommon('back');
 
 /**
  * The part that turns light into a colour on screen.
@@ -328,9 +401,13 @@ export const MESH_SHADER_COMMON = MESH_SHADER_TYPES + MESH_VERTEX_OUTPUT;
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const MESH_SHADER_FRAGMENT = /* wgsl */ `
+export const meshFragment = (cull: TCullMode): string => {
+    // A model drawn on both sides reads the light of the side it is; any other has one.
+    const lit = cull === 'none' ? 'side' : 'in';
+    return /* wgsl */ `
 @fragment
-fn fs(in: VertexOutput) -> @location(0) vec4<f32> {
+fn fs(in: VertexOutput${cull === 'none' ? ', @builtin(front_facing) front: bool' : ''}) -> @location(0) vec4<f32> {${cull === 'none' ? `
+    let side = facedLight(in, front);` : ''}
     let uv = in.uv.xy / in.uv.z;
     let texColor = textureSample(meshTexture, meshSampler, uv);
     // Its glow, through its picture when it has one: lit windows on a dark wall.
@@ -339,7 +416,7 @@ fn fs(in: VertexOutput) -> @location(0) vec4<f32> {
     // one facing the light.
     // Only the casting light's share is taken away, so a thing in the sun's shadow is still lit by
     // the lamp beside it. Taking the whole lot away is what makes a shadow read as a dark smudge.
-    let shaded = litWithShadow(in.light, in.casterLight, in.shadowCoord);
+    let shaded = litWithShadow(${lit}.light, ${lit}.casterLight, in.shadowCoord);
     let lit = max(shaded, lights.ambient.rgb);
     // The colour painted on the corners multiplies in with the picture, the way the era's hardware
     // combined them: a green corner over a dirt picture is grass. Unpainted corners are white.
@@ -347,11 +424,14 @@ fn fs(in: VertexOutput) -> @location(0) vec4<f32> {
 
     // The shine and the glow sit on top, not multiplied by the picture: a highlight is light
     // bouncing off the surface, not part of what is painted on it.
-    let shine = litWithShadow(in.shine, in.casterShine, in.shadowCoord);
+    let shine = litWithShadow(${lit}.shine, ${lit}.casterShine, in.shadowCoord);
     // The fog last, over everything, glow included: a lamp far off in the fog is lost in it too.
     return vec4<f32>(mix(color.rgb + shine + glow, lights.fog.rgb, in.fog), color.a);
 }
 `;
+};
+
+export const MESH_SHADER_FRAGMENT = meshFragment('back');
 
 /**
  * What draws a model that does not bend. See {@link MESH_SHADER_COMMON} for the whole of it.
@@ -360,7 +440,7 @@ fn fs(in: VertexOutput) -> @location(0) vec4<f32> {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const MESH_SHADER = MESH_SHADER_COMMON + /* wgsl */ `
+export const meshShaderFor = (cull: TCullMode): string => meshShaderCommon(cull) + /* wgsl */ `
 @vertex
 fn vs(
     @location(0) position: vec3<f32>,
@@ -372,14 +452,14 @@ fn vs(
     out.position = snapToPixels(uniforms.mvp * vec4<f32>(position, 1.0));
 
     let worldPos = (uniforms.model * vec4<f32>(position, 1.0)).xyz;
-    let worldNormal = normalize((uniforms.normalMatrix * vec4<f32>(normal, 0.0)).xyz);
+    let worldNormal = ${worldNormalOf(cull, 'normal')};
     let viewDir = viewDirOf(worldPos);
 
     let surface = litBy(worldPos, worldNormal, viewDir);
     out.light = surface.diffuse;
     out.shine = surface.shine;
     out.casterLight = surface.casterDiffuse;
-    out.casterShine = surface.casterShine;
+    out.casterShine = surface.casterShine;${cull === 'none' ? TWO_SIDED_WRITE : ''}
     out.shadowCoord = shadowCoordOf(worldPos);
     out.uv = affineUv(uv, out.position);
     out.color = color;
@@ -387,4 +467,6 @@ fn vs(
     return out;
 }
 
-` + MESH_SHADER_FRAGMENT;
+` + meshFragment(cull);
+
+export const MESH_SHADER = meshShaderFor('back');

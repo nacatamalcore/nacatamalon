@@ -199,6 +199,7 @@ export const loadGltf = async (store: TRuntimeStore, model: TGltfModel, options:
                 emissive: surface.emissiveMasked && emissiveTexture === null ? NO_GLOW : surface.emissive,
                 emissiveTexture,
                 transparent: surface.transparent,
+                doubleSided: surface.doubleSided,
                 wrap: surface.wrap,
                 skeleton: piece.skeleton === undefined ? null : skeletons[piece.skeleton] ?? null,
             });

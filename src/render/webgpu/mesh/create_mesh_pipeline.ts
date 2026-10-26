@@ -1,11 +1,11 @@
 import { LIGHT_UNIFORM_FLOATS, MESH_UNIFORM_FLOATS } from '../../shared';
-import { MESH_SHADER } from './mesh_shader';
+import { MESH_SHADER, meshShaderFor } from './mesh_shader';
 import { SHADOW_FORMAT } from '../shadow/shadow_map';
-import { SKINNED_SHADER } from './skinned_shader';
+import { SKINNED_SHADER, skinnedShaderFor } from './skinned_shader';
 import { createJointPalette } from './joint_palette';
 import { createMeshMaterials } from '../material/mesh_materials';
 import { describeMeshPipeline, MESH_BONES, MESH_COLORS, MESH_CORNERS } from './pipeline_state';
-import type { TMeshPipeline } from './types/t_mesh_pipeline';
+import type { TMeshPipeline, TSidedMeshPipelines } from './types/t_mesh_pipeline';
 import { TEXTURE_WRAPS, wrapKey } from '../../shared/texture_wrap';
 import type { TTextureWrap } from '../../../materials/types/t_material';
 
@@ -92,8 +92,8 @@ export const createMeshPipeline = (
         entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } }],
     });
 
-    const describe = (label: string, module: GPUShaderModule, layout: GPUPipelineLayout, buffers: GPUVertexBufferLayout[], writesDepth = true): GPURenderPipelineDescriptor =>
-        describeMeshPipeline(label, module, layout, buffers, format, samples, writesDepth);
+    const describe = (label: string, module: GPUShaderModule, layout: GPUPipelineLayout, buffers: GPUVertexBufferLayout[], writesDepth = true, cull: GPUCullMode = 'back'): GPURenderPipelineDescriptor =>
+        describeMeshPipeline(label, module, layout, buffers, format, samples, writesDepth, cull);
 
 
     const CORNERS = MESH_CORNERS;
@@ -119,6 +119,25 @@ export const createMeshPipeline = (
     const skinnedLayout = device.createPipelineLayout({ bindGroupLayouts: [lightsLayout, textureLayout, uniformsLayout, jointsLayout] });
     const skinnedPipeline = device.createRenderPipeline(describe('skinned mesh pipeline', skinnedModule, skinnedLayout, [CORNERS, COLORS, BONES]));
     const transparentSkinnedPipeline = device.createRenderPipeline(describe('see-through skinned mesh pipeline', skinnedModule, skinnedLayout, [CORNERS, COLORS, BONES], false));
+
+    // The other sides, made the first time a model asks for one. Their shaders differ too: one seen
+    // from inside is lit from inside, and one seen from both sides is lit on both.
+    const sides = new Map<'front' | 'none', TSidedMeshPipelines>();
+    const sided = (cull: 'front' | 'none'): TSidedMeshPipelines => {
+        let made = sides.get(cull);
+        if (made === undefined) {
+            const still = device.createShaderModule({ label: `mesh shader, cull ${cull}`, code: meshShaderFor(cull) });
+            const bending = device.createShaderModule({ label: `skinned mesh shader, cull ${cull}`, code: skinnedShaderFor(cull) });
+            made = {
+                pipeline: device.createRenderPipeline(describe(`mesh pipeline, cull ${cull}`, still, meshLayout, [CORNERS, COLORS], true, cull)),
+                transparentPipeline: device.createRenderPipeline(describe(`see-through mesh pipeline, cull ${cull}`, still, meshLayout, [CORNERS, COLORS], false, cull)),
+                skinnedPipeline: device.createRenderPipeline(describe(`skinned mesh pipeline, cull ${cull}`, bending, skinnedLayout, [CORNERS, COLORS, BONES], true, cull)),
+                transparentSkinnedPipeline: device.createRenderPipeline(describe(`see-through skinned mesh pipeline, cull ${cull}`, bending, skinnedLayout, [CORNERS, COLORS, BONES], false, cull)),
+            };
+            sides.set(cull, made);
+        }
+        return made;
+    };
 
     // One step of depth, bound wherever a scene casts no shadow. Four bytes, and what they buy is
     // that there is one layout and one pipeline instead of two of each: the shader is told there is
@@ -186,6 +205,7 @@ export const createMeshPipeline = (
         skinnedPipeline,
         transparentPipeline,
         transparentSkinnedPipeline,
+        sided,
         layouts,
         materials: createMeshMaterials(device, format, samples, layouts, whiteTexture, wrapSamplers),
         joints: createJointPalette(device),

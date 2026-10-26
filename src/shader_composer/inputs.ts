@@ -255,6 +255,19 @@ export const composerScreenPos = (): TComposerNode => newNode('input', 'vec2<f32
 export const composerUv2 = (): TComposerNode => newNode('input', 'vec2<f32>', [], { input: 'uv2' });
 
 /**
+ * Which side of the triangle is being drawn (`f32`): `1` the side facing the camera, `0` the other.
+ * Only ever `0` on a material that keeps the other side (`cull: 'front'` or `'none'`): mixed by it, a
+ * liquid seen from below takes another colour, or a leaf is lighter underneath. Models only, colour
+ * stage.
+ * @returns The node, to use as the input of another.
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const composerFrontFacing = (): TComposerNode => newNode('input', 'f32', [], { input: 'frontFacing' });
+
+/**
  * Which way across the surface the picture runs, in the world (`vec3`, one long, square to the
  * normal). With the bitangent and the normal it is the frame a relief or a ripple moves the picture
  * in. Models only, colour stage.

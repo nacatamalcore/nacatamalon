@@ -1,4 +1,5 @@
 import { DEPTH_FORMAT, STENCIL_TEST } from '../frame/depth';
+import type { TCullMode } from '../../../materials/types/t_material';
 
 /**
  * The state every model pipeline is built with: how it blends, what it throws away, and what it does
@@ -12,6 +13,9 @@ import { DEPTH_FORMAT, STENCIL_TEST } from '../frame/depth';
  * see-through model is tested against depth like any other but writes none, or it would hide what is
  * drawn after it and behind it. So every model pipeline comes in two, and the frame picks per model.
  *
+ * `cull` is the other, the material's: which side of each triangle is thrown away. The card's words
+ * are the material's, so it is handed straight over.
+ *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -24,6 +28,7 @@ export const describeMeshPipeline = (
     format: GPUTextureFormat,
     samples: number,
     writesDepth = true,
+    cull: TCullMode = 'back',
 ): GPURenderPipelineDescriptor => ({
     label,
     layout,
@@ -39,9 +44,9 @@ export const describeMeshPipeline = (
             },
         }],
     },
-    // Facing away is thrown out: half of a closed shape is always pointing away from the
-    // viewer, and drawing it costs as much as the half that can be seen.
-    primitive: { topology: 'triangle-list', cullMode: 'back' },
+    // Facing away is thrown out unless the material says otherwise: half of a closed shape is always
+    // pointing away from the viewer, and drawing it costs as much as the half that can be seen.
+    primitive: { topology: 'triangle-list', cullMode: cull },
     // The one thing in the frame that really uses depth: nearer wins, and it says so for the
     // ones behind it. A see-through one only asks.
     depthStencil: { format: DEPTH_FORMAT, depthWriteEnabled: writesDepth, depthCompare: 'less', ...STENCIL_TEST },

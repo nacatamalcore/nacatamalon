@@ -23,6 +23,11 @@ export type TMeshPipeline = {
      */
     skinnedProgram: WebGLProgram;
     /**
+     * The same two for a model whose material throws away another side of its triangles, or none:
+     * built the first time one is drawn, so a game that never asks never compiles them.
+     */
+    sided: (cull: 'front' | 'none') => { program: WebGLProgram; skinnedProgram: WebGLProgram };
+    /**
      * Each skeleton's bones as a picture, filled once a frame however many models wear them.
      */
     joints: TJointTextures;

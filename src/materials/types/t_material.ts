@@ -88,6 +88,22 @@ export type TSpriteMaterial = TShaderHalf & {
 export type TTextureWrap = 'repeat' | 'clamp' | 'mirror';
 
 /**
+ * Which side of each triangle is thrown away, by which way it faces the camera.
+ *
+ * - `'back'`: the side facing away. A closed shape seen from outside, which is nearly everything,
+ *   and half the work saved, since half of a closed shape always faces away.
+ * - `'front'`: the side facing the camera. A shape seen from inside: a dome of sky, a room the camera
+ *   stands in. It is lit from inside too.
+ * - `'none'`: nothing. Both sides drawn, each lit as the side it is: a leaf, a sheet, a flag, the
+ *   top of a liquid.
+ *
+ * @category Game objects
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TCullMode = 'back' | 'front' | 'none';
+
+/**
  * One extra picture a model's material carries for its shader to read, besides the picture it is
  * covered with: a reflection, a mask, a fine detail, a ripple.
  *
@@ -201,6 +217,11 @@ export type TMeshMaterial = TShaderHalf & {
      * `false`, the picture held true to the surface.
      */
     affine?: boolean;
+    /**
+     * Which side of its triangles is thrown away: `'back'`, `'front'` or `'none'` (see
+     * {@link TCullMode}). Omitted, `'back'`. Read every frame, so it can change while the game runs.
+     */
+    cull?: TCullMode;
     /**
      * The lighting look it was made with, kept so it can be written down and made again. Left out
      * when it has none.

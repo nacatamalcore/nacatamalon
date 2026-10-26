@@ -193,8 +193,14 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
             lightSpaceMatrix(source.light, source.camera, lightMatrix);
             reportCastersOutside(source.casters, source.light, lightMatrix);
             state.shadowPipeline.begin(state.shadow, lightMatrix);
+            // What a material's corner hook is told about the screen: the screen's size, in the game's
+            // pixels, as its twin tells it.
+            const screenRatio = ctx.pixelRatio ?? 1;
             for (const caster of source.casters) {
-                state.shadowPipeline.draw(state.meshes, caster, caster.worldMatrix ?? computeModelMatrix(caster.transform));
+                state.shadowPipeline.draw(
+                    state.meshes, caster, caster.worldMatrix ?? computeModelMatrix(caster.transform),
+                    ctx.time, gl.drawingBufferWidth / screenRatio, gl.drawingBufferHeight / screenRatio,
+                );
             }
             state.shadowPipeline.end();
 

@@ -97,6 +97,9 @@ const buildPart = (
                 shininess: options.shininess,
                 vertexSnap: options.vertexSnap,
                 affine: options.affine,
+                // The file's word unless the game says otherwise, as with see-through: a leaf the
+                // modelling program kept both sides of is drawn on both.
+                cull: options.cull ?? (part.doubleSided ? 'none' : undefined),
                 alpha: state.alpha,
                 // The file's word unless the game says otherwise. A piece the file does not call
                 // see-through is left to its alpha, rather than written down as solid.

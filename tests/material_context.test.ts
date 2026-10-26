@@ -51,8 +51,12 @@ describe('the detail a material reads', () => {
         const wgsl = buildMeshMaterialShader(HOOK, null, {});
         const glsl = buildMeshMaterialShaderGlsl(HOOK_GLSL, null, {}).fragment;
 
-        expect(wgsl).toContain('ctx.bitangent = cross(normalize(in.normal), ctx.tangent) * in.tangent.w;');
-        expect(glsl).toContain('ctx.bitangent = cross(normalize(vNormal), ctx.tangent) * vTangent.w;');
+        // From the facing the hook is handed, which is the corner's own unless the other side of a
+        // two-sided one is drawn.
+        expect(wgsl).toContain('ctx.normal = in.normal;');
+        expect(wgsl).toContain('ctx.bitangent = cross(normalize(ctx.normal), ctx.tangent) * in.tangent.w;');
+        expect(glsl).toContain('ctx.normal = vNormal;');
+        expect(glsl).toContain('ctx.bitangent = cross(normalize(ctx.normal), ctx.tangent) * vTangent.w;');
     });
 });
 

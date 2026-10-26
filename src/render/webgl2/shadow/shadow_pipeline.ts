@@ -1,4 +1,5 @@
 import { compileProgram } from '../utils/compile_program';
+import { cullOf } from '../../shared/cull_of';
 import { MESH_JOINTS_UNIT } from '../bindings';
 import { SHADOW_DEPTH_BIAS, SHADOW_SLOPE_BIAS, SHADOW_MAP_SIZE } from '../../shared/light_space';
 import { SHADOW_FRAGMENT_GLSL, SHADOW_SKINNED_VERTEX_GLSL, SHADOW_VERTEX_GLSL } from './shadow_shader';
@@ -75,25 +76,50 @@ export const createShadowPipeline = (gl: WebGL2RenderingContext) => {
 
         /**
          * Draws one caster into the map, and says whether it drew.
+         *
+         * `time`, `width` and `height` are what a material's corner hook is told, as in the pass that
+         * lights the scene.
          */
-        draw: (meshes: TMeshPipeline, mesh: TDrawMesh, model: Float32Array): boolean => {
+        draw: (meshes: TMeshPipeline, mesh: TDrawMesh, model: Float32Array, time = 0, width = 0, height = 0): boolean => {
             const vao = vertexArrayFor(gl, meshes, mesh);
             if (vao === null || mesh.geometry === null || mesh.geometry.indexCount === 0) {
                 return false;
             }
 
+            // The side its material throws away, here as in the pass that lights the scene: a leaf
+            // drawn on both sides casts from both.
+            const cull = cullOf(mesh);
+            if (cull === 'none') {
+                gl.disable(gl.CULL_FACE);
+            } else {
+                gl.enable(gl.CULL_FACE);
+                gl.cullFace(cull === 'front' ? gl.FRONT : gl.BACK);
+            }
+
             const bends = mesh.skeleton !== null && mesh.geometry.skinBuffer !== null;
-            const shader = bends ? bending : plain;
+            // A hook that moves the corners moves them here too, or the map holds the shape the file
+            // made and that flat ghost shadows the model wherever the hook takes it behind.
+            const surface = mesh.material;
+            const effect = surface.vertexGlsl !== null && mesh.geometry.detailBuffer !== null
+                ? meshes.materials.get(surface, bends, cull)
+                : null;
+            const hooked = effect !== null && !effect.failed ? meshes.materials.shadow(surface, bends) : null;
+            const shader = hooked ?? (bends ? bending : plain);
             gl.useProgram(shader.program);
             gl.uniformMatrix4fv(shader.lightViewProj, false, lightClip);
             gl.uniformMatrix4fv(shader.model, false, model);
+            if (hooked !== null) {
+                meshes.materials.bind(effect!, surface.uniforms ?? {}, null, time, width, height);
+            }
 
             if (bends) {
                 gl.activeTexture(gl.TEXTURE0 + MESH_JOINTS_UNIT);
                 // The bones the scene's own pass uploaded: the same picture, named again here.
                 gl.bindTexture(gl.TEXTURE_2D, meshes.joints.upload(mesh.skeleton!));
                 gl.bindSampler(MESH_JOINTS_UNIT, null);
-                gl.uniform1i(shader.joints, MESH_JOINTS_UNIT);
+                if (hooked === null) {
+                    gl.uniform1i((shader as TShadowProgram).joints, MESH_JOINTS_UNIT);
+                }
             }
 
             gl.bindVertexArray(vao);

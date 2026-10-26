@@ -45,6 +45,11 @@ export type TGltfPart = {
      */
     transparent: boolean;
     /**
+     * Whether the file says both sides of it are seen. Drawn with `cull: 'none'` unless the game
+     * says otherwise.
+     */
+    doubleSided: boolean;
+    /**
      * What its picture does past its edge, as the file says: repeating, unless it says otherwise.
      */
     wrap: { u: TTextureWrap; v: TTextureWrap };

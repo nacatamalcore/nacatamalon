@@ -102,6 +102,16 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         lightSpaceMatrix(source.light, source.camera, lightMatrix);
         reportCastersOutside(source.casters, source.light, lightMatrix);
         gpu.shadowPipeline.beginFrame(source.casters.length);
+        // A material whose hook moves its corners casts with its own numbers, written into the slots
+        // the passes below write theirs into: so the shadow is sent on its own before they do.
+        const hooked = source.casters.reduce((n, caster) => n + (caster.material.vertex !== null ? 1 : 0), 0);
+        if (hooked > 0) {
+            gpu.meshes.materials.beginFrame(hooked);
+        }
+        // What a material's corner hook is told about the screen: the screen's size, in the game's
+        // pixels, as its twin tells it.
+        const screenRatio = ctx.pixelRatio ?? 1;
+        const screen = gpu.context.canvas as { width: number; height: number };
 
         const shadowPass = encoder.beginRenderPass({
             label: 'shadow',
@@ -116,11 +126,15 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         let casterSlot = 0;
         for (const caster of source.casters) {
             const model = caster.worldMatrix ?? computeModelMatrix(caster.transform);
-            if (gpu.shadowPipeline.draw(shadowPass, gpu.meshes, caster, lightMatrix, model, casterSlot)) {
+            if (gpu.shadowPipeline.draw(shadowPass, gpu.meshes, caster, lightMatrix, model, casterSlot, ctx.time, screen.width / screenRatio, screen.height / screenRatio)) {
                 casterSlot++;
             }
         }
         shadowPass.end();
+        if (hooked > 0) {
+            gpu.device.queue.submit([encoder.finish()]);
+            encoder = gpu.device.createCommandEncoder();
+        }
 
         shadowUniforms = {
             view: source.view,

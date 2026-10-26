@@ -36,6 +36,11 @@ export type TGltfSurface = {
      */
     transparent: boolean;
     /**
+     * Whether the file says both sides are seen (`doubleSided`): a leaf, a sheet, a flag. How a
+     * modelling program writes a surface whose back is not thrown away.
+     */
+    doubleSided: boolean;
+    /**
      * What its picture does past its edge, from the file's sampler. Repeating when it says nothing.
      */
     wrap: { u: TTextureWrap; v: TTextureWrap };
@@ -98,7 +103,7 @@ const imageOf = (doc: TGltfDoc, textureIndex: number | undefined): TGltfImage | 
 export const readMaterial = (doc: TGltfDoc, index: number | undefined): TGltfSurface => {
     const material = index !== undefined ? doc.materials?.[index] : undefined;
     if (material === undefined) {
-        return { name: '', tint: WHITE, emissive: BLACK, image: null, emissiveImage: null, emissiveMasked: false, transparent: false, wrap: REPEAT };
+        return { name: '', tint: WHITE, emissive: BLACK, image: null, emissiveImage: null, emissiveMasked: false, transparent: false, doubleSided: false, wrap: REPEAT };
     }
 
     const [r, g, b, a] = material.pbrMetallicRoughness?.baseColorFactor ?? [1, 1, 1, 1];
@@ -122,6 +127,7 @@ export const readMaterial = (doc: TGltfDoc, index: number | undefined): TGltfSur
         emissiveImage: imageOf(doc, material.emissiveTexture?.index),
         emissiveMasked: material.emissiveTexture !== undefined,
         transparent: material.alphaMode === 'BLEND',
+        doubleSided: material.doubleSided === true,
         wrap: { u: wrapOf(sampler?.wrapS), v: wrapOf(sampler?.wrapT) },
     };
 };

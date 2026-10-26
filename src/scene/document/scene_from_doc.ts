@@ -250,6 +250,7 @@ const buildModelMesh = (
             ...(surface.wrap !== undefined ? { wrap: surface.wrap } : {}),
             ...(surface.vertexSnap !== undefined ? { vertexSnap: surface.vertexSnap } : {}),
             ...(surface.affine === true ? { affine: true } : {}),
+            ...(surface.cull !== undefined ? { cull: surface.cull } : {}),
             // The looks as written, which make the colour again: a document keeps the recipe, not the shader.
             ...(surface.lighting !== undefined ? { lighting: surface.lighting } : {}),
             ...(surface.steps !== undefined ? { steps: surface.steps } : {}),
@@ -285,6 +286,11 @@ const buildModelMesh = (
         // The file's word unless the scene has one of its own.
         if (surface.wrap === undefined) {
             mesh.material.wrap = part.wrap;
+        }
+        // The same: a leaf the modelling program kept both sides of is drawn on both, unless the
+        // scene says which side to keep.
+        if (surface.cull === undefined && part.doubleSided) {
+            mesh.material.cull = 'none';
         }
     });
 };
@@ -486,6 +492,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                     ...(Object.keys(maps).length > 0 ? { maps } : {}),
                     ...(surface.vertexSnap !== undefined ? { vertexSnap: surface.vertexSnap } : {}),
                     ...(surface.affine === true ? { affine: true } : {}),
+                    ...(surface.cull !== undefined ? { cull: surface.cull } : {}),
                     // The looks as written, which make the colour again: a document keeps the recipe, not the shader.
                     ...(surface.lighting !== undefined ? { lighting: surface.lighting } : {}),
                     ...(surface.steps !== undefined ? { steps: surface.steps } : {}),

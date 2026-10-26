@@ -1,5 +1,5 @@
 import type { TColorOption } from '../../color';
-import type { TTextureWrap } from '../../materials';
+import type { TCullMode, TTextureWrap } from '../../materials';
 import type { TTransform3d } from './t_transform_3d';
 
 /**
@@ -48,6 +48,12 @@ export type TMeshSurfaceOptions = {
      * PlayStation drew it: big flat surfaces bend and swim as the camera comes close. Default `false`.
      */
     affine?: boolean;
+    /**
+     * Which side of its triangles is thrown away. `'back'` (the default) is a shape seen from
+     * outside; `'front'` one seen from inside, such as a dome of sky; `'none'` draws both sides, each
+     * lit as the side it is, for a leaf, a sheet or the top of a liquid.
+     */
+    cull?: TCullMode;
     /**
      * Overrides the game's `smooth` for this model alone.
      */

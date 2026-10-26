@@ -1,4 +1,5 @@
-import { MESH_VERTEX_HEAD_GLSL, MESH_VERTEX_LIGHT_GLSL } from './mesh_shader';
+import { meshVertexHeadGlsl, meshVertexLightGlsl, worldNormalOfGlsl } from './mesh_shader';
+import type { TCullMode } from '../../../materials/types/t_material';
 
 /**
  * What draws a model that bends around its bones, in GLSL.
@@ -18,7 +19,7 @@ import { MESH_VERTEX_HEAD_GLSL, MESH_VERTEX_LIGHT_GLSL } from './mesh_shader';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const SKINNED_VERTEX_GLSL = MESH_VERTEX_HEAD_GLSL + /* glsl */ `
+export const skinnedVertexGlsl = (cull: TCullMode): string => meshVertexHeadGlsl(cull) + /* glsl */ `
 layout(location = 3) in vec4 aBones;
 layout(location = 4) in vec4 aWeights;
 
@@ -52,5 +53,7 @@ void main() {
     gl_Position = snapToPixels(uniforms.mvp * bent);
 
     vec3 worldPos = (uniforms.model * bent).xyz;
-    vec3 worldNormal = normalize((uniforms.normalMatrix * vec4(bentNormal, 0.0)).xyz);
-` + MESH_VERTEX_LIGHT_GLSL;
+    vec3 worldNormal = ${worldNormalOfGlsl(cull, 'bentNormal')};
+` + meshVertexLightGlsl(cull);
+
+export const SKINNED_VERTEX_GLSL = skinnedVertexGlsl('back');

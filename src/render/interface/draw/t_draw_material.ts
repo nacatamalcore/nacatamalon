@@ -1,7 +1,7 @@
 import type { TColor } from '../../../color';
 import type { TDrawTexture } from './t_draw_texture';
 import type { TUniformSignature, TUniformValues } from '../../../materials/types/t_uniforms';
-import type { TTextureWrap } from '../../../materials/types/t_material';
+import type { TCullMode, TTextureWrap } from '../../../materials/types/t_material';
 
 /**
  * A shader of the author's own, as the card needs to see it.
@@ -89,4 +89,8 @@ export type TDrawMaterial = TDrawShader & {
      * Its picture stretched across the screen without correcting for depth. Omitted, it is held true.
      */
     readonly affine?: boolean;
+    /**
+     * Which side of its triangles is thrown away. Omitted, `'back'`.
+     */
+    readonly cull?: TCullMode;
 };

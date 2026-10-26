@@ -1,4 +1,4 @@
-import { buildMeshMaterialShader, MESH_MATERIAL_GROUP, MESH_MATERIAL_JOINTS_BINDING } from './mesh_material_shader';
+import { buildMeshMaterialShader, buildMeshMaterialShadowShader, MESH_MATERIAL_GROUP, MESH_MATERIAL_JOINTS_BINDING } from './mesh_material_shader';
 import { buildUniformLayout, writeUniformValues } from '../../shared/material_uniforms';
 import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
@@ -7,7 +7,7 @@ import { describeMeshPipeline, MESH_BONES, MESH_COLORS, MESH_CORNERS, MESH_DETAI
 import type { TDrawMaterial, TDrawShader } from '../../interface/draw/t_draw_material';
 import type { TMeshPipeline } from '../mesh/types/t_mesh_pipeline';
 import type { TUniformLayout } from '../../shared/material_uniforms';
-import type { TUniformValues } from '../../../materials';
+import type { TCullMode, TUniformValues } from '../../../materials';
 
 /**
  * Bytes between one model's parameters and the next. The same stride its placement already uses,
@@ -130,7 +130,7 @@ export const createMeshMaterials = (
         capacity = size;
     };
 
-    const build = (material: TDrawShader, skinned: boolean): TCompiled => {
+    const build = (material: TDrawShader, skinned: boolean, cull: TCullMode): TCompiled => {
         const layout = buildUniformLayout(material.uniformSig ?? {});
         const mapNames = mapNamesOf(material.fragment);
 
@@ -167,7 +167,7 @@ export const createMeshMaterials = (
         const kind = skinned ? 'skinned mesh material' : 'mesh material';
         const module = device.createShaderModule({
             label: `${kind} ${material.name ?? material.id}`,
-            code: buildMeshMaterialShader(material.fragment, material.vertex, material.uniformSig ?? {}, mapNames, skinned),
+            code: buildMeshMaterialShader(material.fragment, material.vertex, material.uniformSig ?? {}, mapNames, skinned, cull),
         });
         const wiring = skinned ? skinnedPipelineLayout : pipelineLayout;
         // The detail run last, after the bones when there are any: slot 2 or 3 at draw time.
@@ -181,6 +181,8 @@ export const createMeshMaterials = (
             buffers,
             format,
             samples,
+            true,
+            cull,
         ));
         entry.transparentPipeline = device.createRenderPipeline(describeMeshPipeline(
             `see-through ${kind} pipeline ${material.name ?? material.id}`,
@@ -190,6 +192,7 @@ export const createMeshMaterials = (
             format,
             samples,
             false,
+            cull,
         ));
         void device.popErrorScope().then((error) => {
             if (error !== null) {
@@ -206,6 +209,13 @@ export const createMeshMaterials = (
         return entry;
     };
 
+    /**
+     * The shadows of materials that move their corners, by the same key as the effects: the module,
+     * `ready` once the card has said it compiled, or `null` once it has failed, so a hook that cannot
+     * cast is drawn flat instead.
+     */
+    const shadows = new Map<string, { module: GPUShaderModule; layout: GPUBindGroupLayout; ready: boolean } | null>();
+
     return {
         /**
          * Frees every slot and makes room for this frame's, before anything is drawn.
@@ -217,17 +227,63 @@ export const createMeshMaterials = (
             }
         },
         /**
-         * The compiled effect, for a model that bends (`skinned`) or one that does not: two shaders,
-         * each built the first time it is wanted.
+         * The compiled effect, for a model that bends (`skinned`) or one that does not, and for the
+         * side of its triangles thrown away: each built the first time it is wanted.
          */
-        get: (material: TDrawShader, skinned = false): TCompiled => {
-            const key = `${skinned ? 'skinned ' : ''}${JSON.stringify(material.uniformSig ?? {})} ${material.fragment ?? ''} ${material.vertex ?? ''}`;
+        get: (material: TDrawShader, skinned = false, cull: TCullMode = 'back'): TCompiled => {
+            const key = `${skinned ? 'skinned ' : ''}${cull === 'back' ? '' : `cull ${cull} `}${JSON.stringify(material.uniformSig ?? {})} ${material.fragment ?? ''} ${material.vertex ?? ''}`;
             let entry = compiled.get(key);
             if (entry === undefined) {
-                entry = build(material, skinned);
+                entry = build(material, skinned, cull);
                 compiled.set(key, entry);
             }
             return entry;
+        },
+        /**
+         * The shadow of a material with a corner hook: the hook moving the corners as it does when
+         * the model is drawn, seen from the light. With the material's group layout, which the
+         * shadow binds in the same place. `null` when it did not compile: the model then casts its
+         * file's shape, as it always did, and says so once.
+         *
+         * Also `null` until the card has answered that it compiled, which it does a moment later:
+         * a module that failed, used in the meantime, would throw the whole shadow pass away with
+         * it, every caster in the map and not just this one. So the first frame or two cast the
+         * file's shape.
+         */
+        shadow: (material: TDrawShader, skinned = false): { module: GPUShaderModule; layout: GPUBindGroupLayout; ready: boolean } | null => {
+            if (material.vertex === null) {
+                return null;
+            }
+            const key = `${skinned ? 'skinned ' : ''}${JSON.stringify(material.uniformSig ?? {})} ${material.fragment ?? ''} ${material.vertex}`;
+            let held = shadows.get(key);
+            if (held === undefined) {
+                const mapNames = mapNamesOf(material.fragment);
+                // Caught here, as the effect's is: the warning below says it once, in this engine's
+                // words, rather than the card printing it on its own as well.
+                device.pushErrorScope('validation');
+                const module = device.createShaderModule({
+                    label: `${skinned ? 'skinned ' : ''}mesh material shadow ${material.name ?? material.id}`,
+                    code: buildMeshMaterialShadowShader(material.vertex, material.uniformSig ?? {}, mapNames, skinned),
+                });
+                void device.popErrorScope();
+                const made = { module, layout: skinned ? skinnedMaterialLayout : materialLayout, ready: false };
+                held = made;
+                shadows.set(key, made);
+                void module.getCompilationInfo().then((info) => {
+                    const bad = info.messages.filter((message) => message.type === 'error');
+                    if (bad.length === 0) {
+                        made.ready = true;
+                    } else {
+                        shadows.set(key, null);
+                        console.warn(
+                            `[NacatamalOn] the shadow of the material "${material.name ?? 'mesh material'}" did not compile, so it casts the shape of its file. ` +
+                            'Its corner hook reads something only the drawn model has.',
+                            bad.map((message) => `${message.lineNum}: ${message.message}`).join('\n'),
+                        );
+                    }
+                });
+            }
+            return held !== null && held.ready ? held : null;
         },
         /**
          * Writes this model's numbers into a slot of their own and gives back the group that binds its
@@ -314,6 +370,7 @@ export const createMeshMaterials = (
             slots?.destroy();
             slots = null;
             groups.clear();
+            shadows.clear();
             capacity = 0;
         },
     };

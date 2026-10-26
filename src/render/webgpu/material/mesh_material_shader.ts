@@ -1,7 +1,8 @@
-import { MESH_SHADER_TYPES } from '../mesh/mesh_shader';
+import { FACED_LIGHT, MESH_SHADER_TYPES, twoSidedOutput, TWO_SIDED_WRITE, worldNormalOf } from '../mesh/mesh_shader';
 import { buildUniformLayout } from '../../shared/material_uniforms';
+import { SHADOW_UNIFORMS_WGSL } from '../shadow/shadow_shader';
 import { MAX_MATERIAL_MAPS } from '../../shared/material_maps';
-import type { TUniformSignature } from '../../../materials';
+import type { TCullMode, TUniformSignature } from '../../../materials';
 
 /**
  * Where a model material's own parameters are bound.
@@ -73,6 +74,9 @@ struct FragContext {
     bitangent: vec3<f32>,
     // A second picture coordinate: the file's own, or the first again.
     uv2: vec2<f32>,
+    // Whether this is the side of the triangle facing the camera. Only ever false on a material that
+    // keeps the other side (cull 'front' or 'none'): a liquid seen from below in another colour.
+    frontFacing: bool,
 };
 `;
 
@@ -82,8 +86,12 @@ struct FragContext {
  * Wider than the built-in one, which carries only what the built-in ending reads. A material may ask
  * where the surface is and which way it faces, so those are carried too, and carrying them costs
  * something across every triangle. That cost is why the ordinary model does not pay it.
+ *
+ * Drawn on both sides, the way it is seen is not carried but worked out again at the pixel, from
+ * where the pixel is: that leaves room for the light of the other side, which a card promises room
+ * for only just.
  */
-const VERTEX_OUTPUT = /* wgsl */ `
+const vertexOutput = (cull: TCullMode): string => /* wgsl */ `
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) uv: vec3<f32>,
@@ -91,8 +99,8 @@ struct VertexOutput {
     @location(2) shine: vec3<f32>,
     @location(3) normal: vec3<f32>,
     @location(4) worldPos: vec3<f32>,
-    @location(5) viewDir: vec3<f32>,
-    // The casting light's own share of the two above, so the ending can take that one away and no
+${cull === 'none' ? '' : `    @location(5) viewDir: vec3<f32>,
+`}    // The casting light's own share of the two above, so the ending can take that one away and no
     // other. Where the corner falls in the map is **not** carried: this one already carries the
     // world position, so the ending works it out from that and saves a number across every
     // triangle.
@@ -106,7 +114,7 @@ struct VertexOutput {
     @location(10) screen: vec3<f32>,
     // The tangent in the world, with its hand in w.
     @location(11) tangent: vec4<f32>,
-    @location(12) uv2: vec2<f32>,
+    @location(12) uv2: vec2<f32>,${cull === 'none' ? twoSidedOutput(13) : ''}
 };
 `;
 
@@ -221,11 +229,11 @@ const STILL = /* wgsl */ `
     let across = cornerTangent.xyz;
 `;
 
-const body = (normal: string, skinned: boolean): string => /* wgsl */ `
-${skinned ? `@group(${MESH_MATERIAL_GROUP}) @binding(${MESH_MATERIAL_JOINTS_BINDING}) var<storage, read> joints: array<mat4x4<f32>>;` : ''}
-
-@vertex
-fn vs(
+/**
+ * What a corner reads, and what its hook is told about it: the same in the pass that draws the model
+ * and in the one that draws its shadow, so the hook moves the corner the same way in both.
+ */
+const cornerInputs = (skinned: boolean): string => /* wgsl */ `
     @location(0) position: vec3<f32>,
     @location(1) normal: vec3<f32>,
     @location(2) uv: vec2<f32>,
@@ -234,7 +242,9 @@ fn vs(
     @location(7) cornerUv2: vec2<f32>,${skinned ? `
     @location(3) bones: vec4<f32>,
     @location(4) weights: vec4<f32>,` : ''}
-) -> VertexOutput {
+`;
+
+const CORNER_CONTEXT = /* wgsl */ `
     var ctx: VertContext;
     ctx.normal = normal;
     ctx.uv = uv;
@@ -244,23 +254,32 @@ fn vs(
     ctx.uv2 = cornerUv2;
 
     let local = vertex(position, ctx);
-${normal}${skinned ? SKIN : STILL}
+`;
+
+const body = (normal: string, skinned: boolean, cull: TCullMode): string => {
+    // A model drawn on both sides reads the light of the side it is; any other has one.
+    const lit = cull === 'none' ? 'side' : 'in';
+    return /* wgsl */ `
+${skinned ? `@group(${MESH_MATERIAL_GROUP}) @binding(${MESH_MATERIAL_JOINTS_BINDING}) var<storage, read> joints: array<mat4x4<f32>>;` : ''}
+
+@vertex
+fn vs(${cornerInputs(skinned)}) -> VertexOutput {${CORNER_CONTEXT}${normal}${skinned ? SKIN : STILL}
     var out: VertexOutput;
     out.position = snapToPixels(uniforms.mvp * placed);
 
     let worldPos = (uniforms.model * placed).xyz;
-    let worldNormal = normalize((uniforms.normalMatrix * vec4<f32>(facing, 0.0)).xyz);
+    let worldNormal = ${worldNormalOf(cull, 'facing')};
     let viewDir = viewDirOf(worldPos);
 
     let surface = litBy(worldPos, worldNormal, viewDir);
     out.light = surface.diffuse;
     out.shine = surface.shine;
     out.casterLight = surface.casterDiffuse;
-    out.casterShine = surface.casterShine;
+    out.casterShine = surface.casterShine;${cull === 'none' ? TWO_SIDED_WRITE : ''}
     out.uv = affineUv(uv, out.position);
     out.normal = worldNormal;
-    out.worldPos = worldPos;
-    out.viewDir = viewDir;
+    out.worldPos = worldPos;${cull === 'none' ? '' : `
+    out.viewDir = viewDir;`}
     out.color = color;
     out.fog = fogAt(worldPos);
     out.screen = out.position.xyw;
@@ -279,7 +298,10 @@ fn screenOf(clip: vec3<f32>) -> vec2<f32> {
 }
 
 @fragment
-fn fs(in: VertexOutput) -> @location(0) vec4<f32> {
+fn fs(in: VertexOutput, @builtin(front_facing) front: bool) -> @location(0) vec4<f32> {${cull === 'none' ? `
+    // Drawn on both sides: lit as the side it is, and facing the way that side does.
+    let side = facedLight(in, front);
+    let normal = select(-in.normal, in.normal, front);` : ''}
     // A shader you wrote yourself receives shadow, and receives it without being told about it:
     // ctx.light simply arrives already darkened where the casting light cannot see. Core leaves a
     // material out of the shadow on purpose, and the consequence is awkward enough to be worth
@@ -287,25 +309,26 @@ fn fs(in: VertexOutput) -> @location(0) vec4<f32> {
     // one model here, and it is that a model is a model.
     let coord = shadowCoordOf(in.worldPos);
     // The floor is a floor and not an addition, exactly as the built-in ending has it.
-    let lit = max(litWithShadow(in.light, in.casterLight, coord), lights.ambient.rgb);
+    let lit = max(litWithShadow(${lit}.light, ${lit}.casterLight, coord), lights.ambient.rgb);
 
     // Divided here, once: a shader of your own receives the picture already stretched when the
     // material is affine, and the corrected one when it is not (see affineUv).
     let uv = in.uv.xy / in.uv.z;
     var ctx: FragContext;
     ctx.uv = uv;
-    ctx.normal = in.normal;
+    ctx.normal = ${cull === 'none' ? 'normal' : 'in.normal'};
     ctx.worldPos = in.worldPos;
     ctx.light = lit;
-    ctx.shine = litWithShadow(in.shine, in.casterShine, coord);
+    ctx.shine = litWithShadow(${lit}.shine, ${lit}.casterShine, coord);
     // The glow through its picture, so a shader of your own adds it the way the built-in one does.
     ctx.emissive = uniforms.emissive.rgb * textureSampleLevel(meshEmissive, meshSampler, uv, 0.0).rgb;
-    ctx.viewDir = in.viewDir;
+    ctx.viewDir = ${cull === 'none' ? 'viewDirOf(in.worldPos)' : 'in.viewDir'};
     ctx.color = in.color;
     ctx.screen = screenOf(in.screen);
     ctx.tangent = normalize(in.tangent.xyz);
-    ctx.bitangent = cross(normalize(in.normal), ctx.tangent) * in.tangent.w;
+    ctx.bitangent = cross(normalize(ctx.normal), ctx.tangent) * in.tangent.w;
     ctx.uv2 = in.uv2;
+    ctx.frontFacing = front;
 
     // The painted colour is part of the surface, as it is in the built-in ending. The fog goes over
     // what the hook made, so a shader of your own sits in the scene's fog without asking for it.
@@ -313,6 +336,7 @@ fn fs(in: VertexOutput) -> @location(0) vec4<f32> {
     return vec4<f32>(mix(shaded.rgb, lights.fog.rgb, in.fog), shaded.a);
 }
 `;
+};
 
 /**
  * Builds the whole shader for a model material: the engine's own declarations, the knobs the author
@@ -328,6 +352,9 @@ fn fs(in: VertexOutput) -> @location(0) vec4<f32> {
  * `skinned` is the same shader for a model that bends: it also reads the bones each corner names and
  * bends the corner around them, after the corner hook has moved it.
  *
+ * `cull` is the side of its triangles the material throws away, which decides how it is lit: from
+ * inside for `'front'`, on both sides for `'none'`.
+ *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -338,6 +365,7 @@ export const buildMeshMaterialShader = (
     sig: TUniformSignature,
     mapNames: readonly string[] = [],
     skinned = false,
+    cull: TCullMode = 'back',
 ): string => {
     const { structText } = buildUniformLayout(sig);
 
@@ -347,11 +375,62 @@ export const buildMeshMaterialShader = (
         `@group(${MESH_MATERIAL_GROUP}) @binding(0) var<uniform> mu: MaterialUniforms;`,
         VERT_CONTEXT,
         FRAG_CONTEXT,
-        VERTEX_OUTPUT,
+        vertexOutput(cull),
+        ...(cull === 'none' ? [FACED_LIGHT] : []),
         SAMPLE,
         maps(mapNames),
         vertex ?? DEFAULT_VERTEX,
         fragment ?? DEFAULT_EFFECT,
-        body(vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL, skinned),
+        body(vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL, skinned, cull),
+    ].join('\n');
+};
+
+/**
+ * The shader a model material's shadow is drawn with: its corner hook, moving each corner exactly as
+ * it does when the model is drawn, and then the corner seen from the light. Nothing else: no light,
+ * no colour, no fragment at all, like the built-in shadow.
+ *
+ * Without it the map holds the model as its file made it, so a flag that waves casts a flat one, and
+ * that flat ghost shadows the cloth wherever the wave takes it behind.
+ *
+ * The material's own group is kept where it is (group 3), with its knobs, its maps and, for a model
+ * that bends, its bones, so a hook reads `mu` and `sampleMap_<name>` here as it does there. The two
+ * groups between are left empty.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const buildMeshMaterialShadowShader = (
+    vertex: string,
+    sig: TUniformSignature,
+    mapNames: readonly string[] = [],
+    skinned = false,
+): string => {
+    const { structText } = buildUniformLayout(sig);
+
+    return [
+        SHADOW_UNIFORMS_WGSL,
+        structText,
+        `@group(${MESH_MATERIAL_GROUP}) @binding(0) var<uniform> mu: MaterialUniforms;`,
+        VERT_CONTEXT,
+        // Declared because the map readers bring a helper that names it, never filled here.
+        FRAG_CONTEXT,
+        maps(mapNames),
+        vertex,
+        skinned ? `@group(${MESH_MATERIAL_GROUP}) @binding(${MESH_MATERIAL_JOINTS_BINDING}) var<storage, read> joints: array<mat4x4<f32>>;` : '',
+        /* wgsl */ `
+@vertex
+fn vs(${cornerInputs(skinned)}) -> @builtin(position) vec4<f32> {${CORNER_CONTEXT}${skinned ? `
+    let skin =
+        weights.x * joints[u32(bones.x)] +
+        weights.y * joints[u32(bones.y)] +
+        weights.z * joints[u32(bones.z)] +
+        weights.w * joints[u32(bones.w)];
+    let placed = skin * vec4<f32>(local, 1.0);` : `
+    let placed = vec4<f32>(local, 1.0);`}
+    return shadow.lightViewProj * shadow.model * placed;
+}
+`,
     ].join('\n');
 };

@@ -73,14 +73,15 @@ const emitShader = (graph: TShaderGraph, target: TShaderTarget): TEmitted => {
         return { fragment: prepend(color, fragment), vertex: prepend(position, vertex), uniforms: collectUniforms(roots) };
     }
 
-    // The helpers go in once. Both hooks end up in one shader, and a function at the top of it can
-    // be called from anywhere below, so one written before the colour hook serves the vertex too.
+    // The helpers go in once. Both hooks end up in one shader, where a function anywhere can be called
+    // from anywhere, so they go with the corner hook when there is one: the shadow of a model is drawn
+    // with that hook alone, and a helper left with the colour would not be there to call.
     const helperText = collectHelpers(roots, target).join('\n\n');
     if (helperText.length > 0) {
-        if (fragment !== null) {
-            fragment = `${helperText}\n\n${fragment}`;
-        } else if (vertex !== null) {
+        if (vertex !== null) {
             vertex = `${helperText}\n\n${vertex}`;
+        } else if (fragment !== null) {
+            fragment = `${helperText}\n\n${fragment}`;
         }
     }
 

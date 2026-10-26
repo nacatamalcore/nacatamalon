@@ -1,4 +1,5 @@
 import { fillLightUniforms, fillMeshUniforms } from '../../shared';
+import { cullOf } from '../../shared/cull_of';
 import { isTransparentMesh } from '../../shared/is_transparent_mesh';
 import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
 import { toGlBuffer } from '../resources';
@@ -148,19 +149,22 @@ export const drawMesh = (
     // A model that bends takes the effect's skinned twin: the same hooks, with the bones bending the
     // corner after the corner hook has moved it. Its bones are bound below, on the same unit either way.
     const surface = mesh.material;
+    // Which side of its triangles is thrown away. The usual one is the pair built at the start.
+    const cull = cullOf(mesh);
+    const set = cull === 'back' ? meshes : meshes.sided(cull);
     let effect: ReturnType<TMeshPipeline['materials']['get']> | null = null;
     if (surface.fragment !== null || surface.vertex !== null) {
         meshes.materials.warnIfWgpuOnly(surface);
         // A shape with no detail run cannot feed a material's program, which reads one.
         if ((surface.fragmentGlsl !== null || surface.vertexGlsl !== null) && mesh.geometry.detailBuffer !== null) {
-            const compiled = meshes.materials.get(surface, bends);
+            const compiled = meshes.materials.get(surface, bends, cull);
             if (!compiled.failed && compiled.program !== null) {
                 effect = compiled;
             }
         }
     }
 
-    gl.useProgram(effect !== null ? effect.program! : bends ? meshes.skinnedProgram : meshes.program);
+    gl.useProgram(effect !== null ? effect.program! : bends ? set.skinnedProgram : set.program);
     gl.bindBufferBase(gl.UNIFORM_BUFFER, MESH_UNIFORMS_BINDING, meshes.uniforms);
     gl.bindBufferBase(gl.UNIFORM_BUFFER, MESH_LIGHTS_BINDING, meshes.lights);
 
@@ -221,8 +225,13 @@ export const drawMesh = (
     // A see-through model is still hidden by what is in front of it, but writes nothing: it is drawn
     // after everything solid, and its distance would throw away whatever comes later behind it.
     gl.depthMask(!isTransparentMesh(mesh));
-    gl.enable(gl.CULL_FACE);
-    gl.cullFace(gl.BACK);
+    // The side the material throws away, or neither.
+    if (cull === 'none') {
+        gl.disable(gl.CULL_FACE);
+    } else {
+        gl.enable(gl.CULL_FACE);
+        gl.cullFace(cull === 'front' ? gl.FRONT : gl.BACK);
+    }
     // Straight alpha, the same blend the WebGPU pipeline is built with and the same one sprites,
     // maps and particles switch on here.
     //

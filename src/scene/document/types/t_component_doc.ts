@@ -7,7 +7,7 @@ import type { TTransform3d } from '../../../gameobjects/types/t_transform_3d';
 import type { TTextStyle } from '../../../gameobjects/text/types/t_text_style';
 import type { TNineSliceBorders, TNineSliceMode } from '../../../gameobjects/nine_slice/types/t_nine_slice';
 import type { TUniformValues } from '../../../materials/types/t_uniforms';
-import type { TTextureWrap } from '../../../materials/types/t_material';
+import type { TCullMode, TTextureWrap } from '../../../materials/types/t_material';
 import type { TParticleOverrides } from '../../../gameobjects/particles/types/t_particles';
 import type { TParticleColliderShape2d, TParticleColliderShape3d } from '../../../gameobjects/particles/colliders/t_particle_collider';
 import type { TSoundCone, TSoundDuck, TSoundZone } from '../../../audio';
@@ -110,6 +110,12 @@ export type TMeshMaterialDoc = TMaterialDoc & {
      * is the default.
      */
     affine?: boolean;
+    /**
+     * Which side of its triangles is thrown away: `'back'`, `'front'` or `'none'`. Left out when it was
+     * never asked for, which draws as `'back'`, except a model piece whose file says both sides are
+     * seen: that is drawn with `'none'` unless the document says otherwise.
+     */
+    cull?: TCullMode;
     /**
      * How it is lit, as the look is written down (`{ look: 'toon', bands: 2, ... }`). When a material
      * has looks, its `fragment` is left out: the looks are the recipe, and the shader they make is

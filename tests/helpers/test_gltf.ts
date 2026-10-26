@@ -82,6 +82,10 @@ export type TTestMaterial = {
     emissiveFactor?: [number, number, number];
     emissiveStrength?: number;
     /**
+     * Both sides seen, as a modelling program writes a leaf or a sheet.
+     */
+    doubleSided?: boolean;
+    /**
      * A picture masking the glow, beside the file: the factor multiplies it.
      */
     emissiveImage?: string;
@@ -311,6 +315,7 @@ const assemble = (model: TTestModel) => {
         const out: Record<string, unknown> = { pbrMetallicRoughness: pbr };
         if (material.name !== undefined) out.name = material.name;
         if (material.emissiveFactor !== undefined) out.emissiveFactor = material.emissiveFactor;
+        if (material.doubleSided !== undefined) out.doubleSided = material.doubleSided;
         if (material.emissiveImage !== undefined) {
             images.push({ uri: material.emissiveImage });
             textures.push({ source: images.length - 1 });

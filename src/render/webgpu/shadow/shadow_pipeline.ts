@@ -1,4 +1,5 @@
-import { MESH_CORNERS } from '../mesh/pipeline_state';
+import { MESH_BONES, MESH_COLORS, MESH_CORNERS, MESH_DETAIL } from '../mesh/pipeline_state';
+import { cullOf } from '../../shared/cull_of';
 import { SHADOW_DEPTH_BIAS, SHADOW_SLOPE_BIAS } from '../../shared/light_space';
 import { SHADOW_FORMAT } from './shadow_map';
 import { SHADOW_SKINNED_WGSL, SHADOW_WGSL } from './shadow_shader';
@@ -55,13 +56,14 @@ export const createShadowPipeline = (device: GPUDevice) => {
      *
      * The face culling is the same word the pass that lights the scene uses, so a shape casts what
      * it shows. Core culls here on one card and not on the other, which is a shape casting two
-     * different shadows depending on the machine.
+     * different shadows depending on the machine. A material that keeps another side keeps it here
+     * too: a leaf drawn on both sides casts from both.
      */
-    const describe = (label: string, module: GPUShaderModule, layout: GPUPipelineLayout, buffers: GPUVertexBufferLayout[]): GPURenderPipelineDescriptor => ({
+    const describe = (label: string, module: GPUShaderModule, layout: GPUPipelineLayout, buffers: GPUVertexBufferLayout[], cull: GPUCullMode = 'back'): GPURenderPipelineDescriptor => ({
         label,
         layout,
         vertex: { module, entryPoint: 'vs', buffers },
-        primitive: { topology: 'triangle-list', cullMode: 'back' },
+        primitive: { topology: 'triangle-list', cullMode: cull },
         depthStencil: {
             format: SHADOW_FORMAT,
             depthWriteEnabled: true,
@@ -74,18 +76,52 @@ export const createShadowPipeline = (device: GPUDevice) => {
     const plain = device.createShaderModule({ label: 'shadow', code: SHADOW_WGSL });
     const bending = device.createShaderModule({ label: 'shadow skinned', code: SHADOW_SKINNED_WGSL });
 
-    const pipeline = device.createRenderPipeline(describe(
-        'shadow',
-        plain,
-        device.createPipelineLayout({ bindGroupLayouts: [uniformsLayout] }),
-        [MESH_CORNERS],
-    ));
-    const skinnedPipeline = device.createRenderPipeline(describe(
-        'shadow skinned',
-        bending,
-        device.createPipelineLayout({ bindGroupLayouts: [uniformsLayout, jointsLayout] }),
-        [MESH_CORNERS, SKIN_CORNERS],
-    ));
+    const plainLayout = device.createPipelineLayout({ bindGroupLayouts: [uniformsLayout] });
+    const bendingLayout = device.createPipelineLayout({ bindGroupLayouts: [uniformsLayout, jointsLayout] });
+    const pipeline = device.createRenderPipeline(describe('shadow', plain, plainLayout, [MESH_CORNERS]));
+    const skinnedPipeline = device.createRenderPipeline(describe('shadow skinned', bending, bendingLayout, [MESH_CORNERS, SKIN_CORNERS]));
+
+    // The other sides, made the first time a caster asks for one.
+    const sides = new Map<'front' | 'none', { pipeline: GPURenderPipeline; skinnedPipeline: GPURenderPipeline }>();
+    const sided = (cull: 'front' | 'none'): { pipeline: GPURenderPipeline; skinnedPipeline: GPURenderPipeline } => {
+        let made = sides.get(cull);
+        if (made === undefined) {
+            made = {
+                pipeline: device.createRenderPipeline(describe(`shadow, cull ${cull}`, plain, plainLayout, [MESH_CORNERS], cull)),
+                skinnedPipeline: device.createRenderPipeline(describe(`shadow skinned, cull ${cull}`, bending, bendingLayout, [MESH_CORNERS, SKIN_CORNERS], cull)),
+            };
+            sides.set(cull, made);
+        }
+        return made;
+    };
+
+    // A material whose hook moves its corners casts through a shader of its own, built from that
+    // hook (see buildMeshMaterialShadowShader): made the first time one casts, by its module and the
+    // side its material throws away. Its own group sits where the material's always does, the
+    // fourth, so the two between are bound empty.
+    const empty = device.createBindGroupLayout({ label: 'shadow nothing', entries: [] });
+    const nothing = device.createBindGroup({ label: 'shadow nothing', layout: empty, entries: [] });
+    const hooked = new Map<GPUShaderModule, Map<string, GPURenderPipeline>>();
+    const hookedPipeline = (module: GPUShaderModule, materialLayout: GPUBindGroupLayout, skinned: boolean, cull: GPUCullMode): GPURenderPipeline => {
+        let byCull = hooked.get(module);
+        if (byCull === undefined) {
+            byCull = new Map();
+            hooked.set(module, byCull);
+        }
+        let made = byCull.get(cull);
+        if (made === undefined) {
+            made = device.createRenderPipeline(describe(
+                `material shadow, cull ${cull}`,
+                module,
+                device.createPipelineLayout({ bindGroupLayouts: [uniformsLayout, empty, empty, materialLayout] }),
+                // The runs a material's pipeline reads, in its order: the bones before the detail.
+                skinned ? [MESH_CORNERS, MESH_COLORS, MESH_BONES, MESH_DETAIL] : [MESH_CORNERS, MESH_COLORS, MESH_DETAIL],
+                cull,
+            ));
+            byCull.set(cull, made);
+        }
+        return made;
+    };
 
     let capacity = INITIAL_CASTERS;
     let buffer = device.createBuffer({
@@ -134,6 +170,8 @@ export const createShadowPipeline = (device: GPUDevice) => {
          *
          * A shape with nothing on the card is skipped rather than drawn as something else, exactly
          * as it is in the pass that lights the scene.
+         *
+         * `time`, `width` and `height` are what a material's corner hook is told, as in that pass.
          */
         draw: (
             pass: GPURenderPassEncoder,
@@ -142,6 +180,9 @@ export const createShadowPipeline = (device: GPUDevice) => {
             lightViewProj: Float32Array,
             model: Float32Array,
             slot: number,
+            time = 0,
+            width = 0,
+            height = 0,
         ): boolean => {
             const geometry = mesh.geometry;
             if (geometry === null || geometry.vertexBuffer === null || geometry.indexBuffer === null || geometry.indexCount === 0) {
@@ -153,7 +194,36 @@ export const createShadowPipeline = (device: GPUDevice) => {
             device.queue.writeBuffer(buffer, slot * SLOT, slotData);
 
             const bends = mesh.skeleton !== null && geometry.skinBuffer !== null;
-            pass.setPipeline(bends ? skinnedPipeline : pipeline);
+            const cull = cullOf(mesh);
+
+            // A hook that moves the corners moves them here too, or the map holds the shape the file
+            // made and that flat ghost shadows the model wherever the hook takes it behind.
+            const surface = mesh.material;
+            const effect = surface.vertex !== null && geometry.colorBuffer !== null && geometry.detailBuffer !== null
+                ? meshes.materials.get(surface, bends, cull)
+                : null;
+            const shadow = effect !== null && !effect.failed ? meshes.materials.shadow(surface, bends) : null;
+            if (shadow !== null) {
+                pass.setPipeline(hookedPipeline(shadow.module, shadow.layout, bends, cull));
+                pass.setBindGroup(0, groupFor(slot));
+                pass.setBindGroup(1, nothing);
+                pass.setBindGroup(2, nothing);
+                const joints = bends ? meshes.joints.upload(mesh.skeleton!) : null;
+                const bound = meshes.materials.bind(effect!, surface, meshes.defaultSmooth, null, time, width, height, joints);
+                pass.setBindGroup(meshes.materials.group, bound.group, [bound.offset]);
+                pass.setVertexBuffer(0, toGpuBuffer(geometry.vertexBuffer));
+                pass.setVertexBuffer(1, toGpuBuffer(geometry.colorBuffer!));
+                if (bends) {
+                    pass.setVertexBuffer(2, toGpuBuffer(geometry.skinBuffer!));
+                }
+                pass.setVertexBuffer(bends ? 3 : 2, toGpuBuffer(geometry.detailBuffer!));
+                pass.setIndexBuffer(toGpuBuffer(geometry.indexBuffer), geometry.indexType);
+                pass.drawIndexed(geometry.indexCount);
+                return true;
+            }
+
+            const set = cull === 'back' ? { pipeline, skinnedPipeline } : sided(cull);
+            pass.setPipeline(bends ? set.skinnedPipeline : set.pipeline);
             pass.setBindGroup(0, groupFor(slot));
             pass.setVertexBuffer(0, toGpuBuffer(geometry.vertexBuffer));
 

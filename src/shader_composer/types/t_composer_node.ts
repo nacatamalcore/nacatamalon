@@ -32,7 +32,8 @@ export type TInputKind =
     | 'worldTangent'
     | 'worldBitangent'
     | 'vertexTangent'
-    | 'vertexBitangent';
+    | 'vertexBitangent'
+    | 'frontFacing';
 
 /**
  * A function a node needs written once at the top of the shader (the noise functions, for

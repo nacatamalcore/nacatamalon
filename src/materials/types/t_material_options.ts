@@ -3,7 +3,7 @@ import type { TColorOption } from '../../color';
 import type { TTexture } from '../../loaders';
 import type { TShader } from '../../loaders/shader/types/t_shader';
 import type { TUniformValues } from './t_uniforms';
-import type { TMaterialMap, TTextureWrap } from './t_material';
+import type { TCullMode, TMaterialMap, TTextureWrap } from './t_material';
 
 /**
  * The shader half of what a material can be asked for, which both kinds share.
@@ -158,6 +158,13 @@ export type TMeshMaterialOptions = TMaterialShaderOptions & {
      * PlayStation drew it: big flat surfaces bend and swim as the camera comes close. Default `false`.
      */
     affine?: boolean;
+    /**
+     * Which side of its triangles is thrown away. `'back'` (the default) is a shape seen from
+     * outside; `'front'` one seen from inside, such as a dome of sky; `'none'` draws both sides, each
+     * lit as the side it is, for a leaf, a sheet or the top of a liquid. A colour hook tells the two
+     * sides apart with `ctx.frontFacing`.
+     */
+    cull?: TCullMode;
     /**
      * How the surface is lit, in place of the engine's light: `toonLighting()` (flat bands) or `unlitLighting()` (no
      * light at all). One only. Its numbers become knobs of the material (`toonShadow`...), so they can

@@ -1,4 +1,5 @@
 import { MAX_LIGHTS, MAX_SCENE_LIGHTS } from '../../../light';
+import type { TCullMode } from '../../../materials/types/t_material';
 
 /**
  * The twin of `webgpu/mesh/mesh_shader.ts`, in the other language.
@@ -140,7 +141,7 @@ float fogAt(vec3 worldPos) {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const MESH_VERTEX_VARYINGS_GLSL = /* glsl */ `
+const meshVertexVaryingsGlsl = (cull: TCullMode): string => /* glsl */ `
 // Where in the picture, times a depth to undo the card's correction with (see affineUv).
 out vec3 vUv;
 out vec3 vLight;
@@ -153,7 +154,94 @@ out vec3 vCasterShine;
 out vec4 vColor;
 // How much of the corner the fog has taken.
 out float vFog;
+${cull === 'none' ? TWO_SIDED_VARYINGS_GLSL('out') : ''}`;
+
+export const MESH_VERTEX_VARYINGS_GLSL = meshVertexVaryingsGlsl('back');
+
+/**
+ * The light of the side facing away, for a model drawn on both sides, packed into three runs of four
+ * numbers as its twin in WGSL packs it (see twoSidedOutput in webgpu/mesh/mesh_shader.ts).
+ *
+ * @internal
+ */
+export const TWO_SIDED_VARYINGS_GLSL = (direction: 'out' | 'in'): string => `// The light of the side facing away, packed: a model drawn on both sides is lit on both.
+${direction} vec4 vBack0;
+${direction} vec4 vBack1;
+${direction} vec4 vBack2;
 `;
+
+/**
+ * Every light on a surface in one call, for the side facing away of a model drawn on both sides. The
+ * side facing the camera keeps its loop written out where it is, as it always was.
+ *
+ * @internal
+ */
+export const LIT_BY_GLSL = /* glsl */ `
+// Every light on a surface, with the casting one's share also kept on its own: the twin of litBy in
+// webgpu/mesh/mesh_shader.ts.
+void litBy(vec3 worldPos, vec3 normal, vec3 viewDir, out vec3 diffuse, out vec3 shine, out vec3 casterDiffuse, out vec3 casterShine) {
+    diffuse = vec3(0.0);
+    shine = vec3(0.0);
+    casterDiffuse = vec3(0.0);
+    casterShine = vec3(0.0);
+    int caster = int(lights.shadowParams.w);
+    for (int k = 0; k < ${MAX_LIGHTS}; k++) {
+        int named = meshLight(k);
+        if (named == 0) break;
+        int i = named - 1;
+        vec3 d;
+        vec3 s;
+        sampleLight(i, worldPos, normal, viewDir, d, s);
+        diffuse += d;
+        shine += s;
+        if (i == caster) {
+            casterDiffuse = d;
+            casterShine = s;
+        }
+    }
+}
+
+`;
+
+/**
+ * What the corner works out for the side facing away, and packs: the same lights, with the surface
+ * turned the other way. The twin of TWO_SIDED_WRITE in webgpu/mesh/mesh_shader.ts.
+ *
+ * @internal
+ */
+export const TWO_SIDED_WRITE_GLSL = /* glsl */ `
+    vec3 backDiffuse;
+    vec3 backShine;
+    vec3 backCasterDiffuse;
+    vec3 backCasterShine;
+    litBy(worldPos, -worldNormal, viewDir, backDiffuse, backShine, backCasterDiffuse, backCasterShine);
+    vBack0 = vec4(backDiffuse, backShine.x);
+    vBack1 = vec4(backShine.yz, backCasterDiffuse.xy);
+    vBack2 = vec4(backCasterDiffuse.z, backCasterShine);
+`;
+
+/**
+ * The light of the side being drawn, from the corner's two, as four values the ending reads in place
+ * of the corner's own. The twin of facedLight in webgpu/mesh/mesh_shader.ts.
+ *
+ * @internal
+ */
+export const FACED_LIGHT_GLSL = /* glsl */ `
+    bool front = gl_FrontFacing;
+    vec3 sideLight = front ? vLight : vBack0.xyz;
+    vec3 sideShine = front ? vShine : vec3(vBack0.w, vBack1.xy);
+    vec3 sideCasterLight = front ? vCasterLight : vec3(vBack1.zw, vBack2.x);
+    vec3 sideCasterShine = front ? vCasterShine : vBack2.yzw;
+`;
+
+/**
+ * The way a corner's surface faces in the world, for the side that is drawn: turned round when only
+ * the inside is. The twin of worldNormalOf in webgpu/mesh/mesh_shader.ts.
+ *
+ * @internal
+ */
+export const worldNormalOfGlsl = (cull: TCullMode, facing: string): string =>
+    `${cull === 'front' ? '-' : ''}normalize((uniforms.normalMatrix * vec4(${facing}, 0.0)).xyz)`;
 
 /**
  * Where a light is from a point, and how much of it survives getting there.
@@ -223,7 +311,10 @@ void sampleLight(int index, vec3 worldPos, vec3 normal, vec3 viewDir, out vec3 d
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const MESH_VERTEX_HEAD_GLSL = MESH_VERTEX_ATTRIBUTES_GLSL + MESH_VERTEX_VARYINGS_GLSL + MESH_SAMPLE_LIGHT_GLSL;
+export const meshVertexHeadGlsl = (cull: TCullMode): string =>
+    MESH_VERTEX_ATTRIBUTES_GLSL + meshVertexVaryingsGlsl(cull) + MESH_SAMPLE_LIGHT_GLSL + (cull === 'none' ? LIT_BY_GLSL : '');
+
+export const MESH_VERTEX_HEAD_GLSL = meshVertexHeadGlsl('back');
 
 /**
  * The rest of a corner's journey once it is where it belongs: which lights reach it, and how much.
@@ -234,7 +325,7 @@ export const MESH_VERTEX_HEAD_GLSL = MESH_VERTEX_ATTRIBUTES_GLSL + MESH_VERTEX_V
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const MESH_VERTEX_LIGHT_GLSL = /* glsl */ `
+export const meshVertexLightGlsl = (cull: TCullMode): string => /* glsl */ `
     vec3 viewDir = viewDirOf(worldPos);
 
     vec3 diffuse = vec3(0.0);
@@ -261,13 +352,15 @@ export const MESH_VERTEX_LIGHT_GLSL = /* glsl */ `
     vLight = diffuse;
     vShine = shine;
     vCasterLight = casterDiffuse;
-    vCasterShine = casterShine;
+    vCasterShine = casterShine;${cull === 'none' ? TWO_SIDED_WRITE_GLSL : ''}
     vShadowCoord = lights.shadowMatrix * vec4(worldPos, 1.0);
     vUv = affineUv(aUv, gl_Position);
     vColor = aColor;
     vFog = fogAt(worldPos);
 }
 `;
+
+export const MESH_VERTEX_LIGHT_GLSL = meshVertexLightGlsl('back');
 
 /**
  * What draws a model that does not bend.
@@ -276,13 +369,15 @@ export const MESH_VERTEX_LIGHT_GLSL = /* glsl */ `
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const MESH_VERTEX_GLSL = MESH_VERTEX_HEAD_GLSL + /* glsl */ `
+export const meshVertexGlsl = (cull: TCullMode): string => meshVertexHeadGlsl(cull) + /* glsl */ `
 void main() {
     gl_Position = snapToPixels(uniforms.mvp * vec4(aPosition, 1.0));
 
     vec3 worldPos = (uniforms.model * vec4(aPosition, 1.0)).xyz;
-    vec3 worldNormal = normalize((uniforms.normalMatrix * vec4(aNormal, 0.0)).xyz);
-` + MESH_VERTEX_LIGHT_GLSL;
+    vec3 worldNormal = ${worldNormalOfGlsl(cull, 'aNormal')};
+` + meshVertexLightGlsl(cull);
+
+export const MESH_VERTEX_GLSL = meshVertexGlsl('back');
 
 /**
  * Reading the shadow map on this card, which is the same act as its twin in WGSL said differently.
@@ -351,7 +446,12 @@ ${MESH_SHADOW_GLSL}
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const MESH_FRAGMENT_GLSL = MESH_FRAGMENT_HEAD_GLSL + /* glsl */ `
+export const meshFragmentGlsl = (cull: TCullMode): string => {
+    // A model drawn on both sides reads the light of the side it is; any other has one.
+    const [light, shine, casterLight, casterShine] = cull === 'none'
+        ? ['sideLight', 'sideShine', 'sideCasterLight', 'sideCasterShine']
+        : ['vLight', 'vShine', 'vCasterLight', 'vCasterShine'];
+    return MESH_FRAGMENT_HEAD_GLSL + /* glsl */ `
 in vec3 vUv;
 in vec3 vLight;
 in vec3 vShine;
@@ -360,20 +460,23 @@ in vec3 vCasterLight;
 in vec3 vCasterShine;
 in vec4 vColor;
 in float vFog;
-out vec4 fragColor;
+${cull === 'none' ? TWO_SIDED_VARYINGS_GLSL('in') : ''}out vec4 fragColor;
 
-void main() {
+void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     vec2 uv = vUv.xy / vUv.z;
     vec4 texColor = texture(meshTexture, uv);
     // Its glow, through its picture when it has one: lit windows on a dark wall.
     vec3 glow = uniforms.emissive.rgb * texture(meshEmissive, uv).rgb;
     // Only the casting light's share is taken away, so a thing in the sun's shadow is still lit by
     // the lamp beside it.
-    vec3 lit = max(litWithShadow(vLight, vCasterLight, vShadowCoord), lights.ambient.rgb);
+    vec3 lit = max(litWithShadow(${light}, ${casterLight}, vShadowCoord), lights.ambient.rgb);
     // The colour painted on the corners multiplies in with the picture. Unpainted corners are white.
     vec4 color = texColor * uniforms.tint * vColor * vec4(lit, 1.0);
-    vec3 shine = litWithShadow(vShine, vCasterShine, vShadowCoord);
+    vec3 shine = litWithShadow(${shine}, ${casterShine}, vShadowCoord);
     // The fog last, over everything, glow included.
     fragColor = vec4(mix(color.rgb + shine + glow, lights.fog.rgb, vFog), color.a);
 }
 `;
+};
+
+export const MESH_FRAGMENT_GLSL = meshFragmentGlsl('back');

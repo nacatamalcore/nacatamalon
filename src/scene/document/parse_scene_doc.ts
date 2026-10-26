@@ -155,6 +155,8 @@ const parseMeshMaterial = (value: unknown): TMeshMaterialDoc => {
             ? { vertexSnap: raw.vertexSnap }
             : {}),
         ...(raw.affine === true ? { affine: true } : {}),
+        // Written only when asked for; anything unknown draws as the default.
+        ...(raw.cull === 'back' || raw.cull === 'front' || raw.cull === 'none' ? { cull: raw.cull } : {}),
         ...parseLooks(raw.lighting, raw.steps),
     };
 };
