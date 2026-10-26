@@ -51,6 +51,9 @@ export type TGameOptions = {
      * - `'WEBGPU'`: WebGPU or nothing. Throws instead of falling back.
      * - `'WEBGL2'`: WebGL2 or nothing, same rule.
      *
+     * Read in capitals whatever way it is written, so `'webgl2'` is `'WEBGL2'`; anything else is
+     * refused with the names there are.
+     *
      * Naming one is for testing that backend: a silent fallback would hide the very thing
      * being tested. What actually won is `capabilities.backend`.
      */

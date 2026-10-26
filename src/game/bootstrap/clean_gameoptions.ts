@@ -2,6 +2,10 @@ import { getColor } from '../../color';
 import { cleanLayerNames } from '../../physics/layer_names';
 import { DEFAULT_GAME_OPTIONS, MAX_STEP_RATE, MIN_STEP_RATE } from "../../CONFIG";
 import type { TGameOptions } from "../types/t_game_options";
+import type { TRendererType } from "../../render/interface/t_renderer_capabilities";
+
+/** Every renderer a game can ask for. */
+const RENDERERS: readonly TRendererType[] = ['AUTO', 'WEBGPU', 'WEBGL2'];
 
 /**
  * Help to clean the game options and return a cleaned TGameOptions object with default values for missing properties.
@@ -14,7 +18,12 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
     const height = game_options.height || DEFAULT_GAME_OPTIONS.height;
     // `??` and not `||`: black written as a number is 0, and `||` turned it into the default.
     const background = getColor(game_options.background ?? DEFAULT_GAME_OPTIONS.background!);
-    const renderer = game_options.renderer || DEFAULT_GAME_OPTIONS.renderer;
+    // Read in capitals whatever way it is written: 'webgl2' is what a person means by 'WEBGL2'.
+    const asked: unknown = game_options.renderer;
+    const renderer = (typeof asked === 'string' && asked !== '' ? asked.toUpperCase() : DEFAULT_GAME_OPTIONS.renderer) as TRendererType;
+    if (!RENDERERS.includes(renderer)) {
+        throw new Error(`[NacatamalOn] createGame: renderer must be ${RENDERERS.map((name) => `'${name}'`).join(', ')}, got ${String(game_options.renderer)}.`);
+    }
     // `??` and not `||`: 0 is a seed like any other, and `||` turned it into a different run every time.
     const seed = game_options.seed ?? DEFAULT_GAME_OPTIONS.seed;
     const smooth = game_options.smooth ?? DEFAULT_GAME_OPTIONS.smooth;

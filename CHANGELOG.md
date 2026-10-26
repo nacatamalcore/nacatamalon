@@ -37,6 +37,13 @@ releases are in [changelog/](./changelog/), one file each.
   game says otherwise. A colour hook tells the two sides apart with `ctx.frontFacing`, and the shader
   composer with `composerFrontFacing()`. A model that keeps the usual side is drawn exactly as before.
 
+### Changed
+
+- **`createGame({ renderer })` is read in capitals whatever way it is written**: `'webgl2'` is
+  `'WEBGL2'` and `'webgpu'` is `'WEBGPU'`. A lowercase name used to stop the game with "Unknown
+  renderer requested". A name that is none of `'AUTO'`, `'WEBGPU'` or `'WEBGL2'` is refused at
+  `createGame`, saying the ones there are.
+
 ### Fixed
 
 - **Rewriting an odd number of 16 bit triangle points works on WebGPU.** Writing over a buffer sent
