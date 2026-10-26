@@ -226,6 +226,11 @@ export const drawMesh = (
         : null;
     // A shape with no detail run cannot feed a material's pipeline, which reads one: it is drawn
     // the built-in way instead.
+    // One still being compiled is not drawn yet: with the built-in shader it would show a frame of
+    // the wrong look, and the shader it is waiting for is not known to be good.
+    if (custom !== null && custom.pending && geometry.detailBuffer !== null) {
+        return false;
+    }
     const effect = custom !== null && !custom.failed && custom.pipeline !== null && geometry.detailBuffer !== null ? custom : null;
 
     // A see-through model takes the twin that writes no depth. The frame already put it after the

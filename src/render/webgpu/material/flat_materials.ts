@@ -1,4 +1,5 @@
 
+import { failWithLines } from './fail_with_lines';
 import { buildUniformLayout, writeUniformValues } from '../../shared/material_uniforms';
 import { FLAT_DEPTH } from '../frame/depth';
 import { ADDITIVE_BLEND, ALPHA_BLEND } from '../frame/blend';
@@ -57,6 +58,11 @@ type TCompiled = {
      * Once true, this material is drawn with the built-in shader and nothing is tried again.
      */
     failed: boolean;
+    /**
+     * Still being compiled and checked, apart from the frame. Until it is, what wears it is not
+     * drawn, as a sprite is not drawn until its sheet is there.
+     */
+    pending: boolean;
 };
 
 /**
@@ -115,15 +121,16 @@ export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) 
                 `[NacatamalOn] the material "${material.name ?? 'flat material'}" declares more parameters ` +
                 `than fit in ${FLAT_MATERIAL_STRIDE} bytes. It is drawing with the built-in shader instead.`,
             );
-            return { pipeline: null, layout, failed: true };
+            return { pipeline: null, layout, failed: true, pending: false };
         }
 
-        const entry: TCompiled = { pipeline: null, layout, failed: false };
+        const entry: TCompiled = { pipeline: null, layout, failed: false, pending: true };
         const fail = (reason: unknown): void => {
             if (entry.failed) {
                 return;
             }
             entry.failed = true;
+            entry.pending = false;
             entry.pipeline = null;
             console.warn(
                 `[NacatamalOn] the material "${material.name ?? 'flat material'}" did not compile. ` +
@@ -132,15 +139,18 @@ export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) 
             );
         };
 
+        // Caught here: what is wrong is said once below, in this engine's words and with its lines.
+        device.pushErrorScope('validation');
         const module = device.createShaderModule({
             label: `flat material ${material.name ?? material.id}`,
             code: kind.build(source, material.uniformSig ?? {}),
         });
+        void device.popErrorScope();
 
         // On this card a shader that will not compile is not an exception thrown here: it is
-        // reported later, twice over, and either report is enough to give up on the effect.
-        device.pushErrorScope('validation');
-        entry.pipeline = device.createRenderPipeline({
+        // reported later. So the pipeline is built and checked apart from the frame, and only used
+        // once the card says it is good: used before, a broken one takes the whole pass with it.
+        void device.createRenderPipelineAsync({
             label: `flat material pipeline ${material.name ?? material.id}`,
             layout: pipelineLayout,
             vertex: { module, entryPoint: 'vs', buffers: kind.vertexBuffers },
@@ -155,18 +165,13 @@ export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) 
             primitive: { topology: kind.topology },
             depthStencil: FLAT_DEPTH,
             multisample: { count: kind.samples },
-        });
-        void device.popErrorScope().then((error) => {
-            if (error !== null) {
-                fail(error.message);
+        }).then((made) => {
+            if (entry.failed) {
+                return;
             }
-        });
-        void module.getCompilationInfo().then((info) => {
-            const bad = info.messages.filter((message) => message.type === 'error');
-            if (bad.length > 0) {
-                fail(bad.map((message) => `${message.lineNum}: ${message.message}`).join('\n'));
-            }
-        });
+            entry.pipeline = made;
+            entry.pending = false;
+        }, (error: unknown) => failWithLines(module, error, fail));
 
         return entry;
     };

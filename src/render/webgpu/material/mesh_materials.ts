@@ -1,4 +1,5 @@
 import { buildMeshMaterialShader, buildMeshMaterialShadowShader, MESH_MATERIAL_GROUP, MESH_MATERIAL_JOINTS_BINDING } from './mesh_material_shader';
+import { failWithLines } from './fail_with_lines';
 import { buildUniformLayout, writeUniformValues } from '../../shared/material_uniforms';
 import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
@@ -28,6 +29,12 @@ type TCompiled = {
     transparentPipeline: GPURenderPipeline | null;
     layout: TUniformLayout;
     failed: boolean;
+    /**
+     * Still being compiled and checked, apart from the frame. Until it is, a model wearing it is not
+     * drawn: drawn with the built-in shader it would show a frame with the wrong look, and drawn with
+     * a pipeline that turns out to be broken it would take the whole pass down with it.
+     */
+    pending: boolean;
     /**
      * The maps the shader reads, in the order of their slots.
      */
@@ -139,22 +146,23 @@ export const createMeshMaterials = (
                 `[NacatamalOn] the material "${material.name ?? 'mesh material'}" declares more parameters ` +
                 `than fit in ${MESH_MATERIAL_STRIDE} bytes. It is drawing with the built-in shader instead.`,
             );
-            return { pipeline: null, transparentPipeline: null, layout, failed: true, mapNames };
+            return { pipeline: null, transparentPipeline: null, layout, failed: true, pending: false, mapNames };
         }
         if (mapNames.length > MAX_MATERIAL_MAPS) {
             console.warn(
                 `[NacatamalOn] the material "${material.name ?? 'mesh material'}" reads ${mapNames.length} maps ` +
                 `(${mapNames.join(', ')}) and a material has ${MAX_MATERIAL_MAPS}. It is drawing with the built-in shader instead.`,
             );
-            return { pipeline: null, transparentPipeline: null, layout, failed: true, mapNames };
+            return { pipeline: null, transparentPipeline: null, layout, failed: true, pending: false, mapNames };
         }
 
-        const entry: TCompiled = { pipeline: null, transparentPipeline: null, layout, failed: false, mapNames };
+        const entry: TCompiled = { pipeline: null, transparentPipeline: null, layout, failed: false, pending: true, mapNames };
         const fail = (reason: unknown): void => {
             if (entry.failed) {
                 return;
             }
             entry.failed = true;
+            entry.pending = false;
             entry.pipeline = null;
             entry.transparentPipeline = null;
             console.warn(
@@ -165,46 +173,29 @@ export const createMeshMaterials = (
         };
 
         const kind = skinned ? 'skinned mesh material' : 'mesh material';
+        // Caught here: what is wrong is said once below, in this engine's words and with its lines.
+        device.pushErrorScope('validation');
         const module = device.createShaderModule({
             label: `${kind} ${material.name ?? material.id}`,
             code: buildMeshMaterialShader(material.fragment, material.vertex, material.uniformSig ?? {}, mapNames, skinned, cull),
         });
+        void device.popErrorScope();
         const wiring = skinned ? skinnedPipelineLayout : pipelineLayout;
         // The detail run last, after the bones when there are any: slot 2 or 3 at draw time.
         const buffers = skinned ? [MESH_CORNERS, MESH_COLORS, MESH_BONES, MESH_DETAIL] : [MESH_CORNERS, MESH_COLORS, MESH_DETAIL];
 
-        device.pushErrorScope('validation');
-        entry.pipeline = device.createRenderPipeline(describeMeshPipeline(
-            `${kind} pipeline ${material.name ?? material.id}`,
-            module,
-            wiring,
-            buffers,
-            format,
-            samples,
-            true,
-            cull,
-        ));
-        entry.transparentPipeline = device.createRenderPipeline(describeMeshPipeline(
-            `see-through ${kind} pipeline ${material.name ?? material.id}`,
-            module,
-            wiring,
-            buffers,
-            format,
-            samples,
-            false,
-            cull,
-        ));
-        void device.popErrorScope().then((error) => {
-            if (error !== null) {
-                fail(error.message);
+        // Compiled and checked apart from the frame, and only used once the card says both are good.
+        void Promise.all([
+            device.createRenderPipelineAsync(describeMeshPipeline(`${kind} pipeline ${material.name ?? material.id}`, module, wiring, buffers, format, samples, true, cull)),
+            device.createRenderPipelineAsync(describeMeshPipeline(`see-through ${kind} pipeline ${material.name ?? material.id}`, module, wiring, buffers, format, samples, false, cull)),
+        ]).then(([solid, glass]) => {
+            if (entry.failed) {
+                return;
             }
-        });
-        void module.getCompilationInfo().then((info) => {
-            const bad = info.messages.filter((message) => message.type === 'error');
-            if (bad.length > 0) {
-                fail(bad.map((message) => `${message.lineNum}: ${message.message}`).join('\n'));
-            }
-        });
+            entry.pipeline = solid;
+            entry.transparentPipeline = glass;
+            entry.pending = false;
+        }, (error: unknown) => failWithLines(module, error, fail));
 
         return entry;
     };
@@ -245,12 +236,12 @@ export const createMeshMaterials = (
          * shadow binds in the same place. `null` when it did not compile: the model then casts its
          * file's shape, as it always did, and says so once.
          *
-         * Also `null` until the card has answered that it compiled, which it does a moment later:
+         * `'pending'` until the card has answered that it compiled, which it does a moment later:
          * a module that failed, used in the meantime, would throw the whole shadow pass away with
-         * it, every caster in the map and not just this one. So the first frame or two cast the
-         * file's shape.
+         * it, every caster in the map and not just this one. A model whose shadow is pending casts
+         * nothing, as a model whose look is pending is not drawn.
          */
-        shadow: (material: TDrawShader, skinned = false): { module: GPUShaderModule; layout: GPUBindGroupLayout; ready: boolean } | null => {
+        shadow: (material: TDrawShader, skinned = false): { module: GPUShaderModule; layout: GPUBindGroupLayout } | 'pending' | null => {
             if (material.vertex === null) {
                 return null;
             }
@@ -283,7 +274,7 @@ export const createMeshMaterials = (
                     }
                 });
             }
-            return held !== null && held.ready ? held : null;
+            return held === null ? null : held.ready ? held : 'pending';
         },
         /**
          * Writes this model's numbers into a slot of their own and gives back the group that binds its

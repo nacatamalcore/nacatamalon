@@ -127,6 +127,10 @@ export const drawTilemapLayer = (
     // A mask's shape is only its cells, so it is written without the layer's effect.
     const material = mask !== null ? null : layer.material ?? null;
     const compiled = material !== null && material.fragment !== null ? tilemaps.materials.get(material) : null;
+    // Not drawn while its effect is still being compiled, like a layer whose sheet is on its way.
+    if (compiled !== null && compiled.pending) {
+        return;
+    }
     const effect = compiled !== null && !compiled.failed && compiled.pipeline !== null ? compiled : null;
 
     gpuPass.setPipeline(mask ?? (effect !== null ? effect.pipeline! : tilemaps.pipeline));

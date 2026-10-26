@@ -1,4 +1,5 @@
 import { buildPostShader, POST_UNIFORMS_BINDING } from './post_shader';
+import { failWithLines } from '../material/fail_with_lines';
 import { buildUniformLayout, POST_ENGINE_FIELDS, writeUniformValues } from '../../shared/material_uniforms';
 import { createWebGPUDataTexture, createWebGPURenderTexture } from '../resources';
 import { toGpuTexture } from '../texture';
@@ -21,6 +22,11 @@ type TCompiled = {
     pipeline: GPURenderPipeline | null;
     layout: TUniformLayout;
     failed: boolean;
+    /**
+     * Still being compiled and checked, apart from the frame. Until it is, the frame is shown
+     * without it, as it is when it fails.
+     */
+    pending: boolean;
 };
 
 /**
@@ -183,37 +189,54 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
         }
     };
 
-    const build = (effect: Pick<TPostEffect, 'name' | 'id' | 'fragment' | 'uniformSig'>): TCompiled => {
+    /**
+     * `now` builds the pipeline at once, for the one shader known to be good (the identity below).
+     * Any other is compiled and checked apart from the frame and used once the card says it is
+     * good: this card reports a broken shader later rather than throwing here, and a broken
+     * pipeline used in the meantime throws away the whole frame, every frame.
+     */
+    const build = (effect: Pick<TPostEffect, 'name' | 'id' | 'fragment' | 'uniformSig'>, now = false): TCompiled => {
         const layout = buildUniformLayout(effect.uniformSig, POST_ENGINE_FIELDS);
         if (layout.floatCount > SLOT_FLOATS) {
             console.warn(
                 `[NacatamalOn] the effect "${effect.name ?? 'post'}" asks for more numbers than one ` +
                 'effect can hold. It is being skipped.',
             );
-            return { pipeline: null, layout, failed: true };
+            return { pipeline: null, layout, failed: true, pending: false };
         }
 
-        try {
-            const module = device.createShaderModule({
-                label: `post ${effect.name ?? effect.id}`,
-                code: buildPostShader(effect.fragment as string, effect.uniformSig),
-            });
-            const pipeline = device.createRenderPipeline({
-                label: `post ${effect.name ?? effect.id}`,
-                layout: pipelineLayout,
-                vertex: { module, entryPoint: 'vs' },
-                fragment: { module, entryPoint: 'fs', targets: [{ format }] },
-                primitive: { topology: 'triangle-list' },
-            });
-            return { pipeline, layout, failed: false };
-        } catch (error) {
+        // Caught here: what is wrong is said once below, in this engine's words and with its lines.
+        device.pushErrorScope('validation');
+        const module = device.createShaderModule({
+            label: `post ${effect.name ?? effect.id}`,
+            code: buildPostShader(effect.fragment as string, effect.uniformSig),
+        });
+        void device.popErrorScope();
+        const described: GPURenderPipelineDescriptor = {
+            label: `post ${effect.name ?? effect.id}`,
+            layout: pipelineLayout,
+            vertex: { module, entryPoint: 'vs' },
+            fragment: { module, entryPoint: 'fs', targets: [{ format }] },
+            primitive: { topology: 'triangle-list' },
+        };
+        if (now) {
+            return { pipeline: device.createRenderPipeline(described), layout, failed: false, pending: false };
+        }
+
+        const entry: TCompiled = { pipeline: null, layout, failed: false, pending: true };
+        void device.createRenderPipelineAsync(described).then((made) => {
+            entry.pipeline = made;
+            entry.pending = false;
+        }, (error: unknown) => failWithLines(module, error, (reason) => {
+            entry.failed = true;
+            entry.pending = false;
             console.warn(
                 `[NacatamalOn] the effect "${effect.name ?? 'post'}" did not compile. The frame is ` +
                 'shown unchanged.',
-                error,
+                reason,
             );
-            return { pipeline: null, layout, failed: true };
-        }
+        }));
+        return entry;
     };
 
     /**
@@ -230,7 +253,7 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
             name: 'identity',
             fragment: 'fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> { return color; }',
             uniformSig: {},
-        } as TPostEffect);
+        } as TPostEffect, true);
         return identity;
     };
 
@@ -249,7 +272,7 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
             entry = build({ name: effect.name, id: effect.id, fragment, uniformSig: effect.uniformSig });
             compiled.set(key, entry);
         }
-        return entry.failed ? identityFor() : entry;
+        return entry.failed || entry.pending ? identityFor() : entry;
     };
 
     const bindGroupFor = (source: GPUTexture, data: GPUTexture, input: GPUTexture, history: GPUTexture): GPUBindGroup => {

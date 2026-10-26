@@ -19,6 +19,15 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **A shader that does not compile no longer takes whole frames down on WebGPU.** This card says a
+  shader is broken a moment after it is made, and a pipeline used in that moment throws away every
+  draw of its pass: one bad material blanked the frame for the first frame or two, and one bad
+  screen effect (`usePostProcess`) did it every frame. A material's pipeline, a sprite's or a map's
+  effect, a screen effect and a material's shadow are now compiled and checked apart from the frame,
+  and used once the card says they are good. Until then what wears it is not drawn, as a sprite is
+  not drawn until its sheet is there, for a frame or so; a broken one falls back to the built-in
+  shader (the frame unchanged, for a screen effect) and says why once, with the shader's own lines.
+  WebGL2 already checked its shaders as they were made.
 - **A material whose `vertex` hook moves its corners casts the shape it moves them into.** The
   shadow map drew every model as its file or geometry made it, so a flag waved by its hook cast a
   flat sheet, and that flat ghost shadowed the cloth itself wherever the wave took it behind: a dark

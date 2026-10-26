@@ -101,26 +101,33 @@ export const createShadowPipeline = (device: GPUDevice) => {
     // fourth, so the two between are bound empty.
     const empty = device.createBindGroupLayout({ label: 'shadow nothing', entries: [] });
     const nothing = device.createBindGroup({ label: 'shadow nothing', layout: empty, entries: [] });
-    const hooked = new Map<GPUShaderModule, Map<string, GPURenderPipeline>>();
-    const hookedPipeline = (module: GPUShaderModule, materialLayout: GPUBindGroupLayout, skinned: boolean, cull: GPUCullMode): GPURenderPipeline => {
+    // Each compiled and checked apart from the frame, like the material's own: `'pending'` until
+    // then, `null` if the card refused it.
+    const hooked = new Map<GPUShaderModule, Map<string, GPURenderPipeline | 'pending' | null>>();
+    const hookedPipeline = (module: GPUShaderModule, materialLayout: GPUBindGroupLayout, skinned: boolean, cull: GPUCullMode): GPURenderPipeline | 'pending' | null => {
         let byCull = hooked.get(module);
         if (byCull === undefined) {
             byCull = new Map();
             hooked.set(module, byCull);
         }
-        let made = byCull.get(cull);
-        if (made === undefined) {
-            made = device.createRenderPipeline(describe(
-                `material shadow, cull ${cull}`,
-                module,
-                device.createPipelineLayout({ bindGroupLayouts: [uniformsLayout, empty, empty, materialLayout] }),
-                // The runs a material's pipeline reads, in its order: the bones before the detail.
-                skinned ? [MESH_CORNERS, MESH_COLORS, MESH_BONES, MESH_DETAIL] : [MESH_CORNERS, MESH_COLORS, MESH_DETAIL],
-                cull,
-            ));
-            byCull.set(cull, made);
+        const held = byCull.get(cull);
+        if (held !== undefined) {
+            return held;
         }
-        return made;
+        const cache = byCull;
+        cache.set(cull, 'pending');
+        void device.createRenderPipelineAsync(describe(
+            `material shadow, cull ${cull}`,
+            module,
+            device.createPipelineLayout({ bindGroupLayouts: [uniformsLayout, empty, empty, materialLayout] }),
+            // The runs a material's pipeline reads, in its order: the bones before the detail.
+            skinned ? [MESH_CORNERS, MESH_COLORS, MESH_BONES, MESH_DETAIL] : [MESH_CORNERS, MESH_COLORS, MESH_DETAIL],
+            cull,
+        )).then((made) => { cache.set(cull, made); }, (error: unknown) => {
+            cache.set(cull, null);
+            console.warn('[NacatamalOn] a material\'s shadow could not be built, so it casts the shape of its file.', error);
+        });
+        return 'pending';
     };
 
     let capacity = INITIAL_CASTERS;
@@ -202,9 +209,17 @@ export const createShadowPipeline = (device: GPUDevice) => {
             const effect = surface.vertex !== null && geometry.colorBuffer !== null && geometry.detailBuffer !== null
                 ? meshes.materials.get(surface, bends, cull)
                 : null;
+            // A model not drawn yet, while its material compiles, casts nothing yet either.
+            if (effect !== null && effect.pending) {
+                return false;
+            }
             const shadow = effect !== null && !effect.failed ? meshes.materials.shadow(surface, bends) : null;
-            if (shadow !== null) {
-                pass.setPipeline(hookedPipeline(shadow.module, shadow.layout, bends, cull));
+            const hookedOne = shadow !== null && shadow !== 'pending' ? hookedPipeline(shadow.module, shadow.layout, bends, cull) : shadow;
+            if (hookedOne === 'pending') {
+                return false;
+            }
+            if (shadow !== null && shadow !== 'pending' && hookedOne !== null) {
+                pass.setPipeline(hookedOne);
                 pass.setBindGroup(0, groupFor(slot));
                 pass.setBindGroup(1, nothing);
                 pass.setBindGroup(2, nothing);

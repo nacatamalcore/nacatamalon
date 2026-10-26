@@ -50,6 +50,11 @@ export const drawSpriteRun = (
     const materials = run.distanceField ? sprites.distanceFieldMaterials : sprites.materials;
     if (material !== null && material.fragment !== null) {
         const compiled = materials.get(material, run.additive);
+        // Not drawn while its effect is still being compiled, as a sprite is not drawn until its
+        // sheet is there. Nothing was set, but the next plain batch is told to set its state anyway.
+        if (compiled.pending) {
+            return false;
+        }
         if (!compiled.failed && compiled.pipeline !== null) {
             const parameters = materials.bind(
                 compiled,
