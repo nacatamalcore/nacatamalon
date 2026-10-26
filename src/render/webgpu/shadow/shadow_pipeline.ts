@@ -5,7 +5,7 @@ import { SHADOW_FORMAT } from './shadow_map';
 import { SHADOW_CUT_SKINNED_WGSL, SHADOW_CUT_WGSL, SHADOW_SKINNED_WGSL, SHADOW_WGSL } from './shadow_shader';
 import { textureBindGroup } from '../mesh/draw_meshes';
 import { toGpuBuffer } from '../resources';
-import type { TDrawMesh } from '../../interface';
+import type { TDrawMaterial, TDrawMesh } from '../../interface';
 import type { TMeshPipeline } from '../mesh/types/t_mesh_pipeline';
 
 /**
@@ -29,6 +29,16 @@ const SKIN_CORNERS: GPUVertexBufferLayout = {
         { shaderLocation: 4, offset: 16, format: 'float32x4' },
     ],
 };
+
+/**
+ * Whether a caster may be drawn through its material's own shader, and so take one of the
+ * materials' slots in the shadow pass: a hook that moves its corners, or a colour hook that cuts it
+ * out. The frame counts these before the pass, to make the room and send the pass on its own.
+ *
+ * @internal
+ */
+export const castsThroughHook = (material: TDrawMaterial): boolean =>
+    material.vertex !== null || ((material.alphaCutoff ?? 0) > 0 && material.fragment !== null);
 
 /**
  * Everything the shadow pass draws with: two pipelines, and a slot per caster.

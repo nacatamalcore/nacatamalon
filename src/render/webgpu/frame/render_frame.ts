@@ -12,7 +12,7 @@ import { countPostSteps } from '../../shared/post_steps';
 import { depthViewFor, multisampledViewFor, releaseUnusedDepths } from './depth';
 import { canvasContextFor } from './canvas_context';
 import { createShadowMap } from '../shadow/shadow_map';
-import { createShadowPipeline } from '../shadow/shadow_pipeline';
+import { castsThroughHook, createShadowPipeline } from '../shadow/shadow_pipeline';
 import { computeModelMatrix } from '../../shared/compute_mvp_3d';
 import { findShadowSource, lightSpaceMatrix, reportCastersOutside } from '../../shared/light_space';
 import { cameraSpacesFor, fillCameraSpace, newCameraSpace } from '../../shared/compute_mvp_3d';
@@ -102,9 +102,10 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         lightSpaceMatrix(source.light, source.camera, lightMatrix);
         reportCastersOutside(source.casters, source.light, lightMatrix);
         gpu.shadowPipeline.beginFrame(source.casters.length);
-        // A material whose hook moves its corners casts with its own numbers, written into the slots
-        // the passes below write theirs into: so the shadow is sent on its own before they do.
-        const hooked = source.casters.reduce((n, caster) => n + (caster.material.vertex !== null ? 1 : 0), 0);
+        // A material whose hook moves its corners, or whose colour hook cuts it out, casts with its own
+        // numbers, written into the slots the passes below write theirs into: so the shadow is sent on
+        // its own before they do.
+        const hooked = source.casters.reduce((n, caster) => n + (castsThroughHook(caster.material) ? 1 : 0), 0);
         if (hooked > 0) {
             gpu.meshes.materials.beginFrame(hooked);
         }

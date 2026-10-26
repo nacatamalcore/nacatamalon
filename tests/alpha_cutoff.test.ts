@@ -17,6 +17,7 @@ import { skinnedShaderFor } from '../src/render/webgpu/mesh/skinned_shader';
 import { buildMeshMaterialShader } from '../src/render/webgpu/material/mesh_material_shader';
 import { meshFragmentGlsl } from '../src/render/webgl2/mesh/mesh_shader';
 import { buildMeshMaterialShaderGlsl } from '../src/render/webgl2/material/mesh_material_shader';
+import { castsThroughHook } from '../src/render/webgpu/shadow/shadow_pipeline';
 import { SHADOW_CUT_SKINNED_WGSL, SHADOW_CUT_WGSL, SHADOW_WGSL } from '../src/render/webgpu/shadow/shadow_shader';
 import { SHADOW_CUT_FRAGMENT_GLSL, SHADOW_CUT_SKINNED_VERTEX_GLSL, SHADOW_CUT_VERTEX_GLSL } from '../src/render/webgl2/shadow/shadow_shader';
 import { createTestGame, startTestScene } from './helpers/test_game';
@@ -224,5 +225,17 @@ describe('the cutoff on the card', () => {
         expect(SHADOW_CUT_FRAGMENT_GLSL).toContain('texture(uTexture, vUv).a * uCut.y * vAlpha < uCut.x');
         expect(SHADOW_CUT_VERTEX_GLSL).toContain('vUv = aUv;');
         expect(SHADOW_CUT_SKINNED_VERTEX_GLSL).toContain('aWeights.w * boneMatrix(int(aBones.w))');
+    });
+});
+
+describe('the casters that take a material\'s slot in the shadow', () => {
+    const material = (fields: Record<string, unknown>) => ({ vertex: null, fragment: null, ...fields }) as never;
+
+    it('counts one cut out by its colour hook alone, as well as one whose hook moves it', () => {
+        expect(castsThroughHook(material({ vertex: 'fn vertex() {}' }))).toBe(true);
+        expect(castsThroughHook(material({ fragment: 'fn effect() {}', alphaCutoff: 0.5 }))).toBe(true);
+        // Not cut, its colour hook is not run in the shadow.
+        expect(castsThroughHook(material({ fragment: 'fn effect() {}' }))).toBe(false);
+        expect(castsThroughHook(material({ alphaCutoff: 0.5 }))).toBe(false);
     });
 });
