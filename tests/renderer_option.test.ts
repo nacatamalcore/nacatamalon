@@ -17,4 +17,10 @@ describe('the renderer option', () => {
     it('refuses a name there is not, saying the ones there are', () => {
         expect(() => cleanGameOptions({ width: 320, height: 240, renderer: 'opengl' as TRendererType })).toThrow("renderer must be 'AUTO', 'WEBGPU', 'WEBGL2', got opengl");
     });
+
+    it('refuses what is not a name at all, and an empty one', () => {
+        for (const asked of [true, 1, '', {}]) {
+            expect(() => cleanGameOptions({ width: 320, height: 240, renderer: asked as never })).toThrow('renderer must be');
+        }
+    });
 });

@@ -18,9 +18,11 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
     const height = game_options.height || DEFAULT_GAME_OPTIONS.height;
     // `??` and not `||`: black written as a number is 0, and `||` turned it into the default.
     const background = getColor(game_options.background ?? DEFAULT_GAME_OPTIONS.background!);
-    // Read in capitals whatever way it is written: 'webgl2' is what a person means by 'WEBGL2'.
-    const asked: unknown = game_options.renderer;
-    const renderer = (typeof asked === 'string' && asked !== '' ? asked.toUpperCase() : DEFAULT_GAME_OPTIONS.renderer) as TRendererType;
+    // Read in capitals whatever way it is written: 'webgl2' is what a person means by 'WEBGL2'. Not
+    // said is AUTO; anything else that is not one of the names is refused, a `true` or an empty
+    // name as much as a misspelt one, rather than drawn with whichever card there is.
+    const asked: unknown = game_options.renderer ?? DEFAULT_GAME_OPTIONS.renderer;
+    const renderer = (typeof asked === 'string' ? asked.toUpperCase() : asked) as TRendererType;
     if (!RENDERERS.includes(renderer)) {
         throw new Error(`[NacatamalOn] createGame: renderer must be ${RENDERERS.map((name) => `'${name}'`).join(', ')}, got ${String(game_options.renderer)}.`);
     }
