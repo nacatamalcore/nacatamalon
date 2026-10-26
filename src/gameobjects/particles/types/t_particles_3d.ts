@@ -21,7 +21,8 @@ export type TParticles3d = Omit<TParticles, 'type' | 'transform' | 'worldTransfo
      */
     transform: TTransform3d;
     /**
-     * Where it ended up once everything above it has moved it. Set by the engine each frame; never authored.
+     * Where it ended up once everything above it has moved it, or where it is when nothing does. Set
+     * by the engine each frame it is drawn; `undefined` before its first. Never authored.
      */
     worldMatrix?: Float32Array;
 };

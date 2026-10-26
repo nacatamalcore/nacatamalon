@@ -33,7 +33,9 @@ export type TMesh = {
      */
     transform: TTransform3d;
     /**
-     * Where it ends up once everything above it has moved it. Set each frame; never authored.
+     * Where it ends up once everything above it has moved it, or where it is when nothing does. Set
+     * each frame it is drawn, so it is there from the first `useUpdate` after it is in a scene;
+     * `undefined` before that. Never authored.
      */
     worldMatrix?: Float32Array;
     /**

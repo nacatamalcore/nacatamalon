@@ -58,17 +58,25 @@ export const fromEuler = (x: number, y: number, z: number): TQuat =>
  * The natural way to author "spin this much around this direction": a barrel roll is
  * a rotation about the ship's forward axis, a turn is one about its up axis.
  *
- * @param angle - Rotation about the axis, in radians.
- * @param ax - The axis to turn about. Any length.
+ * @param ax - The axis to turn about. Any length: it is made a unit first, and an axis of no length
+ *   is no turn at all.
  * @param ay - The axis to turn about.
  * @param az - The axis to turn about.
+ * @param angle - Rotation about the axis, in radians.
  * @returns The turn as a quaternion.
  * @category Math
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const fromAxisAngle = (ax: number, ay: number, az: number, angle: number): TQuat =>
-    toTuple(quat.fromAxisAngle([ax, ay, az], angle));
+export const fromAxisAngle = (ax: number, ay: number, az: number, angle: number): TQuat => {
+    // Made a unit here: the library takes the axis as one, and one a little short of it gives back
+    // a quaternion that turns by less than it was asked, which only shows at large angles.
+    const length = Math.hypot(ax, ay, az);
+    if (length === 0) {
+        return [0, 0, 0, 1];
+    }
+    return toTuple(quat.fromAxisAngle([ax / length, ay / length, az / length], angle));
+};
 
 /**
  * Composes two rotations: the result applies `b` first, then `a` (same convention as

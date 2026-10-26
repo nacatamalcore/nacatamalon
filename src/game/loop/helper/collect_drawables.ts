@@ -74,7 +74,9 @@ const worldOfBox = (parent: TWorld, box: TBox, depth: number): TWorld => {
 };
 
 /**
- * Writes where a drawable ends up, or takes that answer away again when nothing moves it any more.
+ * Writes where a drawable ends up. A flat one has the answer taken away again when nothing moves it
+ * any more; a model, an emitter in depth or a set of lines always has one, its own placement when
+ * nothing above moves it.
  *
  * The answer is kept on the drawable and rewritten in place, so a scene that never moves a box pays
  * one comparison per drawable and a scene that does pays no memory after its first frame.
@@ -83,18 +85,20 @@ const placeDrawable = (drawable: TDrawable, world: TWorld): void => {
     // An emitter in depth, and a set of lines, are placed like a model: a turn in three dimensions
     // is only a matrix.
     if (drawable.type === 'mesh' || drawable.type === 'particles-3d' || drawable.type === 'lines') {
-        if (world === null) {
-            // Cleared rather than left behind, for the reason below.
-            drawable.worldMatrix = undefined;
-            return;
-        }
         // Written into the one it already has, which is what the line above this function has
         // always claimed and what it now does: a scene that moves a box used to leave two matrices
         // behind per model per frame, and a collection pause reads as a stutter rather than as
         // slowness.
         const into = drawable.worldMatrix ?? mat.create();
-        computeModelMatrix(drawable.transform, localScratch);
-        mat.multiply(world.matrix, localScratch, into);
+        if (world === null) {
+            // Its own placement, and written all the same: a game reads this to know where a model
+            // is, and the renderer would work it out from the placement anyway. Nothing above it
+            // moves it, so it is never left behind where it used to be.
+            computeModelMatrix(drawable.transform, into);
+        } else {
+            computeModelMatrix(drawable.transform, localScratch);
+            mat.multiply(world.matrix, localScratch, into);
+        }
         drawable.worldMatrix = into;
         return;
     }

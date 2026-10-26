@@ -92,6 +92,16 @@ describe('a turn written as a quaternion', () => {
 
         close(turn(rotationMatrix(at({ quaternion: half })), 0, 0, 1), [Math.SQRT1_2, 0, Math.SQRT1_2]);
     });
+
+    it('turns by the whole angle about an axis of any length, which only showed at large angles', () => {
+        const short = quat.fromAxisAngle(0, 0, 0.669, (42 * Math.PI) / 180);
+        expect(Math.hypot(...short)).toBeCloseTo(1, 6);
+        const tilted = quat.rotateVec3(short, { x: 1, y: 0, z: 0 });
+        expect((Math.atan2(tilted.y, tilted.x) * 180) / Math.PI).toBeCloseTo(42, 4);
+
+        expect(quat.fromAxisAngle(0, 5, 0, 1)).toEqual(quat.fromAxisAngle(0, 1, 0, 1));
+        expect(quat.fromAxisAngle(0, 0, 0, 1)).toEqual([0, 0, 0, 1]);
+    });
 });
 
 describe('a box turned by a quaternion', () => {
@@ -126,5 +136,31 @@ describe('a box turned by a quaternion', () => {
         // on top of the two the box itself is out by.
         expect(byQuat[12]).toBeCloseTo(6);
         expect(byQuat[14]).toBeCloseTo(0);
+    });
+});
+
+describe('where a model in the scene itself ends up', () => {
+    it('is written for a model no box moves, as for one inside a box that does', () => {
+        const { store } = createTestGame();
+        let mesh: ReturnType<typeof createMesh> | null = null;
+        startTestScene(store, 'Level', () => {
+            mesh = createMesh({ geometry: useCubeGeometry(), transform: { x: 3, z: -2, quaternion: quat.fromAxisAngle(0, 1, 0, Math.PI / 2) } });
+            return createScene();
+        });
+
+        const ctx: TFrameContext = { passes: [{}], time: 0, progress: 0, phase: 0 };
+        fillFrameContext(store, ctx);
+        const world = mesh!.worldMatrix;
+        expect(world).toBeDefined();
+        const own = computeModelMatrix(mesh!.transform);
+        for (let i = 0; i < 16; i++) {
+            expect(world![i]).toBeCloseTo(own[i]);
+        }
+
+        // Kept up with as it moves, in the same matrix.
+        mesh!.transform.x = 7;
+        fillFrameContext(store, ctx);
+        expect(mesh!.worldMatrix).toBe(world);
+        expect(world![12]).toBeCloseTo(7);
     });
 });

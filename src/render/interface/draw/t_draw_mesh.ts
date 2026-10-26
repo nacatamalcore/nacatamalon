@@ -79,7 +79,8 @@ export type TDrawMesh = {
         scaleX: number; scaleY: number; scaleZ: number;
     };
     /**
-     * Where it ends up once something above it did, already as a matrix.
+     * Where it ends up, already as a matrix: written by the frame for everything it collects, and
+     * worked out from `transform` when it is missing, as for a model drawn without a frame.
      */
     readonly worldMatrix?: Float32Array;
     /**

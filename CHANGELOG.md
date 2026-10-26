@@ -3,6 +3,20 @@
 What changed in the current release of `nacatamalon`, and what is waiting for the next one. Earlier
 releases are in [changelog/](./changelog/), one file each.
 
+## Unreleased
+
+### Fixed
+
+- **`quatFromAxisAngle` turns by the whole angle about an axis of any length**, as its docs always
+  said. The axis was taken as a unit, so one a little short of it gave a quaternion that was not a
+  unit and turned by less than asked: a plane meant to lean 42° about `(0, 0, 0.669)` leaned 26°.
+  It is made a unit first now, and an axis of no length is no turn at all. Its docs also listed
+  `angle` first; it is the last argument, as it always was.
+- **`worldMatrix` on a mesh, an emitter in depth or a set of lines is there every frame**, as its
+  type said, also when no box above moves it. It was left `undefined` then, so a `useUpdate` that
+  read where a model in the scene itself was found nothing. It is its own placement as a matrix in
+  that case, written into the same one each frame.
+
 ## 0.2.8 — 2026-10-25
 
 ### Added

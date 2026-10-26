@@ -29,7 +29,8 @@ export type TLines = {
      */
     transform: TTransform3d;
     /**
-     * Where it ends up once everything above it has moved it. Set each frame; never authored.
+     * Where it ends up once everything above it has moved it, or where it is when nothing does. Set
+     * each frame it is drawn; `undefined` before its first. Never authored.
      */
     worldMatrix?: Float32Array;
     /**
