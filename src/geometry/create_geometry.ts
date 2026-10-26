@@ -44,9 +44,11 @@ export type TGeometryData = {
      */
     uvs?: ArrayLike<number> | TUvProjection;
     /**
-     * With `uvs` worked out by name, how many times the picture is laid every unit of the world,
-     * rather than stretched once over the shape: `1` a picture each unit, `0.25` one every four. A
-     * wall twice as long then has twice the bricks, and shapes side by side carry on each other's.
+     * With `uvs` worked out by name, how many times the picture is laid every unit the corners are
+     * given in, rather than stretched once over the shape: `1` a picture each unit, `0.25` one every
+     * four. A wall twice as long then has twice the bricks. It reads the corners as given, before the
+     * object's `transform`: a shape scaled up gets bigger bricks, and two shapes carry on each
+     * other's only when their corners are given where they stand.
      * Round an axis (`'cylinder'`, `'sphere'`) it is rounded to whole times, so the seam meets itself.
      */
     uvScale?: number;
@@ -224,7 +226,7 @@ const release = (geometry: TGeometry): void => {
  * `normals`, the facings are worked out from the triangles, smooth, or one per triangle with `flat`;
  * without `uvs`, every corner reads the picture's top left; without `colors`, white. `uvs` can also
  * be worked out by name, `'box'` for a rock or a building, `'planar'` for a terrain, `'cylinder'`
- * or `'sphere'`, with `uvScale` to lay the picture by the world's units rather than once over it.
+ * or `'sphere'`, with `uvScale` to lay the picture by the units the corners are given in rather than once over it.
  *
  * **It belongs to the object that made it.** Unlike a shape hook's, which every object asking for the
  * same size shares, this one is the object's own: it goes when the object goes, and a mesh elsewhere

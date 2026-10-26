@@ -88,9 +88,9 @@ const mendRound = (u: [number, number, number], onAxis: [boolean, boolean, boole
  * two faces, the seam round a cylinder.
  *
  * Without `scale`, the picture is stretched once over the box round the shape (once round, for
- * `'cylinder'` and `'sphere'`). With it, it is laid `scale` times every unit of the world, from the
- * world's own origin, so two shapes side by side carry on each other's bricks, and a shape that moves
- * its corners keeps its sand where it was. Round an axis it is rounded to whole times, so the seam
+ * `'cylinder'` and `'sphere'`). With it, it is laid `scale` times every unit the corners are given
+ * in, from their origin, so a shape that moves its corners keeps its sand where it was. These are the
+ * corners as given, before any object places them. Round an axis it is rounded to whole times, so the seam
  * meets itself.
  *
  * @returns A picture place per corner of the shape now (`u, v`), which corner it was before, and the
@@ -127,7 +127,7 @@ export const projectUvs = (
     const onAxisWithin = Math.max(reach, 1e-9) * 1e-6;
 
     const at = (corner: number, k: number): number => positions[corner * 3 + k];
-    // Along an axis of the world: from the box's near side, stretched over it, or in world units.
+    // Along an axis of the shape: from the box's near side, stretched over it, or in its own units.
     const along = (value: number, k: number): number => (fit ? (value - min[k]) / size[k] : value * s);
     const against = (value: number, k: number): number => (fit ? (max[k] - value) / size[k] : -value * s);
 

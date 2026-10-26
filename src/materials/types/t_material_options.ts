@@ -45,8 +45,8 @@ export type TMaterialShaderOptions = {
      * corner ends up. 3D only: a sprite is a flat square and has nothing to move.
      *
      * It can also hand four numbers on to the fragment hook by writing them into `carry`
-     * (`carry = vec4<f32>(lift, 0.0, 0.0, 0.0);`, the same in GLSL), which reads them as
-     * `ctx.carry`, smeared across the triangle: how high a wave lifted a corner, for foam on its
+     * (`carry = vec4<f32>(lift, 0.0, 0.0, 0.0);`, `carry = vec4(lift, 0.0, 0.0, 0.0);` in GLSL),
+     * which reads them as `ctx.carry`, smeared across the triangle: how high a wave lifted a corner, for foam on its
      * crests; a light of its own worked out at the corners, the look of the era; `pos` itself, where
      * the corner is in the model's own space, for bands or a fill line that stay on the model as it
      * moves and turns.

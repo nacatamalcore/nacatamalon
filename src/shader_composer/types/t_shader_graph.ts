@@ -4,10 +4,10 @@ import type { TGraphTarget } from './t_shader_graph_doc';
 import type { TLook } from '../surface/types';
 
 /**
- * What `compileShader` is handed: the family the shader is for, and up to two results.
+ * What `compileShader` is handed: the family the shader is for, and up to three results.
  *
  * `color` is what the colour hook returns and `position` is where the vertex hook moves a corner
- * to (models only), and `carry` what the vertex hook hands on to the colour hook. Leave one out and
+ * to (models only), and `carry` is what the vertex hook hands on to the colour hook. Leave one out and
  * that stage keeps the engine's own.
  *
  * The family is kept in the type, so what comes out is known to be a sprite's or a model's.

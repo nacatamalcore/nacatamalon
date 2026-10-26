@@ -104,22 +104,13 @@ export const writeMeshLights = (
 };
 
 /**
- * Draws one model.
- *
- * Depth and the throwing away of back faces are switched on around the draw and off again after,
- * because everything else in this backend is drawn without them and a leftover setting would show
- * up somewhere else entirely.
- *
- * @internal
- * @since 1.0.0
- * @author Francisco Pereira Alvarado
- */
-/**
  * A material's extra maps, on their own units, in the order its shader reads them. A map the
  * material does not carry, or one still loading, reads as white and the model is drawn anyway. The
  * shadow pass binds them the same way, for a shadow cut by what a hook reads of them.
  *
  * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
  */
 export const bindMaterialMaps = (gl: WebGL2RenderingContext, meshes: TMeshPipeline, surface: TDrawMesh['material'], mapNames: readonly string[]): void => {
     MESH_MAP_UNITS.forEach((unit, i) => {
@@ -137,6 +128,17 @@ export const bindMaterialMaps = (gl: WebGL2RenderingContext, meshes: TMeshPipeli
     });
 };
 
+/**
+ * Draws one model.
+ *
+ * Depth and the throwing away of back faces are switched on around the draw and off again after,
+ * because everything else in this backend is drawn without them and a leftover setting would show
+ * up somewhere else entirely.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
 export const drawMesh = (
     gl: WebGL2RenderingContext,
     meshes: TMeshPipeline,
