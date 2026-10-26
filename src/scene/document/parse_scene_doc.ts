@@ -157,6 +157,10 @@ const parseMeshMaterial = (value: unknown): TMeshMaterialDoc => {
         ...(raw.affine === true ? { affine: true } : {}),
         // Written only when asked for; anything unknown draws as the default.
         ...(raw.cull === 'back' || raw.cull === 'front' || raw.cull === 'none' ? { cull: raw.cull } : {}),
+        // The same: a number from 0 to 1, or nothing cut.
+        ...(typeof raw.alphaCutoff === 'number' && Number.isFinite(raw.alphaCutoff) && raw.alphaCutoff >= 0 && raw.alphaCutoff <= 1
+            ? { alphaCutoff: raw.alphaCutoff }
+            : {}),
         ...parseLooks(raw.lighting, raw.steps),
     };
 };

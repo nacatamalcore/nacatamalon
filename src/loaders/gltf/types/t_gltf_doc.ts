@@ -140,6 +140,10 @@ export type TGltfMaterial = {
      */
     alphaMode?: 'OPAQUE' | 'MASK' | 'BLEND';
     /**
+     * With `alphaMode: 'MASK'`, the alpha below which a pixel is cut out. Absent is `0.5`.
+     */
+    alphaCutoff?: number;
+    /**
      * Whether both sides of its triangles are seen. Absent is `false`: only the front.
      */
     doubleSided?: boolean;

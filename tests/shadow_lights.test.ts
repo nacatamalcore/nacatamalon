@@ -163,3 +163,20 @@ describe('what a light hook accepts', () => {
         expect(collectLighting(root).lights).toHaveLength(3);
     });
 });
+
+describe('how far the shadow test is pushed off a surface', () => {
+    it('moves the point towards the casting light in the world, on both cards, rather than off the depth', async () => {
+        const { MESH_SHADER_TYPES } = await import('../src/render/webgpu/mesh/mesh_shader');
+        const webgl = await import('../src/render/webgl2/mesh/mesh_shader');
+        const wgsl = MESH_SHADER_TYPES + (await import('../src/render/webgpu/mesh/mesh_shader')).MESH_SHADER;
+        expect(wgsl).toContain('return lights.shadowMatrix * vec4<f32>(worldPos + toward * lights.shadowParams.x, 1.0);');
+        // A sun's vector is the way towards it, a torch's where it is.
+        expect(wgsl).toContain('select(normalize(caster.xyz - worldPos), normalize(caster.xyz), caster.w < 0.5)');
+        expect(wgsl).not.toContain('proj.z - lights.shadowParams.x');
+        for (const glsl of [webgl.MESH_VERTEX_GLSL, webgl.MESH_FRAGMENT_HEAD_GLSL]) {
+            expect(glsl).toContain('return lights.shadowMatrix * vec4(worldPos + toward * lights.shadowParams.x, 1.0);');
+            expect(glsl).not.toContain('proj.z - lights.shadowParams.x');
+        }
+        expect(webgl.MESH_VERTEX_GLSL).toContain('vShadowCoord = shadowCoordOf(worldPos);');
+    });
+});

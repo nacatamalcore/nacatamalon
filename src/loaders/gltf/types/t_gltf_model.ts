@@ -50,6 +50,12 @@ export type TGltfPart = {
      */
     doubleSided: boolean;
     /**
+     * The alpha below which its picture is cut out, when the file says it is (`alphaMode: 'MASK'`):
+     * a leaf, a fence. Drawn with that `alphaCutoff` unless the game says otherwise; `null` when the
+     * file cuts nothing.
+     */
+    alphaCutoff: number | null;
+    /**
      * What its picture does past its edge, as the file says: repeating, unless it says otherwise.
      */
     wrap: { u: TTextureWrap; v: TTextureWrap };

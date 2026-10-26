@@ -19,6 +19,18 @@ type TCompiled = {
 };
 
 /**
+ * A material's shadow program, and where its numbers go: the light's matrix, the model's, how it is
+ * cut (only in one that cuts) and the maps it reads, in the order their units are bound.
+ */
+type TMaterialShadow = {
+    program: WebGLProgram;
+    lightViewProj: WebGLUniformLocation | null;
+    model: WebGLUniformLocation | null;
+    cut: WebGLUniformLocation | null;
+    mapNames: string[];
+};
+
+/**
  * Every model effect this game has compiled on this card, and the numbers they are drawn with.
  *
  * The same shape as the sprites', and the same two asymmetries with the other card: kept by source
@@ -110,43 +122,60 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
     };
 
     /**
-     * The shadows of materials that move their corners, by the same key as the effects: the program
+     * The shadows of materials that move their corners or are cut out of their pictures, by the same
+     * key as the effects and whether they cut: the program
      * once built, or `null` once it has failed, so a hook that cannot cast is drawn flat instead.
      */
-    const shadows = new Map<string, { program: WebGLProgram; lightViewProj: WebGLUniformLocation | null; model: WebGLUniformLocation | null } | null>();
+    const shadows = new Map<string, TMaterialShadow | null>();
 
     return {
         /**
          * The shadow of a material with a corner hook: the hook moving the corners as it does when
-         * the model is drawn, seen from the light. `null` when it did not compile: the model then
+         * the model is drawn, seen from the light. With `cuts`, also one with only a colour hook:
+         * the pixels its picture and its hook leave out left out. `null` when it did not compile: the model then
          * casts its file's shape, as it always did, and says so once.
          */
-        shadow: (material: TDrawShader, skinned = false): { program: WebGLProgram; lightViewProj: WebGLUniformLocation | null; model: WebGLUniformLocation | null } | null => {
-            if (material.vertexGlsl === null) {
+        shadow: (material: TDrawShader, skinned = false, cuts = false): TMaterialShadow | null => {
+            if (material.vertexGlsl === null && !(cuts && material.fragmentGlsl !== null)) {
                 return null;
             }
-            const key = `${skinned ? 'skinned ' : ''}${JSON.stringify(material.uniformSig ?? {})} ${material.fragmentGlsl ?? ''} ${material.vertexGlsl}`;
+            const key = `${skinned ? 'skinned ' : ''}${cuts ? 'cut ' : ''}${JSON.stringify(material.uniformSig ?? {})} ${material.fragmentGlsl ?? ''} ${material.vertexGlsl ?? ''}`;
             let held = shadows.get(key);
             if (held === undefined) {
                 try {
-                    const sources = buildMeshMaterialShadowShaderGlsl(material.vertexGlsl, material.uniformSig ?? {}, skinned);
-                    const program = compileProgram(gl, sources.vertex, sources.fragment, `${skinned ? 'skinned ' : ''}mesh material shadow ${material.name ?? material.id}`);
+                    const mapNames = mapNamesOf(material.fragmentGlsl);
+                    const cut = cuts ? { fragment: material.fragmentGlsl, mapNames } : null;
+                    const sources = buildMeshMaterialShadowShaderGlsl(material.vertexGlsl, material.uniformSig ?? {}, skinned, cut);
+                    const program = compileProgram(gl, sources.vertex, sources.fragment, `${skinned ? 'skinned ' : ''}${cuts ? 'cut ' : ''}mesh material shadow ${material.name ?? material.id}`);
                     // Only if the hook reads its knobs: asking for a block the card left out is an
                     // error of its own.
                     const knobs = gl.getUniformBlockIndex(program, 'MaterialUniforms');
                     if (knobs !== gl.INVALID_INDEX) {
                         gl.uniformBlockBinding(program, knobs, MATERIAL_UNIFORMS_BINDING);
                     }
+                    gl.useProgram(program);
                     if (skinned) {
-                        gl.useProgram(program);
                         gl.uniform1i(gl.getUniformLocation(program, 'uJoints'), MESH_JOINTS_UNIT);
-                        gl.useProgram(null);
                     }
-                    held = { program, lightViewProj: gl.getUniformLocation(program, 'uLightViewProj'), model: gl.getUniformLocation(program, 'uModel') };
+                    if (cuts) {
+                        // The picture and the maps on the units the drawn model reads them from.
+                        gl.uniform1i(gl.getUniformLocation(program, 'meshTexture'), MESH_TEXTURE_UNIT);
+                        MESH_MAP_UNITS.forEach((unit, i) => {
+                            gl.uniform1i(gl.getUniformLocation(program, `meshMap${i}`), unit);
+                        });
+                    }
+                    gl.useProgram(null);
+                    held = {
+                        program,
+                        lightViewProj: gl.getUniformLocation(program, 'uLightViewProj'),
+                        model: gl.getUniformLocation(program, 'uModel'),
+                        cut: gl.getUniformLocation(program, 'uCut'),
+                        mapNames,
+                    };
                 } catch (error) {
                     console.warn(
-                        `[NacatamalOn] the shadow of the material "${material.name ?? 'mesh material'}" did not compile on WebGL2, so it casts the shape of its file. ` +
-                        'Its corner hook reads something only the drawn model has.',
+                        `[NacatamalOn] the shadow of the material "${material.name ?? 'mesh material'}" did not compile on WebGL2, so it casts the shape of its file${cuts ? ', cut by its picture alone' : ''}. ` +
+                        'Its hooks read something only the drawn model has.',
                         error,
                     );
                     held = null;

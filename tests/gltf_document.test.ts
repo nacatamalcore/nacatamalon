@@ -180,6 +180,34 @@ describe('a model file in a scene that is saved and opened again', () => {
     });
 });
 
+describe('a model piece the file cuts out of its picture', () => {
+    const serveFence = (): void => {
+        const { json, bin } = asGltf({
+            nodes: [{ name: 'Fence', primitives: [{ ...TEST_QUAD, material: 0 }] }],
+            materials: [{ alphaMode: 'MASK', alphaCutoff: 0.3 }],
+        });
+        served = serveGltf({ '/models/car.gltf': json, '/models/model.bin': bin });
+    };
+
+    it('is cut from a document too, as from code', async () => {
+        serveFence();
+        const { store } = createTestGame();
+        startTestScene(store, 'Garage', sceneFromDoc(carScene([{ key: 'fence' }], [mesh('fence-mesh', 'fence')])));
+        await arrive();
+
+        expect(meshesOf(store).get('fence-mesh')!.material.alphaCutoff).toBe(0.3);
+    });
+
+    it('is cut as much as the document asks', async () => {
+        serveFence();
+        const { store } = createTestGame();
+        startTestScene(store, 'Garage', sceneFromDoc(carScene([{ key: 'fence' }], [mesh('fence-mesh', 'fence', { alphaCutoff: 0.7 })])));
+        await arrive();
+
+        expect(meshesOf(store).get('fence-mesh')!.material.alphaCutoff).toBe(0.7);
+    });
+});
+
 describe('a model piece the file keeps both sides of', () => {
     const serveLeaf = (): void => {
         const { json, bin } = asGltf({

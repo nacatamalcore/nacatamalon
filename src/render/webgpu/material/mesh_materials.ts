@@ -201,7 +201,8 @@ export const createMeshMaterials = (
     };
 
     /**
-     * The shadows of materials that move their corners, by the same key as the effects: the module,
+     * The shadows of materials that move their corners or are cut out of their pictures, by the same
+     * key as the effects and whether they cut: the module,
      * `ready` once the card has said it compiled, or `null` once it has failed, so a hook that cannot
      * cast is drawn flat instead.
      */
@@ -232,7 +233,8 @@ export const createMeshMaterials = (
         },
         /**
          * The shadow of a material with a corner hook: the hook moving the corners as it does when
-         * the model is drawn, seen from the light. With the material's group layout, which the
+         * the model is drawn, seen from the light. With `cuts`, also one with only a colour hook:
+         * the pixels its picture and its hook leave out left out (see buildMeshMaterialShadowShader). With the material's group layout, which the
          * shadow binds in the same place. `null` when it did not compile: the model then casts its
          * file's shape, as it always did, and says so once.
          *
@@ -241,20 +243,21 @@ export const createMeshMaterials = (
          * it, every caster in the map and not just this one. A model whose shadow is pending casts
          * nothing, as a model whose look is pending is not drawn.
          */
-        shadow: (material: TDrawShader, skinned = false): { module: GPUShaderModule; layout: GPUBindGroupLayout } | 'pending' | null => {
-            if (material.vertex === null) {
+        shadow: (material: TDrawShader, skinned = false, cuts = false): { module: GPUShaderModule; layout: GPUBindGroupLayout } | 'pending' | null => {
+            if (material.vertex === null && !(cuts && material.fragment !== null)) {
                 return null;
             }
-            const key = `${skinned ? 'skinned ' : ''}${JSON.stringify(material.uniformSig ?? {})} ${material.fragment ?? ''} ${material.vertex}`;
+            const key = `${skinned ? 'skinned ' : ''}${cuts ? 'cut ' : ''}${JSON.stringify(material.uniformSig ?? {})} ${material.fragment ?? ''} ${material.vertex ?? ''}`;
             let held = shadows.get(key);
             if (held === undefined) {
                 const mapNames = mapNamesOf(material.fragment);
+                const cut = cuts ? { fragment: material.fragment } : null;
                 // Caught here, as the effect's is: the warning below says it once, in this engine's
                 // words, rather than the card printing it on its own as well.
                 device.pushErrorScope('validation');
                 const module = device.createShaderModule({
-                    label: `${skinned ? 'skinned ' : ''}mesh material shadow ${material.name ?? material.id}`,
-                    code: buildMeshMaterialShadowShader(material.vertex, material.uniformSig ?? {}, mapNames, skinned),
+                    label: `${skinned ? 'skinned ' : ''}${cuts ? 'cut ' : ''}mesh material shadow ${material.name ?? material.id}`,
+                    code: buildMeshMaterialShadowShader(material.vertex, material.uniformSig ?? {}, mapNames, skinned, cut),
                 });
                 void device.popErrorScope();
                 const made = { module, layout: skinned ? skinnedMaterialLayout : materialLayout, ready: false };
@@ -267,8 +270,8 @@ export const createMeshMaterials = (
                     } else {
                         shadows.set(key, null);
                         console.warn(
-                            `[NacatamalOn] the shadow of the material "${material.name ?? 'mesh material'}" did not compile, so it casts the shape of its file. ` +
-                            'Its corner hook reads something only the drawn model has.',
+                            `[NacatamalOn] the shadow of the material "${material.name ?? 'mesh material'}" did not compile, so it casts the shape of its file${cuts ? ', cut by its picture alone' : ''}. ` +
+                            'Its hooks read something only the drawn model has.',
                             bad.map((message) => `${message.lineNum}: ${message.message}`).join('\n'),
                         );
                     }

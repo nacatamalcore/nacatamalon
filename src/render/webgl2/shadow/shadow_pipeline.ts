@@ -2,9 +2,14 @@ import { compileProgram } from '../utils/compile_program';
 import { cullOf } from '../../shared/cull_of';
 import { MESH_JOINTS_UNIT } from '../bindings';
 import { SHADOW_DEPTH_BIAS, SHADOW_SLOPE_BIAS, SHADOW_MAP_SIZE } from '../../shared/light_space';
-import { SHADOW_FRAGMENT_GLSL, SHADOW_SKINNED_VERTEX_GLSL, SHADOW_VERTEX_GLSL } from './shadow_shader';
+import {
+    SHADOW_CUT_FRAGMENT_GLSL, SHADOW_CUT_SKINNED_VERTEX_GLSL, SHADOW_CUT_VERTEX_GLSL, SHADOW_FRAGMENT_GLSL,
+    SHADOW_SKINNED_VERTEX_GLSL, SHADOW_VERTEX_GLSL,
+} from './shadow_shader';
+import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
+import { toGlTexture } from '../texture';
 import { toGlClip } from '../mesh/depth_range';
-import { vertexArrayFor } from '../mesh/draw_meshes';
+import { bindMaterialMaps, vertexArrayFor } from '../mesh/draw_meshes';
 import type { TDrawMesh } from '../../interface';
 import type { TMeshPipeline } from '../mesh/types/t_mesh_pipeline';
 import type { TShadowMap } from './shadow_map';
@@ -17,6 +22,9 @@ type TShadowProgram = {
     lightViewProj: WebGLUniformLocation | null;
     model: WebGLUniformLocation | null;
     joints: WebGLUniformLocation | null;
+    /** Only in a program that cuts a caster out of its picture. */
+    texture: WebGLUniformLocation | null;
+    cut: WebGLUniformLocation | null;
 };
 
 /**
@@ -37,10 +45,23 @@ export const createShadowPipeline = (gl: WebGL2RenderingContext) => {
         lightViewProj: gl.getUniformLocation(program, 'uLightViewProj'),
         model: gl.getUniformLocation(program, 'uModel'),
         joints: gl.getUniformLocation(program, 'uJoints'),
+        texture: gl.getUniformLocation(program, 'uTexture'),
+        cut: gl.getUniformLocation(program, 'uCut'),
     });
 
     const plain = locate(compileProgram(gl, SHADOW_VERTEX_GLSL, SHADOW_FRAGMENT_GLSL, 'shadow'));
     const bending = locate(compileProgram(gl, SHADOW_SKINNED_VERTEX_GLSL, SHADOW_FRAGMENT_GLSL, 'shadow skinned'));
+
+    // A caster cut out of its picture (`alphaCutoff`) reads that picture too: two more programs,
+    // made the first time one casts.
+    let cutting: { plain: TShadowProgram; bending: TShadowProgram } | null = null;
+    const cutPrograms = (): { plain: TShadowProgram; bending: TShadowProgram } => {
+        cutting ??= {
+            plain: locate(compileProgram(gl, SHADOW_CUT_VERTEX_GLSL, SHADOW_CUT_FRAGMENT_GLSL, 'shadow cut')),
+            bending: locate(compileProgram(gl, SHADOW_CUT_SKINNED_VERTEX_GLSL, SHADOW_CUT_FRAGMENT_GLSL, 'shadow cut skinned')),
+        };
+        return cutting;
+    };
 
     // The light's matrix in this card's range, kept between frames: one matrix for the whole frame,
     // however many models cast into it.
@@ -97,19 +118,41 @@ export const createShadowPipeline = (gl: WebGL2RenderingContext) => {
             }
 
             const bends = mesh.skeleton !== null && mesh.geometry.skinBuffer !== null;
-            // A hook that moves the corners moves them here too, or the map holds the shape the file
-            // made and that flat ghost shadows the model wherever the hook takes it behind.
             const surface = mesh.material;
-            const effect = surface.vertexGlsl !== null && mesh.geometry.detailBuffer !== null
+            // Cut out of its picture, by the same alpha and cutoff the model is drawn with.
+            const cuts = (surface.alphaCutoff ?? 0) > 0;
+            // A hook that moves the corners moves them here too, or the map holds the shape the file
+            // made and that flat ghost shadows the model wherever the hook takes it behind. Cut out,
+            // a colour hook casts through its own shader too: what it leaves out is left out here.
+            const effect = (surface.vertexGlsl !== null || (cuts && surface.fragmentGlsl !== null)) && mesh.geometry.detailBuffer !== null
                 ? meshes.materials.get(surface, bends, cull)
                 : null;
-            const hooked = effect !== null && !effect.failed ? meshes.materials.shadow(surface, bends) : null;
-            const shader = hooked ?? (bends ? bending : plain);
+            const hooked = effect !== null && !effect.failed ? meshes.materials.shadow(surface, bends, cuts) : null;
+            // Cut by its picture alone: a material with no hooks, or one whose shadow the card refused.
+            const cutters = cuts && hooked === null ? cutPrograms() : null;
+            const shader = hooked ?? (cutters !== null ? (bends ? cutters.bending : cutters.plain) : bends ? bending : plain);
             gl.useProgram(shader.program);
             gl.uniformMatrix4fv(shader.lightViewProj, false, lightClip);
             gl.uniformMatrix4fv(shader.model, false, model);
             if (hooked !== null) {
                 meshes.materials.bind(effect!, surface.uniforms ?? {}, null, time, width, height);
+                if (cuts) {
+                    bindMaterialMaps(gl, meshes, surface, hooked.mapNames);
+                }
+            }
+            if (cuts) {
+                const picture = surface.texture;
+                const ready = picture !== null && picture.status === 'ready' && picture.gpu !== null;
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, ready ? toGlTexture(picture.gpu!) : meshes.whiteTexture);
+                // Read the way the model reads it, so the edge it casts is the edge it shows.
+                const { u, v } = textureWrapOf(surface);
+                gl.bindSampler(0, meshes.wrapSamplers.get(wrapKey((surface.smooth ?? meshes.defaultSmooth) ? 'linear' : 'nearest', u, v))!);
+                // The material's own program was told its picture's unit when it was built.
+                if (hooked === null) {
+                    gl.uniform1i((shader as TShadowProgram).texture, 0);
+                }
+                gl.uniform2f(shader.cut, surface.alphaCutoff!, surface.alpha * surface.tint.a);
             }
 
             if (bends) {
@@ -141,12 +184,18 @@ export const createShadowPipeline = (gl: WebGL2RenderingContext) => {
             gl.disable(gl.POLYGON_OFFSET_FILL);
             gl.polygonOffset(0, 0);
             gl.disable(gl.CULL_FACE);
+            // A cut-out caster left its picture's sampler on the first unit.
+            gl.bindSampler(0, null);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         },
 
         destroy: (): void => {
             gl.deleteProgram(plain.program);
             gl.deleteProgram(bending.program);
+            if (cutting !== null) {
+                gl.deleteProgram(cutting.plain.program);
+                gl.deleteProgram(cutting.bending.program);
+            }
         },
     };
 };

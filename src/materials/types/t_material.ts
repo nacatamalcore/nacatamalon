@@ -223,6 +223,16 @@ export type TMeshMaterial = TShaderHalf & {
      */
     cull?: TCullMode;
     /**
+     * Cuts its picture out instead of blending it: a pixel whose alpha is below this number is not
+     * drawn at all, and every other one is drawn solid. A fence, a leaf, grass, hair or a paper
+     * figure, with the shape of its picture and none of its square. Solid, so it hides what is behind
+     * it, needs no sorting, and casts the shadow of its shape. The edge is as hard as the picture is
+     * read: pixel steps without `smooth`, rounded with it. The alpha is the picture's times the tint,
+     * the corners' colour and `alpha`, or what a colour hook returns. `0.5` is the usual. Omitted, nothing is
+     * cut. Read every frame, so it can change while the game runs.
+     */
+    alphaCutoff?: number;
+    /**
      * The lighting look it was made with, kept so it can be written down and made again. Left out
      * when it has none.
      */

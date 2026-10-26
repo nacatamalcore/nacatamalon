@@ -80,7 +80,7 @@ export const createMesh = (options: TMeshOptions): TMesh => {
         throw new Error('[NacatamalOn] createMesh: call it inside a scene body, or inside something created with useSpawn.');
     }
     if (options.material !== undefined && !warnedAboutMaterial) {
-        const ignored = (['tint', 'emissive', 'emissiveTexture', 'specular', 'cull', 'affine', 'vertexSnap'] as const).filter((key) => options[key] !== undefined);
+        const ignored = (['tint', 'emissive', 'emissiveTexture', 'specular', 'cull', 'alphaCutoff', 'affine', 'vertexSnap'] as const).filter((key) => options[key] !== undefined);
         if (ignored.length > 0) {
             warnedAboutMaterial = true;
             console.warn(`[NacatamalOn] createMesh: given a material, its ${ignored.join(', ')} ${ignored.length === 1 ? 'is' : 'are'} not read: they go in the material (createMaterial({ ${ignored[0]}: … })), which every model wearing it shares.`);
@@ -106,6 +106,7 @@ export const createMesh = (options: TMeshOptions): TMesh => {
                 vertexSnap: options.vertexSnap,
                 affine: options.affine,
                 cull: options.cull,
+                alphaCutoff: options.alphaCutoff,
                 alpha: options.alpha,
                 transparent: options.transparent,
                 smooth: options.smooth,

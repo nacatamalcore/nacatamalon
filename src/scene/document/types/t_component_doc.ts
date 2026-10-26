@@ -117,6 +117,12 @@ export type TMeshMaterialDoc = TMaterialDoc & {
      */
     cull?: TCullMode;
     /**
+     * The alpha below which its picture is cut out, from 0 to 1: a fence, a leaf. Left out when
+     * nothing is cut, except a model piece whose file cuts it (`MASK`): that is cut as the file says
+     * unless the document says otherwise.
+     */
+    alphaCutoff?: number;
+    /**
      * How it is lit, as the look is written down (`{ look: 'toon', bands: 2, ... }`). When a material
      * has looks, its `fragment` is left out: the looks are the recipe, and the shader they make is
      * made again when the scene is opened. Its knobs, as turned, are in `uniforms`.

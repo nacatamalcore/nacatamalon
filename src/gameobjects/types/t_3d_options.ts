@@ -55,6 +55,13 @@ export type TMeshSurfaceOptions = {
      */
     cull?: TCullMode;
     /**
+     * Cuts its picture out instead of blending it: a pixel whose alpha is below this number is not
+     * drawn, every other one is drawn solid. For a fence, a leaf, grass or a paper figure, which then
+     * hides what is behind it and casts the shadow of its shape. `0.5` is the usual; from 0 to 1.
+     * Omitted, nothing is cut (a model file's `MASK` pieces bring their own).
+     */
+    alphaCutoff?: number;
+    /**
      * Overrides the game's `smooth` for this model alone.
      */
     smooth?: boolean;

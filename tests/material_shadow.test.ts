@@ -98,3 +98,46 @@ describe('a side that is not one of the three', () => {
         expect(cullOf(mesh('front'))).toBe('front');
     });
 });
+
+describe('the shadow of a material cut out of its picture', () => {
+    const EFFECT = 'fn effect(surface: vec4<f32>, ctx: FragContext) -> vec4<f32> { return vec4<f32>(surface.rgb, step(0.5, fract(ctx.uv.x * 4.0 + mu.amount))); }';
+    const EFFECT_GLSL = 'vec4 effect(vec4 surface, FragContext ctx) { return vec4(surface.rgb, step(0.5, fract(ctx.uv.x * 4.0 + mu.amount))); }';
+
+    it('cuts by the alpha its colour hook makes, with no corner hook of its own', () => {
+        const shadow = buildMeshMaterialShadowShader(null, SIG, [], false, { fragment: EFFECT });
+        expect(shadow).toContain(EFFECT);
+        expect(shadow).toContain('fn vertex(pos: vec3<f32>, ctx: VertContext) -> vec3<f32> {\n    return pos;');
+        expect(shadow).toContain('@fragment\nfn fs(in: CutOutput, @builtin(front_facing) front: bool) {');
+        expect(shadow).toContain('let shaded = effect(sampleTexture(in.uv) * vec4<f32>(1.0, 1.0, 1.0, shadow.cut.y) * in.color, ctx);');
+        expect(shadow).toMatch(/if \(shaded\.a < shadow\.cut\.x\) \{\s*discard;/);
+        // Its picture where the drawn model reads it, and its block telling how it is cut.
+        expect(shadow).toContain('@group(1) @binding(1) var meshTexture: texture_2d<f32>;');
+        expect(shadow).toContain('cut: vec4<f32>,');
+    });
+
+    it('cuts a model its corner hook moves by its picture, as the built-in ending would', () => {
+        const shadow = buildMeshMaterialShadowShader(HOOK, SIG, [], true, { fragment: null });
+        expect(shadow).toContain(HOOK);
+        expect(shadow).toContain('return vec4<f32>(surface.rgb * ctx.light + ctx.shine + ctx.emissive, surface.a);');
+        expect(shadow).toContain('let turn = mat3x3<f32>(skin[0].xyz, skin[1].xyz, skin[2].xyz);');
+        // The usual one, when nothing is cut, is what it was: no colour stage.
+        expect(buildMeshMaterialShadowShader(HOOK, SIG, [], false)).not.toContain('@fragment');
+    });
+
+    it('reads the maps its colour hook reads', () => {
+        expect(buildMeshMaterialShadowShader(null, SIG, ['noise'], false, { fragment: EFFECT })).toContain('fn sampleMap_noise(uv: vec2<f32>) -> vec4<f32>');
+    });
+
+    it('says the same on the other card', () => {
+        for (const skinned of [false, true]) {
+            const shadow = buildMeshMaterialShadowShaderGlsl(null, SIG, skinned, { fragment: EFFECT_GLSL, mapNames: ['noise'] });
+            expect(shadow.vertex).toContain('vec3 vertex(vec3 pos, VertContext ctx) {\n    return pos;');
+            expect(shadow.fragment).toContain(EFFECT_GLSL);
+            expect(shadow.fragment).toContain('vec4 shaded = effect(sampleTexture(vUv) * vec4(1.0, 1.0, 1.0, uCut.y) * vColor, ctx);');
+            expect(shadow.fragment).toMatch(/if \(shaded\.a < uCut\.x\) \{\s*discard;/);
+            expect(shadow.fragment).toContain('vec4 sampleMap_noise(vec2 uv)');
+            expect(shadow.vertex).toContain(skinned ? 'mat3 turn = mat3(skin);' : 'mat3 turn = mat3(1.0);');
+        }
+        expect(buildMeshMaterialShadowShaderGlsl(HOOK_GLSL, SIG, false).fragment).toBe(SHADOW_FRAGMENT_GLSL);
+    });
+});

@@ -25,7 +25,7 @@ describe('readMaterial see-through', () => {
     it('leaves a solid or a cut-out one alone', () => {
         expect(readMaterial(docWith({}), 0).transparent).toBe(false);
         expect(readMaterial(docWith({ alphaMode: 'OPAQUE' }), 0).transparent).toBe(false);
-        // Cutting holes at a threshold is not blending, and this engine does not do it yet.
+        // Cutting holes at a threshold is not blending: it is alphaCutoff, and stays solid.
         expect(readMaterial(docWith({ alphaMode: 'MASK' }), 0).transparent).toBe(false);
     });
 });

@@ -49,7 +49,7 @@ layout(std140) uniform Lights {
     // The matrix the shadow map was drawn with, and how to read it. Same place, same order and same
     // meaning as its twin in WGSL, because one packer fills both.
     mat4 shadowMatrix;
-    // x = how far off the surface to test; y = how dark it goes; z = one step of the map;
+    // x = how far off the surface to test, towards the light in the world's units; y = how dark it goes; z = one step of the map;
     // w = which of the items above casts, or -1 for a scene that casts none.
     vec4 shadowParams;
     // rgb = what things fade into, w = which kinds are on (0 none, 1 by distance, 2 by height, 3
@@ -244,6 +244,22 @@ export const worldNormalOfGlsl = (cull: TCullMode, facing: string): string =>
     `${cull === 'front' ? '-' : ''}normalize((uniforms.normalMatrix * vec4(${facing}, 0.0)).xyz)`;
 
 /**
+ * Where a point falls in the shadow map, moved first towards the casting light by its bias in the
+ * world's units: the twin of shadowCoordOf in webgpu/mesh/mesh_shader.ts, which says why.
+ */
+const SHADOW_COORD_GLSL = /* glsl */ `
+vec4 shadowCoordOf(vec3 worldPos) {
+    if (lights.shadowParams.w < 0.0) {
+        return lights.shadowMatrix * vec4(worldPos, 1.0);
+    }
+    vec4 caster = lights.items[int(lights.shadowParams.w)].vector;
+    // A sun's is the way towards it; a torch's, where it is.
+    vec3 toward = caster.w < 0.5 ? normalize(caster.xyz) : normalize(caster.xyz - worldPos);
+    return lights.shadowMatrix * vec4(worldPos + toward * lights.shadowParams.x, 1.0);
+}
+`;
+
+/**
  * Where a light is from a point, and how much of it survives getting there.
  *
  * Its own value so a material's vertex says the very same thing without repeating it.
@@ -253,6 +269,7 @@ export const worldNormalOfGlsl = (cull: TCullMode, facing: string): string =>
  * @author Francisco Pereira Alvarado
  */
 export const MESH_SAMPLE_LIGHT_GLSL = /* glsl */ `
+${SHADOW_COORD_GLSL}
 // The k-th of the lights this model is lit by, as its place in the scene's block plus one, 0 once
 // the list has ended. Two spare numbers of its block carry the list, four lights of six bits each.
 int meshLight(int k) {
@@ -353,7 +370,7 @@ export const meshVertexLightGlsl = (cull: TCullMode): string => /* glsl */ `
     vShine = shine;
     vCasterLight = casterDiffuse;
     vCasterShine = casterShine;${cull === 'none' ? TWO_SIDED_WRITE_GLSL : ''}
-    vShadowCoord = lights.shadowMatrix * vec4(worldPos, 1.0);
+    vShadowCoord = shadowCoordOf(worldPos);
     vUv = affineUv(aUv, gl_Position);
     vColor = aColor;
     vFog = fogAt(worldPos);
@@ -401,6 +418,7 @@ export const MESH_VERTEX_GLSL = meshVertexGlsl('back');
  */
 export const MESH_SHADOW_GLSL = /* glsl */ `
 uniform highp sampler2DShadow shadowMap;
+${SHADOW_COORD_GLSL}
 
 // Whether the light can see this point: 1 lit, 0 hidden, and in between along a rim.
 //
@@ -418,7 +436,7 @@ float shadowFactor(vec4 coord) {
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0 || proj.z < 0.0 || proj.z > 1.0) {
         return 1.0;
     }
-    return texture(shadowMap, vec3(uv, proj.z - lights.shadowParams.x));
+    return texture(shadowMap, vec3(uv, proj.z));
 }
 
 // What is left of the light once the casting one has been taken away where it cannot see.
@@ -472,6 +490,11 @@ void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     vec3 lit = max(litWithShadow(${light}, ${casterLight}, vShadowCoord), lights.ambient.rgb);
     // The colour painted on the corners multiplies in with the picture. Unpainted corners are white.
     vec4 color = texColor * uniforms.tint * vColor * vec4(lit, 1.0);
+    // Cut out rather than blended: below the material's cutoff the pixel is not there at all, and
+    // above it is solid. It rides in a spare number of the turning matrix; zero cuts nothing.
+    if (color.a < uniforms.normalMatrix[3].z) {
+        discard;
+    }
     vec3 shine = litWithShadow(${shine}, ${casterShine}, vShadowCoord);
     // The fog last, over everything, glow included.
     fragColor = vec4(mix(color.rgb + shine + glow, lights.fog.rgb, vFog), color.a);

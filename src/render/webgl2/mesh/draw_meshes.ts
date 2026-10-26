@@ -114,6 +114,29 @@ export const writeMeshLights = (
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
+/**
+ * A material's extra maps, on their own units, in the order its shader reads them. A map the
+ * material does not carry, or one still loading, reads as white and the model is drawn anyway. The
+ * shadow pass binds them the same way, for a shadow cut by what a hook reads of them.
+ *
+ * @internal
+ */
+export const bindMaterialMaps = (gl: WebGL2RenderingContext, meshes: TMeshPipeline, surface: TDrawMesh['material'], mapNames: readonly string[]): void => {
+    MESH_MAP_UNITS.forEach((unit, i) => {
+        const name = mapNames[i];
+        const map = name === undefined ? undefined : surface.maps?.[name];
+        if (name !== undefined && map === undefined) {
+            meshes.materials.warnIfMapMissing(surface, name);
+        }
+        const ready = map !== undefined && map.texture.status === 'ready' && map.texture.gpu !== null;
+        gl.activeTexture(gl.TEXTURE0 + unit);
+        gl.bindTexture(gl.TEXTURE_2D, ready ? toGlTexture(map.texture.gpu!) : meshes.whiteTexture);
+        const { u, v } = textureWrapOf(map ?? {});
+        const filter = (map?.smooth ?? surface.smooth ?? meshes.defaultSmooth) ? 'linear' : 'nearest';
+        gl.bindSampler(unit, meshes.wrapSamplers.get(wrapKey(filter, u, v))!);
+    });
+};
+
 export const drawMesh = (
     gl: WebGL2RenderingContext,
     meshes: TMeshPipeline,
@@ -170,21 +193,7 @@ export const drawMesh = (
 
     if (effect !== null) {
         meshes.materials.bind(effect, surface.uniforms ?? {}, null, time, width, height);
-        // The extra maps, on their own units, in the order the shader reads them. A map the material
-        // does not carry, or one still loading, reads as white and the model is drawn anyway.
-        MESH_MAP_UNITS.forEach((unit, i) => {
-            const name = effect!.mapNames[i];
-            const map = name === undefined ? undefined : surface.maps?.[name];
-            if (name !== undefined && map === undefined) {
-                meshes.materials.warnIfMapMissing(surface, name);
-            }
-            const ready = map !== undefined && map.texture.status === 'ready' && map.texture.gpu !== null;
-            gl.activeTexture(gl.TEXTURE0 + unit);
-            gl.bindTexture(gl.TEXTURE_2D, ready ? toGlTexture(map.texture.gpu!) : meshes.whiteTexture);
-            const { u, v } = textureWrapOf(map ?? {});
-            const filter = (map?.smooth ?? surface.smooth ?? meshes.defaultSmooth) ? 'linear' : 'nearest';
-            gl.bindSampler(unit, meshes.wrapSamplers.get(wrapKey(filter, u, v))!);
-        });
+        bindMaterialMaps(gl, meshes, surface, effect.mapNames);
     }
 
     if (bends) {

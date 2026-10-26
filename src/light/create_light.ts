@@ -31,7 +31,8 @@ export type TLightOptionsBase = {
      */
     castShadow?: boolean;
     /**
-     * How far the shadow test is pushed off the surface. Default `0.002`.
+     * How far the shadow test is pushed off the surface, towards the light, in the world's units.
+     * Default `0.002`.
      */
     shadowBias?: number;
     /**

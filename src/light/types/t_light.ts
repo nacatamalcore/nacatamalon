@@ -31,11 +31,12 @@ export type TLightBase = {
      */
     castShadow?: boolean;
     /**
-     * How far the shadow test is pushed away from the surface, so a surface does not shadow itself.
-     * Default `0.002`.
+     * How far the shadow test is pushed away from the surface, towards the light, in the world's
+     * units, so a surface does not shadow itself. Default `0.002`.
      *
-     * Too little and a lit surface stripes itself. Too much and the shadow detaches from whatever
-     * cast it, which reads as the thing hovering.
+     * The same distance for a sun and a torch, near the light or far from it. Too little and a lit
+     * surface stripes itself. Too much and the shadow detaches from whatever cast it, which reads as
+     * the thing hovering, and what stands that close behind a thin wall is lit through it.
      */
     shadowBias?: number;
     /**

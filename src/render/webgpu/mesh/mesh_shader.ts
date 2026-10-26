@@ -59,7 +59,7 @@ struct Lights {
     items: array<LightItem, ${MAX_SCENE_LIGHTS}>,
     // The matrix the shadow map was drawn with, and how to read it.
     shadowMatrix: mat4x4<f32>,
-    // x = how far off the surface to test; y = how dark it goes; z = one step of the map;
+    // x = how far off the surface to test, towards the light in the world's units; y = how dark it goes; z = one step of the map;
     // w = which of the items above casts, or -1 for a scene that casts none.
     shadowParams: vec4<f32>,
     // rgb = what things fade into, w = which kinds are on (0 none, 1 by distance, 2 by height, 3
@@ -243,8 +243,20 @@ fn litBy(worldPos: vec3<f32>, normal: vec3<f32>, viewDir: vec3<f32>) -> LitSurfa
 }
 
 // Where this point falls in the map. Worked out at the corner, which is the cheap half.
+//
+// The point is first moved towards the casting light, by shadowParams.x in the world's units: that is
+// what keeps a surface from shadowing itself, and moved in the world it means the same distance for
+// a sun and for a torch, near and far. Taken off the depth instead, it did not: a torch's depth is
+// not even, so the same number was a few centimetres by it and two metres across the room, and a
+// floor or a wall that close behind a thin wall was taken as lit straight through it.
 fn shadowCoordOf(worldPos: vec3<f32>) -> vec4<f32> {
-    return lights.shadowMatrix * vec4<f32>(worldPos, 1.0);
+    if (lights.shadowParams.w < 0.0) {
+        return lights.shadowMatrix * vec4<f32>(worldPos, 1.0);
+    }
+    let caster = lights.items[u32(lights.shadowParams.w)].vector;
+    // A sun's is the way towards it; a torch's, where it is.
+    let toward = select(normalize(caster.xyz - worldPos), normalize(caster.xyz), caster.w < 0.5);
+    return lights.shadowMatrix * vec4<f32>(worldPos + toward * lights.shadowParams.x, 1.0);
 }
 
 // Whether the light can see this point: 1 lit, 0 hidden, and in between along a rim, because the
@@ -266,7 +278,7 @@ fn shadowFactor(coord: vec4<f32>) -> f32 {
     }
     // Level and not the plain one: the plain one picks a mip from the derivatives, which needs
     // every pixel of a quad to be taking the same branch, and the one above is a branch.
-    return textureSampleCompareLevel(shadowMap, shadowSampler, uv, proj.z - lights.shadowParams.x);
+    return textureSampleCompareLevel(shadowMap, shadowSampler, uv, proj.z);
 }
 
 // What is left of the light once the casting one has been taken away where it cannot see.
@@ -421,6 +433,11 @@ fn fs(in: VertexOutput${cull === 'none' ? ', @builtin(front_facing) front: bool'
     // The colour painted on the corners multiplies in with the picture, the way the era's hardware
     // combined them: a green corner over a dirt picture is grass. Unpainted corners are white.
     let color = texColor * uniforms.tint * in.color * vec4<f32>(lit, 1.0);
+    // Cut out rather than blended: below the material's cutoff the pixel is not there at all, and
+    // above it is solid. It rides in a spare number of the turning matrix; zero cuts nothing.
+    if (color.a < uniforms.normalMatrix[3].z) {
+        discard;
+    }
 
     // The shine and the glow sit on top, not multiplied by the picture: a highlight is light
     // bouncing off the surface, not part of what is painted on it.

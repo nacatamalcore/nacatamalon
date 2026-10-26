@@ -16,6 +16,20 @@ import type { TTexture } from '../loaders';
 const isCullMode = (value: unknown): value is 'back' | 'front' | 'none' => value === 'back' || value === 'front' || value === 'none';
 
 /**
+ * The cutoff asked for, checked: a number from 0 to 1, or nothing. Anything else is a fence drawn
+ * as a solid square, or as nothing, with no word why, so it is refused.
+ */
+const cutoffOf = (value: unknown): number | undefined => {
+    if (value === undefined) {
+        return undefined;
+    }
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
+        throw new Error(`[NacatamalOn] createMaterial: alphaCutoff is ${String(value)}, and it takes the alpha below which a pixel is cut out, from 0 to 1 (0.5 is the usual).`);
+    }
+    return value;
+};
+
+/**
  * Whether a `vertexSnap` asks for anything: `true`, or a row count above zero.
  */
 const isSnapping = (value: boolean | number | undefined): boolean =>
@@ -142,6 +156,8 @@ export const newMaterial = (
             // The same: left out unless asked. Asked for, even `'back'` is kept, because it is then a
             // decision: the side a scene keeps of a model piece whose file says both.
             ...(isCullMode((options as TMeshMaterialOptions).cull) ? { cull: (options as TMeshMaterialOptions).cull } : {}),
+            // The same: left out unless asked, so a material that cuts nothing saves as before.
+            ...(cutoffOf((options as TMeshMaterialOptions).alphaCutoff) !== undefined ? { alphaCutoff: (options as TMeshMaterialOptions).alphaCutoff } : {}),
             // Kept as asked so a document can write the recipe rather than the shader it made.
             ...((options as TMeshMaterialOptions).lighting !== undefined ? { lighting: (options as TMeshMaterialOptions).lighting } : {}),
             ...((options as TMeshMaterialOptions).steps !== undefined && (options as TMeshMaterialOptions).steps!.length > 0

@@ -37,6 +37,23 @@ releases are in [changelog/](./changelog/), one file each.
   game says otherwise. A colour hook tells the two sides apart with `ctx.frontFacing`, and the shader
   composer with `composerFrontFacing()`. A model that keeps the usual side is drawn exactly as before.
 
+- **`alphaCutoff` on a model's material: its picture cut out rather than blended**, the fences,
+  railings, leaves, grass and paper figures of the era. A pixel whose alpha is below it is not
+  drawn at all and every other one is drawn solid, so a fence of crossed planes hides what is
+  behind it, needs no sorting, and casts the shadow of its bars rather than of its square, on both
+  sides with `cull: 'none'`. The edge is as hard as the picture is read: in steps of pixels without
+  `smooth`, rounded with it. The alpha cut is the picture's times the tint, the corners' colour and
+  `alpha`, or what a colour hook returns, so a shader of your own cuts by its own (a dissolve). On
+  `createMaterial({ shader: 'mesh3d' })`, `createMesh` and `createModel`, from 0 to 1 and refused
+  outside it, in a scene document (`"alphaCutoff"`, written only when set) and in the editor's
+  inspector. A glTF material with `alphaMode: 'MASK'` is cut at its `alphaCutoff` (a half unless
+  it says) unless the game says otherwise; until now it was drawn with its picture's square. The
+  shadow of a material with hooks is cut the same way: a flag full of holes waved by its `vertex`
+  hook casts the waved holes, and a dissolve its colour hook cuts casts what is left of it (the
+  hook is told a plain white light there, since no light has reached anything yet). Its shadow's
+  shader is compiled alongside the material's, so a model does not stand a few frames casting
+  nothing.
+
 ### Changed
 
 - **`createGame({ renderer })` is read in capitals whatever way it is written**: `'webgl2'` is
@@ -46,6 +63,14 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **A torch's shadow no longer lets light through a thin wall along its edges.** `shadowBias`, how
+  far the shadow test is pushed off a surface so it does not shadow itself, was taken off the depth
+  in the shadow map, and a torch's depth is not even: the default was a few centimetres near it and
+  two metres across a room. Whatever stood that close behind a wall facing a street lamp, a floor
+  at its foot, the walls meeting it in a corner, was taken as lit straight through it, in bands of
+  light. The point tested is now moved towards the light by `shadowBias` in the world's units, the
+  same distance for a sun and a torch, near and far; the default stays `0.002`, and a sun's shadows
+  start a little nearer what casts them than they did. Both cards.
 - **Rewriting an odd number of 16 bit triangle points works on WebGPU.** Writing over a buffer sent
   what it was given as it was, and this card takes only whole fours of bytes, so a shape with an odd
   number of triangles that was changed was refused there and stopped changing. It is rounded up as

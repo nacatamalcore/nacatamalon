@@ -280,7 +280,7 @@ vec2 screenOf(vec3 clip) {
 void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     // A shader you wrote yourself receives shadow, and receives it without being told about it:
     // ctx.light simply arrives already darkened where the casting light cannot see.
-    vec4 coord = lights.shadowMatrix * vec4(vWorldPos, 1.0);
+    vec4 coord = shadowCoordOf(vWorldPos);
     vec3 lit = max(litWithShadow(${light}, ${casterLight}, coord), lights.ambient.rgb);
 
     // Divided here, once: a shader of your own receives the picture already stretched when the
@@ -307,6 +307,11 @@ void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     // The painted colour is part of the surface, as it is in the built-in ending. The fog goes over
     // what the hook made, so a shader of your own sits in the scene's fog without asking for it.
     vec4 shaded = effect(sampleTexture(uv) * uniforms.tint * vColor, ctx);
+    // Cut out rather than blended: below the material's cutoff, by the alpha the hook made, the pixel is not there at all, and
+    // above it is solid. It rides in a spare number of the turning matrix; zero cuts nothing.
+    if (shaded.a < uniforms.normalMatrix[3].z) {
+        discard;
+    }
     fragColor = vec4(mix(shaded.rgb, lights.fog.rgb, vFog), shaded.a);
 }
 `;
@@ -377,37 +382,103 @@ layout(location = 5) in vec4 aColor;
  * The shadow of a model material on this card: its corner hook moving each corner as it does when
  * the model is drawn, then the corner seen from the light. The twin of buildMeshMaterialShadowShader
  * in webgpu/material/mesh_material_shader.ts; its colour stage colours nothing, as the built-in
- * shadow's does.
+ * shadow's does, and with `cut` throws away what the picture and the colour hook leave out.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
 export const buildMeshMaterialShadowShaderGlsl = (
-    vertex: string,
+    vertex: string | null,
     sig: TUniformSignature,
     skinned = false,
-): { vertex: string; fragment: string } => ({
-    vertex: [
-        SHADOW_CORNERS_GLSL,
-        DETAIL_HEAD,
-        skinned ? SKIN_HEAD : '',
-        glslUniformBlock(sig),
-        'uniform mat4 uLightViewProj;\nuniform mat4 uModel;',
-        VERT_CONTEXT,
-        vertex,
-        /* glsl */ `
-void main() {${CORNER_CONTEXT}${skinned ? `
+    cut: { fragment: string | null; mapNames: readonly string[] } | null = null,
+): { vertex: string; fragment: string } => {
+    const bend = skinned ? `
     mat4 skin =
         aWeights.x * boneMatrix(int(aBones.x)) +
         aWeights.y * boneMatrix(int(aBones.y)) +
         aWeights.z * boneMatrix(int(aBones.z)) +
         aWeights.w * boneMatrix(int(aBones.w));
     vec4 placed = skin * vec4(local, 1.0);` : `
-    vec4 placed = vec4(local, 1.0);`}
+    vec4 placed = vec4(local, 1.0);`;
+    if (cut === null) {
+        return {
+            vertex: [
+                SHADOW_CORNERS_GLSL,
+                DETAIL_HEAD,
+                skinned ? SKIN_HEAD : '',
+                glslUniformBlock(sig),
+                'uniform mat4 uLightViewProj;\nuniform mat4 uModel;',
+                VERT_CONTEXT,
+                vertex ?? DEFAULT_VERTEX,
+                /* glsl */ `
+void main() {${CORNER_CONTEXT}${bend}
     gl_Position = uLightViewProj * uModel * placed;
 }
 `,
-    ].join('\n'),
-    fragment: SHADOW_FRAGMENT_GLSL,
-});
+            ].join('\n'),
+            fragment: SHADOW_FRAGMENT_GLSL,
+        };
+    }
+    // Cut out of its picture: the alpha worked out as the drawn model works it out, through its
+    // colour hook, told plain white light and no shine (see buildMeshMaterialShadowShader).
+    return {
+        vertex: [
+            SHADOW_CORNERS_GLSL,
+            DETAIL_HEAD,
+            skinned ? SKIN_HEAD : '',
+            glslUniformBlock(sig),
+            'uniform mat4 uLightViewProj;\nuniform mat4 uModel;',
+            'out vec2 vUv;\nout vec3 vNormal;\nout vec3 vWorldPos;\nout vec4 vColor;\nout vec4 vTangent;\nout vec2 vUv2;',
+            VERT_CONTEXT,
+            vertex ?? DEFAULT_VERTEX,
+            /* glsl */ `
+void main() {${CORNER_CONTEXT}${bend}
+    // Turned as the model is, by its own placement: what the hook reads of the surface.
+    mat3 turn = ${skinned ? 'mat3(skin)' : 'mat3(1.0)'};
+    gl_Position = uLightViewProj * uModel * placed;
+    vUv = aUv;
+    vNormal = normalize((uModel * vec4(turn * aNormal, 0.0)).xyz);
+    vWorldPos = (uModel * placed).xyz;
+    vColor = aColor;
+    vTangent = vec4(normalize((uModel * vec4(turn * aTangent.xyz, 0.0)).xyz), aTangent.w);
+    vUv2 = aUv2;
+}
+`,
+        ].join('\n'),
+        fragment: [
+            '#version 300 es\nprecision highp float;',
+            'uniform sampler2D meshTexture;\nuniform vec2 uCut;',
+            glslUniformBlock(sig),
+            'in vec2 vUv;\nin vec3 vNormal;\nin vec3 vWorldPos;\nin vec4 vColor;\nin vec4 vTangent;\nin vec2 vUv2;',
+            FRAG_CONTEXT,
+            SAMPLE,
+            maps(cut.mapNames),
+            cut.fragment ?? DEFAULT_EFFECT,
+            /* glsl */ `
+void main() {
+    FragContext ctx;
+    ctx.uv = vUv;
+    ctx.normal = gl_FrontFacing ? vNormal : -vNormal;
+    ctx.worldPos = vWorldPos;
+    ctx.light = vec3(1.0);
+    ctx.shine = vec3(0.0);
+    ctx.emissive = vec3(0.0);
+    ctx.viewDir = ctx.normal;
+    ctx.color = vColor;
+    ctx.screen = vec2(0.0);
+    ctx.tangent = vTangent.xyz;
+    ctx.bitangent = cross(ctx.normal, ctx.tangent) * vTangent.w;
+    ctx.uv2 = vUv2;
+    ctx.frontFacing = gl_FrontFacing;
+    // The alpha the drawn model is cut by: its tint's colour does not change it, its alpha does.
+    vec4 shaded = effect(sampleTexture(vUv) * vec4(1.0, 1.0, 1.0, uCut.y) * vColor, ctx);
+    if (shaded.a < uCut.x) {
+        discard;
+    }
+}
+`,
+        ].join('\n'),
+    };
+};

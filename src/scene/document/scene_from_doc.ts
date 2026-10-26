@@ -252,6 +252,7 @@ const buildModelMesh = (
             ...(surface.vertexSnap !== undefined ? { vertexSnap: surface.vertexSnap } : {}),
             ...(surface.affine === true ? { affine: true } : {}),
             ...(surface.cull !== undefined ? { cull: surface.cull } : {}),
+            ...(surface.alphaCutoff !== undefined ? { alphaCutoff: surface.alphaCutoff } : {}),
             // The looks as written, which make the colour again: a document keeps the recipe, not the shader.
             ...(surface.lighting !== undefined ? { lighting: surface.lighting } : {}),
             ...(surface.steps !== undefined ? { steps: surface.steps } : {}),
@@ -292,6 +293,10 @@ const buildModelMesh = (
         // scene says which side to keep.
         if (surface.cull === undefined && part.doubleSided) {
             mesh.material.cull = 'none';
+        }
+        // And a leaf the file cuts out of its picture is cut, unless the scene says how much.
+        if (surface.alphaCutoff === undefined && part.alphaCutoff !== null) {
+            mesh.material.alphaCutoff = part.alphaCutoff;
         }
     });
 };
@@ -494,6 +499,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                     ...(surface.vertexSnap !== undefined ? { vertexSnap: surface.vertexSnap } : {}),
                     ...(surface.affine === true ? { affine: true } : {}),
                     ...(surface.cull !== undefined ? { cull: surface.cull } : {}),
+                    ...(surface.alphaCutoff !== undefined ? { alphaCutoff: surface.alphaCutoff } : {}),
                     // The looks as written, which make the colour again: a document keeps the recipe, not the shader.
                     ...(surface.lighting !== undefined ? { lighting: surface.lighting } : {}),
                     ...(surface.steps !== undefined ? { steps: surface.steps } : {}),

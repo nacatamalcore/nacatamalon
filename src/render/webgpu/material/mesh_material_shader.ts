@@ -1,6 +1,6 @@
 import { FACED_LIGHT, MESH_SHADER_TYPES, twoSidedOutput, TWO_SIDED_WRITE, worldNormalOf } from '../mesh/mesh_shader';
 import { buildUniformLayout } from '../../shared/material_uniforms';
-import { SHADOW_UNIFORMS_WGSL } from '../shadow/shadow_shader';
+import { SHADOW_CUT_UNIFORMS_WGSL, SHADOW_UNIFORMS_WGSL } from '../shadow/shadow_shader';
 import { MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import type { TCullMode, TUniformSignature } from '../../../materials';
 
@@ -333,6 +333,11 @@ fn fs(in: VertexOutput, @builtin(front_facing) front: bool) -> @location(0) vec4
     // The painted colour is part of the surface, as it is in the built-in ending. The fog goes over
     // what the hook made, so a shader of your own sits in the scene's fog without asking for it.
     let shaded = effect(sampleTexture(uv) * uniforms.tint * in.color, ctx);
+    // Cut out rather than blended: below the material's cutoff, by the alpha the hook made, the pixel is not there at all, and
+    // above it is solid. It rides in a spare number of the turning matrix; zero cuts nothing.
+    if (shaded.a < uniforms.normalMatrix[3].z) {
+        discard;
+    }
     return vec4<f32>(mix(shaded.rgb, lights.fog.rgb, in.fog), shaded.a);
 }
 `;
@@ -393,8 +398,17 @@ export const buildMeshMaterialShader = (
  * Without it the map holds the model as its file made it, so a flag that waves casts a flat one, and
  * that flat ghost shadows the cloth wherever the wave takes it behind.
  *
+ * **Cut out of its picture** (`cut`, for a material with `alphaCutoff`), it has a colour stage after
+ * all, which colours nothing either: it works the alpha out as the drawn model does, its picture
+ * times its corners' colour and its own alpha, run through its colour hook when it has one, and
+ * throws away the pixels below the cutoff. So a dissolve casts what is left of it, and a waving flag
+ * full of holes casts the holes. The hook is told the same place in the picture and on the surface;
+ * the light it is told is plain white and the shine none, since no light has reached anything yet,
+ * which a hook deciding its alpha by them would see. Its picture is then read in group 1, where the
+ * drawn model reads it, and its block carries how it is cut.
+ *
  * The material's own group is kept where it is (group 3), with its knobs, its maps and, for a model
- * that bends, its bones, so a hook reads `mu` and `sampleMap_<name>` here as it does there. The two
+ * that bends, its bones, so a hook reads `mu` and `sampleMap_<name>` here as it does there. The
  * groups between are left empty.
  *
  * @internal
@@ -402,34 +416,88 @@ export const buildMeshMaterialShader = (
  * @author Francisco Pereira Alvarado
  */
 export const buildMeshMaterialShadowShader = (
-    vertex: string,
+    vertex: string | null,
     sig: TUniformSignature,
     mapNames: readonly string[] = [],
     skinned = false,
+    cut: { fragment: string | null } | null = null,
 ): string => {
     const { structText } = buildUniformLayout(sig);
-
-    return [
-        SHADOW_UNIFORMS_WGSL,
-        structText,
-        `@group(${MESH_MATERIAL_GROUP}) @binding(0) var<uniform> mu: MaterialUniforms;`,
-        VERT_CONTEXT,
-        // Declared because the map readers bring a helper that names it, never filled here.
-        FRAG_CONTEXT,
-        maps(mapNames),
-        vertex,
-        skinned ? `@group(${MESH_MATERIAL_GROUP}) @binding(${MESH_MATERIAL_JOINTS_BINDING}) var<storage, read> joints: array<mat4x4<f32>>;` : '',
-        /* wgsl */ `
-@vertex
-fn vs(${cornerInputs(skinned)}) -> @builtin(position) vec4<f32> {${CORNER_CONTEXT}${skinned ? `
+    const bend = skinned ? `
     let skin =
         weights.x * joints[u32(bones.x)] +
         weights.y * joints[u32(bones.y)] +
         weights.z * joints[u32(bones.z)] +
         weights.w * joints[u32(bones.w)];
     let placed = skin * vec4<f32>(local, 1.0);` : `
-    let placed = vec4<f32>(local, 1.0);`}
+    let placed = vec4<f32>(local, 1.0);`;
+
+    return [
+        cut === null ? SHADOW_UNIFORMS_WGSL : SHADOW_CUT_UNIFORMS_WGSL,
+        cut === null ? '' : `@group(1) @binding(0) var meshSampler: sampler;
+@group(1) @binding(1) var meshTexture: texture_2d<f32>;`,
+        structText,
+        `@group(${MESH_MATERIAL_GROUP}) @binding(0) var<uniform> mu: MaterialUniforms;`,
+        VERT_CONTEXT,
+        // Declared because the map readers bring a helper that names it; filled only when cut.
+        FRAG_CONTEXT,
+        cut === null ? '' : SAMPLE,
+        maps(mapNames),
+        vertex ?? DEFAULT_VERTEX,
+        cut === null ? '' : cut.fragment ?? DEFAULT_EFFECT,
+        skinned ? `@group(${MESH_MATERIAL_GROUP}) @binding(${MESH_MATERIAL_JOINTS_BINDING}) var<storage, read> joints: array<mat4x4<f32>>;` : '',
+        cut === null ? /* wgsl */ `
+@vertex
+fn vs(${cornerInputs(skinned)}) -> @builtin(position) vec4<f32> {${CORNER_CONTEXT}${bend}
     return shadow.lightViewProj * shadow.model * placed;
+}
+` : /* wgsl */ `
+struct CutOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) uv: vec2<f32>,
+    @location(1) normal: vec3<f32>,
+    @location(2) worldPos: vec3<f32>,
+    @location(3) color: vec4<f32>,
+    @location(4) tangent: vec4<f32>,
+    @location(5) uv2: vec2<f32>,
+};
+
+@vertex
+fn vs(${cornerInputs(skinned)}) -> CutOutput {${CORNER_CONTEXT}${bend}
+    // Turned as the model is, by its own placement: what the hook reads of the surface.
+    let turn = ${skinned ? 'mat3x3<f32>(skin[0].xyz, skin[1].xyz, skin[2].xyz)' : 'mat3x3<f32>(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)'};
+    var out: CutOutput;
+    out.position = shadow.lightViewProj * shadow.model * placed;
+    out.uv = uv;
+    out.normal = normalize((shadow.model * vec4<f32>(turn * normal, 0.0)).xyz);
+    out.worldPos = (shadow.model * placed).xyz;
+    out.color = color;
+    out.tangent = vec4<f32>(normalize((shadow.model * vec4<f32>(turn * cornerTangent.xyz, 0.0)).xyz), cornerTangent.w);
+    out.uv2 = cornerUv2;
+    return out;
+}
+
+@fragment
+fn fs(in: CutOutput, @builtin(front_facing) front: bool) {
+    var ctx: FragContext;
+    ctx.uv = in.uv;
+    ctx.normal = select(-in.normal, in.normal, front);
+    ctx.worldPos = in.worldPos;
+    ctx.light = vec3<f32>(1.0);
+    ctx.shine = vec3<f32>(0.0);
+    ctx.emissive = vec3<f32>(0.0);
+    ctx.viewDir = ctx.normal;
+    ctx.color = in.color;
+    ctx.screen = vec2<f32>(0.0);
+    ctx.tangent = in.tangent.xyz;
+    ctx.bitangent = cross(ctx.normal, ctx.tangent) * in.tangent.w;
+    ctx.uv2 = in.uv2;
+    ctx.frontFacing = front;
+    // The alpha the drawn model is cut by: its tint's colour does not change it, its alpha does.
+    let shaded = effect(sampleTexture(in.uv) * vec4<f32>(1.0, 1.0, 1.0, shadow.cut.y) * in.color, ctx);
+    if (shaded.a < shadow.cut.x) {
+        discard;
+    }
 }
 `,
     ].join('\n');

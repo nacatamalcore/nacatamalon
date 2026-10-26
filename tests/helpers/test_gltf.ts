@@ -86,6 +86,11 @@ export type TTestMaterial = {
      */
     doubleSided?: boolean;
     /**
+     * How its alpha is used, and below what a pixel is cut out with `'MASK'`.
+     */
+    alphaMode?: 'OPAQUE' | 'MASK' | 'BLEND';
+    alphaCutoff?: number;
+    /**
      * A picture masking the glow, beside the file: the factor multiplies it.
      */
     emissiveImage?: string;
@@ -316,6 +321,8 @@ const assemble = (model: TTestModel) => {
         if (material.name !== undefined) out.name = material.name;
         if (material.emissiveFactor !== undefined) out.emissiveFactor = material.emissiveFactor;
         if (material.doubleSided !== undefined) out.doubleSided = material.doubleSided;
+        if (material.alphaMode !== undefined) out.alphaMode = material.alphaMode;
+        if (material.alphaCutoff !== undefined) out.alphaCutoff = material.alphaCutoff;
         if (material.emissiveImage !== undefined) {
             images.push({ uri: material.emissiveImage });
             textures.push({ source: images.length - 1 });

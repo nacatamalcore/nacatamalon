@@ -93,4 +93,9 @@ export type TDrawMaterial = TDrawShader & {
      * Which side of its triangles is thrown away. Omitted, `'back'`.
      */
     readonly cull?: TCullMode;
+    /**
+     * A pixel whose alpha is below this is not drawn, and every other one is drawn solid. Omitted,
+     * nothing is cut.
+     */
+    readonly alphaCutoff?: number;
 };

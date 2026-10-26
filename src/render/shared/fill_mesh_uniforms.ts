@@ -70,6 +70,9 @@ export const fillMeshUniforms = (out: Float32Array, at: number, mesh: TDrawMesh,
     const [first, second] = pickMeshLights(lights, model, mesh.geometry?.bounds ?? null);
     out[at + 44] = first;
     out[at + 45] = second;
+    // And the last one carries the alpha below which a pixel is cut out: zero cuts nothing, since
+    // no alpha is below it.
+    out[at + 46] = surface.alphaCutoff ?? 0;
 
     out[at + 48] = surface.tint.r;
     out[at + 49] = surface.tint.g;

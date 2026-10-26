@@ -18,9 +18,12 @@ const gpuOf = (texture: TDrawMesh['material']['texture'] | undefined): GPUTextur
 
 /**
  * The pictures of a model, its colour and its glow, read the way it asked (its filter, and what
- * they do past their edge), made the first time that pairing is drawn.
+ * they do past their edge), made the first time that pairing is drawn. The shadow pass reads the
+ * same group to cut a caster out of its picture.
+ *
+ * @internal
  */
-const textureBindGroup = (device: GPUDevice, meshes: TMeshPipeline, mesh: TDrawMesh): GPUBindGroup => {
+export const textureBindGroup = (device: GPUDevice, meshes: TMeshPipeline, mesh: TDrawMesh): GPUBindGroup => {
     const filter = (mesh.material.smooth ?? meshes.defaultSmooth) ? 'linear' : 'nearest';
     const picture = gpuOf(mesh.material.texture);
     const glow = gpuOf(mesh.material.emissiveTexture);

@@ -166,6 +166,13 @@ export type TMeshMaterialOptions = TMaterialShaderOptions & {
      */
     cull?: TCullMode;
     /**
+     * Cuts its picture out instead of blending it: a pixel whose alpha is below this number is not
+     * drawn, every other one is drawn solid. For a fence, a leaf, grass or a paper figure, which then
+     * hides what is behind it and casts the shadow of its shape. `0.5` is the usual; from 0 to 1.
+     * Omitted, nothing is cut.
+     */
+    alphaCutoff?: number;
+    /**
      * How the surface is lit, in place of the engine's light: `toonLighting()` (flat bands) or `unlitLighting()` (no
      * light at all). One only. Its numbers become knobs of the material (`toonShadow`...), so they can
      * be turned while the game runs. It makes the colour, so it is not given with `fragment` or

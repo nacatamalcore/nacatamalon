@@ -100,6 +100,8 @@ const buildPart = (
                 // The file's word unless the game says otherwise, as with see-through: a leaf the
                 // modelling program kept both sides of is drawn on both.
                 cull: options.cull ?? (part.doubleSided ? 'none' : undefined),
+                // The same: a leaf the file cuts out of its picture is cut, unless the game says.
+                alphaCutoff: options.alphaCutoff ?? part.alphaCutoff ?? undefined,
                 alpha: state.alpha,
                 // The file's word unless the game says otherwise. A piece the file does not call
                 // see-through is left to its alpha, rather than written down as solid.

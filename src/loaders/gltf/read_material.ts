@@ -32,7 +32,7 @@ export type TGltfSurface = {
     emissiveMasked: boolean;
     /**
      * Whether the file says the surface is seen through (`alphaMode: 'BLEND'`). Only this mode:
-     * `'MASK'` cuts holes at a threshold rather than blending, which this engine does not do yet.
+     * `'MASK'` cuts holes at a threshold rather than blending, and is `alphaCutoff`.
      */
     transparent: boolean;
     /**
@@ -40,6 +40,11 @@ export type TGltfSurface = {
      * modelling program writes a surface whose back is not thrown away.
      */
     doubleSided: boolean;
+    /**
+     * The alpha below which the picture is cut out (`alphaMode: 'MASK'`, `0.5` unless the file says),
+     * or `null` for a surface the file does not cut.
+     */
+    alphaCutoff: number | null;
     /**
      * What its picture does past its edge, from the file's sampler. Repeating when it says nothing.
      */
@@ -103,7 +108,7 @@ const imageOf = (doc: TGltfDoc, textureIndex: number | undefined): TGltfImage | 
 export const readMaterial = (doc: TGltfDoc, index: number | undefined): TGltfSurface => {
     const material = index !== undefined ? doc.materials?.[index] : undefined;
     if (material === undefined) {
-        return { name: '', tint: WHITE, emissive: BLACK, image: null, emissiveImage: null, emissiveMasked: false, transparent: false, doubleSided: false, wrap: REPEAT };
+        return { name: '', tint: WHITE, emissive: BLACK, image: null, emissiveImage: null, emissiveMasked: false, transparent: false, doubleSided: false, alphaCutoff: null, wrap: REPEAT };
     }
 
     const [r, g, b, a] = material.pbrMetallicRoughness?.baseColorFactor ?? [1, 1, 1, 1];
@@ -128,6 +133,8 @@ export const readMaterial = (doc: TGltfDoc, index: number | undefined): TGltfSur
         emissiveMasked: material.emissiveTexture !== undefined,
         transparent: material.alphaMode === 'BLEND',
         doubleSided: material.doubleSided === true,
+        // Kept in range: a file that says more than 1 cuts everything, which is what it asked for.
+        alphaCutoff: material.alphaMode === 'MASK' ? Math.min(Math.max(material.alphaCutoff ?? 0.5, 0), 1) : null,
         wrap: { u: wrapOf(sampler?.wrapS), v: wrapOf(sampler?.wrapT) },
     };
 };
