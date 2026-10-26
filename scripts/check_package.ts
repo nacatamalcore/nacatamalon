@@ -69,8 +69,8 @@ const js = run([esbuild, ...buildArgs], root);
 check(js.code === 0, 'the JavaScript builds', js.out);
 const strip = run(['bun', 'scripts/strip_bare_imports.ts', join(work, 'dist')], root);
 check(strip.code === 0, 'the imports that bring nothing in are left out', strip.out);
-const types = run([tsc, '-p', 'tsconfig.build.json', '--outDir', join(work, 'dist', 'types')], root);
-check(types.code === 0, 'the types build', types.out);
+const types = run(['bun', 'scripts/build_types.ts', join(work, 'dist', 'types')], root);
+check(types.code === 0, 'the types build, one file per door, naming no type a door does not export', types.out);
 
 writeFileSync(join(packageDir, 'package.json'), JSON.stringify(pkg, null, 4));
 // `llms-full.txt` is written by the build, not kept in git: written here too, so it is there to ship.
@@ -127,6 +127,12 @@ if (offline) {
 } else {
     const old = run(['bunx', '-p', `typescript@${OLD_TYPESCRIPT}`, 'tsc', '-p', '.'], work);
     check(old.code === 0, `a game compiles against it (TypeScript ${OLD_TYPESCRIPT})`, old.out);
+    // The doors of tools and extensions too, with no `@webgpu/types` installed: TypeScript 5 has no
+    // WebGPU, and a door naming one of its types stops every project on it that loads the door.
+    writeFileSync(join(work, 'src', 'tool_doors.ts'), ['authoring', 'extend', 'headless', 'speech'].map((door, i) => `import * as tool${i} from 'nacatamalon/${door}';\nvoid tool${i};`).join('\n'));
+    writeFileSync(join(work, 'tsconfig.tools.json'), JSON.stringify({ extends: './tsconfig.json', include: ['src/tool_doors.ts'] }));
+    const oldTools = run(['bunx', '-p', `typescript@${OLD_TYPESCRIPT}`, 'tsc', '-p', 'tsconfig.tools.json'], work);
+    check(oldTools.code === 0, `the doors of tools compile against it (TypeScript ${OLD_TYPESCRIPT}, no WebGPU types)`, oldTools.out);
 }
 
 // 3. The README's physics example, compiling against the physics engines installed beside it.

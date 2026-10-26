@@ -27,7 +27,7 @@ import type { TMask } from '../../mask/types/t_mask';
  * serialized: `parent` points back up the tree, so a naive `JSON.stringify` would throw, and the
  * other three hold functions.
  *
- * @category Boxes
+ * @category Game objects
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
@@ -157,6 +157,8 @@ export type TBox = {
     /**
      * Registered by `useCollisionBetween` and `useCollisionWith`: what to compare (a component, or a
      * tag) once every update of the scene has run, and what to call for each pair touching.
+     *
+     * @internal
      */
     collisionCallbacks: TCollisionListener[];
     /**

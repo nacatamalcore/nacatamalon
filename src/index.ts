@@ -127,7 +127,7 @@ export { worldToLocal, localToWorld, worldToLocal3d, localToWorld3d } from './bo
 // Whether two things touch, with no physics: a bullet and a brick, the player and the coins.
 export { collisionBetween } from './hitbox';
 export type { TRect, TCollisionTarget, THitbox } from './hitbox';
-export type { TCollisionWhen } from './hitbox/types/t_hitbox';
+export type { TCollisionWhen, TCollisionMatch, TCollisionMatched } from './hitbox/types/t_hitbox';
 export { useHitbox, useCollisionBetween, useCollisionWith, useTag } from './hooks';
 export type { TTag, TTaggable } from './tags';
 export { useMask } from './hooks';

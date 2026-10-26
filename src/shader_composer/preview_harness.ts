@@ -59,6 +59,29 @@ export type TPreviewHarness = {
 export const PREVIEW_QUAD_VERTICES: Float32Array = SPRITE_QUAD;
 
 /**
+ * How one vertex buffer is read, in the shape WebGPU's `GPUVertexBufferLayout` takes, so an editor
+ * hands it to `createRenderPipeline` as it is.
+ *
+ * Its own type rather than WebGPU's: TypeScript 5 has no WebGPU types, and naming one here stopped
+ * every project on it that loaded this door from compiling. Only the formats the renderer's table
+ * uses are named, which is what keeps it assignable to WebGPU's.
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TPreviewVertexLayout = {
+    readonly arrayStride: number;
+    readonly stepMode?: 'vertex' | 'instance';
+    // Not a readonly list: WebGPU's type takes a plain array.
+    readonly attributes: {
+        readonly shaderLocation: number;
+        readonly offset: number;
+        readonly format: 'float32' | 'float32x2' | 'float32x3' | 'float32x4';
+    }[];
+};
+
+/**
  * How the two vertex buffers a picture draws with are read: the corners
  * (`PREVIEW_QUAD_VERTICES`) and one sprite (`PREVIEW_INSTANCE`).
  *
@@ -68,7 +91,10 @@ export const PREVIEW_QUAD_VERTICES: Float32Array = SPRITE_QUAD;
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const PREVIEW_VERTEX_BUFFERS: readonly GPUVertexBufferLayout[] = VERTEX_BUFFERS;
+// Through WebGPU's readonly list on the way: the types only meet there. The declaration says only
+// `TPreviewVertexLayout`, which is the point.
+export const PREVIEW_VERTEX_BUFFERS: readonly TPreviewVertexLayout[] =
+    VERTEX_BUFFERS as readonly GPUVertexBufferLayout[] as readonly TPreviewVertexLayout[];
 
 /**
  * The frame's numbers for a picture: a target one unit wide and one unit high, looked at straight

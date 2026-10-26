@@ -90,6 +90,7 @@ export { readGltfNodes } from '../loaders';
 // its document changes. A published game never does that; it changes scene from inside, by name.
 export { editorHandleOf } from '../game/handle';
 export type { TEditorHandle } from '../game/handle';
+export type { TMotionPreview } from '../motion/preview_motion';
 export type { TLoggedSound, TSoundLog, TSoundLogPoint } from '../audio';
 export type { TCanvasFit } from '../DOM/types/t_canvas_fit';
 export type { TCameraPreview } from '../game/preview';
@@ -129,4 +130,4 @@ export type {
 export {
     buildPreviewHarness, PREVIEW_QUAD_VERTICES, PREVIEW_VERTEX_BUFFERS, PREVIEW_FRAME_UNIFORMS, PREVIEW_INSTANCE,
 } from '../shader_composer/preview_harness';
-export type { TPreviewHarness } from '../shader_composer/preview_harness';
+export type { TPreviewHarness, TPreviewVertexLayout } from '../shader_composer/preview_harness';

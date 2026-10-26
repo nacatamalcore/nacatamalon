@@ -16,9 +16,9 @@ releases are in [changelog/](./changelog/), one file each.
   are: `'box'`, each face from the side it faces most (a rock, a building); `'planar'`, from above (a
   terrain); `'cylinder'`, once round and down (a barrel, a column); `'sphere'` (a planet). A corner
   two faces want at two places of the picture is split, so a box or a seam needs no corner given
-  twice. The picture is stretched once over the shape, or laid `uvScale` times a unit of the world,
-  so a long wall and a short one get bricks of one size and shapes side by side carry on each
-  other's; round an axis it goes a whole number of times, so the seam meets itself. It belongs to the object that made it and goes with it, unlike a shape hook's,
+  twice. The picture is stretched once over the shape, or laid `uvScale` times a unit of the
+  corners as given (before the object's `transform`), so a long wall and a short one get bricks of
+  one size; round an axis it goes a whole number of times, so the seam meets itself. It belongs to the object that made it and goes with it, unlike a shape hook's,
   which is shared. `updateGeometry(geometry, data)` changes it while the game runs, from a
   `useUpdate`: written over what the card holds while it fits, in new room with some to spare when
   it grows past it. A shape hook's shape is shared, so it is refused.
@@ -28,7 +28,7 @@ releases are in [changelog/](./changelog/), one file each.
   the rim of a base. The same profile is the same shape, shared like the other shape hooks, and a
   scene document writes it as its recipe (`{ "kind": "lathe", "profile", "segments" }`).
 - **`carry`: four numbers a model material's vertex hook hands on to its colour hook.** The vertex
-  hook writes them, `carry = vec4<f32>(lift, 0.0, 0.0, 0.0);` (the same in GLSL), and the colour hook
+  hook writes them, `carry = vec4<f32>(lift, 0.0, 0.0, 0.0);` (`carry = vec4(lift, 0.0, 0.0, 0.0);` in GLSL), and the colour hook
   reads them as `ctx.carry`, smeared across the triangle like everything else a corner carries: how
   high a wave lifted the water, for foam on its crests; a light of the game's own worked out at the
   corners, the look of the era; `pos`, where the corner is in the model's own space, so bands or a
@@ -37,7 +37,9 @@ releases are in [changelog/](./changelog/), one file each.
   they share is worked out once, and read with `composerCarry()`; in a `.shader` graph, the Carry
   Output and Carry nodes. On both cards and every `cull`, in the shadow of a material cut out of its
   picture too. A material's fog rides in the fourth number of its world position now, to leave
-  the place, and draws exactly as before.
+  the place, and draws exactly as before. `carry` and `carried` are the engine's names in a
+  material's shader now: a hand-written hook that declared its own at the top of the file renames
+  it.
 - **`cull` on a model's material**: which side of its triangles is thrown away. `'back'`, the
   default, is a shape seen from outside, as before. `'none'` draws both sides, for a leaf, a sheet,
   a flag or the top of a liquid, with no second plane turned round; each side is lit as the side it
@@ -73,6 +75,26 @@ releases are in [changelog/](./changelog/), one file each.
   `onComplete` ran, by arriving or by `finish`, never by `cancel`, never while it repeats for ever,
   and a tween started from it still waits for the next frame. Code passing `onComplete` has to
   move it to `.onEnd(…)`; TypeScript says where.
+- **The published types are one file per door.** `dist/types` held a declaration for every file of
+  the engine, 1,106 of them, and "go to definition" landed in its insides; now each door has its
+  own (`dist/types/index.d.ts`, `physics2d.d.ts`, `authoring.d.ts`…), holding what it exports and
+  the types those name, with what two doors share written once in `shared/`, so a type is the same
+  in `nacatamalon` and `nacatamalon/physics2d`. 19 files, 1.1 MB instead of 4.9. Nothing a game
+  imports changes. The build stops when a door names a type no door exports, which found three:
+  `TCollisionMatch` and `TCollisionMatched` (what `useCollisionWith` takes and hands back) are on
+  the root now, and `TBox` (what `onReport` and `listen` name) on `nacatamalon/extend`.
+- **What the engine keeps for itself is no longer in the published types.** What is marked
+  internal is left out of them, a whole type or one field of a public one, and the build stops
+  when something shown still names it. That took out of `TRuntimeStore` (`getActiveGame()`, on
+  `nacatamalon/extend`) the renderer, the input sources, the audio manager and clock, full screen,
+  the canvas fit and the capture and preview requests, and `collisionCallbacks` out of `TBox`;
+  nothing outside the engine read them. `TMotionPreview`, what `previewMotion` answers, is on
+  `nacatamalon/authoring` now, and `TMotionEase` is named by the easing curves themselves.
+- **`nacatamalon/authoring` compiles on TypeScript 5 without `@webgpu/types`.**
+  `PREVIEW_VERTEX_BUFFERS` is a `TPreviewVertexLayout` list, a type of its own in the shape WebGPU's
+  `GPUVertexBufferLayout` takes, handed to `createRenderPipeline` as it is; it was WebGPU's, which
+  TypeScript 5 does not have, so a project on it that loaded the door did not compile. The package
+  check compiles the doors of tools on TypeScript 5.4 with no WebGPU types.
 - **A shader written in WGSL alone says how to have it on both cards.** On WebGL2 such a material
   draws with the built-in shader, and the warning only told to write it again after a `// @glsl`
   line, which is how a shader file says it; it names the shader composer now (`compileShader`

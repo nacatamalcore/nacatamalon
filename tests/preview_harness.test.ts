@@ -21,7 +21,17 @@ import { buildUniformLayout } from '../src/render/shared/material_uniforms';
 describe('the harness a node picture draws through', () => {
     it('is the renderer\'s own quad and vertex table, not a copy', () => {
         expect(PREVIEW_QUAD_VERTICES).toBe(SPRITE_QUAD);
-        expect(PREVIEW_VERTEX_BUFFERS).toBe(VERTEX_BUFFERS);
+        expect(PREVIEW_VERTEX_BUFFERS as unknown).toBe(VERTEX_BUFFERS);
+    });
+
+    it('names only the formats its own type says, so the table still goes to WebGPU as it is', () => {
+        // The type is narrower than WebGPU's and taken by a cast: a format added to the renderer's
+        // table and not to the type would get past the compiler, and stops here.
+        const named = new Set(['float32', 'float32x2', 'float32x3', 'float32x4']);
+        const formats = PREVIEW_VERTEX_BUFFERS.flatMap((buffer) => buffer.attributes.map((attribute) => attribute.format));
+        expect(formats.filter((format) => !named.has(format))).toEqual([]);
+        const asWebGpu: readonly GPUVertexBufferLayout[] = PREVIEW_VERTEX_BUFFERS;
+        expect(asWebGpu).toBe(PREVIEW_VERTEX_BUFFERS);
     });
 
     it('draws one sprite laid out exactly as the renderer lays one out', () => {

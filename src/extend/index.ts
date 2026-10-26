@@ -36,3 +36,6 @@ export { placementOf, worldPlacementOf, localPositionFrom } from '../box';
 // place, a full turn and a size on three axes, and a flat scene would carry all of that for nothing.
 export { placement3dOf, worldPlacement3dOf, localPosition3dFrom, localQuaternionFrom } from '../box';
 export type { TPose3d } from '../box';
+// Every object in the tree as the engine holds it, whatever made it. A game names `TGameObject`;
+// this is what the engine's own signatures name (`onReport`, `listen`), so it has a door.
+export type { TBox } from '../box';

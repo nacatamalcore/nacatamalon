@@ -43,31 +43,31 @@
             "default": "./dist/index.js"
         },
         "./authoring": {
-            "types": "./dist/types/authoring/index.d.ts",
+            "types": "./dist/types/authoring.d.ts",
             "default": "./dist/authoring/index.js"
         },
         "./extend": {
-            "types": "./dist/types/extend/index.d.ts",
+            "types": "./dist/types/extend.d.ts",
             "default": "./dist/extend/index.js"
         },
         "./physics2d": {
-            "types": "./dist/types/physics/rapier2d/index.d.ts",
+            "types": "./dist/types/physics2d.d.ts",
             "default": "./dist/physics2d.js"
         },
         "./physics3d": {
-            "types": "./dist/types/physics/box3d/index.d.ts",
+            "types": "./dist/types/physics3d.d.ts",
             "default": "./dist/physics3d.js"
         },
         "./react": {
-            "types": "./dist/types/react/index.d.ts",
+            "types": "./dist/types/react.d.ts",
             "default": "./dist/react/index.js"
         },
         "./headless": {
-            "types": "./dist/types/headless/index.d.ts",
+            "types": "./dist/types/headless.d.ts",
             "default": "./dist/headless/index.js"
         },
         "./speech": {
-            "types": "./dist/types/speech/index.d.ts",
+            "types": "./dist/types/speech.d.ts",
             "default": "./dist/speech/index.js"
         },
         "./package.json": "./package.json"
@@ -106,7 +106,7 @@
         "build": "bun run clean && bun run build:js && bun run build:strip && bun run build:types && bun run build:llms",
         "build:js": "esbuild src/index.ts src/authoring/index.ts src/extend/index.ts src/react/index.ts src/headless/index.ts src/speech/index.ts physics2d=src/physics/rapier2d/index.ts physics3d=src/physics/box3d/index.ts --bundle --splitting --format=esm --outdir=dist --packages=external --sourcemap --log-level=warning",
         "build:strip": "bun scripts/strip_bare_imports.ts",
-        "build:types": "tsc -p tsconfig.build.json",
+        "build:types": "bun scripts/build_types.ts",
         "build:llms": "bun scripts/build_llms.ts",
         "build:fonts": "bun scripts/build_fonts.ts",
         "check:package": "bun scripts/check_package.ts",
@@ -118,6 +118,8 @@
         "@webgpu/types": "^0.1.70",
         "esbuild": "^0.28.2",
         "react": "^19.2.6",
+        "rollup": "^4.65.1",
+        "rollup-plugin-dts": "^6.5.1",
         "typedoc": "^0.28.19",
         "typescript": "~6.0.2"
     },

@@ -49,14 +49,19 @@ export type TRuntimeState = {
      */
     screen: {
         canvas: HTMLCanvasElement;
+        /** @internal */
         renderer: IRenderer;
         /**
          * Full screen for the canvas, or `null` where the game was started without a page to fill.
+         *
+         * @internal
          */
         fullscreen: TCanvasFullscreen | null;
         /**
          * Fits the canvas another way while a host asks (`TEditorHandle.setCanvasFit`), or `null`
          * where the game was started without a page to fit.
+         *
+         * @internal
          */
         setFit: ((fit: TCanvasFit | null) => void) | null;
     };
@@ -217,14 +222,19 @@ export type TRuntimeState = {
      * contents are mutated in place and nothing subscribes to it, so it never notifies.
      */
     input: {
+        /** @internal */
         keyboard: TKeyboardSource;
         /**
          * The pads. Asked how they are once a frame, by the loop, because a pad sends no events.
+         *
+         * @internal
          */
         gamepads: TGamepadSource;
         /**
          * The game's named actions, worked out from the keyboard and the pads right after they are
          * read, so everything in a frame sees the same answer.
+         *
+         * @internal
          */
         actions: TActionSource;
         /**
@@ -232,6 +242,7 @@ export type TRuntimeState = {
          * own choices are kept.
          */
         inputMap: TInputMapHandle;
+        /** @internal */
         pointer: TPointerSource;
     };
 
@@ -373,6 +384,8 @@ export type TRuntimeState = {
         /**
          * A second view drawn every frame onto another canvas, or `null`, which is what a game
          * always has. See `TEditorHandle.setCameraPreview`.
+         *
+         * @internal
          */
         preview: TPreviewRequest | null;
     };
@@ -383,6 +396,7 @@ export type TRuntimeState = {
      * sized and framed by its own options. See `TEditorHandle.capture`.
      */
     capture: {
+        /** @internal */
         request: TCaptureRequest | null;
     };
     /**
@@ -407,10 +421,13 @@ export type TRuntimeState = {
      * sound never opens one. The first `useLoadAudio` or `useSound` fills this in.
      */
     audio: {
+        /** @internal */
         manager: TAudioManager | null;
         /**
          * What the music counts by, kept here so a host can ask before the game has any sound: the
          * manager made later starts on it. See `TEditorHandle.setAudioClock`.
+         *
+         * @internal
          */
         clock: TAudioClock;
     };

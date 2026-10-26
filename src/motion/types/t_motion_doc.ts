@@ -1,4 +1,4 @@
-import type { MOTION_EASES } from '../motion_eases';
+import type * as easing from '../../math/easing/functions';
 
 /**
  * The name of a curve a motion moves along between two keys: one of the engine's easing curves,
@@ -8,7 +8,7 @@ import type { MOTION_EASES } from '../motion_eases';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TMotionEase = keyof typeof MOTION_EASES;
+export type TMotionEase = keyof typeof easing;
 
 /**
  * One key of a track: the value it has at a moment.

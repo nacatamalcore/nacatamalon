@@ -7,7 +7,7 @@ import type { TMotionDoc } from './types/t_motion_doc';
 /**
  * What a preview did: how many tracks moved something, and why each of the others did not.
  *
- * @internal
+ * @category Game
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
