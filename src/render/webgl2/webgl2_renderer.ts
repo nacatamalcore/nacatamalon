@@ -85,7 +85,18 @@ export const createWebGL2Renderer = async (
         },
         createBuffer: (data, usage) => createWebGL2Buffer(gl, data, usage),
         updateBuffer: (buffer, data) => updateWebGL2Buffer(gl, buffer, data),
-        destroyBuffer: (buffer) => { gl.deleteBuffer(toGlBuffer(buffer)); },
+        destroyBuffer: (buffer) => {
+            // A shape's bindings are kept by its corners' buffer, and go with it: a shape that grows
+            // past its room, or goes with its object, would otherwise leave them on the card.
+            for (const held of [state.meshes.vertexArrays, state.meshes.skinnedVertexArrays]) {
+                const vao = held.get(buffer);
+                if (vao !== undefined) {
+                    gl.deleteVertexArray(vao);
+                    held.delete(buffer);
+                }
+            }
+            gl.deleteBuffer(toGlBuffer(buffer));
+        },
         createDataTexture: (data, width, height) => {
             const texture = createWebGL2DataTexture(gl, data, width, height) as TWebGL2Texture;
             state.textures.add(texture);
