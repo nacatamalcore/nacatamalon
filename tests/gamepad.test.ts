@@ -3,7 +3,7 @@ import { createScene } from '../src/scene/create_scene';
 import { stopScene } from '../src/scene/stop_scene';
 import { useGamepad } from '../src/hooks/input/use_gamepad';
 import { createFrameContext, tick } from '../src/game/loop';
-import { createTestGame, startTestScene } from './helpers/test_game';
+import { createFakeCanvas, createTestGame, startTestScene } from './helpers/test_game';
 import { createFakePad, installFakePads } from './helpers/test_gamepad';
 import type { TFakePad } from './helpers/test_gamepad';
 import type { TGamepad, TGamepadInfo, TGamepadTarget } from '../src/input';
@@ -188,6 +188,48 @@ describe('useGamepad', () => {
         played.length = 0;
         await pad.rumble({ duration: 0.3, delay: 0.1 });
         expect(played).toEqual([['dual-rumble', { duration: 300, startDelay: 100, strongMagnitude: 1, weakMagnitude: 1 }]]);
+    });
+
+    it('stops a shake when the page goes out of sight or away, with nothing left running to stop it', async () => {
+        // A page and its window to tell, around the pads the test installed.
+        const page = Object.assign(new EventTarget(), { hidden: false, defaultView: undefined as unknown });
+        const view = Object.assign(new EventTarget(), { navigator: globalThis.navigator });
+        page.defaultView = view;
+        const canvas = Object.assign(createFakeCanvas(), { ownerDocument: page });
+        const { store } = createTestGame({}, canvas);
+        let pad!: TGamepad;
+        startTestScene(store, 'Level', () => { pad = useGamepad(); return createScene(); });
+
+        const fake = createFakePad();
+        let resets = 0;
+        fake.vibrationActuator = {
+            playEffect: async () => 'complete',
+            reset: async () => { resets += 1; },
+        };
+        pads.pads[0] = fake;
+        store.get('input').gamepads.beginFrame();
+
+        // Nothing shaking yet: nothing to stop.
+        page.hidden = true;
+        page.dispatchEvent(new Event('visibilitychange'));
+        expect(resets).toBe(0);
+
+        page.hidden = false;
+        await pad.rumble({ duration: 5 });
+        page.hidden = true;
+        page.dispatchEvent(new Event('visibilitychange'));
+        expect(resets).toBe(1);
+
+        // Stopped through the motor it shook with, even once the hidden page is handed no pads.
+        pads.pads[0] = null;
+        view.dispatchEvent(new Event('pagehide'));
+        expect(resets).toBe(2);
+
+        // Once the game is gone it listens no more.
+        store.get('input').gamepads.destroy();
+        const after = resets;
+        view.dispatchEvent(new Event('pagehide'));
+        expect(resets).toBe(after);
     });
 
     it('does not ask the browser anything when nobody asked for a pad', () => {

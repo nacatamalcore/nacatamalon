@@ -132,6 +132,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **A pad kept shaking after its game's tab was hidden or closed**, until the game was opened again
+  and shook once more: a hidden page gets no frames, so nothing was left to stop it. Every pad that
+  was shaking is stopped when the page goes out of sight and when it is closed, through the motor it
+  shook with, since a hidden page may no longer be handed its pads.
 - **A store saving by itself (`mode: 'auto'`) lost the last change made before the page went**: it
   waits `throttle` seconds before writing, and a tab closed in between never wrote it. It writes what
   it still owes when the page is hidden and when it is leaving now. A store in `'manual'` still saves

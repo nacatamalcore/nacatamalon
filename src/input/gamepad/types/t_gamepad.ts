@@ -207,7 +207,8 @@ export type TGamepad = {
      */
     rumble(options?: TRumbleOptions): Promise<boolean>;
     /**
-     * Stops whatever is playing. Done for you when the game is destroyed.
+     * Stops whatever is playing. Done for you when the game is destroyed, and when its page goes out
+     * of sight or is closed, since nothing in the game runs then to stop a shake it started.
      */
     stopRumble(): void;
 

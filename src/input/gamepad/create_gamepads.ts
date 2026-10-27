@@ -52,6 +52,11 @@ type TPort = {
      * Whether it has ever been vibrated, so the teardown knows whether to stop it.
      */
     rumbled: boolean;
+    /**
+     * The motor it was last vibrated through, for stopping it when the pad can no longer be asked
+     * for: a hidden page may not be handed its pads any more, and the shake has to stop all the same.
+     */
+    actuator: GamepadHapticActuator | null;
     connectListeners: TGamepadListener[];
     disconnectListeners: TGamepadListener[];
 };
@@ -69,6 +74,7 @@ const createPort = (): TPort => ({
     axisCount: 0,
     seen: false,
     rumbled: false,
+    actuator: null,
     connectListeners: [],
     disconnectListeners: [],
 });
@@ -207,7 +213,7 @@ export const createGamepads = (canvas: HTMLCanvasElement): TGamepadSource => {
         if (!port.rumbled) {
             return;
         }
-        const actuator = padAt(index)?.vibrationActuator;
+        const actuator = padAt(index)?.vibrationActuator ?? port.actuator;
         if (actuator === null || actuator === undefined) {
             return;
         }
@@ -246,6 +252,26 @@ export const createGamepads = (canvas: HTMLCanvasElement): TGamepadSource => {
 
     view.addEventListener('gamepadconnected', onConnected);
     view.addEventListener('gamepaddisconnected', onDisconnected);
+
+    /**
+     * Stops every pad that was shaking. A page that goes out of sight or away stops sending frames,
+     * so nothing in the game is left to stop a shake it started, and the motors can keep going in
+     * the player's hands long after: until the game is opened again and shakes once more.
+     */
+    const stopAllRumble = (): void => {
+        for (const [index, port] of ports) {
+            stopPortRumble(index, port);
+        }
+    };
+    const page = canvas.ownerDocument;
+    const onVisibility = (): void => {
+        if (page?.hidden) {
+            stopAllRumble();
+        }
+    };
+    // `?.` on the method too: a headless game's page is only a window to hang the input on.
+    page?.addEventListener?.('visibilitychange', onVisibility);
+    view.addEventListener('pagehide', stopAllRumble);
 
     const buildHandle = (target: TGamepadTarget, options: TUseGamepadOptions & { scope?: (off: () => void) => void } = {}): TGamepad => {
         // A handle that follows the first pad has to bring every port into being, not only the one
@@ -364,7 +390,9 @@ export const createGamepads = (canvas: HTMLCanvasElement): TGamepadSource => {
                 saysMilliseconds('rumble duration', rumbleOptions.duration ?? 0, MAX_RUMBLE);
                 const duration = Math.min(Math.max(rumbleOptions.duration ?? 0.2, 0), MAX_RUMBLE) * 1000;
                 const startDelay = Math.max(rumbleOptions.delay ?? 0, 0) * 1000;
-                portNow().rumbled = true;
+                const port = portNow();
+                port.rumbled = true;
+                port.actuator = actuator;
 
                 return actuator
                     .playEffect('dual-rumble', {
@@ -407,11 +435,11 @@ export const createGamepads = (canvas: HTMLCanvasElement): TGamepadSource => {
         destroy: () => {
             view.removeEventListener('gamepadconnected', onConnected);
             view.removeEventListener('gamepaddisconnected', onDisconnected);
+            page?.removeEventListener?.('visibilitychange', onVisibility);
+            view.removeEventListener('pagehide', stopAllRumble);
             // A game closed mid shake leaves the pad buzzing in the player's hands with nothing left
             // running to stop it: only the effect's own length would ever end it.
-            for (const [index, port] of ports) {
-                stopPortRumble(index, port);
-            }
+            stopAllRumble();
             ports.clear();
         },
     };
