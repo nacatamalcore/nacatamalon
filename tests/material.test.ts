@@ -173,6 +173,45 @@ describe('a material built on a file', () => {
         expect(warn).toHaveBeenCalled();
     });
 
+    it('keeps a material of the other family built-in, and says so once, whichever arrives first', async () => {
+        const { store } = createTestGame();
+        serve({ '/cel.wgsl': FILE });
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+
+        // Built before the bytes land, then two more after them: a sprite has no FragContext.
+        const shader = newShader('/cel.wgsl', '/cel.wgsl');
+        const before = inScene(store, 'A', () => createMaterial({ effect: shader }));
+        await loadShader(store, shader);
+        const after = inScene(store, 'B', () => [createMaterial({ effect: shader }), createMaterial({ name: 'glow', effect: shader })]);
+
+        for (const material of [before, ...after]) {
+            expect(material.shader).toBe('sprite2d');
+            expect(material.fragment).toBeNull();
+            expect(material.vertex).toBeNull();
+        }
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(String(warn.mock.calls[0]![0])).toContain(`'/cel.wgsl' is a mesh3d shader, but the material is sprite2d`);
+    });
+
+    it('says it again for the other family, and not at all when the families agree', async () => {
+        const { store } = createTestGame();
+        serve({ '/cel.wgsl': FILE, '/plain.wgsl': 'fn effect(c: vec4<f32>, uv: vec2<f32>) -> vec4<f32> { return c; }' });
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+
+        const plain = newShader('/plain.wgsl', '/plain.wgsl');
+        await loadShader(store, plain);
+        const [sprite, model] = inScene(store, 'Level', () => [
+            createMaterial({ effect: plain }),
+            createMaterial({ shader: 'mesh3d', name: 'hull', effect: plain }),
+        ]);
+
+        // A file with no `@shader` line is for sprites.
+        expect(sprite.fragment).toContain('fn effect');
+        expect(model.fragment).toBeNull();
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(String(warn.mock.calls[0]![0])).toContain(`'/plain.wgsl' is a sprite2d shader, but the material "hull" is mesh3d`);
+    });
+
     it('is loud about a name no shader was loaded under', () => {
         const { store } = createTestGame();
 
