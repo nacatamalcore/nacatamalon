@@ -45,8 +45,8 @@ releases are in [changelog/](./changelog/), one file each.
   a flag or the top of a liquid, with no second plane turned round; each side is lit as the side it
   is, since the light is worked out at the corners for both, and casts its shadow. `'front'` shows a
   shape from inside, a dome of sky or a room, lit from inside. On `createMaterial({ shader: 'mesh3d' })`,
-  `createMesh` and `createModel`, in a scene document (`"cull"`, written only when not `"back"`) and
-  in the editor's inspector. A glTF material marked `doubleSided` is drawn with `'none'` unless the
+  `createMesh` and `createModel`, in a scene document (`"cull"`, written whenever the material says
+  it, `"back"` included) and in the editor's inspector. A glTF material marked `doubleSided` is drawn with `'none'` unless the
   game says otherwise. A colour hook tells the two sides apart with `ctx.frontFacing`, and the shader
   composer with `composerFrontFacing()`. A model that keeps the usual side is drawn exactly as before.
 
