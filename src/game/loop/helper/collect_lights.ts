@@ -1,6 +1,8 @@
 import { composeTransform2d } from '../../../render/shared/compose_transform_2d';
 import { isPunctualLight, MAX_SCENE_LIGHTS } from '../../../light';
+import { gameOfBox } from '../../../box/box_game';
 import type { TBox } from '../../../box';
+import { firstTimeIn, forgetOnPage } from '../../../utils/first_time_in';
 import type { TColor } from '../../../color';
 import type { TLight, TPunctualLight } from '../../../light';
 import type { TTransform3d } from '../../../gameobjects/types/t_transform_3d';
@@ -22,10 +24,6 @@ const DEFAULT_LIGHT: TPunctualLight = {
     transform: { x: 0, y: 0, z: 0, rotation: 0, rotationX: -0.9, rotationY: 0.6, scaleX: 1, scaleY: 1, scaleZ: 1 },
 };
 
-let warnedBudget = false;
-let warnedSecondCaster = false;
-let warnedSecondAmbient = false;
-
 /**
  * Forgets that the warnings below were already given. For the tests, like `resetShadowWarnings`.
  *
@@ -34,9 +32,9 @@ let warnedSecondAmbient = false;
  * @author Francisco Pereira Alvarado
  */
 export const resetLightWarnings = (): void => {
-    warnedBudget = false;
-    warnedSecondCaster = false;
-    warnedSecondAmbient = false;
+    forgetOnPage('lights: over the budget');
+    forgetOnPage('lights: a second shadow caster');
+    forgetOnPage('lights: a second ambient');
 };
 
 /**
@@ -97,10 +95,11 @@ const gather = (box: TBox, out: TLight[], parent: TTransform3d | null, top = tru
 export const collectLighting = (scene: TBox): TSceneLighting => {
     const found: TLight[] = [];
     gather(scene, found, null);
+    // Each warning below is said once per game, the scene's: they would otherwise repeat every frame.
+    const game = gameOfBox(scene);
 
     const punctual = found.filter(isPunctualLight);
-    if (punctual.length > MAX_SCENE_LIGHTS && !warnedBudget) {
-        warnedBudget = true;
+    if (punctual.length > MAX_SCENE_LIGHTS && firstTimeIn(game, 'lights: over the budget')) {
         console.warn(`[NacatamalOn] a scene has ${punctual.length} lights and holds ${MAX_SCENE_LIGHTS} at a time. The rest are ignored, in the order they were made.`);
     }
     const lights = punctual.slice(0, MAX_SCENE_LIGHTS);
@@ -110,8 +109,7 @@ export const collectLighting = (scene: TBox): TSceneLighting => {
     // whoever asked first. Core keeps the first one too and says nothing, which leaves an author
     // turning `castShadow` on and off on a light that was never going to be the one.
     const casters = lights.filter((light) => light.castShadow === true && light.type !== 'point' && light.type !== 'rect');
-    if (casters.length > 1 && !warnedSecondCaster) {
-        warnedSecondCaster = true;
+    if (casters.length > 1 && firstTimeIn(game, 'lights: a second shadow caster')) {
         console.warn(`[NacatamalOn] ${casters.length} lights in a scene ask to cast shadows and one can. The first is used, the rest light the scene without casting.`);
     }
 
@@ -119,8 +117,7 @@ export const collectLighting = (scene: TBox): TSceneLighting => {
     // rest. Said once when there are more, since summing them is what anyone would guess.
     const declared = found.filter((light) => light.type === 'ambient');
     if (declared.length > 0) {
-        if (declared.length > 1 && !warnedSecondAmbient) {
-            warnedSecondAmbient = true;
+        if (declared.length > 1 && firstTimeIn(game, 'lights: a second ambient')) {
             console.warn(`[NacatamalOn] a scene has ${declared.length} ambient lights and one sets how dark its shade is: the last one made.`);
         }
         const last = declared[declared.length - 1]!;

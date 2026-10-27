@@ -1,5 +1,7 @@
 import { useCleanup } from '../../hooks/scene/use_cleanup';
 import { getActiveGame } from '../../store';
+import { gameOfBox } from '../../box/box_game';
+import { firstTimeIn, forgetOnPage } from '../../utils/first_time_in';
 import { registerPhysicsProvider } from '../physics_provider';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
 import type { TPhysicsBody, TPhysicsBody2d, TPhysicsWorld } from '../types/t_physics';
@@ -67,7 +69,6 @@ let owner: TRuntimeStore | null = null;
 export const getPhysicsWorld2d = (): TPhysicsWorldHandle2d | null =>
     owner !== null && owner === getActiveGame() ? current : null;
 
-let warnedNoWorld = false;
 
 /**
  * Forgets that a collider with no world was already reported. For the tests, like
@@ -77,7 +78,7 @@ let warnedNoWorld = false;
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const resetNoWorldWarning = (): void => { warnedNoWorld = false; };
+export const resetNoWorldWarning = (): void => forgetOnPage('physics 2d: collider with no world');
 
 /**
  * The world each box's body was put in, for `watchContacts`. Weak, so a box gone is forgotten.
@@ -128,7 +129,6 @@ export const rapier2dProvider: TPhysicsProvider = {
 
         current = usePhysicsWorld({ gravity: record.gravity });
         owner = getActiveGame();
-        warnedNoWorld = false;
 
         // Without this the pointer outlives its scene, and the next scene's bodies would be
         // added to a world that has already freed its WASM memory.
@@ -153,8 +153,7 @@ export const rapier2dProvider: TPhysicsProvider = {
         // game on the page, is not where this body goes.
         const world = getPhysicsWorld2d();
         if (world === null) {
-            if (!warnedNoWorld) {
-                warnedNoWorld = true;
+            if (firstTimeIn(gameOfBox(box), 'physics 2d: collider with no world')) {
                 console.warn(
                     '[NacatamalOn] A box declares a 2D collider but the scene has no physics ' +
                     'world: add a Physics World 2D component to the scene root. The collider ' +

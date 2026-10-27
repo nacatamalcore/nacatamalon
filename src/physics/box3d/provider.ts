@@ -1,6 +1,8 @@
 import { useCleanup } from '../../hooks/scene/use_cleanup';
 import { getGeometry } from '../../geometry';
 import { getActiveGame } from '../../store';
+import { gameOfBox } from '../../box/box_game';
+import { firstTimeIn, forgetOnPage } from '../../utils/first_time_in';
 import { registerPhysicsProvider } from '../physics_provider';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
 import type { TPhysicsBody, TPhysicsBody3d, TPhysicsWorld } from '../types/t_physics';
@@ -66,7 +68,6 @@ let owner: TRuntimeStore | null = null;
 export const getPhysicsWorld3d = (): TPhysicsWorldHandle3d | null =>
     owner !== null && owner === getActiveGame() ? current : null;
 
-let warnedNoWorld = false;
 
 /**
  * Forgets that a collider with no world was already reported. For the tests, like
@@ -76,7 +77,7 @@ let warnedNoWorld = false;
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const resetNoWorldWarning = (): void => { warnedNoWorld = false; };
+export const resetNoWorldWarning = (): void => forgetOnPage('physics 3d: collider with no world');
 
 /**
  * The world each box's body was put in, for `watchContacts`. Weak, so a box gone is forgotten.
@@ -88,10 +89,8 @@ const worldOfBody = new WeakMap<TGameObject, TPhysicsWorldHandle3d>();
  * rather than once per body, because a wall of two hundred identical lines says nothing the
  * first one did not.
  */
-const warnedGeometry = new Set<string>();
-const warnMissingGeometry = (key: string): void => {
-    if (warnedGeometry.has(key)) return;
-    warnedGeometry.add(key);
+const warnMissingGeometry = (box: TGameObject, key: string): void => {
+    if (!firstTimeIn(gameOfBox(box), `physics 3d: missing shape: ${key}`)) return;
     console.warn(
         `[NacatamalOn] A collider is shaped after "${key}", which this scene has not loaded, so ` +
         'it is inert. A collider names a shape the same way anything else that draws one does: ' +
@@ -144,7 +143,6 @@ export const box3dProvider: TPhysicsProvider = {
 
         current = usePhysicsWorld({ gravity: record.gravity });
         owner = getActiveGame();
-        warnedNoWorld = false;
 
         // Without this the pointer outlives its scene, and the next scene's bodies would be
         // added to a world that has already freed its WASM memory.
@@ -169,8 +167,7 @@ export const box3dProvider: TPhysicsProvider = {
         // game on the page, is not where this body goes.
         const world = getPhysicsWorld3d();
         if (world === null) {
-            if (!warnedNoWorld) {
-                warnedNoWorld = true;
+            if (firstTimeIn(gameOfBox(box), 'physics 3d: collider with no world')) {
                 console.warn(
                     '[NacatamalOn] An object declares a 3D collider but the scene has no physics ' +
                     'world: give the scene a Physics World 3D of its own. The collider is inert.',
@@ -268,7 +265,7 @@ export const bodyIntoWorld = (world: TPhysicsWorldHandle3d, box: TGameObject, re
             // is how a simplified stand-in for a complicated model is done.
             const geometry = getGeometry(collider.geometry);
             if (geometry === null) {
-                warnMissingGeometry(collider.geometry);
+                warnMissingGeometry(box, collider.geometry);
                 break;
             }
             const options = { type: record.body, geometry, ...surface };

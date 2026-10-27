@@ -1,10 +1,9 @@
-import { getActiveBox } from '../../store';
+import { getActiveBox, getActiveGame } from '../../store';
+import { firstTimeIn } from '../../utils/first_time_in';
 import { getPhysicsProviders } from '../physics_provider';
 import { getPhysicsWorld2d } from './provider';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
 import type { TJoint2d, TJointHandle2d } from './t_joint_2d';
-
-let warnedNoWorld = false;
 
 /**
  * Joins two objects' bodies, or one to a point of the world when `b` is `null`: the planks of a
@@ -64,8 +63,7 @@ export const useJoint2d = (a: TGameObject, b: TGameObject | null, joint: TJoint2
     }
     const world = getPhysicsWorld2d();
     if (world === null) {
-        if (getPhysicsProviders().length > 0 && !warnedNoWorld) {
-            warnedNoWorld = true;
+        if (getPhysicsProviders().length > 0 && firstTimeIn(getActiveGame(), 'useJoint2d: no world')) {
             console.warn('[NacatamalOn] useJoint2d: the scene has no 2D world, so nothing is joined. Call usePhysicsWorld2d() in the scene\'s body, before what is in it.');
         }
         return { destroy: () => {} };

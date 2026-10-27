@@ -1,5 +1,6 @@
 import { trackDrawableOwner } from '../../box';
 import { getActiveBox, getActiveGame } from '../../store';
+import { firstTimeIn } from '../../utils/first_time_in';
 import { createRecord } from '../create_record';
 import { newMaterial } from '../../materials';
 import type { TMesh } from './types/t_mesh';
@@ -34,11 +35,6 @@ const resolveTexture = (options: TMeshOptions): TTexture | null => {
     }
     return found;
 };
-
-/**
- * Said once: a game that builds many models from one material would say it for every one of them.
- */
-let warnedAboutMaterial = false;
 
 /**
  * Puts a model in the scene: a shape, somewhere, with a surface.
@@ -79,10 +75,11 @@ export const createMesh = (options: TMeshOptions): TMesh => {
     if (box === null || store === null) {
         throw new Error('[NacatamalOn] createMesh: call it inside a scene body, or inside something created with useSpawn.');
     }
-    if (options.material !== undefined && !warnedAboutMaterial) {
+    if (options.material !== undefined) {
         const ignored = (['tint', 'emissive', 'emissiveTexture', 'specular', 'cull', 'alphaCutoff', 'affine', 'vertexSnap'] as const).filter((key) => options[key] !== undefined);
-        if (ignored.length > 0) {
-            warnedAboutMaterial = true;
+        // Said once per game: a game that builds many models from one material would say it for
+        // every one of them.
+        if (ignored.length > 0 && firstTimeIn(store, 'createMesh: options beside a material')) {
             console.warn(`[NacatamalOn] createMesh: given a material, its ${ignored.join(', ')} ${ignored.length === 1 ? 'is' : 'are'} not read: they go in the material (createMaterial({ ${ignored[0]}: … })), which every model wearing it shares.`);
         }
     }

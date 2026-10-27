@@ -1,7 +1,6 @@
-/**
- * The keys already said to be taken, so a scene that asks every time it starts says it once.
- */
-const said = new Set<string>();
+import { getActiveGame } from '../store/active_game';
+import { firstTimeIn } from '../utils/first_time_in';
+
 
 /**
  * Says that a key already names another file. The cache keeps one thing per key, so the second file
@@ -18,8 +17,8 @@ const said = new Set<string>();
  */
 export const warnIfKeyTaken = (hook: string, key: string, kept: string, asked: string): void => {
     if (kept === asked) return;
-    const id = `${hook}:${key}:${asked}`;
-    if (said.has(id)) return;
-    said.add(id);
+    // Once per game, so a scene that asks every time it starts says it once. Asked while a scene
+    // is built, so the game is the one building it.
+    if (!firstTimeIn(getActiveGame(), `${hook}: key taken: ${key}: ${asked}`)) return;
     console.warn(`[NacatamalOn] ${hook}: the key '${key}' already names '${kept}', so '${asked}' was not loaded and the first is used. Give each file a key of its own.`);
 };

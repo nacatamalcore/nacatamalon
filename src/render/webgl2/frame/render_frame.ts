@@ -191,7 +191,7 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
         if (state.shadow !== null) {
             state.shadowPipeline ??= createShadowPipeline(gl);
             lightSpaceMatrix(source.light, source.camera, lightMatrix);
-            reportCastersOutside(source.casters, source.light, lightMatrix);
+            reportCastersOutside(source.casters, source.light, lightMatrix, state);
             state.shadowPipeline.begin(state.shadow, lightMatrix);
             // What a material's corner hook is told about the screen: the screen's size, in the game's
             // pixels, as its twin tells it.

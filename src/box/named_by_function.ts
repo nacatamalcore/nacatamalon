@@ -1,15 +1,12 @@
+import { gameOfBox } from './box_game';
 import type { TBox } from './types/t_box';
+import { firstTimeIn } from '../utils/first_time_in';
 
 /**
  * The boxes `useSpawn` named after their component's function because it was given no name, and
  * have not been named since. Weak, so a box gone is forgotten with it.
  */
 const namedByFunction = new WeakSet<TBox>();
-
-/**
- * The names already warned about, so a lookup made every frame says it once.
- */
-const warned = new Set<string>();
 
 /**
  * Remembers that `box` is called after its component's function, a name a published build does not
@@ -41,10 +38,10 @@ export const markNamedByFunction = (box: TBox): void => {
  * looked for no longer matches, and this never fires.
  */
 export const noteFoundByName = (box: TBox, name: string): void => {
-    if (!namedByFunction.has(box) || warned.has(name)) {
+    // Once per name and game, so a lookup made every frame says it once.
+    if (!namedByFunction.has(box) || !firstTimeIn(gameOfBox(box), `found by function name: ${name}`)) {
         return;
     }
-    warned.add(name);
     console.warn(
         `[NacatamalOn] '${name}' was found by its component's function name, which a published build ` +
         `shortens, so it would not be found there. Give it the name: useSpawn(${name}, '${name}').`,

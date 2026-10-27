@@ -1,9 +1,8 @@
-import { getActiveBox } from '../../store';
+import { getActiveBox, getActiveGame } from '../../store';
+import { firstTimeIn } from '../../utils/first_time_in';
 import { getPhysicsProviders } from '../physics_provider';
 import { getPhysicsWorld2d } from './provider';
 import type { TSoftBody2d, TSoftBodyOptions2d } from './t_soft_body_2d';
-
-let warnedNoWorld = false;
 
 /**
  * A body that does nothing: where nothing simulates, a soft body stays the shape it was drawn.
@@ -73,8 +72,7 @@ export const useSoftBody2d = (options: TSoftBodyOptions2d): TSoftBody2d => {
     }
     const world = getPhysicsWorld2d();
     if (world === null) {
-        if (getPhysicsProviders().length > 0 && !warnedNoWorld) {
-            warnedNoWorld = true;
+        if (getPhysicsProviders().length > 0 && firstTimeIn(getActiveGame(), 'useSoftBody2d: no world')) {
             console.warn('[NacatamalOn] useSoftBody2d: the scene has no 2D world, so the body never moves. Call usePhysicsWorld2d() in the scene\'s body, before what is in it.');
         }
         return inert();

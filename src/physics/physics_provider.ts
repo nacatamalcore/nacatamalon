@@ -1,4 +1,6 @@
 import type { TBox } from '../box';
+import { getActiveGame } from '../store/active_game';
+import { firstTimeIn } from '../utils/first_time_in';
 import type { TPhysicsBody, TPhysicsWorld } from './types/t_physics';
 
 /**
@@ -53,7 +55,11 @@ export type TPhysicsProvider = {
  * each one answers for its own dimension and leaves the rest alone.
  */
 let providers: TPhysicsProvider[] = [];
-let warned = false;
+/**
+ * How many times an adapter has been installed or taken away: a change says the warning below again,
+ * since what was missing may now be there, or be gone.
+ */
+let installs = 0;
 
 /**
  * Installs something to simulate the physics a scene declares. `null` uninstalls **everything**,
@@ -87,7 +93,7 @@ export const registerPhysicsProvider = (next: TPhysicsProvider | null): void => 
     } else if (!providers.includes(next)) {
         providers.push(next);
     }
-    warned = false;
+    installs += 1;
 };
 
 /**
@@ -110,9 +116,8 @@ export const getPhysicsProviders = (): readonly TPhysicsProvider[] => providers;
  * @internal
  */
 export const warnMissingPhysicsProvider = (): void => {
-    if (warned) {
+    if (!firstTimeIn(getActiveGame(), `physics: nothing installed: ${installs}`)) {
         return;
     }
-    warned = true;
     console.warn('[NacatamalOn] This scene declares physics and nothing is installed to simulate it, so its colliders sit still. Install an adapter and call installPhysics2d() or installPhysics3d().');
 };

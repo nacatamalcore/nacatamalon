@@ -12,10 +12,11 @@ const VIEWS_START = 4;
 const VIEW_FLOATS = 4;
 
 /**
- * Only said once per page, not once per frame: the same scenes will be over the limit on the next
- * frame too, and sixty warnings a second bury everything else in the console.
+ * The renderers that already said so. Once per renderer, which is once per game, not once per frame:
+ * the same scenes will be over the limit on the next frame too, and sixty warnings a second bury
+ * everything else in the console.
  */
-let warnedTooManyCameras = false;
+const warnedTooManyCameras = new WeakSet<TWebGPUState>();
 
 /**
  * The size of the frame uniform buffer in bytes, matching `Uniforms` in the sprite shader.
@@ -47,8 +48,8 @@ export const writeFrameUniforms = (gpu: TWebGPUState, width: number, height: num
     data[VIEWS_START + 2] = 0;
     data[VIEWS_START + 3] = 1;
 
-    if (cameras.length > MAX_VIEWS - 1 && !warnedTooManyCameras) {
-        warnedTooManyCameras = true;
+    if (cameras.length > MAX_VIEWS - 1 && !warnedTooManyCameras.has(gpu)) {
+        warnedTooManyCameras.add(gpu);
         console.warn(`[NacatamalOn] More than ${MAX_VIEWS - 1} scenes with a camera at once: the extra ones are drawn as if they had none.`);
     }
 

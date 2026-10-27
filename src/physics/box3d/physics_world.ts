@@ -4,6 +4,8 @@ import { createGameSignal } from '../../signal/create_game_signal';
 import { ALL_LAYERS } from '../layers';
 import { resolveLayers } from '../layer_names';
 import { getActiveGame } from '../../store';
+import { gameOfBox } from '../../box/box_game';
+import { firstTimeIn } from '../../utils/first_time_in';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
 import type { TGameSignal } from '../../signal';
 import { fromB3, loadBox3D, toB3 } from './load_box3d';
@@ -601,8 +603,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
         },
         addSphere: (box, opts) => {
             const [sx, sy, sz] = scaleOf(box);
-            if ((sx !== sy || sy !== sz) && !warnedNonUniform) {
-                warnedNonUniform = true;
+            if ((sx !== sy || sy !== sz) && firstTimeIn(gameOfBox(box), 'physics 3d: round shape scaled unevenly')) {
                 console.warn(
                     `[NacatamalOn] A sphere collider cannot be scaled non-uniformly (${sx}x${sy}x${sz}): ` +
                     'that shape is an ellipsoid, which this solver has no room for. Using the largest ' +
@@ -622,8 +623,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
             // factors, and a non-uniform X/Z would need an elliptical cross-section, which this
             // shape has no room for. Largest of the two wins, so the collider contains its art.
             const radial = Math.max(Math.abs(sx), Math.abs(sz));
-            if (sx !== sz && !warnedNonUniform) {
-                warnedNonUniform = true;
+            if (sx !== sz && firstTimeIn(gameOfBox(box), 'physics 3d: round shape scaled unevenly')) {
                 console.warn(
                     `[NacatamalOn] A capsule collider cannot be scaled non-uniformly across X/Z ` +
                     `(${sx} vs ${sz}), because its cross-section is a circle. Using the larger axis so the ` +
@@ -902,8 +902,6 @@ const freeGeometryData = (b3: TBox3dModule, entry: TBodyEntry): void => {
     else b3.b3DestroyMesh(entry.geometryData.handle as never);
     entry.geometryData = null;
 };
-
-let warnedNonUniform = false;
 
 /**
  * The box's scale, which multiplies its collider exactly as it multiplies its mesh.

@@ -1,5 +1,6 @@
 import { ownerOfDrawable } from '../box/drawable_owner';
 import { gameOfBox } from '../box/box_game';
+import { firstTimeIn } from '../utils/first_time_in';
 import type { TBox } from '../box';
 import { SPRITE_EVENT_NAMES } from '../input/types/t_sprite_events';
 import type { TSpriteEvents } from '../input/types/t_sprite_events';
@@ -7,10 +8,6 @@ import type { TSprite } from '../gameobjects/sprite/types/t_sprite';
 import type { TText } from '../gameobjects/text/types/t_text';
 import type { TNineSlice } from '../gameobjects/nine_slice/types/t_nine_slice';
 
-/**
- * Said once per page: the same mistake tends to repeat every frame.
- */
-let warnedGone = false;
 
 const nothing = (): void => {};
 
@@ -78,8 +75,8 @@ export const listen = (sprite: TSprite | TText | TNineSlice | TBox, events: TSpr
         ? (store === undefined ? undefined : { box: sprite, store })
         : ownerOfDrawable(sprite);
     if (owner === undefined || sprite.destroyed) {
-        if (!warnedGone) {
-            warnedGone = true;
+        // Once per game: the same mistake tends to repeat every frame.
+        if (firstTimeIn(store, 'listen: destroyed')) {
             console.warn('[NacatamalOn] listen: this has been destroyed, so it cannot react to the pointer.');
         }
         return nothing;

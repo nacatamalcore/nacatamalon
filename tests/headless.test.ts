@@ -20,6 +20,8 @@ import { createMesh } from '../src/gameobjects/mesh';
 import { useCubeGeometry } from '../src/hooks/geometry';
 import { usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d } from '../src/hooks/physics';
 import { useTransform } from '../src/hooks/transform/use_transform';
+import { destroy } from '../src/destroy';
+import { listen } from '../src/events';
 import type { THeadlessGame } from '../src/headless';
 import type { TSceneFn } from '../src/scene';
 
@@ -217,3 +219,26 @@ describe('physics with no browser', () => {
     });
 });
 
+describe('a warning said once', () => {
+    it('is said once in each game, so a second game in the same page is not left quiet', () => {
+        const said = spyOn(console, 'warn').mockImplementation(() => {});
+        // The same mistake twice in one game: it would repeat every frame, so it is said once.
+        const Mistaken: TSceneFn = () => {
+            const sprite = createSprite({ width: 4, height: 4 });
+            destroy(sprite);
+            listen(sprite, { onClick: () => {} });
+            listen(sprite, { onClick: () => {} });
+            return createScene();
+        };
+        const told = () => said.mock.calls.filter((call) => String(call[0]).includes('listen: this has been destroyed')).length;
+
+        make({ width: 32, height: 32, scenes: { Mistaken } });
+        expect(told()).toBe(1);
+
+        // A second game in the same page, as a test file or a React page that mounts <Game> again
+        // makes: kept once for the page, it would say nothing here.
+        make({ width: 32, height: 32, scenes: { Mistaken } });
+        expect(told()).toBe(2);
+        said.mockRestore();
+    });
+});

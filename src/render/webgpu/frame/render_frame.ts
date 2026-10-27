@@ -100,7 +100,7 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         gpu.shadow ??= createShadowMap(gpu.device);
         gpu.shadowPipeline ??= createShadowPipeline(gpu.device);
         lightSpaceMatrix(source.light, source.camera, lightMatrix);
-        reportCastersOutside(source.casters, source.light, lightMatrix);
+        reportCastersOutside(source.casters, source.light, lightMatrix, gpu);
         gpu.shadowPipeline.beginFrame(source.casters.length);
         // A material whose hook moves its corners, or whose colour hook cuts it out, casts with its own
         // numbers, written into the slots the passes below write theirs into: so the shadow is sent on

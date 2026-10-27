@@ -3,6 +3,7 @@ import { whenLoaded } from '../../loaders/track_load';
 import { sceneFromDoc } from '../../scene/document/scene_from_doc';
 import { listScripts } from '../../scripts/script_registry';
 import { getActiveBox, getActiveGame } from '../../store';
+import { firstTimeIn } from '../../utils/first_time_in';
 import { useTransform } from '../../hooks/transform/use_transform';
 import { nanoId } from '../../utils';
 import { connectReport } from '../../events/reports';
@@ -11,13 +12,10 @@ import type { TBoxNode, TSceneDoc } from '../../scene/document/types/t_scene_doc
 import type { TPackOptions } from './types/t_pack_options';
 
 /**
- * Said once per pack and thing, never per copy.
+ * Said once per pack and thing, never per copy, in the game placing it.
  */
-const warned = new Set<string>();
 const warnOnce = (key: string, message: string): void => {
-    if (warned.has(key)) return;
-    warned.add(key);
-    console.warn(message);
+    if (firstTimeIn(getActiveGame(), `createPack: ${key}`)) console.warn(message);
 };
 
 /**

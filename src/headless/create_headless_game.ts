@@ -208,7 +208,7 @@ export const createHeadlessGame = (options: THeadlessGameOptions): THeadlessGame
                 };
             }),
         loaded: async (timeout = 5) => {
-            saysMilliseconds('loaded() timeout', timeout, LONGEST_LOADED_WAIT);
+            saysMilliseconds('loaded() timeout', timeout, LONGEST_LOADED_WAIT, store);
             const until = Date.now() + timeout * 1000;
             const scenesNow = () => store.get('world').scenes;
             const loading = () => scenesNow().flatMap((scene) => scene.loads).filter((load) => load.status === 'loading');

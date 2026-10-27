@@ -5,6 +5,8 @@ import type { TDrawSprite } from '../../render/interface';
 import type { TText } from './types/t_text';
 import { worldOf } from '../../render/shared/world_of';
 import { pivotPlace } from '../../render/shared/pivot_place';
+import { ownerOfDrawable } from '../../box/drawable_owner';
+import { firstTimeIn } from '../../utils/first_time_in';
 
 /** Where a text with a pivot is laid out from, written over text by text. */
 const pivoted = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 };
@@ -43,11 +45,6 @@ const glyphOwners = new WeakMap<object, TText>();
  * Each text's block size from the last time it was laid out: the area the pointer touches.
  */
 const blockSizes = new WeakMap<TText, { width: number; height: number }>();
-
-/**
- * Font and size pairs already warned about.
- */
-const warned = new Set<string>();
 
 const TOP_LEFT = { x: 0, y: 0 };
 
@@ -112,9 +109,8 @@ export const expandText = (text: TText): readonly TDrawSprite[] => {
         // Letters drawn for the first time just now are only in memory until this sends them.
         uploadFontAtlas(font);
     } else if (font.meta !== null && !Number.isInteger(layout.scale)) {
-        const id = `${font.key}:${style.fontSize}`;
-        if (!warned.has(id)) {
-            warned.add(id);
+        // Once per font and size, in the game the text is in: this runs every frame.
+        if (firstTimeIn(ownerOfDrawable(text)?.store, `text: uneven size: ${font.key}:${style.fontSize}`)) {
             const height = font.meta.glyphHeight;
             // The multiples either side of what was asked, never below the font's own size.
             const below = height * Math.max(1, Math.floor(layout.scale));

@@ -1,4 +1,6 @@
 import { PHYSICS_LAYERS } from './layers';
+import { getActiveGame } from '../store/active_game';
+import { firstTimeIn } from '../utils/first_time_in';
 import type { TPhysicsSurface } from './types/t_physics';
 
 /**
@@ -41,8 +43,6 @@ export const cleanLayerNames = (raw: unknown): string[] => {
     return names;
 };
 
-const warned = new Set<string>();
-
 /**
  * The number of one layer: a number as it is, a name by its place in `names`. A name the game did
  * not give is said once, and taken as layer 0.
@@ -51,8 +51,9 @@ const layerNumber = (layer: TPhysicsLayer, names: readonly string[]): number => 
     if (typeof layer === 'number') return layer;
     const at = names.indexOf(layer);
     if (at >= 0) return at;
-    if (!warned.has(layer)) {
-        warned.add(layer);
+    // Once per name and game: a body made while a scene is built belongs to that game; one changed
+    // later, with no game being built, says it once for the page.
+    if (firstTimeIn(getActiveGame(), `physics: no layer: ${layer}`)) {
         const known = names.length > 0 ? `It names: ${names.join(', ')}.` : 'It names none: give them with physicsLayers in createGame or the project.';
         console.warn(`[NacatamalOn] physics: the game has no layer called '${layer}', so layer 0 is used. ${known}`);
     }

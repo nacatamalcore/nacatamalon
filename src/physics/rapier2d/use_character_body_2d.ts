@@ -1,10 +1,9 @@
-import { getActiveBox } from '../../store';
+import { getActiveBox, getActiveGame } from '../../store';
+import { firstTimeIn } from '../../utils/first_time_in';
 import { getPhysicsProviders } from '../physics_provider';
 import { getPhysicsWorld2d } from './provider';
 import type { TCharacterOptions2d } from './character_body_2d';
 import type { TCharacterBody2d } from '../character/t_character_body_2d';
-
-let warnedNoWorld = false;
 
 /**
  * A character that is not simulated: what a scene opened in a tool gets, where nothing is.
@@ -86,8 +85,7 @@ export const useCharacterBody2d = (options: TCharacterOptions2d): TCharacterBody
     if (world === null) {
         // Nothing installed is a tool showing the scene, and is said by nobody. Installed and still no
         // world is a scene that forgot to declare one.
-        if (getPhysicsProviders().length > 0 && !warnedNoWorld) {
-            warnedNoWorld = true;
+        if (getPhysicsProviders().length > 0 && firstTimeIn(getActiveGame(), 'useCharacterBody2d: no world')) {
             console.warn('[NacatamalOn] useCharacterBody2d: the scene has no 2D world, so the character never moves. Call usePhysicsWorld2d() in the scene\'s body, before what is in it.');
         }
         return inert();

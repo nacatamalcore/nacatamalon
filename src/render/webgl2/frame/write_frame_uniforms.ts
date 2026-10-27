@@ -12,9 +12,9 @@ const VIEWS_START = 4;
 const VIEW_FLOATS = 4;
 
 /**
- * Said once per page, like in the WebGPU backend.
+ * Said once per renderer, like in the WebGPU backend.
  */
-let warnedTooManyCameras = false;
+const warnedTooManyCameras = new WeakSet<TWebGL2State>();
 
 /**
  * The size of the frame uniform buffer in floats, matching the std140 `Uniforms` block of the sprite
@@ -45,8 +45,8 @@ export const writeFrameUniforms = (state: TWebGL2State, width: number, height: n
     data[VIEWS_START + 2] = 0;
     data[VIEWS_START + 3] = 1;
 
-    if (cameras.length > MAX_VIEWS - 1 && !warnedTooManyCameras) {
-        warnedTooManyCameras = true;
+    if (cameras.length > MAX_VIEWS - 1 && !warnedTooManyCameras.has(state)) {
+        warnedTooManyCameras.add(state);
         console.warn(`[NacatamalOn] More than ${MAX_VIEWS - 1} scenes with a camera at once: the extra ones are drawn as if they had none.`);
     }
 

@@ -18,6 +18,9 @@ import { worldPose2d, writeWorldPose2d } from './world_pose';
 import { physicsStepOf } from '../step_length';
 import { getActiveBox, getActiveGame } from '../../store';
 import { rootOf } from '../../box/root_of';
+import { gameOfBox } from '../../box/box_game';
+import { firstTimeIn } from '../../utils/first_time_in';
+import type { TRuntimeStore } from '../../store/types/t_runtime_store';
 import { sceneTilemaps } from '../../gameobjects/tilemap/scene_tilemaps';
 import { tilemapPlacement } from '../../gameobjects/tilemap/tile_queries';
 import { tileRevisionOf } from '../../gameobjects/tilemap/tile_revision';
@@ -667,7 +670,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         // WORLD scale and, below, world position: a group that moves or scales what is under it moves
         // and scales what they collide with too. See `world_pose.ts`.
         const pose = worldPose2d(box);
-        const shape = scaleCollider(options, pose.scaleX, pose.scaleY);
+        const shape = scaleCollider(options, pose.scaleX, pose.scaleY, gameOfBox(box));
 
         const bodyEntry: TBodyEntry = {
             box,
@@ -909,8 +912,6 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
     };
 };
 
-let warnedNonUniform = false;
-
 /**
  * Applies the box's `transform.scale` to a collider's geometry.
  *
@@ -927,9 +928,9 @@ let warnedNonUniform = false;
  * A circle has one radius, so a non-uniform scale cannot be represented: it would be an
  * ellipse. The larger axis wins, so the collider **contains** its art rather than sitting
  * inside it: a body that stops slightly early is visible and debuggable, one that lets art
- * overlap is not.
+ * overlap is not. Said once per game, `game` being the box's.
  */
-const scaleCollider = (options: TBodyOptions, sx: number, sy: number): TBodyOptions => {
+const scaleCollider = (options: TBodyOptions, sx: number, sy: number, game: TRuntimeStore | undefined): TBodyOptions => {
         if (sx === 1 && sy === 1) return options;
 
         if (options.shape === 'rect') {
@@ -937,8 +938,7 @@ const scaleCollider = (options: TBodyOptions, sx: number, sy: number): TBodyOpti
         }
 
         if (options.shape === 'circle') {
-                if (sx !== sy && !warnedNonUniform) {
-                        warnedNonUniform = true;
+                if (sx !== sy && firstTimeIn(game, 'physics 2d: circle scaled unevenly')) {
                         console.warn(
                                 `[NacatamalOn] A circle collider cannot be scaled non-uniformly (${sx}x${sy}): ` +
                                 'that shape is an ellipse, which the 2D solver has no room for. Using the larger ' +

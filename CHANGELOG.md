@@ -107,6 +107,17 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **A warning said once is said once in each game, not once for the page.** The engine says some
+  mistakes only the first time, so one that repeats every frame does not bury the console: `listen`
+  on something destroyed, a collider with no world, a physics layer the game does not name, more
+  lights than a scene holds, a second light casting shadows, more scenes with a camera than fit, and
+  others. It remembered that for the whole page, so a second game in the same page said nothing: the
+  next test of a file run with `nacatamalon/headless`, a React page mounting `<Game>` again. Each
+  game remembers its own now. The editor never showed it, since each Play is a page of its own.
+  Three are still once for the page, having no game to hand: a skinned animation's cubic keys, a
+  rumble given in milliseconds, and a store's throttle (stores belong to the page).
+- **The voice's mistakes start like every other message**, `[NacatamalOn] speech:` and
+  `[NacatamalOn] textToPhonemes:`, rather than `speech:` alone.
 - **`createMaterial` is typed for a game of some size.** Called from a function of the game's own
   that takes its options as a type parameter, it did not compile, with an error a screen long; with
   options of any type it gave a material that could not be handed to `createMesh` without a cast.

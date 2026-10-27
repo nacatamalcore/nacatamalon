@@ -294,9 +294,11 @@ export const findShadowSource = (ctx: TFrameContext): TShadowSource | null => {
 };
 
 /**
- * Said once for the life of the game, because it is one mistake and not one per frame.
+ * The renderers that already said so: once for the life of the game, because it is one mistake and
+ * not one per frame. A test that calls this with no renderer is the page's.
  */
-let warnedOutside = false;
+let warnedOutside = new WeakSet<object>();
+const PAGE = {};
 
 /**
  * Forgets that the warning below was already given.
@@ -309,7 +311,7 @@ let warnedOutside = false;
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const resetShadowWarnings = (): void => { warnedOutside = false; };
+export const resetShadowWarnings = (): void => { warnedOutside = new WeakSet(); };
 
 /**
  * Says so, once, when something that should cast a shadow falls outside the square the light covers.
@@ -325,12 +327,14 @@ export const resetShadowWarnings = (): void => { warnedOutside = false; };
  * Only a sun is checked. A torch's frustum is its own cone, and something outside it is not out of
  * range: it is simply not lit by that torch, which is a thing the scene already shows.
  *
+ * @param by The renderer drawing it, so each game says it once.
+ *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const reportCastersOutside = (casters: readonly TDrawMesh[], light: TDrawLight, matrix: Mat4): void => {
-    if (warnedOutside || light.type !== 'directional') {
+export const reportCastersOutside = (casters: readonly TDrawMesh[], light: TDrawLight, matrix: Mat4, by: object = PAGE): void => {
+    if (warnedOutside.has(by) || light.type !== 'directional') {
         return;
     }
 
@@ -348,7 +352,7 @@ export const reportCastersOutside = (casters: readonly TDrawMesh[], light: TDraw
         const cz = matrix[2] * x + matrix[6] * y + matrix[10] * z + matrix[14];
 
         if (Math.abs(cx) > 1 || Math.abs(cy) > 1 || cz < 0 || cz > 1) {
-            warnedOutside = true;
+            warnedOutside.add(by);
             console.warn(
                 '[NacatamalOn] something that casts a shadow is outside the square the light covers, so it casts nothing. ' +
                 `Raise 'shadowArea' on that light (it is ${light.shadowArea ?? DEFAULT_SHADOW_AREA} now): it is how far the shadows reach in front of the camera.`,
