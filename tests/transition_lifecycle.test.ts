@@ -213,6 +213,40 @@ describe('the cover always comes off', () => {
     });
 });
 
+describe('what the shader of a change reads', () => {
+    it('counts up while covering, then says it is uncovering and counts up again', () => {
+        // Through the frame's context, which is what reaches the shader, and not the transition's
+        // own state: the state said 'reveal' all along, while a line lost on the way would have
+        // left `phase` at 0 and every wipe coming back the way it went.
+        const { store, ctx, frame, handle } = twoRooms();
+        handle().change('B', { transition: fade(0.3) });
+
+        const seen: { phase: number; progress: number }[] = [];
+        for (let i = 0; i < 60 && store.get('transition').active?.done !== true; i++) {
+            frame();
+            seen.push({ phase: ctx.phase, progress: ctx.progress });
+        }
+        const covering = seen.filter((sample) => sample.phase === 0);
+        const uncovering = seen.filter((sample) => sample.phase === 1);
+
+        expect(covering.length).toBeGreaterThan(2);
+        expect(uncovering.length).toBeGreaterThan(2);
+        // Every covering frame before every uncovering one, never back and forth.
+        expect(seen.map((sample) => sample.phase)).toEqual([...covering.map(() => 0), ...uncovering.map(() => 1)]);
+        for (const half of [covering, uncovering]) {
+            for (let i = 1; i < half.length; i++) {
+                expect(half[i].progress).toBeGreaterThanOrEqual(half[i - 1].progress);
+            }
+            expect(half[0].progress).toBeLessThan(0.5);
+        }
+        // The frame that finishes covering is already the first of uncovering, carrying what it
+        // went over, so covering ends a frame short of 1 and uncovering ends on it.
+        const oneFrame = FRAME / 0.15;
+        expect(covering[covering.length - 1].progress).toBeGreaterThanOrEqual(1 - oneFrame - 1e-9);
+        expect(uncovering[uncovering.length - 1].progress).toBe(1);
+    });
+});
+
 describe('a change that cannot be made', () => {
     it('is refused while another one is being covered, rather than stranding it', () => {
         const { store, frame, handle } = twoRooms();
