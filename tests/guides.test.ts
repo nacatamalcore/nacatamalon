@@ -41,17 +41,25 @@ const OPTIONS: ts.CompilerOptions = {
     },
 };
 
-/** What is wrong when a block of code is compiled on its own, against the engine. */
-const compile = (code: string): string[] => {
-    const name = join(ROOT, '..', '__guide_example.ts');
-    const source = `${code}\nexport {};\n`;
+/**
+ * What is wrong in each block of code, compiled against the engine. Each block is a file of its own,
+ * so they cannot see each other's names, but all of them are one program: the engine is read and
+ * checked once for the whole guide rather than once per block, which on a slower machine (CI) went
+ * past the time a test is given.
+ */
+const compileEach = (codes: string[]): string[][] => {
+    const sources = new Map(codes.map((code, i) => [join(ROOT, '..', `__guide_example_${i}.ts`), `${code}\nexport {};\n`]));
     const host = ts.createCompilerHost(OPTIONS);
     const { readFile, fileExists, getSourceFile } = host;
-    host.readFile = (file) => (file === name ? source : readFile(file));
-    host.fileExists = (file) => file === name || fileExists(file);
-    host.getSourceFile = (file, version) => (file === name ? ts.createSourceFile(file, source, version) : getSourceFile(file, version));
-    const program = ts.createProgram([name], OPTIONS, host);
-    return ts.getPreEmitDiagnostics(program, program.getSourceFile(name)).map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n'));
+    host.readFile = (file) => sources.get(file) ?? readFile(file);
+    host.fileExists = (file) => sources.has(file) || fileExists(file);
+    host.getSourceFile = (file, version) => {
+        const source = sources.get(file);
+        return source === undefined ? getSourceFile(file, version) : ts.createSourceFile(file, source, version);
+    };
+    const program = ts.createProgram([...sources.keys()], OPTIONS, host);
+    return [...sources.keys()].map((name) =>
+        ts.getPreEmitDiagnostics(program, program.getSourceFile(name)).map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n')));
 };
 
 describe('the guides', () => {
@@ -63,7 +71,7 @@ describe('the guides', () => {
         const text = readFileSync(join(GUIDES, file), 'utf8');
 
         it(`${file}: every block of code compiles`, () => {
-            const results = blocksOf(text, 'ts').map(compile);
+            const results = compileEach(blocksOf(text, 'ts'));
             expect(results.every((errors) => errors.length === 0) ? [] : results).toEqual([]);
         });
 
