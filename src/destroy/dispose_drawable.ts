@@ -8,8 +8,8 @@ import type { TRuntimeStore } from '../store';
  * Whatever a drawable owns beyond its own record, released once it is out of the tree.
  *
  * A sprite owns nothing: its texture is shared through the game's cache and other sprites may
- * still be drawing it, so destroying one must never free it. Releasing an asset is what an
- * `unload` is for.
+ * still be drawing it, so destroying one must never free it. Releasing an asset is what
+ * `releaseAsset` is for.
  *
  * The exhaustive `switch` is the point of this file. A tilemap owns one drawable per layer plus
  * the meshes it built, and particles own their sub-emitters: adding either without saying here

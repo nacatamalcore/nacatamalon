@@ -19,7 +19,8 @@ export const uploadTexture = async (store: TRuntimeStore, texture: TTexture, blo
     // alpha, and the two backends would disagree about a premultiplied bitmap.
     const bitmap = await createImageBitmap(blob, { premultiplyAlpha: 'none' });
 
-    if (store.get('loop').destroyed) {
+    // Released while it was on its way: the game let it go, so nothing is uploaded.
+    if (store.get('loop').destroyed || texture.status === 'released') {
         bitmap.close();
         return;
     }

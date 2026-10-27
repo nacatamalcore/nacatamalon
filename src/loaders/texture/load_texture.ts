@@ -28,6 +28,10 @@ export const loadTexture = (store: TRuntimeStore, texture: TTexture): Promise<vo
         })
         .then((blob) => uploadTexture(store, texture, blob))
         .catch((error: unknown) => {
+            // Let go before it failed: nobody is waiting for it any more.
+            if (texture.status === 'released') {
+                return;
+            }
             texture.status = 'error';
             bumpVersion(texture);
             console.warn(`[NacatamalOn] useLoadTexture: '${texture.src}' could not be loaded. Sprites using it draw as their tint.`, error);

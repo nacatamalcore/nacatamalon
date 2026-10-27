@@ -32,6 +32,8 @@ them by topic, each with an id, and `https://nacatamalon.com/llms/examples/<id>.
   changes to the first real scene when `loader.done`. What is loaded is the game's, not the scene's:
   a later scene asks for the same file by the same name and has it at once, so no scene after it
   waits.
+  Nothing is let go on its own; a level with files of its own frees them when it is left for good
+  with `useGame().releaseAsset(asset)` (or a key: everything kept under it).
 - **It looks like React and is not.** Nothing is rendered again: a scene, or a piece made with
   `useSpawn`, runs its body once, and changing its state or its props does not run it again. What
   changes over time is done by hand, in `useUpdate`, or in `useWatch(fn, [data])` when a value

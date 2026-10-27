@@ -1,5 +1,6 @@
 import type { TColor, TColorOption } from '../../color';
 import type { TRendererBackend } from '../../render/interface';
+import type { TAsset } from '../../loaders/types/t_asset';
 
 /**
  * What a game can do with itself while it runs: the settings that belong to the whole game rather
@@ -130,4 +131,34 @@ export type TGameHandle = {
      * with Esc, so a menu reading it every frame is never out of date.
      */
     isFullscreen(): boolean;
+
+    /**
+     * Lets go of something the game loaded: off the graphics card, off the sound card and out of the
+     * game, with what is its own (a model's pictures and shapes, an atlas's or a font's picture).
+     * Nothing is let go on its own, so a game that loads everything up front, or goes back to a scene
+     * it left, keeps it all; this is for a level with files of its own, when it is left for good.
+     *
+     * Given the asset (what its `useLoad…` handed back), that one goes. Given a key, everything kept
+     * under it goes, whatever it is: the picture called `'hero'` and the sound called `'hero'`.
+     *
+     * It ends `'released'`. Whatever still shows it is not drawn from then on, and the call says how
+     * many; a load still on its way is thrown away when it arrives. Asked for again with the same key,
+     * it loads afresh, like the first time.
+     *
+     * @example
+     * ```ts
+     * const game = useGame();
+     * const forest = useLoadTexture({ src: '/levels/forest.png', key: 'forest' });
+     * useCleanup(() => {
+     *     game.releaseAsset(forest);
+     * });
+     * ```
+     *
+     * @param asset The asset, or the key it was loaded under (its `src` when no key was given).
+     * @returns Whether there was anything to let go of. Releasing it twice is not a mistake.
+     * @throws When it belongs to something in the game rather than to the game: a picture made with
+     * `createSpriteTexture` or `createPixelTexture`, a shape made with `createGeometry`. Those go with
+     * whatever made them. Nothing is let go then, not even the other assets under the same key.
+     */
+    releaseAsset(asset: TAsset | string): boolean;
 };

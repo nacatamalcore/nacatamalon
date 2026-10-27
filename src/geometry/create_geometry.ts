@@ -1,4 +1,5 @@
 import { getActiveBox, getActiveGame } from '../store';
+import { freeGeometryBuffers } from './free_geometry';
 import { nanoId } from '../utils';
 import { computeDetail } from './build/compute_tangents';
 import { computeNormals, toFlatShaded } from './build/normals';
@@ -77,6 +78,16 @@ type TOwned = {
 };
 
 const owned = new WeakMap<TGeometry, TOwned>();
+
+/**
+ * Whether a shape was made with `createGeometry` and so belongs to the object that made it, rather
+ * than being one of the game's shared shapes.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const isOwnedGeometry = (geometry: TGeometry): boolean => owned.has(geometry);
 
 /**
  * How much more room a shape is given when it outgrows its buffers: enough that one that grows a
@@ -199,19 +210,7 @@ const release = (geometry: TGeometry): void => {
         return;
     }
     owned.delete(geometry);
-    const renderer = held.store.get('screen').renderer;
-    for (const buffer of [geometry.vertexBuffer, geometry.indexBuffer, geometry.colorBuffer, geometry.detailBuffer, geometry.skinBuffer]) {
-        if (buffer !== null) {
-            renderer.destroyBuffer(buffer);
-        }
-    }
-    geometry.vertexBuffer = null;
-    geometry.indexBuffer = null;
-    geometry.colorBuffer = null;
-    geometry.detailBuffer = null;
-    geometry.skinBuffer = null;
-    geometry.indexCount = 0;
-    geometry.vertexCount = 0;
+    freeGeometryBuffers(held.store.get('screen').renderer, geometry);
     const shapes = held.store.get('assets').geometries;
     if (shapes.get(geometry.key) === geometry) {
         shapes.delete(geometry.key);

@@ -4,6 +4,7 @@ import { isTransparentMesh } from '../../shared/is_transparent_mesh';
 import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
 import { toGpuBuffer } from '../resources';
 import { toGpuTexture } from '../texture';
+import { isAway } from '../../../loaders/texture/is_away';
 import { LIGHT_STRIDE, MESH_STRIDE } from './create_mesh_pipeline';
 import type { TCameraSpace } from '../../shared/compute_mvp_3d';
 import type { TDrawLight, TDrawMesh, TDrawView3d } from '../../interface';
@@ -199,7 +200,7 @@ export const drawMesh = (
     }
     // A picture that has not arrived: nothing is drawn, rather than a shape in a colour it will
     // stop being a moment later.
-    if (mesh.material.texture !== null && mesh.material.texture.status === 'loading') {
+    if (isAway(mesh.material.texture)) {
         return false;
     }
 

@@ -4,6 +4,8 @@ import type { TRuntimeStore } from '../../store';
 import type { TBox } from '../../box';
 import { gamePaused, gameResumed } from '../../signal/engine_signals';
 import { screenSizeOf } from '../../DOM/screen_size';
+import { releaseAsset } from '../../loaders/release_asset';
+import type { TAsset } from '../../loaders/types/t_asset';
 import type { TGameHandle } from './t_game_handle';
 
 /**
@@ -92,4 +94,6 @@ export const createGameHandle = (store: TRuntimeStore): TGameHandle => ({
         await store.get('screen').fullscreen?.exit();
     },
     isFullscreen: () => store.get('screen').fullscreen?.isActive() ?? false,
+
+    releaseAsset: (asset: TAsset | string) => releaseAsset(store, asset),
 });

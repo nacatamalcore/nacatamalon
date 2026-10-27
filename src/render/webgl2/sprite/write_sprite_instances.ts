@@ -5,6 +5,7 @@ import { spriteSize } from '../../shared/sprite_size';
 import { spriteUvWindow } from '../../shared/sprite_uv';
 import { spriteRepeat } from '../../shared/sprite_repeat';
 import { toGlTexture } from '../texture';
+import { isAway } from '../../../loaders/texture/is_away';
 import type { TSpritePipeline } from './types/t_sprite_pipeline';
 import type { TDrawShader } from '../../interface/draw/t_draw_material';
 import type { TUniformValues } from '../../../materials/types/t_uniforms';
@@ -161,8 +162,9 @@ export const writeSpriteInstances = (
                 const transform = worldOf(item);
                 const { tint, texture } = item;
 
-                // Not drawn until the image is there, rather than a frame of plain tint in its place.
-                if (texture !== null && texture.status === 'loading') {
+                // Not drawn until the image is there, rather than a frame of plain tint in its place,
+                // and not after it was released either.
+                if (isAway(texture)) {
                     broken = true;
                     break;
                 }

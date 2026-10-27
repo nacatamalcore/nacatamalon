@@ -2,6 +2,8 @@ export { loadTexture } from './texture/load_texture';
 export { newTexture } from './texture/new_texture';
 export { uploadTexture } from './texture/upload_texture';
 export { markMadeTexture, isMadeTexture } from './texture/made_texture';
+export { isAway } from './texture/is_away';
+export { releaseAsset } from './release_asset';
 export { loadGltf } from './gltf/load_gltf';
 export { newGltfModel } from './gltf/new_gltf_model';
 export { loadAtlas } from './atlas/load_atlas';
@@ -26,6 +28,7 @@ export { readGltfNodes } from './gltf/read_gltf_nodes';
 
 export type { TLoadStatus } from './types/t_load_status';
 export type { TLoadable } from './types/t_loadable';
+export type { TAsset } from './types/t_asset';
 export type { TLoader } from './types/t_loader';
 export type { TTexture } from './texture/types/t_texture';
 export type { TAudioClip } from './audio/types/t_audio_clip';

@@ -76,7 +76,8 @@ export const newSpriteTexture = (store: TRuntimeStore, options: TSpriteTextureOp
 
 /**
  * Lets a picture go: out of the game's textures, and off the graphics card. Its `gpu` is emptied
- * first-hand, so anything still showing it draws nothing instead of reading a texture that is gone.
+ * first-hand and it ends `'released'`, so anything still showing it draws nothing, instead of reading
+ * a texture that is gone or being drawn as a square of its tint.
  */
 const releasePicture = (store: TRuntimeStore, texture: TTexture): void => {
     const textures = store.get('assets').textures;
@@ -87,6 +88,7 @@ const releasePicture = (store: TRuntimeStore, texture: TTexture): void => {
         store.get('screen').renderer.destroyTexture(texture.gpu);
         texture.gpu = null;
     }
+    texture.status = 'released';
 };
 
 /**

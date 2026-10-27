@@ -37,8 +37,8 @@ const gone = new WeakSet<TTexture>();
 
 /**
  * Lets a painted texture go: out of the game's textures, and off the graphics card. Its `gpu` is
- * emptied first-hand, so anything still showing it draws nothing instead of reading a texture that
- * is gone.
+ * emptied first-hand and it ends `'released'`, so anything still showing it draws nothing, instead
+ * of reading a texture that is gone or being drawn as a square of its tint.
  */
 const release = (store: TRuntimeStore, texture: TTexture): void => {
     gone.add(texture);
@@ -50,6 +50,7 @@ const release = (store: TRuntimeStore, texture: TTexture): void => {
         store.get('screen').renderer.destroyTexture(texture.gpu);
         texture.gpu = null;
     }
+    texture.status = 'released';
 };
 
 /**

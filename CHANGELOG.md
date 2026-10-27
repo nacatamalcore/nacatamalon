@@ -66,6 +66,17 @@ releases are in [changelog/](./changelog/), one file each.
   hook is told a plain white light there, since no light has reached anything yet). Its shadow's
   shader is compiled alongside the material's, so a model does not stand a few frames casting
   nothing.
+- **`useGame().releaseAsset(asset | key)`**: lets go of something the game loaded, off the graphics
+  card, off the sound card and out of the game, for a level with files of its own when it is left for
+  good. It knows what it is given by its `type`, and takes what is its own with it: a model's
+  pictures and shapes, an atlas's, a font's or a particle effect's picture. Given a key, everything
+  kept under it goes, the picture and the sound both called `'hero'`. Nothing is let go on its own,
+  so a loading scene that loads everything up front, or a game going back to a scene it left, keeps
+  what it loaded. The record ends `'released'` (a new `TLoadStatus`): whatever still shows it is not
+  drawn, and is counted in a warning; a load still on its way is thrown away when it arrives; the
+  same key asked for again loads afresh. What belongs to something in the game (a picture made with
+  `createSpriteTexture` or `createPixelTexture`, a shape made with `createGeometry`) is refused, and
+  then nothing goes. `TAsset` names every kind it takes.
 
 ### Changed
 
@@ -107,6 +118,8 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **A sprite showing a picture whose box was destroyed** (`createSpriteTexture`, `createPixelTexture`)
+  was drawn as a square of its tint, though the code said it drew nothing. It is not drawn now.
 - **A warning said once is said once in each game, not once for the page.** The engine says some
   mistakes only the first time, so one that repeats every frame does not bury the console: `listen`
   on something destroyed, a collider with no world, a physics layer the game does not name, more

@@ -4,6 +4,7 @@ import { isTransparentMesh } from '../../shared/is_transparent_mesh';
 import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
 import { toGlBuffer } from '../resources';
 import { toGlTexture } from '../texture';
+import { isAway } from '../../../loaders/texture/is_away';
 import { MESH_EMISSIVE_UNIT, MESH_JOINTS_UNIT, MESH_LIGHTS_BINDING, MESH_MAP_UNITS, MESH_SHADOW_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
 import type { TCameraSpace } from '../../shared/compute_mvp_3d';
 import type { TDrawLight, TDrawMesh, TDrawView3d } from '../../interface';
@@ -154,7 +155,7 @@ export const drawMesh = (
     if (vao === null || mesh.geometry === null || mesh.geometry.indexCount === 0) {
         return false;
     }
-    if (mesh.material.texture !== null && mesh.material.texture.status === 'loading') {
+    if (isAway(mesh.material.texture)) {
         return false;
     }
 

@@ -166,7 +166,7 @@ export type { TSpriteAnimation, TSpriteAnimationOptions, TAnimationClip } from '
 export type { TTweenOptions, TTweenTargetOptions, TTweenFields, TTweenHandle, TTweenStarter } from './hooks';
 export type { TTimer, TTimerHandle } from './hooks';
 export type { TDestroyOptions } from './destroy';
-export type { TLoader, TLoadStatus, TTexture, TLoadedAtlas, TBitmapFont, TFont, TAudioClip, TGltfModel, TGltfPart, TShading } from './loaders';
+export type { TLoader, TLoadStatus, TAsset, TTexture, TLoadedAtlas, TBitmapFont, TFont, TAudioClip, TGltfModel, TGltfPart, TShading } from './loaders';
 export type { TSkeleton, TSkeletalClip, TJointPose, TClipEvent } from './animation';
 export type {
     TMaterial, TSpriteMaterial, TMeshMaterial, TMaterialMap, TTextureWrap, TCullMode, TMaterialShader, TMaterialOptions,

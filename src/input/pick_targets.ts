@@ -10,6 +10,7 @@ import type { TNineSlice } from '../gameobjects/nine_slice/types/t_nine_slice';
 import type { TRuntimeStore } from '../store';
 import { worldOf } from '../render/shared/world_of';
 import { pivotPlace } from '../render/shared/pivot_place';
+import { isAway } from '../loaders/texture/is_away';
 import { spriteUvWindow } from '../render/shared/sprite_uv';
 import { maskedPassOf, shapePixelsOf } from '../mask/masked_pick';
 import type { TDrawCamera2d } from '../render/interface';
@@ -303,8 +304,8 @@ const hitsAt = (
         }
 
         const sprite = drawables[i] as TSprite;
-        // Not drawn, so not touchable: on its way out, or its image has not arrived.
-        if (sprite.destroyed || sprite.texture?.status === 'loading') {
+        // Not drawn, so not touchable: on its way out, or its image has not arrived or was released.
+        if (sprite.destroyed || isAway(sprite.texture)) {
             continue;
         }
         const { width, height } = spriteSize(sprite);

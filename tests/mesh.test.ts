@@ -101,7 +101,7 @@ describe('createMesh', () => {
         flushDestroyed(store);
 
         // Both were the same shape and the other one is still drawing it. Letting go of a shape is
-        // what unloading an asset would be, never what destroying one thing that shows it is.
+        // what releasing an asset is (`releaseAsset`), never what destroying one thing that shows it is.
         expect(renderer.buffers.every((buffer) => buffer.alive)).toBe(true);
     });
 
