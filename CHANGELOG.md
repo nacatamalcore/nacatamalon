@@ -24,6 +24,12 @@ releases are in [changelog/](./changelog/), one file each.
   broken it. Words need no game to be measured, and measuring them in a vector font draws no letter
   into its atlas.
 
+### Fixed
+
+- **A press the browser did not make is still a press.** A `pointerdown` sent by a test or a script
+  carries the id of a pointer that is not there, and keeping its release on the canvas threw, so the
+  press never reached `usePointer`. Now it does.
+
 ## 0.2.9 — 2026-10-27
 
 ### Added

@@ -81,6 +81,18 @@ describe('usePointer', () => {
         expect(seen).toHaveLength(1);
     });
 
+    it('takes a press the browser did not make, which has no pointer to capture', () => {
+        const { store, canvas, frame } = pointerGame();
+        const { seen } = listening(store, 'Level');
+        // What a browser does with the id of a pointer that is not there.
+        canvas.setPointerCapture = () => { throw new DOMException('No active pointer with the given id is found.', 'NotFoundError'); };
+
+        fire(canvas, 'pointerdown', 10, 10);
+        frame();
+
+        expect(seen).toHaveLength(1);
+    });
+
     it('turns page pixels into game pixels when the canvas is shown bigger', () => {
         const { store, canvas, frame } = pointerGame(2);
         const { seen } = listening(store, 'Level');

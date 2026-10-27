@@ -232,8 +232,13 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
     const onDown = (event: Event): void => {
         const pointerEvent = event as PointerEvent;
         // Keeps the release coming to this canvas even if it happens outside it, or a drag that
-        // ends off the edge would leave the button held for ever.
-        canvas.setPointerCapture?.(pointerEvent.pointerId);
+        // ends off the edge would leave the button held for ever. A press the browser did not make
+        // (one sent by a test or a script) has no pointer to capture and throws; it is still a press.
+        try {
+            canvas.setPointerCapture?.(pointerEvent.pointerId);
+        } catch {
+            // Nothing to keep: the release of a pointer that is not there arrives where it is sent.
+        }
         noteButtons(pointerEvent);
         enqueue('down', pointerEvent);
     };
