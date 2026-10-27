@@ -155,7 +155,11 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   engine, never as HTML over the canvas (the native runtime has no page). `usePointer()` also answers
   `isDown()`, `justPressed()` and `justReleased()` (one frame, like the keyboard; `justPressed('right')` for
   one button, the names in `INPUT.POINTER_BUTTONS`; a right click opens no browser menu over the game unless
-  `contextMenu: true`, or `useGame().setContextMenu(true)` while it runs), `position()`, `touches()` (each finger, by `pointerId`) and `isPressing(sprite)`. How long
+  `contextMenu: true`, or `useGame().setContextMenu(true)` while it runs), `position()`, `touches()` (each finger, by `pointerId`) and `isPressing(sprite)`.
+  In its listeners, `info.target` is what is on top, whatever it is, and `info.hits` everything under
+  the pointer, top first. A sprite's or an object's own events (`onClick`, `listen(card, { onClick })`,
+  dragging) go to the topmost thing that listens: a shadow or a glow over a card does not take its
+  click. How long
   an action has been held, for a charged shot: `actions.heldFor('fire')`, still set on its
   `justReleased` frame.
 - **When a press happened**, to the moment of the hand and not of the frame (up to a frame earlier),
