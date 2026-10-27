@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, spyOn } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test';
 import { applyStoreDocs, clearGameStores, createGameStore, emptyStoreDoc, getGameStore, listGameStores, parseStoreDoc, resetStores, serializeStoreDoc, storeFieldsFromState, defaultStoreFieldValue } from '../src/game_store';
 import { STORE_FORMAT } from '../src/game_store';
 
@@ -28,6 +28,12 @@ const silence = () => {
     warn = spyOn(console, 'warn').mockImplementation(() => {});
     return warn;
 };
+
+// Before as well as after: the stores are listed for the whole page, and one another file left
+// behind would turn up in these lists, depending on the order the files ran in.
+beforeEach(() => {
+    clearGameStores();
+});
 
 afterEach(() => {
     warn?.mockRestore();

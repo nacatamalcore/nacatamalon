@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, spyOn } from 'bun:test';
-import { createGameStore } from '../src/game_store/create_game_store';
+import { clearGameStores, createGameStore } from '../src/game_store';
 import { saysMilliseconds } from '../src/utils/says_milliseconds';
 
 afterEach(() => {
     (console.warn as { mockRestore?: () => void }).mockRestore?.();
+    // The stores are listed for the whole page: one left here would turn up in another file's list.
+    clearGameStores();
 });
 
 /**
