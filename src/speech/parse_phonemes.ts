@@ -28,7 +28,7 @@ export const parsePhonemes = (text: string): TPhonemeToken[] => {
         }
         const match = /^([a-z]+)([0-2]?)$/i.exec(word);
         const name = match?.[1]?.toUpperCase() ?? '';
-        if (!PHONEMES[name]) throw new Error(`speech: "${word}" is not a phoneme the voice knows`);
+        if (!PHONEMES[name]) throw new Error(`[NacatamalOn] speech: "${word}" is not a phoneme the voice knows.`);
         tokens.push({ name, stress: match?.[2] ? Number(match[2]) : 0 });
     }
     return tokens;

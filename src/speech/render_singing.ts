@@ -30,7 +30,7 @@ const SHORTEST_VOWEL = 0.05;
 const pitchOf = (pitch: number | string): number => {
     if (typeof pitch === 'number') return pitch;
     const match = /^([A-G])([#b]?)(-?\d)$/.exec(pitch.trim());
-    if (!match) throw new Error(`speech: "${pitch}" is not a note; write it as C4, F#5 or Bb3`);
+    if (!match) throw new Error(`[NacatamalOn] speech: "${pitch}" is not a note. Write it as C4, F#5 or Bb3.`);
     const accidental = match[2] === '#' ? 1 : match[2] === 'b' ? -1 : 0;
     return 12 * (Number(match[3]) + 1) + NOTE_NAMES[match[1]!]! + accidental;
 };

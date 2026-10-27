@@ -26,6 +26,6 @@ const READERS: Readonly<Record<TSpeechLanguage, (text: string) => string>> = {
  */
 export const textToPhonemes = (text: string, language: TSpeechLanguage = 'es'): string => {
     const read = READERS[language];
-    if (!read) throw new Error(`speech: there are no rules to read "${language}"; write it as phonemes`);
+    if (!read) throw new Error(`[NacatamalOn] textToPhonemes: there are no rules to read "${language}". Write it as phonemes.`);
     return read(text);
 };
