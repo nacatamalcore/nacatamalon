@@ -102,6 +102,25 @@ describe('createTilemap', () => {
         expect(drawn(store).drawables ?? []).toHaveLength(2);
     });
 
+    it('waits for a sheet another map started loading a moment earlier', async () => {
+        served = serveTilemap();
+        const { store } = createTestGame();
+        const maps: TTilemap[] = [];
+        startTestScene(store, 'Level', () => {
+            // Two maps on one sheet, asked for together: the second finds the sheet the first is
+            // still loading. That load was never tracked, so the second had nothing to wait on and
+            // called the sheet broken.
+            maps.push(createTilemap({ src: '/maps/level.tilemap', key: 'left' }));
+            maps.push(createTilemap({ src: '/maps/level.tilemap', key: 'right' }));
+            return createScene();
+        });
+        await Promise.all(maps.map(whenLoaded));
+
+        expect(maps.map((map) => map.status)).toEqual(['ready', 'ready']);
+        expect(maps[0].atlas).toBe(maps[1].atlas);
+        expect(served.asked.filter((url) => url.endsWith('.atlas')).length).toBe(1);
+    });
+
     it('draws one layer per layer, each sorted by where the file said', async () => {
         const { store } = await withMap();
         const pass = drawn(store);

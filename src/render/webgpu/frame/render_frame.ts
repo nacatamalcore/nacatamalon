@@ -1,5 +1,5 @@
 import { beginSprites, drawSpriteRun } from '../sprite/draw_sprites';
-import { drawTilemapLayer } from '../tilemap/draw_tilemaps';
+import { drawTilemapLayer, reserveLayerSlots } from '../tilemap/draw_tilemaps';
 import { toGpuTexture } from '../texture';
 import { writeSpriteInstances } from '../sprite/write_sprite_instance';
 import { writeFrameUniforms } from './write_frame_uniforms';
@@ -222,7 +222,7 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         let state: TDrawStencil | null = null;
         const spriteCount = writeSpriteInstances(gpu.device, gpu.sprites, drawables, cameraIndex, stencil);
 
-        // All three before anything is drawn: growing any of these buffers throws away the slots
+        // All of these before anything is drawn: growing any of these buffers throws away the slots
         // already written, so the room has to be there first.
         writeMeshLights(gpu.device, gpu.meshes, views3d, shadowUniforms, gpu.shadow?.view ?? null);
         const meshCount = drawables.reduce((n, item) => n + (item.type === 'mesh' ? 1 : 0), 0);
@@ -241,9 +241,9 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         }
         gpu.sprites.materials.beginFrame(withEffect);
         gpu.sprites.distanceFieldMaterials.beginFrame(fieldsWithEffect);
-        gpu.tilemaps.materials.beginFrame(
-            drawables.reduce((n, item) => n + (item.type === 'tilemap' ? 1 : 0), 0),
-        );
+        const layerCount = drawables.reduce((n, item) => n + (item.type === 'tilemap' ? 1 : 0), 0);
+        reserveLayerSlots(gpu.device, gpu.tilemaps, layerCount);
+        gpu.tilemaps.materials.beginFrame(layerCount);
 
         // Counted and reserved before a single draw is recorded, or a buffer that grew in the middle
         // would leave the draws already recorded pointing at nothing.

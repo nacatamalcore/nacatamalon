@@ -4,7 +4,7 @@ import { loadAtlas } from '../atlas/load_atlas';
 import { newAtlas } from '../atlas/new_atlas';
 import { parseTilemapDoc } from './parse_tilemap_doc';
 import { resolveAssetPath } from '../resolve_asset_path';
-import { whenLoaded } from '../track_load';
+import { trackLoad, whenLoaded } from '../track_load';
 import { resolveLayerOrder } from './types/t_tilemap_doc';
 import type { TRuntimeStore } from '../../store';
 import type { TTilemap, TTilemapLayer } from '../../gameobjects/tilemap/types/t_tilemap';
@@ -46,7 +46,11 @@ export const loadTilemap = async (store: TRuntimeStore, map: TTilemap): Promise<
         if (atlas === undefined) {
             atlas = newAtlas(atlasSrc, atlasSrc);
             atlases.set(atlasSrc, atlas);
-            await loadAtlas(store, atlas);
+            // Tracked, so a second map on the same sheet that asks while this one is still on its
+            // way waits for it rather than finding it unfinished and calling it broken.
+            const loading = loadAtlas(store, atlas);
+            trackLoad(atlas, loading);
+            await loading;
         } else {
             // In the cache already, which does not mean it has arrived: a scene that asks for the
             // sheet itself, for the sprites that come out of the map, starts the very same load a

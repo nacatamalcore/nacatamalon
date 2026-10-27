@@ -35,9 +35,18 @@ const textureBindGroup = (device: GPUDevice, tilemaps: TTilemapPipeline, texture
 };
 
 /**
- * Makes room for more layers than the buffer holds, doubling so it settles after a few frames.
+ * Makes room for this frame's layers, before any of them is drawn, doubling so it settles after a
+ * few frames.
+ *
+ * Counted first and grown once, because growing throws away the buffer the layers already recorded
+ * were pointing at, and the card refuses the whole frame for it.
+ *
+ * @internal
  */
-const growLayers = (device: GPUDevice, tilemaps: TTilemapPipeline, needed: number): void => {
+export const reserveLayerSlots = (device: GPUDevice, tilemaps: TTilemapPipeline, needed: number): void => {
+    if (needed <= tilemaps.layerUniforms.capacity) {
+        return;
+    }
     let capacity = tilemaps.layerUniforms.capacity;
     while (capacity < needed) {
         capacity *= 2;
@@ -93,7 +102,8 @@ const layerBindGroup = (device: GPUDevice, tilemaps: TTilemapPipeline, slot: num
  * Draws one layer of a map: one call per mesh it holds, whatever its number of cells.
  *
  * `slot` is which set of the shared numbers this layer uses, and it climbs through the frame: a
- * frame with a ground layer, a canopy and a second map uses three.
+ * frame with a ground layer, a canopy and a second map uses three. The room for them was made
+ * before the pass, by `reserveLayerSlots`.
  *
  * @internal
  * @since 1.0.0
@@ -116,10 +126,6 @@ export const drawTilemapLayer = (
     const texture = layer.texture;
     if (texture === null || texture.status !== 'ready' || texture.gpu === null) {
         return;
-    }
-
-    if (slot >= tilemaps.layerUniforms.capacity) {
-        growLayers(device, tilemaps, slot + 1);
     }
 
     // An effect of its own runs a different pipeline over the same cells. One that would not

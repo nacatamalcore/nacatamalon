@@ -12,7 +12,7 @@ import type { TGltfImage } from './read_material';
 import { resolveAssetPath } from '../resolve_asset_path';
 import { uploadGeometry } from '../../geometry/upload_geometry';
 import { uploadTexture } from '../texture/upload_texture';
-import { whenLoaded } from '../track_load';
+import { trackLoad, whenLoaded } from '../track_load';
 import type { TGltfDoc } from './types/t_gltf_doc';
 import type { TSkeleton } from '../../animation';
 import type { TGltfModel, TGltfPart } from './types/t_gltf_model';
@@ -120,7 +120,10 @@ const surfaceTexture = async (
 
     const texture = newTexture(src, src);
     textures.set(src, texture);
-    await loadTexture(store, texture);
+    // Tracked, so the wait above has something to wait on when the next piece asks for it.
+    const loading = loadTexture(store, texture);
+    trackLoad(texture, loading);
+    await loading;
     return texture;
 };
 
