@@ -42,7 +42,8 @@ export type T2dOptions = {
     pivot?: { x: number; y: number };
     /**
      * Its colour, multiplied over what it draws: `'#ff6b1a'`, `0xff6b1a`, `'tomato'` or a `TColor`.
-     * Default white, drawn as it is.
+     * Default white, drawn as it is. A `TColor` is copied, so changing this one's `tint` changes no
+     * other thing given the same colour.
      */
     tint?: TColorOption;
     /**

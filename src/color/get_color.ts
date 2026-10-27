@@ -30,10 +30,12 @@ export type TColorOption = TColorInput | TColor;
 
 /**
  * A colour as the engine keeps it, `{ r, g, b, a }` from `0` to `1`, from a hex number, a hex string,
- * any CSS colour, or a `TColor`, which is handed back as it is (the same object, not a copy).
+ * any CSS colour, or a `TColor`. Always a new one, a `TColor` given included: a copy of it.
  *
  * Every option that takes a colour reads it through here, so `tint: '#ff6b1a'` and
- * `tint: getColor('#ff6b1a')` are the same thing.
+ * `tint: getColor('#ff6b1a')` are the same thing, and whatever is made keeps a colour of its own.
+ * One colour kept in a constant can tint many texts, and fading one of them (`who.tint.a = 0.3`)
+ * fades that one: not the others, nor the constant.
  * @param input - A colour: a hex number, a hex string, any CSS colour, or a `TColor`.
  * @returns The colour, with each channel from `0` to `1`.
  *
@@ -42,7 +44,7 @@ export type TColorOption = TColorInput | TColor;
  * @author Francisco Pereira Alvarado
  */
 export const getColor = (input: TColorOption): TColor =>
-    typeof input === 'object'  ? input
+    typeof input === 'object'  ? { r: input.r, g: input.g, b: input.b, a: input.a }
     : typeof input === 'number' ? fromHex(input)
     : input.startsWith('#')    ? fromHexString(input)
     : fromCss(input);

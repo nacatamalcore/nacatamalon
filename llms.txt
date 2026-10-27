@@ -192,7 +192,10 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   name (`'red'`) or any CSS colour (`'rgba(255, 0, 0, 0.5)'`, `'hsl(30 100% 50%)'`). Every option that
   takes a colour takes the same (`createSprite({ tint: '#ff6b1a' })`, `usePointLight({ color: 'orange'
   })`, `fade(0.3, 'white')`, `setBackground('#000')`); what is read back (`sprite.tint`) is always `{ r,
-  g, b, a }`, so assigning one is `sprite.tint = getColor('red')`.
+  g, b, a }`, so assigning one is `sprite.tint = getColor('red')`. `getColor` always gives a new
+  colour, and each thing keeps the colour it is given as its own: one `gold` constant can tint many
+  texts, and `who.tint.a = 0.3` fades only `who`. Assigning the constant itself (`who.tint = gold`)
+  shares it; `who.tint = getColor(gold)` gives a copy.
   To blend two colours (a sky between dusk and night), `lerpColor(a, b, t)`.
 - **Glows, flashes, beams of light**: `createSprite({ ..., blend: 'additive' })` (a text or a panel too) adds its colour to
   what is behind instead of covering it, the same as additive particles.

@@ -29,6 +29,11 @@ releases are in [changelog/](./changelog/), one file each.
 - **A press the browser did not make is still a press.** A `pointerdown` sent by a test or a script
   carries the id of a pointer that is not there, and keeping its release on the canvas threw, so the
   press never reached `usePointer`. Now it does.
+- **Each thing keeps its own colour.** `getColor` handed a colour already made back as it was, so
+  texts and sprites given the same constant (`tint: gold`) all held that one object: fading one
+  (`who.tint.a = 0.3`, a `fade` behaviour, a motion on `tint.a`) faded all of them and the constant
+  too. `getColor` now always gives a new colour, and every option that takes one reads it through
+  there. Assigning a constant (`who.tint = gold`) still shares it; `getColor(gold)` is a copy.
 
 ## 0.2.9 — 2026-10-27
 

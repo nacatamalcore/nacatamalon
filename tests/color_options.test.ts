@@ -17,11 +17,30 @@ import { createTestGame, startTestScene } from './helpers/test_game';
 const ORANGE = { r: 1, g: 0x6b / 255, b: 0x1a / 255, a: 1 };
 
 describe('a colour, wherever one is asked for', () => {
-    it('is read from a hex string, a hex number or a colour already made, and the last one is kept as it is', () => {
+    it('is read from a hex string, a hex number or a colour already made, and is always a new one', () => {
         const made = getColor('#ff6b1a');
         expect(getColor(0xff6b1a)).toEqual(ORANGE);
         expect(made).toEqual(ORANGE);
-        expect(getColor(made)).toBe(made);
+        expect(getColor(made)).toEqual(made);
+        expect(getColor(made)).not.toBe(made);
+    });
+
+    it('is kept by each thing it tints as its own: fading one fades neither the others nor the colour', () => {
+        const { store } = createTestGame();
+        startTestScene(store, 'Level', () => {
+            const gold = getColor('#ffc450');
+            const who = createText({ text: 'TU TURNO', tint: gold });
+            const score = createText({ text: '12', tint: gold });
+            const coin = createSprite({ width: 4, height: 4, tint: gold });
+
+            who.tint.a = 0.3;
+
+            expect(who.tint.a).toBe(0.3);
+            expect(score.tint.a).toBe(1);
+            expect(coin.tint.a).toBe(1);
+            expect(gold.a).toBe(1);
+            return createScene();
+        });
     });
 
     it('is taken as words by sprites, texts, lights, fog, transitions and the background', () => {
