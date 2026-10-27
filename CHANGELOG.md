@@ -77,9 +77,23 @@ releases are in [changelog/](./changelog/), one file each.
   same key asked for again loads afresh. What belongs to something in the game (a picture made with
   `createSpriteTexture` or `createPixelTexture`, a shape made with `createGeometry`) is refused, and
   then nothing goes. `TAsset` names every kind it takes.
+- **The game hears its page**: `useGame().onHidden`, `onShown` (another tab, a minimised window, a
+  phone's home screen, and back), `onBlurred`, `onFocused` (the keyboard elsewhere while the game is
+  still in sight) and `onLeaving` (the page closing or reloading, for what is done at once). Each
+  hands back what stops it, and one set up in a scene or a piece leaves with it. Heard whether or not
+  the game pauses itself while hidden. `isHidden()` and `hasFocus()` ask how the page is right now.
 
 ### Changed
 
+- **What the engine tells a game is heard through its handles, like the rest**: `useGame().onPaused`
+  and `onResumed` (with `{ reason }`), `useScene().onPaused` and `onResumed` (the scene that asks,
+  or another by its name), and a physics body's `onEnter` and `onExit`, which are called now
+  (`body.onEnter((other) => …)`) rather than handed to `useSignal`. Each gives back what stops it,
+  and one set up in a scene or a piece leaves with it. The `gamePaused`, `gameResumed`,
+  `scenePaused` and `sceneResumed` signals are gone, and with them `TScenePauseEvent`
+  (`TGamePauseEvent` stays, beside `TGameHandle`). They belonged to the page, so a second game on it
+  heard the first one's pauses; these belong to their game. Signals are now only what a game makes
+  for itself with `createGameSignal`.
 - **A tween's end is heard only with `onEnd`: the `onComplete` option is gone.** There were two
   ways to hear the same moment, and an animation or a motion has only the handle's `onEnd`, so the
   tween now has the same: `tween({ from, to, duration, onUpdate }).onEnd(() => …)`. It runs when
@@ -118,6 +132,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **A store saving by itself (`mode: 'auto'`) lost the last change made before the page went**: it
+  waits `throttle` seconds before writing, and a tab closed in between never wrote it. It writes what
+  it still owes when the page is hidden and when it is leaving now. A store in `'manual'` still saves
+  only when the game says.
 - **A sprite showing a picture whose box was destroyed** (`createSpriteTexture`, `createPixelTexture`)
   was drawn as a square of its tint, though the code said it drew nothing. It is not drawn now.
 - **A warning said once is said once in each game, not once for the page.** The engine says some

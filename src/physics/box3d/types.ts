@@ -1,5 +1,4 @@
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
-import type { TGameSignal } from '../../signal';
 import type { TGeometry } from '../../geometry';
 import type { TCharacterBody, TCharacterOptions } from './character_body';
 // How a body moves is the engine's own word for it, the same one a scene writes down.
@@ -31,19 +30,23 @@ export type { TPhysicsBodyType };
  */
 export type TPhysicsBodyHandle3d = {
     /**
-     * Fires when another body starts touching this one, receiving the **other** object.
+     * Runs `listener` each time another body starts touching this one, with the **other** object.
+     * Set up in a scene or a piece, it leaves with it.
      *
-     * Reading this property is the opt-in: box3d reports contacts only for shapes that asked,
-     * so a body nobody listens to costs nothing and allocates no signal. Verified against
-     * box3d: for *contacts* one side asking is enough, so listening on the player alone still
-     * reports the wall.
+     * Listening is the opt-in: the simulation reports contacts only for shapes that asked, so a
+     * body nobody listens to costs nothing. For contacts one side asking is enough, so listening
+     * on the player alone still reports the wall.
+     *
+     * @returns What stops it sooner.
      */
-    onEnter: TGameSignal<TGameObject>;
+    onEnter(listener: (other: TGameObject) => void): () => void;
     /**
-     * Fires when a body stops touching this one, the exit half of {@link TPhysicsBodyHandle3d.onEnter},
-     * same opt-in-on-read rule.
+     * Runs `listener` each time a body stops touching this one, the exit half of
+     * {@link TPhysicsBodyHandle3d.onEnter}, with the same opt-in.
+     *
+     * @returns What stops it sooner.
      */
-    onExit: TGameSignal<TGameObject>;
+    onExit(listener: (other: TGameObject) => void): () => void;
     /**
      * Applies an instantaneous impulse (mass·velocity) at the body's center, waking
      * it. Queued if the WASM world is still loading, then flushed on materialization.

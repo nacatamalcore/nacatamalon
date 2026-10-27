@@ -3,7 +3,7 @@ import { useCleanup } from '../../hooks/scene/use_cleanup';
 import { createGameSignal } from '../../signal/create_game_signal';
 import { ALL_LAYERS } from '../layers';
 import { resolveLayers } from '../layer_names';
-import { getActiveGame } from '../../store';
+import { getActiveBox, getActiveGame } from '../../store';
 import { gameOfBox } from '../../box/box_game';
 import { firstTimeIn } from '../../utils/first_time_in';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
@@ -89,7 +89,7 @@ type TBodyEntry = {
     pending: TPendingAction[];       // actions requested before materialization
     /**
      * Whether this body asked box3d to report its *contacts*. False until someone reads
-     * `onEnter`/`onExit`: see `TPhysicsBodyHandle3d.onEnter` for why the opt-in is a property read.
+     * `onEnter`/`onExit`: see `TPhysicsBodyHandle3d.onEnter` for why listening is the opt-in.
      * Sensor reporting is separate and not opt-in; see `sensorsPresent`.
      */
     wantsEvents: boolean;
@@ -511,11 +511,21 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
             return signal;
         };
 
+        /**
+         * Listens for one kind of contact. Set up while a scene or a piece is being built, the
+         * listener leaves with it, like a pointer's; later, what is handed back stops it.
+         */
+        const listenContact = (which: 'onEnter' | 'onExit', listener: (other: TGameObject) => void): (() => void) => {
+            const off = ensureSignal(which).connect(listener);
+            getActiveBox()?.cleanups.push(off);
+            return off;
+        };
+
         // The names the game gave its layers, as it is when the body is made, for `setLayers`.
         const layerNames = getActiveGame()?.get('config').physicsLayers ?? [];
         const body: TPhysicsBodyHandle3d = {
-            get onEnter() { return ensureSignal('onEnter'); },
-            get onExit() { return ensureSignal('onExit'); },
+            onEnter: (listener) => listenContact('onEnter', listener),
+            onExit: (listener) => listenContact('onExit', listener),
             applyImpulse: (x, y, z) => act('impulse', x, y, z),
             applyForce: (x, y, z) => act('force', x, y, z),
             applyTorque: (x, y, z) => act('torque', x, y, z),

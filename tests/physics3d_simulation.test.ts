@@ -14,7 +14,6 @@ import { usePhysicsBody3d, usePhysicsWorld3d } from '../src/hooks/physics';
 import { useSelf } from '../src/hooks/spawn/use_self';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useTransform } from '../src/hooks/transform/use_transform';
-import { useSignal } from '../src/hooks/signal/use_signal';
 import { stopScene } from '../src/scene/stop_scene';
 import type { TGameObject } from '../src/hooks/spawn/use_spawn';
 import { destroy } from '../src/destroy/destroy';
@@ -169,7 +168,7 @@ describe('a collider that only notices', () => {
                 // scene: this is the way back to it, and it is the whole point of `bodyOf`.
                 const body = getPhysicsWorld3d()?.bodyOf(useSelf());
                 if (body) {
-                    useSignal(body.onEnter, (other: TGameObject) => { seen.push(other.name); });
+                    body.onEnter((other: TGameObject) => { seen.push(other.name); });
                 }
             })();
             useSpawn(function Crate() {
@@ -204,7 +203,7 @@ describe('a listener that ends the scene', () => {
                 usePhysicsBody3d({ body: 'static', collider: { shape: 'box', size: [4, 1, 4] }, sensor: true });
                 const body = getPhysicsWorld3d()?.bodyOf(useSelf());
                 if (body) {
-                    useSignal(body.onEnter, () => {
+                    body.onEnter(() => {
                         heard++;
                         stopScene(store, 'Level');
                     });

@@ -4,7 +4,6 @@ import { getAudioManager } from '../src/audio';
 import { installFakeAudio } from './helpers/test_audio';
 import type { TFakeContext } from './helpers/test_audio';
 import { createGameHandle } from '../src/game/handle/create_game_handle';
-import { gamePaused, gameResumed } from '../src/signal/engine_signals';
 import { createTestGame } from './helpers/test_game';
 
 /**
@@ -42,7 +41,7 @@ describe('a hidden page', () => {
         const game = createGameHandle(store);
         const { page, setHidden } = fakePage();
         const heard: string[] = [];
-        off.push(gamePaused.connect(({ reason }) => heard.push(`paused ${reason}`)));
+        off.push(game.onPaused(({ reason }) => heard.push(`paused ${reason}`)));
         off.push(watchVisibility(game, page, fakeFrames().next));
 
         setHidden(true);
@@ -58,7 +57,7 @@ describe('a hidden page', () => {
         const { page, setHidden } = fakePage();
         const frames = fakeFrames();
         const heard: string[] = [];
-        off.push(gameResumed.connect(({ reason }) => heard.push(`resumed ${reason}`)));
+        off.push(game.onResumed(({ reason }) => heard.push(`resumed ${reason}`)));
         off.push(watchVisibility(game, page, frames.next));
 
         setHidden(true);

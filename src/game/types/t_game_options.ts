@@ -157,7 +157,7 @@ export type TGameOptions = {
      * moving teleports. Pausing makes that gap explicit instead of letting it reach the game.
      *
      * The page being hidden pauses the game the way a pause menu does, with the reason
-     * `'browser'`, so `gamePaused` and `gameResumed` are heard for it. Coming back releases only
+     * `'browser'`, so `useGame().onPaused` and `onResumed` are told it. Coming back releases only
      * that hold, so a game paused from a menu stays paused; it resumes one frame after the page is
      * seen again, so the frame that measured the time away is not run. Its sound is held with it:
      * every sound and song stops where it is and carries on from there when the page is back, as a

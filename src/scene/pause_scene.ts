@@ -1,6 +1,6 @@
 import type { TRuntimeStore } from '../store';
 import { findScene } from './find_scene';
-import { scenePaused, sceneResumed } from '../signal/engine_signals';
+import { gameMoment } from '../signal/game_moments';
 
 /**
  * Freezes or unfreezes one running scene. A paused scene skips its `useUpdate` callbacks but keeps
@@ -23,7 +23,8 @@ export const setScenePaused = (store: TRuntimeStore, name: string, paused: boole
     // Only when it really changes: pausing what is already paused is not an event.
     if (root.paused !== paused) {
         root.paused = paused;
-        (paused ? scenePaused : sceneResumed).emit({ scene: name });
+        // Heard through `useScene().onPaused` and `onResumed`.
+        gameMoment(store, `${paused ? 'scene paused' : 'scene resumed'}: ${name}`).emit();
     }
     return root.paused;
 };

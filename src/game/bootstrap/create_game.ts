@@ -14,6 +14,7 @@ import { isDevelopmentPage, shouldShowSplash } from "../../splash/should_show_sp
 import { createGameEvents } from "./create_game_events";
 import { createGameHandle } from "../handle/create_game_handle";
 import { holdingSound, watchVisibility } from "./watch_visibility";
+import { watchPage } from './watch_page';
 import { VERSION } from "../../version";
 import { settleCapture } from "../capture";
 import type { TRendererBackend } from "../../render/interface";
@@ -243,10 +244,16 @@ export const createGame = (target: TGameTarget, game_options: TGameOptions) => {
             // `pauseOnBlur`: the browser holds the loop while the page is hidden, beside any other hold,
             // and its sound with it, every sound where it was, as a console's did when it was paused.
             const unwatchVisibility = pauseOnBlur ? watchVisibility(holdingSound(createGameHandle(runtime), runtime)) : () => {};
+            // What happens to the page, for the game's `onHidden`, `onLeaving` and the rest. The page
+            // the canvas is in, which is not this script's when a tool shows the game in a window of
+            // its own.
+            const page = screen.canvas.ownerDocument;
+            const unwatchPage = watchPage(runtime, page, page.defaultView ?? undefined);
             unwatchConfig = () => {
                 unwatchSmooth();
                 unwatchFailure();
                 unwatchVisibility();
+                unwatchPage();
             };
 
             // Only the requested scene runs; the rest stay dormant until something launches them.

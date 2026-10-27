@@ -1,6 +1,7 @@
 import { rootOf } from '../../box';
 import { findScene, isScenePaused, setScenePaused, startScene, stopScene } from '../../scene';
 import { getActiveBox, getActiveGame } from '../../store';
+import { onGameMoment } from '../../signal/game_moments';
 import { canDrawTransition, startTransition } from '../../transition';
 import type { TSceneChangeOptions, TSceneLaunchOptions } from '../../transition';
 import type { TSceneFn } from '../../scene/types/t_scene_fn';
@@ -74,6 +75,35 @@ export type TSceneHandle = {
      * Whether a scene is running and paused. Never warns: asking is not an instruction.
      */
     isPaused(name?: string): boolean;
+    /**
+     * Runs `listener` each time a scene is frozen, only when it really changes: pausing what is
+     * already paused says nothing.
+     *
+     * The engine leaves sound and timers alone, because what should stop is the game's decision:
+     * the music of a level usually carries on under its pause menu, its footsteps do not. This is
+     * how the game hears it. The listener leaves with the scene or piece that set it up.
+     *
+     * @example
+     * ```ts
+     * const scene = useScene();
+     * scene.onPaused(() => steps.pause());
+     * scene.onResumed(() => steps.resume());
+     *
+     * // From the HUD, about the level under it.
+     * scene.onPaused(() => music.setVolume(0.2), 'Level');
+     * ```
+     *
+     * @param name The scene to listen to. Leave it out and it is the one that called `useScene`.
+     * @returns What stops it sooner.
+     */
+    onPaused(listener: () => void, name?: string): () => void;
+    /**
+     * Runs `listener` each time a scene that was paused runs again. See {@link TSceneHandle.onPaused}.
+     *
+     * @param name The scene to listen to. Leave it out and it is the one that called `useScene`.
+     * @returns What stops it sooner.
+     */
+    onResumed(listener: () => void, name?: string): () => void;
 };
 
 /**
@@ -96,7 +126,8 @@ export type TSceneHandle = {
  * };
  * ```
  *
- * @returns The controls: `change`, `launch`, `stop`, `pause`, `resume` and `isPaused`.
+ * @returns The controls: `change`, `launch`, `stop`, `pause`, `resume`, `isPaused`, and `onPaused` and
+ * `onResumed` to hear a scene freeze.
  *
  * @category Scenes
  * @since 1.0.0
@@ -248,5 +279,8 @@ export const useScene = (): TSceneHandle => {
             const target = running(name);
             return target === undefined ? false : isScenePaused(store, target);
         },
+        // By name, so a HUD listening to 'Level' still hears it after the level restarts.
+        onPaused: (listener, name = owner.name) => onGameMoment(store, `scene paused: ${name}`, active, listener),
+        onResumed: (listener, name = owner.name) => onGameMoment(store, `scene resumed: ${name}`, active, listener),
     };
 };

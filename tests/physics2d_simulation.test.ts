@@ -12,7 +12,6 @@ import { usePhysicsBody2d, usePhysicsWorld2d } from '../src/hooks/physics';
 import { useSelf } from '../src/hooks/spawn/use_self';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useUpdate } from '../src/hooks/loop/use_update';
-import { useSignal } from '../src/hooks/signal/use_signal';
 import { stopScene } from '../src/scene/stop_scene';
 import { destroy } from '../src/destroy/destroy';
 import { flushDestroyed } from '../src/destroy/flush_destroyed';
@@ -62,7 +61,7 @@ describe('a listener that ends the scene', () => {
                 usePhysicsBody2d({ body: 'static', collider: { shape: 'rect', width: 200, height: 20 }, sensor: true });
                 const body = getPhysicsWorld2d()?.bodyOf(useSelf());
                 if (body) {
-                    useSignal(body.onEnter, () => {
+                    body.onEnter(() => {
                         heard++;
                         stopScene(store, 'Level');
                     });
@@ -198,7 +197,7 @@ describe('a destroyed object', () => {
                 const self = useSelf();
                 const body = getPhysicsWorld2d()?.bodyOf(self);
                 if (body) {
-                    useSignal(body.onEnter, () => {
+                    body.onEnter(() => {
                         heard++;
                         destroy(self);
                     });

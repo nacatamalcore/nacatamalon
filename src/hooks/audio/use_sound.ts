@@ -82,8 +82,8 @@ const resolveSource = (audio: TAudioManager, source: TSoundSource): TAudioClip =
  * can fade, and so can the volume.
  *
  * Pausing the game or the scene does **not** stop a sound, because a menu over a frozen level often
- * wants the music to carry on. To silence something on pause, listen to `scenePaused`/`gamePaused`
- * and decide for each sound.
+ * wants the music to carry on. To silence something on pause, listen with `useScene().onPaused` or
+ * `useGame().onPaused` and decide for each sound.
  *
  * A sound laid out in a scene document (a `sound` component, chosen in an editor) is made by this same
  * hook; a behaviour gets its controls with `soundOf(box, name)`. In a scene shown rather than played
@@ -105,7 +105,7 @@ const resolveSource = (audio: TAudioManager, source: TSoundSource): TAudioClip =
  *         if (keys.justPressed('Space')) jump.play();
  *     });
  *
- *     useSignal(scenePaused, () => music.setVolume(0.2));
+ *     useScene().onPaused(() => music.setVolume(0.2));
  *     return createScene();
  * };
  * ```

@@ -1,3 +1,4 @@
+import { whenPageGoes } from './persistence/when_page_goes';
 import { bumpVersion, markWatchable } from '../store';
 import { saysMilliseconds } from '../utils/says_milliseconds';
 import { adoptProvisionalStore, registerGameStore, storeInternals } from './store_registry';
@@ -140,6 +141,19 @@ export const createGameStore = <S extends object, A = Record<string, never>>(
             void save();
         }, throttle * 1000);
     };
+
+    // A change still waiting for its throttle when the page goes is written there and then, or a
+    // coin picked up just before the tab was closed would not be in the save. Only in `'auto'`: a
+    // store in `'manual'` saves when the game says, and leaving is not saying so.
+    // `localStorageAdapter` writes before its first `await`, so it always gets there; an adapter
+    // that waits (IndexedDB, a server) may be cut off by the page going.
+    if (persist !== null && mode === 'auto') {
+        whenPageGoes(() => {
+            if (saveTimer !== null) {
+                void save();
+            }
+        });
+    }
 
     const changed = (): void => {
         scheduleSave();

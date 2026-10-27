@@ -3,7 +3,6 @@ import type { TJoint2d, TJointHandle2d } from './t_joint_2d';
 import type { TCharacterOptions2d } from './character_body_2d';
 import type { TCharacterBody2d } from '../character/t_character_body_2d';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
-import type { TGameSignal } from '../../signal';
 // How a body moves is the engine's own word for it, the same one a scene writes down.
 import type { TPhysicsBodyType } from '../types/t_physics';
 import type { TPhysicsLayer } from '../layer_names';
@@ -123,33 +122,35 @@ export type TPhysicsWorldOptions2d = {
  */
 export type TPhysicsBodyHandle2d = {
     /**
-     * Fires when another body starts touching this one, carrying **the other body's box**.
-     * The engine's own signal, so connect it with `useSignal` and the disconnect rides
-     * the box's teardown:
+     * Runs `listener` each time another body starts touching this one, with **the other body's
+     * box**. Set up in a scene or a piece, it leaves with it:
      *
      * ```ts
-     * const bullet = usePhysicsCircle(sprite, { world, type: 'dynamic', radius: 3 });
-     * useSignal(bullet.onEnter, (other) => { if (other.name.startsWith('tank')) destroy(other); });
+     * const bullet = usePhysicsBody2d(self, { type: 'dynamic', shape: 'circle', radius: 3 });
+     * bullet.onEnter((other) => { if (other.name.startsWith('tank')) destroy(other); });
      * ```
      *
-     * **Reading this property is the opt-in.** Rapier reports contacts only for colliders that
-     * asked for them, and asking has a cost the rest of a scene should not pay, so the flag is
-     * set the first time you touch `onEnter`/`onExit`, not when the body is created. The upshot
-     * is that you never configure anything, and a pile of a thousand event-less crates stays as
-     * cheap as it was before this existed.
+     * **Listening is the opt-in.** The simulation reports contacts only for colliders that asked
+     * for them, and asking has a cost the rest of a scene should not pay, so it is asked the first
+     * time `onEnter` or `onExit` is called, not when the body is made. Nothing to configure, and a
+     * pile of a thousand crates nobody listens to stays as cheap as it was.
      *
-     * Only one of the two bodies needs to have opted in for the contact to be reported, which is
-     * why a bullet can listen for hits against walls that know nothing about it.
+     * Only one of the two bodies needs to listen for the contact to be reported, which is why a
+     * bullet can hear its hits against walls that know nothing about it.
+     *
+     * @returns What stops it sooner.
      */
-    readonly onEnter: TGameSignal<TGameObject>;
+    onEnter(listener: (other: TGameObject) => void): () => void;
 
     /**
-     * Fires when another body stops touching this one, carrying the other body's box. Same
-     * opt-in-by-reading rule as `onEnter`.
+     * Runs `listener` each time another body stops touching this one, with the other body's box.
+     * Listening is the opt-in, as for `onEnter`.
      *
-     * Note that a body coming to rest **on** another never emits this: it is still touching.
+     * A body coming to rest **on** another never says this: it is still touching.
+     *
+     * @returns What stops it sooner.
      */
-    readonly onExit: TGameSignal<TGameObject>;
+    onExit(listener: (other: TGameObject) => void): () => void;
 
     /**
      * Apply an instantaneous impulse (momentum change) at the body's center.

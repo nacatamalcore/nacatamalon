@@ -185,9 +185,9 @@ export const box3dProvider: TPhysicsProvider = {
         const world = worldOfBody.get(box);
         const body = world?.bodyOf(box as TGameObject);
         if (body === null || body === undefined) return false;
-        // Reading the signals is what asks the simulation to report this body's contacts.
-        body.onEnter.connect((other) => told(other, true));
-        body.onExit.connect((other) => told(other, false));
+        // Listening is what asks the simulation to report this body's contacts.
+        body.onEnter((other) => told(other, true));
+        body.onExit((other) => told(other, false));
         return true;
     },
 

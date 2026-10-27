@@ -3,6 +3,16 @@ import type { TRendererBackend } from '../../render/interface';
 import type { TAsset } from '../../loaders/types/t_asset';
 
 /**
+ * What `onPaused` and `onResumed` are told: who held the game or let it go. `pause()` with no
+ * reason says `'game'`.
+ *
+ * @category Game
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TGamePauseEvent = { reason: string };
+
+/**
  * What a game can do with itself while it runs: the settings that belong to the whole game rather
  * than to any one scene.
  *
@@ -84,6 +94,32 @@ export type TGameHandle = {
      * Whether anything at all is holding the game frozen.
      */
     isPaused(): boolean;
+    /**
+     * Runs `listener` each time the game is frozen: on the **first** hold only, so a pause menu
+     * opening over a game already held by the browser does not say it twice. It is told who held it
+     * (`'browser'` for a hidden page with `pauseOnBlur`, `'game'` for a `pause()` with no reason).
+     *
+     * The engine leaves sound and timers alone, since what should stop is the game's decision: this
+     * is where the game hears it. Called from a scene or a piece, the listener leaves with it.
+     *
+     * @example
+     * ```ts
+     * const game = useGame();
+     * game.onPaused(({ reason }) => {
+     *     if (reason === 'browser') music.pause();
+     * });
+     * ```
+     *
+     * @returns What stops it sooner.
+     */
+    onPaused(listener: (event: TGamePauseEvent) => void): () => void;
+    /**
+     * Runs `listener` each time the game runs again, once the **last** hold has let go. It is told
+     * which one that was.
+     *
+     * @returns What stops it sooner.
+     */
+    onResumed(listener: (event: TGamePauseEvent) => void): () => void;
 
     /**
      * Which card API is drawing: `'WEBGPU'`, or `'WEBGL2'` when the browser has no WebGPU (or the
@@ -161,4 +197,67 @@ export type TGameHandle = {
      * whatever made them. Nothing is let go then, not even the other assets under the same key.
      */
     releaseAsset(asset: TAsset | string): boolean;
+
+    /**
+     * Runs `listener` each time the page stops being seen: another tab, a minimised window, a phone
+     * going back to its home screen. The moment to save, on a phone above all, where a page in the
+     * background can be closed without another word: this one is always heard first.
+     *
+     * Called from a scene or a piece, the listener leaves with it, like every listener the scene
+     * set up. It is heard whether or not the game pauses itself while hidden (`pauseOnBlur`).
+     *
+     * @example
+     * ```ts
+     * const game = useGame();
+     * game.onHidden(() => {
+     *     void progress.save();
+     * });
+     * ```
+     *
+     * @returns What stops it sooner. From React, where there is no scene to leave with, return it
+     * from the `useEffect` that set it up.
+     */
+    onHidden(listener: () => void): () => void;
+    /**
+     * Whether the page is out of sight right now: another tab, a minimised window. Asked of the page
+     * the game is drawn in, the same one {@link TGameHandle.onHidden} listens to, so the two never
+     * disagree. A game with no page (headless) is never hidden.
+     */
+    isHidden(): boolean;
+    /**
+     * Runs `listener` each time the page is seen again after {@link TGameHandle.onHidden}.
+     *
+     * @returns What stops it sooner.
+     */
+    onShown(listener: () => void): () => void;
+    /**
+     * Runs `listener` each time the game's window loses the keyboard while it may still be in sight:
+     * another window in front, a click outside the game's frame. A pause menu opens here; changing
+     * tabs is heard here first and then in {@link TGameHandle.onHidden}.
+     *
+     * @returns What stops it sooner.
+     */
+    onBlurred(listener: () => void): () => void;
+    /**
+     * Runs `listener` each time the game's window has the keyboard again.
+     *
+     * @returns What stops it sooner.
+     */
+    onFocused(listener: () => void): () => void;
+    /**
+     * Whether the game's window has the keyboard right now. A game with no page (headless) always
+     * has it.
+     */
+    hasFocus(): boolean;
+    /**
+     * Runs `listener` when the page is closing or reloading.
+     *
+     * **Only what is done at once gets done.** The page does not wait: a `localStorage.setItem` is
+     * written, an `await` or a `fetch` is not. And on a phone it may never be heard, since a page in
+     * the background can be closed without a word, so anything that must not be lost goes in
+     * {@link TGameHandle.onHidden}.
+     *
+     * @returns What stops it sooner.
+     */
+    onLeaving(listener: () => void): () => void;
 };

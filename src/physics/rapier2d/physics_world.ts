@@ -52,7 +52,7 @@ type TBodyEntry = {
     /**
      * Whether this collider asked Rapier to report its contacts. False until someone reads
      * `onEnter`/`onExit` (or the collider is a sensor, which is pointless without them),
-     * see `TPhysicsBodyHandle2d.onEnter` for why the opt-in is a property read.
+     * see `TPhysicsBodyHandle2d.onEnter` for why listening is the opt-in.
      */
     wantsEvents: boolean;
     /**
@@ -708,7 +708,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
                 return;
             }
             // Applied here rather than in `createColliderDesc` because the opt-in can arrive at any
-            // point before materialization: WASM loads async, so a `body.onEnter` read during scene
+            // point before materialization: WASM loads async, so a `body.onEnter` call during scene
             // init routinely runs before this collider exists.
             if (bodyEntry.wantsEvents) colliderDesc.setActiveEvents(rapier.ActiveEvents.COLLISION_EVENTS);
 
@@ -739,6 +739,16 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
             const signal = createGameSignal<TGameObject>();
             bodyEntry[which] = signal;
             return signal;
+        };
+
+        /**
+         * Listens for one kind of contact. Set up while a scene or a piece is being built, the
+         * listener leaves with it, like a pointer's; later, what is handed back stops it.
+         */
+        const listenContact = (which: 'onEnter' | 'onExit', listener: (other: TGameObject) => void): (() => void) => {
+            const off = ensureSignal(which).connect(listener);
+            getActiveBox()?.cleanups.push(off);
+            return off;
         };
 
         if (rapier && world) {
@@ -775,8 +785,8 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         // The names the game gave its layers, as it is when the body is made, for `setLayers`.
         const layerNames = getActiveGame()?.get('config').physicsLayers ?? [];
         const handle: TPhysicsBodyHandle2d = {
-            get onEnter() { return ensureSignal('onEnter'); },
-            get onExit() { return ensureSignal('onExit'); },
+            onEnter: (listener) => listenContact('onEnter', listener),
+            onExit: (listener) => listenContact('onExit', listener),
 
             // A handle kept past its object's destruction pushes nothing.
             applyImpulse: (x: number, y: number) => {

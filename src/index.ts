@@ -105,7 +105,7 @@ export type { TAtlasDoc, TAtlasDocFrame, TAtlasGridSpec, TAtlasPixelRect, TAtlas
 export { destroy } from './destroy';
 export { listen, onReport } from './events';
 export type { TReportHandler } from './events';
-export { createGameSignal, scenePaused, sceneResumed, gamePaused, gameResumed } from './signal';
+export { createGameSignal } from './signal';
 // Physics: the FORMAT only. The engine keeps colliders, writes them down and reads them back while
 // being completely unable to move them. What moves them is registered from outside, so a game that
 // never simulates never pays for the WebAssembly and a tool can draw a collider's outline without
@@ -236,7 +236,7 @@ export type {
 // Values moved over time by keys, the `.motion` an editor's motion panel writes.
 export { parseMotionDoc, MOTION_FORMAT, MOTION_VERSION } from './motion';
 export type { TMotionDoc, TMotionTrack, TMotionKey, TMotionEvent, TMotionEase, TMotionTransition, TMotionOptions, TMotionHandle, TMotionAttachment } from './motion';
-export type { TGameSignal, TSignalHandler, TScenePauseEvent, TGamePauseEvent } from './signal';
+export type { TGameSignal, TSignalHandler } from './signal';
 // A sound laid out in the scene, played by a behaviour.
 export { soundOf } from './audio';
 export type {
@@ -248,7 +248,7 @@ export type { TGameStore, TGameStoreConfig, TStoreActionsFactory, TStoreGet, TSt
 // The format's vocabulary, which stays on the root the way `TSceneDoc` does: it describes a file,
 // and the file is the engine's.
 export type { TStoreDoc, TStoreField, TStoreFieldType, TStoreFieldValue, TStorePersistDoc } from './game_store';
-export type { TGameHandle } from './game/handle';
+export type { TGameHandle, TGamePauseEvent } from './game/handle';
 // What its `capture` is asked for and hands back.
 export type { TCaptureOptions } from './game/capture';
 export type { TCaptureResult } from './render/interface';

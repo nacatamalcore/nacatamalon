@@ -12,7 +12,7 @@ import { useAudio } from '../src/hooks/audio/use_audio';
 import { updateAudio } from '../src/audio';
 import { destroy, flushDestroyed } from '../src/destroy';
 import { createGameHandle } from '../src/game/handle/create_game_handle';
-import { gamePaused, gameResumed, scenePaused, sceneResumed } from '../src/signal/engine_signals';
+import { useScene } from '../src/hooks/scene/use_scene';
 import { whenLoaded } from '../src/loaders';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { FAKE_DURATION, installFakeAudio } from './helpers/test_audio';
@@ -393,30 +393,48 @@ describe('sound placed in the world', () => {
     });
 });
 
-describe('pause signals', () => {
+describe('hearing a pause', () => {
     it('says when a scene is paused and when it runs again, only when it changes', () => {
         const { store } = createTestGame();
-        startTestScene(store, 'Level', () => createScene());
         const log: string[] = [];
-        const offPaused = scenePaused.connect(({ scene }) => { log.push(`paused ${scene}`); });
-        const offResumed = sceneResumed.connect(({ scene }) => { log.push(`resumed ${scene}`); });
+        startTestScene(store, 'Level', () => {
+            const scene = useScene();
+            scene.onPaused(() => { log.push('paused'); });
+            scene.onResumed(() => { log.push('resumed'); });
+            return createScene();
+        });
 
         setScenePaused(store, 'Level', true);
         setScenePaused(store, 'Level', true);
         setScenePaused(store, 'Level', false);
         setScenePaused(store, 'Missing', true);
 
-        expect(log).toEqual(['paused Level', 'resumed Level']);
-        offPaused();
-        offResumed();
+        expect(log).toEqual(['paused', 'resumed']);
+    });
+
+    it('hears another scene by its name, and stops with the scene that listened', () => {
+        const { store } = createTestGame();
+        const log: string[] = [];
+        startTestScene(store, 'Level', () => createScene());
+        startTestScene(store, 'Hud', () => {
+            useScene().onPaused(() => { log.push('level paused'); }, 'Level');
+            return createScene();
+        });
+
+        setScenePaused(store, 'Level', true);
+        setScenePaused(store, 'Level', false);
+        stopScene(store, 'Hud');
+        setScenePaused(store, 'Level', true);
+
+        expect(log).toEqual(['level paused']);
     });
 
     it('says the game is paused on the first hold and running again on the last', () => {
         const { store } = createTestGame();
         const game = createGameHandle(store);
         const log: string[] = [];
-        const offPaused = gamePaused.connect(({ reason }) => { log.push(`paused ${reason}`); });
-        const offResumed = gameResumed.connect(({ reason }) => { log.push(`resumed ${reason}`); });
+        const offPaused = game.onPaused(({ reason }) => { log.push(`paused ${reason}`); });
+        const offResumed = game.onResumed(({ reason }) => { log.push(`resumed ${reason}`); });
 
         game.pause('menu');
         game.pause('blur');
@@ -427,5 +445,17 @@ describe('pause signals', () => {
         expect(log).toEqual(['paused menu', 'resumed blur']);
         offPaused();
         offResumed();
+    });
+
+    it('is heard by the game paused and not by another on the same page', () => {
+        const first = createGameHandle(createTestGame().store);
+        const second = createGameHandle(createTestGame().store);
+        const log: string[] = [];
+        first.onPaused(() => { log.push('first'); });
+        second.onPaused(() => { log.push('second'); });
+
+        first.pause();
+
+        expect(log).toEqual(['first']);
     });
 });

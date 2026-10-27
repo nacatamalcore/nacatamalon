@@ -9,8 +9,8 @@ export const BROWSER_PAUSE = 'browser';
 
 /**
  * `pauseOnBlur`: the game pauses while its page is hidden (another tab, a minimised window) and
- * resumes when it is seen again, through the same holds a pause menu uses, so `gamePaused` and
- * `gameResumed` are heard with the reason `'browser'`.
+ * resumes when it is seen again, through the same holds a pause menu uses, so the game's `onPaused`
+ * and `onResumed` are told the reason `'browser'`.
  *
  * Only its own hold is released on the way back: a game the player paused from a menu before
  * switching tabs is still paused when they return.
