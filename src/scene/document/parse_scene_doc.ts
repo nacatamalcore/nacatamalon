@@ -615,6 +615,7 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                     ...(style.align !== undefined ? { align: asOneOf(style.align, ['left', 'center', 'right'] as const, 'left') } : {}),
                     ...optionalNumber(style, 'letterSpacing'),
                     ...optionalNumber(style, 'lineSpacing'),
+                    ...optionalNumber(style, 'maxWidth'),
                 },
                 tint: asColor(raw.tint, WHITE),
                 ...(parsePoint(raw.anchor) !== undefined ? { anchor: parsePoint(raw.anchor) } : {}),

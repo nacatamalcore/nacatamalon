@@ -47,7 +47,8 @@ const fontByKey = (store: TRuntimeStore, box: TBox, key: string): TBitmapFont | 
  *
  * - `style.fontSize` is how tall a line is, in pixels. A pixel font looks crisp at whole multiples of
  *   its own height and uneven in between; the console says so if that happens.
- * - `\n` starts a new line, and `style.align` lines them up.
+ * - `\n` starts a new line, and `style.maxWidth` breaks one that runs wider at a space, so a
+ *   dialogue box needs no `\n` put in by hand. `style.align` lines them up.
  * - `x` and `y` are the top-left corner of the text unless `anchor` says otherwise: `{ x: 0.5, y: 0 }`
  *   centres a title on `x`.
  * - A lowercase letter the font does not have is drawn as its capital, since most arcade fonts only

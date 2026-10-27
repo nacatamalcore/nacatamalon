@@ -87,6 +87,16 @@ describe('drawText with the font the engine carries', () => {
         expect(rows[9]).toBe('....##...##......');
     });
 
+    it('breaks lines at maxWidth where a text on screen breaks them', () => {
+        const wrapped = drawText(createPixels(40, 20), 'HH HH', 0, 0, { maxWidth: 20, align: 'right' });
+        const broken = drawText(createPixels(40, 20), 'HH\nHH', 0, 0, { align: 'right' });
+        // The same two lines, pushed over to the right of a 20 pixel box rather than of their own 17.
+        const moved = drawText(createPixels(40, 20), 'HH\nHH', 3, 0, { align: 'right' });
+
+        expect(shade(wrapped)).not.toEqual(shade(broken));
+        expect(shade(wrapped)).toEqual(shade(moved));
+    });
+
     it('draws nothing outside the picture and does not mind being half off it', () => {
         const p = drawText(createPixels(4, 4), 'H', -2, -2);
 
@@ -113,6 +123,16 @@ describe('drawText with a vector font', () => {
 
         expect(opaque(smooth)).toBeGreaterThan(0);
         expect(rows.join('')).toContain('+');
+    });
+
+    it('breaks lines at maxWidth by the font\'s own advances, as on screen', () => {
+        const { font } = vector();
+        // At 20, "IA" is 26 wide (unkerned) and "IA IA" 57.
+        const wrapped = drawText(createPixels(40, 50), 'IA IA', 0, 0, { font, fontSize: 20, maxWidth: 30, smooth: false });
+        const broken = drawText(createPixels(40, 50), 'IA\nIA', 0, 0, { font, fontSize: 20, smooth: false });
+
+        expect(shade(wrapped)).toEqual(shade(broken));
+        expect(opaque(wrapped)).toBeGreaterThan(0);
     });
 
     it('gives every pixel in or out with smooth off, and covers what the soft edge covered', () => {

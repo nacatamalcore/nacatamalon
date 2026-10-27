@@ -3,6 +3,18 @@
 What changed in the current release of `nacatamalon`, and what is waiting for the next one. Earlier
 releases are in [changelog/](./changelog/), one file each.
 
+## Unreleased
+
+### Added
+
+- **Text that breaks its own lines.** `style.maxWidth` is how wide a line can be, in pixels, before
+  its words go on to the next: a dialogue box, a panel's description, with no `\n` put in by hand
+  and none to put in again when the text or its size changes. Lines break at spaces, and a word
+  wider than the whole width between two letters; a `\n` still starts a line. The block is as wide
+  as `maxWidth`, so `align` and `anchor` place the lines in the box rather than around the words.
+  The same for a bitmap font and a vector one, in `drawText` too, in a scene document, and in the
+  editor's inspector as Max Width.
+
 ## 0.2.9 — 2026-10-27
 
 ### Added

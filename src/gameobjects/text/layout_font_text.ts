@@ -1,5 +1,6 @@
 import { fontGlyph, fontKerning } from '../../loaders';
 import { EMPTY_LAYOUT, alignLines } from './layout_text';
+import { textLines } from './wrap_line';
 import type { TFont, TFontGlyph } from '../../loaders';
 import type { TGlyphPlacement, TTextLayout } from './layout_text';
 import type { TTextStyle } from './types/t_text_style';
@@ -22,7 +23,8 @@ export const DEFAULT_FONT_SIZE = 16;
  * - A character advances by the font's own advance, adjusted by the font's kerning against the one
  *   before it, plus `letterSpacing`. A line is as wide as its advances.
  * - A character the font lacks is drawn as the font's missing glyph, usually a box.
- * - `\n` starts a line `lineHeight + lineSpacing` further down; `align` works as for a bitmap font.
+ * - `\n` starts a line `lineHeight + lineSpacing` further down; `maxWidth` and `align` work as for a
+ *   bitmap font.
  *
  * Characters are drawn into the font's atlas the first time they are laid out, which is why this is
  * not quite pure: the same text and style always give the same answer, but the first time may also
@@ -46,8 +48,14 @@ export const layoutFontText = (text: string, style: TTextStyle, font: TFont): TT
     const lineSpacing = style.lineSpacing ?? 0;
     const lineHeight = (meta.ascender - meta.descender + meta.lineGap) * units;
     const baseline = (meta.ascender + meta.lineGap / 2) * units;
+    // Measured by the same advances and kerning the letters are placed by below.
+    const step = (char: string, previous: string | undefined): number => {
+        const glyph = fontGlyph(font, char)!;
+        const kerning = previous !== undefined ? fontKerning(font, fontGlyph(font, previous)!, glyph) : 0;
+        return (kerning + glyph.advance) * units + letterSpacing;
+    };
 
-    const lines = text.split('\n').map((line, row) => {
+    const lines = textLines(text, style, step, letterSpacing).map((line, row) => {
         const top = row * (lineHeight + lineSpacing) + baseline;
         const placements: TGlyphPlacement[] = [];
         let pen = 0;

@@ -135,6 +135,9 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   or `useLoadBitmapFont({ json, atlas })` for a bitmap font (an image plus a JSON of glyph positions).
   A font loaded with a `key` in an earlier scene is named by it, `createText({ text, font: 'title' })`,
   with no loader in that scene.
+  `style.maxWidth` breaks the lines at spaces to fit that many pixels, again whenever the text
+  changes (a dialogue box: never put the `\n`s in by hand), and makes the block that wide, so
+  `align` and `anchor` place the lines in the box; `drawText` takes it too.
 - **Mouse look** (first person): `usePointer().lock()` captures the mouse, but only when called from
   a click or key press (`pointer.onDown(() => { void pointer.lock(); })`); then turn the camera with
   `movementX`/`movementY` from `onMove`, which keep changing while `screenX`/`screenY` do not.

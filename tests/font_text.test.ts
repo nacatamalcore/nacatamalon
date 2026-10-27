@@ -81,6 +81,22 @@ describe('layoutFontText', () => {
         expect(second!.y - first!.y).toBeCloseTo(24);
     });
 
+    it('breaks a line at maxWidth by the same advances and kerning it places the letters by', () => {
+        const { font } = kerned();
+        // At 20, I is 12 and A 14, kerned together by -2: "IA" is 24 wide, and only fits in 24
+        // because the kerning is counted. A space is 5.
+        const layout = layoutFontText('IA IA', { fontSize: 20, maxWidth: 24 }, font);
+        const [i1, a1, i2, a2] = layout.placements;
+
+        expect(layout.width).toBe(24);
+        expect(layout.height).toBe(40);
+        expect(i2!.x).toBeCloseTo(i1!.x);
+        expect(a2!.x).toBeCloseTo(a1!.x);
+        expect(i2!.y - i1!.y).toBeCloseTo(20);
+        // Centred in the box, which is the line's width here, so nothing moves.
+        expect(layoutFontText('IA IA', { fontSize: 20, maxWidth: 24, align: 'center' }, font).placements[0]!.x).toBeCloseTo(i1!.x);
+    });
+
     it('takes up the space of a space without drawing one, and draws the missing glyph for a character the font lacks', () => {
         const { font } = kerned();
         const spaced = layoutFontText('A A', { fontSize: 20 }, font);

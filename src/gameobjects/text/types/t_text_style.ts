@@ -19,9 +19,21 @@ export type TTextStyle = {
      */
     fontSize?: number;
     /**
-     * Where each line sits inside the width of the longest one. Default `'left'`.
+     * Where each line sits: inside `maxWidth` when there is one, inside the width of the longest
+     * line when not. Default `'left'`.
      */
     align?: 'left' | 'center' | 'right';
+    /**
+     * How wide a line can be, in pixels, before its words go on to the next one: a dialogue box, a
+     * panel's description. The text's block is this wide, so `align` and `anchor` place the lines
+     * in the box rather than around the words. Measured before the text's scale, like the other
+     * sizes here.
+     *
+     * Lines break at spaces; a word wider than the whole width breaks between two letters. `\n`
+     * still starts a line wherever it is. Changing the text or the size breaks it again on the next
+     * frame. Left out or `0`, lines are only broken by `\n`.
+     */
+    maxWidth?: number;
     /**
      * Extra pixels between two characters. Default `0`.
      */

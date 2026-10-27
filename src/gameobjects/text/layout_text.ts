@@ -1,3 +1,4 @@
+import { textLines } from './wrap_line';
 import type { TBitmapFontGlyph, TBitmapFontMeta } from '../../loaders';
 import type { TTextStyle } from './types/t_text_style';
 
@@ -39,8 +40,9 @@ export const EMPTY_LAYOUT: TTextLayout = { width: 0, height: 0, scale: 1, placem
 export type TTextLine = { width: number; placements: TGlyphPlacement[] };
 
 /**
- * Puts the lines together into one block: each moved along by `align` inside the width of the
- * longest, and the block's size worked out. Shared by every kind of font, so they all align alike.
+ * Puts the lines together into one block: each moved along by `align` inside `maxWidth`, or inside
+ * the width of the longest line without one, and the block's size worked out. Shared by every kind
+ * of font, so they all align alike.
  *
  * @internal
  * @since 1.0.0
@@ -48,7 +50,8 @@ export type TTextLine = { width: number; placements: TGlyphPlacement[] };
  */
 export const alignLines = (lines: readonly TTextLine[], style: TTextStyle, lineHeight: number, scale: number): TTextLayout => {
     const lineSpacing = style.lineSpacing ?? 0;
-    const width = Math.max(0, ...lines.map((line) => line.width));
+    // A word too wide for the box on its own still makes the block as wide as it is.
+    const width = Math.max(style.maxWidth ?? 0, ...lines.map((line) => line.width));
     const height = lines.length * lineHeight + (lines.length - 1) * lineSpacing;
 
     const align = style.align ?? 'left';
@@ -89,8 +92,9 @@ const glyphFor = (char: string, glyphs: ReadonlyMap<string, TBitmapFontGlyph>): 
  *   in final pixels. The last character of a line adds no spacing after it.
  * - A character the font lacks leaves the gap of a space (the font's own space, or half its height)
  *   and is not drawn.
- * - `\n` starts a line `fontSize + lineSpacing` further down. `align` places each line inside the
- *   width of the longest one.
+ * - `\n` starts a line `fontSize + lineSpacing` further down, and so does a line running past
+ *   `maxWidth`, broken at a space (`wrapLine`). `align` places each line inside `maxWidth`, or
+ *   inside the width of the longest one without it.
  *
  * @internal
  * @since 1.0.0
@@ -107,8 +111,9 @@ export const layoutText = (text: string, style: TTextStyle, meta: TBitmapFontMet
     const lineSpacing = style.lineSpacing ?? 0;
     const gap = (meta.tracking * scale) + letterSpacing;
     const spaceWidth = glyphs.get(' ')?.w ?? Math.ceil(meta.glyphHeight / 2);
+    const step = (char: string): number => (glyphFor(char, glyphs)?.w ?? spaceWidth) * scale + gap;
 
-    const lines = text.split('\n').map((line, row) => {
+    const lines = textLines(text, style, step, gap).map((line, row) => {
         const top = row * (lineHeight + lineSpacing);
         const placements: TGlyphPlacement[] = [];
         let pen = 0;
@@ -125,7 +130,7 @@ export const layoutText = (text: string, style: TTextStyle, meta: TBitmapFontMet
                     source: { x: glyph.x, y: glyph.y, width: glyph.w, height: meta.glyphHeight },
                 });
             }
-            pen += (glyph?.w ?? spaceWidth) * scale + gap;
+            pen += step(char);
             count++;
         }
 

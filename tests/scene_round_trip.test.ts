@@ -189,6 +189,16 @@ describe('what the writer leaves out', () => {
         expect(rebuilt(doc)).toEqual(doc);
     });
 
+    it('keeps the width a text breaks its lines at', () => {
+        const { doc } = written(() => {
+            createText({ text: 'AB CD', font: createTestFont(), tint, style: { maxWidth: 20, align: 'center' } });
+        });
+
+        expect(doc.root.components[0]).toMatchObject({ style: { maxWidth: 20, align: 'center' } });
+        expect(parseSceneDoc(doc, '/scenes/level.scene')).toEqual(doc);
+        expect(rebuilt(doc)).toEqual(doc);
+    });
+
     it('leaves out a box born after its scene was built, and keeps one built with it', () => {
         const { store } = createTestGame();
         const Brick = () => { createSprite({ width: 8, height: 8, tint }); };

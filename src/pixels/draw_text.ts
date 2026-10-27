@@ -1,5 +1,6 @@
 import { getActiveGame } from '../store';
 import { layoutText } from '../gameobjects/text/layout_text';
+import { textLines } from '../gameobjects/text/wrap_line';
 import { DEFAULT_FONT_SIZE } from '../gameobjects/text/layout_font_text';
 import { builtinFontInMemory, isBuiltinFont } from '../gameobjects/text/default_font';
 import { bitmapFontGlyphs } from '../loaders/bitmap_font/bitmap_font_glyphs';
@@ -197,7 +198,13 @@ const drawVectorText = (pixels: TPixels, text: string, x: number, y: number, fon
     const lineHeight = (parsed.ascender - parsed.descender + parsed.lineGap) * units;
     const baseline = (parsed.ascender + parsed.lineGap / 2) * units;
 
-    const lines = text.split('\n').map((line) => {
+    const step = (char: string, previous: string | undefined): number => {
+        const glyph = parsed.glyphIndex(char.codePointAt(0) ?? 0);
+        const kerning = previous !== undefined ? parsed.kerning(parsed.glyphIndex(previous.codePointAt(0) ?? 0), glyph) : 0;
+        return (kerning + parsed.advance(glyph)) * units + letterSpacing;
+    };
+
+    const lines = textLines(text, options, step, letterSpacing).map((line) => {
         const glyphs: Array<{ glyph: number; pen: number }> = [];
         let pen = 0;
         let previous = -1;
@@ -213,7 +220,7 @@ const drawVectorText = (pixels: TPixels, text: string, x: number, y: number, fon
         return { glyphs, width: glyphs.length > 0 ? pen - letterSpacing : 0 };
     });
 
-    const width = Math.max(0, ...lines.map((line) => line.width));
+    const width = Math.max(options.maxWidth ?? 0, ...lines.map((line) => line.width));
     const height = lines.length * lineHeight + (lines.length - 1) * lineSpacing;
     const left = x - width * (options.anchor?.x ?? 0);
     const top = y - height * (options.anchor?.y ?? 0);
@@ -234,8 +241,8 @@ const drawVectorText = (pixels: TPixels, text: string, x: number, y: number, fon
  * Writes text into a picture: the name on a sign, a number on a door, a label on a crate. Once it is
  * in the pixels it is part of the art, and turns, scales and lights with whatever shows it.
  *
- * It lays the text out exactly as `createText` does, with the same `fontSize`, `align` and
- * spacing, and works with either kind of font: a bitmap font is copied pixel for pixel, and a vector
+ * It lays the text out exactly as `createText` does, with the same `fontSize`, `align`, `maxWidth`
+ * and spacing, and works with either kind of font: a bitmap font is copied pixel for pixel, and a vector
  * font is drawn from its outlines at the size asked for.
  *
  * **With no font it needs nothing at all**: the font the engine carries is already inside it, so a
