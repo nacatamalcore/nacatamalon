@@ -253,6 +253,7 @@ const buildModelMesh = (
             ...(surface.affine === true ? { affine: true } : {}),
             ...(surface.cull !== undefined ? { cull: surface.cull } : {}),
             ...(surface.alphaCutoff !== undefined ? { alphaCutoff: surface.alphaCutoff } : {}),
+            ...(surface.transparent !== undefined ? { transparent: surface.transparent } : {}),
             // The looks as written, which make the colour again: a document keeps the recipe, not the shader.
             ...(surface.lighting !== undefined ? { lighting: surface.lighting } : {}),
             ...(surface.steps !== undefined ? { steps: surface.steps } : {}),
@@ -281,8 +282,8 @@ const buildModelMesh = (
         if (part.emissiveTexture !== null) {
             mesh.material.emissiveTexture = part.emissiveTexture;
         }
-        // Only ever switched on: a document has no word for it, so a file saying so is the only say.
-        if (part.transparent) {
+        // The file's word unless the scene has one of its own, as with the side and the cut below.
+        if (surface.transparent === undefined && part.transparent) {
             mesh.material.transparent = true;
         }
         // The file's word unless the scene has one of its own.
@@ -500,6 +501,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                     ...(surface.affine === true ? { affine: true } : {}),
                     ...(surface.cull !== undefined ? { cull: surface.cull } : {}),
                     ...(surface.alphaCutoff !== undefined ? { alphaCutoff: surface.alphaCutoff } : {}),
+                    ...(surface.transparent !== undefined ? { transparent: surface.transparent } : {}),
                     // The looks as written, which make the colour again: a document keeps the recipe, not the shader.
                     ...(surface.lighting !== undefined ? { lighting: surface.lighting } : {}),
                     ...(surface.steps !== undefined ? { steps: surface.steps } : {}),

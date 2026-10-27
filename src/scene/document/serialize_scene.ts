@@ -238,6 +238,7 @@ const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting, fromFile:
         ...(material.affine === true ? { affine: true } : {}),
         ...(material.cull === 'back' || material.cull === 'front' || material.cull === 'none' ? { cull: material.cull } : {}),
         ...(material.alphaCutoff !== undefined ? { alphaCutoff: material.alphaCutoff } : {}),
+        ...(material.transparent !== undefined ? { transparent: material.transparent } : {}),
         ...(lighting !== undefined ? { lighting: lighting as TMeshMaterialDoc['lighting'] } : {}),
         ...(steps !== undefined ? { steps: steps as TMeshMaterialDoc['steps'] } : {}),
     };

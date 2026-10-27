@@ -161,6 +161,8 @@ const parseMeshMaterial = (value: unknown): TMeshMaterialDoc => {
         ...(typeof raw.alphaCutoff === 'number' && Number.isFinite(raw.alphaCutoff) && raw.alphaCutoff >= 0 && raw.alphaCutoff <= 1
             ? { alphaCutoff: raw.alphaCutoff }
             : {}),
+        // Either word, or left to its alpha.
+        ...(typeof raw.transparent === 'boolean' ? { transparent: raw.transparent } : {}),
         ...parseLooks(raw.lighting, raw.steps),
     };
 };

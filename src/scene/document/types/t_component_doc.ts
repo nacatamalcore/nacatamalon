@@ -123,6 +123,13 @@ export type TMeshMaterialDoc = TMaterialDoc & {
      */
     alphaCutoff?: number;
     /**
+     * Whether it is seen through whatever its alpha: `true` for a picture with see-through parts or a
+     * shader that works out its own, `false` for solid at any alpha. Left out when it was never asked
+     * for, which is see-through only below full alpha, except a model piece whose file blends it
+     * (`BLEND`): that is see-through unless the document says otherwise.
+     */
+    transparent?: boolean;
+    /**
      * How it is lit, as the look is written down (`{ look: 'toon', bands: 2, ... }`). When a material
      * has looks, its `fragment` is left out: the looks are the recipe, and the shader they make is
      * made again when the scene is opened. Its knobs, as turned, are in `uniforms`.

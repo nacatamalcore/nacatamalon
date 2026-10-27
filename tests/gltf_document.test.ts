@@ -235,3 +235,31 @@ describe('a model piece the file keeps both sides of', () => {
         expect(meshesOf(store).get('leaf-mesh')!.material.cull).toBe('back');
     });
 });
+
+describe('a model piece the file blends', () => {
+    const serveGlass = (): void => {
+        const { json, bin } = asGltf({
+            nodes: [{ name: 'Glass', primitives: [{ ...TEST_QUAD, material: 0 }] }],
+            materials: [{ alphaMode: 'BLEND' }],
+        });
+        served = serveGltf({ '/models/car.gltf': json, '/models/model.bin': bin });
+    };
+
+    it('is seen through from a document too, as from code', async () => {
+        serveGlass();
+        const { store } = createTestGame();
+        startTestScene(store, 'Garage', sceneFromDoc(carScene([{ key: 'glass' }], [mesh('glass-mesh', 'glass')])));
+        await arrive();
+
+        expect(meshesOf(store).get('glass-mesh')!.material.transparent).toBe(true);
+    });
+
+    it('is solid when the document says so', async () => {
+        serveGlass();
+        const { store } = createTestGame();
+        startTestScene(store, 'Garage', sceneFromDoc(carScene([{ key: 'glass' }], [mesh('glass-mesh', 'glass', { transparent: false })])));
+        await arrive();
+
+        expect(meshesOf(store).get('glass-mesh')!.material.transparent).toBe(false);
+    });
+});

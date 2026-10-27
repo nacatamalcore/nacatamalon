@@ -3,7 +3,10 @@ import { createScene } from '../src/scene/create_scene';
 import { createMesh } from '../src/gameobjects/mesh/create_mesh';
 import { useCubeGeometry } from '../src/hooks';
 import { useCamera3d } from '../src/hooks';
+import { useSpawn } from '../src/hooks/spawn/use_spawn';
+import { useTransform } from '../src/hooks/transform/use_transform';
 import { fillFrameContext } from '../src/game/loop/fill_frame_context';
+import { parseSceneDoc, sceneFromDoc, serializeScene } from '../src/scene/document';
 import { isTransparentMesh } from '../src/render/shared/is_transparent_mesh';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import type { TMesh } from '../src/gameobjects/mesh/types/t_mesh';
@@ -141,5 +144,45 @@ describe('what counts as see-through', () => {
             expect(isTransparentMesh(cube('forced', 0, { alpha: 0.5, transparent: false }))).toBe(false);
             return createScene();
         });
+    });
+});
+
+describe('see-through in a scene document', () => {
+    const written = (transparent: boolean | undefined) => {
+        const { store } = createTestGame();
+        const root = startTestScene(store, 'Level', () => {
+            useSpawn(function Glass() {
+                useTransform({});
+                createMesh({ geometry: useCubeGeometry(), ...(transparent !== undefined ? { transparent } : {}) });
+            })();
+            return createScene();
+        });
+        return serializeScene(root);
+    };
+    const materialOf = (doc: ReturnType<typeof written>) =>
+        (doc.root.children[0]!.components.find((component) => component.type === 'mesh') as { material: { transparent?: unknown } }).material;
+
+    it('is written only when it was asked for, either way, and read back the same', () => {
+        expect(materialOf(written(undefined))).not.toHaveProperty('transparent');
+        // Solid at any alpha is a word of its own, not the default left out.
+        expect(materialOf(written(false)).transparent).toBe(false);
+        const glass = written(true);
+        expect(materialOf(glass).transparent).toBe(true);
+        expect(parseSceneDoc(glass, '/scenes/level.scene')).toEqual(glass);
+    });
+
+    it('is drawn that way when the scene is made from it', () => {
+        for (const transparent of [true, false]) {
+            const { store } = createTestGame();
+            const root = startTestScene(store, 'Level', sceneFromDoc(written(transparent)));
+            const mesh = root.children[0]!.drawables.find((drawable) => drawable.type === 'mesh') as TMesh;
+            expect(mesh.material.transparent).toBe(transparent);
+        }
+    });
+
+    it('leaves out a word that is not one', () => {
+        const doc = written(true);
+        materialOf(doc).transparent = 'yes';
+        expect(materialOf(parseSceneDoc(doc, '/scenes/level.scene'))).not.toHaveProperty('transparent');
     });
 });
