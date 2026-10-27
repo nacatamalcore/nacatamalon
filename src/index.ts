@@ -119,11 +119,11 @@ export type {
 } from './physics';
 // Reaching a named part of something, the turret of a tank or the wheels of a car, from a behaviour.
 export { findObject, findObjects, sceneOf } from './box';
-export { boundsOf, sizeOf } from './gameobjects/size_of';
-export type { TMeasurable } from './gameobjects/size_of';
-// A point of the world measured on an object, and a point of an object found in the world: where a
-// hit landed on it, where a shot leaves it from.
-export { worldToLocal, localToWorld, worldToLocal3d, localToWorld3d } from './box';
+// How big something is and where: what is drawn flat, how a text is set and where its lines break,
+// and a point of the world measured on an object (where a hit landed on it), or a point of an
+// object found in the world (where a shot leaves it from).
+export { boundsOf, sizeOf, measureText, worldToLocal, localToWorld, worldToLocal3d, localToWorld3d } from './layout';
+export type { TMeasurable, TMeasureTextOptions, TTextMeasure } from './layout';
 // Whether two things touch, with no physics: a bullet and a brick, the player and the coins.
 export { collisionBetween } from './hitbox';
 export type { TRect, TCollisionTarget, THitbox } from './hitbox';

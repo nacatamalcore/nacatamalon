@@ -108,6 +108,9 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   it is made); `boundsOf(thing)` the rectangle it covers, `{ x, y, width, height }` from its top-left
   corner, anchor and pivot taken into account, in the place its `transform` is written: a box behind a
   label, `coin.transform.x = boundsOf(score).x + boundsOf(score).width + 4`.
+  `measureText(label)` gives a text's `{ width, height }` (no scale) and its `lines`; before a text
+  exists, `measureText('words', { font?, fontSize?, maxWidth?, ... })` gives what `createText`
+  would make of them: it needs no game, like `drawText`, and takes the same options.
 - **Pivot**: a sprite, a text or a panel turns and grows about its anchor, unless `pivot` (0-1, like
   `anchor`) names another point. The anchor says where it sits, the pivot what it spins on: a bike
   anchored under its back wheel (`anchor: { x: 5 / 24, y: 1 }`) wheelies about it, and set
@@ -137,7 +140,9 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   with no loader in that scene.
   `style.maxWidth` breaks the lines at spaces to fit that many pixels, again whenever the text
   changes (a dialogue box: never put the `\n`s in by hand), and makes the block that wide, so
-  `align` and `anchor` place the lines in the box; `drawText` takes it too.
+  `align` and `anchor` place the lines in the box; `drawText` takes it too. Shown letter by letter,
+  break the whole page first, `page = measureText(speech, style).lines.join('\n')`, and show
+  `page.slice(0, n)`: a word never starts a line and then jumps to the next.
 - **Mouse look** (first person): `usePointer().lock()` captures the mouse, but only when called from
   a click or key press (`pointer.onDown(() => { void pointer.lock(); })`); then turn the camera with
   `movementX`/`movementY` from `onMove`, which keep changing while `screenX`/`screenY` do not.

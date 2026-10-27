@@ -1,9 +1,9 @@
 import { conjugate, rotateVec3 } from '../math/quat';
-import { placementInside, worldPlacementOf } from './world_placement_of';
-import { pose3dInside, worldPlacement3dOf } from './world_placement_3d_of';
-import { ownerOfDrawable } from './drawable_owner';
-import type { TBox } from './types/t_box';
-import type { TPose3d } from './world_placement_3d_of';
+import { placementInside, worldPlacementOf } from '../box/world_placement_of';
+import { pose3dInside, worldPlacement3dOf } from '../box/world_placement_3d_of';
+import { ownerOfDrawable } from '../box/drawable_owner';
+import type { TBox } from '../box/types/t_box';
+import type { TPose3d } from '../box/world_placement_3d_of';
 import type { TTransform2d } from '../gameobjects/types/t_transform_2d';
 import type { TSprite } from '../gameobjects/sprite/types/t_sprite';
 import type { TText } from '../gameobjects/text/types/t_text';
@@ -54,7 +54,7 @@ const undo = (value: number, scale: number): number => value / (scale === 0 ? 1 
  * const english = at.x / (PADDLE_WIDTH / 2);
  * ```
  *
- * @category Game objects
+ * @category Layout
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
@@ -92,7 +92,7 @@ export const worldToLocal = (object: TBox | TSprite | TText | TNineSlice, point:
  * spawnShot(muzzle.x, muzzle.y);
  * ```
  *
- * @category Game objects
+ * @category Layout
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
@@ -127,7 +127,7 @@ export const localToWorld = (object: TBox | TSprite | TText | TNineSlice, point:
  * dentAt(at.x, at.y, at.z);
  * ```
  *
- * @category Game objects
+ * @category Layout
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
@@ -160,7 +160,7 @@ export const worldToLocal3d = (object: TBox | TMesh, point: TPoint3d): TPoint3d 
  * const tip = localToWorld3d(sword, { x: 0, y: 1, z: 0 });
  * ```
  *
- * @category Game objects
+ * @category Layout
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */

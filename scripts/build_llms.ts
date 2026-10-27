@@ -98,6 +98,28 @@ const signatureOf = (name: string, symbol: ts.Symbol, decl: ts.Node): string => 
     return `const ${name}: ${checker.typeToString(type, decl, FLAGS)}`;
 };
 
+/**
+ * The ways a function can be called when it has more than one, each declared with its own JSDoc:
+ * its overloads, without the body that serves them all. Empty for anything else.
+ */
+const overloadsOf = (symbol: ts.Symbol): ts.FunctionDeclaration[] => {
+    const functions = (symbol.declarations ?? []).filter(ts.isFunctionDeclaration);
+    return functions.length > 1 ? functions.filter((decl) => decl.body === undefined) : [];
+};
+
+/**
+ * A declaration's documentation as the reference prints it: its text, then its parameters, what it
+ * returns and its examples.
+ */
+const describe = ({ text, tags }: ReturnType<typeof docOf>): string[] => {
+    const lines: string[] = [];
+    if (text) lines.push('', text);
+    for (const param of tags.get('param') ?? []) lines.push(`- param ${param.trim()}`);
+    for (const returns of tags.get('returns') ?? []) lines.push(`- returns ${returns.trim()}`);
+    for (const example of tags.get('example') ?? []) lines.push('', 'Example:', example.trim());
+    return lines;
+};
+
 const out: string[] = [];
 out.push(
     `# nacatamalon ${pkg.version}: full API reference`,
@@ -118,13 +140,20 @@ for (const door of DOORS) {
         const symbol = exported.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(exported) : exported;
         const decl = symbol.declarations?.[0];
         if (!decl) continue;
-        const { text, tags } = docOf(decl);
-        const category = tags.get('category')?.[0]?.trim() || 'Other';
-        const entry: string[] = ['', `### ${exported.name}`, '', '```ts', signatureOf(exported.name, symbol, decl), '```'];
-        if (text) entry.push('', text);
-        for (const param of tags.get('param') ?? []) entry.push(`- param ${param.trim()}`);
-        for (const returns of tags.get('returns') ?? []) entry.push(`- returns ${returns.trim()}`);
-        for (const example of tags.get('example') ?? []) entry.push('', 'Example:', example.trim());
+        const doc = docOf(decl);
+        const category = doc.tags.get('category')?.[0]?.trim() || 'Other';
+        const entry: string[] = ['', `### ${exported.name}`];
+        const overloads = overloadsOf(symbol);
+        if (overloads.length > 0) {
+            // Each way of calling it with its own documentation, which is where it says what that
+            // way is for: printed once for the first, the rest would be lost.
+            for (const overload of overloads) {
+                const signature = checker.signatureToString(checker.getSignatureFromDeclaration(overload)!, overload, FLAGS).replace(/ => /, ': ');
+                entry.push('', '```ts', `function ${exported.name}${signature}`, '```', ...describe(docOf(overload)));
+            }
+        } else {
+            entry.push('', '```ts', signatureOf(exported.name, symbol, decl), '```', ...describe(doc));
+        }
         entry.push('', `Source: \`${relative(ROOT, decl.getSourceFile().fileName)}\``);
         groups.set(category, [...(groups.get(category) ?? []), entry.join('\n')]);
         count++;

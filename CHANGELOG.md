@@ -14,6 +14,15 @@ releases are in [changelog/](./changelog/), one file each.
   as `maxWidth`, so `align` and `anchor` place the lines in the box rather than around the words.
   The same for a bitmap font and a vector one, in `drawText` too, in a scene document, and in the
   editor's inspector as Max Width.
+- **`measureText`**: how a text is set, `{ width, height, lines }`. Given a text from `createText`,
+  `measureText(label)`, with its own font and style. Given words, `measureText('CONTINUE', options)`,
+  how they will be set before there is a text, with the same font and style options as `drawText`:
+  a panel fitted to its label before the label is made, a title tried at smaller sizes until it
+  fits, a dialogue shown letter by letter from its lines so no word jumps to the next line halfway.
+  The block is measured as the engine places it, the same numbers `sizeOf`, `align` and `anchor`
+  use, in the text's own pixels; `lines` says what each line says once `\n` and `maxWidth` have
+  broken it. Words need no game to be measured, and measuring them in a vector font draws no letter
+  into its atlas.
 
 ## 0.2.9 — 2026-10-27
 

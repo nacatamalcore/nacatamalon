@@ -235,7 +235,9 @@ console.log(game.drawn().map((p) => p.text ?? p.name));
 come with it, named by key: `font: 'nacatamalon:square'` (square corners) and
 `font: 'nacatamalon:thin'` (one-pixel strokes). Load a
 `.ttf` or `.woff` with `useLoadFont`, sharp at any size, or a bitmap font with
-`useLoadBitmapFont`, and hand it to `createText` as `font`.
+`useLoadBitmapFont`, and hand it to `createText` as `font`. A text breaks its own
+lines at `style.maxWidth`, and `measureText` says how big a text is and where its
+lines break, from the text itself or, before there is one, from its words and style.
 
 **Music** is written as notes and played by the engine's own synthesizer, as the
 NES, the SNES or the Genesis sounded, with instruments, echo and pan, and

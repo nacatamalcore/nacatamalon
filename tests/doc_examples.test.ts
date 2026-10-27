@@ -54,18 +54,27 @@ const collect = (): { examples: TExample[]; frontNames: string[] } => {
         if (spec === 'nacatamalon') frontNames = exports.map((s) => s.name);
         for (const exported of exports) {
             const real = exported.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(exported) : exported;
-            let node: ts.Node | undefined = real.declarations?.[0];
-            if (node === undefined) continue;
-            if (ts.isVariableDeclaration(node)) node = node.parent.parent;
-            const tags = ts.getJSDocTags(node);
-            const category = tags.find((t) => t.tagName.text === 'category');
-            const categoryName = typeof category?.comment === 'string' ? category.comment.trim() : '';
-            tags.filter((t) => t.tagName.text === 'example').forEach((tag, index) => {
-                const text = typeof tag.comment === 'string' ? tag.comment : ts.getTextOfJSDocComment(tag.comment) ?? '';
-                for (const block of text.matchAll(/```(?:ts|typescript)\n([\s\S]*?)```/g)) {
-                    examples.push({ symbol: exported.name, category: categoryName, index, code: block[1] });
+            const declarations = real.declarations ?? [];
+            const functions = declarations.filter(ts.isFunctionDeclaration);
+            // A function with overloads documents each way of calling it on its own declaration,
+            // and every one of them is copied from a hover.
+            const documented: ts.Node[] = functions.length > 1 ? functions.filter((d) => d.body === undefined) : declarations.slice(0, 1);
+            if (documented.length === 0) continue;
+            let categoryName = '';
+            let index = 0;
+            for (let node of documented) {
+                if (ts.isVariableDeclaration(node)) node = node.parent.parent;
+                const tags = ts.getJSDocTags(node);
+                const category = tags.find((t) => t.tagName.text === 'category');
+                if (categoryName === '' && typeof category?.comment === 'string') categoryName = category.comment.trim();
+                for (const tag of tags.filter((t) => t.tagName.text === 'example')) {
+                    const text = typeof tag.comment === 'string' ? tag.comment : ts.getTextOfJSDocComment(tag.comment) ?? '';
+                    for (const block of text.matchAll(/```(?:ts|typescript)\n([\s\S]*?)```/g)) {
+                        examples.push({ symbol: exported.name, category: categoryName, index, code: block[1] });
+                    }
+                    index++;
                 }
-            });
+            }
         }
     }
     return { examples, frontNames };

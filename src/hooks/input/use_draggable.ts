@@ -1,6 +1,6 @@
 import { getActiveBox, getActiveGame } from '../../store';
 import { ownerOfDrawable } from '../../box/drawable_owner';
-import { worldToLocal } from '../../box/world_to_local';
+import { worldToLocal } from '../../layout/world_to_local';
 import { carries } from '../../tags/tags';
 import type { TBox } from '../../box';
 import type { TTaggable } from '../../tags';

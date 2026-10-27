@@ -18,4 +18,3 @@ export { findObject, findObjects } from './find_object';
 export { sceneOf } from './scene_of';
 export { markNamedByFunction, noteFoundByName } from './named_by_function';
 export { markMadeBy, componentOf } from './made_by';
-export { worldToLocal, localToWorld, worldToLocal3d, localToWorld3d } from './world_to_local';

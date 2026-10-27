@@ -83,7 +83,7 @@ export const layoutFontText = (text: string, style: TTextStyle, font: TFont): TT
 
         // The spacing is between characters, so the last one's is taken back off.
         const width = count > 0 ? pen - letterSpacing : 0;
-        return { width, placements };
+        return { text: line, width, placements };
     });
 
     return alignLines(lines, style, lineHeight, pixels);

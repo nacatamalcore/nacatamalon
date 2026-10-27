@@ -5,7 +5,7 @@ import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { useCubeGeometry } from '../src/hooks/geometry';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useTransform } from '../src/hooks/transform/use_transform';
-import { localToWorld, localToWorld3d, worldToLocal, worldToLocal3d } from '../src/box';
+import { localToWorld, localToWorld3d, worldToLocal, worldToLocal3d } from '../src/layout';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import type { TSprite } from '../src/gameobjects/sprite/types/t_sprite';
 import type { TMesh } from '../src/gameobjects/mesh/types/t_mesh';

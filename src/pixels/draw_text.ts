@@ -1,8 +1,6 @@
-import { getActiveGame } from '../store';
 import { layoutText } from '../gameobjects/text/layout_text';
-import { textLines } from '../gameobjects/text/wrap_line';
-import { DEFAULT_FONT_SIZE } from '../gameobjects/text/layout_font_text';
-import { builtinFontInMemory, isBuiltinFont } from '../gameobjects/text/default_font';
+import { layoutOutlineText } from '../gameobjects/text/layout_outline_text';
+import { looseFontOf } from '../gameobjects/text/loose_font';
 import { bitmapFontGlyphs } from '../loaders/bitmap_font/bitmap_font_glyphs';
 import { bitmapFontPixels } from '../loaders/bitmap_font/bitmap_font_pixels';
 import { parsedFontOf } from '../loaders/font/font_glyphs';
@@ -11,24 +9,19 @@ import type { TColor } from '../color';
 import type { TBitmapFont } from '../loaders/bitmap_font/types/t_bitmap_font';
 import type { TFont } from '../loaders/font/types/t_font';
 import type { TOutline } from '../loaders/font/sfnt/t_outline';
-import type { TTextStyle } from '../gameobjects/text/types/t_text_style';
+import type { TMeasureTextOptions } from '../layout/measure_text';
 import type { TPixels } from './types/t_pixels';
 import type { TPolygon } from './fill_outline';
 
 /**
  * How `drawText` writes: the font, the colour, and the same size and spacing a text on screen takes.
+ * The same font and style measured by `measureText` are what it draws.
  *
  * @category Pixels
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TDrawTextOptions = TTextStyle & {
-    /**
-     * A font from `useLoadFont` or `useLoadBitmapFont`, or the key one was loaded under. A key is
-     * looked up in the scene body, where `createText` looks up its own. Left out, the font the
-     * engine carries, which needs no game and no loading.
-     */
-    font?: TBitmapFont | TFont | string;
+export type TDrawTextOptions = TMeasureTextOptions & {
     /**
      * What the letters are painted in. Default white. A bitmap font's own colours are multiplied by
      * it, the way a text's tint is.
@@ -59,34 +52,6 @@ const warnOnce = (font: TBitmapFont | TFont, message: string): void => {
         warned.add(font);
         console.warn(`[NacatamalOn] drawText: ${message}`);
     }
-};
-
-const fontOf = (font: TDrawTextOptions['font']): TBitmapFont | TFont => {
-    if (font === undefined) {
-        return builtinFontInMemory();
-    }
-    if (typeof font !== 'string') {
-        return font;
-    }
-    if (isBuiltinFont(font)) {
-        return builtinFontInMemory(font);
-    }
-    const store = getActiveGame();
-    if (store === null) {
-        throw new Error(
-            `[NacatamalOn] drawText: the font '${font}' is a key, and a key is looked up while a scene ` +
-            'is being built. Elsewhere (a useWatch, a useUpdate) pass the font itself.',
-        );
-    }
-    const assets = store.get('assets');
-    const found = assets.fonts.get(font) ?? assets.bitmapFonts.get(font);
-    if (found === undefined) {
-        throw new Error(
-            `[NacatamalOn] drawText: no font loaded under key '${font}'. ` +
-            `Did you forget useLoadFont({ src, key: '${font}' }) in an earlier scene?`,
-        );
-    }
-    return found;
 };
 
 /**
@@ -190,38 +155,9 @@ const drawVectorText = (pixels: TPixels, text: string, x: number, y: number, fon
     if (parsed === undefined) {
         return;
     }
-    const fontSize = options.fontSize ?? DEFAULT_FONT_SIZE;
-    const units = fontSize / parsed.unitsPerEm;
-    const letterSpacing = options.letterSpacing ?? 0;
-    const lineSpacing = options.lineSpacing ?? 0;
     // The same lines as a text on screen in the same font, so the two can be set side by side.
-    const lineHeight = (parsed.ascender - parsed.descender + parsed.lineGap) * units;
-    const baseline = (parsed.ascender + parsed.lineGap / 2) * units;
-
-    const step = (char: string, previous: string | undefined): number => {
-        const glyph = parsed.glyphIndex(char.codePointAt(0) ?? 0);
-        const kerning = previous !== undefined ? parsed.kerning(parsed.glyphIndex(previous.codePointAt(0) ?? 0), glyph) : 0;
-        return (kerning + parsed.advance(glyph)) * units + letterSpacing;
-    };
-
-    const lines = textLines(text, options, step, letterSpacing).map((line) => {
-        const glyphs: Array<{ glyph: number; pen: number }> = [];
-        let pen = 0;
-        let previous = -1;
-        for (const char of line) {
-            const glyph = parsed.glyphIndex(char.codePointAt(0) ?? 0);
-            if (previous >= 0) {
-                pen += parsed.kerning(previous, glyph) * units;
-            }
-            glyphs.push({ glyph, pen });
-            pen += parsed.advance(glyph) * units + letterSpacing;
-            previous = glyph;
-        }
-        return { glyphs, width: glyphs.length > 0 ? pen - letterSpacing : 0 };
-    });
-
-    const width = Math.max(options.maxWidth ?? 0, ...lines.map((line) => line.width));
-    const height = lines.length * lineHeight + (lines.length - 1) * lineSpacing;
+    const { lines, width, height, lineHeight, baseline, units } = layoutOutlineText(text, options, parsed);
+    const lineSpacing = options.lineSpacing ?? 0;
     const left = x - width * (options.anchor?.x ?? 0);
     const top = y - height * (options.anchor?.y ?? 0);
     const align = options.align ?? 'left';
@@ -282,7 +218,7 @@ const drawVectorText = (pixels: TPixels, text: string, x: number, y: number, fon
  * @author Francisco Pereira Alvarado
  */
 export const drawText = (pixels: TPixels, text: string, x: number, y: number, options: TDrawTextOptions = {}): TPixels => {
-    const font = fontOf(options.font);
+    const font = looseFontOf(options.font, 'drawText');
     if (font.status === 'error') {
         warnOnce(font, `'${font.key}' could not be loaded, so nothing is drawn with it.`);
         return pixels;

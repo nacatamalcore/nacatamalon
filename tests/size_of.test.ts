@@ -3,7 +3,7 @@ import { createScene } from '../src/scene/create_scene';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { createText } from '../src/gameobjects/text/create_text';
 import { createNineSlice } from '../src/gameobjects/nine_slice/create_nine_slice';
-import { boundsOf, sizeOf } from '../src/gameobjects/size_of';
+import { boundsOf, sizeOf } from '../src/layout/size_of';
 import { textBlockSize } from '../src/gameobjects/text/expand_text';
 import { fillFrameContext } from '../src/game/loop/fill_frame_context';
 import { createTestGame, startTestScene } from './helpers/test_game';

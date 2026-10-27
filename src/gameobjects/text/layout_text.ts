@@ -19,25 +19,26 @@ export type TGlyphPlacement = {
 };
 
 /**
- * Where every character of a text goes, and how big the whole block is.
+ * Where every character of a text goes, how big the whole block is, and the lines it was set in:
+ * one per `\n`, and more where `maxWidth` broke one, without the spaces it broke at.
  *
  * @internal
  */
-export type TTextLayout = { width: number; height: number; scale: number; placements: TGlyphPlacement[] };
+export type TTextLayout = { width: number; height: number; scale: number; placements: TGlyphPlacement[]; lines: string[] };
 
 /**
  * A text with nothing to lay out yet, because its font has not loaded.
  *
  * @internal
  */
-export const EMPTY_LAYOUT: TTextLayout = { width: 0, height: 0, scale: 1, placements: [] };
+export const EMPTY_LAYOUT: TTextLayout = { width: 0, height: 0, scale: 1, placements: [], lines: [] };
 
 /**
- * One line of a text, laid out from the left edge: its characters and how wide it is.
+ * One line of a text, laid out from the left edge: what it says, its characters and how wide it is.
  *
  * @internal
  */
-export type TTextLine = { width: number; placements: TGlyphPlacement[] };
+export type TTextLine = { text: string; width: number; placements: TGlyphPlacement[] };
 
 /**
  * Puts the lines together into one block: each moved along by `align` inside `maxWidth`, or inside
@@ -64,7 +65,7 @@ export const alignLines = (lines: readonly TTextLine[], style: TTextStyle, lineH
         }
     }
 
-    return { width, height, scale, placements };
+    return { width, height, scale, placements, lines: lines.map((line) => line.text) };
 };
 
 /**
@@ -136,7 +137,7 @@ export const layoutText = (text: string, style: TTextStyle, meta: TBitmapFontMet
 
         // The spacing is between characters, so the last one's is taken back off.
         const width = count > 0 ? pen - gap : 0;
-        return { width, placements };
+        return { text: line, width, placements };
     });
 
     return alignLines(lines, style, lineHeight, scale);
