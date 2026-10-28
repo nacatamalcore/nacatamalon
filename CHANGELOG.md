@@ -7,6 +7,12 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **`useSceneTransitionEnd`**: runs once, when the transition a scene came in with is over and
+  nothing covers it. A scene brought in with `change(name, { transition })` starts at once and
+  waits behind the cover while it loads, so its body and `useReady` run before anybody sees it. Its
+  clock waits with it, but a song or a sound does not: started here, the music of a level begins
+  when the level can be seen. Without a transition it runs on the scene's first frame, before its
+  first update, so a scene does the same with its transition or without it.
 - **Text that breaks its own lines.** `style.maxWidth` is how wide a line can be, in pixels, before
   its words go on to the next: a dialogue box, a panel's description, with no `\n` put in by hand
   and none to put in again when the text or its size changes. Lines break at spaces, and a word

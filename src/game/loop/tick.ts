@@ -5,6 +5,7 @@ import { fillFrameContext } from "./fill_frame_context";
 import { MAX_FRAME_DELTA, MAX_STEPS_PER_FRAME } from "../../CONFIG";
 import { runHookUpdates as runUpdates, runLateUpdates, runMoves } from "./runHookUpdates";
 import { stepGameTransition } from "./helper/step_game_transition";
+import { flushTransitionEnd } from "../../scene/flush_transition_end";
 import { flushDestroyed } from "../../destroy";
 import { runCollisions } from "../../hitbox/run_collisions";
 import { updateAudio } from "../../audio";
@@ -74,6 +75,9 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
     // that the screen always uncovers. A transition frozen at full cover has no pause menu
     // visible to get out of it, so it would be a lock-up with nothing to show for itself.
     stepGameTransition(store, unscaled);
+    // Right after, so the frame that takes the cover away is the one `useSceneTransitionEnd` runs
+    // in, before any update of it. Outside the pause check with the transition it waits for.
+    flushTransitionEnd(store);
 
     if (!paused) {
         // Marked as walking the tree for as long as the updates run, so a `destroy` asking to

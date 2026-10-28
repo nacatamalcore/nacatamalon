@@ -134,6 +134,13 @@ export type TRuntimeState = {
          * subscribes to it.
          */
         ready: Array<{ box: TBox; run: () => void }>;
+        /**
+         * What `useSceneTransitionEnd` set aside until its scene is on screen with nothing over it,
+         * with the box it belongs to. Emptied by `flushTransitionEnd` at the start of a frame.
+         *
+         * Mutated in place like `ready`, and nothing subscribes to it.
+         */
+        transitionEnd: Array<{ box: TBox; run: () => void }>;
     };
 
     /**
