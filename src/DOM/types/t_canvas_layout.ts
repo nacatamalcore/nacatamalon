@@ -10,7 +10,9 @@ export type TCanvasLayout = {
     cssWidth: number;
     cssHeight: number;
     /**
-     * The uniform factor. `fill` has none (it distorts) and reports 1.
+     * The uniform factor, in CSS pixels: with `integer` on a screen whose density is not whole it
+     * has fractions (5.6 is 7 of the screen's pixels at 1.25). `fill` has none (it distorts) and
+     * reports 1.
      */
     scale: number;
 };

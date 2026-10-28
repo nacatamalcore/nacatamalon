@@ -19,7 +19,8 @@ const measure = (canvas: HTMLCanvasElement): { width: number; height: number } =
  * only: the vertical axis needs `align-items: center` on the container, which is the host's.
  *
  * The layout is worked out in game pixels, and `pixelRatio` only multiplies the drawing buffer at
- * the end: the CSS size, `scaling` and `keep` do not know it exists. The game's size is
+ * the end: the CSS size, `scaling` and `keep` do not know it exists. The screen's density is
+ * another thing: `integer` counts its whole multiple in the screen's pixels. The game's size is
  * remembered beside the canvas (`screenSizeOf`), because the buffer is no longer it.
  *
  * @category Game
@@ -35,6 +36,7 @@ export const fitCanvas = (canvas: HTMLCanvasElement, options: TCanvasOptions): v
         height,
         options.scaling ?? 'none',
         options.keep ?? 'both',
+        resolvePixelRatio('device'),
     );
 
     const pixelRatio = resolvePixelRatio(options.pixelRatio);

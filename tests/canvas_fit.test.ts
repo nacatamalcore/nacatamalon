@@ -41,7 +41,8 @@ describe('fitting the canvas another way', () => {
         const canvas = pageWith();
         const screen = createCanvas(canvas, { width: 256, height: 240, scaling: 'integer' });
         expect(screenSizeOf(canvas)).toMatchObject({ width: 256, height: 240 });
-        expect(canvas.style.width).toBe('512px');
+        // 2.5×: the page's density is 2, and `integer` counts in the screen's pixels, 5 of them.
+        expect(canvas.style.width).toBe('640px');
 
         // The whole container, drawn at the screen's density: a level seen through the window.
         screen.setFit({ keep: 'none', pixelRatio: 'device' });
@@ -56,7 +57,7 @@ describe('fitting the canvas another way', () => {
         screen.setFit(null);
         expect(screenSizeOf(canvas)).toEqual({ width: 256, height: 240, pixelRatio: 1 });
         expect([canvas.width, canvas.height]).toEqual([256, 240]);
-        expect(canvas.style.width).toBe('512px');
+        expect(canvas.style.width).toBe('640px');
     });
 
     it('is asked for through the editor\'s handle, and is nothing where there is no page to fit', async () => {

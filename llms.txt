@@ -90,7 +90,8 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   `z` to stand back from what it looks at.
 - **Canvas size**: `createGame` `width` and `height` are the game's size, and by default (`scaling:
   'none'`) the canvas is shown at exactly that size; it does not fit the page. Pass `scaling:
-  'integer'` (whole multiples, crisp pixel art) or `'contain'` (as large as fits).
+  'integer'` (whole multiples of the screen's own pixels, so crisp pixel art also on a screen at 125%,
+  where the CSS size has fractions) or `'contain'` (as large as fits).
 - **Its size while it runs** is `useGame().getWidth()` and `getHeight()`, in its own pixels. With a `keep`
   other than `'both'` (`keep: 'height'`: a wide screen sees more world to the sides) it follows the
   screen, and `onResized(({ width, height }) => ...)` says when: at the start of the first frame of

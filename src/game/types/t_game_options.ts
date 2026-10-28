@@ -109,8 +109,9 @@ export type TGameOptions = {
      * `width × height` pixels and only their size on screen changes.
      *
      * - `'none'` (default): 1×, exactly `width × height` CSS pixels.
-     * - `'integer'`: the largest whole multiple that fits. The pixel-art one, because nothing is
-     *   resampled, at the cost of bars when the fit is not exact.
+     * - `'integer'`: the largest whole multiple that fits, in the screen's own pixels (on a screen at
+     *   125%, 7 of them a game pixel rather than a CSS 3× that is 3.75). The pixel-art one, because
+     *   nothing is resampled, at the cost of bars when the fit is not exact.
      * - `'contain'`: the largest fit with fractions allowed. Fills more, resamples.
      * - `'fill'`: stretched to the container, aspect ratio broken. Ignores `keep`.
      *

@@ -35,6 +35,10 @@ export const loadBitmapFont = async (store: TRuntimeStore, font: TBitmapFont): P
         // Downloaded once and used twice: on the card for texts, and in memory for `drawText`.
         await Promise.all([uploadTexture(store, font.texture, image), keepBitmapFontPixels(font, image)]);
 
+        // Let go, or the game gone, while it was on its way: nobody is waiting for it any more.
+        if (store.get('loop').destroyed || font.texture.status === 'released') {
+            return;
+        }
         if (font.texture.status !== 'ready') {
             throw new Error(`its image '${font.texture.src}' could not be loaded`);
         }

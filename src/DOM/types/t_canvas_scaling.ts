@@ -4,10 +4,13 @@
  *
  * - `'none'`: 1×. The canvas is painted at exactly `width × height` CSS pixels and ignores
  *   the space around it. The default, and what a fixed-size embed wants.
- * - `'integer'`: the largest **whole** multiple that fits (2×, 3×, 4×…). The pixel-art one:
- *   every game pixel lands on an exact square block, so nothing is resampled and no row ends
- *   up one pixel taller than its neighbour. Leaves bars when the fit is not exact. Below 1×
- *   there is no whole number to snap to, so it falls back to the exact fit.
+ * - `'integer'`: the largest **whole** multiple that fits (2×, 3×, 4×…), counted in the
+ *   screen's own pixels. The pixel-art one: every game pixel lands on an exact square block, so
+ *   nothing is resampled and no row ends up one pixel taller than its neighbour. On a screen at
+ *   125% (a density of 1.25) a whole CSS multiple is not a whole one of the screen, so the CSS size
+ *   comes out with fractions (5.6×, which is 7 of the screen's pixels); on a density of 2 it can be
+ *   3.5×. Leaves bars when the fit is not exact. Below 1× there is no whole number to snap to, so
+ *   it falls back to the exact fit.
  * - `'contain'`: the largest fit, fractions allowed (2.37×). Fills more of the container than
  *   `'integer'` and keeps the aspect ratio, at the cost of resampling: pixel art shimmers,
  *   smooth art does not care.

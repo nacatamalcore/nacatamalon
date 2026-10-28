@@ -8,9 +8,10 @@ import type { TCanvasOptions } from './types/t_canvas_options';
  * noticing. `<body>` is the exception: there the reference is the viewport. Fires are
  * coalesced into one frame, because a free side means every fit resizes the buffer.
  *
- * With `pixelRatio: 'device'` it also listens for the screen's density changing: a window dragged
- * to another monitor, or the browser zoomed. Nothing about the container moves then, so the
- * observer alone would keep drawing at the old density.
+ * It also listens for the screen's density changing: a window dragged to another monitor, or the
+ * browser zoomed. Nothing about the container may move then, so the observer alone would keep
+ * the old density: the buffer of `pixelRatio: 'device'`, and the whole multiple `integer` counts
+ * in the screen's pixels.
  *
  * @category Game
  * @since 1.0.0
@@ -35,7 +36,7 @@ export const watchCanvasFit = (canvas: HTMLCanvasElement, read: () => TCanvasOpt
     if (onWindowResize) window.addEventListener('resize', onWindowResize);
 
     // A media query matches one density only, so each change arms a new one for the density the
-    // screen has now. Armed on every fit that asks for `'device'`, and dropped otherwise.
+    // screen has now.
     let density: MediaQueryList | null = null;
     const onDensity = (): void => {
         armDensity();
@@ -44,7 +45,7 @@ export const watchCanvasFit = (canvas: HTMLCanvasElement, read: () => TCanvasOpt
     const armDensity = (): void => {
         density?.removeEventListener('change', onDensity);
         density = null;
-        if (read().pixelRatio !== 'device' || typeof window.matchMedia !== 'function') return;
+        if (typeof window.matchMedia !== 'function') return;
         density = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
         density.addEventListener('change', onDensity);
     };

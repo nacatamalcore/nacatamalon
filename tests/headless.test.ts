@@ -147,6 +147,16 @@ describe('a game with no browser', () => {
         said.mockRestore();
     });
 
+    it('says nothing of a font still on its way when the game goes', async () => {
+        const said = spyOn(console, 'warn').mockImplementation(() => {});
+        const game = createHeadlessGame({ width: 64, height: 64, scenes: { Level } });
+        game.destroy();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        expect(said.mock.calls.filter((call) => String(call[0]).includes('could not be loaded'))).toEqual([]);
+        said.mockRestore();
+    });
+
     it('gives the browser back its own when the last game goes', () => {
         const before = globalThis.fetch;
         const game = createHeadlessGame({ width: 64, height: 64, scenes: { Level } });

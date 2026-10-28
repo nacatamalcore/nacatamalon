@@ -3,6 +3,26 @@
 What changed in the current release of `nacatamalon`, and what is waiting for the next one. Earlier
 releases are in [changelog/](./changelog/), one file each.
 
+## Unreleased
+
+### Changed
+
+- **`scaling: 'integer'` counts its whole multiple in the screen's own pixels.** On a screen at
+  125% or 150%, the usual Windows laptop, a CSS 3× was 3.75 or 4.5 of the screen's pixels, and
+  painted with nearest neighbour a game pixel came out one width in some columns and another in the
+  rest: measured in Chromium and WebKit, a game of one-pixel stripes showed 118 of 6 and 40 of 7 at
+  125%, half of 7 and half of 8 at 150%. Now every game pixel is a whole number of the screen's
+  (7 at 125%, 8 at 150%), so the CSS size has fractions (5.6×). On a density of 2 it also takes the
+  half steps a whole CSS multiple skipped: 5.5× where it was 5×, a little bigger and as crisp. At a
+  density of 1 nothing changes, nor below 1×, nor with `'contain'`, `'fill'` or `'none'`. A window
+  dragged to a screen of another density fits again.
+
+### Fixed
+
+- **A font still on its way when its game goes is let go quietly**: it no longer warns that it
+  "could not be loaded". A test that destroys a headless game before the built-in font arrives
+  (one that changed scene a frame earlier) said so, and nothing had failed.
+
 ## 0.3.0 — 2026-10-28
 
 ### Added
