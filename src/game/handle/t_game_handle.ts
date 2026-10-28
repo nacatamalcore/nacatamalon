@@ -13,6 +13,16 @@ import type { TAsset } from '../../loaders/types/t_asset';
 export type TGamePauseEvent = { reason: string };
 
 /**
+ * What `onResized` is told: the game's new size, in its own pixels, the same numbers `getWidth` and
+ * `getHeight` give from then on.
+ *
+ * @category Game
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TGameResizeEvent = { width: number; height: number };
+
+/**
  * What a game can do with itself while it runs: the settings that belong to the whole game rather
  * than to any one scene.
  *
@@ -34,6 +44,30 @@ export type TGameHandle = {
      * How many pixels tall the game is. See {@link TGameHandle.getWidth}.
      */
     getHeight(): number;
+    /**
+     * Runs `listener` each time the game changes size, told the new one: the window or the
+     * container it sits in resized, the game going full screen or coming back. Only with a `keep`
+     * other than `'both'`: with `'both'`, the default, the picture is scaled and the game stays as
+     * big as it was.
+     *
+     * Heard at the start of the first frame with the new size, before any update, and once however
+     * many times the browser said so on the way. Not when only the screen's density changes (a
+     * window dragged to another monitor, the browser zoomed): the game has as many pixels as before.
+     * Not when it is set up either, so what places a HUD is called once by hand as well.
+     *
+     * Called from a scene or a piece, the listener leaves with it.
+     *
+     * @example
+     * ```ts
+     * const game = useGame();
+     * const place = () => { score.transform.x = game.getWidth() - 8; };
+     * place();
+     * game.onResized(place);
+     * ```
+     *
+     * @returns What stops it sooner.
+     */
+    onResized(listener: (event: TGameResizeEvent) => void): () => void;
 
     /**
      * The colour behind everything.

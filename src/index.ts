@@ -248,7 +248,7 @@ export type { TGameStore, TGameStoreConfig, TStoreActionsFactory, TStoreGet, TSt
 // The format's vocabulary, which stays on the root the way `TSceneDoc` does: it describes a file,
 // and the file is the engine's.
 export type { TStoreDoc, TStoreField, TStoreFieldType, TStoreFieldValue, TStorePersistDoc } from './game_store';
-export type { TGameHandle, TGamePauseEvent } from './game/handle';
+export type { TGameHandle, TGamePauseEvent, TGameResizeEvent } from './game/handle';
 // What its `capture` is asked for and hands back.
 export type { TCaptureOptions } from './game/capture';
 export type { TCaptureResult } from './render/interface';

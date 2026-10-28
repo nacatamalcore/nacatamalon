@@ -7,7 +7,7 @@ import { screenSizeOf } from '../../DOM/screen_size';
 import { releaseAsset } from '../../loaders/release_asset';
 import { onPageMoment } from '../bootstrap/watch_page';
 import type { TAsset } from '../../loaders/types/t_asset';
-import type { TGameHandle, TGamePauseEvent } from './t_game_handle';
+import type { TGameHandle, TGamePauseEvent, TGameResizeEvent } from './t_game_handle';
 
 /**
  * The game's background as CSS, for the bars round a full-screen game.
@@ -53,6 +53,7 @@ export const createGameHandle = (store: TRuntimeStore, box: TBox | null = null):
     // buffer's: with a `pixelRatio` the buffer is bigger than the game.
     getWidth: () => screenSizeOf(store.get('screen').canvas).width,
     getHeight: () => screenSizeOf(store.get('screen').canvas).height,
+    onResized: (listener) => onGameMoment<TGameResizeEvent>(store, 'resized', box, listener),
 
     getBackground: () => store.get('config').background,
     setBackground: (color: TColorOption) => store.setState('config', { background: getColor(color) }),
