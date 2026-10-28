@@ -6,6 +6,8 @@ import { MAX_FRAME_DELTA, MAX_STEPS_PER_FRAME } from "../../CONFIG";
 import { runHookUpdates as runUpdates, runLateUpdates, runMoves } from "./runHookUpdates";
 import { stepGameTransition } from "./helper/step_game_transition";
 import { flushTransitionEnd } from "../../scene/flush_transition_end";
+import { flushReleased } from "../../scene/when_released";
+import { noticeResize } from "./helper/notice_resize";
 import { flushDestroyed } from "../../destroy";
 import { runCollisions } from "../../hitbox/run_collisions";
 import { updateAudio } from "../../audio";
@@ -70,6 +72,10 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
     input.gamepads.beginFrame();
     input.actions.sample(dt);
 
+    // Before the updates, so a HUD placed against the edges is moved on the first frame of the new
+    // size. Paused or not: a pause menu has to fit the screen too.
+    noticeResize(store);
+
     // Before the updates, so the cover is sized for the frame about to be drawn and not for the
     // one before it. Outside the pause check, and deliberately: the invariant worth keeping is
     // that the screen always uncovers. A transition frozen at full cover has no pause menu
@@ -78,6 +84,8 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
     // Right after, so the frame that takes the cover away is the one `useSceneTransitionEnd` runs
     // in, before any update of it. Outside the pause check with the transition it waits for.
     flushTransitionEnd(store);
+    // The sounds a held scene was asked to start, now that the swap has let it go.
+    flushReleased(store);
 
     if (!paused) {
         // Marked as walking the tree for as long as the updates run, so a `destroy` asking to

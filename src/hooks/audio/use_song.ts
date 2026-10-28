@@ -1,4 +1,5 @@
 import { getActiveBox, getActiveGame } from '../../store';
+import { whenReleased } from '../../scene/when_released';
 import { createBeatClock, getAudioManager, heardPositionOf } from '../../audio';
 import { createStreamedPlayer } from '../../audio/streamed_player';
 import { setAttachmentHandle } from '../../audio/attachment_players';
@@ -92,6 +93,8 @@ export const useSong = (song: TSongFile | TSongDoc | TSongAccompaniment, options
         volume: options.volume ?? 1,
         channel: options.channel ?? 'music',
         autoplay: options.autoplay ?? false,
+        fadeIn: Math.max(0, options.fadeIn ?? 0),
+        fadeOut: Math.max(0, options.fadeOut ?? 0),
         voices: { ...options.voices },
         pan: { ...options.pan },
         tempo: options.tempo ?? null,
@@ -284,7 +287,7 @@ export const useSong = (song: TSongFile | TSongDoc | TSongAccompaniment, options
             make();
         }
         if (attachment.autoplay && !showingOnly) {
-            handle.play();
+            whenReleased(store, box, () => handle.play({ fade: attachment.fadeIn }));
         }
     });
 
@@ -308,8 +311,10 @@ export const useSong = (song: TSongFile | TSongDoc | TSongAccompaniment, options
         });
     });
 
+    // With a `fadeOut` it goes on being heard after its scene has gone, going down: the player lets
+    // go of it once it is silent.
     box.cleanups.push(() => {
-        player.stop(0);
+        player.stop(attachment.fadeOut);
         beats.dispose();
     });
 

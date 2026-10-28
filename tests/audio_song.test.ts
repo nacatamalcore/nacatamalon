@@ -208,6 +208,21 @@ describe('a song written as notes', () => {
 
         expect(started(context)).toHaveLength(0);
     });
+
+    it('comes up over its fadeIn when it starts on its own, and goes down over its fadeOut when its scene stops', async () => {
+        const { store, context } = await withSong({ autoplay: true, fadeIn: 2, fadeOut: 1 });
+        const piece = () => (lanesOf(context)[0]!.connectedTo!.connectedTo!.connectedTo as unknown as TFakeGain).gain;
+        expect(lastRamp(piece())).toEqual({ kind: 'ramp', value: 1, time: 2 });
+
+        context.currentTime = 3;
+        const { stopScene } = await import('../src/scene/stop_scene');
+        const gain = piece();
+        stopScene(store, 'Ballpark');
+
+        // Still heard after its scene has gone, going down to silence by then.
+        expect(lastRamp(gain)).toEqual({ kind: 'ramp', value: 0, time: 4 });
+        expect(started(context).length).toBeGreaterThan(0);
+    });
 });
 
 describe('the notes it plays', () => {
@@ -613,6 +628,20 @@ describe('a song in a scene document', () => {
         const again = createTestGame().store;
         registerScene(again, doc.name, sceneFromDoc(doc as TSceneDoc));
         expect(serializeScene(startScene(again, doc.name))).toEqual(doc);
+    });
+
+    it('keeps its fades, and only those that are not 0', async () => {
+        const { store } = createTestGame();
+        const root = startTestScene(store, 'Ballpark', () => {
+            useSong(useLoadSong({ src: '/music/minuet.song' }), { id: 'theme', fadeIn: 0, fadeOut: 1.5 });
+            return createScene();
+        });
+        await whenLoaded(store.get('assets').songs.get('/music/minuet.song')!);
+        await settle();
+
+        const doc = serializeScene(root);
+        expect(doc.root.components).toEqual([{ type: 'song', id: 'theme', song: '/music/minuet.song', fadeOut: 1.5 }]);
+        expect(parseSceneDoc(doc, '/scenes/ballpark.scene')).toEqual(doc);
     });
 
     it('is ready only once the sound files its instruments name are read, and plays them', async () => {

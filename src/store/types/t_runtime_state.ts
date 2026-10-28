@@ -141,6 +141,13 @@ export type TRuntimeState = {
          * Mutated in place like `ready`, and nothing subscribes to it.
          */
         transitionEnd: Array<{ box: TBox; run: () => void }>;
+        /**
+         * What `whenReleased` set aside until its scene is no longer held: a sound set to start on
+         * its own. Emptied by `flushReleased` at the start of a frame.
+         *
+         * Mutated in place like `ready`, and nothing subscribes to it.
+         */
+        released: Array<{ box: TBox; run: () => void }>;
     };
 
     /**

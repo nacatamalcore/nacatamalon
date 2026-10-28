@@ -1,4 +1,5 @@
 import { getActiveBox, getActiveGame } from '../../store';
+import { whenReleased } from '../../scene/when_released';
 import { applyDucking, clipFromSamples, DEFAULT_CHANNEL, getAudioManager, logVoice, placeVoice, rampTo, wrapPosition } from '../../audio';
 import { setAttachmentHandle } from '../../audio/attachment_players';
 import { isShowingOnly } from '../physics/is_showing_only';
@@ -388,7 +389,8 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
         // starts it the moment it can, and never if the file failed.
         void whenLoaded(clip).then(() => {
             if (!box.destroyed) {
-                handle.play();
+                // Not under the cover of a transition: see `whenReleased`.
+                whenReleased(store, box, () => handle.play());
             }
         });
     }

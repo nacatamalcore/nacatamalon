@@ -8,9 +8,10 @@ import { getActiveGame } from '../../store/active_game';
  * A scene that comes in with a transition (`change('Level', { transition: iris(0.6) })`) starts at
  * once, so its loading starts too, and waits behind the cover: its body and its `useReady` have
  * already run, but it is not seen. Its clock does not move while it waits, so a timer or a tween
- * started in `useReady` waits with it. What does not wait is what keeps real time: a song, a sound,
- * a vibration. Started here, they begin when the player can see the scene. So does handing over
- * the controls once nothing covers the level.
+ * started in `useReady` waits with it, and so does a sound set to `autoplay`, until the swap. What
+ * does not wait is what is started by hand and keeps real time: a `play()`, a vibration. Started
+ * here, they begin when the player can see the scene. So does handing over the controls once
+ * nothing covers the level.
  *
  * Without a transition it runs on the scene's first frame, before its first update, so a scene does
  * the same with its transition or without it. In something spawned once the scene is already on

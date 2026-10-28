@@ -834,6 +834,12 @@ export type TMusicComponent = {
     channel?: string;
     autoplay?: boolean;
     /**
+     * Seconds `autoplay` takes to come up from silence, and to go down to it when the object goes
+     * away. Absent for `0`.
+     */
+    fadeIn?: number;
+    fadeOut?: number;
+    /**
      * Where the loop goes back to and turns back, in seconds into the tune. Absent for the whole
      * tune.
      */
@@ -868,6 +874,12 @@ export type TSongComponent = {
      */
     channel?: string;
     autoplay?: boolean;
+    /**
+     * Seconds `autoplay` takes to come up from silence, and to go down to it when the object goes
+     * away. Absent for `0`.
+     */
+    fadeIn?: number;
+    fadeOut?: number;
     /**
      * How loud each voice is, only those not at `1`.
      */

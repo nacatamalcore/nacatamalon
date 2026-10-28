@@ -226,6 +226,26 @@ describe('music in layers', () => {
         expect(store.get('audio').manager!.voices.size).toBe(0);
     });
 
+    it('comes up over its fadeIn when it starts on its own', async () => {
+        const { context } = await withMusic({ autoplay: true, fadeIn: 2 });
+        await Promise.resolve();
+
+        const [land] = started(context);
+        expect(lastRamp((land.connectedTo!.connectedTo!.connectedTo as unknown as TFakeGain).gain)).toEqual({ kind: 'ramp', value: 1, time: 2 });
+    });
+
+    it('goes down over its fadeOut when its scene stops, heard after the scene has gone', async () => {
+        const { store, context } = await withMusic({ autoplay: true, fadeOut: 3 });
+        await Promise.resolve();
+        context.currentTime = 6;
+
+        stopScene(store, 'Level');
+
+        const [land, water] = started(context);
+        expect(lastRamp((land.connectedTo!.connectedTo!.connectedTo as unknown as TFakeGain).gain)).toEqual({ kind: 'ramp', value: 0, time: 9 });
+        expect([land.stopAt, water.stopAt]).toEqual([9, 9]);
+    });
+
     it('starts on its own once every layer is there', async () => {
         const { store, context } = await withMusic({ autoplay: true });
         await Promise.resolve();

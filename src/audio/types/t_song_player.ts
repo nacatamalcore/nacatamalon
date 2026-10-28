@@ -56,9 +56,22 @@ export type TSongOptions = {
      */
     channel?: string;
     /**
-     * Starts as soon as the song is ready, with no `play()`. Default `false`.
+     * Starts as soon as the song is ready, with no `play()`. Default `false`. In a scene coming in with a
+     * transition it waits for the swap, when the screen is covered, rather than sounding under the
+     * cover over the music of the scene still on screen.
      */
     autoplay?: boolean;
+    /**
+     * Seconds that `autoplay` takes to come up from silence. Default `0`, at full volume at once.
+     * With the `fadeOut` of the music it replaces, two scenes cross their music: the one leaving
+     * goes down as this one comes up.
+     */
+    fadeIn?: number;
+    /**
+     * Seconds it takes to go down to silence when what asked for it goes away: its scene stops, its
+     * object is destroyed. It goes on being heard for that long after. Default `0`, cut at once.
+     */
+    fadeOut?: number;
     /**
      * How loud each voice starts, `0` to `1`. A voice not named starts at `1`.
      */
@@ -92,6 +105,11 @@ export type TSongAttachment = {
     volume: number;
     channel: string;
     autoplay: boolean;
+    /**
+     * Seconds, `0` for none: see the options.
+     */
+    fadeIn: number;
+    fadeOut: number;
     voices: Partial<Record<TSongVoiceName, number>>;
     /**
      * Where each voice is heard, left (`-1`) to right (`1`), only those changed from the file's.

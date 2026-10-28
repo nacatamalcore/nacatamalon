@@ -7,11 +7,22 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **Music that fades in and out with its scene**: `fadeIn` and `fadeOut`, in seconds, on `useMusic`
+  and `useSong`, in a scene document and, for a song, in the editor's inspector. `fadeOut` is how
+  long it takes to go down to silence when its scene stops or its object is destroyed, heard after
+  they have gone, instead of being cut; `fadeIn` is how long `autoplay` takes to come up. With both,
+  two scenes cross their music: `fadeOut` on the menu's, `fadeIn` on the level's.
+- **`useGame().onResized`**: told the game's new size, `{ width, height }`, each time it changes:
+  the window or the container resized, full screen entered or left. Only with a `keep` other than
+  `'both'`, the one where the size follows the screen. Heard at the start of the first frame with
+  the new size, before any update, once per change however many times the browser said so, and not
+  when only the density changes. A HUD pinned to the right edge of a `keep: 'height'` game is placed
+  there again, instead of reading `getWidth()` every frame.
 - **`useSceneTransitionEnd`**: runs once, when the transition a scene came in with is over and
   nothing covers it. A scene brought in with `change(name, { transition })` starts at once and
   waits behind the cover while it loads, so its body and `useReady` run before anybody sees it. Its
-  clock waits with it, but a song or a sound does not: started here, the music of a level begins
-  when the level can be seen. Without a transition it runs on the scene's first frame, before its
+  clock waits with it, but a `play()` does not: started here, the music of a level begins when the
+  level can be seen. Without a transition it runs on the scene's first frame, before its
   first update, so a scene does the same with its transition or without it.
 - **Text that breaks its own lines.** `style.maxWidth` is how wide a line can be, in pixels, before
   its words go on to the next: a dialogue box, a panel's description, with no `\n` put in by hand
@@ -32,6 +43,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **A sound that starts on its own waits for its scene to be let go.** `autoplay` on `useSound`,
+  `useMusic` and `useSong` started as soon as the file arrived, so in a scene coming in with a
+  transition it sounded under the cover, over the music of the scene still on screen. It now waits
+  for the swap, when the screen is covered.
 - **A press the browser did not make is still a press.** A `pointerdown` sent by a test or a script
   carries the id of a pointer that is not there, and keeping its release on the canvas threw, so the
   press never reached `usePointer`. Now it does.

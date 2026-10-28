@@ -1,4 +1,5 @@
 import { getActiveBox, getActiveGame } from '../../store';
+import { whenReleased } from '../../scene/when_released';
 import { createBeatClock, createLayeredPlayer, getAudioManager, heardPositionOf } from '../../audio';
 import { setAttachmentHandle } from '../../audio/attachment_players';
 import { isShowingOnly } from '../physics/is_showing_only';
@@ -80,6 +81,8 @@ export const useMusic = (options: TMusicOptions): TMusicHandle => {
         volume: options.volume ?? 1,
         channel: options.channel ?? 'music',
         autoplay: options.autoplay ?? false,
+        fadeIn: Math.max(0, options.fadeIn ?? 0),
+        fadeOut: Math.max(0, options.fadeOut ?? 0),
         loopStart: options.loopStart ?? 0,
         loopEnd: options.loopEnd ?? 0,
         bpm: options.bpm ?? null,
@@ -165,13 +168,15 @@ export const useMusic = (options: TMusicOptions): TMusicHandle => {
     if (attachment.autoplay && !showingOnly) {
         void Promise.all(layers.map((layer) => whenLoaded(layer.clip))).then(() => {
             if (!box.destroyed) {
-                handle.play();
+                whenReleased(store, box, () => handle.play({ fade: attachment.fadeIn }));
             }
         });
     }
 
+    // With a `fadeOut` it goes on being heard after its scene has gone, going down: the player lets
+    // go of it once it is silent.
     box.cleanups.push(() => {
-        player.stop(0);
+        player.stop(attachment.fadeOut);
         beats.dispose();
     });
 

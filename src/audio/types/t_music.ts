@@ -43,9 +43,22 @@ export type TMusicOptions = {
      */
     channel?: string;
     /**
-     * Starts as soon as every layer is ready, with no `play()`. Default `false`.
+     * Starts as soon as every layer is ready, with no `play()`. Default `false`. In a scene coming in with a
+     * transition it waits for the swap, when the screen is covered, rather than sounding under the
+     * cover over the music of the scene still on screen.
      */
     autoplay?: boolean;
+    /**
+     * Seconds that `autoplay` takes to come up from silence. Default `0`, at full volume at once.
+     * With the `fadeOut` of the music it replaces, two scenes cross their music: the one leaving
+     * goes down as this one comes up.
+     */
+    fadeIn?: number;
+    /**
+     * Seconds it takes to go down to silence when what asked for it goes away: its scene stops, its
+     * object is destroyed. It goes on being heard for that long after. Default `0`, cut at once.
+     */
+    fadeOut?: number;
     /**
      * Where the loop goes back to, in seconds into the tune. Everything before it is an intro that
      * plays once. Default `0`, the whole tune.
@@ -103,6 +116,11 @@ export type TMusicAttachment = {
     volume: number;
     channel: string;
     autoplay: boolean;
+    /**
+     * Seconds, `0` for none: see the options.
+     */
+    fadeIn: number;
+    fadeOut: number;
     /**
      * `0` for both is the whole tune.
      */
