@@ -5,11 +5,12 @@ import { toGlTexture } from '../texture';
 import type { TDrawTilemapLayer } from '../../interface';
 import type { TTilemapPipeline } from './types/t_tilemap_pipeline';
 import { worldOf } from '../../shared/world_of';
+import { TILE_CORNER_BYTES } from '../../shared/tile_corner';
 
 /**
- * Bytes of one corner: where it is, and which piece of the sheet it shows.
+ * Bytes of one corner: where it is, which point of the sheet it shows, and its cell's window.
  */
-const VERTEX_STRIDE = 16;
+const VERTEX_STRIDE = TILE_CORNER_BYTES;
 
 /**
  * Draws one layer of a map: one call per mesh it holds, whatever its number of cells.
@@ -85,6 +86,7 @@ export const drawTilemapLayer = (
         gl.bindBuffer(gl.ARRAY_BUFFER, toGlBuffer(mesh.buffer));
         gl.vertexAttribPointer(0, 2, gl.FLOAT, false, VERTEX_STRIDE, 0);
         gl.vertexAttribPointer(1, 2, gl.FLOAT, false, VERTEX_STRIDE, 8);
+        gl.vertexAttribPointer(2, 4, gl.FLOAT, false, VERTEX_STRIDE, 16);
         gl.drawArrays(gl.TRIANGLES, 0, mesh.vertexCount);
     }
 

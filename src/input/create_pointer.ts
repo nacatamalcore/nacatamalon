@@ -5,6 +5,8 @@ import type { TPointerButtonName } from './pointer_buttons';
 import { rootOf } from '../box/root_of';
 import { screenSizeOf } from '../DOM/screen_size';
 import { unapplyView2d } from '../render/shared';
+import { cameraAsDrawn } from '../camera/camera_as_drawn';
+import type { TPixelSnap } from '../game/types/t_game_options';
 import { pickTargets, pickTargetsAt } from './pick_targets';
 import { ownerOfDrawable } from '../box/drawable_owner';
 import { topmostListening } from './topmost_listening';
@@ -347,10 +349,16 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
     const current: { pointerId: number; pointerType: TPointerType; time: number | null } = { pointerId: MOUSE_ID, pointerType: 'mouse', time: null };
 
     /**
+     * The game's `pixelSnap`, read when a frame hands its events on: the world is read through the
+     * camera as it is drawn, so what is touched is what is seen.
+     */
+    let snap: TPixelSnap = 'off';
+
+    /**
      * What a listener belonging to `box` is told: the world through the camera of its own scene.
      */
     const infoFor = (box: TBox, screenX: number, screenY: number, button: TPointerButtonName, hits: Array<TSprite | TText | TNineSlice>): TPointerInfo => {
-        const world = unapplyView2d(rootOf(box).camera2d, { x: screenX, y: screenY });
+        const world = unapplyView2d(cameraAsDrawn(rootOf(box).camera2d, snap), { x: screenX, y: screenY });
         return {
             screenX,
             screenY,
@@ -532,7 +540,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
      */
     const dragInfo = (box: TBox, drag: TDrag, screenX: number, screenY: number, button: TPointerButtonName, under: Array<TSprite | TText | TNineSlice>): TPointerDragInfo => {
         const pointerInfo = infoFor(box, screenX, screenY, button, under);
-        const start = unapplyView2d(rootOf(box).camera2d, { x: drag.startX, y: drag.startY });
+        const start = unapplyView2d(cameraAsDrawn(rootOf(box).camera2d, snap), { x: drag.startX, y: drag.startY });
         return {
             ...pointerInfo,
             startX: start.x,
@@ -720,6 +728,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
         },
 
         dispatch: (store: TRuntimeStore) => {
+            snap = store.get('config').pixelSnap;
             // Taken first, so an event queued while listeners run waits for the next frame
             // instead of being handled inside this one.
             const events = queue;

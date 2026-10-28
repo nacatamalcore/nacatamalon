@@ -5,6 +5,7 @@ import { asBoolean, asColor, asInt, asOneOf } from '../utils';
 import { DEFAULT_PROJECT_SETTINGS } from './default_project';
 import { MAX_STEP_RATE, MIN_STEP_RATE } from '../CONFIG';
 import type { TProjectSettings } from './types/t_project_settings';
+import type { TPixelSnap } from '../game/types/t_game_options';
 
 /**
  * The known formats, so a file from somewhere else is caught rather than half read.
@@ -16,6 +17,20 @@ const FORMAT = 'nacatamalon-project';
  * under an older name, so such a file is read as it is and comes back out with `FORMAT`.
  */
 const EDITOR_FORMAT = 'nacatamal-project';
+
+/**
+ * A project's `pixelSnap`, or `undefined` to follow `smooth`. One written before there were three
+ * kinds said yes or no, and is read as what yes and no meant: whole pixels of the screen, or none.
+ */
+const pixelSnapOf = (value: unknown): TPixelSnap | undefined => {
+    if (value === true) {
+        return 'screen';
+    }
+    if (value === false) {
+        return 'off';
+    }
+    return value === 'screen' || value === 'game' || value === 'off' ? value : undefined;
+};
 
 /**
  * Reads a `project.json`, whatever state it is in.
@@ -53,6 +68,7 @@ export const parseProject = (value: unknown): TProjectSettings => {
     if (typeof raw.version === 'number' && raw.version > DEFAULT_PROJECT_SETTINGS.version) {
         console.warn(`[NacatamalOn] parseProject: this project was written by a newer version (${raw.version}). Anything unknown in it is ignored.`);
     }
+    const pixelSnap = pixelSnapOf(raw.pixelSnap);
 
     return {
         format: FORMAT,
@@ -64,7 +80,7 @@ export const parseProject = (value: unknown): TProjectSettings => {
         background: asColor(raw.background, DEFAULT_PROJECT_SETTINGS.background),
         smooth: asBoolean(raw.smooth, DEFAULT_PROJECT_SETTINGS.smooth),
         // Absent follows `smooth`, so it is kept absent rather than given a default of its own.
-        ...(typeof raw.pixelSnap === 'boolean' ? { pixelSnap: raw.pixelSnap } : {}),
+        ...(pixelSnap !== undefined ? { pixelSnap } : {}),
         msaa: asOneOf(String(raw.msaa), ['1', '4'], '1') === '4' ? 4 : 1,
         renderer: asOneOf(raw.renderer, ['AUTO', 'WEBGPU', 'WEBGL2'] as const, DEFAULT_PROJECT_SETTINGS.renderer),
         scaling: asOneOf(raw.scaling, ['none', 'integer', 'contain', 'fill'] as const, DEFAULT_PROJECT_SETTINGS.scaling),

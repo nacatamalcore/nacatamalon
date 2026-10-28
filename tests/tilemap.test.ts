@@ -342,9 +342,9 @@ describe('the corners of a layer', () => {
         const { map } = await withMap();
         const { still, moving } = buildLayerMesh(map, map.layers[0]);
 
-        // Two still cells, one cycling, one empty.
-        expect(still.length).toBe(2 * 6 * 4);
-        expect(moving.length).toBe(1 * 6 * 4);
+        // Two still cells, one cycling, one empty: eight numbers a corner.
+        expect(still.length).toBe(2 * 6 * 8);
+        expect(moving.length).toBe(1 * 6 * 8);
 
         // Half a texel of the sheet, which is how far inside its own square each cell reads.
         // Tiles sit against each other in the sheet with nothing between them, so a cell drawn at a
@@ -352,25 +352,57 @@ describe('the corners of a layer', () => {
         // with the tile next door: a one-pixel seam along every edge.
         const inU = 0.5 / 32;
         const inV = 0.5 / 8;
+        const window = [inU, inV, 0.25 - inU, 1 - inV];
 
-        // The first corner of the first cell: the top-left of the map, showing frame 0 of a sheet
-        // four frames across, read from just inside it.
-        expect(Array.from(still.slice(0, 4))).toEqual([0, 0, inU, inV]);
-        // Its opposite corner: one cell across and down, and a quarter of the way into the sheet,
-        // stopping the same half texel short. The place on screen is untouched by any of this.
-        expect(Array.from(still.slice(16, 20))).toEqual([8, 8, 0.25 - inU, 1 - inV]);
+        // The first corner of the first cell: the top-left of the map, showing the corner of frame 0
+        // of a sheet four frames across, and the window it reads inside.
+        expect(Array.from(still.slice(0, 8))).toEqual([0, 0, 0, 0, ...window]);
+        // Its opposite corner: one cell across and down, a quarter of the way into the sheet. The
+        // corners show the tile's whole square, so each texel is as wide as the next; only the read
+        // is kept half a texel in.
+        expect(Array.from(still.slice(32, 40))).toEqual([8, 8, 0.25, 1, ...window]);
     });
 
     it('reads a flipped tile\'s piece of the sheet the other way round', async () => {
         const { map } = await withMap();
         map.tiles[1] = { ...map.tiles[1]!, flipX: true, flipY: true };
         const { still } = buildLayerMesh(map, map.layers[0]);
-        const inU = 0.5 / 32;
-        const inV = 0.5 / 8;
+        const window = [0.5 / 32, 0.5 / 8, 0.25 - 0.5 / 32, 1 - 0.5 / 8];
 
-        // The same corners on screen, each reading the opposite corner of its piece.
-        expect(Array.from(still.slice(0, 4))).toEqual([0, 0, 0.25 - inU, 1 - inV]);
-        expect(Array.from(still.slice(16, 20))).toEqual([8, 8, inU, inV]);
+        // The same corners on screen, each reading the opposite corner of its piece. The window is a
+        // place and stays where it was.
+        expect(Array.from(still.slice(0, 8))).toEqual([0, 0, 0.25, 1, ...window]);
+        expect(Array.from(still.slice(32, 40))).toEqual([8, 8, 0, 0, ...window]);
+    });
+
+    it('draws each texel of a tile as wide as the next when zoomed, and never reads the tile next door', async () => {
+        const { map } = await withMap();
+        const { still } = buildLayerMesh(map, map.layers[0]);
+        // The first cell's left and right edges, read off its corners as the card does: the point of
+        // the sheet at each pixel's centre, kept inside the cell's window. The sheet is 32 texels
+        // across and a cell is 8, so this tile is texels 0 to 7.
+        const [u0, w0, w1] = [still[2]!, still[4]!, still[6]!];
+        const u1 = still[32 + 2]!;
+        const texelAt = (screen: number, zoom: number, shift: number): number => {
+            const across = ((screen + 0.5) / zoom - shift) / 8;
+            const u = Math.min(Math.max(u0 + (u1 - u0) * across, w0), w1);
+            return Math.floor(u * 32);
+        };
+
+        // At zoom 3 on a whole pixel, every texel is three pixels of the screen. Pulling the corners
+        // in half a texel, as the cells once did, came out 2 3 3 3 4 3 3 2.
+        const widths = new Array(8).fill(0);
+        for (let x = 0; x < 24; x++) widths[texelAt(x, 3, 0)]++;
+        expect(widths).toEqual([3, 3, 3, 3, 3, 3, 3, 3]);
+
+        // Between two pixels, at any fraction, the cell still reads only its own texels.
+        for (const shift of [0.1, 0.25, 0.5, 0.75, 0.9]) {
+            for (let x = 0; x < 20; x++) {
+                const texel = texelAt(x + 1, 2.5, shift);
+                expect(texel).toBeGreaterThanOrEqual(0);
+                expect(texel).toBeLessThanOrEqual(7);
+            }
+        }
     });
 
     it('leaves a hole where a cell is empty rather than drawing anything', async () => {
@@ -406,7 +438,8 @@ describe('a map over a sheet that is not a plain grid', () => {
         map.atlas!.rects = [0.5, 0.625, 0.75, 0.875].map((x) => ({ uvOffset: { x, y: 0 }, uvScale: { x: 0.125, y: 1 } }));
         const { still } = buildLayerMesh(map, map.layers[0]);
 
-        expect(still[2]).toBeCloseTo(0.5 + 0.5 / 32, 6);
+        expect(still[2]).toBeCloseTo(0.5, 6);
+        expect(still[4]).toBeCloseTo(0.5 + 0.5 / 32, 6);
     });
 
     it('draws a tile that names its frame, and nothing for a name the sheet does not have', async () => {
@@ -416,7 +449,8 @@ describe('a map over a sheet that is not a plain grid', () => {
         const named = buildLayerMesh(map, map.layers[0]).still;
 
         // Frame 2 of a sheet four across starts half way along it.
-        expect(named[2]).toBeCloseTo(0.5 + 0.5 / 32, 6);
+        expect(named[2]).toBeCloseTo(0.5, 6);
+        expect(named[4]).toBeCloseTo(0.5 + 0.5 / 32, 6);
 
         map.tiles[1] = { ...map.tiles[1], frame: 'missing' };
         expect(buildLayerMesh(map, map.layers[0]).still.length).toBeLessThan(named.length);

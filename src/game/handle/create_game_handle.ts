@@ -7,6 +7,7 @@ import { screenSizeOf } from '../../DOM/screen_size';
 import { releaseAsset } from '../../loaders/release_asset';
 import { onPageMoment } from '../bootstrap/watch_page';
 import type { TAsset } from '../../loaders/types/t_asset';
+import type { TPixelSnap } from '../types/t_game_options';
 import type { TGameHandle, TGamePauseEvent, TGameResizeEvent } from './t_game_handle';
 
 /**
@@ -60,6 +61,9 @@ export const createGameHandle = (store: TRuntimeStore, box: TBox | null = null):
 
     isSmooth: () => store.get('config').smooth,
     setSmooth: (smooth: boolean) => store.setState('config', { smooth }),
+
+    getPixelSnap: () => store.get('config').pixelSnap,
+    setPixelSnap: (snap: TPixelSnap) => store.setState('config', { pixelSnap: snap }),
 
     hasContextMenu: () => store.get('config').contextMenu,
     setContextMenu: (open: boolean) => store.setState('config', { contextMenu: open }),

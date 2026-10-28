@@ -30,7 +30,7 @@ fn sampleTexture(uv: vec2f) -> vec4f {
 const TAIL = /* wgsl */ `
 @fragment
 fn fs(in: VertexOut) -> @location(0) vec4f {
-    return effect(sampleTexture(in.uv) * layer.tint, in.uv);
+    return effect(sampleTexture(tileUv(in)) * layer.tint, in.uv);
 }
 `;
 

@@ -25,8 +25,12 @@ uniform float layerView;
 
 layout(location = 0) in vec2 corner;
 layout(location = 1) in vec2 uv;
+layout(location = 2) in vec4 window;
 
 out vec2 vUv;
+// The cell's own piece of the sheet, half a texel in from each edge. The same at every corner of a
+// cell, so it is not blended across it.
+flat out vec4 vWindow;
 
 void main() {
     vec2 scaled = corner * layerScale;
@@ -45,6 +49,7 @@ void main() {
 
     gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
     vUv = uv;
+    vWindow = window;
 }
 `;
 
@@ -62,7 +67,15 @@ uniform sampler2D tilesTexture;
 uniform vec4 layerTint;
 
 in vec2 vUv;
+flat in vec4 vWindow;
 out vec4 fragColor;
+
+// Where a fragment reads the sheet: where the cell says, kept inside the cell's window. The corners
+// show the tile's whole square, so each texel is as wide as the next; this is what keeps a cell drawn
+// at a fractional position from reading the tile next door along its edge.
+vec2 tileUv() {
+    return clamp(vUv, vWindow.xy, vWindow.zw);
+}
 `;
 
 /**
@@ -75,7 +88,7 @@ out vec4 fragColor;
  */
 export const TILEMAP_FRAGMENT_MAIN_GLSL = /* glsl */ `
 void main() {
-    fragColor = texture(tilesTexture, vUv) * layerTint;
+    fragColor = texture(tilesTexture, tileUv()) * layerTint;
 }
 `;
 

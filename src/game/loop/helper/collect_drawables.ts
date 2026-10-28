@@ -7,6 +7,8 @@ import type { TPlacedCollider2d, TPlacedCollider3d, TSceneColliders } from '../.
 import type { TDrawable } from '../../../gameobjects/types';
 import type { TTransform2d } from '../../../gameobjects/types/t_transform_2d';
 import type { TCamera2d } from '../../../camera';
+import { cameraAsDrawn, onPixels, pixelsPerUnit } from '../../../camera/camera_as_drawn';
+import type { TPixelSnap } from '../../types/t_game_options';
 import { shapeRolesOf } from '../../../mask/create_mask';
 import { maskLevelFor, masksNow, noteShape } from '../../../mask/mask_walk';
 import type { TMask } from '../../../mask/types/t_mask';
@@ -121,17 +123,28 @@ const placeDrawable = (drawable: TDrawable, world: TWorld): void => {
 /**
  * Moves a flat drawable by its parallax: by the part of the camera's travel it does not follow, so on
  * screen it goes by more slowly. Written into where it is drawn and touched, never into its placement.
+ *
+ * @param snap The game's `pixelSnap`, which decides where the camera is drawn from and the pixels
+ * the layer's own travel is put on.
  */
-const applyParallax = (drawable: TDrawable, factor: { x: number; y: number }, camera: TCamera2d): void => {
+const applyParallax = (drawable: TDrawable, factor: { x: number; y: number }, camera: TCamera2d, snap: TPixelSnap): void => {
     if (drawable.type === 'mesh' || drawable.type === 'particles-3d' || drawable.type === 'lines' || drawable.type === 'particles') {
         return;
     }
     const base = drawable.worldTransform ?? drawable.transform;
     const out = drawable.worldTransform ?? { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 };
-    // On whole pixels, as the layers of the old consoles scrolled: a layer moving at another pace from
-    // the camera would otherwise sit between two pixels and shimmer.
-    out.x = base.x + Math.round(camera.transform.x * (1 - factor.x));
-    out.y = base.y + Math.round(camera.transform.y * (1 - factor.y));
+    // On screen the layer is left behind by its share of the camera's travel, and that share is what
+    // is put on pixels: once, so it only ever steps one way. Placed against the camera as it is
+    // drawn: rounding the layer's offset and the camera each on its own left their difference
+    // stepping back and forth, a cloud going a pixel on and one back as the two roundings took turns.
+    // On the screen's pixels a far layer at a tenth of the camera moves a screen pixel at a time
+    // rather than a whole pixel of the art, which at zoom 3 was a jump of three every forty frames.
+    const seen = cameraAsDrawn(camera, snap)!;
+    const perUnit = pixelsPerUnit(snap, camera);
+    const shareX = -camera.transform.x * factor.x;
+    const shareY = -camera.transform.y * factor.y;
+    out.x = base.x + seen.transform.x + (perUnit === 0 ? shareX : onPixels(shareX, perUnit));
+    out.y = base.y + seen.transform.y + (perUnit === 0 ? shareY : onPixels(shareY, perUnit));
     out.rotation = base.rotation;
     out.scaleX = base.scaleX;
     out.scaleY = base.scaleY;
@@ -145,12 +158,12 @@ const applyParallax = (drawable: TDrawable, factor: { x: number; y: number }, ca
 const snappedPlaces = new WeakMap<object, TTransform2d>();
 
 /**
- * Puts a flat drawable on whole pixels of the game where it is drawn: the game's `pixelSnap`. Where it
- * is stays as it was, fractions and all, so it moves as fast as it says; only the picture lands on the
- * grid, as the consoles drew it. With the camera on whole pixels too, something it follows stays on
- * the same pixel of the screen.
+ * Puts a flat drawable on pixels where it is drawn: the game's `pixelSnap`, through `pixelsPerUnit`.
+ * Where it is stays as it was, fractions and all, so it moves as fast as it says; only the picture
+ * lands on the grid. With the camera on the same pixels, something it follows stays on the same
+ * pixel of the screen.
  */
-const snapToPixels = (drawable: TDrawable): void => {
+const snapToPixels = (drawable: TDrawable, perUnit: number): void => {
     if (drawable.type !== 'sprite' && drawable.type !== 'text' && drawable.type !== 'nine-slice' && drawable.type !== 'tilemap' && drawable.type !== 'polygon') {
         return;
     }
@@ -160,8 +173,8 @@ const snapToPixels = (drawable: TDrawable): void => {
         out = snappedPlaces.get(drawable) ?? { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 };
         snappedPlaces.set(drawable, out);
     }
-    out.x = Math.round(base.x);
-    out.y = Math.round(base.y);
+    out.x = onPixels(base.x, perUnit);
+    out.y = onPixels(base.y, perUnit);
     out.rotation = base.rotation;
     out.scaleX = base.scaleX;
     out.scaleY = base.scaleY;
@@ -234,7 +247,7 @@ export const collectDrawables = (
     screenCamera = -1,
     camera: TCamera2d | null = null,
     inherited: { x: number; y: number } | null = null,
-    snap = false,
+    snap: TPixelSnap = 'off',
     masks: TMaskWalk | null = null,
     level: TMaskLevel | null = null,
     shapeOf: readonly TMask[] | null = null,
@@ -275,14 +288,16 @@ export const collectDrawables = (
     const shown = shapes === null || shapes.some((mask) => mask.showShape);
     // What is pinned to the screen does not see the camera, so it has no parallax either.
     const parallax = pinned ? null : box.parallax ?? inherited;
+    // What is pinned to the screen is drawn at zoom 1, where a pixel of the screen is one of the game.
+    const perUnit = pixelsPerUnit(snap, pinned ? null : camera);
     for (const drawable of box.drawables) {
         placeDrawable(drawable, world);
         const factor = pinned ? null : (drawable as { parallax?: { x: number; y: number } }).parallax ?? parallax;
         if (factor !== null && camera !== null) {
-            applyParallax(drawable, factor, camera);
+            applyParallax(drawable, factor, camera, snap);
         }
-        if (snap) {
-            snapToPixels(drawable);
+        if (perUnit > 0) {
+            snapToPixels(drawable, perUnit);
         }
         // `undefined` is drawn: a drawable that never mentions it is the ordinary case, and the
         // ordinary case should not have to say anything.

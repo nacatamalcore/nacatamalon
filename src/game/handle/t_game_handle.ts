@@ -1,6 +1,7 @@
 import type { TColor, TColorOption } from '../../color';
 import type { TRendererBackend } from '../../render/interface';
 import type { TAsset } from '../../loaders/types/t_asset';
+import type { TPixelSnap } from '../types/t_game_options';
 
 /**
  * What `onPaused` and `onResumed` are told: who held the game or let it go. `pause()` with no
@@ -87,6 +88,27 @@ export type TGameHandle = {
      * `false` is the retro answer: a scaled-up pixel stays a square.
      */
     setSmooth(smooth: boolean): void;
+    /**
+     * Which pixels things are drawn on: the game's `pixelSnap`, `'screen'`, `'game'` or `'off'`.
+     */
+    getPixelSnap(): TPixelSnap;
+    /**
+     * Draws on other pixels from the next frame: every sprite, text, panel, map, layer with parallax
+     * and the scene's camera, and the pointer reads the world the same way. Where things are is never
+     * touched, so changing it moves nothing. For an option a player picks (the consoles' steps, crisp
+     * and smooth, or blended), or to compare them in a running game.
+     *
+     * @example
+     * ```ts
+     * const game = useGame();
+     * useUpdate(() => {
+     *     if (keys.justPressed('p')) {
+     *         game.setPixelSnap(game.getPixelSnap() === RENDER.PIXEL_SNAP.OFF ? RENDER.PIXEL_SNAP.SCREEN : RENDER.PIXEL_SNAP.OFF);
+     *     }
+     * });
+     * ```
+     */
+    setPixelSnap(snap: TPixelSnap): void;
 
     /**
      * Whether a right click over the game opens the browser's menu. `false` unless the game said

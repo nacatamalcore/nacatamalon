@@ -64,8 +64,8 @@ describe('parseProject', () => {
     });
 
     it('reads what createGame takes about the page: snapping, full screen, the menu, the banner and the splash', () => {
-        const settings = parseProject({ pixelSnap: false, fullscreenScaling: 'contain', contextMenu: true, banner: false, splash: 'always' });
-        expect(settings.pixelSnap).toBe(false);
+        const settings = parseProject({ pixelSnap: 'game', fullscreenScaling: 'contain', contextMenu: true, banner: false, splash: 'always' });
+        expect(settings.pixelSnap).toBe('game');
         expect(settings.fullscreenScaling).toBe('contain');
         expect(settings.contextMenu).toBe(true);
         expect(settings.banner).toBe(false);
@@ -73,9 +73,16 @@ describe('parseProject', () => {
         expect(parseProject({ splash: true }).splash).toBe(true);
 
         const options = gameOptionsFromProject(settings);
-        expect(options).toMatchObject({ pixelSnap: false, fullscreenScaling: 'contain', contextMenu: true, banner: false, splash: 'always' });
+        expect(options).toMatchObject({ pixelSnap: 'game', fullscreenScaling: 'contain', contextMenu: true, banner: false, splash: 'always' });
         // Left out, it follows `smooth` in createGame, so it is not written for it.
         expect('pixelSnap' in gameOptionsFromProject(parseProject({}))).toBe(false);
+    });
+
+    it('reads a pixelSnap written as yes or no, before there were three, as what it meant', () => {
+        expect(parseProject({ pixelSnap: true }).pixelSnap).toBe('screen');
+        expect(parseProject({ pixelSnap: false }).pixelSnap).toBe('off');
+        expect(parseProject({ pixelSnap: 'off' }).pixelSnap).toBe('off');
+        expect(parseProject({ pixelSnap: 'pixels' }).pixelSnap).toBeUndefined();
     });
 
     it('reads a fixed step, and falls back to the screen\'s time from one createGame would refuse', () => {

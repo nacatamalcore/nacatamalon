@@ -16,6 +16,17 @@ import type { TActionMap, TActionPersist } from '../../input';
 export type TGameStep = 'display' | number;
 
 /**
+ * Which pixels a game draws on: `'screen'`, whole pixels of the screen; `'game'`, whole pixels of the
+ * game, as the consoles drew; `'off'`, between them. See `TGameOptions.pixelSnap`, and
+ * `RENDER.PIXEL_SNAP` for the three as constants.
+ *
+ * @category Game
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TPixelSnap = 'screen' | 'game' | 'off';
+
+/**
  * How a game's window is set up, for `createGame`: its resolution, the colour behind everything,
  * how it scales to the page and which renderer draws it. Only `width` and `height` are required.
  *
@@ -69,16 +80,23 @@ export type TGameOptions = {
      */
     smooth?: boolean;
     /**
-     * Draws everything flat on whole pixels of the game: where each sprite, text, panel and map is
-     * drawn is rounded, never where it is. A character at 1.83 is drawn at 2, and moves at 1.83 a
-     * frame all the same; with the camera on whole pixels too (`useCameraFollow`), it stays on the
-     * same pixel of the screen while the camera follows it, instead of shaking by one.
+     * Which pixels everything flat is drawn on: where each sprite, text, panel and map is drawn is
+     * rounded, never where it is. A character at 1.83 is drawn on a whole pixel, and moves at 1.83 a
+     * frame all the same. The scene's camera and the layers with parallax are drawn on the same
+     * pixels, a `useCamera2d` moved by hand as much as `useCameraFollow`, so the picture does not
+     * shimmer as it pans, and a character it follows stays on the same pixel of the screen.
      *
-     * The way the consoles drew, and right for pixel art: something moving slower than a pixel a
-     * frame steps a pixel at a time. On by default unless the game is `smooth`, where drawing
-     * between pixels is the point.
+     * - `'screen'`: whole pixels of the screen. With the camera zoomed in to 3, a pixel of the art is
+     *   three of the screen and stays three wide, and things move a screen pixel at a time: pixel art
+     *   kept crisp, and slow motion (a far layer, a camera easing in) still smooth.
+     * - `'game'`: whole pixels of the game, as the consoles drew. Everything stays on the art's own
+     *   grid, and something slower than a pixel a frame steps a whole pixel of the art at a time.
+     * - `'off'`: between pixels, for a `smooth` game, where blending them is the point.
+     *
+     * Not said, it follows `smooth`: `'screen'` for pixel art, `'off'` for a smooth game. At zoom 1
+     * `'screen'` and `'game'` are the same. See `RENDER.PIXEL_SNAP` for the three as constants.
      */
-    pixelSnap?: boolean;
+    pixelSnap?: TPixelSnap;
     /**
      * MSAA (multisample anti-aliasing) sample count. `1` (default) disables it: the
      * raw, aliased look that suits a PS1/N64 aesthetic. `4` enables 4× MSAA, smoothing

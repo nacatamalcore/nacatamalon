@@ -2,6 +2,7 @@ import { getActiveBox, getActiveGame } from '../../store';
 import { pickTargets } from '../../input';
 import { rootOf } from '../../box/root_of';
 import { unapplyView2d } from '../../render/shared';
+import { cameraAsDrawn } from '../../camera/camera_as_drawn';
 import type { TPointerHandle } from '../../input';
 
 /**
@@ -119,11 +120,11 @@ export const usePointer = (): TPointerHandle => {
             if (at === null) {
                 return null;
             }
-            const world = unapplyView2d(rootOf(box).camera2d, at);
+            const world = unapplyView2d(cameraAsDrawn(rootOf(box).camera2d, store.get('config').pixelSnap), at);
             return { screenX: at.x, screenY: at.y, worldX: world.x, worldY: world.y };
         },
         touches: () => pointer.touches().map((finger) => {
-            const world = unapplyView2d(rootOf(box).camera2d, { x: finger.screenX, y: finger.screenY });
+            const world = unapplyView2d(cameraAsDrawn(rootOf(box).camera2d, store.get('config').pixelSnap), { x: finger.screenX, y: finger.screenY });
             return { ...finger, worldX: world.x, worldY: world.y };
         }),
         isPressing: (target) => pointer.isPressing(store, target),

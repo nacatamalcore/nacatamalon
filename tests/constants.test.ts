@@ -45,6 +45,7 @@ describe('what the groups say', () => {
         expect(LIMITS.LIGHTS).toBe(MAX_LIGHTS);
         expect(PHYSICS.ALL_LAYERS).toBe((1 << LIMITS.PHYSICS_LAYERS) - 1);
         expect(RENDER.TYPE).toEqual({ AUTO: 'AUTO', WEBGPU: 'WEBGPU', WEBGL2: 'WEBGL2' });
+        expect(RENDER.PIXEL_SNAP).toEqual({ SCREEN: 'screen', GAME: 'game', OFF: 'off' });
         expect(INPUT.DEADZONE).toBe(0.2);
     });
 });

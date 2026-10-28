@@ -1,7 +1,7 @@
 import type { TColor } from '../../color';
 import type { TCanvasKeep } from '../../DOM/types/t_canvas_keep';
 import type { TCanvasScaling } from '../../DOM/types/t_canvas_scaling';
-import type { TGameStep } from '../../game/types/t_game_options';
+import type { TGameStep, TPixelSnap } from '../../game/types/t_game_options';
 import type { TRendererType } from '../../render';
 import type { TActionMap } from '../../input';
 import type { TPostChain } from '../../post';
@@ -46,10 +46,11 @@ export type TProjectSettings = {
      */
     smooth: boolean;
     /**
-     * Whether what is drawn lands on whole pixels. Absent, it follows `smooth`: on for crisp pixel
-     * art, off for a smooth game. See `TGameOptions.pixelSnap`.
+     * Which pixels what is drawn lands on: `'screen'`, `'game'` or `'off'`. Absent, it follows
+     * `smooth`: `'screen'` for crisp pixel art, `'off'` for a smooth game. See
+     * `TGameOptions.pixelSnap`.
      */
-    pixelSnap?: boolean;
+    pixelSnap?: TPixelSnap;
     /**
      * Anti-aliasing: `1` is off, which is the aliased look of the era.
      */

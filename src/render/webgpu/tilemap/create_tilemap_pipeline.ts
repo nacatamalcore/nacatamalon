@@ -1,4 +1,5 @@
 import { TILEMAP_SHADER } from './tilemap_shader';
+import { TILE_CORNER_BYTES } from '../../shared/tile_corner';
 import { buildTilemapMaterialShader } from '../material/tilemap_material_shader';
 import { createFlatMaterials } from '../material/flat_materials';
 import type { TTilemapPipeline } from './types/t_tilemap_pipeline';
@@ -26,6 +27,22 @@ export const LAYER_STRIDE = 256;
  * How many layers fit before the buffer has to grow.
  */
 const INITIAL_LAYERS = 8;
+
+/**
+ * One corner of a cell: where it is inside the map, which point of the sheet it shows, and the window
+ * of the sheet its cell reads inside. The masks draw a map's cells with the same corners.
+ *
+ * @internal
+ */
+export const TILE_CORNERS: GPUVertexBufferLayout[] = [{
+    arrayStride: TILE_CORNER_BYTES,
+    stepMode: 'vertex',
+    attributes: [
+        { shaderLocation: 0, offset: 0, format: 'float32x2' },
+        { shaderLocation: 1, offset: 8, format: 'float32x2' },
+        { shaderLocation: 2, offset: 16, format: 'float32x4' },
+    ],
+}];
 
 /**
  * Creates the pipeline that draws a map's layers.
@@ -67,17 +84,7 @@ export const createTilemapPipeline = (
         }],
     });
 
-    /**
-     * One corner: where it is inside the map, and which part of the sheet it shows.
-     */
-    const CORNERS: GPUVertexBufferLayout[] = [{
-        arrayStride: 16,
-        stepMode: 'vertex',
-        attributes: [
-            { shaderLocation: 0, offset: 0, format: 'float32x2' },
-            { shaderLocation: 1, offset: 8, format: 'float32x2' },
-        ],
-    }];
+    const CORNERS = TILE_CORNERS;
 
     const module = device.createShaderModule({ label: 'tilemap shader', code: TILEMAP_SHADER });
     const pipeline = device.createRenderPipeline({

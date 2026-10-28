@@ -14,6 +14,7 @@ import { SONG_BUILTINS } from './audio/synth/builtin/song_library';
 import { SONG_INSTRUMENTS } from './audio/synth/builtin/song_instruments';
 import { SONG_SAMPLES } from './audio/synth/builtin/song_samples';
 import type { TRendererType } from './render';
+import type { TPixelSnap } from './game/types/t_game_options';
 import type { TGamepadAxisName, TGamepadButtonName } from './input/gamepad/gamepad_standard';
 import type { TPointerButtonName } from './input/pointer_buttons';
 import type { TSfxPreset } from './audio/synth/types/t_song';
@@ -42,15 +43,16 @@ const frozen = <T>(value: T): T => {
 };
 
 /**
- * How the engine draws: the renderers `createGame` can be asked for, and how many numbers one corner
- * of a line takes.
+ * How the engine draws: the renderers `createGame` can be asked for, which pixels it draws on, and
+ * how many numbers one corner of a line takes.
  *
- * `TYPE.WEBGL2` is the same as writing `'WEBGL2'` in `createGame({ renderer })`. `LINE_VERTEX_FLOATS`
- * is seven, where a corner is (`x`, `y`, `z`) and its colour (`r`, `g`, `b`, `a`), for a game that
- * writes the corners of its lines itself.
+ * `TYPE.WEBGL2` is the same as writing `'WEBGL2'` in `createGame({ renderer })`. `PIXEL_SNAP.SCREEN`,
+ * `GAME` and `OFF` are what `createGame({ pixelSnap })` and `useGame().setPixelSnap` take.
+ * `LINE_VERTEX_FLOATS` is seven, where a corner is (`x`, `y`, `z`) and its colour (`r`, `g`, `b`,
+ * `a`), for a game that writes the corners of its lines itself.
  *
  * @example
- * createGame({ renderer: RENDER.TYPE.WEBGL2 });
+ * createGame({ renderer: RENDER.TYPE.WEBGL2, pixelSnap: RENDER.PIXEL_SNAP.GAME });
  *
  * @category Constants
  * @since 1.0.0
@@ -62,6 +64,11 @@ export const RENDER = /* @__PURE__ */ frozen({
         WEBGPU: 'WEBGPU',
         WEBGL2: 'WEBGL2',
     } as const satisfies Record<string, TRendererType>,
+    PIXEL_SNAP: {
+        SCREEN: 'screen',
+        GAME: 'game',
+        OFF: 'off',
+    } as const satisfies Record<string, TPixelSnap>,
     LINE_VERTEX_FLOATS,
 });
 

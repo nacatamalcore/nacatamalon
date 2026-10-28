@@ -122,9 +122,9 @@ describe('parallax', () => {
         expect(drawnAt(hud)).toEqual([10, 10]);
     });
 
-    it('moves in whole pixels', () => {
+    it('moves in whole pixels under pixelSnap', () => {
         let far!: TSprite;
-        const { store } = createTestGame();
+        const { store } = createTestGame({ pixelSnap: 'game' });
         startTestScene(store, 'Level', () => {
             const camera = useCamera2d();
             camera.transform.x = 101;
@@ -133,6 +133,69 @@ describe('parallax', () => {
         });
         frame(store);
         expect(drawnAt(far)[0]).toBe(51);
+    });
+
+    it('moves between pixels when pixelSnap is off, as smooth as the camera', () => {
+        let far!: TSprite;
+        const { store } = createTestGame({ pixelSnap: 'off' });
+        startTestScene(store, 'Level', () => {
+            const camera = useCamera2d();
+            camera.transform.x = 101;
+            far = createSprite({ width: 8, height: 8, tint, transform: at(0, 0), parallax: { x: 0.5, y: 1 } });
+            return createScene();
+        });
+        frame(store);
+        expect(drawnAt(far)[0]).toBe(50.5);
+    });
+
+    it('only ever steps one way on screen while a camera moved by hand goes on, under pixelSnap', () => {
+        let far!: TSprite;
+        let camera!: ReturnType<typeof useCamera2d>;
+        const { store } = createTestGame({ pixelSnap: 'game' });
+        startTestScene(store, 'Level', () => {
+            camera = useCamera2d();
+            far = createSprite({ width: 8, height: 8, tint, transform: at(100, 0), parallax: { x: 0.1, y: 1 } });
+            return createScene();
+        });
+        // Where it is on the screen: where it is drawn, less where the camera is drawn from.
+        const onScreen: number[] = [];
+        for (let i = 0; i < 200; i++) {
+            camera.transform.x += 0.25;
+            const ctx: TFrameContext = { passes: [{}], time: 0, progress: 0, phase: 0 };
+            fillFrameContext(store, ctx);
+            onScreen.push(drawnAt(far)[0]! - ctx.passes[0]!.cameras![0]!.transform.x);
+        }
+        // A tenth of the camera's 50 pixels, on whole pixels, and never a pixel back: rounding the
+        // layer and the camera each on their own took turns and stepped it back and forth.
+        for (let i = 1; i < onScreen.length; i++) expect(onScreen[i]!).toBeLessThanOrEqual(onScreen[i - 1]!);
+        expect(onScreen.every(Number.isInteger)).toBe(true);
+        expect(onScreen.at(-1)).toBe(95);
+    });
+
+    it('steps a screen pixel at a time on the screen\'s pixels, one way, with the camera zoomed in', () => {
+        let far!: TSprite;
+        let camera!: ReturnType<typeof useCamera2d>;
+        const { store } = createTestGame({ pixelSnap: 'screen' });
+        startTestScene(store, 'Level', () => {
+            camera = useCamera2d({ zoom: 3 });
+            far = createSprite({ width: 8, height: 8, tint, transform: at(100, 0), parallax: { x: 0.1, y: 1 } });
+            return createScene();
+        });
+        // In screen pixels this time: where it is drawn less where the camera is drawn from, times 3.
+        const onScreen: number[] = [];
+        for (let i = 0; i < 200; i++) {
+            camera.transform.x += 0.25;
+            const ctx: TFrameContext = { passes: [{}], time: 0, progress: 0, phase: 0 };
+            fillFrameContext(store, ctx);
+            onScreen.push((drawnAt(far)[0]! - ctx.passes[0]!.cameras![0]!.transform.x) * 3);
+        }
+        // A tenth of the camera's 50 pixels, 15 screen pixels, one at a time and never one back: on the
+        // game's pixels the same layer went three at once, five times.
+        for (let i = 1; i < onScreen.length; i++) {
+            const step = onScreen[i - 1]! - onScreen[i]!;
+            expect(Math.abs(step) < 1e-6 || Math.abs(step - 1) < 1e-6).toBe(true);
+        }
+        expect(onScreen.at(-1)).toBeCloseTo(285, 6);
     });
 
     it('is measured against the scene\'s camera, not a tool\'s looking at it from elsewhere', () => {

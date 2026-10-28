@@ -5,6 +5,7 @@ import { loadTilemap, newTilemap } from '../../loaders/tilemap';
 import { trackLoad } from '../../loaders';
 import { useUpdate } from '../../hooks/loop';
 import { buildLayerMesh } from './build_layer_mesh';
+import { TILE_CORNER_FLOATS } from '../../render/shared/tile_corner';
 import { openLayerState } from './layer_state';
 import { releaseLayer } from './release_layer';
 import { rememberTilemap } from './get_tilemap';
@@ -32,8 +33,8 @@ const uploadMesh = (renderer: IRenderer, mesh: TTileMesh, data: Float32Array): v
     } else {
         renderer.updateBuffer(mesh.buffer, data);
     }
-    // Four numbers a corner: where it is, and which piece of the sheet it shows.
-    mesh.vertexCount = data.length / 4;
+    // Eight numbers a corner: where it is, which point of the sheet it shows, and its cell's window.
+    mesh.vertexCount = data.length / TILE_CORNER_FLOATS;
 };
 
 /**

@@ -7,6 +7,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **`useGame().setPixelSnap(mode)` and `getPixelSnap()`**: which pixels the game draws on, changed
+  while it runs, from the next frame, for an option a player picks or to compare them. Nothing moves
+  when it changes: only where things are drawn.
+- **`RENDER.PIXEL_SNAP`**: `SCREEN`, `GAME` and `OFF`, the three `pixelSnap` takes, as constants.
 - **Input maps ready to use**, `INPUT.ACTION_PRESETS`: `nes`, `genesis`, `snes` and `arcade`, whose
   actions are the console's buttons (`a`, `b`, `start`…; `button1` to `button6` and `coin` on an
   arcade) sitting on the pad where they sat on its own, and `platformer` (`jump`, `action`,
@@ -56,8 +60,37 @@ releases are in [changelog/](./changelog/), one file each.
   broken it. Words need no game to be measured, and measuring them in a vector font draws no letter
   into its atlas.
 
+### Changed
+
+- **`pixelSnap` says which pixels: `'screen'`, `'game'` or `'off'`**, no longer yes or no. Not said,
+  it is `'screen'` for pixel art and `'off'` for a `smooth` game. `'screen'` puts everything flat, the
+  camera and the layers with parallax on whole pixels of the screen: with the camera zoomed in to 3
+  a pixel of the art is still three of the screen and stays three wide, and things move a screen
+  pixel at a time, so a far layer on a slow scroll glides instead of jumping three pixels every so
+  often. `'game'` is how it drew until now, everything on whole pixels of the art as the consoles
+  drew, and at zoom 1 the two are the same. `createGame({ pixelSnap: true })` is now refused with the
+  three names; a `project.json` that says `true` or `false` is read as `'screen'` and `'off'`.
+- **A layer with parallax under `pixelSnap: 'off'` moves between pixels**, as smooth as the camera.
+  It was always put on whole pixels, which in a smooth game stepped the far layers and nothing else.
+
 ### Fixed
 
+- **A tilemap drawn bigger than 1:1 keeps its pixel art square.** To keep a cell from reading the
+  tile next to it in the sheet, its corners were pulled half a texel in, which squeezed a tile's
+  sixteen texels into the width of fifteen: at zoom 3 its columns came out 2, 3 and 4 screen pixels
+  wide instead of all 3, and the outermost ones half as wide as the rest. The corners now show the
+  whole tile and the read is kept half a texel inside it, as a sprite's is, on both cards, with a
+  material and as a mask too. Every texel is as wide as the next, and a cell between two pixels
+  still never shows its neighbour.
+- **A camera moved by hand no longer shimmers the picture under `pixelSnap`.** Everything was drawn
+  on whole pixels but the camera, unless it was a `useCameraFollow`: a `useCamera2d` panned in an
+  update by a fraction a frame moved the whole picture between pixels, and a stripe one pixel wide
+  came out two or four screen pixels wide depending on the frame. The scene's camera is now drawn
+  from the same pixels too, and where it is keeps its fractions. The pointer reads the world through
+  the camera as it is drawn (`worldX` in its events, `position()`, `touches()`, a drag's start), so
+  what is touched is what is seen. A layer with parallax is left behind by its share of the camera's travel
+  rounded once, so a cloud on a slow scroll only ever steps one way instead of a pixel on and one
+  back.
 - **A sound that starts on its own waits for its scene to be let go.** `autoplay` on `useSound`,
   `useMusic` and `useSong` started as soon as the file arrived, so in a scene coming in with a
   transition it sounded under the cover, over the music of the scene still on screen. It now waits

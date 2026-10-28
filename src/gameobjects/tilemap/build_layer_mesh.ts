@@ -1,11 +1,13 @@
 import { atlasFrame } from '../../atlas';
+import { TILE_CORNER_FLOATS } from '../../render/shared/tile_corner';
 import type { TAtlasFrame, TSpriteAtlas } from '../../atlas';
 import type { TTilemap, TTilemapLayer } from './types/t_tilemap';
 
 /**
- * Two triangles per cell, three corners each, four numbers per corner: where it is and what it shows.
+ * Two triangles per cell, three corners each: where the corner is, what it shows, and the window its
+ * cell reads inside (see `TILE_CORNER_FLOATS`).
  */
-const FLOATS_PER_CELL = 6 * 4;
+const FLOATS_PER_CELL = 6 * TILE_CORNER_FLOATS;
 
 /**
  * Writes one cell's two triangles and says where the next one starts.
@@ -29,21 +31,25 @@ const writeCell = (
     const x1 = x0 + cell;
     const y1 = y0 + cell;
 
-    // Half a texel in from the tile's own square in the sheet. Tiles sit against each other there
-    // with nothing between them, so a cell drawn at a fractional position (a camera that follows
-    // with a little lag is enough) asks for a point exactly on the boundary between two columns of
-    // the image and gets the tile next door: a one-pixel seam along the edge of every cell.
-    //
-    // Done here rather than in the shader, which is where the sprites do it, because a tile's
-    // square is known when the corners are built and a sprite's is not: this costs nothing per
-    // frame, and the shader would have needed four more numbers on every corner.
-    const left = frame.uvOffset.x + inset.u;
-    const top = frame.uvOffset.y + inset.v;
-    // Guarded against crossing over for a sheet so small that a tile is thinner than one texel.
-    const right = Math.max(left, frame.uvOffset.x + frame.uvScale.x - inset.u);
-    const bottom = Math.max(top, frame.uvOffset.y + frame.uvScale.y - inset.v);
+    // The corners show the tile's whole square in the sheet, so each of its texels covers as many
+    // pixels of the cell as the next: at zoom 3 every one is three wide.
+    const left = frame.uvOffset.x;
+    const top = frame.uvOffset.y;
+    const right = frame.uvOffset.x + frame.uvScale.x;
+    const bottom = frame.uvOffset.y + frame.uvScale.y;
+    // And the shader reads no nearer the edge than half a texel in, which is the middle of the
+    // outermost column. Tiles sit against each other in the sheet with nothing between them, so a
+    // cell drawn at a fractional position would otherwise ask for a point on the boundary and get the
+    // tile next door: a one-pixel seam along every cell. Kept in the read and not in the corners,
+    // as the sprites do: pulling the corners in instead squeezed a tile's sixteen texels into the
+    // width of fifteen, and drawn bigger than 1:1 its columns came out of different widths. Guarded
+    // against crossing over for a sheet so small that a tile is thinner than one texel.
+    const wl = left + inset.u;
+    const wt = top + inset.v;
+    const wr = Math.max(wl, right - inset.u);
+    const wb = Math.max(wt, bottom - inset.v);
     // A flipped tile reads its piece of the sheet from the other side: the same corners, the
-    // picture the other way round.
+    // picture the other way round. The window stays as it is: it is a place, not a direction.
     const u0 = flip.x ? right : left;
     const u1 = flip.x ? left : right;
     const v0 = flip.y ? bottom : top;
@@ -53,13 +59,13 @@ const writeCell = (
     // and at a few thousand cells two more each are cheaper than the bookkeeping. Which way round
     // they are does not matter, since nothing is being hidden from behind.
     out.set([
-        x0, y0, u0, v0,
-        x1, y0, u1, v0,
-        x0, y1, u0, v1,
+        x0, y0, u0, v0, wl, wt, wr, wb,
+        x1, y0, u1, v0, wl, wt, wr, wb,
+        x0, y1, u0, v1, wl, wt, wr, wb,
 
-        x1, y0, u1, v0,
-        x1, y1, u1, v1,
-        x0, y1, u0, v1,
+        x1, y0, u1, v0, wl, wt, wr, wb,
+        x1, y1, u1, v1, wl, wt, wr, wb,
+        x0, y1, u0, v1, wl, wt, wr, wb,
     ], at);
     return at + FLOATS_PER_CELL;
 };

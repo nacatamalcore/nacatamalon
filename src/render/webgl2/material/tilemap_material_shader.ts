@@ -16,7 +16,7 @@ vec4 sampleTexture(vec2 uv) {
  */
 const TAIL = /* glsl */ `
 void main() {
-    fragColor = effect(sampleTexture(vUv) * layerTint, vUv);
+    fragColor = effect(sampleTexture(tileUv()) * layerTint, vUv);
 }
 `;
 

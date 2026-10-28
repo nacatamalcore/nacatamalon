@@ -25,6 +25,8 @@ import { collectLighting } from './helper/collect_lights';
 import { computeJointMatrices } from '../../math/skinning';
 import { buildPostChain } from '../../post/build_post_chain';
 import type { TCamera2d } from '../../camera';
+import { cameraAsDrawn } from '../../camera/camera_as_drawn';
+import type { TPixelSnap } from '../types/t_game_options';
 import type { TDrawView3d } from '../../render/interface/draw/t_draw_view_3d';
 import type { TDrawCamera3d } from '../../render/interface/draw/t_draw_camera_3d';
 import type { TSceneColliders } from '../../gameobjects/particles/collide';
@@ -406,9 +408,9 @@ const keptByBoxes = (drawable: TDrawable, hide: ReadonlySet<TBox | TDrawable> | 
 };
 
 /**
- * Whether this frame draws flat things on whole pixels: the game's `pixelSnap`, read once a frame.
+ * Which pixels this frame draws flat things on: the game's `pixelSnap`, read once a frame.
  */
-let snapping = false;
+let snapping: TPixelSnap = 'off';
 
 /**
  * The renderer of the game being filled in, for the shapes whose corners go up every frame.
@@ -434,7 +436,9 @@ const gatherTree = (
     let sceneCamera = -1;
     if (camera2d !== null) {
         sceneCamera = cameras.length;
-        cameras.push(camera2d);
+        // The scene's own camera is drawn on the same pixels as everything else under `pixelSnap`;
+        // a tool's is not, since it is zoomed in to look and would pan in steps of its zoom.
+        cameras.push(viewport?.camera2d == null ? cameraAsDrawn(camera2d, snapping)! : camera2d);
     }
 
     // What is pinned to the screen goes through the tool's camera for it, when it has one.

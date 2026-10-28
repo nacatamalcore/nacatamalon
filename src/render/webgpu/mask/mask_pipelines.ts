@@ -1,5 +1,6 @@
 import { DISTANCE_FIELD_COVERAGE, SPRITE_SHADER_HEAD } from '../sprite/sprite_shader';
 import { TILEMAP_SHADER_HEAD } from '../tilemap/tilemap_shader';
+import { TILE_CORNERS } from '../tilemap/create_tilemap_pipeline';
 import { VERTEX_BUFFERS } from '../sprite/create_sprite_pipeline';
 import { DEPTH_FORMAT, FLAT_DEPTH } from '../frame/depth';
 import { toGpuTexture } from '../texture';
@@ -60,7 +61,7 @@ override READING: u32 = 0u;
 
 @fragment
 fn fs(in: VertexOut) -> @location(0) vec4f {
-    let sample = textureSample(tilesTexture, tilesSampler, in.uv) * layer.tint;
+    let sample = textureSample(tilesTexture, tilesSampler, tileUv(in)) * layer.tint;
     var value = sample.a;
     if (READING == 1u) {
         value = dot(sample.rgb, vec3f(0.2126, 0.7152, 0.0722)) * sample.a;
@@ -189,14 +190,7 @@ export const createMaskPipelines = (
             vertex: {
                 module: tilemapModule,
                 entryPoint: 'vs',
-                buffers: [{
-                    arrayStride: 16,
-                    stepMode: 'vertex',
-                    attributes: [
-                        { shaderLocation: 0, offset: 0, format: 'float32x2' },
-                        { shaderLocation: 1, offset: 8, format: 'float32x2' },
-                    ],
-                }],
+                buffers: TILE_CORNERS,
             },
             fragment: {
                 module: tilemapModule,

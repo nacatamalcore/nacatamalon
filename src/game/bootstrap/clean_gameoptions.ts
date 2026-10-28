@@ -1,11 +1,14 @@
 import { getColor } from '../../color';
 import { cleanLayerNames } from '../../physics/layer_names';
 import { DEFAULT_GAME_OPTIONS, MAX_STEP_RATE, MIN_STEP_RATE } from "../../CONFIG";
-import type { TGameOptions } from "../types/t_game_options";
+import type { TGameOptions, TPixelSnap } from "../types/t_game_options";
 import type { TRendererType } from "../../render/interface/t_renderer_capabilities";
 
 /** Every renderer a game can ask for. */
 const RENDERERS: readonly TRendererType[] = ['AUTO', 'WEBGPU', 'WEBGL2'];
+
+/** Every way a game can draw on pixels. */
+const PIXEL_SNAPS: readonly TPixelSnap[] = ['screen', 'game', 'off'];
 
 /**
  * Help to clean the game options and return a cleaned TGameOptions object with default values for missing properties.
@@ -30,7 +33,12 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
     const seed = game_options.seed ?? DEFAULT_GAME_OPTIONS.seed;
     const smooth = game_options.smooth ?? DEFAULT_GAME_OPTIONS.smooth;
     // Follows `smooth` unless it says: pixel art is drawn on whole pixels, smooth pictures between them.
-    const pixelSnap = game_options.pixelSnap ?? !smooth;
+    // Anything but the three names is refused, a `true` from before there were three as much as a
+    // misspelt one, rather than guessed at.
+    const pixelSnap: TPixelSnap = game_options.pixelSnap ?? (smooth ? 'off' : 'screen');
+    if (!PIXEL_SNAPS.includes(pixelSnap)) {
+        throw new Error(`[NacatamalOn] createGame: pixelSnap must be ${PIXEL_SNAPS.map((name) => `'${name}'`).join(', ')}, got ${String(game_options.pixelSnap)}.`);
+    }
     const msaa = game_options.msaa || DEFAULT_GAME_OPTIONS.msaa;
     const scaling = game_options.scaling ?? DEFAULT_GAME_OPTIONS.scaling;
     const keep = game_options.keep ?? DEFAULT_GAME_OPTIONS.keep;

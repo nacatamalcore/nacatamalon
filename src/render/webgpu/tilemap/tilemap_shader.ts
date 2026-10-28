@@ -36,13 +36,23 @@ struct Layer {
 struct VertexOut {
     @builtin(position) clip: vec4f,
     @location(0) uv: vec2f,
+    // The cell's own piece of the sheet, half a texel in from each edge: left, top, right, bottom.
+    // The same at every corner of a cell, so it is not blended across it.
+    @location(1) @interpolate(flat) window: vec4f,
 };
+
+// Where a fragment reads the sheet: where the cell says, kept inside the cell's window. The corners
+// show the tile's whole square, so each texel is as wide as the next; this is what keeps a cell drawn
+// at a fractional position from reading the tile next door along its edge.
+fn tileUv(in: VertexOut) -> vec2f {
+    return clamp(in.uv, in.window.xy, in.window.zw);
+}
 
 // A cell's corner arrives already in its place inside the map, and carrying the piece of the sheet
 // it shows. That is what lets a whole layer be one draw: a sprite says "one picture, here", and a
 // thousand cells showing thirty different pieces cannot be said that way.
 @vertex
-fn vs(@location(0) corner: vec2f, @location(1) uv: vec2f) -> VertexOut {
+fn vs(@location(0) corner: vec2f, @location(1) uv: vec2f, @location(2) window: vec4f) -> VertexOut {
     let scaled = corner * layer.scale;
     let c = cos(layer.rotation);
     let s = sin(layer.rotation);
@@ -62,6 +72,7 @@ fn vs(@location(0) corner: vec2f, @location(1) uv: vec2f) -> VertexOut {
     var out: VertexOut;
     out.clip = vec4f(clip.x, -clip.y, 0.0, 1.0);
     out.uv = uv;
+    out.window = window;
     return out;
 }
 
@@ -76,7 +87,7 @@ fn vs(@location(0) corner: vec2f, @location(1) uv: vec2f) -> VertexOut {
  */
 export const TILEMAP_SHADER_FRAGMENT = /* wgsl */ `@fragment
 fn fs(in: VertexOut) -> @location(0) vec4f {
-    return textureSample(tilesTexture, tilesSampler, in.uv) * layer.tint;
+    return textureSample(tilesTexture, tilesSampler, tileUv(in)) * layer.tint;
 }
 `;
 

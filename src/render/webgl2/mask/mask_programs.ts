@@ -49,7 +49,7 @@ const TILEMAP_MASK_MAIN = /* glsl */ `
 uniform int reading;
 
 void main() {
-    vec4 sampled = texture(tilesTexture, vUv) * layerTint;
+    vec4 sampled = texture(tilesTexture, tileUv()) * layerTint;
     float value = sampled.a;
     if (reading == 1) {
         value = dot(sampled.rgb, vec3(0.2126, 0.7152, 0.0722)) * sampled.a;

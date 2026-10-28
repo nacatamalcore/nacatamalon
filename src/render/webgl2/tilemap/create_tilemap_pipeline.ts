@@ -28,11 +28,12 @@ export const createTilemapPipeline = (
     gl.uniform1i(gl.getUniformLocation(program, 'tilesTexture'), 0);
 
     // The corners live in the layer's own buffer, so the array only remembers the shape of an
-    // entry: where it is inside the map, and which piece of the sheet it shows.
+    // entry: where it is inside the map, which point of the sheet it shows, and its cell's window.
     const vao = gl.createVertexArray();
     gl.bindVertexArray(vao);
     gl.enableVertexAttribArray(0);
     gl.enableVertexAttribArray(1);
+    gl.enableVertexAttribArray(2);
     gl.bindVertexArray(null);
 
     return {
