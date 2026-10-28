@@ -129,7 +129,6 @@ export const editorHandleOf = async (instance: TGameInstance): Promise<TEditorHa
         capture: (options) => captureScreen(store, options),
         setPostChain: (chain) => replaceProjectPostChain(store, chain),
         setPostUniforms: (index, values) => tuneProjectPostEffect(store, index, values),
-        setPostProcessEnabled: (enabled) => store.setState('post', { enabled }),
         getPostEffects: () => store.get('post').effects,
         evictAsset: (key) => {
             let dropped = false;

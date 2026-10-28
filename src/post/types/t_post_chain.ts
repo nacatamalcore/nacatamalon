@@ -19,9 +19,9 @@ import type { TUniformValues } from '../../materials/types/t_uniforms';
  */
 export type TPostChainEntry = {
     /**
-     * Where the effect is written. Empty when `builtin` names one instead.
+     * Where the effect is written. Left out, or empty, when `builtin` names one instead.
      */
-    effect: string;
+    effect?: string;
     /**
      * A key from `POST_BUILTINS`, the engine's own effects. Wins over `effect` if somebody wrote both.
      */

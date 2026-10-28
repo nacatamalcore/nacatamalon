@@ -87,7 +87,7 @@ export const installPostChain = (store: TRuntimeStore, chain: TPostChain): void 
                 history: built.history,
                 enabled: entry.enabled ?? true,
             }, null, 'project');
-        } else {
+        } else if (entry.effect !== undefined) {
             const shader = shaderFor(store, entry.effect);
             effect = newPostEffect({
                 name: entry.name ?? entry.effect,
@@ -99,6 +99,9 @@ export const installPostChain = (store: TRuntimeStore, chain: TPostChain): void 
             if (shader.status === 'ready') {
                 applyShaderToEffect(effect, shader);
             }
+        } else {
+            // Neither a built-in nor a file: `normalizePostChain` never lets one through.
+            continue;
         }
 
         if (entry.palette !== undefined) {

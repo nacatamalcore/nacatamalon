@@ -7,6 +7,9 @@ import { dither, paletteMatch } from '../src/post';
 import { loadShader } from '../src/loaders/shader/load_shader';
 import { newShader } from '../src/loaders/shader/new_shader';
 import { usePostProcess } from '../src/hooks/post/use_post_process';
+import { installPostChain } from '../src/post/install_post_chain';
+import { normalizePostChain } from '../src/post/post_chain';
+import { createGameHandle } from '../src/game/handle/create_game_handle';
 
 /**
  * What installing an effect does, and who owns the result.
@@ -162,5 +165,28 @@ describe('who owns what', () => {
         stopScene(store, 'Menu');
 
         expect(store.get('post').effects).toEqual([kept]);
+    });
+});
+
+describe('turning every effect off from the game', () => {
+    it('stops the project\'s and the scenes\' at once, and brings back only the ones that were on', () => {
+        const { store } = createTestGame();
+        installPostChain(store, normalizePostChain([{ builtin: 'dither' }]));
+        const { on, off } = inScene(store, 'Level', () => ({
+            on: usePostProcess({ ...paletteMatch() }),
+            off: usePostProcess({ ...dither(), enabled: false }),
+        }));
+        const project = store.get('post').effects[0]!;
+        const game = createGameHandle(store);
+
+        expect(game.isPostProcessEnabled()).toBe(true);
+        game.setPostProcessEnabled(false);
+        expect(game.isPostProcessEnabled()).toBe(false);
+        expect(buildPostChain(store)).toBeNull();
+        // Nothing is forgotten: the list and each effect's own switch are as they were.
+        expect(store.get('post').effects).toEqual([project, on, off]);
+
+        game.setPostProcessEnabled(true);
+        expect(buildPostChain(store)).toEqual([project, on]);
     });
 });

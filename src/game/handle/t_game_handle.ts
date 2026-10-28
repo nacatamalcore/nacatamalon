@@ -162,6 +162,27 @@ export type TGameHandle = {
     setContextMenu(open: boolean): void;
 
     /**
+     * Whether the screen effects run: `true` unless something turned them off.
+     */
+    isPostProcessEnabled(): boolean;
+    /**
+     * Turns every screen effect on or off at once, the project's and each scene's, without forgetting
+     * any of them: what a "CRT filter" in a game's options does. Off costs what no effects cost, and a
+     * scene change is still covered either way. Each effect's own `enabled` is kept, so turning them
+     * back on brings back only the ones that were on. Not saved: a game that remembers the choice
+     * keeps it with its other options.
+     *
+     * @example
+     * ```ts
+     * const game = useGame();
+     * useUpdate(() => {
+     *     if (keys.justPressed('f')) game.setPostProcessEnabled(!game.isPostProcessEnabled());
+     * });
+     * ```
+     */
+    setPostProcessEnabled(enabled: boolean): void;
+
+    /**
      * How fast the game runs: `1` is normal, `0.5` slow motion, `2` double speed.
      */
     getTimeScale(): number;

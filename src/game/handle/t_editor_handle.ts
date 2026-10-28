@@ -127,11 +127,6 @@ export type TEditorHandle = TGameHandle & {
      */
     setPostUniforms(index: number, values: Readonly<Record<string, unknown>>): boolean;
     /**
-     * Turns every screen effect on or off at once, without forgetting any of them. Off costs what no
-     * effects cost, so it can be flicked while working. A scene change is still covered either way.
-     */
-    setPostProcessEnabled(enabled: boolean): void;
-    /**
      * The screen effects as they stand, in the order they run: the project's, then each scene's.
      * The live list, so whether an effect's shader or palette has arrived can be seen on it.
      */
