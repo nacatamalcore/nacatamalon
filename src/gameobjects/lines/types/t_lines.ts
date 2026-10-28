@@ -42,7 +42,7 @@ export type TLines = {
      */
     visible?: boolean;
     /**
-     * Set by `destroy` and never cleared.
+     * Set by `destroy`, on it or on the object it belongs to, and never cleared.
      */
     destroyed: boolean;
 };

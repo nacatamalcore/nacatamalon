@@ -194,8 +194,9 @@ export type TBox = {
      */
     loads: TLoadable[];
     /**
-     * Set by `destroy` and never cleared. The frame that marked it stops updating it at once, even
-     * though it is only taken out of the tree at the end of that frame.
+     * Set by `destroy`, on it or on an object above it, and never cleared. The frame that marked it
+     * stops updating it at once, even though it is only taken out of the tree at the end of that
+     * frame.
      */
     destroyed: boolean;
     /**

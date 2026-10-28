@@ -88,7 +88,7 @@ export type TTilemapLayer = {
      */
     parallax?: { x: number; y: number };
     /**
-     * Set by `destroy` and never cleared.
+     * Set by `destroy`, on it or on the object it belongs to, and never cleared.
      */
     destroyed: boolean;
     /**
@@ -162,7 +162,7 @@ export type TTilemap = {
      */
     clocks: Map<string, { elapsed: number; frame: number }>;
     /**
-     * Set by `destroy` and never cleared.
+     * Set by `destroy`, on it or on the object it belongs to, and never cleared.
      */
     destroyed: boolean;
 };

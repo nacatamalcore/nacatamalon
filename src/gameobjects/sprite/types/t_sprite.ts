@@ -156,8 +156,9 @@ export type TSprite = {
      */
     zIndex?: number;
     /**
-     * Set by `destroy` and never cleared. True means it is on its way out and nothing should
-     * treat it as part of the game any more, even in the gap before the frame sweeps it away.
+     * Set by `destroy`, on it or on the object it belongs to, and never cleared. True means it is on
+     * its way out and nothing should treat it as part of the game any more, even in the gap before
+     * the frame sweeps it away.
      */
     destroyed: boolean;
 };

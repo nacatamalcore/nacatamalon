@@ -13,6 +13,14 @@ releases are in [changelog/](./changelog/), one file each.
   `destroy(sprite)` takes only that sprite and leaves the piece running with its other sprites and
   its `useUpdate`, which `destroy`'s documentation now says.
 
+### Changed
+
+- **What goes with a destroyed object says it is destroyed.** `destroy(piece)` took its sprites,
+  texts and child objects with it, but they kept `destroyed: false`, as if only what `destroy` was
+  called on had gone: a game still holding a sprite of a piece it destroyed read it as alive. Now
+  they are `true` too, as their documentation already promised: true means it is no longer part of
+  the game.
+
 ### Fixed
 
 - **One file is loaded once, however its path is written.** The cache went by the path as the game

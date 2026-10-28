@@ -74,6 +74,8 @@ describe('ownerOf', () => {
         flushDestroyed(store);
         expect(card.destroyed).toBe(true);
         expect(card.drawables).toHaveLength(0);
+        // And its sprites say so, like one destroyed on its own.
+        expect(card.api.face.destroyed).toBe(true);
         expect(ownerOf(card.api.face)).toBeNull();
     });
 });

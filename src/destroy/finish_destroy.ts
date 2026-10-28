@@ -7,16 +7,19 @@ import { isGameObject } from './is_game_object';
 
 /**
  * Lets go of everything a box draws, itself and everything under it: the same per-kind disposal a
- * drawable destroyed on its own goes through.
+ * drawable destroyed on its own goes through. What goes with a box is marked `destroyed` like what
+ * goes on its own, so a game still holding a sprite of a piece it destroyed reads it as gone.
  */
 const disposeTree = (store: TRuntimeStore, box: TBox): void => {
     for (const drawable of box.drawables) {
+        drawable.destroyed = true;
         disposeDrawable(store, drawable);
         forgetDrawableOwner(drawable);
     }
     box.drawables.length = 0;
 
     for (const child of box.children) {
+        child.destroyed = true;
         disposeTree(store, child);
     }
 };

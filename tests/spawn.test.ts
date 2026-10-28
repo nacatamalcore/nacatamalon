@@ -253,7 +253,7 @@ describe('destroy of a spawned object', () => {
         expect(self.parent).toBeNull();
         expect(cleanups).toEqual(['bullet']);
         expect(self.drawables).toHaveLength(0);
-        expect(sprite.destroyed).toBe(false);   // never asked for on its own, it went with its owner
+        expect(sprite.destroyed).toBe(true);   // gone with its owner, and says so like one destroyed alone
     });
 
     it('takes everything under it, children first', () => {
