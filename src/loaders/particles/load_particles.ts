@@ -8,6 +8,7 @@ import { newParticlesFile } from './new_particles_file';
 import type { TParticlesFile } from './types/t_particles_file';
 import type { TRuntimeStore } from '../../store';
 import type { TTexture } from '../texture/types/t_texture';
+import { findAssetFile } from '../asset_key';
 
 /**
  * Said once per file, never per emitter and never per frame.
@@ -43,7 +44,7 @@ export const MAX_CHILD_DEPTH = 3;
 export const particlesTexture = (store: TRuntimeStore, fromSrc: string, src: string): TTexture => {
     const path = resolveAssetPath(fromSrc, src);
     const { textures } = store.get('assets');
-    let texture = textures.get(path);
+    let texture = findAssetFile(textures, path);
     if (texture === undefined) {
         texture = newTexture(path, path);
         textures.set(path, texture);
@@ -73,7 +74,7 @@ export const childFileFor = (store: TRuntimeStore, parent: TParticlesFile, src: 
         return null;
     }
     const { particles } = store.get('assets');
-    let file = particles.get(path);
+    let file = findAssetFile(particles, path);
     if (file === undefined) {
         file = newParticlesFile(path, path);
         particles.set(path, file);

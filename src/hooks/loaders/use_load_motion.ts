@@ -4,6 +4,7 @@ import { loadMotion, newMotionFile } from '../../loaders/motion';
 import { rootOf } from '../../box';
 import { trackLoad } from '../../loaders/track_load';
 import type { TMotionFile } from '../../loaders/motion';
+import { assetKey } from '../../loaders/asset_key';
 
 /**
  * What `useLoadMotion` is asked for.
@@ -18,7 +19,9 @@ export type TUseLoadMotionOptions = {
      */
     src: string;
     /**
-     * What to keep it under, so another scene can reach the same one. Defaults to `src`.
+     * What to keep it under, so another scene can reach the same one. Defaults to `src` as the page
+     * resolves it, so one file written two ways (on a page at the root, `./assets/a.png` and
+     * `/assets/a.png`) is kept once and found by either.
      */
     key?: string;
 };
@@ -50,7 +53,7 @@ export const useLoadMotion = ({ src, key }: TUseLoadMotionOptions): TMotionFile 
         throw new Error('[NacatamalOn] useLoadMotion: call it inside a scene body.');
     }
 
-    const cacheKey = key ?? src;
+    const cacheKey = key ?? assetKey(src);
     const { motions } = store.get('assets');
 
     let file = motions.get(cacheKey);

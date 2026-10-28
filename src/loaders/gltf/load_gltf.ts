@@ -19,6 +19,7 @@ import type { TGltfModel, TGltfPart } from './types/t_gltf_model';
 import type { TRuntimeStore } from '../../store';
 import type { TShading } from './shading';
 import type { TTexture } from '../texture/types/t_texture';
+import { findAssetFile } from '../asset_key';
 
 /** No light of its own. */
 const NO_GLOW = { r: 0, g: 0, b: 0, a: 1 };
@@ -109,7 +110,7 @@ const surfaceTexture = async (
     }
 
     const src = isDataUri(image.uri) ? image.uri : resolveAssetPath(model.src, image.uri);
-    const cached = textures.get(src);
+    const cached = findAssetFile(textures, src);
     if (cached !== undefined) {
         // In the store is not the same as arrived: another piece may have asked for it a moment ago
         // and still be waiting. Waiting here is what keeps the model from calling itself ready

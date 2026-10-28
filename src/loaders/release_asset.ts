@@ -7,6 +7,7 @@ import type { TRuntimeStore } from '../store';
 import type { TTexture } from './texture/types/t_texture';
 import type { TGeometry } from '../geometry/types/t_geometry';
 import type { TAsset } from './types/t_asset';
+import { findAsset } from './asset_key';
 
 /**
  * Whether a drawing shows `thing`: as its picture (a sprite, a panel, particles), as a model's
@@ -197,7 +198,7 @@ export const releaseAsset = (store: TRuntimeStore, asset: TAsset | string): bool
 
     const found = new Set<TAsset>();
     for (const cache of Object.values(store.get('assets')) as Map<string, TAsset>[]) {
-        const held = cache.get(asset);
+        const held = findAsset(cache, asset);
         if (held !== undefined) {
             found.add(held);
         }

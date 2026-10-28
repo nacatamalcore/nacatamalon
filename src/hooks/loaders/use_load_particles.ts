@@ -4,6 +4,7 @@ import { loadParticles, newParticlesFile } from '../../loaders/particles';
 import { rootOf } from '../../box';
 import { trackLoad } from '../../loaders/track_load';
 import type { TParticlesFile } from '../../loaders/particles/types/t_particles_file';
+import { assetKey } from '../../loaders/asset_key';
 
 /**
  * What `useLoadParticles` is asked for.
@@ -18,7 +19,9 @@ export type TUseLoadParticlesOptions = {
      */
     src: string;
     /**
-     * What to keep it under, so another scene can reach the same one. Defaults to `src`.
+     * What to keep it under, so another scene can reach the same one. Defaults to `src` as the page
+     * resolves it, so one file written two ways (on a page at the root, `./assets/a.png` and
+     * `/assets/a.png`) is kept once and found by either.
      */
     key?: string;
 };
@@ -53,7 +56,7 @@ export const useLoadParticles = ({ src, key }: TUseLoadParticlesOptions): TParti
         throw new Error('[NacatamalOn] useLoadParticles: call it inside a scene body.');
     }
 
-    const cacheKey = key ?? src;
+    const cacheKey = key ?? assetKey(src);
     const { particles } = store.get('assets');
 
     let file = particles.get(cacheKey);

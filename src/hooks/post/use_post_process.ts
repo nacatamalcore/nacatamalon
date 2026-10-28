@@ -6,6 +6,7 @@ import type { TPostEffect } from '../../post/types/t_post_effect';
 import type { TPostProcessOptions } from '../../post/types/t_post_options';
 import type { TShader } from '../../loaders/shader/types/t_shader';
 import type { TUniformValues } from '../../materials/types/t_uniforms';
+import { findAsset } from '../../loaders/asset_key';
 
 /**
  * The file the options ask for. A name nothing was loaded under is a typo, never "no effect".
@@ -18,7 +19,7 @@ const resolveEffect = (options: TPostProcessOptions): TShader | null => {
         return options.effect;
     }
 
-    const found = getActiveGame()?.get('assets').shaders.get(options.effect);
+    const found = findAsset(getActiveGame()?.get('assets').shaders, options.effect);
     if (found === undefined) {
         throw new Error(
             `[NacatamalOn] usePostProcess: no shader loaded under key '${options.effect}'. ` +

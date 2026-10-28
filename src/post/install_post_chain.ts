@@ -7,16 +7,18 @@ import { newPostEffect } from './new_post_effect';
 import type { TPostChain } from './types/t_post_chain';
 import type { TPostEffect } from './types/t_post_effect';
 import type { TRuntimeStore } from '../store';
+import { assetKey, findAssetFile } from '../loaders/asset_key';
 
 /**
  * A file already fetched, or one fetched now. Two entries naming the same one share a single load.
  */
 const shaderFor = (store: TRuntimeStore, src: string) => {
     const { shaders } = store.get('assets');
-    let shader = shaders.get(src);
+    const key = assetKey(src);
+    let shader = findAssetFile(shaders, key);
     if (shader === undefined) {
-        shader = newShader(src, src);
-        shaders.set(src, shader);
+        shader = newShader(src, key);
+        shaders.set(key, shader);
         void loadShader(store, shader);
     }
     return shader;
@@ -24,10 +26,11 @@ const shaderFor = (store: TRuntimeStore, src: string) => {
 
 const paletteFor = (store: TRuntimeStore, src: string) => {
     const { palettes } = store.get('assets');
-    let palette = palettes.get(src);
+    const key = assetKey(src);
+    let palette = findAssetFile(palettes, key);
     if (palette === undefined) {
-        palette = newPalette(src, src);
-        palettes.set(src, palette);
+        palette = newPalette(src, key);
+        palettes.set(key, palette);
         void loadPalette(store, palette);
     }
     return palette;
@@ -35,10 +38,11 @@ const paletteFor = (store: TRuntimeStore, src: string) => {
 
 const lutFor = (store: TRuntimeStore, src: string) => {
     const { luts } = store.get('assets');
-    let lut = luts.get(src);
+    const key = assetKey(src);
+    let lut = findAssetFile(luts, key);
     if (lut === undefined) {
-        lut = newLut(src, src);
-        luts.set(src, lut);
+        lut = newLut(src, key);
+        luts.set(key, lut);
         void loadLut(store, lut);
     }
     return lut;

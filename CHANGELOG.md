@@ -3,6 +3,24 @@
 What changed in the current release of `nacatamalon`, and what is waiting for the next one. Earlier
 releases are in [changelog/](./changelog/), one file each.
 
+## Unreleased
+
+### Fixed
+
+- **One file is loaded once, however its path is written.** The cache went by the path as the game
+  wrote it, so a game served from a folder (`base: './'`, as on itch.io) that asked for
+  `./assets/tilesets/overworld.atlas` while its map asked for the same sheet as
+  `/html/1234/assets/tilesets/overworld.atlas` fetched it twice and made two textures of it: measured
+  on a build of a platformer, 36 requests for 34 files, now 34. A file asked for with no `key` is now
+  kept under its path as the page resolves it, and a map, a model or an effect that names a file the
+  game already loaded under a key of its own (`useLoadAtlas({ src, key: 'tiles' })`) shares that one.
+  So does a palette, a table or a shader the project's `post` chain names. Finding it and letting it
+  go by name work with the path written either way (`createSprite({ texture: './a.png' })`,
+  `useGame().releaseAsset('./a.png')`), a `key` is kept exactly as given, and the same file asked for
+  twice under one key no longer warns that the key names another file. Only the `key` of a file
+  loaded with none reads differently: its resolved path (`'/html/1234/assets/a.png'`), not the
+  string the game wrote.
+
 ## 0.3.1 — 2026-10-28
 
 ### Added

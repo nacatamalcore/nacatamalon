@@ -4,6 +4,7 @@ import { getActiveBox, getActiveGame } from '../../store';
 import { trackLoad } from '../../loaders';
 import { loadShader, newShader } from '../../loaders/shader';
 import type { TShader } from '../../loaders/shader';
+import { assetKey } from '../../loaders/asset_key';
 
 /**
  * What `useLoadShader` is asked for.
@@ -27,7 +28,9 @@ export type TUseLoadShaderOptions = {
      */
     glslSrc?: string;
     /**
-     * What to keep it under, so another scene can reach the same one. Defaults to `src`.
+     * What to keep it under, so another scene can reach the same one. Defaults to `src` as the page
+     * resolves it, so one file written two ways (on a page at the root, `./assets/a.png` and
+     * `/assets/a.png`) is kept once and found by either.
      */
     key?: string;
 };
@@ -70,7 +73,7 @@ export const useLoadShader = ({ src, glslSrc, key }: TUseLoadShaderOptions): TSh
         throw new Error('[NacatamalOn] useLoadShader: call it inside a scene body.');
     }
 
-    const cacheKey = key ?? src;
+    const cacheKey = key ?? assetKey(src);
     const { shaders } = store.get('assets');
 
     let shader = shaders.get(cacheKey);

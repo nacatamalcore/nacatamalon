@@ -3,6 +3,7 @@ import { rootOf } from '../../box';
 import { loadBitmapFont, newBitmapFont, trackLoad } from '../../loaders';
 import { getActiveBox, getActiveGame } from '../../store';
 import type { TBitmapFont } from '../../loaders';
+import { assetKey } from '../../loaders/asset_key';
 
 /**
  * Where a bitmap font comes from.
@@ -21,7 +22,9 @@ export type TUseLoadBitmapFontOptions = {
      */
     atlas: string;
     /**
-     * What to call it in this game. Default: the description's path.
+     * What to call it in this game. Default: the description's path as the page resolves it, so one
+     * file written two ways (on a page at the root, `./fonts/pixel.json` and `/fonts/pixel.json`)
+     * is kept once and found by either.
      */
     key?: string;
 };
@@ -62,7 +65,7 @@ export const useLoadBitmapFont = ({ json, atlas, key }: TUseLoadBitmapFontOption
         throw new Error('[NacatamalOn] useLoadBitmapFont: call it inside a scene body.');
     }
 
-    const cacheKey = key ?? json;
+    const cacheKey = key ?? assetKey(json);
     const { bitmapFonts } = store.get('assets');
 
     let font = bitmapFonts.get(cacheKey);

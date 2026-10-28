@@ -180,7 +180,9 @@ export type TTilemapOptions = {
      */
     src: string;
     /**
-     * What to cache it under, so two scenes share one map. Defaults to `src`.
+     * What to cache it under, so two scenes share one map. Defaults to `src` as the page resolves
+     * it, so one file written two ways (on a page at the root, `./assets/a.png` and
+     * `/assets/a.png`) is kept once and found by either.
      */
     key?: string;
     /**

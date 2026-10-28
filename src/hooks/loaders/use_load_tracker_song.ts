@@ -4,6 +4,7 @@ import { loadTrackerSong, newSongFile } from '../../loaders/song';
 import { rootOf } from '../../box';
 import { trackLoad } from '../../loaders/track_load';
 import type { TSongFile } from '../../loaders/song';
+import { assetKey } from '../../loaders/asset_key';
 
 /**
  * What `useLoadTrackerSong` is asked for.
@@ -23,8 +24,9 @@ export type TUseLoadTrackerSongOptions = {
      */
     song?: number;
     /**
-     * What to keep it under, so another scene can reach the same one. Defaults to `src`, and to `src`
-     * and the song's number for any song but the first.
+     * What to keep it under, so another scene can reach the same one. Defaults to `src` as the page
+     * resolves it, so one file written two ways (on a page at the root, `./assets/a.png` and
+     * `/assets/a.png`) is kept once and found by either. Any song but the first adds its number.
      */
     key?: string;
 };
@@ -62,7 +64,7 @@ export const useLoadTrackerSong = ({ src, song, key }: TUseLoadTrackerSongOption
         throw new Error('[NacatamalOn] useLoadTrackerSong: call it inside a scene body.');
     }
 
-    const cacheKey = key ?? (song === undefined || song === 0 ? src : `${src}#song-${song}`);
+    const cacheKey = key ?? (song === undefined || song === 0 ? assetKey(src) : `${assetKey(src)}#song-${song}`);
     const { songs } = store.get('assets');
 
     let file = songs.get(cacheKey);

@@ -12,6 +12,7 @@ import { rememberTilemap } from './get_tilemap';
 import type { IRenderer } from '../../render';
 import type { TTileMesh } from './layer_state';
 import type { TTilemap, TTilemapLayer, TTilemapOptions } from './types/t_tilemap';
+import { assetKey } from '../../loaders/asset_key';
 
 /**
  * Puts a batch of corners on the graphics card, reusing the memory when what is written still fits.
@@ -130,7 +131,7 @@ export const createTilemap = (options: TTilemapOptions): TTilemap => {
         throw new Error('[NacatamalOn] createTilemap: call it inside a scene body.');
     }
 
-    const cacheKey = options.key ?? options.src;
+    const cacheKey = options.key ?? assetKey(options.src);
     const { tilemaps } = store.get('assets');
 
     let map = tilemaps.get(cacheKey);

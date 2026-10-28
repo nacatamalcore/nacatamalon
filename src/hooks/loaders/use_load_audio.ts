@@ -4,6 +4,7 @@ import { getActiveBox, getActiveGame } from '../../store';
 import { getAudioManager } from '../../audio';
 import { loadAudio, newAudio, trackLoad } from '../../loaders';
 import type { TAudioClip } from '../../loaders';
+import { assetKey } from '../../loaders/asset_key';
 
 /**
  * What `useLoadAudio` is asked for. Named fields rather than two bare strings, which would be too
@@ -19,7 +20,9 @@ export type TUseLoadAudioOptions = {
      */
     src: string;
     /**
-     * What to cache it under, so another scene can reach the same sound. Defaults to `src`.
+     * What to cache it under, so another scene can reach the same sound. Defaults to `src` as the
+     * page resolves it, so one file written two ways (on a page at the root, `./assets/a.png` and
+     * `/assets/a.png`) is kept once and found by either.
      */
     key?: string;
 };
@@ -61,7 +64,7 @@ export const useLoadAudio = ({ src, key }: TUseLoadAudioOptions): TAudioClip => 
         throw new Error('[NacatamalOn] useLoadAudio: call it inside a scene body.');
     }
 
-    const cacheKey = key ?? src;
+    const cacheKey = key ?? assetKey(src);
     const { sounds } = store.get('assets');
 
     let clip = sounds.get(cacheKey);

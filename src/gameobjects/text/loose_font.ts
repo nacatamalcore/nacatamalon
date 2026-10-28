@@ -1,6 +1,7 @@
 import { getActiveGame } from '../../store';
 import { builtinFontInMemory, isBuiltinFont } from './default_font';
 import type { TBitmapFont, TFont } from '../../loaders';
+import { findAsset } from '../../loaders/asset_key';
 
 /**
  * The font something is written in away from a text on screen (`drawText`, `measureText`): the one
@@ -30,7 +31,7 @@ export const looseFontOf = (font: TBitmapFont | TFont | string | undefined, call
         );
     }
     const assets = store.get('assets');
-    const found = assets.fonts.get(font) ?? assets.bitmapFonts.get(font);
+    const found = findAsset(assets.fonts, font) ?? findAsset(assets.bitmapFonts, font);
     if (found === undefined) {
         throw new Error(
             `[NacatamalOn] ${caller}: no font loaded under key '${font}'. ` +

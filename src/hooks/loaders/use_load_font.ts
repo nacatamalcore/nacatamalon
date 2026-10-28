@@ -3,6 +3,7 @@ import { rootOf } from '../../box';
 import { DEFAULT_FONT_ATLAS_SIZE, loadFont, newFont, trackLoad } from '../../loaders';
 import { getActiveBox, getActiveGame } from '../../store';
 import type { TFont } from '../../loaders';
+import { assetKey } from '../../loaders/asset_key';
 
 /**
  * Where a vector font comes from, and how finely its letters are kept.
@@ -17,7 +18,9 @@ export type TUseLoadFontOptions = {
      */
     src: string;
     /**
-     * What to call it in this game. Default: `src`.
+     * What to call it in this game. Default: `src` as the page resolves it, so one file written two
+     * ways (on a page at the root, `./assets/a.png` and `/assets/a.png`) is kept once and found by
+     * either.
      */
     key?: string;
     /**
@@ -76,7 +79,7 @@ export const useLoadFont = ({ src, key, size, chars }: TUseLoadFontOptions): TFo
         throw new Error('[NacatamalOn] useLoadFont: call it inside a scene body.');
     }
 
-    const cacheKey = key ?? src;
+    const cacheKey = key ?? assetKey(src);
     const { fonts } = store.get('assets');
 
     let font = fonts.get(cacheKey);

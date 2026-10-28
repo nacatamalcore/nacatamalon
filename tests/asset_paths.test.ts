@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'bun:test';
+import { afterEach, describe, expect, it, spyOn } from 'bun:test';
 import { resolveAssetPath } from '../src/loaders/resolve_asset_path';
 import { createScene } from '../src/scene/create_scene';
 import { createTilemap } from '../src/gameobjects/tilemap/create_tilemap';
@@ -7,7 +7,12 @@ import { createTestGame, startTestScene } from './helpers/test_game';
 import { serveTilemap } from './helpers/test_tilemap';
 import { asGltf, serveGltf, TEST_QUAD } from './helpers/test_gltf';
 import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
-import type { TGltfModel } from '../src/loaders';
+import { useLoadAtlas } from '../src/hooks/loaders/use_load_atlas';
+import { useLoadTexture } from '../src/hooks/loaders/use_load_texture';
+import { assetKey } from '../src/loaders/asset_key';
+import { textureByKey } from '../src/loaders/texture/texture_by_key';
+import { createGameHandle } from '../src/game/handle/create_game_handle';
+import type { TGltfModel, TLoadedAtlas, TTexture } from '../src/loaders';
 import type { TTilemap } from '../src/gameobjects/tilemap';
 
 /**
@@ -154,5 +159,108 @@ describe('a model served from a subfolder', () => {
         expect(served.asked).toContain('/html/1234/assets/models/model.bin');
         expect(served.asked).toContain('/html/1234/assets/models/textures/atlas.png');
         expect(model.status).toBe('ready');
+    });
+});
+
+describe('one file, one entry in the cache', () => {
+    const GAME = 'https://html-classic.itch.zone/html/1234/index.html';
+    const count = (asked: string[], end: string) => asked.filter((url) => url.endsWith(end)).length;
+
+    it('is the same file however the game writes its path', async () => {
+        const served = serveTilemap();
+        onPage(GAME);
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+
+        const { store } = createTestGame();
+        let first!: TTexture;
+        let second!: TTexture;
+        startTestScene(store, 'Level', () => {
+            first = useLoadTexture({ src: './assets/maps/tiles.png' });
+            second = useLoadTexture({ src: '/html/1234/assets/maps/tiles.png' });
+            return createScene();
+        });
+        await whenLoaded(first);
+        served.restore();
+
+        expect(second).toBe(first);
+        expect(count(served.asked, 'tiles.png')).toBe(1);
+        expect(store.get('assets').textures.size).toBe(1);
+        // Found by the name it was asked by, either way it is written.
+        startTestScene(store, 'Other', () => {
+            expect(textureByKey('createSprite', './assets/maps/tiles.png')).toBe(first);
+            expect(textureByKey('createSprite', '/html/1234/assets/maps/tiles.png')).toBe(first);
+            return createScene();
+        });
+        // The same file is not "another file under a key already taken".
+        expect(warn).not.toHaveBeenCalled();
+        warn.mockRestore();
+    });
+
+    it('shares a map\'s sheet with the game, asked for with no key', async () => {
+        const served = serveTilemap();
+        onPage(GAME);
+
+        const { store } = createTestGame();
+        let map!: TTilemap;
+        let sheet!: TLoadedAtlas;
+        startTestScene(store, 'Level', () => {
+            sheet = useLoadAtlas({ src: './assets/maps/tiles.atlas' });
+            map = createTilemap({ src: './assets/maps/level.tilemap' });
+            return createScene();
+        });
+        await whenLoaded(map);
+        served.restore();
+
+        // The build of a game served from a folder used to ask for this sheet twice: once as the
+        // game wrote it and once as the map resolved it, and made two textures of it.
+        expect(count(served.asked, 'tiles.atlas')).toBe(1);
+        expect(store.get('assets').atlases.size).toBe(1);
+        expect(sheet.status).toBe('ready');
+    });
+
+    it('shares it with one the game loaded under a key of its own', async () => {
+        const served = serveTilemap();
+        onPage(GAME);
+
+        const { store } = createTestGame();
+        let map!: TTilemap;
+        startTestScene(store, 'Level', () => {
+            useLoadAtlas({ src: './assets/maps/tiles.atlas', key: 'tiles' });
+            map = createTilemap({ src: './assets/maps/level.tilemap' });
+            return createScene();
+        });
+        await whenLoaded(map);
+        served.restore();
+
+        expect(count(served.asked, 'tiles.atlas')).toBe(1);
+        expect([...store.get('assets').atlases.keys()]).toEqual(['tiles']);
+        expect(map.status).toBe('ready');
+    });
+
+    it('lets go of a file by the path the game wrote, however it was kept', async () => {
+        const served = serveTilemap();
+        onPage(GAME);
+
+        const { store } = createTestGame();
+        let texture!: TTexture;
+        startTestScene(store, 'Level', () => {
+            texture = useLoadTexture({ src: './assets/maps/tiles.png' });
+            return createScene();
+        });
+        await whenLoaded(texture);
+        served.restore();
+
+        expect(createGameHandle(store).releaseAsset('./assets/maps/tiles.png')).toBe(true);
+        expect(texture.status).toBe('released');
+        expect(store.get('assets').textures.size).toBe(0);
+    });
+
+    it('leaves the engine\'s own names and inline data as they are', () => {
+        onPage(GAME);
+        expect(assetKey('nacatamalon:arcade')).toBe('nacatamalon:arcade');
+        expect(assetKey('data:image/png;base64,AAAA')).toBe('data:image/png;base64,AAAA');
+        expect(assetKey('./assets/a.png')).toBe('/html/1234/assets/a.png');
+        expect(assetKey('https://html-classic.itch.zone/html/1234/assets/a.png')).toBe('/html/1234/assets/a.png');
+        expect(assetKey('https://cdn.example.com/a.png')).toBe('https://cdn.example.com/a.png');
     });
 });

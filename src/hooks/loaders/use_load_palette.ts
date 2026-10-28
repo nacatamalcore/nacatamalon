@@ -4,6 +4,7 @@ import { loadPalette, newPalette } from '../../loaders/palette';
 import { rootOf } from '../../box';
 import { trackLoad } from '../../loaders/track_load';
 import type { TPalette } from '../../loaders/palette/types/t_palette';
+import { assetKey } from '../../loaders/asset_key';
 
 /**
  * What `useLoadPalette` is asked for.
@@ -18,7 +19,9 @@ export type TUseLoadPaletteOptions = {
      */
     src: string;
     /**
-     * What to keep it under, so another scene can reach the same one. Defaults to `src`.
+     * What to keep it under, so another scene can reach the same one. Defaults to `src` as the page
+     * resolves it, so one file written two ways (on a page at the root, `./assets/a.png` and
+     * `/assets/a.png`) is kept once and found by either.
      */
     key?: string;
 };
@@ -50,7 +53,7 @@ export const useLoadPalette = ({ src, key }: TUseLoadPaletteOptions): TPalette =
         throw new Error('[NacatamalOn] useLoadPalette: call it inside a scene body.');
     }
 
-    const cacheKey = key ?? src;
+    const cacheKey = key ?? assetKey(src);
     const { palettes } = store.get('assets');
 
     let palette = palettes.get(cacheKey);

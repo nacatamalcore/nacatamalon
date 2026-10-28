@@ -4,6 +4,7 @@ import { loadSong, newSongFile } from '../../loaders/song';
 import { rootOf } from '../../box';
 import { trackLoad } from '../../loaders/track_load';
 import type { TSongFile } from '../../loaders/song';
+import { assetKey } from '../../loaders/asset_key';
 
 /**
  * What `useLoadSong` is asked for.
@@ -18,7 +19,9 @@ export type TUseLoadSongOptions = {
      */
     src: string;
     /**
-     * What to keep it under, so another scene can reach the same one. Defaults to `src`.
+     * What to keep it under, so another scene can reach the same one. Defaults to `src` as the page
+     * resolves it, so one file written two ways (on a page at the root, `./assets/a.png` and
+     * `/assets/a.png`) is kept once and found by either.
      */
     key?: string;
 };
@@ -50,7 +53,7 @@ export const useLoadSong = ({ src, key }: TUseLoadSongOptions): TSongFile => {
         throw new Error('[NacatamalOn] useLoadSong: call it inside a scene body.');
     }
 
-    const cacheKey = key ?? src;
+    const cacheKey = key ?? assetKey(src);
     const { songs } = store.get('assets');
 
     let file = songs.get(cacheKey);

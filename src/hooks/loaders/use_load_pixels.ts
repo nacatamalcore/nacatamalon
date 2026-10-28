@@ -4,6 +4,7 @@ import { loadPixels, newLoadedPixels } from '../../loaders/pixels';
 import { rootOf } from '../../box';
 import { trackLoad } from '../../loaders/track_load';
 import type { TLoadedPixels } from '../../loaders/pixels';
+import { assetKey } from '../../loaders/asset_key';
 
 /**
  * What `useLoadPixels` is asked for.
@@ -18,7 +19,9 @@ export type TUseLoadPixelsOptions = {
      */
     src: string;
     /**
-     * What to keep it under, so another scene can reach the same one. Defaults to `src`.
+     * What to keep it under, so another scene can reach the same one. Defaults to `src` as the page
+     * resolves it, so one file written two ways (on a page at the root, `./assets/a.png` and
+     * `/assets/a.png`) is kept once and found by either.
      */
     key?: string;
 };
@@ -62,7 +65,7 @@ export const useLoadPixels = ({ src, key }: TUseLoadPixelsOptions): TLoadedPixel
         throw new Error('[NacatamalOn] useLoadPixels: call it inside a scene body.');
     }
 
-    const cacheKey = key ?? src;
+    const cacheKey = key ?? assetKey(src);
     const cache = store.get('assets').pixels;
 
     let record = cache.get(cacheKey);

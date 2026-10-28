@@ -1,5 +1,6 @@
 import { getActiveGame } from '../store/active_game';
 import { firstTimeIn } from '../utils/first_time_in';
+import { assetKey } from './asset_key';
 
 
 /**
@@ -16,7 +17,8 @@ import { firstTimeIn } from '../utils/first_time_in';
  * @internal
  */
 export const warnIfKeyTaken = (hook: string, key: string, kept: string, asked: string): void => {
-    if (kept === asked) return;
+    // The same file written two ways (`./a.png` and `/game/a.png`) is the same file.
+    if (kept === asked || assetKey(kept) === assetKey(asked)) return;
     // Once per game, so a scene that asks every time it starts says it once. Asked while a scene
     // is built, so the game is the one building it.
     if (!firstTimeIn(getActiveGame(), `${hook}: key taken: ${key}: ${asked}`)) return;

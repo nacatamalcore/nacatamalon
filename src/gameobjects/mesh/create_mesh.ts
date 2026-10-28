@@ -7,6 +7,7 @@ import type { TMesh } from './types/t_mesh';
 import type { TMeshOptions } from './types/t_mesh_options';
 import type { TMeshMaterial } from '../../materials';
 import type { TTexture } from '../../loaders';
+import { findAsset } from '../../loaders/asset_key';
 
 /**
  * Nowhere in particular, which is where a model goes when it is not told.
@@ -26,7 +27,7 @@ const resolveTexture = (options: TMeshOptions): TTexture | null => {
         return null;
     }
 
-    const found = getActiveGame()?.get('assets').textures.get(options.key);
+    const found = findAsset(getActiveGame()?.get('assets').textures, options.key);
     if (found === undefined) {
         throw new Error(
             `[NacatamalOn] createMesh: no texture loaded under key '${options.key}'. ` +

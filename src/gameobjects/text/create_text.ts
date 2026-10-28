@@ -9,6 +9,7 @@ import type { TBox } from '../../box';
 import type { TRuntimeStore } from '../../store';
 import type { TText } from './types/t_text';
 import type { TTextOptions } from './types/t_text_options';
+import { findAsset } from '../../loaders/asset_key';
 
 /**
  * Finds a font by the key it was loaded under, in this game's cache of either kind. A key that is not
@@ -21,7 +22,7 @@ const fontByKey = (store: TRuntimeStore, box: TBox, key: string): TBitmapFont | 
         return builtinFontOf(store, box, key);
     }
     const assets = store.get('assets');
-    const found = assets.fonts.get(key) ?? assets.bitmapFonts.get(key);
+    const found = findAsset(assets.fonts, key) ?? findAsset(assets.bitmapFonts, key);
     if (found === undefined) {
         throw new Error(
             `[NacatamalOn] createText: no font loaded under key '${key}'. ` +

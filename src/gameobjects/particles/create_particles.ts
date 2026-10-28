@@ -8,6 +8,7 @@ import { fileFromEffect } from '../../loaders/particles/file_from_effect';
 import type { TParticlesEffect } from '../../loaders/particles/types/t_particles_effect';
 import type { TParticlesFile } from '../../loaders/particles/types/t_particles_file';
 import type { TParticlesOptions } from './types/t_particles_options';
+import { findAsset } from '../../loaders/asset_key';
 
 /**
  * The effect the options ask for: a loaded file, the name one was loaded under, or an effect written
@@ -36,7 +37,7 @@ export const resolveEffect = (
         }
         found = fileFromEffect(store, effect as TParticlesEffect);
     } else {
-        found = getActiveGame()?.get('assets').particles.get(effect);
+        found = findAsset(getActiveGame()?.get('assets').particles, effect);
         if (found === undefined) {
             throw new Error(
                 `[NacatamalOn] ${caller}: no effect loaded under key '${effect}'. ` +

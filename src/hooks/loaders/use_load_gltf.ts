@@ -3,6 +3,7 @@ import { rootOf } from '../../box';
 import { loadGltf, newGltfModel, trackLoad } from '../../loaders';
 import { getActiveBox, getActiveGame } from '../../store';
 import type { TGltfModel, TShading } from '../../loaders';
+import { assetKey } from '../../loaders/asset_key';
 
 /**
  * Where a model comes from, and how to read it.
@@ -32,7 +33,9 @@ export type TUseLoadGltfOptions = {
      */
     textures?: boolean;
     /**
-     * What to call it in this game. Default: `src`, or `src` and the piece when one is named.
+     * What to call it in this game. Default: `src`, or `src` and the piece when one is named, as
+     * the page resolves it, so one file written two ways (on a page at the root, `./assets/a.png`
+     * and `/assets/a.png`) is kept once and found by either.
      */
     key?: string;
 };
@@ -89,7 +92,7 @@ export const useLoadGltf = ({ src, node, shading = 'auto', textures = true, key 
 
     // The piece is part of the name: one file asked for whole and asked for a piece at a time are
     // two different models, and sharing a name would hand back whichever was asked for first.
-    const cacheKey = key ?? (node !== undefined ? `${src}#${node}` : src);
+    const cacheKey = key ?? (node !== undefined ? `${assetKey(src)}#${node}` : assetKey(src));
     const { gltf } = store.get('assets');
 
     let model = gltf.get(cacheKey);

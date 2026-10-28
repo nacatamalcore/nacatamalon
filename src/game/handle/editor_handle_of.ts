@@ -11,6 +11,7 @@ import { MAX_FRAME_DELTA } from '../../CONFIG';
 import { replaceSongDoc } from '../../loaders/song';
 import { replaceMotionDoc } from '../../loaders/motion';
 import { endMotionPreview, previewMotion } from '../../motion/preview_motion';
+import { assetKey } from '../../loaders/asset_key';
 
 /**
  * Each game's running state, reachable from the instance `createGame` handed back.
@@ -132,8 +133,11 @@ export const editorHandleOf = async (instance: TGameInstance): Promise<TEditorHa
         getPostEffects: () => store.get('post').effects,
         evictAsset: (key) => {
             let dropped = false;
+            // Under its key, or under the path it resolves to when it was loaded with none.
+            const resolved = assetKey(key);
             for (const cache of Object.values(store.get('assets'))) {
                 dropped = cache.delete(key) || dropped;
+                dropped = cache.delete(resolved) || dropped;
             }
             return dropped;
         },

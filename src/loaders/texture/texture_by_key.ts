@@ -1,5 +1,6 @@
 import { getActiveGame } from '../../store';
 import type { TTexture } from './types/t_texture';
+import { findAsset } from '../asset_key';
 
 /**
  * The texture this game loaded under `key`, for something that names its picture rather than holds
@@ -11,7 +12,7 @@ import type { TTexture } from './types/t_texture';
  * @internal
  */
 export const textureByKey = (who: string, key: string): TTexture => {
-    const found = getActiveGame()?.get('assets').textures.get(key);
+    const found = findAsset(getActiveGame()?.get('assets').textures, key);
     if (found === undefined) {
         throw new Error(
             `[NacatamalOn] ${who}: no texture loaded under key '${key}'. ` +

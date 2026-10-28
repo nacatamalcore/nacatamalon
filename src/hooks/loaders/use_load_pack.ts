@@ -4,6 +4,7 @@ import { trackLoad } from '../../loaders/track_load';
 import { loadPack, newPack } from '../../loaders/pack';
 import { getActiveBox, getActiveGame } from '../../store';
 import type { TLoadedPack } from '../../loaders/pack';
+import { assetKey } from '../../loaders/asset_key';
 
 /**
  * What `useLoadPack` is asked for.
@@ -18,7 +19,9 @@ export type TUseLoadPackOptions = {
      */
     src: string;
     /**
-     * What to keep it under, so another scene can reach the same one. Defaults to `src`.
+     * What to keep it under, so another scene can reach the same one. Defaults to the folder as the
+     * page resolves it, so one file written two ways (on a page at the root, `./packs/forest` and
+     * `/packs/forest`) is kept once and found by either.
      */
     key?: string;
 };
@@ -61,7 +64,7 @@ export const useLoadPack = ({ src, key }: TUseLoadPackOptions): TLoadedPack => {
     }
 
     const folder = src.endsWith('/') ? src : `${src}/`;
-    const cacheKey = key ?? folder;
+    const cacheKey = key ?? assetKey(folder);
     const { packs } = store.get('assets');
 
     let pack = packs.get(cacheKey);

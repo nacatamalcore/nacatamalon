@@ -3,6 +3,7 @@ import { rootOf } from '../../box';
 import { loadAtlas, newAtlas, trackLoad } from '../../loaders';
 import type { TLoadedAtlas } from '../../loaders';
 import { getActiveBox, getActiveGame } from '../../store';
+import { assetKey } from '../../loaders/asset_key';
 
 /**
  * What `useLoadAtlas` is asked for.
@@ -17,7 +18,9 @@ export type TUseLoadAtlasOptions = {
      */
     src: string;
     /**
-     * What to remember it under, so another scene can ask for the same sheet. Defaults to `src`.
+     * What to remember it under, so another scene can ask for the same sheet. Defaults to `src` as
+     * the page resolves it, so one file written two ways (on a page at the root, `./assets/a.png`
+     * and `/assets/a.png`) is kept once and found by either.
      */
     key?: string;
 };
@@ -63,7 +66,7 @@ export const useLoadAtlas = ({ src, key }: TUseLoadAtlasOptions): TLoadedAtlas =
         throw new Error('[NacatamalOn] useLoadAtlas: call it inside a scene body.');
     }
 
-    const cacheKey = key ?? src;
+    const cacheKey = key ?? assetKey(src);
     const { atlases } = store.get('assets');
 
     let atlas = atlases.get(cacheKey);

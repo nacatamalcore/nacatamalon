@@ -3,6 +3,7 @@ import { rootOf } from '../../box';
 import { getActiveBox, getActiveGame } from '../../store';
 import { loadTexture, newTexture, trackLoad } from '../../loaders';
 import type { TTexture } from '../../loaders';
+import { assetKey } from '../../loaders/asset_key';
 
 /**
  * What `useLoadTexture` is asked for. Named fields rather than two positional strings, which would
@@ -19,8 +20,10 @@ export type TUseLoadTextureOptions = {
     src: string;
     /**
      * The name the game finds it by, here or in another scene: `createSprite({ texture: 'hero' })`.
-     * Defaults to `src`. One key names one file: another file asked for under a key already taken is
-     * not loaded, the first is handed back, and it is said.
+     * Defaults to `src` as the page resolves it, so one file written two ways (on a page at the
+     * root, `./assets/a.png` and `/assets/a.png`) is kept once and found by either. One key names
+     * one file: another file asked for under a key already taken is not loaded, the first is handed
+     * back, and it is said.
      */
     key?: string;
 };
@@ -55,7 +58,7 @@ export const useLoadTexture = ({ src, key }: TUseLoadTextureOptions): TTexture =
         throw new Error('[NacatamalOn] useLoadTexture: call it inside a scene body.');
     }
 
-    const cacheKey = key ?? src;
+    const cacheKey = key ?? assetKey(src);
     const { textures } = store.get('assets');
 
     let texture = textures.get(cacheKey);

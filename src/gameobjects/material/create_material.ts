@@ -5,6 +5,7 @@ import type {
 } from '../../materials';
 import type { TShader } from '../../loaders/shader';
 import type { TTexture } from '../../loaders';
+import { findAsset } from '../../loaders/asset_key';
 
 /**
  * The picture the options ask for: one given outright, or one looked up by the name it was loaded
@@ -23,7 +24,7 @@ const resolveTexture = (options: TMaterialOptions): TTexture | null => {
         return null;
     }
 
-    const found = getActiveGame()?.get('assets').textures.get(mesh.key);
+    const found = findAsset(getActiveGame()?.get('assets').textures, mesh.key);
     if (found === undefined) {
         throw new Error(
             `[NacatamalOn] createMaterial: no texture loaded under key '${mesh.key}'. ` +
@@ -46,7 +47,7 @@ const resolveEffect = (options: TMaterialOptions): TShader | null => {
         return options.effect;
     }
 
-    const found = getActiveGame()?.get('assets').shaders.get(options.effect);
+    const found = findAsset(getActiveGame()?.get('assets').shaders, options.effect);
     if (found === undefined) {
         throw new Error(
             `[NacatamalOn] createMaterial: no shader loaded under key '${options.effect}'. ` +
