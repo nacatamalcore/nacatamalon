@@ -90,6 +90,7 @@ export const createRuntimeStore = (init: TRuntimeStoreInit): TRuntimeStore => {
         actions: init.config.actions,
         touch: () => (self === null ? new Set<TBox>() : pointer.pressedBoxes(self)),
         touchMoment: () => pointer.pressedAt(),
+        mouse: pointer,
     });
 
     const state: TRuntimeState = {

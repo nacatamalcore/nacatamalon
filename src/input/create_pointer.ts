@@ -155,6 +155,24 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
      * When each button of `wentDown` went down, by its event: the first press if there were two.
      */
     const wentDownAt = new Map<TPointerButtonName, number>();
+    /**
+     * The mouse's buttons, and a pen's, with fingers left out: what an action bound to a mouse button
+     * reads. Held as of the last frame that handed events on, and the ones that went down (with when)
+     * and came up during it. A finger is not a click: it touches the screen for every button drawn on
+     * it, and would fire whatever the click is bound to each time.
+     */
+    const mouseHeld = new Set<TPointerButtonName>();
+    const mouseWentDown = new Map<TPointerButtonName, number>();
+    const mouseCameUp = new Set<TPointerButtonName>();
+    const noteMouse = (kind: TQueuedEvent['kind'], button: TPointerButtonName, time: number): void => {
+        if (kind === 'down' || kind === 'pressed') {
+            mouseHeld.add(button);
+            if (!mouseWentDown.has(button)) mouseWentDown.set(button, time);
+        } else if (kind === 'up' || kind === 'released') {
+            mouseHeld.delete(button);
+            mouseCameUp.add(button);
+        }
+    };
     const goneDown = (button: TPointerButtonName, time: number): void => {
         if (!wentDown.has(button)) {
             wentDownAt.set(button, time);
@@ -711,6 +729,8 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
             wentDown.clear();
             wentDownAt.clear();
             cameUp.clear();
+            mouseWentDown.clear();
+            mouseCameUp.clear();
 
             for (const event of events) {
                 const { screenX, screenY, button, deltaX, deltaY, pointerId } = event;
@@ -722,6 +742,9 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
                 current.pointerId = pointerId;
                 current.pointerType = event.pointerType;
                 current.time = event.time;
+                if (event.pointerType !== 'touch') {
+                    noteMouse(kind, button, event.time);
+                }
 
                 if (kind === 'leave') {
                     lastPosition = null;
@@ -871,6 +894,10 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
         justPressed: (button) => (button === undefined ? wentDown.size > 0 : wentDown.has(button)),
         justReleased: (button) => (button === undefined ? cameUp.size > 0 : cameUp.has(button)),
         pressedAt: (button) => (button === undefined ? (wentDownAt.size > 0 ? Math.min(...wentDownAt.values()) : null) : wentDownAt.get(button) ?? null),
+        isMouseDown: (button) => mouseHeld.has(button),
+        mouseJustPressed: (button) => mouseWentDown.has(button),
+        mouseJustReleased: (button) => mouseCameUp.has(button),
+        mousePressedAt: (button) => mouseWentDown.get(button) ?? null,
         position: () => lastPosition,
         isPressing: (store, target) => {
             if (active.size === 0) {
@@ -935,6 +962,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
             drags.clear();
             zones = [];
             active.clear();
+            mouseHeld.clear();
             underActive = null;
             setCursor();
         },

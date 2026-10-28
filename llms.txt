@@ -152,6 +152,13 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   a click or key press (`pointer.onDown(() => { void pointer.lock(); })`); then turn the camera with
   `movementX`/`movementY` from `onMove`, which keep changing while `screenX`/`screenY` do not.
   `isLocked()` turns `false` when the player presses Esc.
+- **The mouse in the action map**: `{ type: 'mouse', button: 'main' }` (`'main'` the left one,
+  `'right'`, `'middle'`… in `INPUT.POINTER_BUTTONS`) next to a key, `{ name: 'fire', bindings: [{
+  type: 'key', key: 'j' }, { type: 'mouse', button: 'main' }] }`, and the game reads
+  `actions.isDown('fire')` whichever it was. A pen counts; a finger never does (fingers are `touch`,
+  below). It is the keyboard's player: heard on `'any'` and `'keyboard'`, not on a pad's port. A
+  controls screen binds it only when asked, `map.capture(done, { sources: ['key', 'mouse'] })`, so a
+  click on its own Back button does not bind itself.
 - **Touch** (phones): an on-screen button is an ordinary component that says which action it presses,
   `useTouchAction('jump')` in its body: the action is held while a finger is on it, so the game still
   reads `actions.isDown('jump')`, and one `Button` component made twice with two props is two buttons

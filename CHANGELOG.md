@@ -7,6 +7,14 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **The mouse in the action map**: `{ type: 'mouse', button: 'main' }` (`'right'`, `'middle'`,
+  `'back'`, `'forward'`), so "fire" is J or a click and the game reads one action. Held like a key,
+  with its edges from the events, so a click between two frames is still a `justPressed`. A pen
+  counts and a finger does not: a finger touches the screen for every button drawn on it, and those
+  are `touch` bindings. It belongs to the keyboard's player (`'any'` and `'keyboard'`, not a pad's
+  port). `describeBinding` says `'Mouse Left'`; a controls screen binds it with
+  `capture(done, { sources: ['key', 'mouse'] })`, never by default, so a click on its own buttons
+  does not bind itself. The editor's `bind_action` takes `mouse`.
 - **Music that fades in and out with its scene**: `fadeIn` and `fadeOut`, in seconds, on `useMusic`
   and `useSong`, in a scene document and, for a song, in the editor's inspector. `fadeOut` is how
   long it takes to go down to silence when its scene stops or its object is destroyed, heard after

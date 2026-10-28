@@ -1,4 +1,5 @@
 import type { TGamepadAxisName, TGamepadButtonName } from '../../gamepad';
+import type { TPointerButtonName } from '../../pointer_buttons';
 import type { TStorePersistence } from '../../../game_store';
 
 /**
@@ -26,6 +27,12 @@ export type TActionName = string;
  * In code, a button can say itself which action it presses with `useTouchAction`, and needs no name;
  * this binding is for a map written in a project file, where a scene's button has only its name.
  *
+ * And the **mouse**: `{ type: 'mouse', button: 'main' }` is held while that button is, `'main'` the
+ * left one, then `'right'`, `'middle'`, `'back'` and `'forward'` (`INPUT.POINTER_BUTTONS`). A pen
+ * counts; a finger does not, because it touches the screen for every button drawn on it and would
+ * fire whatever the click is bound to each time: fingers are `touch`. It belongs to the keyboard's
+ * player, so it counts for a handle on `'any'` and on `'keyboard'`, and not on a pad's port.
+ *
  * `dir` on an axis is not a threshold and is not optional: it is part of **which** input this is. An
  * axis goes both ways and an action does not, so "the horizontal axis of the left stick" does not
  * name an input at all until it says which way.
@@ -44,7 +51,8 @@ export type TActionBinding =
     | { type: 'key'; key: string }
     | { type: 'button'; button: TGamepadButtonName }
     | { type: 'axis'; axis: TGamepadAxisName; dir: -1 | 1 }
-    | { type: 'touch'; box: string };
+    | { type: 'touch'; box: string }
+    | { type: 'mouse'; button: TPointerButtonName };
 
 /**
  * One named action and everything it listens to.
@@ -214,9 +222,11 @@ export type TAction = {
  */
 export type TActionCaptureOptions = {
     /**
-     * Which kinds of input can be bound. All three by default.
+     * Which kinds of input can be bound. Keys, buttons and axes by default: the mouse only when
+     * named, `['key', 'mouse']`, because a controls screen is used with the mouse too, and a click on
+     * its Back button would otherwise bind itself.
      */
-    sources?: Array<'key' | 'button' | 'axis'>;
+    sources?: Array<'key' | 'button' | 'axis' | 'mouse'>;
     /**
      * Which pad to listen to. `'any'` by default.
      */

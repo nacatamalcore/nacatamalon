@@ -387,6 +387,17 @@ export type TPointerSource = {
      */
     pressedAt(button?: TPointerButtonName): number | null;
     /**
+     * Whether the mouse (or a pen) holds `button`, as of the last `dispatch`. A finger never counts:
+     * this is what an action bound to `{ type: 'mouse' }` reads.
+     */
+    isMouseDown(button: TPointerButtonName): boolean;
+    /**
+     * Whether the mouse's `button` went down, or came up, in the last `dispatch`, and when it went down.
+     */
+    mouseJustPressed(button: TPointerButtonName): boolean;
+    mouseJustReleased(button: TPointerButtonName): boolean;
+    mousePressedAt(button: TPointerButtonName): number | null;
+    /**
      * Where the pointer was last seen over the canvas, as of the last `dispatch`, or `null`.
      */
     position(): { x: number; y: number } | null;

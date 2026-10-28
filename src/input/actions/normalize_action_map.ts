@@ -1,4 +1,5 @@
 import { GAMEPAD_AXES, GAMEPAD_BUTTONS } from '../gamepad';
+import { POINTER_BUTTONS } from '../pointer_buttons';
 import { normalizeKey } from '../normalize_key';
 import type { TActionBinding, TActionDef, TActionMap } from './types/t_action';
 
@@ -23,6 +24,9 @@ export const bindingKey = (binding: TActionBinding): string => {
     if (binding.type === 'touch') {
         return `touch:${binding.box}`;
     }
+    if (binding.type === 'mouse') {
+        return `mouse:${binding.button}`;
+    }
     return `axis:${binding.axis}:${binding.dir}`;
 };
 
@@ -44,6 +48,9 @@ const isBinding = (value: unknown): value is TActionBinding => {
     if (binding.type === 'touch') {
         const box = (binding as { box?: unknown }).box;
         return typeof box === 'string' && box.length > 0;
+    }
+    if (binding.type === 'mouse') {
+        return POINTER_BUTTONS.includes((binding as { button: never }).button);
     }
     return false;
 };

@@ -1,5 +1,17 @@
 import { GAMEPAD_BUTTON_LABELS, gamepadAxisDirectionLabel } from '../gamepad';
 import type { TActionBinding } from './types/t_action';
+import type { TPointerButtonName } from '../pointer_buttons';
+
+/**
+ * A mouse button as a controls screen prints it.
+ */
+const MOUSE_LABELS: Record<TPointerButtonName, string> = {
+    main: 'Mouse Left',
+    right: 'Mouse Right',
+    middle: 'Mouse Middle',
+    back: 'Mouse Back',
+    forward: 'Mouse Forward',
+};
 
 /**
  * A binding the way a person reads it: `'Space'`, `'A'`, `'L STICK LEFT'`.
@@ -31,6 +43,9 @@ export const describeBinding = (binding: TActionBinding): string => {
     }
     if (binding.type === 'touch') {
         return `Touch ${binding.box}`;
+    }
+    if (binding.type === 'mouse') {
+        return MOUSE_LABELS[binding.button];
     }
     return gamepadAxisDirectionLabel(binding.axis, binding.dir);
 };

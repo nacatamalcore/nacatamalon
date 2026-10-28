@@ -3,9 +3,11 @@ import { noteFoundByName } from '../../box/named_by_function';
 import { momentOf } from '../moment';
 import { DEFAULT_ACTION_PRESS, DEFAULT_DEADZONE } from '../../CONFIG';
 import { bindingKey } from './normalize_action_map';
+import { POINTER_BUTTONS } from '../pointer_buttons';
 import type { TBox } from '../../box';
 import type { TGamepad } from '../gamepad';
 import type { TKeyboardSource } from '../types/t_keyboard';
+import type { TPointerSource } from '../types/t_pointer';
 import type {
     TActionBinding, TActionCaptureOptions, TActionDef, TActionDevice, TActionMap, TActionName,
     TActionOverrides, TActionsHandle,
@@ -61,7 +63,7 @@ const NO_ACTIONS: ReadonlySet<TActionName> = new Set();
  */
 type TCapture = {
     done: (binding: TActionBinding | null) => void;
-    sources: Set<'key' | 'button' | 'axis'>;
+    sources: Set<'key' | 'button' | 'axis' | 'mouse'>;
     row: TRow;
     cancelKey: string | null;
     threshold: number;
@@ -96,6 +98,11 @@ export type TActionSourceOptions = {
      * `TPointerSource.pressedAt`.
      */
     touchMoment?: () => number | null;
+    /**
+     * The mouse's buttons, fingers left out, for mouse bindings. A game with no pointer (a test) has
+     * no mouse.
+     */
+    mouse?: Pick<TPointerSource, 'isMouseDown' | 'mouseJustPressed' | 'mouseJustReleased' | 'mousePressedAt'>;
 };
 
 /**
@@ -246,6 +253,9 @@ export const createActions = (options: TActionSourceOptions): TActionSource => {
             }
             return touchedNamed(binding.box) ? 1 : 0;
         }
+        if (binding.type === 'mouse') {
+            return row.keyboard && options.mouse?.isMouseDown(binding.button) === true ? 1 : 0;
+        }
         if (binding.type === 'button') {
             let best = 0;
             // A button's value is already undeadzoned and is analogue on the triggers, so one call
@@ -342,18 +352,22 @@ export const createActions = (options: TActionSourceOptions): TActionSource => {
     };
 
     /**
-     * Whether any of an action's keys reports a keyboard edge this frame.
+     * Whether any of an action's keys or mouse buttons reports an edge this frame. Both come from
+     * real events, so a tap or a click that went down and up between two frames is still seen.
      */
     const keyEdge = (action: TCompiled, row: TRow, released: boolean): boolean => {
         if (!row.keyboard) {
             return false;
         }
         for (const binding of action.bindings) {
-            if (binding.type !== 'key') {
-                continue;
-            }
-            if (released ? keyboard.justReleased(binding.key) : keyboard.justPressed(binding.key)) {
-                return true;
+            if (binding.type === 'key') {
+                if (released ? keyboard.justReleased(binding.key) : keyboard.justPressed(binding.key)) {
+                    return true;
+                }
+            } else if (binding.type === 'mouse' && options.mouse !== undefined) {
+                if (released ? options.mouse.mouseJustReleased(binding.button) : options.mouse.mouseJustPressed(binding.button)) {
+                    return true;
+                }
             }
         }
         return false;
@@ -377,6 +391,8 @@ export const createActions = (options: TActionSourceOptions): TActionSource => {
                 for (const pad of row.pads) {
                     take(pad.pressedAt(binding.button));
                 }
+            } else if (binding.type === 'mouse' && row.keyboard) {
+                take(options.mouse?.mousePressedAt(binding.button) ?? null);
             } else if (binding.type === 'touch' && row.touch) {
                 take(options.touchMoment?.() ?? null);
             }
@@ -503,6 +519,15 @@ export const createActions = (options: TActionSourceOptions): TActionSource => {
      * Looks for what a waiting capture wants. Runs after the rows are read, so an edge is this frame's.
      */
     const pollCapture = (capture: TCapture): void => {
+        if (capture.sources.has('mouse') && capture.row.keyboard && options.mouse !== undefined) {
+            for (const button of POINTER_BUTTONS) {
+                // Just pressed, like a pad's button: one already held when the wait began is not it.
+                if (options.mouse.mouseJustPressed(button)) {
+                    finish(capture, { type: 'mouse', button });
+                    return;
+                }
+            }
+        }
         if (capture.sources.has('button')) {
             for (const pad of capture.row.pads) {
                 for (const button of GAMEPAD_BUTTONS) {
