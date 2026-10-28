@@ -49,6 +49,9 @@ const storeOf = (target: TDrawable | TBox): TRuntimeStore | undefined =>
  * nothing: you should not have to find out whether someone else got there first. What is
  * destroyed is gone, not recycled, so keep making new ones rather than reviving old ones.
  *
+ * A sprite of something spawned goes alone: the thing it belongs to stays, with its other sprites
+ * and its `useUpdate`. `destroy(ownerOf(sprite))` takes the whole thing.
+ *
  * Images are **not** freed. Several things can be showing the same one, and the game keeps it for
  * whoever asks next, so destroying a sprite never costs the next one a reload.
  *

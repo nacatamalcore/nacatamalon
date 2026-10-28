@@ -118,7 +118,7 @@ export type {
     TPhysicsSurface, TPhysicsWorld, TPhysicsWorld2d, TPhysicsWorld3d, TCollider2d, TCollider3d,
 } from './physics';
 // Reaching a named part of something, the turret of a tank or the wheels of a car, from a behaviour.
-export { findObject, findObjects, sceneOf } from './box';
+export { findObject, findObjects, ownerOf, sceneOf } from './box';
 // How big something is and where: what is drawn flat, how a text is set and where its lines break,
 // and a point of the world measured on an object (where a hit landed on it), or a point of an
 // object found in the world (where a shot leaves it from).

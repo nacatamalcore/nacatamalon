@@ -5,6 +5,14 @@ releases are in [changelog/](./changelog/), one file each.
 
 ## Unreleased
 
+### Added
+
+- **`ownerOf(drawable)`**: the object a sprite, text or mesh belongs to, the thing `useSpawn` made
+  or the scene for one made in its body, and `null` once it or its piece is destroyed. The way back
+  from what was touched to the whole piece: `destroy(ownerOf(info.target))` takes the piece, where
+  `destroy(sprite)` takes only that sprite and leaves the piece running with its other sprites and
+  its `useUpdate`, which `destroy`'s documentation now says.
+
 ### Fixed
 
 - **One file is loaded once, however its path is written.** The cache went by the path as the game
