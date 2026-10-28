@@ -64,6 +64,13 @@ export type TRuntimeState = {
          * @internal
          */
         setFit: ((fit: TCanvasFit | null) => void) | null;
+        /**
+         * Paints the game's pixels another shape from now on (`TGameHandle.setPixelAspect`), or `null`
+         * where the game was started without a page to fit.
+         *
+         * @internal
+         */
+        setPixelAspect: ((aspect: number) => void) | null;
     };
 
     /**

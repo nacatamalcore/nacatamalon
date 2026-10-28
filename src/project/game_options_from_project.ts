@@ -36,6 +36,7 @@ export const gameOptionsFromProject = (settings: TProjectSettings): TGameOptions
     seed: settings.seed,
     smooth: settings.smooth,
     ...(settings.pixelSnap !== undefined ? { pixelSnap: settings.pixelSnap } : {}),
+    ...(settings.pixelAspect !== undefined ? { pixelAspect: settings.pixelAspect } : {}),
     msaa: settings.msaa,
     scaling: settings.scaling,
     keep: settings.keep,

@@ -32,6 +32,11 @@ export type TCanvasOptions = {
      */
     pixelRatio?: number | 'device';
     /**
+     * How wide a game pixel is painted against how tall. Defaults to `1`, square. Only the size on
+     * screen changes.
+     */
+    pixelAspect?: number;
+    /**
      * How it scales while full screen. Defaults to `'integer'`.
      */
     fullscreenScaling?: TCanvasScaling;

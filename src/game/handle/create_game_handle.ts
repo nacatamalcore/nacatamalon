@@ -64,6 +64,14 @@ export const createGameHandle = (store: TRuntimeStore, box: TBox | null = null):
 
     getPixelSnap: () => store.get('config').pixelSnap,
     setPixelSnap: (snap: TPixelSnap) => store.setState('config', { pixelSnap: snap }),
+    getPixelAspect: () => store.get('config').pixelAspect,
+    setPixelAspect: (aspect: number) => {
+        if (!(typeof aspect === 'number' && Number.isFinite(aspect) && aspect > 0)) {
+            throw new Error(`[NacatamalOn] setPixelAspect: it must be a number above 0 (1 for square pixels, 8 / 7 for the NES and the SNES), got ${String(aspect)}.`);
+        }
+        store.setState('config', { pixelAspect: aspect });
+        store.get('screen').setPixelAspect?.(aspect);
+    },
 
     hasContextMenu: () => store.get('config').contextMenu,
     setContextMenu: (open: boolean) => store.setState('config', { contextMenu: open }),

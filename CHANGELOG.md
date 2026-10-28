@@ -5,6 +5,26 @@ releases are in [changelog/](./changelog/), one file each.
 
 ## Unreleased
 
+### Added
+
+- **`pixelAspect`: pixels wider than tall, as the consoles' televisions showed them.** The NES and
+  the SNES drew 256 across a 4:3 television, so each pixel was 8:7, and with square ones their
+  games look squashed. `createGame({ pixelAspect: 8 / 7 })` paints each game pixel that much wider;
+  only the size on screen changes, and the game draws the same `width × height`, with the camera,
+  where things are, physics and the pointer as they were. With `scaling: 'integer'` the rows stay a
+  whole multiple and the columns take that times 8/7, with fractions: the television's shape
+  exactly (a whole multiple both ways is 9% too wide), at the price of columns a screen pixel apart
+  in width, which a `crt()` on top hides. `'fill'` ignores it. In `project.json` and the editor's
+  project settings ("Pixel shape"), and `useGame().setPixelAspect(aspect)` and `getPixelAspect()`
+  change it while the game runs, for a player's option. The canvas says the shape it is painted at
+  in `aspect-ratio` too, so a page whose style sheet sets `height: auto` on it keeps that shape
+  rather than the buffer's.
+- **`RENDER.CONSOLE_SCREENS`**: each console's screen to spread into `createGame`, its size, the
+  shape of its pixels and its pictures a second: `nes` and `snes` 256 × 224 at 8:7, `genesis`
+  320 × 224 at 32:35, `gameBoy` 160 × 144, `gba` 240 × 160, `ps1` and `n64` 320 × 240, all at 60.
+  `createGame('#app', { ...RENDER.CONSOLE_SCREENS.snes, scaling: 'integer' })`. Only the screen: the
+  controls are `INPUT.ACTION_PRESETS`, the colours `COLOR_LEVELS` and the television `crt()`.
+
 ### Changed
 
 - **`scaling: 'integer'` counts its whole multiple in the screen's own pixels.** On a screen at

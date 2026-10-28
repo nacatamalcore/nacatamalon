@@ -109,6 +109,24 @@ export type TGameHandle = {
      * ```
      */
     setPixelSnap(snap: TPixelSnap): void;
+    /**
+     * How wide a game pixel is painted against how tall: the game's `pixelAspect`.
+     */
+    getPixelAspect(): number;
+    /**
+     * Paints the game's pixels another shape from now on, for an option a player picks (square
+     * pixels, or the television's). Only the size on screen changes: the game draws the same
+     * pixels, and nothing in it moves. Refused unless it is a number above 0.
+     *
+     * @example
+     * ```ts
+     * const game = useGame();
+     * useUpdate(() => {
+     *     if (keys.justPressed('t')) game.setPixelAspect(game.getPixelAspect() === 1 ? 8 / 7 : 1);
+     * });
+     * ```
+     */
+    setPixelAspect(aspect: number): void;
 
     /**
      * Whether a right click over the game opens the browser's menu. `false` unless the game said

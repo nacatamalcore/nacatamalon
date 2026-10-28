@@ -2,6 +2,7 @@ import { DEFAULT_ACTION_PRESS, DEFAULT_DEADZONE, MAX_LIGHTS, MAX_PALETTE_COLORS,
 import { GAMEPAD_AXES, GAMEPAD_AXIS_LABELS, GAMEPAD_BUTTONS, GAMEPAD_BUTTON_LABELS } from './input/gamepad/gamepad_standard';
 import { POINTER_BUTTONS } from './input/pointer_buttons';
 import { ACTION_PRESETS } from './input/actions/action_presets';
+import { CONSOLE_SCREENS } from './game/console_screens';
 import { ALL_LAYERS } from './physics/layers';
 import { LINE_VERTEX_FLOATS } from './render/shared/line_vertex';
 import { CRT_PRESETS } from './post/builtin/crt_presets';
@@ -43,16 +44,20 @@ const frozen = <T>(value: T): T => {
 };
 
 /**
- * How the engine draws: the renderers `createGame` can be asked for, which pixels it draws on, and
- * how many numbers one corner of a line takes.
+ * How the engine draws: the renderers `createGame` can be asked for, which pixels it draws on, the
+ * screens of the consoles, and how many numbers one corner of a line takes.
  *
  * `TYPE.WEBGL2` is the same as writing `'WEBGL2'` in `createGame({ renderer })`. `PIXEL_SNAP.SCREEN`,
  * `GAME` and `OFF` are what `createGame({ pixelSnap })` and `useGame().setPixelSnap` take.
+ * `CONSOLE_SCREENS` is each console's screen, its size, the shape of its pixels (`pixelAspect`) and
+ * its pictures a second, to spread into `createGame`: `nes`, `snes`, `genesis`, `gameBoy`, `gba`,
+ * `ps1` and `n64`.
  * `LINE_VERTEX_FLOATS` is seven, where a corner is (`x`, `y`, `z`) and its colour (`r`, `g`, `b`,
  * `a`), for a game that writes the corners of its lines itself.
  *
  * @example
  * createGame({ renderer: RENDER.TYPE.WEBGL2, pixelSnap: RENDER.PIXEL_SNAP.GAME });
+ * createGame('#app', { ...RENDER.CONSOLE_SCREENS.snes, scaling: 'integer' });
  *
  * @category Constants
  * @since 1.0.0
@@ -69,6 +74,7 @@ export const RENDER = /* @__PURE__ */ frozen({
         GAME: 'game',
         OFF: 'off',
     } as const satisfies Record<string, TPixelSnap>,
+    CONSOLE_SCREENS,
     LINE_VERTEX_FLOATS,
 });
 

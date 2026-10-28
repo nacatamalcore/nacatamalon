@@ -117,6 +117,7 @@ const TEST_CONFIG: TGameConfig = {
     // Off here, where checks read where things are drawn to the fraction; tests of the rounding
     // turn it on.
     pixelSnap: 'off',
+    pixelAspect: 1,
     msaa: 1,
     scaling: 'contain',
     keep: 'none',

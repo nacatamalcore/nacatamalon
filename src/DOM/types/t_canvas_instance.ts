@@ -26,6 +26,11 @@ export type TCanvasInstance = {
      */
     setFit(fit: TCanvasFit | null): void;
     /**
+     * Paints the game's pixels this much wider than tall from now on (`pixelAspect`), and fits the
+     * canvas again.
+     */
+    setPixelAspect(aspect: number): void;
+    /**
      * Stops the observer, and removes the canvas only if we created it.
      */
     destroy(): void;

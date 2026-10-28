@@ -22,6 +22,11 @@ export type TRuntimeStoreInit = {
      * How a host fits the canvas another way (see `TCanvasFit`). Absent where there is no page.
      */
     setFit?: (fit: TCanvasFit | null) => void;
+    /**
+     * Paints the game's pixels another shape (`TGameHandle.setPixelAspect`). Absent where there is no
+     * page.
+     */
+    setPixelAspect?: (aspect: number) => void;
     renderer: IRenderer;
     config: TGameConfig;
 };

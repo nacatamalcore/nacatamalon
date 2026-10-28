@@ -37,6 +37,7 @@ export const fitCanvas = (canvas: HTMLCanvasElement, options: TCanvasOptions): v
         options.scaling ?? 'none',
         options.keep ?? 'both',
         resolvePixelRatio('device'),
+        options.pixelAspect ?? 1,
     );
 
     const pixelRatio = resolvePixelRatio(options.pixelRatio);
@@ -53,5 +54,9 @@ export const fitCanvas = (canvas: HTMLCanvasElement, options: TCanvasOptions): v
     canvas.style.margin = layout.cssWidth < width ? '0 auto' : '';
     canvas.style.width = `${layout.cssWidth}px`;
     canvas.style.height = `${layout.cssHeight}px`;
+    // The shape it is painted at, written out too: a page that sets `height: auto` on a canvas, as
+    // many style sheets do so it shrinks with its width, would otherwise take the buffer's shape and
+    // undo a `pixelAspect` (8:7 drawn 1.143 instead of 1.306). With the ratio said, `auto` follows it.
+    canvas.style.aspectRatio = `${layout.cssWidth} / ${layout.cssHeight}`;
     canvas.style.imageRendering = options.smooth ? 'auto' : 'pixelated';
 };

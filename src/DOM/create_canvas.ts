@@ -25,7 +25,7 @@ export const createCanvas = (parent: TGameTarget, options: TCanvasOptions): TCan
     if (!canvas.id) canvas.id = `nacatamalon-canvas-${id}`;
     if (!adopted) target.appendChild(canvas);
 
-    const current = options;
+    const current = { ...options };
     // The scaling full screen asks for, laid over the game's own while it lasts and dropped after:
     // the options themselves never change, so leaving full screen cannot lose them.
     let override: TCanvasScaling | null = null;
@@ -68,6 +68,10 @@ export const createCanvas = (parent: TGameTarget, options: TCanvasOptions): TCan
         setFit: (next) => {
             fit = next;
             rewatch();
+            fitCanvas(canvas, effective());
+        },
+        setPixelAspect: (aspect) => {
+            current.pixelAspect = aspect;
             fitCanvas(canvas, effective());
         },
         destroy: () => {

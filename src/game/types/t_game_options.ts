@@ -119,6 +119,20 @@ export type TGameOptions = {
      */
     scaling?: TCanvasScaling;
     /**
+     * How wide a game pixel is painted against how tall: `1` (default), square; `8 / 7` for the NES
+     * and the SNES, which drew 256 across a 4:3 television, so each pixel was a little wider than
+     * tall and their games look squashed with square ones; `32 / 35` for the Genesis at 320.
+     * **Writes CSS only**, like `scaling`: the game still draws `width × height`, and the camera,
+     * where things are, physics and the pointer do not change.
+     *
+     * With `scaling: 'integer'` the rows stay a whole multiple and the columns take that times
+     * `pixelAspect`, with fractions: the television's shape exactly, at the cost of columns a screen
+     * pixel apart in width, which a `crt()` on top hides. `'fill'` ignores it. See
+     * `RENDER.CONSOLE_SCREENS` for each console's size and shape together, and
+     * `useGame().setPixelAspect` to change it while the game runs.
+     */
+    pixelAspect?: number;
+    /**
      * Which sides of the resolution stay fixed. **This one writes the buffer**: anything
      * but `'both'` makes the game see more or less world instead of leaving bars.
      *

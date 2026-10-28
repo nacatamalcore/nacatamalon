@@ -81,6 +81,8 @@ export const parseProject = (value: unknown): TProjectSettings => {
         smooth: asBoolean(raw.smooth, DEFAULT_PROJECT_SETTINGS.smooth),
         // Absent follows `smooth`, so it is kept absent rather than given a default of its own.
         ...(pixelSnap !== undefined ? { pixelSnap } : {}),
+        // Absent is square, and anything that is not a number above 0 is read as absent.
+        ...(typeof raw.pixelAspect === 'number' && Number.isFinite(raw.pixelAspect) && raw.pixelAspect > 0 ? { pixelAspect: raw.pixelAspect } : {}),
         msaa: asOneOf(String(raw.msaa), ['1', '4'], '1') === '4' ? 4 : 1,
         renderer: asOneOf(raw.renderer, ['AUTO', 'WEBGPU', 'WEBGL2'] as const, DEFAULT_PROJECT_SETTINGS.renderer),
         scaling: asOneOf(raw.scaling, ['none', 'integer', 'contain', 'fill'] as const, DEFAULT_PROJECT_SETTINGS.scaling),

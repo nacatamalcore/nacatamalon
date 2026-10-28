@@ -16,7 +16,7 @@ const screenPixelsPer = (layout: { cssWidth: number; bufferWidth: number }, dens
 describe('integer scaling on screens of every density', () => {
     it('is the same as before on a density of 1', () => {
         const layout = computeCanvasLayout(160, 120, 1000, 700, 'integer', 'both', 1);
-        expect(layout).toEqual({ bufferWidth: 160, bufferHeight: 120, cssWidth: 800, cssHeight: 600, scale: 5 });
+        expect(layout).toEqual({ bufferWidth: 160, bufferHeight: 120, cssWidth: 800, cssHeight: 600, scale: 5, scaleX: 5 });
     });
 
     it.each([

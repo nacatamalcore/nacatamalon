@@ -12,7 +12,12 @@ export type TCanvasLayout = {
     /**
      * The uniform factor, in CSS pixels: with `integer` on a screen whose density is not whole it
      * has fractions (5.6 is 7 of the screen's pixels at 1.25). `fill` has none (it distorts) and
-     * reports 1.
+     * reports 1. With a `pixelAspect` other than 1 it is the height's: see `scaleX`.
      */
     scale: number;
+    /**
+     * The width's factor: `scale` times `pixelAspect`, so `scale` itself for square pixels. `fill`
+     * reports 1.
+     */
+    scaleX: number;
 };

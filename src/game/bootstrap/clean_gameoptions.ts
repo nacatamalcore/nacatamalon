@@ -39,6 +39,10 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
     if (!PIXEL_SNAPS.includes(pixelSnap)) {
         throw new Error(`[NacatamalOn] createGame: pixelSnap must be ${PIXEL_SNAPS.map((name) => `'${name}'`).join(', ')}, got ${String(game_options.pixelSnap)}.`);
     }
+    const pixelAspect = game_options.pixelAspect ?? 1;
+    if (!(typeof pixelAspect === 'number' && Number.isFinite(pixelAspect) && pixelAspect > 0)) {
+        throw new Error(`[NacatamalOn] createGame: pixelAspect must be a number above 0 (1 for square pixels, 8 / 7 for the NES and the SNES), got ${String(game_options.pixelAspect)}.`);
+    }
     const msaa = game_options.msaa || DEFAULT_GAME_OPTIONS.msaa;
     const scaling = game_options.scaling ?? DEFAULT_GAME_OPTIONS.scaling;
     const keep = game_options.keep ?? DEFAULT_GAME_OPTIONS.keep;
@@ -78,6 +82,7 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
         seed,
         smooth,
         pixelSnap,
+        pixelAspect,
         msaa,
         scaling,
         keep,

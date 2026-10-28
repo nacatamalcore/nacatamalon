@@ -25,8 +25,16 @@ const roundScale = (raw: number, scaling: TCanvasScaling, density: number): numb
  * Scale first, from the sides `keep` pins: they are the only ones with a fixed reference.
  * With nothing pinned the scale would be circular, so `keep: 'none'` stays at 1×.
  *
+ * A game pixel is `aspect` times as wide as it is tall (`pixelAspect`: 8/7 for the consoles that drew
+ * 256 across a 4:3 television). The scale is the one of its height, and its width takes that times
+ * `aspect`: with `integer` the rows stay a whole multiple and the columns come out with fractions,
+ * which is the television's shape exactly. A whole multiple both ways would be crisper and the
+ * wrong shape: 5 across and 4 down for 8:7 is a picture 9% too wide.
+ *
  * @param density The screen's pixels to a CSS one (`devicePixelRatio`): what `integer` counts its
  * whole multiple in, and what the CSS size is rounded to.
+ * @param aspect How wide a game pixel is against how tall, `1` for square. `fill` ignores it: it
+ * stretches the picture to the container anyway.
  *
  * @category Game
  * @since 1.0.0
@@ -39,8 +47,13 @@ export const computeCanvasLayout = (
     scaling: TCanvasScaling,
     keep: TCanvasKeep,
     density = 1,
+    aspect = 1,
 ): TCanvasLayout => {
     const screen = Number.isFinite(density) && density > 0 ? density : 1;
+    const wide = Number.isFinite(aspect) && aspect > 0 ? aspect : 1;
+    // As wide as the picture is drawn, in the units its height is: the game's width times how wide a
+    // pixel of it is.
+    const shownWidth = baseWidth * wide;
     const availW = Number.isFinite(availWidth) && availWidth > 0 ? availWidth : baseWidth;
     const availH = Number.isFinite(availHeight) && availHeight > 0 ? availHeight : baseHeight;
 
@@ -51,14 +64,15 @@ export const computeCanvasLayout = (
             cssWidth: Math.round(availW),
             cssHeight: Math.round(availH),
             scale: 1,
+            scaleX: 1,
         };
     }
 
     const scale =
         scaling === 'none' ? 1
-        : keep === 'both'   ? roundScale(Math.min(availW / baseWidth, availH / baseHeight), scaling, screen)
+        : keep === 'both'   ? roundScale(Math.min(availW / shownWidth, availH / baseHeight), scaling, screen)
         : keep === 'height' ? roundScale(availH / baseHeight, scaling, screen)
-        : keep === 'width'  ? roundScale(availW / baseWidth, scaling, screen)
+        : keep === 'width'  ? roundScale(availW / shownWidth, scaling, screen)
         : 1;
 
     const lockedW = keep === 'both' || keep === 'width';
@@ -67,7 +81,8 @@ export const computeCanvasLayout = (
     // `floor`, not `round`: an unlocked side is multiplied back by `scale` two lines down, so
     // rounding it up overflows the container. With an integer scale of 3 in 500px, `round`
     // gives 167 rows and paints 501px: one pixel is enough for a scrollbar.
-    const bufferWidth = lockedW ? baseWidth : Math.max(1, Math.floor(availW / scale));
+    const scaleX = scale * wide;
+    const bufferWidth = lockedW ? baseWidth : Math.max(1, Math.floor(availW / scaleX));
     const bufferHeight = lockedH ? baseHeight : Math.max(1, Math.floor(availH / scale));
 
     // Rounded to the screen's pixels, not to whole CSS ones: 160 game pixels 7 of the screen's wide
@@ -75,8 +90,9 @@ export const computeCanvasLayout = (
     return {
         bufferWidth,
         bufferHeight,
-        cssWidth: Math.round(bufferWidth * scale * screen) / screen,
+        cssWidth: Math.round(bufferWidth * scaleX * screen) / screen,
         cssHeight: Math.round(bufferHeight * scale * screen) / screen,
         scale,
+        scaleX,
     };
 };

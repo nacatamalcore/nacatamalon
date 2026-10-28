@@ -52,6 +52,11 @@ export type TProjectSettings = {
      */
     pixelSnap?: TPixelSnap;
     /**
+     * How wide a game pixel is painted against how tall: absent is `1`, square; `8 / 7` for the NES
+     * and the SNES. See `TGameOptions.pixelAspect`.
+     */
+    pixelAspect?: number;
+    /**
      * Anti-aliasing: `1` is off, which is the aliased look of the era.
      */
     msaa: 1 | 4;
