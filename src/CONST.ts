@@ -1,6 +1,7 @@
 import { DEFAULT_ACTION_PRESS, DEFAULT_DEADZONE, MAX_LIGHTS, MAX_PALETTE_COLORS, MAX_SCENE_LIGHTS, PHYSICS_LAYERS } from './CONFIG';
 import { GAMEPAD_AXES, GAMEPAD_AXIS_LABELS, GAMEPAD_BUTTONS, GAMEPAD_BUTTON_LABELS } from './input/gamepad/gamepad_standard';
 import { POINTER_BUTTONS } from './input/pointer_buttons';
+import { ACTION_PRESETS } from './input/actions/action_presets';
 import { ALL_LAYERS } from './physics/layers';
 import { LINE_VERTEX_FLOATS } from './render/shared/line_vertex';
 import { CRT_PRESETS } from './post/builtin/crt_presets';
@@ -72,11 +73,20 @@ export const RENDER = /* @__PURE__ */ frozen({
  * - `POINTER_BUTTONS`: `main`, `middle`, `right`, `back` and `forward`.
  * - `DEADZONE`: how far a stick or a trigger moves before it counts, the pad's and an action's,
  *   when nothing says. `ACTION_PRESS`: how far it moves before an action counts as pressed.
+ * - `ACTION_PRESETS`: input maps ready to use, so a game does not write its sixteen bindings by
+ *   hand. By console, `nes`, `genesis`, `snes` and `arcade`, whose actions are its buttons (`a`, `b`,
+ *   `start`; `button1` to `button6` and `coin` on an arcade), and by kind of game, `platformer`
+ *   (`jump`, `action`, `pause`). Every one has `up`, `down`, `left` and `right` on the arrows, WASD, the
+ *   d-pad and the left stick; a console's buttons sit on the pad where they sat on its own.
  *
  * @example
  * for (const button of INPUT.GAMEPAD_BUTTONS) {
  *     if (pad.pressed(button)) console.log(INPUT.GAMEPAD_BUTTON_LABELS[button]);
  * }
+ *
+ * createGame('#app', { actions: INPUT.ACTION_PRESETS.genesis });
+ * // and actions of its own, after:
+ * createGame('#app', { actions: [...INPUT.ACTION_PRESETS.nes, { name: 'dash', bindings: [{ type: 'key', key: 'c' }] }] });
  *
  * @category Constants
  * @since 1.0.0
@@ -88,6 +98,7 @@ export const INPUT = /* @__PURE__ */ frozen({
     GAMEPAD_BUTTON_LABELS,
     GAMEPAD_AXIS_LABELS,
     POINTER_BUTTONS: POINTER_BUTTONS as readonly TPointerButtonName[],
+    ACTION_PRESETS,
     DEADZONE: DEFAULT_DEADZONE,
     ACTION_PRESS: DEFAULT_ACTION_PRESS,
 });

@@ -13,4 +13,4 @@ export { createGamepads, deadzoneRadial, deadzoneScalar, GAMEPAD_AXES, GAMEPAD_A
 export { createActions, createInputMap, normalizeActionMap, bindingKey, describeBinding, INPUT_MAP_STORAGE_KEY } from './actions';
 
 export type { TGamepad, TGamepadAxisName, TGamepadButtonName, TGamepadInfo, TGamepadListener, TGamepadSource, TGamepadTarget, TRumbleOptions, TUseGamepadOptions } from './gamepad';
-export type { TAction, TActionBinding, TActionCaptureOptions, TActionDef, TActionDevice, TActionMap, TActionName, TActionOverrides, TActionPersist, TActionsHandle, TActionSource, TInputMapHandle } from './actions';
+export type { TAction, TActionBinding, TActionCaptureOptions, TActionDef, TActionDevice, TActionMap, TActionName, TActionOverrides, TActionPersist, TActionsHandle, TActionSource, TInputMapHandle, TActionPresetName } from './actions';

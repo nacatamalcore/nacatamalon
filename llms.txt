@@ -152,6 +152,13 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   a click or key press (`pointer.onDown(() => { void pointer.lock(); })`); then turn the camera with
   `movementX`/`movementY` from `onMove`, which keep changing while `screenX`/`screenY` do not.
   `isLocked()` turns `false` when the player presses Esc.
+- **An input map ready to use**: `createGame('#app', { actions: INPUT.ACTION_PRESETS.genesis })`
+  rather than sixteen bindings by hand. By console, the actions named by its buttons: `nes` (`a`,
+  `b`, `select`, `start`), `genesis` (`a`, `b`, `c`, `start`), `snes` (`a`, `b`, `x`, `y`, `l`, `r`,
+  `select`, `start`), `arcade` (`button1` to `button6`, `coin`, `start`); by kind of game,
+  `platformer` (`jump`, `action`, `pause`). Every one has `up`, `down`, `left`, `right` on the
+  arrows, WASD, the d-pad and the left stick. Actions of its own go after:
+  `[...INPUT.ACTION_PRESETS.nes, { name: 'dash', bindings: [...] }]`.
 - **The mouse in the action map**: `{ type: 'mouse', button: 'main' }` (`'main'` the left one,
   `'right'`, `'middle'`… in `INPUT.POINTER_BUTTONS`) next to a key, `{ name: 'fire', bindings: [{
   type: 'key', key: 'j' }, { type: 'mouse', button: 'main' }] }`, and the game reads

@@ -5,6 +5,7 @@ export {
     normalizeActionMap,
 } from './normalize_action_map';
 export { describeBinding } from './describe_binding';
+export type { TActionPresetName } from './action_presets';
 
 export type { TActionSource, TActionSourceOptions } from './create_actions';
 export type {

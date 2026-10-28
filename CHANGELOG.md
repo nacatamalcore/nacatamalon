@@ -7,6 +7,13 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **Input maps ready to use**, `INPUT.ACTION_PRESETS`: `nes`, `genesis`, `snes` and `arcade`, whose
+  actions are the console's buttons (`a`, `b`, `start`…; `button1` to `button6` and `coin` on an
+  arcade) sitting on the pad where they sat on its own, and `platformer` (`jump`, `action`,
+  `pause`). Every one has the four directions on the arrows, WASD, the d-pad and the left stick:
+  `createGame('#app', { actions: INPUT.ACTION_PRESETS.genesis })` instead of sixteen bindings. The
+  editor's agent starts a project's map from one with `use_action_preset`, adding only the actions
+  it does not have yet.
 - **The mouse in the action map**: `{ type: 'mouse', button: 'main' }` (`'right'`, `'middle'`,
   `'back'`, `'forward'`), so "fire" is J or a click and the game reads one action. Held like a key,
   with its edges from the events, so a click between two frames is still a `justPressed`. A pen

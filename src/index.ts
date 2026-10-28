@@ -212,7 +212,7 @@ export type { TCamera2d, TCamera2dOptions, TCamera3d, TCamera3dOptions } from '.
 export type { TFog, TFogOptions } from './fog';
 export type { TKeyboard, TKeyName, TPointerInfo, TPointerDragInfo, TPointerDragListener, TDropZoneListener, TPointerHandle, TPointerType, TPointerTouch, TPointerListener, TPointerWheelInfo, TPointerWheelListener, TPointerLockOptions, TSpriteEvents } from './input';
 export type { TGamepad, TGamepadAxisName, TGamepadButtonName, TGamepadInfo, TGamepadListener, TGamepadTarget, TRumbleOptions, TUseGamepadOptions } from './input';
-export type { TAction, TActionBinding, TActionCaptureOptions, TActionDef, TActionDevice, TActionMap, TActionName, TActionOverrides, TActionPersist, TActionsHandle, TInputMapHandle } from './input';
+export type { TAction, TActionBinding, TActionCaptureOptions, TActionDef, TActionDevice, TActionMap, TActionName, TActionOverrides, TActionPersist, TActionsHandle, TInputMapHandle, TActionPresetName } from './input';
 export type { TPointerButtonName } from './input';
 export { gamepadAxisDirectionLabel, normalizeActionMap, bindingKey, describeBinding } from './input';
 export { parseProject, gameOptionsFromProject } from './project';
