@@ -15,6 +15,21 @@ const measure = (canvas: HTMLCanvasElement): { width: number; height: number } =
 };
 
 /**
+ * The smallest margin, in CSS pixels, that starts the canvas on a whole pixel of the screen as the
+ * browser lays it out: a whole number of the screen's pixels, and a whole number of the 1/64 of a CSS
+ * pixel the browser places things in. A margin that is only the first (46.4 at a density of 1.25,
+ * 58 of the screen's) is laid out at 46.40625, a hair past the pixel, and Chromium painted a third
+ * of the columns a pixel narrower or wider. 1 at a density of 1, 4 at 1.25, 2 at 1.5, half at 2.
+ */
+const centringStep = (density: number): number => {
+    for (let pixels = 1; pixels <= 64; pixels++) {
+        const units = pixels * 64 / density;
+        if (Math.abs(units - Math.round(units)) < 1e-6) return pixels / density;
+    }
+    return 1;
+};
+
+/**
  * Applies `options` to the canvas: buffer, CSS size and filtering. Centring is horizontal
  * only: the vertical axis needs `align-items: center` on the container, which is the host's.
  *
@@ -51,7 +66,12 @@ export const fitCanvas = (canvas: HTMLCanvasElement, options: TCanvasOptions): v
     if (canvas.height !== bufferHeight) canvas.height = bufferHeight;
 
     canvas.style.display = 'block';
-    canvas.style.margin = layout.cssWidth < width ? '0 auto' : '';
+    // Centred by hand: `margin: auto` put it half the leftover in, and with the leftover odd that is
+    // part of one of the screen's pixels (46.5 CSS pixels at a density of 1.5 is 69.75 of the
+    // screen's), where a game pixel 6 of them wide was painted 5 in some columns and 7 in others,
+    // whole multiple and all. See `centringStep` for what it is rounded to.
+    const step = centringStep(resolvePixelRatio('device'));
+    canvas.style.margin = layout.cssWidth < width ? `0 0 0 ${Math.floor((width - layout.cssWidth) / 2 / step) * step}px` : '';
     canvas.style.width = `${layout.cssWidth}px`;
     canvas.style.height = `${layout.cssHeight}px`;
     // The shape it is painted at, written out too: a page that sets `height: auto` on a canvas, as

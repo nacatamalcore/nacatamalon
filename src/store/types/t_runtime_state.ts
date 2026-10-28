@@ -1,5 +1,6 @@
 import type { TCanvasFullscreen } from '../../DOM/fullscreen';
 import type { TCanvasFit } from '../../DOM/types/t_canvas_fit';
+import type { TCanvasLiveOptions } from '../../DOM/types/t_canvas_instance';
 import type { TGameConfig } from '../../game/types/t_game_config';
 import type { IRenderer } from '../../render';
 import type { TBox } from '../../box';
@@ -65,12 +66,12 @@ export type TRuntimeState = {
          */
         setFit: ((fit: TCanvasFit | null) => void) | null;
         /**
-         * Paints the game's pixels another shape from now on (`TGameHandle.setPixelAspect`), or `null`
-         * where the game was started without a page to fit.
+         * Changes how the game is fitted to the page from now on (`TGameHandle.setScaling`,
+         * `setPixelAspect`), or `null` where the game was started without a page to fit.
          *
          * @internal
          */
-        setPixelAspect: ((aspect: number) => void) | null;
+        setCanvasOptions: ((options: TCanvasLiveOptions) => void) | null;
     };
 
     /**

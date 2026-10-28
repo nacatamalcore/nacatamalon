@@ -142,7 +142,9 @@ export type TGameOptions = {
      *   the sides.
      * - `'width'`: width pinned and height follows, so a tall screen sees more above and below.
      * - `'none'`: nothing pinned, so there is no reference to scale from. Stays at 1× and
-     *   the buffer becomes the container's size.
+     *   the buffer becomes the container's size. On a screen at 125% or 150% that stretches each
+     *   game pixel to 1.25 or 1.5 of the screen's, unevenly: `pixelRatio: 'device'` keeps pixel
+     *   art crisp there.
      *
      * See {@link TCanvasKeep}.
      */

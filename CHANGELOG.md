@@ -19,6 +19,10 @@ releases are in [changelog/](./changelog/), one file each.
   change it while the game runs, for a player's option. The canvas says the shape it is painted at
   in `aspect-ratio` too, so a page whose style sheet sets `height: auto` on it keeps that shape
   rather than the buffer's.
+- **`useGame().setScaling(scaling)` and `getScaling()`**: how the game is fitted to the page,
+  changed while it runs (`'integer'`, `'contain'`, `'fill'`, `'none'`), for a player's option, crisp
+  or as large as the screen. Only the size on screen changes. While full screen its own
+  `fullscreenScaling` still wins, and this one is back once it is left.
 - **`RENDER.CONSOLE_SCREENS`**: each console's screen to spread into `createGame`, its size, the
   shape of its pixels and its pictures a second: `nes` and `snes` 256 × 224 at 8:7, `genesis`
   320 × 224 at 32:35, `gameBoy` 160 × 144, `gba` 240 × 160, `ps1` and `n64` 320 × 240, all at 60.
@@ -35,7 +39,12 @@ releases are in [changelog/](./changelog/), one file each.
   (7 at 125%, 8 at 150%), so the CSS size has fractions (5.6×). On a density of 2 it also takes the
   half steps a whole CSS multiple skipped: 5.5× where it was 5×, a little bigger and as crisp. At a
   density of 1 nothing changes, nor below 1×, nor with `'contain'`, `'fill'` or `'none'`. A window
-  dragged to a screen of another density fits again.
+  dragged to a screen of another density fits again. The canvas is also centred on a whole pixel of
+  the screen the browser can place exactly (a margin of 4 CSS pixels' steps at 1.25, 2 at 1.5), not
+  with `margin: auto`: half an odd leftover started it part of a pixel in, and Chromium then painted
+  up to a third of the columns a pixel narrower or wider. Its size is rounded down to the screen's
+  pixels, so it never overflows its space by a fraction. Checked over 256 fits (every scaling,
+  `keep`, density 1 to 2, square and 8:7 pixels, two spaces) in Chromium and WebKit.
 
 ### Fixed
 

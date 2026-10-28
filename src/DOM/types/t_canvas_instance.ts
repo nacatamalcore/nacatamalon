@@ -1,5 +1,14 @@
 import type { TCanvasFullscreen } from '../fullscreen';
 import type { TCanvasFit } from './t_canvas_fit';
+import type { TCanvasOptions } from './t_canvas_options';
+
+/**
+ * What of the canvas's options a running game can change: how it is fitted to the page.
+ *
+ * @category Game
+ * @since 1.0.0
+ */
+export type TCanvasLiveOptions = Partial<Pick<TCanvasOptions, 'scaling' | 'pixelAspect'>>;
 
 /**
  * What `createCanvas` returns.
@@ -26,10 +35,10 @@ export type TCanvasInstance = {
      */
     setFit(fit: TCanvasFit | null): void;
     /**
-     * Paints the game's pixels this much wider than tall from now on (`pixelAspect`), and fits the
-     * canvas again.
+     * Changes how the game is fitted to the page from now on (its `scaling`, its `pixelAspect`), and
+     * fits the canvas again. While full screen, its own scaling still wins until it is left.
      */
-    setPixelAspect(aspect: number): void;
+    setCanvasOptions(options: TCanvasLiveOptions): void;
     /**
      * Stops the observer, and removes the canvas only if we created it.
      */

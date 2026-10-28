@@ -79,7 +79,7 @@ describe('the canvas with wider pixels', () => {
 
     it('paints 1× tall and 8/7 wide with no scaling, and as large as fits with contain', () => {
         const none = computeCanvasLayout(256, 224, 1920, 1080, 'none', 'both', 1, SNES);
-        expect([none.cssWidth, none.cssHeight]).toEqual([293, 224]);
+        expect([none.cssWidth, none.cssHeight]).toEqual([292, 224]);
         const contain = computeCanvasLayout(256, 224, 1920, 1080, 'contain', 'both', 1, SNES);
         expect(contain.cssHeight).toBeCloseTo(1080, 0);
         expect(contain.cssWidth / contain.cssHeight).toBeCloseTo(256 * SNES / 224, 2);
@@ -128,7 +128,7 @@ describe('a game with wider pixels', () => {
     it('is changed while the game runs, refitting the canvas and moving nothing', () => {
         const { store } = snes();
         const asked: number[] = [];
-        store.setState('screen', { setPixelAspect: (aspect) => asked.push(aspect) });
+        store.setState('screen', { setCanvasOptions: (options) => asked.push(options.pixelAspect!) });
         const game = createGameHandle(store);
 
         expect(game.getPixelAspect()).toBe(SNES);

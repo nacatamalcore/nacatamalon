@@ -11,7 +11,10 @@
  *   below. The vertical-shooter version of the same idea.
  * - `'none'`: nothing pinned. With no fixed side there is no reference to compute a scale
  *   from, so it stays at 1× and the buffer becomes the container's size in CSS pixels.
- *   Desktop-app behaviour, not game behaviour.
+ *   Desktop-app behaviour, not game behaviour. On a screen at 125% or 150% a CSS pixel is 1.25 or
+ *   1.5 of the screen's, so each game pixel is stretched to that and comes out 1 of them in some
+ *   columns and 2 in others; for crisp pixel art add `pixelRatio: 'device'`, which draws at the
+ *   screen's own pixels so nothing is stretched, at the cost of drawing more of them.
  *
  * Pairs with {@link TCanvasScaling}, which is the other axis and decides how big it is drawn.
  *

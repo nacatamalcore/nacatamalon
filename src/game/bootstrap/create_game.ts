@@ -197,7 +197,7 @@ export const createGame = (target: TGameTarget, game_options: TGameOptions) => {
                 canvas: screen.canvas,
                 fullscreen: screen.fullscreen,
                 setFit: screen.setFit,
-                setPixelAspect: screen.setPixelAspect,
+                setCanvasOptions: screen.setCanvasOptions,
                 renderer: rendererInstance,
                 config: cleanedOptions as TGameConfig,
             });

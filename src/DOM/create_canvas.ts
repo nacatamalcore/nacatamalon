@@ -70,8 +70,9 @@ export const createCanvas = (parent: TGameTarget, options: TCanvasOptions): TCan
             rewatch();
             fitCanvas(canvas, effective());
         },
-        setPixelAspect: (aspect) => {
-            current.pixelAspect = aspect;
+        setCanvasOptions: (next) => {
+            Object.assign(current, next);
+            rewatch();
             fitCanvas(canvas, effective());
         },
         destroy: () => {

@@ -87,11 +87,13 @@ export const computeCanvasLayout = (
 
     // Rounded to the screen's pixels, not to whole CSS ones: 160 game pixels 7 of the screen's wide
     // at 1.25 are 896 CSS pixels exactly, and 853.33 at 1.5, which a whole CSS pixel would spoil.
+    // Down, not to the nearest: 733 game pixels at 1× on a density of 1.5 are 1099.5 of the screen's,
+    // and 1100 of them is a third of a CSS pixel more than the space, enough for a scrollbar.
     return {
         bufferWidth,
         bufferHeight,
-        cssWidth: Math.round(bufferWidth * scaleX * screen) / screen,
-        cssHeight: Math.round(bufferHeight * scale * screen) / screen,
+        cssWidth: Math.floor(bufferWidth * scaleX * screen + 1e-6) / screen,
+        cssHeight: Math.floor(bufferHeight * scale * screen + 1e-6) / screen,
         scale,
         scaleX,
     };

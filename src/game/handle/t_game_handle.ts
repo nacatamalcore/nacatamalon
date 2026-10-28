@@ -2,6 +2,7 @@ import type { TColor, TColorOption } from '../../color';
 import type { TRendererBackend } from '../../render/interface';
 import type { TAsset } from '../../loaders/types/t_asset';
 import type { TPixelSnap } from '../types/t_game_options';
+import type { TCanvasScaling } from '../../DOM/types/t_canvas_scaling';
 
 /**
  * What `onPaused` and `onResumed` are told: who held the game or let it go. `pause()` with no
@@ -127,6 +128,27 @@ export type TGameHandle = {
      * ```
      */
     setPixelAspect(aspect: number): void;
+    /**
+     * How the game is fitted to the page: the game's `scaling`.
+     */
+    getScaling(): TCanvasScaling;
+    /**
+     * Fits the game to the page another way from now on: `'integer'` (whole multiples, crisp pixel
+     * art), `'contain'` (as large as fits), `'fill'` (stretched to the page) or `'none'` (its own
+     * size). For an option a player picks, crisp or as large as the screen. Only the size on screen
+     * changes: the game draws the same pixels, and nothing in it moves. While full screen, its own
+     * `fullscreenScaling` still wins, and this one is back once it is left.
+     *
+     * @example
+     * ```ts
+     * const game = useGame();
+     * useUpdate(() => {
+     *     if (keys.justPressed('1')) game.setScaling('integer');
+     *     if (keys.justPressed('2')) game.setScaling('contain');
+     * });
+     * ```
+     */
+    setScaling(scaling: TCanvasScaling): void;
 
     /**
      * Whether a right click over the game opens the browser's menu. `false` unless the game said

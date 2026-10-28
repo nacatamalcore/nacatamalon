@@ -91,7 +91,8 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
 - **Canvas size**: `createGame` `width` and `height` are the game's size, and by default (`scaling:
   'none'`) the canvas is shown at exactly that size; it does not fit the page. Pass `scaling:
   'integer'` (whole multiples of the screen's own pixels, so crisp pixel art also on a screen at 125%,
-  where the CSS size has fractions) or `'contain'` (as large as fits).
+  where the CSS size has fractions) or `'contain'` (as large as fits). `useGame().setScaling('contain')`
+  changes it while the game runs (a player's option), and `getScaling()` reads it.
 - **A console's screen**: `createGame('#app', { ...RENDER.CONSOLE_SCREENS.snes, scaling: 'integer' })`
   gives its size, its pictures a second and the shape of its pixels (`nes`, `snes`, `genesis`,
   `gameBoy`, `gba`, `ps1`, `n64`). `pixelAspect: 8 / 7` paints each pixel wider than tall, as the NES

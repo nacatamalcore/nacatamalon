@@ -4,6 +4,7 @@ import { screenSizeOf } from '../src/DOM/screen_size';
 import { editorHandleOf, openHost } from '../src/game/handle/editor_handle_of';
 import type { TGameInstance } from '../src/game/types/t_game_instance';
 import { createTestGame } from './helpers/test_game';
+import { createGameHandle } from '../src/game/handle/create_game_handle';
 
 /**
  * A canvas fitted another way while a host asks, and back: what an editor does to look at a level
@@ -77,5 +78,45 @@ describe('fitting the canvas another way', () => {
         const other: TGameInstance = { destroy: () => {}, on: () => () => {} };
         openHost(other).resolve(bare);
         expect(() => void editorHandleOf(other).then((h) => h.setCanvasFit({ keep: 'none' }))).not.toThrow();
+    });
+});
+
+describe('fitting the canvas another way while the game runs', () => {
+    it('changes the scaling and the pixels\' shape, under a host\'s fit, and keeps them', () => {
+        const canvas = pageWith();
+        const screen = createCanvas(canvas, { width: 256, height: 240, scaling: 'integer' });
+        expect(canvas.style.width).toBe('640px');
+
+        screen.setCanvasOptions({ scaling: 'none' });
+        expect(canvas.style.width).toBe('256px');
+
+        screen.setCanvasOptions({ scaling: 'contain', pixelAspect: 8 / 7 });
+        // As tall as the 600 rows allow, and 8/7 as wide.
+        expect(canvas.style.height).toBe('600px');
+        expect(parseFloat(canvas.style.width)).toBeCloseTo(256 * 2.5 * 8 / 7, 0);
+
+        // A host's fit lies over them, and they are there again once it lets go.
+        screen.setFit({ scaling: 'none' });
+        expect(canvas.style.height).toBe('240px');
+        screen.setFit(null);
+        expect(canvas.style.height).toBe('600px');
+    });
+
+    it('is asked for through the game\'s handle, and refused for a way it does not know', () => {
+        const asked: unknown[] = [];
+        const { store } = createTestGame();
+        store.setState('screen', { setCanvasOptions: (options) => asked.push(options) });
+        const game = createGameHandle(store);
+
+        game.setScaling('integer');
+        expect(game.getScaling()).toBe('integer');
+        expect(asked).toEqual([{ scaling: 'integer' }]);
+        expect(() => game.setScaling('cover' as never)).toThrow(/setScaling: it must be 'integer', 'contain', 'fill', 'none', got cover/);
+        expect(game.getScaling()).toBe('integer');
+
+        // A game with no page (a test, a capture) keeps the setting and has nothing to fit.
+        const bare = createGameHandle(createTestGame().store);
+        expect(() => bare.setScaling('fill')).not.toThrow();
+        expect(bare.getScaling()).toBe('fill');
     });
 });

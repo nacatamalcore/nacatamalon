@@ -79,3 +79,31 @@ describe('fitting a canvas on a screen at 125%', () => {
         expect([style.width, style.height]).toEqual(['896px', '672px']);
     });
 });
+
+describe('centring a canvas on a screen of any density', () => {
+    afterEach(() => {
+        delete (globalThis as Record<string, unknown>).document;
+        delete (globalThis as Record<string, unknown>).window;
+    });
+
+    const centred = (density: number, space: number): string => {
+        (globalThis as Record<string, unknown>).document = { body: {} };
+        (globalThis as Record<string, unknown>).window = { devicePixelRatio: density, innerWidth: 1000, innerHeight: 1000 };
+        const style = {} as CSSStyleDeclaration;
+        const canvas = { width: 300, height: 150, style, parentElement: { clientWidth: space, clientHeight: 517 } } as unknown as HTMLCanvasElement;
+        fitCanvas(canvas, { width: 160, height: 120, scaling: 'integer' });
+        return style.margin;
+    };
+
+    // Half of an odd leftover is part of a screen pixel, and so is a margin on whole screen pixels
+    // that the browser cannot place exactly in its 1/64 of a CSS pixel: Chromium painted a third of
+    // the columns a pixel narrower or wider. Measured over 256 fits in Chromium and WebKit.
+    it.each([
+        [1, '0 0 0 46px'],
+        [1.25, '0 0 0 44px'],
+        [1.5, '0 0 0 46px'],
+        [2, '0 0 0 46.5px'],
+    ])('starts the canvas on a whole pixel of the screen the browser can place at %p', (density, margin) => {
+        expect(centred(density, 733)).toBe(margin);
+    });
+});

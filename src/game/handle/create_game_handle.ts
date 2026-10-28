@@ -8,6 +8,10 @@ import { releaseAsset } from '../../loaders/release_asset';
 import { onPageMoment } from '../bootstrap/watch_page';
 import type { TAsset } from '../../loaders/types/t_asset';
 import type { TPixelSnap } from '../types/t_game_options';
+import type { TCanvasScaling } from '../../DOM/types/t_canvas_scaling';
+
+/** Every way the game can be fitted to the page. */
+const SCALINGS: readonly TCanvasScaling[] = ['integer', 'contain', 'fill', 'none'];
 import type { TGameHandle, TGamePauseEvent, TGameResizeEvent } from './t_game_handle';
 
 /**
@@ -70,7 +74,15 @@ export const createGameHandle = (store: TRuntimeStore, box: TBox | null = null):
             throw new Error(`[NacatamalOn] setPixelAspect: it must be a number above 0 (1 for square pixels, 8 / 7 for the NES and the SNES), got ${String(aspect)}.`);
         }
         store.setState('config', { pixelAspect: aspect });
-        store.get('screen').setPixelAspect?.(aspect);
+        store.get('screen').setCanvasOptions?.({ pixelAspect: aspect });
+    },
+    getScaling: () => store.get('config').scaling,
+    setScaling: (scaling: TCanvasScaling) => {
+        if (!SCALINGS.includes(scaling)) {
+            throw new Error(`[NacatamalOn] setScaling: it must be ${SCALINGS.map((name) => `'${name}'`).join(', ')}, got ${String(scaling)}.`);
+        }
+        store.setState('config', { scaling });
+        store.get('screen').setCanvasOptions?.({ scaling });
     },
 
     hasContextMenu: () => store.get('config').contextMenu,
