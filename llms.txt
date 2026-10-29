@@ -421,8 +421,8 @@ const App = () => (
 - **3D**: `createMesh`, `useCubeGeometry`, `usePlaneGeometry`, `useUvSphereGeometry`, `createMaterial`, `useLoadGltf`, `createModel`, `useSkeletalAnimation` (of the model `createModel` gave back, `useSkeletalAnimation(fox, { play: 'Walk' })`: each placed model has bones of its own), `useCamera3d`, `cameraLookAt`, `useDirectionalLight`, `usePointLight`, `useSpotLight`, `useRectLight` (a panel: `width`, `height`, `range`, facing down unless turned, no shadows), `useBlobShadow`, `createParticles3d`. A shape of your own: `useLatheGeometry({ profile: [{ x, y }, ...], segments })` turns half an outline, from the bottom up, into a round solid (a bottle, a vase, a chess piece; repeat a point for a hard edge), and `createGeometry({ positions, indices?, normals?, uvs?, colors?, flat? })` takes the corners themselves (a terrain, a ramp, a trail), with `uvs` given two numbers a corner or worked out by name, `'box'` (a rock, a building), `'planar'` (a terrain), `'cylinder'` or `'sphere'`, and `uvScale` to lay the picture by the world's units (`1` a picture each unit) rather than once over the shape; `updateGeometry(geometry, data)` changes it while the game runs, from a `useUpdate`. Do not deform a sphere in a vertex hook to get a profile. A glow picture, lit windows or a screen that shines in the dark: `createMaterial({ shader: 'mesh3d', emissiveTexture })` or `createMesh({ emissiveTexture })` (a glTF's own is read from the file; a picture drawn into makes a monitor).
 - **Material maps** (extra pictures for a model's shader): `createMaterial({ shader: 'mesh3d', texture, maps: { noise, env }, fragment })` carries up to 4 named maps; the shader reads one with `sampleMap_<name>(uv)` (`sampleMap_noise(ctx.uv)`), and `envUv(ctx)` gives the coordinates of a chrome reflection (`sampleMap_env(envUv(ctx))`). A map the material lacks reads white. In the shader composer, `composerMapSample(name, uv)`, `composerEnvUv()` and `composerShine()` (prefer the composer: it writes both shader languages from one graph).
 - **Material looks** (a model's look without writing a shader): `createMaterial({ shader: 'mesh3d', tint, lighting: toonLighting({ bands: 2 }), steps: [mangaDots(), rim({ color: '#ffd966' })] })`. `lighting` is one of `toonLighting()` or `unlitLighting()`; `steps` are `mangaDots()` and `rim()`, in order. Also `createModel({ model, lighting, steps })` (every piece, bones included) and `compileShader({ shader: 'mesh3d', lighting, steps })`. Their numbers are knobs: `material.uniforms.toonShadow`, `mangaDotsSize`, `rimColor`. Not with `fragment` or `effect`.
-- **A shader written once for both cards**: hooks written by hand are one language per card, `fragment`/`vertex` in WGSL for WebGPU and `fragmentGlsl`/`vertexGlsl` for WebGL2; with WGSL alone, WebGL2 draws the built-in look and warns. Do not write each twice: build it with the shader composer, which gives both, and spread it into the material: `createMaterial({ ...compileShader({ shader: 'mesh3d', color, position }), tint })` (`shader: 'sprite2d'` for a sprite or a map). `color` is the pixel: `composerSurface()` is the picture times the tint and the corners' colour, before light, so the engine's own look is `composerMul(composerSwizzle(composerSurface(), 'rgb'), composerLight())` plus `composerShine()` and `composerEmissive()`; inputs also `composerUv()`, `composerWorldPos()`, `composerWorldNormal()`, `composerViewDir()`, `composerFrontFacing()`, `composerTextureSample(uv)`, `composerMapSample('noise', uv)`, `composerTime()`. `position` moves the corner: `composerAdd(composerVertexPosition(), composerMul(composerVertexNormal(), composerUniform('swell', 0.1)))`. `carry` hands up to four numbers from the corner to the pixel, read there with `composerCarry()`: `compileShader({ shader: 'mesh3d', position, carry: lift, color: ... composerCarry() ... })`, written with `position` so what they share is worked out once (`carry: composerVec4(composerVertexPosition(), 0)` is the model's own space). A `composerUniform('name', value)` is a knob tuned while the game runs with `material.uniforms.name = 2`. Maths: `composerAdd`, `composerSub`, `composerMul`, `composerDiv`, `composerMix`, `composerStep`, `composerSmoothstep`, `composerSin`, `composerFract`, `composerFresnel(power)`, `composerVec4(r, g, b, a)`, `composerSwizzle(node, 'rgb')`, numbers where a node goes; noise `composerSimplexNoise`, `composerFbm`, `composerCellularNoise`. Screen effects (`usePostProcess`) are not built this way: give them `fragment` and `fragmentGlsl`.
-- **What a model's material reads** (`fn effect(surface, ctx: FragContext)`): `uv`, `normal`, `worldPos`, `viewDir`, `light`, `shine`, `emissive`, `color`, `screen` (the pixel's place on the screen in game pixels, top left `(0, 0)`: for dot screens and hatches that stay put), `tangent` and `bitangent` (the way across and down the surface the picture runs, in the world: for relief and ripples) and `uv2` (a second picture coordinate, the file's `TEXCOORD_1` or `uv` again) and `frontFacing` (a `bool`: false on the far side of a material with `cull: 'none'`) and `carry` (four numbers the vertex hook wrote into `carry = vec4<f32>(...)`, smeared across the triangle: a wave's height for foam on its crests, a light worked out at the corners, or `pos` for the model's own space, so bands or a fill line stay on the model as it moves and turns). In the composer: `composerScreenPos()`, `composerUv2()`, `composerWorldTangent()`, `composerWorldBitangent()`, `composerVertexTangent()`, `composerVertexBitangent()`, `composerFrontFacing()` (1 or 0).
+- **A shader written once for both cards**: hooks written by hand are one language per card, `fragment`/`vertex` in WGSL for WebGPU and `fragmentGlsl`/`vertexGlsl` for WebGL2; with WGSL alone, WebGL2 draws the built-in look and warns. Which card is drawing is `useGame().getBackend()`, `'WEBGPU'` or `'WEBGL2'` (`createGame({ renderer: 'AUTO' })` tries WebGPU and falls back), fixed for the life of the game. Do not write each twice: build it with the shader composer, which gives both, and spread it into the material: `createMaterial({ ...compileShader({ shader: 'mesh3d', color, position }), tint })` (`shader: 'sprite2d'` for a sprite or a map). `color` is the pixel: `composerSurface()` is the picture times the tint and the corners' colour, before light, so the engine's own look is `composerMul(composerSwizzle(composerSurface(), 'rgb'), composerLight())` plus `composerShine()` and `composerEmissive()`; inputs also `composerUv()`, `composerWorldPos()`, `composerWorldNormal()`, `composerViewDir()`, `composerFrontFacing()`, `composerTextureSample(uv)`, `composerMapSample('noise', uv)`, `composerTime()`. `position` moves the corner: `composerAdd(composerVertexPosition(), composerMul(composerVertexNormal(), composerUniform('swell', 0.1)))`. `carry` hands up to four numbers from the corner to the pixel, read there with `composerCarry()`: `compileShader({ shader: 'mesh3d', position, carry: lift, color: ... composerCarry() ... })`, written with `position` so what they share is worked out once (`carry: composerVec4(composerVertexPosition(), 0)` is the model's own space). A `composerUniform('name', value)` is a knob tuned while the game runs with `material.uniforms.name = 2`. Maths: `composerAdd`, `composerSub`, `composerMul`, `composerDiv`, `composerMix`, `composerStep`, `composerSmoothstep`, `composerSin`, `composerFract`, `composerFresnel(power)`, `composerVec4(r, g, b, a)`, `composerSwizzle(node, 'rgb')`, numbers where a node goes; noise `composerSimplexNoise`, `composerFbm`, `composerCellularNoise`. Screen effects (`usePostProcess`) are not built this way: give them `fragment` and `fragmentGlsl`.
+- **What a model's material reads**: every field of `ctx` is in "What the engine hands a shader" below. In the composer: `composerScreenPos()`, `composerUv2()`, `composerWorldTangent()`, `composerWorldBitangent()`, `composerVertexTangent()`, `composerVertexBitangent()`, `composerFrontFacing()` (1 or 0).
 - **Both sides of a surface** (a leaf, a sheet, a flag, the top of a liquid): `cull: 'none'` on `createMaterial({ shader: 'mesh3d' })`, `createMesh` or `createModel`; each side is lit as the side it is, and casts. `cull: 'front'` shows a shape from inside (a dome of sky, lit from within). The default, `'back'`, throws away the side facing away. A glTF material marked `doubleSided` is drawn with `'none'`. Do not stack two planes back to back for this.
 - **A picture cut out** (a fence, a leaf, grass, hair, a paper figure, a tree of crossed planes): `alphaCutoff: 0.5` on `createMaterial({ shader: 'mesh3d' })`, `createMesh` or `createModel`. A pixel whose alpha is below it is not drawn and the rest is solid, so it hides what is behind it, needs no sorting and casts the shadow of its shape; with `cull: 'none'` both sides show. Hard pixel edges without `smooth`, rounded with it. A colour hook's own alpha is cut the same way (a dissolve), shadow included. A glTF material with `alphaMode: 'MASK'` is cut at its `alphaCutoff`. Use `transparent` only for what is truly seen through (glass, water, smoke).
 - **The 1997 look**: material options `vertexSnap` and `affine`, `useFog` (by distance, and by height with `height: { top, bottom }` for pits and valleys), `usePostProcess` with `dither`, `posterize`, `paletteMatch`, `lutGrade`, `crt` (with `POST.CRT_PRESETS`) and `POST.COLOR_LEVELS`.
@@ -447,6 +447,87 @@ const App = () => (
 - **Checking a game from a test** (Node or Bun, no browser): `createHeadlessGame({ width, height, scenes: { Level } })` from `nacatamalon/headless`; `await game.loaded()`, then `press(key)`, `run(frames)`, `release(key)`, `tap(key)`, and look with `find(name)` (an object and its drawables), `drawn()` (each sprite, text and panel on screen: `text`, `left`, `top`, `width`, `height`, `seen`) and `scenes`. A step per frame (60 a second), `seed: 1`: the same run every time. Files come from `public/` (`assets`); PNG only for pictures; physics runs once installed as the game does (`installPhysics2d()`), and `loaded()` waits for its world; silent sound; no pointer, pad or pixels. Run frames to check what the code does rather than guessing; a scene that throws throws from `run`.
 
 `nacatamalon/authoring` and `nacatamalon/extend` are for tools and engine extensions; a game never needs them.
+
+## What the engine hands a shader
+
+These names are a contract: a `.wgsl` or `.glsl` someone wrote against them keeps working, so none
+is ever renamed. The same names exist in GLSL (`mu.time`, `ctx.uv`, `sampleTexture(uv)`), with
+GLSL's types (`vec4` for `vec4<f32>`).
+
+**Every material and screen effect: `mu`.** Its parameters arrive in `mu`, the engine's first and
+always in this order, then yours by the name you gave them (`mu.charge`):
+
+| Name | Type | What it is |
+|---|---|---|
+| `mu.time` | `f32` | Game seconds: `timeScale` scales it and a pause stops it. |
+| `mu.resolution` | `vec2<f32>` | What is drawn into, in pixels. |
+| `mu.progress` | `f32` | Screen effects only: how far through its half a scene change is, 0 to 1; 0 outside one. |
+| `mu.phase` | `f32` | Screen effects only: 0 while the change covers the screen, 1 while it uncovers it; 0 outside one. |
+
+Those four names are taken. A parameter is `f32`, `vec2<f32>`, `vec3<f32>` or `vec4<f32>`, nothing
+else. The block holds 64 numbers in all, the engine's included, and a `vec3` or `vec4` starts on a
+multiple of four, so a lone number before one leaves a gap; a material that declares more draws
+the built-in look on both cards (a screen effect is skipped), and the console says so when it is made.
+
+**Sprite, text and map layer** (`shader: 'sprite2d'`, the default):
+`fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32>`.
+- `color` is the picture already read and tinted, so `return color;` draws what the engine would
+  have drawn. On a vector font's text it is the tint, with the letter's edge in its alpha.
+- `uv` is the place on the sheet, not held inside the frame: reaching elsewhere on the sheet is
+  allowed.
+- `sampleTexture(uv)` reads the sheet anywhere, also inside an `if` or a loop.
+- One effect written for a sprite works on a map layer without a word changed.
+
+**Model** (`shader: 'mesh3d'`): two hooks, both optional; the one left out does what the engine does.
+- `fn vertex(pos: vec3<f32>, ctx: VertContext) -> vec3<f32>` moves a corner, in the model's own
+  space. Writing it costs two more calls per corner, because the surface is measured again after
+  the move. It may also write `carry = vec4<f32>(...)`, four numbers handed to the colour hook.
+- `fn effect(surface: vec4<f32>, ctx: FragContext) -> vec4<f32>` colours a pixel. `surface` is the
+  picture times the tint times the painted colour. The engine's own ending is
+  `vec4<f32>(surface.rgb * ctx.light + ctx.shine + ctx.emissive, surface.a)`. Fog goes over what
+  it returns, and `alphaCutoff` cuts by its alpha.
+
+| `VertContext` | Type | What it is |
+|---|---|---|
+| `normal` | `vec3<f32>` | Which way the corner faces, in the model's space. |
+| `uv` | `vec2<f32>` | The picture's place. |
+| `color` | `vec4<f32>` | The colour painted on the corner (white if none). |
+| `tangent`, `bitangent` | `vec3<f32>` | Which way across and down the picture runs, in the model's space. |
+| `uv2` | `vec2<f32>` | A second picture coordinate: the file's `TEXCOORD_1`, or `uv` again. |
+
+| `FragContext` | Type | What it is |
+|---|---|---|
+| `uv` | `vec2<f32>` | The picture's place (already stretched if the material is `affine`). |
+| `normal` | `vec3<f32>` | Which way the surface faces, in the world. |
+| `worldPos` | `vec3<f32>` | Where the pixel is, in the world. |
+| `light` | `vec3<f32>` | The light that falls here, shadow and ambient included. Worked out at the corners and smeared between them: the look of the era. |
+| `shine` | `vec3<f32>` | The highlight, the same way. |
+| `emissive` | `vec3<f32>` | The material's own glow, through its glow picture. |
+| `viewDir` | `vec3<f32>` | From the surface towards the camera. |
+| `color` | `vec4<f32>` | The painted colour on its own (it is already in `surface`). |
+| `screen` | `vec2<f32>` | Where on the screen, in game pixels, `(0, 0)` top left. |
+| `tangent`, `bitangent` | `vec3<f32>` | Which way across and down the picture runs, in the world. |
+| `uv2` | `vec2<f32>` | The second picture coordinate. |
+| `frontFacing` | `bool` | False only on the far side of a material with `cull: 'front'` or `'none'`. |
+| `carry` | `vec4<f32>` | What the vertex hook wrote in `carry`, smeared across the triangle; zero if nothing. |
+
+Helpers: `sampleTexture(uv)`, `sampleMap_<name>(uv)` for each of the material's `maps` (white if
+the map is missing), and `envUv(ctx)`, where a chrome reflection lands on a round picture of the
+surroundings (`sampleMap_env(envUv(ctx))`).
+
+**Screen effect** (`usePostProcess({ fragment })`): `fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32>`,
+`color` being the frame already read at `uv`.
+
+| Helper | What it reads |
+|---|---|
+| `sampleTexture(uv)` | The frame, pixel by pixel. |
+| `sampleTextureSmooth(uv)` | The frame blended between pixels: for blurs, bends and smaller passes. |
+| `sampleInput(uv)` | The frame the effect was handed; differs from `sampleTexture` only in an effect with `passes`. |
+| `sampleHistory(uv)` | What the effect showed last frame (black at first; white if it did not ask for it). |
+| `paletteSize()`, `paletteColor(i)` | The palette given to the effect: how many colours, and colour `i`. |
+| `lutSize()`, `lutTexel(x, y, slice, size)`, `lutColor(rgb)` | The colour table given to it: `lutColor` grades a colour. |
+
+An effect reads one data picture: a palette or a colour table, never both.
 
 ## Getting help and sharing
 
