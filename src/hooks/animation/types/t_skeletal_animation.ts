@@ -1,6 +1,47 @@
 import type { TClipEvent } from '../../../animation';
 
 /**
+ * How one movement of a model plays: what its sprite twin, `TAnimationClip`, says on the clip, said
+ * here because **a glTF file has nowhere to put it**. The format says what moves and when, and
+ * nothing about whether it goes round or what any moment of it means. Somebody has to decide, once
+ * for each movement, and this is where.
+ *
+ * Left out, a field is the animator's own (`loop`, `repeat`, `yoyo` of the options).
+ *
+ * @category Animation
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TSkeletalClipOptions = {
+    /**
+     * Whether it goes round for ever. A `repeat` says how many times instead.
+     */
+    loop?: boolean;
+    /**
+     * How many **extra** times it runs after the first: `2` is three times, then it ends, telling
+     * `onEnd`. Negative is for ever. Given, `loop` is not looked at.
+     */
+    repeat?: number;
+    /**
+     * Whether each time it runs again it comes back the other way.
+     */
+    yoyo?: boolean;
+    /**
+     * Moments inside it worth being told about: the instant a blow lands, a foot meets the ground, a
+     * spell leaves the hand. **`at` is in seconds from its start**, because a movement off a file is
+     * a continuous thing with no pictures in it to count. Passed on the way there, not on the way
+     * back.
+     */
+    events?: readonly TClipEvent[];
+    /**
+     * The movement to play when this one ends, eased into by the animator's `fade`: an attack that
+     * goes back to standing. A name the file has no movement for is said once, and it rests where it
+     * ended.
+     */
+    next?: string;
+};
+
+/**
  * What to ask a model's bones to do.
  *
  * @category Animation
@@ -13,19 +54,21 @@ export type TSkeletalAnimationOptions = {
      */
     play?: string;
     /**
-     * Whether it goes round for ever. Default `true`. A `repeat` says how many times instead.
+     * Whether a movement goes round for ever. Default `true`. A `repeat` says how many times instead.
+     * One movement's own, in `clips`, comes first.
      */
     loop?: boolean;
     /**
      * How many **extra** times a movement runs after the first, as a tween's `repeat`: `2` is three
      * times, then it ends, telling `onEnd`. A negative number means for ever. Given, it says it and
-     * `loop` is not looked at.
+     * `loop` is not looked at. One movement's own, in `clips`, comes first.
      */
     repeat?: number;
     /**
      * Whether each time a movement runs again it comes back the other way, as a tween's `yoyo`: a
      * breath, a sway, a door that swings to and fro, from a movement that only goes one way. Marks
-     * are passed on the way there, not on the way back. Default `false`.
+     * are passed on the way there, not on the way back. Default `false`. One movement's own, in
+     * `clips`, comes first.
      */
     yoyo?: boolean;
     /**
@@ -37,25 +80,23 @@ export type TSkeletalAnimationOptions = {
      */
     fade?: number;
     /**
-     * Moments inside a movement worth being told about, by the name of the movement they are in:
-     * the instant a blow lands, a foot meets the ground, a spell leaves the hand.
-     *
-     * **`at` is in seconds from the start of that movement**, because a movement off a file is a
-     * continuous thing with no pictures in it to count.
-     *
-     * They are asked for here rather than written on the movement because **a glTF file has nowhere
-     * to put them**: the format says what moves and when, and nothing at all about what any of it
-     * is supposed to mean. Somebody has to decide, and this is where.
+     * How each movement plays, by its name in the file: whether it goes round, how many times, what
+     * comes after it and the moments worth being told about. A movement not named here plays as the
+     * options above say. See `TSkeletalClipOptions`.
      *
      * @example
      * ```ts
      * useSkeletalAnimation(fighter, {
      *     play: 'Idle',
-     *     events: { Attack: [{ at: 0.42, name: 'hit' }] },
+     *     clips: {
+     *         Death: { loop: false },
+     *         Attack: { loop: false, next: 'Idle', events: [{ at: 0.42, name: 'hit' }] },
+     *         Breathe: { yoyo: true },
+     *     },
      * });
      * ```
      */
-    events?: Readonly<Record<string, readonly TClipEvent[]>>;
+    clips?: Readonly<Record<string, TSkeletalClipOptions>>;
 };
 
 /**

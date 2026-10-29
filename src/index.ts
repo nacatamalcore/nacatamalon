@@ -161,7 +161,7 @@ export { useColor } from './hooks';
 export type { TColor, TColorInput, TColorOption } from './color';
 export type { TScene, TSceneFn } from './scene';
 export type { TUseLoadShaderOptions } from './hooks';
-export type { TUseLoadTextureOptions, TUseLoadAtlasOptions, TUseLoadGltfOptions, TSkeletalAnimation, TSkeletalAnimationOptions, TSceneHandle, TGameObject, TSpawnOptions } from './hooks';
+export type { TUseLoadTextureOptions, TUseLoadAtlasOptions, TUseLoadGltfOptions, TSkeletalAnimation, TSkeletalAnimationOptions, TSkeletalClipOptions, TSceneHandle, TGameObject, TSpawnOptions } from './hooks';
 export type { TSpriteAnimation, TSpriteAnimationOptions, TAnimationClip } from './hooks';
 export type { TTweenOptions, TTweenTargetOptions, TTweenFields, TTweenHandle, TTweenStarter } from './hooks';
 export type { TTimer, TTimerHandle } from './hooks';

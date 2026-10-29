@@ -241,10 +241,10 @@ const step = (scene: TBox, seconds: number): void => { runHookUpdates(scene, sec
 afterEach(() => { mock.restore(); });
 
 describe('moments marked on a model movement', () => {
-    const HIT = { Attack: [{ at: 0.4, name: 'hit' }] };
+    const HIT = { Attack: { events: [{ at: 0.4, name: 'hit' }] } };
 
     it('passes the mark when the movement reaches that second', async () => {
-        const { scene, moves, restore } = await withRig({ play: 'Attack', loop: false, events: HIT });
+        const { scene, moves, restore } = await withRig({ play: 'Attack', loop: false, clips: HIT });
         const heard: Array<[string, string]> = [];
         moves.onEvent((event, clip) => heard.push([event, clip]));
 
@@ -256,7 +256,7 @@ describe('moments marked on a model movement', () => {
     });
 
     it('passes it once, not on every frame after it', async () => {
-        const { scene, moves, restore } = await withRig({ play: 'Attack', loop: false, events: HIT });
+        const { scene, moves, restore } = await withRig({ play: 'Attack', loop: false, clips: HIT });
         const heard: string[] = [];
         moves.onEvent((event) => heard.push(event));
 
@@ -268,7 +268,7 @@ describe('moments marked on a model movement', () => {
     });
 
     it('counts a mark a long frame stepped clean over', async () => {
-        const { scene, moves, restore } = await withRig({ play: 'Attack', loop: false, events: HIT });
+        const { scene, moves, restore } = await withRig({ play: 'Attack', loop: false, clips: HIT });
         const heard: string[] = [];
         moves.onEvent((event) => heard.push(event));
 
@@ -280,7 +280,7 @@ describe('moments marked on a model movement', () => {
 
     it('counts a mark on the very first instant', async () => {
         const { scene, moves, restore } = await withRig({
-            play: 'Attack', loop: false, events: { Attack: [{ at: 0, name: 'start' }] },
+            play: 'Attack', loop: false, clips: { Attack: { events: [{ at: 0, name: 'start' }] } },
         });
         const heard: string[] = [];
         moves.onEvent((event) => heard.push(event));
@@ -291,7 +291,7 @@ describe('moments marked on a model movement', () => {
     });
 
     it('counts it once a time through when the movement goes round', async () => {
-        const { scene, moves, restore } = await withRig({ play: 'Attack', loop: true, events: HIT });
+        const { scene, moves, restore } = await withRig({ play: 'Attack', loop: true, clips: HIT });
         const heard: string[] = [];
         moves.onEvent((event) => heard.push(event));
 
@@ -306,7 +306,7 @@ describe('moments marked on a model movement', () => {
 
     it('counts a mark on the last instant, and counts it before saying the movement ended', async () => {
         const { scene, moves, restore } = await withRig({
-            play: 'Attack', loop: false, events: { Attack: [{ at: 1, name: 'land' }] },
+            play: 'Attack', loop: false, clips: { Attack: { events: [{ at: 1, name: 'land' }] } },
         });
         const order: string[] = [];
         moves.onEvent((event) => order.push(event));
@@ -318,7 +318,7 @@ describe('moments marked on a model movement', () => {
     });
 
     it('passes nothing while the movement runs backwards', async () => {
-        const { scene, moves, restore } = await withRig({ play: 'Attack', loop: true, events: HIT });
+        const { scene, moves, restore } = await withRig({ play: 'Attack', loop: true, clips: HIT });
         const heard: string[] = [];
         moves.onEvent((event) => heard.push(event));
 
@@ -334,7 +334,7 @@ describe('moments marked on a model movement', () => {
             play: 'Attack',
             loop: true,
             fade: 0.5,
-            events: { Attack: [{ at: 0.4, name: 'hit' }], Idle: [{ at: 0.4, name: 'breathe' }] },
+            clips: { Attack: { events: [{ at: 0.4, name: 'hit' }] }, Idle: { events: [{ at: 0.4, name: 'breathe' }] } },
         });
         const heard: string[] = [];
         moves.onEvent((event) => heard.push(event));
@@ -348,7 +348,7 @@ describe('moments marked on a model movement', () => {
     });
 
     it('stops telling the one that asked to be let go', async () => {
-        const { scene, moves, restore } = await withRig({ play: 'Attack', loop: false, events: HIT });
+        const { scene, moves, restore } = await withRig({ play: 'Attack', loop: false, clips: HIT });
         const heard: string[] = [];
         const stop = moves.onEvent((event) => heard.push(event));
 

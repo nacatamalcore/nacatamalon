@@ -38,6 +38,13 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- **A model says how each movement plays in `clips`, its marks with them.** `useSkeletalAnimation`
+  takes `clips: { Death: { loop: false, next: 'Idle' }, Attack: { repeat: 2, events: [...] } }`: what
+  a sprite's clip says, said per movement because a glTF has nowhere to put it. A movement not
+  named plays by the options. A game that kept a table of which movements loop and called
+  `setLoop` before each `play` (the Flatwood example did) needs neither, and `next` plays what comes
+  after one that ends, eased in by `fade`. The marks moved there: `events: { Attack: [...] }` is now
+  `clips: { Attack: { events: [...] } }`, one place for all a movement says.
 - **A model's movement played backwards that does not go round ends at its start.** With a negative
   `setSpeed` and `loop: false` it stopped at the beginning without telling anybody; it now says so
   with `onEnd`, as one played forwards does at its end.

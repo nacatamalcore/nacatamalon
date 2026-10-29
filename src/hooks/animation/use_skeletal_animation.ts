@@ -73,7 +73,7 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
      * How many times it has started again since it was played.
      */
     let repeats = 0;
-    const yoyo = options.yoyo ?? false;
+    let yoyo = options.yoyo ?? false;
     /**
      * `1` going from the start of the movement to its end, `-1` coming back, which a `yoyo` does
      * every other time.
@@ -105,7 +105,7 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
      * a mark at `0` belongs to the time through that is starting.
      */
     const markBetween = (name: string, from: number, to: number, fromStart: boolean): void => {
-        const marks = options.events?.[name];
+        const marks = options.clips?.[name]?.events;
         if (marks === undefined || marks.length === 0 || eventListeners.length === 0) {
             return;
         }
@@ -141,6 +141,7 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
     } | null = null;
 
     const known = (): string[] => Object.keys(file.clips);
+    const warnedNext = new Set<string>();
 
     /**
      * Puts the bones back the way the model was made.
@@ -184,10 +185,14 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
         time = 0;
         reached = false;
         playing = true;
-        // A negative repeat means for ever, as it does for a tween; with none, `loop` says yes or no.
-        const repeat = options.repeat ?? (loop ? -1 : 0);
+        // The movement's own first, then the animator's. A negative repeat means for ever, as it does
+        // for a tween; with none, `loop` says yes or no.
+        const own = options.clips?.[name];
+        const repeat = own?.repeat
+            ?? (own?.loop !== undefined ? (own.loop ? -1 : 0) : options.repeat ?? (loop ? -1 : 0));
         repeatsLeft = repeat < 0 ? Infinity : repeat;
         repeats = 0;
+        yoyo = own?.yoyo ?? options.yoyo ?? false;
         direction = 1;
     };
 
@@ -377,6 +382,18 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
             // change the list being walked.
             for (const listener of [...listeners]) {
                 listener(ended);
+            }
+            // What the movement says comes after it, unless a listener has already started
+            // something else: what a script asks for on the spot wins over what was said in general.
+            const next = options.clips?.[ended]?.next;
+            if (next !== undefined && !playing && clipName === ended) {
+                if (file.clips[next] !== undefined) {
+                    start(next, defaultFade);
+                } else if (!warnedNext.has(next)) {
+                    // Said once per missing name, not every time it ends. It rests where it ended.
+                    warnedNext.add(next);
+                    console.warn(`[NacatamalOn] useSkeletalAnimation: no movement called '${next}' to play after '${ended}'. It knows: ${known().join(', ')}.`);
+                }
             }
         }
     });

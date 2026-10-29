@@ -171,12 +171,15 @@ const ON_ONE_BONE = {
     weights: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
 };
 
-/** A bone that slides ten along x over a second. */
+/** A bone that slides ten along x over a second in one movement, and rises twenty in the other. */
 const withRig = async (options: TSkeletalAnimationOptions) => {
     const { json, bin } = asGltf({
         nodes: [{ name: 'Mesh', skin: 0, primitives: [ON_ONE_BONE] }, { name: 'Bone' }],
         skins: [{ joints: [1] }],
-        animations: [{ name: 'Slide', channels: [{ node: 1, path: 'translation', times: [0, 1], values: [0, 0, 0, 10, 0, 0] }] }],
+        animations: [
+            { name: 'Slide', channels: [{ node: 1, path: 'translation', times: [0, 1], values: [0, 0, 0, 10, 0, 0] }] },
+            { name: 'Rise', channels: [{ node: 1, path: 'translation', times: [0, 1], values: [0, 0, 0, 0, 20, 0] }] },
+        ],
     });
     serveGltf({ 'model.gltf': json, 'model.bin': bin });
     const { store } = createTestGame();
@@ -193,7 +196,8 @@ const withRig = async (options: TSkeletalAnimationOptions) => {
     // The frame the file shows up on starts the movement.
     runHookUpdates(scene, 0);
     const at = (): number => Math.round(model.skeletons[0]!.pose[0]!.t[0]! * 100) / 100;
-    return { moves, at, step: (seconds: number) => runHookUpdates(scene, seconds) };
+    const up = (): number => Math.round(model.skeletons[0]!.pose[0]!.t[1]! * 100) / 100;
+    return { moves, at, up, step: (seconds: number) => runHookUpdates(scene, seconds) };
 };
 
 describe('a model\'s movement that repeats', () => {
@@ -232,7 +236,7 @@ describe('a model\'s movement that repeats', () => {
     });
 
     it('passes its marks on the way there, once each time, and not on the way back', async () => {
-        const { moves, step } = await withRig({ yoyo: true, events: { Slide: [{ at: 0.5, name: 'mid' }] } });
+        const { moves, step } = await withRig({ yoyo: true, clips: { Slide: { events: [{ at: 0.5, name: 'mid' }] } } });
         let marks = 0;
         moves.onEvent(() => { marks++; });
         // There (mark), back (none), there again (mark).
@@ -249,5 +253,55 @@ describe('a model\'s movement that repeats', () => {
         moves.setLoop(false);
         step(1);
         expect(ended).toEqual(['Slide']);
+    });
+});
+
+describe('each movement of a model played its own way', () => {
+    it('goes round or plays once by what its own clip says, with no setLoop between', async () => {
+        const { moves, step } = await withRig({ play: 'Slide', clips: { Rise: { loop: false } } });
+        const ended: string[] = [];
+        moves.onEnd((clip) => ended.push(clip));
+        // Slide says nothing of its own: it goes round, as the animator does.
+        step(2.5);
+        expect(ended).toEqual([]);
+        moves.play('Rise');
+        step(1.5);
+        expect(ended).toEqual(['Rise']);
+    });
+
+    it('takes its own repeat and yoyo over the animator\'s', async () => {
+        const { moves, at, step } = await withRig({ play: 'Slide', repeat: -1, clips: { Slide: { repeat: 0, yoyo: true } } });
+        const ended: string[] = [];
+        moves.onEnd((clip) => ended.push(clip));
+        step(1.25);
+        // Once, so no way back: it ended at the end.
+        expect(ended).toEqual(['Slide']);
+        expect(at()).toBe(10);
+    });
+
+    it('plays what comes after it, and says once when there is no such movement', async () => {
+        const warn = mock(() => {});
+        const was = console.warn;
+        console.warn = warn;
+        try {
+            const { moves, up, step } = await withRig({ play: 'Slide', clips: { Slide: { loop: false, next: 'Rise' }, Rise: { loop: false, next: 'Fly' } } });
+            step(1.25);
+            expect(moves.clip).toBe('Rise');
+            step(0.5);
+            expect(up()).toBe(10);
+            step(1);
+            step(1);
+            expect(warn).toHaveBeenCalledTimes(1);
+            expect(String(warn.mock.calls[0])).toContain("no movement called 'Fly' to play after 'Rise'");
+        } finally {
+            console.warn = was;
+        }
+    });
+
+    it('lets a listener of onEnd choose what comes next over what the clip says', async () => {
+        const { moves, step } = await withRig({ play: 'Slide', clips: { Slide: { loop: false, next: 'Rise' } } });
+        moves.onEnd(() => { moves.play('Slide'); });
+        step(1.25);
+        expect(moves.clip).toBe('Slide');
     });
 });
