@@ -98,10 +98,10 @@ const animatedFrame = (map: TTilemap, run: string): number | null => {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const buildLayerMesh = (map: TTilemap, layer: TTilemapLayer): { still: Float32Array; moving: Float32Array } => {
+export const buildLayerMesh = (map: TTilemap, layer: TTilemapLayer): { still: Float32Array; moving: Float32Array; firstVertex: Uint32Array } => {
     const sheet = map.atlas;
     if (sheet === null || sheet.status !== 'ready') {
-        return { still: new Float32Array(0), moving: new Float32Array(0) };
+        return { still: new Float32Array(0), moving: new Float32Array(0), firstVertex: new Uint32Array(0) };
     }
     // With its cut, when the file gives one: a sheet with a margin or a packed one is not a plain grid.
     const atlas: TSpriteAtlas = {
@@ -137,8 +137,12 @@ export const buildLayerMesh = (map: TTilemap, layer: TTilemapLayer): { still: Fl
     const moving = new Float32Array(movingCells * FLOATS_PER_CELL);
     let stillAt = 0;
     let movingAt = 0;
+    // Where each cell starts in the still batch, the empty ones where the next one does: what lets a
+    // camera draw only the cells it shows (`tileRuns`).
+    const firstVertex = new Uint32Array(layer.data.length + 1);
 
     for (let i = 0; i < layer.data.length; i++) {
+        firstVertex[i] = stillAt / TILE_CORNER_FLOATS;
         const id = layer.data[i];
         if (id === 0) {
             continue;
@@ -170,9 +174,11 @@ export const buildLayerMesh = (map: TTilemap, layer: TTilemapLayer): { still: Fl
 
     // A tile whose frame was out of the sheet left a gap, so what was written can be shorter than
     // what was counted.
+    firstVertex[layer.data.length] = stillAt / TILE_CORNER_FLOATS;
     return {
         still: stillAt === still.length ? still : still.subarray(0, stillAt),
         moving: movingAt === moving.length ? moving : moving.subarray(0, movingAt),
+        firstVertex,
     };
 };
 

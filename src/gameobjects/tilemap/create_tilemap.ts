@@ -46,9 +46,10 @@ const uploadMesh = (renderer: IRenderer, mesh: TTileMesh, data: Float32Array): v
  */
 const rebuildLayer = (renderer: IRenderer, layer: TTilemapLayer): void => {
     const state = openLayerState(layer);
-    const { still, moving } = buildLayerMesh(layer.map, layer);
+    const { still, moving, firstVertex } = buildLayerMesh(layer.map, layer);
     uploadMesh(renderer, state.still, still);
     uploadMesh(renderer, state.moving, moving);
+    state.still.grid = { columns: layer.map.width, rows: layer.map.height, cell: layer.map.cell, firstVertex };
     state.dirty = false;
 };
 

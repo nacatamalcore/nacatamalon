@@ -374,7 +374,7 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
                     gl.useProgram(state.masks!.tilemap.program);
                     gl.uniform1i(state.masks!.tilemap.reading, writes.channel === 'luminance' ? 1 : 0);
                 }
-                drawTilemapLayer(gl, state.tilemaps, item, cameraIndex[i] ?? -1, ctx.time, width, height, writes === null ? null : state.masks!.tilemap);
+                drawTilemapLayer(gl, state.tilemaps, item, cameraIndex[i] ?? -1, ctx.time, width, height, writes === null ? null : state.masks!.tilemap, drawn.cameras ?? []);
                 // The layer's program left none of the sprite state set.
                 spritesReady = false;
                 continue;

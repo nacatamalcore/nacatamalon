@@ -2,6 +2,7 @@ import type { TFog } from '../../fog/types/t_fog';
 import type { TDrawable } from '../../gameobjects/types';
 import { screenSizeOf } from '../../DOM/screen_size';
 import { collectDrawables } from './helper/collect_drawables';
+import { sightOf } from '../../render/shared/sight_2d';
 import { lookAgainAtParticles, stepSceneParticles } from './helper/step_scene_particles';
 import { stepSceneTilemaps } from './helper/step_scene_tilemaps';
 import type { IRenderer } from '../../render';
@@ -511,6 +512,7 @@ const gatherTree = (
     pictures: TBox[],
     viewport: TSeenThrough | null = null,
     again = false,
+    size: { width: number; height: number } | null = null,
 ): TWorldSeen => {
     const { drawables, cameraIndex, cameras, views3d, viewIndex } = lists;
     const levels = lists.masks?.levels ?? null;
@@ -541,7 +543,15 @@ const gatherTree = (
     // Parallax is measured against the scene's own camera, where the game has it, even when a tool
     // looks through one of its own: a far layer is where the game would draw it, and panning the
     // tool's view moves it with everything else rather than sliding it away by most of the pan.
-    collectDrawables(root, drawables as TDrawable[], cameraIndex, sceneCamera, false, null, 0, colliders, pictures, screenCamera, root.camera2d, null, snapping, lists.masks);
+    // What each of its cameras shows, in the size this pass is drawn: a flat drawable outside it is
+    // left out as it is collected. Not known, as for a canvas with no size yet, nothing is.
+    const sights = size !== null && size.width > 0 && size.height > 0
+        ? {
+            scene: sightOf(sceneCamera >= 0 ? cameras[sceneCamera] : null, size.width, size.height),
+            pinned: sightOf(screenCamera >= 0 ? cameras[screenCamera] : null, size.width, size.height),
+        }
+        : null;
+    collectDrawables(root, drawables as TDrawable[], cameraIndex, sceneCamera, false, null, 0, colliders, pictures, screenCamera, root.camera2d, null, snapping, lists.masks, null, null, sights);
     // A tool showing only some kinds: dropped before anything else is worked out for them, so a kind
     // nobody is looking at costs no sorting, no lamps and no particles stepped.
     const layers = viewport?.layers ?? null;
@@ -709,7 +719,7 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
         pictureColliders.set(box, colliders);
     }
     const found: TBox[] = [];
-    const own = gatherTree(box, lists, delta, colliders, found);
+    const own = gatherTree(box, lists, delta, colliders, found, null, false, { width: picture.texture.width, height: picture.texture.height });
 
     let pass = picturePasses.get(box);
     if (pass === undefined) {
@@ -741,7 +751,7 @@ const secondPass = (store: TRuntimeStore, seenThrough: TSeenThrough, clearColor:
     const lists = newLists();
     for (const scene of store.get('world').scenes) {
         if (!scene.held) {
-            gatherTree(scene, lists, 0, { flat: [], deep: [] }, [], seenThrough, true);
+            gatherTree(scene, lists, 0, { flat: [], deep: [] }, [], seenThrough, true, { width: target.width / target.pixelRatio, height: target.height / target.pixelRatio });
         }
     }
     const pass: TRenderPass = {
@@ -766,6 +776,10 @@ export const fillFrameContext = (store: TRuntimeStore, ctx: TFrameContext, delta
     // Game objects while collecting and sorting; only sprites once texts are expanded.
     const lists = newLists();
     const scenes = store.get('world').scenes;
+    // The game's pixels the screen is drawn in, which is what its cameras show.
+    const shown = store.get('screen').canvas;
+    const ratio = shown === null || shown === undefined ? 1 : screenSizeOf(shown).pixelRatio;
+    const screenSize = shown === null || shown === undefined ? null : { width: shown.width / ratio, height: shown.height / ratio };
     inside.length = 0;
     watching.length = 0;
 
@@ -782,7 +796,7 @@ export const fillFrameContext = (store: TRuntimeStore, ctx: TFrameContext, delta
         sceneColliders[sceneIndex] ??= { flat: [], deep: [] };
         const found: TBox[] = [];
         // The screen is the one pass a tool's own cameras reach; see `TRuntimeState.viewport`.
-        const seen = gatherTree(scene, lists, delta, sceneColliders[sceneIndex], found, store.get('viewport'));
+        const seen = gatherTree(scene, lists, delta, sceneColliders[sceneIndex], found, store.get('viewport'), false, screenSize);
         for (const box of found) {
             gatherPicture(box, seen, delta);
         }

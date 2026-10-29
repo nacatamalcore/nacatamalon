@@ -8,6 +8,7 @@ import type { TDrawable } from '../../../gameobjects/types';
 import type { TTransform2d } from '../../../gameobjects/types/t_transform_2d';
 import type { TCamera2d } from '../../../camera';
 import { cameraAsDrawn, onPixels, pixelsPerUnit } from '../../../camera/camera_as_drawn';
+import type { TSight } from '../../../render/shared/sight_2d';
 import { pivotPlace } from '../../../render/shared/pivot_place';
 import { layoutOfText } from '../../../layout/measure_text';
 import { spriteHeight, spriteWidth } from '../../../render/shared/sprite_size';
@@ -228,6 +229,61 @@ const cornerOffset = (drawable: TSprite | TText | TNineSlice, base: TTransform2d
 };
 
 /**
+ * Whether a flat drawable puts anything inside what a camera shows (`sightOf`): its picture where it
+ * is drawn, held by its anchor, turned about its pivot and grown, as the renderer and the pointer
+ * place it. What is not a sprite, a text or a panel is always kept: a map, a shape, particles and
+ * everything in depth are judged elsewhere, or not at all.
+ *
+ * A text is measured as it is laid out this frame, the layout its drawing takes, and kept within its
+ * own height of the camera: a letter can reach a little past the block it is laid out in, the soft
+ * edge of a distance-field one most of all.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const inSight = (drawable: TDrawable, sight: TSight): boolean => {
+    if (drawable.type !== 'sprite' && drawable.type !== 'text' && drawable.type !== 'nine-slice') {
+        return true;
+    }
+    let width: number;
+    let height: number;
+    let pad = 0;
+    if (drawable.type === 'sprite') {
+        width = spriteWidth(drawable);
+        height = spriteHeight(drawable);
+    } else if (drawable.type === 'nine-slice') {
+        width = drawable.width;
+        height = drawable.height;
+    } else {
+        const layout = layoutOfText(drawable);
+        if (drawable.font.type === 'font' || drawable.font.meta !== null) {
+            keepTextLayout(drawable, layout);
+        }
+        width = layout.width;
+        height = layout.height;
+        pad = height;
+    }
+    const base = drawable.worldTransform ?? drawable.transform;
+    const anchor = drawable.anchor ?? (drawable.type === 'text' ? TOP_LEFT : MIDDLE);
+    const held = drawable.pivot ?? anchor;
+    const place = pivotPlace(base, drawable, anchor, width, height, pivotScratch);
+    // The picture spans `(0 to 1 - held) * size * scale` from its place, turned with it: its middle,
+    // and how far it reaches from there along the world's two axes.
+    const sx = width * place.scaleX;
+    const sy = height * place.scaleY;
+    const c = Math.cos(place.rotation);
+    const s = Math.sin(place.rotation);
+    const mx = (0.5 - held.x) * sx;
+    const my = (0.5 - held.y) * sy;
+    const cx = place.x + mx * c - my * s;
+    const cy = place.y + mx * s + my * c;
+    const hx = (Math.abs(sx * c) + Math.abs(sy * s)) / 2 + pad;
+    const hy = (Math.abs(sx * s) + Math.abs(sy * c)) / 2 + pad;
+    return cx + hx >= sight.minX && cx - hx <= sight.maxX && cy + hy >= sight.minY && cy - hy <= sight.maxY;
+};
+
+/**
  * How far back a corner goes when it falls exactly between two pixels of the grid of
  * `pixelsPerUnit`: to the one before. Left to the graphics card, that tie went either way, so the
  * same sprite came out a column apart in WebGPU and in WebGL2, or with a column twice and its last
@@ -351,6 +407,7 @@ export const collectDrawables = (
     masks: TMaskWalk | null = null,
     level: TMaskLevel | null = null,
     shapeOf: readonly TMask[] | null = null,
+    sights: { readonly scene: TSight; readonly pinned: TSight } | null = null,
 ): void => {
     // Before the check for hidden, because a hidden screen is a screen switched off: its picture is
     // still drawn, with nothing in it. The top of the walk is the picture's own, and is not stopped.
@@ -386,6 +443,7 @@ export const collectDrawables = (
         }
     }
     const shown = shapes === null || shapes.some((mask) => mask.showShape);
+    const sight = sights === null ? null : pinned ? sights.pinned : sights.scene;
     // What is pinned to the screen does not see the camera, so it has no parallax either.
     const parallax = pinned ? null : box.parallax ?? inherited;
     // What is pinned to the screen is drawn at zoom 1, where a pixel of the screen is one of the game.
@@ -410,11 +468,17 @@ export const collectDrawables = (
                 continue;
             }
         }
+        // Wholly outside what its camera shows: nothing after this sorts it, lays it out, counts it or
+        // writes it for the card. After the shape is noted, since a mask's shape off the screen still
+        // cuts what is on it.
+        if (sight !== null && !inSight(drawable, sight)) {
+            continue;
+        }
         out.push(drawable);
         cameraIndex.push(view);
         masks?.levels.push(here);
     }
     for (const child of box.children) {
-        collectDrawables(child, out, cameraIndex, sceneCamera, pinned, world, depth + 1, colliders, pictures, screenCamera, camera, parallax, snap, masks, here, shapes);
+        collectDrawables(child, out, cameraIndex, sceneCamera, pinned, world, depth + 1, colliders, pictures, screenCamera, camera, parallax, snap, masks, here, shapes, sights);
     }
 };

@@ -7,6 +7,17 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **What a 2D camera cannot see is not drawn.** A sprite, a text or a panel wholly outside what its
+  camera shows, in the size each pass is drawn (the screen, a picture, a capture), is left out as
+  the frame is collected: nothing after that sorts it, lays it out, counts it or writes it for the
+  card, and the pointer does not look through it either. Placed as it is drawn, parallax and
+  `pixelSnap` included, held by its anchor, turned about its pivot; a text measured as it is laid
+  out that frame. Measured with 60,000 sprites in a field the camera looks away from: from about
+  52 ms a frame to under 10. A map layer draws only the rows of cells its camera shows, as one
+  draw when it is seen whole as before: where each cell starts among its corners is noted when the
+  layer is built, four bytes a cell. Its cycling tiles, shapes and particles are drawn whole as
+  before. Every frame of the native parity scenes is the same pixel for pixel.
+
 - **What a camera cannot see is not drawn.** A model wholly outside a view is skipped before it
   costs anything there (its numbers, its draw, every corner the card would have moved), judged per
   camera, so what one leaves out another still draws, and its shadow judged by the light, so one

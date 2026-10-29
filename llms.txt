@@ -246,7 +246,9 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   `alpha`, `zIndex`, `castShadow`, `alwaysDrawn` and `boundsMargin` for every piece at once, set any time, even before the file
   arrives (its pieces arrive so); `destroy(model)` takes it all. `parts` is for one piece alone (the
   glass of a car).
-- **What the camera cannot see is not drawn**: a model whose box is wholly outside a view is skipped
+- **What the camera cannot see is not drawn**: a sprite, a text or a panel wholly outside what its 2D
+  camera shows is left out as the frame is collected, and a map layer draws only the rows of cells
+  its camera shows (a shape and particles are always drawn whole). In 3D, a model whose box is wholly outside a view is skipped
   there, each camera on its own, its shadow judged by the light. A material with a `vertex` hook
   moves corners no box knows about, so its model is always drawn until it says how far they go:
   `createMesh({ material: waves, boundsMargin: 0.4 })` (in its own units; bones are measured

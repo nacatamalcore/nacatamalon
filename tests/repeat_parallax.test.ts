@@ -351,9 +351,9 @@ describe('parallax and blend on a text and a panel, as on a sprite', () => {
 
     it('adds a glowing text and panel to what is behind, every letter and every piece', () => {
         const { drawn } = drawnWithCamera(() => {
-            createText({ text: 'AB', font, blend: 'additive' });
-            createNineSlice({ texture: panelPicture, slice: 8, width: 40, height: 20, blend: 'additive' });
-            createText({ text: 'ABCDE', font });
+            createText({ text: 'AB', font, blend: 'additive', transform: at(200, 100) });
+            createNineSlice({ texture: panelPicture, slice: 8, width: 40, height: 20, blend: 'additive', transform: at(200, 100) });
+            createText({ text: 'ABCDE', font, transform: at(200, 100) });
         });
         const glowing = drawn.filter((piece) => piece.blend === 'additive');
         // Two letters and nine pieces; the plain text's five letters cover as before.

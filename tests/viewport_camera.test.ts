@@ -39,7 +39,8 @@ const level = (store: ReturnType<typeof createTestGame>['store']) => {
         own3d = useCamera3d({ projection: 'perspective', transform: { z: 5 } });
         own2d = useCamera2d({ transform: { x: 10 } });
         createMesh({ geometry: useCubeGeometry() });
-        createSprite({ width: 8, height: 8 });
+        // Where every camera these tests pan to still sees it: what a camera does not see is not drawn.
+        createSprite({ width: 8, height: 8, transform: { x: 100, y: 50 } });
         return createScene();
     });
     return { own3d, own2d };
@@ -70,7 +71,7 @@ describe('the viewport cameras', () => {
     it('give a scene with no 2D camera of its own one to be looked at through', () => {
         const { store } = createTestGame();
         startTestScene(store, 'Flat', () => {
-            createSprite({ width: 8, height: 8 });
+            createSprite({ width: 8, height: 8, transform: { x: 100, y: 50 } });
             return createScene();
         });
         const panning = createCamera2d({ transform: { x: 40 } });
@@ -152,7 +153,7 @@ describe('the viewport cameras', () => {
         // A level with a HUD pinned to the screen: the level's sprite, then the HUD's.
         const withHud = (store: ReturnType<typeof createTestGame>['store']) => {
             startTestScene(store, 'Level', () => {
-                createSprite({ width: 8, height: 8 });
+                createSprite({ width: 8, height: 8, transform: { x: 100, y: 50 } });
                 useSpawn(() => {
                     useScreenSpace();
                     createSprite({ width: 4, height: 4 });

@@ -23,6 +23,7 @@ import type { TDrawTexture } from './t_draw_texture';
  */
 import type { TDrawShader } from './t_draw_material';
 import type { TUniformValues } from '../../../materials/types/t_uniforms';
+import type { TTileGrid } from '../../shared/tile_runs';
 
 export type TDrawTilemapLayer = {
     readonly type: 'tilemap';
@@ -38,9 +39,10 @@ export type TDrawTilemapLayer = {
     readonly worldTransform?: { x: number; y: number; rotation: number; scaleX: number; scaleY: number };
     /**
      * The corners: `x, y, u, v` each, three per triangle and two triangles per cell. Written by the
-     * engine, read by the backend, and rewritten in place when a cell changes.
+     * engine, read by the backend, and rewritten in place when a cell changes. A batch with a `grid`
+     * is drawn only where a camera shows it (`tileRuns`); one without is drawn whole.
      */
-    readonly meshes: ReadonlyArray<{ buffer: IBuffer | null; vertexCount: number }>;
+    readonly meshes: ReadonlyArray<{ buffer: IBuffer | null; vertexCount: number; grid?: TTileGrid | null }>;
     /**
      * The sheet every cell takes its picture from.
      */

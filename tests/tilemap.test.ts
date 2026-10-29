@@ -363,6 +363,20 @@ describe('the corners of a layer', () => {
         expect(Array.from(still.slice(32, 40))).toEqual([8, 8, 0.25, 1, ...window]);
     });
 
+    it('notes where each cell starts among the still corners, an empty or cycling one where the next does', async () => {
+        const { map } = await withMap();
+        const layer = map.layers[0];
+        const { still, firstVertex } = buildLayerMesh(map, layer);
+
+        expect(firstVertex).toHaveLength(layer.data.length + 1);
+        expect(firstVertex[layer.data.length]).toBe(still.length / 8);
+        for (let i = 0; i < layer.data.length; i++) {
+            const tile = map.tiles[layer.data[i]!];
+            const writes = layer.data[i] !== 0 && tile !== undefined && tile.anim === undefined;
+            expect(firstVertex[i + 1]! - firstVertex[i]!).toBe(writes ? 6 : 0);
+        }
+    });
+
     it('reads a flipped tile\'s piece of the sheet the other way round', async () => {
         const { map } = await withMap();
         map.tiles[1] = { ...map.tiles[1]!, flipX: true, flipY: true };

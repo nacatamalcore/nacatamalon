@@ -392,7 +392,7 @@ describe('masks found twice in a frame', () => {
             useMask({ rect: { x: -20, y: -10, width: 40, height: 30 } }).add(box);
             return createScene();
         });
-        store.setState('viewport', { screen2d: createCamera2d({ transform: { x: 300, y: 0 } }) });
+        store.setState('viewport', { screen2d: createCamera2d({ transform: { x: 30, y: 0 } }) });
         // Pinned to the screen, so the screen's pass sees it through the tool's camera for that.
         store.get('world').scenes[0]!.children[0]!.screenSpace = true;
         const alone = screenOf(frame(store)).stencil![0]!.scissor;

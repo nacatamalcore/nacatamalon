@@ -317,7 +317,7 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
                 // A mask's shape drawn as a layer writes the stencil instead of colour.
                 const writes = state !== null && state.write !== 'none' && state.write !== 'reset' ? state : null;
                 drawTilemapLayer(gpu.device, gpuPass, gpu.tilemaps, item, cameraIndex[i] ?? -1, layerSlot, ctx.time, width, height,
-                    writes === null ? null : gpu.masks!.tilemap(writes.channel, writes.write as 'add' | 'sub'));
+                    writes === null ? null : gpu.masks!.tilemap(writes.channel, writes.write as 'add' | 'sub'), drawn.cameras ?? []);
                 layerSlot++;
                 // The layer's pipeline left none of the sprite state set.
                 spritesReady = false;

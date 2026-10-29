@@ -6,6 +6,9 @@ import { MAX_VIEWS } from '../sprite/write_sprite_instance';
 import type { TDrawTilemapLayer } from '../../interface';
 import type { TTilemapPipeline } from './types/t_tilemap_pipeline';
 import { worldOf } from '../../shared/world_of';
+import { tileRuns } from '../../shared/tile_runs';
+import { sightOf } from '../../shared/sight_2d';
+import type { TDrawCamera2d } from '../../interface';
 
 /**
  * The sheet of a layer, read the way it asked, made the first time that pairing is drawn.
@@ -120,6 +123,7 @@ export const drawTilemapLayer = (
     width: number,
     height: number,
     mask: GPURenderPipeline | null = null,
+    cameras: readonly TDrawCamera2d[] | null = null,
 ): void => {
     // Not drawn until the sheet is there, exactly like a sprite: a map of white squares for one
     // frame is worse than a map that appears a moment later.
@@ -157,7 +161,20 @@ export const drawTilemapLayer = (
         if (mesh.buffer === null || mesh.vertexCount === 0) {
             continue;
         }
+        // Only the rows of cells the camera shows, as few draws as there are stretches of them. The
+        // camera the shader places it by: one past what it holds draws through the screen.
+        const seenBy = camera >= 0 && camera < MAX_VIEWS - 1 ? cameras?.[camera] ?? null : null;
+        const runs = cameras !== null && mesh.grid != null ? tileRuns(mesh.grid, worldOf(layer), sightOf(seenBy, width, height)) : null;
+        if (runs !== null && runs.length === 0) {
+            continue;
+        }
         gpuPass.setVertexBuffer(0, toGpuBuffer(mesh.buffer));
-        gpuPass.draw(mesh.vertexCount);
+        if (runs === null) {
+            gpuPass.draw(mesh.vertexCount);
+            continue;
+        }
+        for (let r = 0; r < runs.length; r += 2) {
+            gpuPass.draw(runs[r + 1], 1, runs[r]);
+        }
     }
 };

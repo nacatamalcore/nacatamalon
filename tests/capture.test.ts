@@ -40,7 +40,7 @@ const driven = () => {
     startTestScene(store, 'Level', () => {
         own = useCamera3d({ projection: 'perspective', transform: { z: 5 } });
         createMesh({ geometry: useCubeGeometry() });
-        createSprite({ width: 8, height: 8 });
+        createSprite({ width: 8, height: 8, transform: { x: 100, y: 50 } });
         return createScene();
     });
 

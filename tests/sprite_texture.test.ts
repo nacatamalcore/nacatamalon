@@ -348,7 +348,8 @@ describe('the world inside a picture', () => {
             picture = createSpriteTexture({ width: 8, height: 8 }, () => {
                 screenCamera = useCamera2d({ transform: { x: 50 } });
                 deep = useCamera3d({ projection: 'perspective' });
-                block();
+                // Where that camera looks, or it is not drawn at all.
+                createSprite({ width: 10, height: 10, transform: { x: 54, y: 4 } });
             });
             return createScene();
         });

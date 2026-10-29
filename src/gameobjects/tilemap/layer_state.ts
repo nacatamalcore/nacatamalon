@@ -1,5 +1,6 @@
 import type { IBuffer, TDrawTilemapLayer } from '../../render/interface';
 import type { TTilemapLayer } from './types/t_tilemap';
+import type { TTileGrid } from '../../render/shared/tile_runs';
 
 /**
  * One batch of corners on the graphics card, and how many of them are being drawn.
@@ -16,6 +17,11 @@ export type TTileMesh = {
     buffer: IBuffer | null;
     vertexCount: number;
     capacity: number;
+    /**
+     * Where each cell starts, for the still batch of a layer, so a camera draws only the cells it
+     * shows. `null` for one drawn whole: the cycling cells, and a shape drawn as a layer.
+     */
+    grid?: TTileGrid | null;
 };
 
 /**
