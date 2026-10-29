@@ -63,6 +63,21 @@ const resolveTexture = (options: TNineSliceOptions): TTexture => {
  * };
  * ```
  *
+ * @example
+ * ```ts
+ * // The borders belong to the picture, not to each panel: write them once, and if the frame is
+ * // redrawn there is only one number to change.
+ * const PANEL = { key: 'panel', slice: 8 };
+ *
+ * export const Inventory: TSceneFn = () => {
+ *     useLoadTexture({ src: '/assets/ui/panel.png', key: 'panel' });
+ *     createNineSlice({ ...PANEL, width: 200, height: 64, transform: { x: 160, y: 60 } });
+ *     createNineSlice({ ...PANEL, width: 120, height: 40, transform: { x: 160, y: 140 } });
+ *
+ *     return createScene();
+ * };
+ * ```
+ *
  * @param options - Its picture, borders, size, place and look: see {@link TNineSliceOptions}.
  * @returns The nine-slice. Change its fields to resize or move it; `destroy(panel)` removes it.
  *
