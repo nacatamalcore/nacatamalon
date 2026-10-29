@@ -1,5 +1,5 @@
 import { buildTilemapMaterialShaderGlsl } from './tilemap_material_shader';
-import { buildUniformLayout, writeUniformValues } from '../../shared/material_uniforms';
+import { buildUniformLayout, MAX_MATERIAL_FLOATS, writeUniformValues } from '../../shared/material_uniforms';
 import { compileProgram } from '../utils/compile_program';
 import { MATERIAL_UNIFORMS_BINDING } from './uniform_block';
 import { FRAME_UNIFORMS_BINDING } from '../bindings';
@@ -42,7 +42,7 @@ type TCompiled = {
  */
 export const createTilemapMaterials = (gl: WebGL2RenderingContext) => {
     const compiled = new Map<string, TCompiled>();
-    const values = new Float32Array(64);
+    const values = new Float32Array(MAX_MATERIAL_FLOATS);
     const warned = new Set<string>();
 
     let parameters: WebGLBuffer | null = null;
@@ -50,6 +50,10 @@ export const createTilemapMaterials = (gl: WebGL2RenderingContext) => {
     const build = (material: TDrawShader): TCompiled => {
         const layout = buildUniformLayout(material.uniformSig ?? {});
         const empty: TLayerLocations = { position: null, scale: null, rotation: null, view: null, tint: null };
+        // Too many numbers for its slot. Said once where it was made (`checkParameterRoom`).
+        if (layout.floatCount > MAX_MATERIAL_FLOATS) {
+            return { program: null, locations: empty, layout, failed: true };
+        }
         const sources = buildTilemapMaterialShaderGlsl(material.fragmentGlsl as string, material.uniformSig ?? {});
 
         try {

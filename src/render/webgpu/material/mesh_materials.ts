@@ -1,6 +1,6 @@
 import { buildMeshMaterialShader, buildMeshMaterialShadowShader, MESH_MATERIAL_GROUP, MESH_MATERIAL_JOINTS_BINDING } from './mesh_material_shader';
 import { failWithLines } from './fail_with_lines';
-import { buildUniformLayout, writeUniformValues } from '../../shared/material_uniforms';
+import { buildUniformLayout, MAX_MATERIAL_FLOATS, writeUniformValues } from '../../shared/material_uniforms';
 import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
 import { toGpuTexture } from '../texture';
@@ -15,11 +15,6 @@ import type { TCullMode, TUniformValues } from '../../../materials';
  * and for the same reason: the card will only point at a multiple of it.
  */
 export const MESH_MATERIAL_STRIDE = 256;
-
-/**
- * How many numbers that leaves, which is what a material may not exceed.
- */
-const MAX_MATERIAL_FLOATS = MESH_MATERIAL_STRIDE / 4;
 
 type TCompiled = {
     pipeline: GPURenderPipeline | null;
@@ -141,11 +136,8 @@ export const createMeshMaterials = (
         const layout = buildUniformLayout(material.uniformSig ?? {});
         const mapNames = mapNamesOf(material.fragment);
 
+        // Too many numbers for its slot. Said once where it was made (`checkParameterRoom`).
         if (layout.floatCount > MAX_MATERIAL_FLOATS) {
-            console.warn(
-                `[NacatamalOn] the material "${material.name ?? 'mesh material'}" declares more parameters ` +
-                `than fit in ${MESH_MATERIAL_STRIDE} bytes. It is drawing with the built-in shader instead.`,
-            );
             return { pipeline: null, transparentPipeline: null, layout, failed: true, pending: false, mapNames };
         }
         if (mapNames.length > MAX_MATERIAL_MAPS) {

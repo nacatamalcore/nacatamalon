@@ -53,6 +53,18 @@ export const POST_ENGINE_FIELDS: [string, TUniformType][] = [
 ];
 
 /**
+ * How many numbers one material's parameters may take, the engine's own included.
+ *
+ * One slot of 256 bytes, the smallest step WebGPU will point at in a buffer the materials share.
+ * WebGL2 could take more and is held to the same, so a material draws the same on both cards.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const MAX_MATERIAL_FLOATS = 64;
+
+/**
  * Where every parameter lives, and the text that declares them, worked out together.
  *
  * @internal

@@ -1,5 +1,5 @@
 import { buildMeshMaterialShaderGlsl, buildMeshMaterialShadowShaderGlsl } from './mesh_material_shader';
-import { buildUniformLayout, writeUniformValues } from '../../shared/material_uniforms';
+import { buildUniformLayout, MAX_MATERIAL_FLOATS, writeUniformValues } from '../../shared/material_uniforms';
 import { compileProgram } from '../utils/compile_program';
 import { MATERIAL_UNIFORMS_BINDING } from './uniform_block';
 import { MESH_EMISSIVE_UNIT, MESH_JOINTS_UNIT, MESH_LIGHTS_BINDING, MESH_MAP_UNITS, MESH_SHADOW_UNIT, MESH_TEXTURE_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
@@ -54,7 +54,7 @@ type TMaterialShadow = {
  */
 export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
     const compiled = new Map<string, TCompiled>();
-    const values = new Float32Array(64);
+    const values = new Float32Array(MAX_MATERIAL_FLOATS);
     const warned = new Set<string>();
 
     let parameters: WebGLBuffer | null = null;
@@ -62,6 +62,10 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
     const build = (material: TDrawShader, skinned: boolean, cull: TCullMode): TCompiled => {
         const layout = buildUniformLayout(material.uniformSig ?? {});
         const mapNames = mapNamesOf(material.fragmentGlsl);
+        // Too many numbers for its slot. Said once where it was made (`checkParameterRoom`).
+        if (layout.floatCount > MAX_MATERIAL_FLOATS) {
+            return { program: null, layout, failed: true, mapNames };
+        }
         if (mapNames.length > MAX_MATERIAL_MAPS) {
             console.warn(
                 `[NacatamalOn] the material "${material.name ?? 'mesh material'}" reads ${mapNames.length} maps ` +

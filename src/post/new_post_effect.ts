@@ -1,5 +1,6 @@
 import { createRecord } from '../gameobjects/create_record';
 import { deriveSignature, POST_RULES } from '../materials/derive_signature';
+import { checkParameterRoom } from '../materials/check_parameter_room';
 import type { TPostEffect, TPostSource } from './types/t_post_effect';
 import type { TPostProcessOptions } from './types/t_post_options';
 import type { TShader } from '../loaders/shader/types/t_shader';
@@ -24,6 +25,9 @@ export const newPostEffect = (
     // Given rather than worked out when the caller already knows, which is how one of the engine's
     // own arrives: it was written with its kinds and should not have them guessed back off values.
     const sig = options.uniformSig ?? deriveSignature(asked, POST_RULES);
+    if (shader === null) {
+        checkParameterRoom(sig, POST_RULES, options.name ?? null);
+    }
 
     return createRecord('post', {
         name: options.name ?? null,

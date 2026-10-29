@@ -1,6 +1,6 @@
 
 import { failWithLines } from './fail_with_lines';
-import { buildUniformLayout, writeUniformValues } from '../../shared/material_uniforms';
+import { buildUniformLayout, MAX_MATERIAL_FLOATS, writeUniformValues } from '../../shared/material_uniforms';
 import { FLAT_DEPTH } from '../frame/depth';
 import { ADDITIVE_BLEND, ALPHA_BLEND } from '../frame/blend';
 import type { TDrawShader } from '../../interface/draw/t_draw_material';
@@ -42,11 +42,6 @@ export type TFlatMaterialKind = {
  * use for theirs.
  */
 export const FLAT_MATERIAL_STRIDE = 256;
-
-/**
- * How many numbers that leaves, which is what a material may not exceed.
- */
-const MAX_MATERIAL_FLOATS = FLAT_MATERIAL_STRIDE / 4;
 
 /**
  * One compiled effect, or the record that it would not compile.
@@ -116,11 +111,8 @@ export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) 
         const layout = buildUniformLayout(material.uniformSig ?? {});
         const source = material.fragment as string;
 
+        // Too many numbers for its slot. Said once where it was made (`checkParameterRoom`).
         if (layout.floatCount > MAX_MATERIAL_FLOATS) {
-            console.warn(
-                `[NacatamalOn] the material "${material.name ?? 'flat material'}" declares more parameters ` +
-                `than fit in ${FLAT_MATERIAL_STRIDE} bytes. It is drawing with the built-in shader instead.`,
-            );
             return { pipeline: null, layout, failed: true, pending: false };
         }
 

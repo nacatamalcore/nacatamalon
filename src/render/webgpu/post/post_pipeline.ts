@@ -1,6 +1,6 @@
 import { buildPostShader, POST_UNIFORMS_BINDING } from './post_shader';
 import { failWithLines } from '../material/fail_with_lines';
-import { buildUniformLayout, POST_ENGINE_FIELDS, writeUniformValues } from '../../shared/material_uniforms';
+import { buildUniformLayout, MAX_MATERIAL_FLOATS, POST_ENGINE_FIELDS, writeUniformValues } from '../../shared/material_uniforms';
 import { createWebGPUDataTexture, createWebGPURenderTexture } from '../resources';
 import { toGpuTexture } from '../texture';
 import { passSize, postStepsOf } from '../../shared/post_steps';
@@ -16,7 +16,7 @@ const SLOT = 256;
 /**
  * How many numbers fit in one, which is also the cap on how many knobs one effect may have.
  */
-const SLOT_FLOATS = SLOT / 4;
+const SLOT_FLOATS = MAX_MATERIAL_FLOATS;
 
 type TCompiled = {
     pipeline: GPURenderPipeline | null;
@@ -197,11 +197,8 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
      */
     const build = (effect: Pick<TPostEffect, 'name' | 'id' | 'fragment' | 'uniformSig'>, now = false): TCompiled => {
         const layout = buildUniformLayout(effect.uniformSig, POST_ENGINE_FIELDS);
+        // Too many numbers for its slot. Said once where it was made (`checkParameterRoom`).
         if (layout.floatCount > SLOT_FLOATS) {
-            console.warn(
-                `[NacatamalOn] the effect "${effect.name ?? 'post'}" asks for more numbers than one ` +
-                'effect can hold. It is being skipped.',
-            );
             return { pipeline: null, layout, failed: true, pending: false };
         }
 

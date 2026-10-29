@@ -101,6 +101,13 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **A material with more numbers than it holds draws the built-in look on WebGL2 too.** A material
+  or a screen effect holds 64 numbers, `mu.time` and `mu.resolution` included; on WebGL2 one that
+  asked for more threw out of the middle of every frame, so nothing else in the game was drawn
+  either. Now both cards draw it the built-in way (a screen effect is skipped), and it is said once,
+  when the material or effect is made, with how many it needs, rather than by WebGPU alone when it
+  was first drawn.
+
 - **A model whose file's bone weights do not add up to one is read as if they did.** A file rounded
   on the way out often misses by a little, which left a bending corner a hair off where its bones
   put it; now each corner's four are brought back to one when it is read. A corner moved by no bone

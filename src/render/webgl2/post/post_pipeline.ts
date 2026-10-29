@@ -1,5 +1,5 @@
 import { buildPostShaderGlsl } from './post_shader';
-import { buildUniformLayout, POST_ENGINE_FIELDS, writeUniformValues } from '../../shared/material_uniforms';
+import { buildUniformLayout, MAX_MATERIAL_FLOATS, POST_ENGINE_FIELDS, writeUniformValues } from '../../shared/material_uniforms';
 import { compileProgram } from '../utils/compile_program';
 import { createWebGL2DataTexture, createWebGL2RenderTexture } from '../resources';
 import { toGlTexture } from '../texture';
@@ -41,7 +41,7 @@ type TCompiled = {
  */
 export const createPostPipelines = (gl: WebGL2RenderingContext) => {
     const compiled = new Map<string, TCompiled>();
-    const values = new Float32Array(64);
+    const values = new Float32Array(MAX_MATERIAL_FLOATS);
     const targets = new Map<ITexture, WebGLFramebuffer>();
 
     let parameters: WebGLBuffer | null = null;
@@ -173,6 +173,10 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
 
     const build = (effect: Pick<TPostEffect, 'name' | 'id' | 'fragmentGlsl' | 'uniformSig'>): TCompiled => {
         const layout = buildUniformLayout(effect.uniformSig, POST_ENGINE_FIELDS);
+        // Too many numbers for its slot. Said once where it was made (`checkParameterRoom`).
+        if (layout.floatCount > MAX_MATERIAL_FLOATS) {
+            return { program: null, layout, failed: true };
+        }
         const sources = buildPostShaderGlsl(effect.fragmentGlsl as string, effect.uniformSig);
 
         try {

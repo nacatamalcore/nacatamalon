@@ -1,4 +1,5 @@
 import { deriveSignature, POST_RULES } from '../materials/derive_signature';
+import { checkParameterRoom } from '../materials/check_parameter_room';
 import type { TPostEffect } from './types/t_post_effect';
 import type { TShader } from '../loaders/shader/types/t_shader';
 import type { TUniformValues } from '../materials/types/t_uniforms';
@@ -56,4 +57,5 @@ export const applyShaderToEffect = (effect: TPostEffect, shader: TShader): void 
     // Worked out from the two together, not copied from the file: a knob the scene introduced is
     // real and has to have somewhere to live in the block the card reads.
     effect.uniformSig = { ...shader.uniformSig, ...deriveSignature(asked, POST_RULES) };
+    checkParameterRoom(effect.uniformSig, POST_RULES, effect.name);
 };

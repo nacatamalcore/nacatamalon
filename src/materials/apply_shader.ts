@@ -1,4 +1,5 @@
-import { deriveSignature } from './derive_signature';
+import { deriveSignature, MATERIAL_RULES } from './derive_signature';
+import { checkParameterRoom } from './check_parameter_room';
 import type { TMaterial } from './types/t_material';
 import type { TShader } from '../loaders/shader/types/t_shader';
 
@@ -70,4 +71,5 @@ export const applyShader = (material: TMaterial, shader: TShader): void => {
     // Derived from the merged values rather than copied from the file, because a knob the call site
     // introduced is real and has to have somewhere to live in the block the card reads.
     material.uniformSig = { ...shader.uniformSig, ...deriveSignature(asked) };
+    checkParameterRoom(material.uniformSig, MATERIAL_RULES, material.name);
 };

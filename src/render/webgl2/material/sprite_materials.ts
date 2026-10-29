@@ -1,5 +1,5 @@
 import { buildSpriteMaterialShaderGlsl } from './sprite_material_shader';
-import { buildUniformLayout, writeUniformValues } from '../../shared/material_uniforms';
+import { buildUniformLayout, MAX_MATERIAL_FLOATS, writeUniformValues } from '../../shared/material_uniforms';
 import { compileProgram } from '../utils/compile_program';
 import { MATERIAL_UNIFORMS_BINDING } from './uniform_block';
 import { FRAME_UNIFORMS_BINDING } from '../bindings';
@@ -38,7 +38,7 @@ export const createSpriteMaterials = (
     buildShader: (fragment: string, sig: TUniformSignature) => { vertex: string; fragment: string } = buildSpriteMaterialShaderGlsl,
 ) => {
     const compiled = new Map<string, TCompiled>();
-    const values = new Float32Array(64);
+    const values = new Float32Array(MAX_MATERIAL_FLOATS);
     /**
      * Which sources have already been reported as WebGPU only.
      *
@@ -59,6 +59,10 @@ export const createSpriteMaterials = (
 
     const build = (material: TDrawShader): TCompiled => {
         const layout = buildUniformLayout(material.uniformSig ?? {});
+        // Too many numbers for its slot. Said once where it was made (`checkParameterRoom`).
+        if (layout.floatCount > MAX_MATERIAL_FLOATS) {
+            return { program: null, layout, failed: true };
+        }
         const sources = buildShader(material.fragmentGlsl as string, material.uniformSig ?? {});
 
         try {

@@ -1,7 +1,8 @@
 import { getColor } from '../color';
 import { createRecord } from '../gameobjects/create_record';
 import { applyShader, rememberOverrides } from './apply_shader';
-import { deriveSignature } from './derive_signature';
+import { deriveSignature, MATERIAL_RULES } from './derive_signature';
+import { checkParameterRoom } from './check_parameter_room';
 import { compileShader } from '../shader_composer/compile_shader';
 import { MAP_NAME, MAX_MATERIAL_MAPS } from '../render/shared/material_maps';
 import type { TMaterial, TMaterialMap, TMeshMaterial, TSpriteMaterial } from './types/t_material';
@@ -128,6 +129,9 @@ export const newMaterial = (
         uniformSig: shaded ? deriveSignature(asked) : null,
         effect,
     };
+    if (half.uniformSig !== null) {
+        checkParameterRoom(half.uniformSig, MATERIAL_RULES, half.name);
+    }
 
     const material: TMaterial = options.shader === 'mesh3d'
         ? createRecord('material', {
