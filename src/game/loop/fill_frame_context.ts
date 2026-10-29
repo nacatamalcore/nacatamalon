@@ -402,15 +402,17 @@ type TWorldSeen = { models: Array<TDrawable | TDrawSprite>; camera: TCamera3d | 
  * What a tool asks the world to be seen through: the screen's cameras and kinds, or a capture's, or
  * a preview's. `null` in each is the scene's own.
  */
-/** A 3D camera as it is drawn when it follows the 2D one, kept per camera between frames. */
-type TFollowing = { -readonly [K in keyof TDrawCamera3d]: TDrawCamera3d[K] } & { flat: { x: number; y: number; rotation: number; zoom: number } };
-const following = new WeakMap<TCamera3d, TFollowing>();
 /**
- * The same for a camera another one skips by, kept apart: the one camera can be drawn through in one
- * pass and skipped by in another, each with its own 2D camera, and the lists of every pass are read
- * after all of them are made.
+ * A 3D camera as it is drawn when it follows the 2D one, kept between frames per 3D camera and per
+ * 2D camera it follows. Per pair because one camera can be seen in two passes of a frame through
+ * two 2D cameras (the screen's and a picture's, the game's and a tool's), drawn through or skipped
+ * by, and the lists of every pass are read after all of them are made: one kept per 3D camera would
+ * leave all of them showing the last.
  */
-const followingToSkip = new WeakMap<TCamera3d, TFollowing>();
+type TFollowing = { -readonly [K in keyof TDrawCamera3d]: TDrawCamera3d[K] } & { flat: { x: number; y: number; rotation: number; zoom: number } };
+const following = new WeakMap<TCamera3d, WeakMap<object, TFollowing>>();
+/** What stands for no 2D camera among the keys above, where the screen's pixels are followed. */
+const NO_FLAT = {};
 
 /**
  * The camera a scene's models are drawn through: its 3D camera, or, for one that follows the 2D
@@ -418,14 +420,19 @@ const followingToSkip = new WeakMap<TCamera3d, TFollowing>();
  * tool's included, so a tool panning the flat world pans the models with it. With no 2D camera, the
  * screen's pixels, as the sprites have them.
  */
-const drawnThrough = (camera3d: TCamera3d | null, camera2d: TCamera2d | null, kept = following): TDrawCamera3d | null => {
+const drawnThrough = (camera3d: TCamera3d | null, camera2d: TCamera2d | null): TDrawCamera3d | null => {
     if (camera3d === null || !followsFlat(camera3d)) {
         return camera3d;
     }
-    let drawn = kept.get(camera3d);
+    let kept = following.get(camera3d);
+    if (kept === undefined) {
+        kept = new WeakMap();
+        following.set(camera3d, kept);
+    }
+    let drawn = kept.get(camera2d ?? NO_FLAT);
     if (drawn === undefined) {
         drawn = { ...camera3d, flat: { x: 0, y: 0, rotation: 0, zoom: 1 } };
-        kept.set(camera3d, drawn);
+        kept.set(camera2d ?? NO_FLAT, drawn);
     }
     drawn.projection = camera3d.projection;
     drawn.transform = camera3d.transform;
@@ -466,7 +473,7 @@ const skippedBy = (camera3d: TCamera3d | null, camera2d: TCamera2d | null): TDra
         }
         return null;
     }
-    return drawnThrough(other, camera2d, followingToSkip);
+    return drawnThrough(other, camera2d);
 };
 
 type TSeenThrough = Pick<TRuntimeState['viewport'], 'camera3d' | 'camera2d' | 'layers'> & {
@@ -522,13 +529,16 @@ const gatherTree = (
     // The camera itself goes over, not a copy: moving it between two frames needs nothing
     // rebuilt. A scene without one draws in screen pixels, which is `-1`. A tool looking at the
     // screen through a camera of its own wins over the scene's.
-    const camera2d = viewport?.camera2d ?? root.camera2d;
+    //
+    // The scene's own camera is drawn on the same pixels as everything else under `pixelSnap`; a
+    // tool's is not, since it is zoomed in to look and would pan in steps of its zoom. Models that
+    // follow it are drawn through this same one, or they would slide against the sprites by however
+    // much it was rounded.
+    const camera2d = viewport?.camera2d == null ? cameraAsDrawn(root.camera2d, snapping) : viewport.camera2d;
     let sceneCamera = -1;
     if (camera2d !== null) {
         sceneCamera = cameras.length;
-        // The scene's own camera is drawn on the same pixels as everything else under `pixelSnap`;
-        // a tool's is not, since it is zoomed in to look and would pan in steps of its zoom.
-        cameras.push(viewport?.camera2d == null ? cameraAsDrawn(camera2d, snapping)! : camera2d);
+        cameras.push(camera2d);
     }
 
     // What is pinned to the screen goes through the tool's camera for it, when it has one.
@@ -705,7 +715,9 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
         const lighting = seen.lighting ?? collectLighting(rootOf(box));
         // The world's fog, unless the picture asked for one of its own: it is looking at that world.
         const seenThrough = box.camera3d ?? seen.camera;
-        lists.views3d.push({ camera: drawnThrough(seenThrough, box.camera2d), cullingCamera: skippedBy(seenThrough, box.camera2d), lights: lighting.lights, ambient: lighting.ambient, fog: box.fog ?? seen.fog });
+        // Through its 2D camera as the picture draws its own sprites with it, rounded the same.
+        const flat = cameraAsDrawn(box.camera2d, snapping);
+        lists.views3d.push({ camera: drawnThrough(seenThrough, flat), cullingCamera: skippedBy(seenThrough, flat), lights: lighting.lights, ambient: lighting.ambient, fog: box.fog ?? seen.fog });
         for (const model of seen.models) {
             if (shows(model, picture.texture)) {
                 continue;

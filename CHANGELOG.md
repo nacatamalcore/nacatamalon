@@ -101,6 +101,21 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **Models following the 2D camera pan with the sprites under `pixelSnap`.** The sprites were drawn
+  through the 2D camera rounded to the pixels, and a `follow2d` camera's models through it as it
+  was, so the two slid apart by the rounding as the camera moved: a third of a pixel at zoom 3. Now
+  both go through the same, in a picture with `sees: 'scene'` too; a tool's camera is still not
+  rounded. And a picture borrowing the scene's following 3D camera with a 2D camera of its own no
+  longer leaves the screen's models drawn through the picture's 2D camera.
+
+- **A run that `onRepeat` starts is not ended in the same frame.** When one frame of a sprite's run
+  or a model's movement went round and also finished (a short clip, a high `speed`), and an
+  `onRepeat` listener started another, the end was put on the new one: `onEnd` named it at once,
+  and a model's stopped playing. Now what a frame passed is told about the run that passed it, the
+  same clip started again included, and its marks, repeats and end stop at the first listener that
+  starts another. A sprite's run started from a mark on the first picture begins the next frame, so
+  its own first mark is told, and told once.
+
 - **A `useSceneTransitionEnd` that leaves the scene stops the ones after it.** When one of them
   stopped its scene (sending the game elsewhere) or destroyed a box, the ones still waiting in that
   same frame ran anyway, in a scene already gone. Now each is asked again just before it runs. The

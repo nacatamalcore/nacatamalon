@@ -459,6 +459,46 @@ describe('a picture that sees the scene', () => {
         expect(orderOf(frameOf(store), { handheld, feed })).toEqual(['handheld', 'feed', 'screen']);
     });
 
+    it('draws the models with its own 2D camera rounded as its sprites have it, when its 3D camera follows that one', () => {
+        const { store } = createTestGame({ pixelSnap: 'screen' });
+        let feed!: TTexture;
+        startTestScene(store, 'S', () => {
+            createMesh({ geometry: useCubeGeometry() });
+            feed = createSpriteTexture({ width: 16, height: 16, sees: 'scene' }, () => {
+                const flat = useCamera2d();
+                flat.transform.x = 0.4;
+                flat.zoom = 3;
+                useCamera3d({ projection: 'orthographic', follow2d: true });
+                block();
+            });
+            return createScene();
+        });
+
+        const pass = passFor(frameOf(store), feed)!;
+
+        expect(pass.cameras![0]!.transform.x).toBeCloseTo(1 / 3, 10);
+        expect(pass.views3d![0]!.camera!.flat!.x).toBe(pass.cameras![0]!.transform.x);
+    });
+
+    it('borrows the scene\'s following 3D camera with its own 2D one, leaving the screen\'s as it was', () => {
+        const { store } = createTestGame({ pixelSnap: 'off' });
+        let feed!: TTexture;
+        startTestScene(store, 'S', () => {
+            useCamera2d().transform.x = 100;
+            useCamera3d({ projection: 'orthographic', follow2d: true });
+            createMesh({ geometry: useCubeGeometry() });
+            feed = createSpriteTexture({ width: 16, height: 16, sees: 'scene' }, () => {
+                useCamera2d().transform.x = 7;
+            });
+            return createScene();
+        });
+
+        const ctx = frameOf(store);
+
+        expect(screenOf(ctx).views3d![0]!.camera!.flat!.x).toBe(100);
+        expect(passFor(ctx, feed)!.views3d![0]!.camera!.flat!.x).toBe(7);
+    });
+
     it('looks through the scene\'s camera when it has none of its own', () => {
         const { store } = createTestGame();
         let scene!: ReturnType<typeof useCamera3d>;

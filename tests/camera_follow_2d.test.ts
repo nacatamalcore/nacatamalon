@@ -107,6 +107,26 @@ describe('a scene whose 3D camera follows its 2D one', () => {
         expect(drawn.transform.z).toBe(800);
     });
 
+    it('draws them through the 2D camera as rounded by pixelSnap, so they pan with the sprites', () => {
+        // At zoom 3, 'screen' rounds to thirds and 'game' to whole pixels.
+        for (const [snap, x] of [['screen', 1 / 3], ['game', 0], ['off', 0.4]] as const) {
+            const { store } = createTestGame({ pixelSnap: snap });
+            startTestScene(store, 'Level', () => {
+                const flat = useCamera2d();
+                flat.transform.x = 0.4;
+                flat.zoom = 3;
+                useCamera3d({ projection: 'orthographic', follow2d: true });
+                createMesh({ geometry: useCubeGeometry() });
+                return createScene();
+            });
+            const ctx: TFrameContext = { passes: [{}], time: 0, progress: 0, phase: 0 };
+            fillFrameContext(store, ctx);
+            const pass = ctx.passes[0]!;
+            expect(pass.views3d![0]!.camera!.flat!.x).toBe(pass.cameras![0]!.transform.x);
+            expect(pass.cameras![0]!.transform.x).toBeCloseTo(x, 10);
+        }
+    });
+
     it('is drawn as before when it does not follow', () => {
         const { store } = createTestGame();
         let own!: ReturnType<typeof useCamera3d>;
