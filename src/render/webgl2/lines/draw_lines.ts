@@ -1,23 +1,6 @@
-import type { TDrawItem, TDrawLines } from '../../interface';
+import type { TDrawLines } from '../../interface';
 import type { TCameraSpace } from '../../shared/compute_mvp_3d';
 import type { TLinesPipeline } from './create_lines_pipeline';
-
-/**
- * How many corners of lines this frame will draw, counted before any of them is.
- *
- * @internal
- * @since 1.0.0
- * @author Francisco Pereira Alvarado
- */
-export const countLineCorners = (drawables: readonly TDrawItem[]): number => {
-    let total = 0;
-    for (const item of drawables) {
-        if (item.type === 'lines') {
-            total += item.count;
-        }
-    }
-    return total;
-};
 
 /**
  * Draws one set of lines, seen through `space`: one call, however many lines it holds.

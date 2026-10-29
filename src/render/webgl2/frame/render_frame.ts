@@ -2,9 +2,10 @@ import { beginSprites, drawSpriteRun } from '../sprite/draw_sprites';
 import { drawTilemapLayer } from '../tilemap/draw_tilemaps';
 import { toGlTexture, textureSize } from '../texture';
 import { writeSpriteInstances } from '../sprite/write_sprite_instances';
-import { countParticles, drawParticles, drawParticles3d } from '../particles/draw_particles';
+import { drawParticles, drawParticles3d } from '../particles/draw_particles';
+import { countDrawn } from '../../shared/count_drawn';
 import { createParticlesPipeline } from '../particles/create_particles_pipeline';
-import { countLineCorners, drawLines } from '../lines/draw_lines';
+import { drawLines } from '../lines/draw_lines';
 import { createLinesPipeline } from '../lines/create_lines_pipeline';
 import { createPostPipelines } from '../post/post_pipeline';
 import { canvasTargetFor, presentToCanvas, releaseUnusedCanvasTargets } from './canvas_target';
@@ -303,14 +304,13 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
 
         // Counted and reserved before anything is drawn, so the buffer cannot be swapped out from
         // under a draw that was already pointed at it.
-        const particleCount = countParticles(drawables);
+        const { particles: particleCount, lineCorners } = countDrawn(drawables);
         if (particleCount > 0) {
             state.particles ??= createParticlesPipeline(gl, state.sprites.quad);
             state.particles.beginFrame(particleCount);
         }
 
         // The same for lines, and for the same reason.
-        const lineCorners = countLineCorners(drawables);
         if (lineCorners > 0) {
             state.lines ??= createLinesPipeline(gl);
             state.lines.beginFrame(lineCorners);

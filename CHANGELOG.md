@@ -48,6 +48,12 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- **A big scene costs less a frame.** Sorting by `zIndex` reads each drawable once and does nothing
+  when the list is already in order, which is nearly every frame, and keeps what it works with
+  between frames instead of making five lists of the scene's size each time. The renderer counts
+  what a pass draws in one walk instead of one per kind. Measured with 60,000 sprites: a fifth less
+  per frame, and the sort from a fifth of the frame to a twenty-fifth. Nothing drawn changes.
+
 - **A model says how each movement plays in `clips`, its marks with them.** `useSkeletalAnimation`
   takes `clips: { Death: { loop: false, next: 'Idle' }, Attack: { repeat: 2, events: [...] } }`: what
   a sprite's clip says, said per movement because a glTF has nowhere to put it. A movement not

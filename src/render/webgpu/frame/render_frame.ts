@@ -3,9 +3,10 @@ import { drawTilemapLayer, reserveLayerSlots } from '../tilemap/draw_tilemaps';
 import { toGpuTexture } from '../texture';
 import { writeSpriteInstances } from '../sprite/write_sprite_instance';
 import { writeFrameUniforms } from './write_frame_uniforms';
-import { countParticles, drawParticles, drawParticles3d } from '../particles/draw_particles';
+import { drawParticles, drawParticles3d } from '../particles/draw_particles';
+import { countDrawn } from '../../shared/count_drawn';
 import { createParticlesPipeline } from '../particles/create_particles_pipeline';
-import { countLineCorners, drawLines } from '../lines/draw_lines';
+import { drawLines } from '../lines/draw_lines';
 import { createLinesPipeline } from '../lines/create_lines_pipeline';
 import { createPostPipelines } from '../post/post_pipeline';
 import { countPostSteps } from '../../shared/post_steps';
@@ -232,7 +233,8 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         // All of these before anything is drawn: growing any of these buffers throws away the slots
         // already written, so the room has to be there first.
         writeMeshLights(gpu.device, gpu.meshes, views3d, shadowUniforms, gpu.shadow?.view ?? null);
-        const meshCount = drawables.reduce((n, item) => n + (item.type === 'mesh' ? 1 : 0), 0);
+        // One walk for all of them, before anything is drawn.
+        const { meshes: meshCount, layers: layerCount, particles: particleCount, lineCorners } = countDrawn(drawables);
         reserveMeshSlots(gpu.device, gpu.meshes, meshCount);
         gpu.meshes.materials.beginFrame(meshCount);
         let withEffect = 0;
@@ -248,13 +250,11 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         }
         gpu.sprites.materials.beginFrame(withEffect);
         gpu.sprites.distanceFieldMaterials.beginFrame(fieldsWithEffect);
-        const layerCount = drawables.reduce((n, item) => n + (item.type === 'tilemap' ? 1 : 0), 0);
         reserveLayerSlots(gpu.device, gpu.tilemaps, layerCount);
         gpu.tilemaps.materials.beginFrame(layerCount);
 
         // Counted and reserved before a single draw is recorded, or a buffer that grew in the middle
         // would leave the draws already recorded pointing at nothing.
-        const particleCount = countParticles(drawables);
         if (particleCount > 0) {
             gpu.particles ??= createParticlesPipeline(gpu.device, gpu.format, gpu.samples, gpu.sprites.layouts);
             gpu.particles.beginFrame(particleCount);
@@ -262,7 +262,6 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         }
 
         // The same for lines, and for the same reason.
-        const lineCorners = countLineCorners(drawables);
         if (lineCorners > 0) {
             gpu.lines ??= createLinesPipeline(gpu.device, gpu.format, gpu.samples);
             gpu.lines.beginFrame(lineCorners);

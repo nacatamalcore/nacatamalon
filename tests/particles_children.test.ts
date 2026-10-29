@@ -3,8 +3,7 @@ import { loadParticles } from '../src/loaders/particles/load_particles';
 import { newParticlesFile } from '../src/loaders/particles/new_particles_file';
 import { simulateParticles } from '../src/gameobjects/particles/simulate_particles';
 import { childrenOf } from '../src/gameobjects/particles/particle_state';
-import { countParticles as countWebGPU } from '../src/render/webgpu/particles/draw_particles';
-import { countParticles as countWebGL2 } from '../src/render/webgl2/particles/draw_particles';
+import { countDrawn } from '../src/render/shared/count_drawn';
 import { createTestGame } from './helpers/test_game';
 import { effectDoc, effectState, noTint, somewhere } from './helpers/particles';
 import type { TParticlesFile } from '../src/loaders/particles/types/t_particles_file';
@@ -148,11 +147,10 @@ describe('drawing what an effect set off', () => {
     const cloud = (count: number, children?: TDrawParticles[]): TDrawParticles =>
         ({ type: 'particles', instances: new Float32Array(0), count, texture: null, blend: 'alpha', children });
 
-    it('makes room for the children\'s particles too, however deep, on both backends', () => {
+    it('makes room for the children\'s particles too, however deep, in the count both backends share', () => {
         const drawn = [cloud(0, [cloud(3, [cloud(2)]), cloud(1)])];
 
-        expect(countWebGPU(drawn)).toBe(6);
-        expect(countWebGL2(drawn)).toBe(6);
+        expect(countDrawn(drawn).particles).toBe(6);
     });
 });
 

@@ -43,19 +43,6 @@ import { computeView } from '../../render/shared/compute_mvp_3d';
 import * as mat from '../../math/mat4';
 
 /**
- * Sorts by `zIndex` the drawables from `start` to the end, in place, and only if one of them asks
- * for it. A scene where nobody says `zIndex` is already in the order it was built in, and a
- * benchmark of many thousands of sprites should not pay for a sort it does not use.
- *
- * `cameraIndex` is reordered with them: each entry belongs to its drawable, and sorting one list
- * without the other would draw a HUD through the world's camera.
- *
- * **See-through models go after the solid ones at their number, furthest first.** They blend over
- * what is already drawn, so what is behind them has to be there first, and among themselves the
- * nearest has to be last. `zIndex` still wins over all of it, so a scene that ordered its glass by
- * hand keeps that order.
- */
-/**
  * Whether a drawable is seen through its scene's camera in depth: a model, particles or lines in space.
  */
 const inDepth = (drawable: TDrawable | TDrawSprite): boolean =>
@@ -88,6 +75,31 @@ const viewDepth = (drawable: TDrawable, view: Float32Array): number => {
     return view[2] * x + view[6] * y + view[10] * z + view[14];
 };
 
+/**
+ * What a sort works with, kept between frames: a scene of thousands sorted every frame made five
+ * lists of that size each time, only to throw them away.
+ */
+let sortZ = new Float64Array(256);
+let sortRank = new Uint8Array(256);
+let sortDepth = new Float64Array(256);
+const sortOrder: number[] = [];
+const sortDrawables: TDrawable[] = [];
+const sortCameras: number[] = [];
+
+/**
+ * Sorts by `zIndex` the drawables from `start` to the end, in place, and only if one of them asks
+ * for it. A scene where nobody says `zIndex` is already in the order it was built in, and a
+ * benchmark of many thousands of sprites should not pay for a sort it does not use. Nor does one
+ * that is already in order, which is nearly every frame of nearly every scene.
+ *
+ * `cameraIndex` is reordered with them: each entry belongs to its drawable, and sorting one list
+ * without the other would draw a HUD through the world's camera.
+ *
+ * **See-through models go after the solid ones at their number, furthest first.** They blend over
+ * what is already drawn, so what is behind them has to be there first, and among themselves the
+ * nearest has to be last. `zIndex` still wins over all of it, so a scene that ordered its glass by
+ * hand keeps that order.
+ */
 const sortSceneByZIndex = (drawables: TDrawable[], cameraIndex: number[], start: number, camera: TCamera3d | null, levels: Array<TMaskLevel | null> | null): void => {
     let needed = false;
     let models = false;
@@ -116,36 +128,75 @@ const sortSceneByZIndex = (drawables: TDrawable[], cameraIndex: number[], start:
     // times. A solid model gets no depth at all: among themselves they keep the order they were made
     // in, since depth already sorts them out wherever they are drawn.
     const count = drawables.length - start;
-    const glass = new Array<boolean>(count);
-    const depth = new Array<number>(count);
+    if (sortZ.length < count) {
+        let room = sortZ.length;
+        while (room < count) room *= 2;
+        sortZ = new Float64Array(room);
+        sortRank = new Uint8Array(room);
+        sortDepth = new Float64Array(room);
+    }
+    // Each drawable read once, into numbers: its `zIndex`, then which half of the engine it is in and
+    // whether it is see-through, in one rank. A comparison then only compares numbers, where reading
+    // the fields of thousands of drawables of every kind, twice for each comparison, was what a big
+    // scene spent its sort on.
+    const z = sortZ;
+    const rank = sortRank;
+    const depth = sortDepth;
     let seeThrough = false;
     for (let i = 0; i < count; i++) {
         const drawable = drawables[start + i];
-        glass[i] = drawable.type === 'mesh' && isTransparentMesh(drawable);
-        seeThrough = seeThrough || glass[i];
+        const glass = drawable.type === 'mesh' && isTransparentMesh(drawable);
+        z[i] = drawable.zIndex ?? 0;
+        rank[i] = layerRank(drawable) * 2 + (glass ? 1 : 0);
+        depth[i] = 0;
+        seeThrough = seeThrough || glass;
     }
     if (seeThrough) {
         computeView(camera, sortView);
         for (let i = 0; i < count; i++) {
-            depth[i] = glass[i] ? viewDepth(drawables[start + i], sortView) : 0;
+            depth[i] = (rank[i] & 1) === 1 ? viewDepth(drawables[start + i], sortView) : 0;
         }
     }
-    const order = Array.from({ length: count }, (_, i) => start + i)
-        .sort((a, b) => (drawables[a].zIndex ?? 0) - (drawables[b].zIndex ?? 0)
-            || layerRank(drawables[a]) - layerRank(drawables[b])
-            || Number(glass[a - start]) - Number(glass[b - start])
-            || (glass[a - start] ? depth[a - start] - depth[b - start] : 0));
-    const sortedDrawables = order.map((i) => drawables[i]);
-    const sortedCameras = order.map((i) => cameraIndex[i]);
+    // Two of the same rank are both see-through or both not, so the depth only ever parts glass.
+    const before = (a: number, b: number): number => z[a] - z[b] || rank[a] - rank[b] || depth[a] - depth[b];
+
+    // The tree is walked in the same order every frame, so the list nearly always comes out the way
+    // the last sort left it: a HUD made after the level, the level's pieces in the order they were
+    // made. Seeing that is one pass, and then nothing is copied or written back.
+    let inOrder = true;
+    for (let i = 1; i < count && inOrder; i++) {
+        inOrder = before(i - 1, i) <= 0;
+    }
+    if (inOrder) {
+        return;
+    }
+
+    const order = sortOrder;
+    order.length = count;
+    for (let i = 0; i < count; i++) {
+        order[i] = i;
+    }
+    order.sort(before);
+    // Copied out before any is written back, since the order reads the lists as they were.
+    const sortedDrawables = sortDrawables;
+    const sortedCameras = sortCameras;
+    sortedDrawables.length = count;
+    sortedCameras.length = count;
+    for (let i = 0; i < count; i++) {
+        sortedDrawables[i] = drawables[start + order[i]];
+        sortedCameras[i] = cameraIndex[start + order[i]];
+    }
     // A drawable's masks go with it, like its camera.
-    const sortedLevels = levels === null ? null : order.map((i) => levels[i] ?? null);
-    for (let i = 0; i < order.length; i++) {
+    const sortedLevels = levels === null ? null : order.map((i) => levels[start + i] ?? null);
+    for (let i = 0; i < count; i++) {
         drawables[start + i] = sortedDrawables[i];
         cameraIndex[start + i] = sortedCameras[i];
         if (sortedLevels !== null) {
             levels![start + i] = sortedLevels[i]!;
         }
     }
+    // Let go of what was sorted, so a scene that is gone is not kept alive by the last frame's copy.
+    sortedDrawables.length = 0;
 };
 
 /**

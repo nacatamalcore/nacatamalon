@@ -46,6 +46,22 @@ describe('zIndex', () => {
         expect(paintOrder(store)).toEqual([2, 3, 1]);
     });
 
+    it('keeps the order frame after frame, and sorts again the frame a number changes', () => {
+        const { store } = createTestGame();
+        let first!: TSprite;
+        startTestScene(store, 'Level', () => {
+            first = card(1, 5); card(2); card(3, 1); card(4, 1);
+            return createScene();
+        });
+
+        expect(paintOrder(store)).toEqual([2, 3, 4, 1]);
+        // Already in order: nothing moves.
+        expect(paintOrder(store)).toEqual([2, 3, 4, 1]);
+        first.zIndex = 0;
+        expect(paintOrder(store)).toEqual([1, 2, 3, 4]);
+        expect(paintOrder(store)).toEqual([1, 2, 3, 4]);
+    });
+
     it('puts negatives behind the sprites that say nothing', () => {
         const { store } = createTestGame();
         startTestScene(store, 'Level', () => {

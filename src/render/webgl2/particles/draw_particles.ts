@@ -1,36 +1,8 @@
 import { toGlTexture } from '../texture';
-import type { TDrawItem, TDrawParticles, TDrawParticles3d } from '../../interface';
+import type { TDrawParticles, TDrawParticles3d } from '../../interface';
 import type { TCameraSpace } from '../../shared/compute_mvp_3d';
 import type { TParticlesPipeline } from './create_particles_pipeline';
 import type { TSpritePipeline } from '../sprite/types/t_sprite_pipeline';
-
-/**
- * An emitter's particles and those of every effect they set off, however deep.
- */
-const countWithChildren = (item: TDrawParticles | TDrawParticles3d): number => {
-    let total = item.count;
-    for (const child of item.children ?? []) {
-        total += countWithChildren(child);
-    }
-    return total;
-};
-
-/**
- * How many particles this frame will draw, counted before any of them is.
- *
- * @internal
- * @since 1.0.0
- * @author Francisco Pereira Alvarado
- */
-export const countParticles = (drawables: readonly TDrawItem[]): number => {
-    let total = 0;
-    for (const item of drawables) {
-        if (item.type === 'particles' || item.type === 'particles-3d') {
-            total += countWithChildren(item);
-        }
-    }
-    return total;
-};
 
 /**
  * Draws one emitter's particles: one call, however many it is holding.
