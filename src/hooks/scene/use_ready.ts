@@ -1,5 +1,6 @@
 import { getActiveBox } from '../../store';
 import { getActiveGame } from '../../store/active_game';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Runs your code once, when everything being built with it exists: the whole scene, children and
@@ -44,7 +45,7 @@ export const useReady = (callback: () => void): void => {
     const box = getActiveBox();
     const game = getActiveGame();
     if (box === null || game === null) {
-        throw new Error('[NacatamalOn] useReady: call it inside a scene body, a component or a script.');
+        throw outsideSceneBody('useReady');
     }
     game.get('world').ready.push({ box, run: callback });
 };

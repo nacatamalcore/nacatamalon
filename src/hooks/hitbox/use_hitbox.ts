@@ -1,5 +1,6 @@
 import { getActiveBox } from '../../store';
 import type { THitbox } from '../../hitbox/types/t_hitbox';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * How a hitbox starts. All of it is optional: it begins as the picture.
@@ -58,7 +59,7 @@ export type THitboxOptions = {
 export const useHitbox = (options: THitboxOptions = {}): THitbox => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useHitbox: call it inside a scene body, or inside something created with useSpawn.');
+        throw outsideSceneBody('useHitbox');
     }
     const hitbox: THitbox = {
         x: options.x ?? 0,

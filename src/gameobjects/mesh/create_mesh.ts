@@ -8,6 +8,7 @@ import type { TMeshOptions } from './types/t_mesh_options';
 import type { TMeshMaterial } from '../../materials';
 import type { TTexture } from '../../loaders';
 import { findAsset } from '../../loaders/asset_key';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Nowhere in particular, which is where a model goes when it is not told.
@@ -74,7 +75,7 @@ export const createMesh = (options: TMeshOptions): TMesh => {
     const box = getActiveBox();
     const store = getActiveGame();
     if (box === null || store === null) {
-        throw new Error('[NacatamalOn] createMesh: call it inside a scene body, or inside something created with useSpawn.');
+        throw outsideSceneBody('createMesh');
     }
     if (options.material !== undefined) {
         const ignored = (['tint', 'emissive', 'emissiveTexture', 'specular', 'cull', 'alphaCutoff', 'affine', 'vertexSnap'] as const).filter((key) => options[key] !== undefined);

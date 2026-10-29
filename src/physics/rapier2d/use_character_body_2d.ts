@@ -4,6 +4,7 @@ import { getPhysicsProviders } from '../physics_provider';
 import { getPhysicsWorld2d } from './provider';
 import type { TCharacterOptions2d } from './character_body_2d';
 import type { TCharacterBody2d } from '../character/t_character_body_2d';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * A character that is not simulated: what a scene opened in a tool gets, where nothing is.
@@ -79,7 +80,7 @@ const inert = (): TCharacterBody2d => ({
 export const useCharacterBody2d = (options: TCharacterOptions2d): TCharacterBody2d => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useCharacterBody2d: call it inside a scene body, or inside something created with useSpawn.');
+        throw outsideSceneBody('useCharacterBody2d');
     }
     const world = getPhysicsWorld2d();
     if (world === null) {

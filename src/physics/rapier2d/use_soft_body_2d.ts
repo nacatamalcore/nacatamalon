@@ -3,6 +3,7 @@ import { firstTimeIn } from '../../utils/first_time_in';
 import { getPhysicsProviders } from '../physics_provider';
 import { getPhysicsWorld2d } from './provider';
 import type { TSoftBody2d, TSoftBodyOptions2d } from './t_soft_body_2d';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * A body that does nothing: where nothing simulates, a soft body stays the shape it was drawn.
@@ -65,7 +66,7 @@ const inert = (): TSoftBody2d => ({
 export const useSoftBody2d = (options: TSoftBodyOptions2d): TSoftBody2d => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useSoftBody2d: call it inside a scene body, or inside something created with useSpawn.');
+        throw outsideSceneBody('useSoftBody2d');
     }
     if (options.shape === 'polygon' && options.points.length < 3) {
         throw new Error(`[NacatamalOn] useSoftBody2d: a 'polygon' needs at least three corners, and was given ${options.points.length}.`);

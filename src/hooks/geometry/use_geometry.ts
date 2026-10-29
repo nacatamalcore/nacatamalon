@@ -2,6 +2,7 @@ import { getActiveGame } from '../../store';
 import { uploadGeometry } from '../../geometry/upload_geometry';
 import type { TGeometry } from '../../geometry';
 import type { TGeometrySource } from '../../geometry/types/t_geometry_source';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * The shared body of every shape hook: look it up by name, and only build it if it is not there.
@@ -21,7 +22,7 @@ export const useGeometry = (
 ): TGeometry => {
     const store = getActiveGame();
     if (store === null) {
-        throw new Error(`[NacatamalOn] ${hook}: call it inside a scene body.`);
+        throw outsideSceneBody(hook);
     }
 
     const cached = store.get('assets').geometries.get(key);

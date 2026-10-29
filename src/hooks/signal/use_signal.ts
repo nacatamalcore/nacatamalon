@@ -1,5 +1,6 @@
 import { getActiveBox } from '../../store';
 import type { TGameSignal, TSignalHandler } from '../../signal';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Listens to a signal from a scene, and stops listening by itself when that part of the scene goes
@@ -30,7 +31,7 @@ import type { TGameSignal, TSignalHandler } from '../../signal';
 export const useSignal = <T>(signal: TGameSignal<T>, handler: TSignalHandler<T>): void => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useSignal: call it inside a scene body, not from a timer or a callback. In a React component, import useSignal from \'nacatamalon/react\' instead.');
+        throw outsideSceneBody('useSignal', "In a React component, import useSignal from 'nacatamalon/react' instead.");
     }
 
     const off = signal.connect((payload) => {

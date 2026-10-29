@@ -1,5 +1,6 @@
 import { getActiveBox } from '../../store';
 import type { TGameStore, TStoreListener, TStoreSelector } from '../../game_store';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Reacts from a scene when one value of a store changes, and stops by itself when that part of the
@@ -47,7 +48,7 @@ export const useStore = <S extends object, A, T>(
 ): void => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useStore: call it inside a scene body, not from a timer or a callback. In a React component, use useGameStore from \'nacatamalon/react\' instead.');
+        throw outsideSceneBody('useStore', "In a React component, use useGameStore from 'nacatamalon/react' instead.");
     }
 
     const off = store.subscribe(selector, (value, previous) => {

@@ -2,6 +2,7 @@ import { getActiveBox } from '../../store';
 import { viewOf } from '../../box';
 import { createCamera2d } from '../../camera';
 import type { TCamera2d, TCamera2dOptions } from '../../camera';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Gives the scene a camera, so its world can be bigger than the screen and scroll, turn and zoom.
@@ -51,7 +52,7 @@ import type { TCamera2d, TCamera2dOptions } from '../../camera';
 export const useCamera2d = (options?: TCamera2dOptions): TCamera2d => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useCamera2d: call it inside a scene body, not from a timer or a callback.');
+        throw outsideSceneBody('useCamera2d');
     }
 
     const scene = viewOf(box);

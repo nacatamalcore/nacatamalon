@@ -1,5 +1,6 @@
 import { getActiveGame } from '../../store';
 import type { TKeyboard } from '../../input';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * The keyboard, to ask in every frame what the player is holding or has just pressed.
@@ -38,7 +39,7 @@ import type { TKeyboard } from '../../input';
 export const useKeyboard = (): TKeyboard => {
     const store = getActiveGame();
     if (store === null) {
-        throw new Error('[NacatamalOn] useKeyboard: call it inside a scene body.');
+        throw outsideSceneBody('useKeyboard');
     }
     return store.get('input').keyboard;
 };

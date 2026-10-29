@@ -11,6 +11,7 @@ import type { TTexture } from "../../loaders";
 import type { TSprite, TSpriteOptions } from "./types";
 import type { TSpriteAtlas } from "../../atlas";
 import { listen } from "../../events/listen";
+import { outsideSceneBody } from "../../utils/outside_scene_body";
 
 /**
  * Finds the texture the options ask for: an explicit record wins, then a key looked up in this
@@ -156,7 +157,7 @@ export const createSprite = ((options: TSpriteOptions): TSprite => {
     const store = getActiveGame();
 
     if (!box || !store) {
-        throw new Error('[NacatamalOn] createSprite: call it inside a scene body, or inside something created with useSpawn.');
+        throw outsideSceneBody('createSprite');
     }
 
     const { width, height, smooth, blend, anchor, pivot, zIndex, flipX, flipY, repeat, repeatOffset, parallax, visible, material, uniforms, uvOffset, uvScale, atlas, texture, transform, tint } = cleanSpriteOptions(options);

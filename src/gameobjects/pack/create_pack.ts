@@ -10,6 +10,7 @@ import { connectReport } from '../../events/reports';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
 import type { TBoxNode, TSceneDoc } from '../../scene/document/types/t_scene_doc';
 import type { TPackOptions } from './types/t_pack_options';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Said once per pack and thing, never per copy, in the game placing it.
@@ -113,7 +114,7 @@ export const createPack = (options: TPackOptions): TGameObject => {
     const store = getActiveGame();
     const active = getActiveBox();
     if (store === null || active === null) {
-        throw new Error('[NacatamalOn] createPack: call it inside a scene body, or inside something created with useSpawn.');
+        throw outsideSceneBody('createPack');
     }
 
     const { pack } = options;

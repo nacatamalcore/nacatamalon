@@ -9,6 +9,7 @@ import { COLOR_STRIDE, DETAIL_STRIDE, GEOMETRY_STRIDE } from './types/t_geometry
 import type { TRuntimeStore } from '../store';
 import type { TGeometry } from './types/t_geometry';
 import type { TUvProjection } from './build/project_uvs';
+import { outsideSceneBody } from '../utils/outside_scene_body';
 
 /**
  * A shape given corner by corner: what `createGeometry` makes and `updateGeometry` changes.
@@ -263,7 +264,7 @@ export const createGeometry = (data: TGeometryData): TGeometry => {
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] createGeometry: call it inside a scene body, or inside something created with useSpawn.');
+        throw outsideSceneBody('createGeometry');
     }
     const built = assemble('createGeometry', data);
     const geometry = uploadGeometry(store, `geometry:${nanoId()}`, built, null);

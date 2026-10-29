@@ -8,6 +8,7 @@ import type { TSprite } from '../../gameobjects/sprite/types/t_sprite';
 import type { TText } from '../../gameobjects/text/types/t_text';
 import type { TNineSlice } from '../../gameobjects/nine_slice/types/t_nine_slice';
 import type { TPointerDragInfo } from '../../input';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * What `useDraggable`'s `onDragEnd` is told: the drag's info, and what it was dropped on.
@@ -192,7 +193,7 @@ export const useDraggable = (target: TSprite | TText | TNineSlice | TBox, option
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useDraggable: call it inside a scene body or a behaviour, not from a timer or a callback. To let it be dragged later, pass enabled: false and call enable().');
+        throw outsideSceneBody('useDraggable', 'To let it be dragged later, pass enabled: false and call enable().');
     }
     const pointer = store.get('input').pointer;
     const axis = options.axis ?? 'both';

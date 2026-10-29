@@ -1,4 +1,5 @@
 import { getActiveBox } from '../../store';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Runs when its owner goes away: the component it is called in when it is destroyed, or the scene
@@ -27,7 +28,7 @@ import { getActiveBox } from '../../store';
 export const useCleanup = (cleanup: () => void): void => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useCleanup: call it inside a scene body or a component made with useSpawn, not from a timer or a callback.');
+        throw outsideSceneBody('useCleanup');
     }
     box.cleanups.push(cleanup);
 };

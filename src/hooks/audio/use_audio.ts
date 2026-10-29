@@ -1,6 +1,7 @@
 import { getActiveGame } from '../../store';
 import { getAudioManager, rampTo } from '../../audio';
 import type { TAudioHandle } from '../../audio';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * The game's volumes: the general one and one per channel, plus a way to silence everything.
@@ -34,7 +35,7 @@ import type { TAudioHandle } from '../../audio';
 export const useAudio = (): TAudioHandle => {
     const store = getActiveGame();
     if (store === null) {
-        throw new Error('[NacatamalOn] useAudio: call it inside a scene body.');
+        throw outsideSceneBody('useAudio');
     }
     const audio = getAudioManager(store);
 

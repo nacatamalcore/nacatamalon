@@ -1,6 +1,7 @@
 import { getActiveBox } from '../../store';
 import { collisionKey } from '../../hitbox/collision_key';
 import type { TCollisionListener, TCollisionMatch, TCollisionMatched } from '../../hitbox/types/t_hitbox';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Calls `callback` for every thing of kind `a` touching one of kind `b`, every frame they touch: a
@@ -45,7 +46,7 @@ export const useCollisionBetween = <A extends TCollisionMatch, B extends TCollis
 ): (() => void) => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useCollisionBetween: call it inside a scene body, not from a timer or a callback.');
+        throw outsideSceneBody('useCollisionBetween');
     }
     const listener: TCollisionListener = { kind: 'between', a: collisionKey(a), b: collisionKey(b), callback: callback as (a: unknown, b: unknown) => void };
     box.collisionCallbacks.push(listener);

@@ -1,6 +1,7 @@
 import { getActiveBox } from '../../store';
 import { createMask, releaseMask } from '../../mask/create_mask';
 import type { TMask, TMaskOptions } from '../../mask/types/t_mask';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Makes a mask: what keeps objects, and everything under them, to a rectangle or to the shape of
@@ -63,7 +64,7 @@ import type { TMask, TMaskOptions } from '../../mask/types/t_mask';
 export const useMask = (options: TMaskOptions = {}): TMask => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useMask: call it inside a scene body, or inside something created with useSpawn; what it gives works whenever.');
+        throw outsideSceneBody('useMask');
     }
     const mask = createMask(options);
     box.cleanups.push(() => releaseMask(mask));

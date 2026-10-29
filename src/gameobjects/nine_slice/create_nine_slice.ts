@@ -7,6 +7,7 @@ import { textureByKey } from '../../loaders/texture/texture_by_key';
 import type { TTexture } from '../../loaders';
 import type { TNineSlice } from './types/t_nine_slice';
 import type { TNineSliceOptions } from './types/t_nine_slice_options';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Finds the picture the options ask for: an explicit texture wins, then a sheet's, then a key looked
@@ -75,7 +76,7 @@ export const createNineSlice = (options: TNineSliceOptions): TNineSlice => {
     const box = getActiveBox();
     const store = getActiveGame();
     if (!box || !store) {
-        throw new Error('[NacatamalOn] createNineSlice: call it inside a scene body, or inside something created with useSpawn.');
+        throw outsideSceneBody('createNineSlice');
     }
 
     const { slice } = options;

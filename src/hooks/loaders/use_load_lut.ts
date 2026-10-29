@@ -5,6 +5,7 @@ import { rootOf } from '../../box';
 import { trackLoad } from '../../loaders/track_load';
 import type { TLut } from '../../loaders/lut/types/t_lut';
 import { assetKey } from '../../loaders/asset_key';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * What `useLoadLut` is asked for.
@@ -53,7 +54,7 @@ export const useLoadLut = ({ src, key }: TUseLoadLutOptions): TLut => {
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useLoadLut: call it inside a scene body.');
+        throw outsideSceneBody('useLoadLut');
     }
 
     const cacheKey = key ?? assetKey(src);

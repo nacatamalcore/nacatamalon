@@ -5,6 +5,7 @@ import { rootOf } from '../../box';
 import { trackLoad } from '../../loaders/track_load';
 import type { TLoadedPixels } from '../../loaders/pixels';
 import { assetKey } from '../../loaders/asset_key';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * What `useLoadPixels` is asked for.
@@ -62,7 +63,7 @@ export const useLoadPixels = ({ src, key }: TUseLoadPixelsOptions): TLoadedPixel
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useLoadPixels: call it inside a scene body.');
+        throw outsideSceneBody('useLoadPixels');
     }
 
     const cacheKey = key ?? assetKey(src);

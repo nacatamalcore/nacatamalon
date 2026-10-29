@@ -1,5 +1,6 @@
 import { getActiveBox } from '../../store';
 import { getActiveGame } from '../../store/active_game';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Runs your code once, when the transition this scene came in with is over: the screen uncovered
@@ -43,7 +44,7 @@ export const useSceneTransitionEnd = (callback: () => void): void => {
     const box = getActiveBox();
     const game = getActiveGame();
     if (box === null || game === null) {
-        throw new Error('[NacatamalOn] useSceneTransitionEnd: call it inside a scene body, a component or a script.');
+        throw outsideSceneBody('useSceneTransitionEnd');
     }
     game.get('world').transitionEnd.push({ box, run: callback });
 };

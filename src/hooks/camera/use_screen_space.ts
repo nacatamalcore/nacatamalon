@@ -1,4 +1,5 @@
 import { getActiveBox } from '../../store';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Keeps what is created here fixed on the screen, even while the scene's camera moves.
@@ -37,7 +38,7 @@ import { getActiveBox } from '../../store';
 export const useScreenSpace = (on = true): void => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useScreenSpace: call it inside a scene body, not from a timer or a callback.');
+        throw outsideSceneBody('useScreenSpace');
     }
     box.screenSpace = on;
 };

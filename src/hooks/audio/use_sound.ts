@@ -10,6 +10,7 @@ import { whenLoaded } from '../../loaders';
 import { useLoadAudio } from '../loaders/use_load_audio';
 import type { TAudioClip } from '../../loaders';
 import type { TAudioManager, TSoundAttachment, TSoundHandle, TSoundOptions, TSoundSource, TVoice } from '../../audio';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * One sounding voice plus what `pause` needs to start it again where it stopped. A sound node can
@@ -121,7 +122,7 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useSound: call it inside a scene body.');
+        throw outsideSceneBody('useSound');
     }
 
     const audio: TAudioManager = getAudioManager(store);

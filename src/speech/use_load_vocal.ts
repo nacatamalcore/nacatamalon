@@ -4,6 +4,7 @@ import { trackLoad } from '../loaders/track_load';
 import { parseVocalDoc } from './parse_vocal_doc';
 import type { TRuntimeStore } from '../store';
 import type { TVocalFile } from './types/t_vocal';
+import { outsideSceneBody } from '../utils/outside_scene_body';
 
 /**
  * What `useLoadVocal` takes.
@@ -77,7 +78,7 @@ export const useLoadVocal = ({ src, key }: TUseLoadVocalOptions): TVocalFile => 
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useLoadVocal: call it inside a scene body.');
+        throw outsideSceneBody('useLoadVocal');
     }
 
     const cacheKey = key ?? src;

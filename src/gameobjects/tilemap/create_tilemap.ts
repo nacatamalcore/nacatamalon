@@ -13,6 +13,7 @@ import type { IRenderer } from '../../render';
 import type { TTileMesh } from './layer_state';
 import type { TTilemap, TTilemapLayer, TTilemapOptions } from './types/t_tilemap';
 import { assetKey } from '../../loaders/asset_key';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Puts a batch of corners on the graphics card, reusing the memory when what is written still fits.
@@ -128,7 +129,7 @@ export const createTilemap = (options: TTilemapOptions): TTilemap => {
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] createTilemap: call it inside a scene body.');
+        throw outsideSceneBody('createTilemap');
     }
 
     const cacheKey = options.key ?? assetKey(options.src);

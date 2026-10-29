@@ -8,6 +8,7 @@ import type { TLoadedPixels } from '../../loaders/pixels/types/t_loaded_pixels';
 import type { TPixelRegion, TPixels } from '../../pixels';
 import type { TRuntimeStore } from '../../store';
 import type { TTexture } from '../../loaders';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Where each painted texture reads its bytes from, and the game it lives in.
@@ -152,7 +153,7 @@ export function createPixelTexture(
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] createPixelTexture: call it inside a scene body.');
+        throw outsideSceneBody('createPixelTexture');
     }
     const paint = typeof paintOrOptions === 'function' ? paintOrOptions : undefined;
     const options = (typeof paintOrOptions === 'function' ? maybeOptions : paintOrOptions) ?? {};

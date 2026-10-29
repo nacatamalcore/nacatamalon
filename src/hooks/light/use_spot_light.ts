@@ -2,6 +2,7 @@ import { createSpotLight } from '../../light';
 import { getActiveBox } from '../../store';
 import type { TLightOptionsBase } from '../../light';
 import type { TSpotLight } from '../../light';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * A torch: a lamp that only shines inside a cone.
@@ -39,7 +40,7 @@ import type { TSpotLight } from '../../light';
 export const useSpotLight = (options: TLightOptionsBase & { range?: number; angle?: number; penumbra?: number } = {}): TSpotLight => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useSpotLight: call it inside a scene body, or inside something created with useSpawn.');
+        throw outsideSceneBody('useSpotLight');
     }
 
     const light = createSpotLight(options);

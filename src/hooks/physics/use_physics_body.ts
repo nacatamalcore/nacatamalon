@@ -8,6 +8,7 @@ import { getPhysicsProviders, createPhysicsBody2d, createPhysicsBody3d, warnMiss
 import type {
     TCollider2d, TCollider3d, TPhysicsBody2d, TPhysicsBody3d, TPhysicsBodyType, TPhysicsSurface,
 } from '../../physics';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * What a flat body is made from: how it moves, its shape, and how it feels to touch. `id` and
@@ -78,7 +79,7 @@ const layerNames = (): readonly string[] => getActiveGame()?.get('config').physi
 export const usePhysicsBody2d = (options: TPhysicsBody2dOptions): TPhysicsBody2d => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] usePhysicsBody2d: call it inside a scene body.');
+        throw outsideSceneBody('usePhysicsBody2d');
     }
 
     const { layer, collidesWith, ...rest } = options;
@@ -133,7 +134,7 @@ export const usePhysicsBody2d = (options: TPhysicsBody2dOptions): TPhysicsBody2d
 export const usePhysicsBody3d = (options: TPhysicsBody3dOptions): TPhysicsBody3d => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] usePhysicsBody3d: call it inside a scene body.');
+        throw outsideSceneBody('usePhysicsBody3d');
     }
 
     const { layer, collidesWith, ...rest } = options;

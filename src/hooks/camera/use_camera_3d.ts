@@ -2,6 +2,7 @@ import { viewOf } from '../../box';
 import { createCamera3d } from '../../camera/create_camera_3d';
 import { getActiveBox } from '../../store';
 import type { TCamera3d, TCamera3dOptions } from '../../camera/types/t_camera_3d';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Gives the scene a camera to look at its models through, and returns it.
@@ -42,7 +43,7 @@ import type { TCamera3d, TCamera3dOptions } from '../../camera/types/t_camera_3d
 export const useCamera3d = (options: TCamera3dOptions = {}): TCamera3d => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useCamera3d: call it inside a scene body.');
+        throw outsideSceneBody('useCamera3d');
     }
 
     const scene = viewOf(box);

@@ -1,6 +1,7 @@
 import { getActiveBox as getActiveGameObject } from '../../store';
 import { getPhysicsWorld3d } from './provider';
 import type { TCharacterBody, TCharacterOptions } from './character_body';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Makes this object a **walking character**: a capsule moved by asking the world what is in the
@@ -42,7 +43,7 @@ import type { TCharacterBody, TCharacterOptions } from './character_body';
 export const useCharacterBody = (options: TCharacterOptions): TCharacterBody | null => {
     const box = getActiveGameObject();
     if (box === null) {
-        throw new Error('[NacatamalOn] useCharacterBody: call it inside a scene body.');
+        throw outsideSceneBody('useCharacterBody');
     }
 
     // Asked for while the scene is being built, which is the only time it can be answered, and

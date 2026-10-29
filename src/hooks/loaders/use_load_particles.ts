@@ -5,6 +5,7 @@ import { rootOf } from '../../box';
 import { trackLoad } from '../../loaders/track_load';
 import type { TParticlesFile } from '../../loaders/particles/types/t_particles_file';
 import { assetKey } from '../../loaders/asset_key';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * What `useLoadParticles` is asked for.
@@ -53,7 +54,7 @@ export const useLoadParticles = ({ src, key }: TUseLoadParticlesOptions): TParti
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useLoadParticles: call it inside a scene body.');
+        throw outsideSceneBody('useLoadParticles');
     }
 
     const cacheKey = key ?? assetKey(src);

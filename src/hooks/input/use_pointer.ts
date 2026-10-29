@@ -4,6 +4,7 @@ import { rootOf } from '../../box/root_of';
 import { unapplyView2d } from '../../render/shared';
 import { cameraAsDrawn } from '../../camera/camera_as_drawn';
 import type { TPointerHandle } from '../../input';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Listens to the mouse and to touch: presses, releases, movement, and what is under the pointer.
@@ -100,7 +101,7 @@ export const usePointer = (): TPointerHandle => {
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] usePointer: call it inside a scene body, not from a timer or a callback.');
+        throw outsideSceneBody('usePointer');
     }
 
     const pointer = store.get('input').pointer;

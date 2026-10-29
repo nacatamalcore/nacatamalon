@@ -1,5 +1,6 @@
 import { getActiveGame } from '../../store';
 import type { TRandomHandle } from '../../math/random';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * The random numbers of this game.
@@ -32,7 +33,7 @@ import type { TRandomHandle } from '../../math/random';
 export const useRandom = (): TRandomHandle => {
     const store = getActiveGame();
     if (store === null) {
-        throw new Error('[NacatamalOn] useRandom: call it inside a scene body.');
+        throw outsideSceneBody('useRandom');
     }
     return store.get('random').rng;
 };

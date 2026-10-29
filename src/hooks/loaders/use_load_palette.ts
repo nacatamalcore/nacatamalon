@@ -5,6 +5,7 @@ import { rootOf } from '../../box';
 import { trackLoad } from '../../loaders/track_load';
 import type { TPalette } from '../../loaders/palette/types/t_palette';
 import { assetKey } from '../../loaders/asset_key';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * What `useLoadPalette` is asked for.
@@ -50,7 +51,7 @@ export const useLoadPalette = ({ src, key }: TUseLoadPaletteOptions): TPalette =
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useLoadPalette: call it inside a scene body.');
+        throw outsideSceneBody('useLoadPalette');
     }
 
     const cacheKey = key ?? assetKey(src);

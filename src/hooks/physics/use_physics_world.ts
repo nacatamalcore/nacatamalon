@@ -3,6 +3,7 @@ import { getPhysicsProviders, warnMissingPhysicsProvider } from '../../physics';
 import { nanoId } from '../../utils';
 import type { TPhysicsWorld2d, TPhysicsWorld3d } from '../../physics';
 import { isShowingOnly } from './is_showing_only';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Opens the flat simulation for this scene, and says how hard things fall.
@@ -37,7 +38,7 @@ import { isShowingOnly } from './is_showing_only';
 export const usePhysicsWorld2d = (options: { id?: string; gravity?: { x: number; y: number } } = {}): TPhysicsWorld2d => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] usePhysicsWorld2d: call it inside a scene body.');
+        throw outsideSceneBody('usePhysicsWorld2d');
     }
     if (box.parent !== null) {
         console.warn(`[NacatamalOn] usePhysicsWorld2d: '${box.name}' is not a scene, and only a scene's simulation is read. Call it in the scene's own body.`);
@@ -82,7 +83,7 @@ export const usePhysicsWorld2d = (options: { id?: string; gravity?: { x: number;
 export const usePhysicsWorld3d = (options: { id?: string; gravity?: { x: number; y: number; z: number } } = {}): TPhysicsWorld3d => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] usePhysicsWorld3d: call it inside a scene body.');
+        throw outsideSceneBody('usePhysicsWorld3d');
     }
     if (box.parent !== null) {
         console.warn(`[NacatamalOn] usePhysicsWorld3d: '${box.name}' is not a scene, and only a scene's simulation is read. Call it in the scene's own body.`);

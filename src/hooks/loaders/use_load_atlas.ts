@@ -4,6 +4,7 @@ import { loadAtlas, newAtlas, trackLoad } from '../../loaders';
 import type { TLoadedAtlas } from '../../loaders';
 import { getActiveBox, getActiveGame } from '../../store';
 import { assetKey } from '../../loaders/asset_key';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * What `useLoadAtlas` is asked for.
@@ -63,7 +64,7 @@ export const useLoadAtlas = ({ src, key }: TUseLoadAtlasOptions): TLoadedAtlas =
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useLoadAtlas: call it inside a scene body.');
+        throw outsideSceneBody('useLoadAtlas');
     }
 
     const cacheKey = key ?? assetKey(src);

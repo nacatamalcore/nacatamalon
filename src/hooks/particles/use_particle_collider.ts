@@ -3,6 +3,7 @@ import { getActiveBox } from '../../store';
 import type {
     TParticleCollider2d, TParticleCollider3d, TParticleColliderShape2d, TParticleColliderShape3d,
 } from '../../gameobjects/particles/colliders/t_particle_collider';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Puts it on the object being built, replacing one it already had, and says so if it did.
@@ -10,7 +11,7 @@ import type {
 const attach = <T extends TParticleCollider2d | TParticleCollider3d>(caller: string, collider: T): T => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error(`[NacatamalOn] ${caller}: call it inside a scene body, or inside something created with useSpawn.`);
+        throw outsideSceneBody(caller);
     }
     if (box.particleCollider !== null) {
         console.warn(`[NacatamalOn] ${caller}: this object already stops particles, so the shape it had is replaced. Put the second one on its own object.`);

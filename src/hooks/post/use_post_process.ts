@@ -7,6 +7,7 @@ import type { TPostProcessOptions } from '../../post/types/t_post_options';
 import type { TShader } from '../../loaders/shader/types/t_shader';
 import type { TUniformValues } from '../../materials/types/t_uniforms';
 import { findAsset } from '../../loaders/asset_key';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * The file the options ask for. A name nothing was loaded under is a typo, never "no effect".
@@ -70,7 +71,7 @@ export const usePostProcess = <U extends TUniformValues = TUniformValues>(option
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] usePostProcess: call it inside a scene body.');
+        throw outsideSceneBody('usePostProcess');
     }
 
     const shader = resolveEffect(options);

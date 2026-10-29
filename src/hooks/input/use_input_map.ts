@@ -1,5 +1,6 @@
 import { getActiveBox, getActiveGame } from '../../store';
 import type { TInputMapHandle } from '../../input';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Remapping: what a game's controls screen is built on.
@@ -39,7 +40,7 @@ export const useInputMap = (): TInputMapHandle => {
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useInputMap: call it inside a scene body.');
+        throw outsideSceneBody('useInputMap');
     }
     return store.get('input').inputMap;
 };

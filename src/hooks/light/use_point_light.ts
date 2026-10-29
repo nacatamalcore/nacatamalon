@@ -2,6 +2,7 @@ import { createPointLight } from '../../light';
 import { getActiveBox } from '../../store';
 import type { TLightOptionsBase } from '../../light';
 import type { TPointLight } from '../../light';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * A lamp: it has a place, shines every way, and fades out with distance.
@@ -39,7 +40,7 @@ import type { TPointLight } from '../../light';
 export const usePointLight = (options: TLightOptionsBase & { range?: number } = {}): TPointLight => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] usePointLight: call it inside a scene body, or inside something created with useSpawn.');
+        throw outsideSceneBody('usePointLight');
     }
 
     const light = createPointLight(options);

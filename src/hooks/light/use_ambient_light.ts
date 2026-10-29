@@ -2,6 +2,7 @@ import { createAmbientLight } from '../../light';
 import { getActiveBox } from '../../store';
 import type { TColorOption } from '../../color';
 import type { TAmbientLight } from '../../light';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * The level everything is lit to before any lamp reaches it.
@@ -33,7 +34,7 @@ import type { TAmbientLight } from '../../light';
 export const useAmbientLight = (options: { color?: TColorOption; intensity?: number } = {}): TAmbientLight => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useAmbientLight: call it inside a scene body, or inside something created with useSpawn.');
+        throw outsideSceneBody('useAmbientLight');
     }
 
     const light = createAmbientLight(options);

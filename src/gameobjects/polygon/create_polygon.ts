@@ -8,6 +8,7 @@ import type { TTexture } from '../../loaders';
 import type { TSpriteAtlas } from '../../atlas';
 import type { TTransform2d } from '../types/t_transform_2d';
 import type { TPolygon } from './types/t_polygon';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * What `createPolygon` is told.
@@ -95,7 +96,7 @@ export const createPolygon = (options: TPolygonOptions): TPolygon => {
     const box = getActiveBox();
     const store = getActiveGame();
     if (box === null || store === null) {
-        throw new Error('[NacatamalOn] createPolygon: call it inside a scene body, or inside something created with useSpawn.');
+        throw outsideSceneBody('createPolygon');
     }
     if (options.points.length < 3) {
         throw new Error(`[NacatamalOn] createPolygon: an outline needs at least three corners, and was given ${options.points.length}.`);

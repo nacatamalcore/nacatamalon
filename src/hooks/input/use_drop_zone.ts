@@ -4,6 +4,7 @@ import type { TSprite } from '../../gameobjects/sprite/types/t_sprite';
 import type { TText } from '../../gameobjects/text/types/t_text';
 import type { TNineSlice } from '../../gameobjects/nine_slice/types/t_nine_slice';
 import type { TDropZoneListener, TDropZoneState } from '../../input';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * What a drop zone accepts, and what it is told.
@@ -130,7 +131,7 @@ export const useDropZone = (target: TSprite | TText | TNineSlice | TBox, options
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useDropZone: call it inside a scene body or a behaviour, not from a timer or a callback. To open it later, pass enabled: false and call enable().');
+        throw outsideSceneBody('useDropZone', 'To open it later, pass enabled: false and call enable().');
     }
     const pointer = store.get('input').pointer;
     let state: TDropZoneState | null = null;

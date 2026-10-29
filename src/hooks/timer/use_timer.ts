@@ -1,5 +1,6 @@
 import { getActiveBox } from '../../store';
 import type { TTimer, TTimerHandle } from './types/t_timer';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * One call waiting its turn.
@@ -69,7 +70,7 @@ const isOver = (call: TWaiting): boolean => call.cancelled || call.fired;
 export const useTimer = (): TTimer => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useTimer: call it inside a scene body, not from a timer or a callback.');
+        throw outsideSceneBody('useTimer');
     }
 
     const waiting: TWaiting[] = [];

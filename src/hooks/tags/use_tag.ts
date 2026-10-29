@@ -2,6 +2,7 @@ import { getActiveBox } from '../../store';
 import { rootOf } from '../../box/root_of';
 import { tagHandle } from '../../tags/tags';
 import type { TTag } from '../../tags/tags';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Gives the tag `name`, to put on things, take off, ask about and find: what something is,
@@ -39,7 +40,7 @@ import type { TTag } from '../../tags/tags';
 export const useTag = (name: string): TTag => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useTag: call it inside a scene body or a component made with useSpawn; what it gives works whenever.');
+        throw outsideSceneBody('useTag');
     }
     return tagHandle(name, () => rootOf(box));
 };

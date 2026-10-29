@@ -2,6 +2,7 @@ import { getActiveBox, getActiveGame } from '../../store';
 import { defaultScriptProps, getScript, isToolScript, warnUnregisteredScript } from '../../scripts/script_registry';
 import { nanoId } from '../../utils';
 import type { TScriptProps } from '../../scripts';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * What `useScript` takes besides the behaviour and its settings.
@@ -59,7 +60,7 @@ export const useScript = (ref: string, props?: TScriptProps, options: TUseScript
     const box = getActiveBox();
     const store = getActiveGame();
     if (box === null || store === null) {
-        throw new Error('[NacatamalOn] useScript: call it inside a scene body, not from a timer or a callback.');
+        throw outsideSceneBody('useScript');
     }
 
     // Declared defaults first, authored values over them. That order is what lets a behaviour gain

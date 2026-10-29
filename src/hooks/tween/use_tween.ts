@@ -2,6 +2,7 @@ import { getActiveBox } from '../../store';
 import { linear } from '../../math/easing';
 import type { TEaseFn } from '../../math/easing';
 import type { TTweenHandle, TTweenOptions, TTweenStarter, TTweenTargetOptions } from './types/t_tween';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * How a tween stands: still going, ended (by arriving or by `finish`), or cancelled.
@@ -273,7 +274,7 @@ const numberWriter = (options: TTweenOptions): Pick<TRunningTween, 'write' | 'be
 export const useTween = (): TTweenStarter => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useTween: call it inside a scene body, not from a timer or a callback.');
+        throw outsideSceneBody('useTween');
     }
 
     const running: TRunningTween[] = [];

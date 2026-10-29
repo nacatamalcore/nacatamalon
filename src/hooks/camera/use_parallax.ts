@@ -1,4 +1,5 @@
 import { getActiveBox } from '../../store';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Makes this object, and everything it draws and holds, move with the camera only so much: `1` as
@@ -26,7 +27,7 @@ import { getActiveBox } from '../../store';
 export const useParallax = (factor: { x: number; y: number }): void => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useParallax: call it inside a scene body, or inside something created with useSpawn.');
+        throw outsideSceneBody('useParallax');
     }
     box.parallax = { x: factor.x, y: factor.y };
 };

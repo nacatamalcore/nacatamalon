@@ -4,6 +4,7 @@ import { getActiveBox, getActiveGame } from '../../store';
 import { loadTexture, newTexture, trackLoad } from '../../loaders';
 import type { TTexture } from '../../loaders';
 import { assetKey } from '../../loaders/asset_key';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * What `useLoadTexture` is asked for. Named fields rather than two positional strings, which would
@@ -55,7 +56,7 @@ export const useLoadTexture = ({ src, key }: TUseLoadTextureOptions): TTexture =
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useLoadTexture: call it inside a scene body.');
+        throw outsideSceneBody('useLoadTexture');
     }
 
     const cacheKey = key ?? assetKey(src);

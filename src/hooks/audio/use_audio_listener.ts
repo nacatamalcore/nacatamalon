@@ -2,6 +2,7 @@ import { createRecord } from '../../gameobjects/create_record';
 import { getActiveBox, getActiveGame } from '../../store';
 import { getAudioManager } from '../../audio';
 import type { TAudioListener } from '../../audio';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Puts the game's ears on this object: every sound placed in the world is heard from where it is,
@@ -34,7 +35,7 @@ export const useAudioListener = (options: { enabled?: boolean } = {}): TAudioLis
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useAudioListener: call it inside a scene body, or inside something created with useSpawn.');
+        throw outsideSceneBody('useAudioListener');
     }
     if (box.audioListener !== null) {
         console.warn('[NacatamalOn] useAudioListener: this object already has ears, so the ones it had are replaced.');

@@ -4,6 +4,7 @@ import { DEFAULT_FONT_ATLAS_SIZE, loadFont, newFont, trackLoad } from '../../loa
 import { getActiveBox, getActiveGame } from '../../store';
 import type { TFont } from '../../loaders';
 import { assetKey } from '../../loaders/asset_key';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Where a vector font comes from, and how finely its letters are kept.
@@ -76,7 +77,7 @@ export const useLoadFont = ({ src, key, size, chars }: TUseLoadFontOptions): TFo
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useLoadFont: call it inside a scene body.');
+        throw outsideSceneBody('useLoadFont');
     }
 
     const cacheKey = key ?? assetKey(src);

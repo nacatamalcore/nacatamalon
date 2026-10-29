@@ -293,9 +293,12 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
 
 ## Gotchas
 
-- A hook called inside `useUpdate`, an event handler, a timeout or after `await` throws
-  `[NacatamalOn] <hook>: call it inside a scene body...`. Create everything up front and change
-  `visible`, or spawn things with `useSpawn`.
+- A hook or a `create*` called inside `useUpdate`, an event handler, a timer or after `await` throws
+  `[NacatamalOn] <name>: call it inside a scene body...`. To make things while the game runs (a
+  bullet, a fish, an enemy wave), put them in a piece and get its maker in the body,
+  `const spawn = useSpawn(Fish)`, then call `spawn(x, y)` from `useUpdate` or a timer: each call
+  makes one, as many as you like. `useSpawn` itself is a hook too: never call it in `useUpdate`. Or
+  create everything up front and change `visible`.
 - An object is built before the objects inside it: a body (or a script on a scene document's root)
   that looks for a child with `findObject` finds `null`. Look it up inside
   `useReady(() => { ... })`, which runs once everything being built with it exists, before the
@@ -340,6 +343,7 @@ A game is small pieces made with `useSpawn`, and each way they talk has one job:
 | keep a value of the whole game, across scenes or saved (best score, settings) | `createGameStore`; `useStore` to react to one value of it, `useWatch(fn, [store, lives])` to draw from it and more |
 | say something happened, for anyone to hear (`gameOver`) | `createGameSignal`, `useSignal` |
 | tell whoever placed you (an enemy dead, a button pressed) | a callback in your props: `useSpawn(Enemy)({ onDied })`. From a pack or a behaviour, which take only data: `useReport('pressed')` sends it up, `onReport(copy, 'pressed', h)` or a pack's `on` hears it |
+| make one while the game runs (a bullet, a fish) | its maker, got in the body and called whenever: `const fire = useSpawn(Bullet)`, then `fire(x, y)` from `useUpdate` |
 | tell a piece you made what to do (`hurt`, `open`) | the `api` it returns: `useSpawn(Bat)({ x }).api.hurt(1)` |
 | let two behaviours on the same box talk | return an api from one, `useScriptApi(name)` in the other; `provide(word, api)` for a word several behaviours answer to |
 | find everything of a kind (every coin left) | a tag: `useTag('coin').all()` |

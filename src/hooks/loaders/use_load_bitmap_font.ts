@@ -4,6 +4,7 @@ import { loadBitmapFont, newBitmapFont, trackLoad } from '../../loaders';
 import { getActiveBox, getActiveGame } from '../../store';
 import type { TBitmapFont } from '../../loaders';
 import { assetKey } from '../../loaders/asset_key';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Where a bitmap font comes from.
@@ -62,7 +63,7 @@ export const useLoadBitmapFont = ({ json, atlas, key }: TUseLoadBitmapFontOption
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useLoadBitmapFont: call it inside a scene body.');
+        throw outsideSceneBody('useLoadBitmapFont');
     }
 
     const cacheKey = key ?? assetKey(json);

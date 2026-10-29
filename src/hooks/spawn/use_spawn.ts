@@ -2,6 +2,7 @@ import { markMadeBy, markNamedByFunction, newBox, spawnBox } from '../../box';
 import type { TBox } from '../../box';
 import { getActiveBox, getActiveGame } from '../../store';
 import { isSceneStopped } from '../../scene/stopped_scenes';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * One thing made by a spawner: what `destroy` takes to remove it whole, with its sprites, its
@@ -71,8 +72,9 @@ export type TSpawnOptions = {
  * an enemy that returns `{ hurt }` is hurt with `enemy.api.hurt(1)`, typed, with no signal and no
  * lookup. It is there once the maker returns, never while the component is still being run.
  *
- * Call it while the scene is being built, like every hook. It remembers the scene it was called
- * in, so the maker keeps working long after that, for as long as that scene runs. Called once the
+ * **Call `useSpawn` while the scene is being built, like every hook, and the maker whenever**: from
+ * `useUpdate`, a timer or a listener, which is how things are made while the game runs. It remembers
+ * the scene it was called in, so the maker keeps working for as long as that scene runs. Called once the
  * scene has stopped (from a `setTimeout` or a listener that outlived it), it makes nothing, says so
  * once, and gives back something already destroyed; under something destroyed, the same in silence.
  *
@@ -152,7 +154,7 @@ export const useSpawn = <TArgs extends unknown[], TApi>(
     const store = getActiveGame();
     const active = getActiveBox();
     if (store === null || active === null) {
-        throw new Error('[NacatamalOn] useSpawn: call it inside a scene body.');
+        throw outsideSceneBody('useSpawn');
     }
 
     // Looked up at each spawn rather than now: while a scene is still being built, the thing

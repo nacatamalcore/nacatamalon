@@ -7,6 +7,7 @@ import { nanoId } from '../../utils';
 import { whenLoaded } from '../../loaders';
 import { useLoadAudio } from '../loaders/use_load_audio';
 import type { TMusicAttachment, TMusicHandle, TMusicLayer, TMusicOptions } from '../../audio';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Plays **one piece of music recorded in several files** (its layers, or stems) that sound together,
@@ -65,7 +66,7 @@ export const useMusic = (options: TMusicOptions): TMusicHandle => {
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useMusic: call it inside a scene body.');
+        throw outsideSceneBody('useMusic');
     }
     const audio = getAudioManager(store);
 

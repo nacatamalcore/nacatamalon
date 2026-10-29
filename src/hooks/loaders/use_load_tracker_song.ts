@@ -5,6 +5,7 @@ import { rootOf } from '../../box';
 import { trackLoad } from '../../loaders/track_load';
 import type { TSongFile } from '../../loaders/song';
 import { assetKey } from '../../loaders/asset_key';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * What `useLoadTrackerSong` is asked for.
@@ -61,7 +62,7 @@ export const useLoadTrackerSong = ({ src, song, key }: TUseLoadTrackerSongOption
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useLoadTrackerSong: call it inside a scene body.');
+        throw outsideSceneBody('useLoadTrackerSong');
     }
 
     const cacheKey = key ?? (song === undefined || song === 0 ? assetKey(src) : `${assetKey(src)}#song-${song}`);

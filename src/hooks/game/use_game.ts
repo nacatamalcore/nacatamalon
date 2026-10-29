@@ -1,6 +1,7 @@
 import { createGameHandle } from '../../game/handle';
 import type { TGameHandle } from '../../game/handle';
 import { getActiveBox, getActiveGame } from '../../store';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * The game itself: its size, its background, whether images are kept crisp, how fast time runs,
@@ -41,7 +42,7 @@ import { getActiveBox, getActiveGame } from '../../store';
 export const useGame = (): TGameHandle => {
     const store = getActiveGame();
     if (store === null) {
-        throw new Error('[NacatamalOn] useGame: call it inside a scene body. In a React component, import useGame from \'nacatamalon/react\' instead.');
+        throw outsideSceneBody('useGame', "In a React component, import useGame from 'nacatamalon/react' instead.");
     }
     // The box asking, so what it listens to through the handle leaves with it.
     return createGameHandle(store, getActiveBox());

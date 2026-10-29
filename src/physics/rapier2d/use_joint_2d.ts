@@ -4,6 +4,7 @@ import { getPhysicsProviders } from '../physics_provider';
 import { getPhysicsWorld2d } from './provider';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
 import type { TJoint2d, TJointHandle2d } from './t_joint_2d';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Joins two objects' bodies, or one to a point of the world when `b` is `null`: the planks of a
@@ -59,7 +60,7 @@ import type { TJoint2d, TJointHandle2d } from './t_joint_2d';
  */
 export const useJoint2d = (a: TGameObject, b: TGameObject | null, joint: TJoint2d): TJointHandle2d => {
     if (getActiveBox() === null) {
-        throw new Error('[NacatamalOn] useJoint2d: call it inside a scene body. To join things later, call addJoint on the world from getPhysicsWorld2d().');
+        throw outsideSceneBody('useJoint2d', 'To join things later, call addJoint on the world from getPhysicsWorld2d().');
     }
     const world = getPhysicsWorld2d();
     if (world === null) {

@@ -1,6 +1,7 @@
 import { getActiveGame } from '../../store';
 import { takePhoto } from '../../capture';
 import type { TCapture } from '../../capture';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * A camera for the game itself: takes photos of what the player sees, the whole screen or a part of
@@ -53,7 +54,7 @@ import type { TCapture } from '../../capture';
 export const useCapture = (): TCapture => {
     const store = getActiveGame();
     if (store === null) {
-        throw new Error('[NacatamalOn] useCapture: call it inside a scene body, or a behaviour\'s.');
+        throw outsideSceneBody('useCapture');
     }
     return (options) => takePhoto(store, options);
 };

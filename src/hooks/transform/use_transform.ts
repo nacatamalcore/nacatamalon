@@ -1,5 +1,6 @@
 import { getActiveBox } from '../../store';
 import type { TTransform3d } from '../../gameobjects/types/t_transform_3d';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Where to put something, and everything inside it.
@@ -60,7 +61,7 @@ const NOWHERE: TTransform3d = { x: 0, y: 0, z: 0, rotation: 0, rotationX: 0, rot
 export const useTransform = (options: TTransformOptions = {}): TTransform3d => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useTransform: call it inside a scene body, or inside something created with useSpawn.');
+        throw outsideSceneBody('useTransform');
     }
 
     // Already placed: the same one back, never a second one. Two calls asking for different places

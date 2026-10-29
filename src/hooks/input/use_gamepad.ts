@@ -1,5 +1,6 @@
 import { getActiveBox, getActiveGame } from '../../store';
 import type { TGamepad, TGamepadTarget, TUseGamepadOptions } from '../../input';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * A gamepad, to ask in every frame what the player is holding, has just pressed, or how far a stick
@@ -49,7 +50,7 @@ export const useGamepad = (target: TGamepadTarget = 'first', options: TUseGamepa
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useGamepad: call it inside a scene body.');
+        throw outsideSceneBody('useGamepad');
     }
 
     return store.get('input').gamepads.handle(target, {

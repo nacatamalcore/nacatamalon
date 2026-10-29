@@ -5,6 +5,7 @@ import { getAudioManager } from '../../audio';
 import { loadAudio, newAudio, trackLoad } from '../../loaders';
 import type { TAudioClip } from '../../loaders';
 import { assetKey } from '../../loaders/asset_key';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * What `useLoadAudio` is asked for. Named fields rather than two bare strings, which would be too
@@ -61,7 +62,7 @@ export const useLoadAudio = ({ src, key }: TUseLoadAudioOptions): TAudioClip => 
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useLoadAudio: call it inside a scene body.');
+        throw outsideSceneBody('useLoadAudio');
     }
 
     const cacheKey = key ?? assetKey(src);

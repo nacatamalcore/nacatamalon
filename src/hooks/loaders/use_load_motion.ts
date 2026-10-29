@@ -5,6 +5,7 @@ import { rootOf } from '../../box';
 import { trackLoad } from '../../loaders/track_load';
 import type { TMotionFile } from '../../loaders/motion';
 import { assetKey } from '../../loaders/asset_key';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * What `useLoadMotion` is asked for.
@@ -50,7 +51,7 @@ export const useLoadMotion = ({ src, key }: TUseLoadMotionOptions): TMotionFile 
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useLoadMotion: call it inside a scene body.');
+        throw outsideSceneBody('useLoadMotion');
     }
 
     const cacheKey = key ?? assetKey(src);

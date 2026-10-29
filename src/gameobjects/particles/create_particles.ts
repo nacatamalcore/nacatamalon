@@ -9,6 +9,7 @@ import type { TParticlesEffect } from '../../loaders/particles/types/t_particles
 import type { TParticlesFile } from '../../loaders/particles/types/t_particles_file';
 import type { TParticlesOptions } from './types/t_particles_options';
 import { findAsset } from '../../loaders/asset_key';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * The effect the options ask for: a loaded file, the name one was loaded under, or an effect written
@@ -33,7 +34,7 @@ export const resolveEffect = (
         // Written in code: read on the spot, so a mistake in it is reported on the line that made it.
         const store = getActiveGame();
         if (store === null) {
-            throw new Error(`[NacatamalOn] ${caller}: call it inside a scene body.`);
+            throw outsideSceneBody(caller);
         }
         found = fileFromEffect(store, effect as TParticlesEffect);
     } else {
@@ -84,7 +85,7 @@ export const createParticles = (options: TParticlesOptions): TParticles => {
     const box = getActiveBox();
     const store = getActiveGame();
     if (box === null || store === null) {
-        throw new Error('[NacatamalOn] createParticles: call it inside a scene body.');
+        throw outsideSceneBody('createParticles');
     }
 
     const file = resolveEffect(options.effect, 'particles-2d', 'createParticles');

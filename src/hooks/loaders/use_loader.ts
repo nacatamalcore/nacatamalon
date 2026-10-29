@@ -2,6 +2,7 @@ import { rootOf } from '../../box';
 import { getActiveBox } from '../../store';
 import { whenLoaded } from '../../loaders';
 import type { TLoadable, TLoader } from '../../loaders';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Keeps count of what a scene is loading, for a loading bar or to wait before changing scene.
@@ -43,7 +44,7 @@ import type { TLoadable, TLoader } from '../../loaders';
 export const useLoader = (assets?: readonly TLoadable[]): TLoader => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useLoader: call it inside a scene body.');
+        throw outsideSceneBody('useLoader');
     }
 
     // With no list, the scene's own list and not a copy: what the body asks for after this line

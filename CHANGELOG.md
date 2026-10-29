@@ -21,6 +21,16 @@ releases are in [changelog/](./changelog/), one file each.
   they are `true` too, as their documentation already promised: true means it is no longer part of
   the game.
 
+- **Calling a hook or a `create*` where nothing is being built says how to get what was wanted.**
+  `createSprite` in a `useUpdate` said only to call it inside a scene body, and the guide answered
+  "spawn things with `useSpawn`", itself a hook that throws the same there: a game that wanted fish
+  while it ran made a pool of hidden sprites instead. The error now says to put the thing in a piece,
+  get its maker in the body (`const spawn = useSpawn(Fish)`) and call `spawn(…)` from `useUpdate` or a
+  timer; `useSpawn` says it gives a maker; any other hook, to keep what it gives. In the shape of
+  every message, who, what happened, what to do: `createSprite: called where nothing is being built
+  (from useUpdate, a timer, a callback or after an await). Call it inside a scene body…`. A hook's
+  own advice still follows it.
+
 ### Fixed
 
 - **One file is loaded once, however its path is written.** The cache went by the path as the game

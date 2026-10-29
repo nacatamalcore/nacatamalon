@@ -1,4 +1,5 @@
 import { getActiveBox } from '../../store';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Runs your code once per frame, for as long as the scene is on screen.
@@ -47,7 +48,7 @@ import { getActiveBox } from '../../store';
 export const useUpdate = (callback: (delta: number, time: number) => void): void => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useUpdate: call it inside a scene body, not from a timer or a callback.');
+        throw outsideSceneBody('useUpdate');
     }
     box.updateCallbacks.push(callback);
 };

@@ -13,6 +13,7 @@ import type { TText } from '../../gameobjects/text/types/t_text';
 import type { TNineSlice } from '../../gameobjects/nine_slice/types/t_nine_slice';
 import type { TTilemap } from '../../gameobjects/tilemap/types/t_tilemap';
 import type { TRect } from '../../hitbox/collision_between';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * What a camera can follow: an object, something it draws, or a point that the game moves.
@@ -282,7 +283,7 @@ export const useCameraFollow = (target: TCameraTarget | null, options: TCameraFo
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useCameraFollow: call it inside a scene body, not from a timer or a callback.');
+        throw outsideSceneBody('useCameraFollow');
     }
     const scene = viewOf(box);
     /**

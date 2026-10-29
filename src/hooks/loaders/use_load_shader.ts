@@ -5,6 +5,7 @@ import { trackLoad } from '../../loaders';
 import { loadShader, newShader } from '../../loaders/shader';
 import type { TShader } from '../../loaders/shader';
 import { assetKey } from '../../loaders/asset_key';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * What `useLoadShader` is asked for.
@@ -70,7 +71,7 @@ export const useLoadShader = ({ src, glslSrc, key }: TUseLoadShaderOptions): TSh
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useLoadShader: call it inside a scene body.');
+        throw outsideSceneBody('useLoadShader');
     }
 
     const cacheKey = key ?? assetKey(src);

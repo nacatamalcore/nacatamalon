@@ -1,4 +1,5 @@
 import { getActiveBox, getVersion, isWatchable } from '../../store';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Something `useWatch` can be given to watch: state from `useData`, a store from `createGameStore`,
@@ -71,7 +72,7 @@ export type TWatchDep = object;
 export const useWatch = (fn: () => void, deps: readonly TWatchDep[]): void => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useWatch: call it inside a scene body, not from a timer or a callback.');
+        throw outsideSceneBody('useWatch');
     }
 
     for (const dep of deps) {

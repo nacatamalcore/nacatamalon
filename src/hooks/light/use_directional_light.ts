@@ -2,6 +2,7 @@ import { createDirectionalLight } from '../../light';
 import { getActiveBox } from '../../store';
 import type { TLightOptionsBase } from '../../light';
 import type { TDirectionalLight } from '../../light';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * A light from far away, like the sun.
@@ -41,7 +42,7 @@ import type { TDirectionalLight } from '../../light';
 export const useDirectionalLight = (options: TLightOptionsBase & { shadowArea?: number; shadowDistance?: number } = {}): TDirectionalLight => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useDirectionalLight: call it inside a scene body, or inside something created with useSpawn.');
+        throw outsideSceneBody('useDirectionalLight');
     }
 
     const light = createDirectionalLight(options);

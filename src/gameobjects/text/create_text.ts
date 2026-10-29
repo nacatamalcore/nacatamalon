@@ -10,6 +10,7 @@ import type { TRuntimeStore } from '../../store';
 import type { TText } from './types/t_text';
 import type { TTextOptions } from './types/t_text_options';
 import { findAsset } from '../../loaders/asset_key';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Finds a font by the key it was loaded under, in this game's cache of either kind. A key that is not
@@ -90,7 +91,7 @@ export const createText = (options: TTextOptions): TText => {
     const box = getActiveBox();
     const store = getActiveGame();
     if (!box || !store) {
-        throw new Error('[NacatamalOn] createText: call it inside a scene body, or inside something created with useSpawn.');
+        throw outsideSceneBody('createText');
     }
 
     const text = createRecord('text', {

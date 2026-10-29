@@ -16,6 +16,7 @@ import type { TSongAccompaniment, TSongAttachment, TSongHandle, TSongOptions } f
 import type { TSongStream } from '../../audio/synth/song_stream';
 import type { TSongDoc, TSongError, TSongNote, TSongVoiceName } from '../../audio/synth';
 import type { TSongFile } from '../../loaders/song';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Plays **a song written as notes** (a `.song` file, or one written in code) with the engine's 8-bit
@@ -78,7 +79,7 @@ export const useSong = (song: TSongFile | TSongDoc | TSongAccompaniment, options
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useSong: call it inside a scene body.');
+        throw outsideSceneBody('useSong');
     }
     const audio = getAudioManager(store);
     const id = options.id ?? nanoId();

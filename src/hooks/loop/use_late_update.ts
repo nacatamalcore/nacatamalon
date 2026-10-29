@@ -1,4 +1,5 @@
 import { getActiveBox } from '../../store';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Runs your code once per frame, after every `useUpdate` of the scene has run.
@@ -53,7 +54,7 @@ import { getActiveBox } from '../../store';
 export const useLateUpdate = (callback: (delta: number, time: number) => void): void => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useLateUpdate: call it inside a scene body, not from a timer or a callback.');
+        throw outsideSceneBody('useLateUpdate');
     }
     box.lateCallbacks.push(callback);
 };

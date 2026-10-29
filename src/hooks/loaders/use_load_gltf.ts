@@ -4,6 +4,7 @@ import { loadGltf, newGltfModel, trackLoad } from '../../loaders';
 import { getActiveBox, getActiveGame } from '../../store';
 import type { TGltfModel, TShading } from '../../loaders';
 import { assetKey } from '../../loaders/asset_key';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Where a model comes from, and how to read it.
@@ -87,7 +88,7 @@ export const useLoadGltf = ({ src, node, shading = 'auto', textures = true, key 
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useLoadGltf: call it inside a scene body.');
+        throw outsideSceneBody('useLoadGltf');
     }
 
     // The piece is part of the name: one file asked for whole and asked for a piece at a time are

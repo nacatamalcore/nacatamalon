@@ -1,4 +1,5 @@
 import { getActiveBox } from '../../store';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Says that this object **uses** one of the game's stores.
@@ -33,7 +34,7 @@ import { getActiveBox } from '../../store';
 export const useStoreLink = (key: string): void => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useStoreLink: call it inside a scene body.');
+        throw outsideSceneBody('useStoreLink');
     }
     // Once: naming the same store twice is one link, and a list with it twice would make
     // "how many stores does this use" answer wrong.

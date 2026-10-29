@@ -15,6 +15,7 @@ import type { TTransition } from '../../transition';
 import type { TBoundTracks } from '../../motion/motion_tracks';
 import type { TMotionDoc, TMotionEvent, TMotionTransition } from '../../motion/types/t_motion_doc';
 import type { TMotionAttachment, TMotionHandle, TMotionOptions } from '../../motion/types/t_motion';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * More loops than this in one frame is a frame far longer than the motion, and the rest is skipped:
@@ -66,7 +67,7 @@ export const useMotion = (motion: TMotionFile | TMotionDoc, options: TMotionOpti
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useMotion: call it inside a scene body.');
+        throw outsideSceneBody('useMotion');
     }
     const scene = useScene();
     // A scene being shown rather than played (an editor laying it out) keeps everything where it

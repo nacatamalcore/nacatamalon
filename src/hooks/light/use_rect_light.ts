@@ -2,6 +2,7 @@ import { createRectLight } from '../../light';
 import { getActiveBox } from '../../store';
 import type { TLightOptionsBase } from '../../light';
 import type { TRectLight } from '../../light';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * A panel: a lamp shaped like a rectangle, which shines from its front only.
@@ -41,7 +42,7 @@ import type { TRectLight } from '../../light';
 export const useRectLight = (options: TLightOptionsBase & { range?: number; width?: number; height?: number } = {}): TRectLight => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useRectLight: call it inside a scene body, or inside something created with useSpawn.');
+        throw outsideSceneBody('useRectLight');
     }
 
     const light = createRectLight(options);

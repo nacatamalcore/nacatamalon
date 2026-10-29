@@ -1,5 +1,6 @@
 import { getActiveBox } from '../../store';
 import type { TGameObject } from '../spawn/use_spawn';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Offers something to the other behaviours on the same object under `key`, besides what this one
@@ -30,7 +31,7 @@ import type { TGameObject } from '../spawn/use_spawn';
 export const provide = <T>(key: string, value: T): void => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] provide: call it inside a scene body, not from a timer or a callback.');
+        throw outsideSceneBody('provide');
     }
     box.scriptApis.set(key, value);
 };
@@ -89,7 +90,7 @@ export const useScriptApi = <T>(name: string, self?: TGameObject): (() => T | nu
     // of the pass.
     const box = self ?? getActiveBox();
     if (box === null || box === undefined) {
-        throw new Error('[NacatamalOn] useScriptApi: call it inside a scene body, not from a timer or a callback.');
+        throw outsideSceneBody('useScriptApi');
     }
     return () => (box.scriptApis.get(name) as T | undefined) ?? null;
 };

@@ -1,4 +1,5 @@
 import { getActiveBox, bumpVersion, markWatchable } from '../../store';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * State that belongs to one piece of the scene, handed back as an object you read `.value` from.
@@ -81,7 +82,7 @@ export type TDataSetter<T> = (next: T | ((previous: T) => T | void)) => void;
 export const useData = <T>(initial: T): [TDataRecord<T>, TDataSetter<T>] => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useData: call it inside a scene body, not from a timer or a callback.');
+        throw outsideSceneBody('useData');
     }
 
     const record: TDataRecord<T> = { value: initial };

@@ -5,6 +5,7 @@ import { loadPack, newPack } from '../../loaders/pack';
 import { getActiveBox, getActiveGame } from '../../store';
 import type { TLoadedPack } from '../../loaders/pack';
 import { assetKey } from '../../loaders/asset_key';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * What `useLoadPack` is asked for.
@@ -60,7 +61,7 @@ export const useLoadPack = ({ src, key }: TUseLoadPackOptions): TLoadedPack => {
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useLoadPack: call it inside a scene body.');
+        throw outsideSceneBody('useLoadPack');
     }
 
     const folder = src.endsWith('/') ? src : `${src}/`;

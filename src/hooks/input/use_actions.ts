@@ -1,5 +1,6 @@
 import { getActiveBox, getActiveGame } from '../../store';
 import type { TAction, TActionDevice, TActionName, TActionsHandle } from '../../input';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * What the action hooks accept.
@@ -21,7 +22,7 @@ const sourceOf = (hook: string) => {
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error(`[NacatamalOn] ${hook}: call it inside a scene body.`);
+        throw outsideSceneBody(hook);
     }
     return store.get('input').actions;
 };

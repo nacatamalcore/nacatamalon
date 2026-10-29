@@ -5,6 +5,7 @@ import { onGameMoment } from '../../signal/game_moments';
 import { canDrawTransition, startTransition } from '../../transition';
 import type { TSceneChangeOptions, TSceneLaunchOptions } from '../../transition';
 import type { TSceneFn } from '../../scene/types/t_scene_fn';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * What a scene can do with the game's scenes, returned by `useScene`. Every name is one of the keys
@@ -137,7 +138,7 @@ export const useScene = (): TSceneHandle => {
     const store = getActiveGame();
     const active = getActiveBox();
     if (store === null || active === null) {
-        throw new Error('[NacatamalOn] useScene: call it inside a scene body.');
+        throw outsideSceneBody('useScene');
     }
 
     const owner = rootOf(active);

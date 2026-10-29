@@ -6,6 +6,7 @@ import { markMadeTexture } from '../../loaders';
 import type { TTexture } from '../../loaders';
 import type { TRuntimeStore } from '../../store';
 import type { TSpriteTexture, TSpriteTextureOptions } from './types';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Tells the pictures made here from images somebody loaded, which a key must never quietly take over.
@@ -143,7 +144,7 @@ export const createSpriteTexture = <TArgs extends unknown[]>(
     const store = getActiveGame();
     const parent = getActiveBox();
     if (store === null || parent === null) {
-        throw new Error('[NacatamalOn] createSpriteTexture: call it inside a scene body.');
+        throw outsideSceneBody('createSpriteTexture');
     }
 
     const record = newSpriteTexture(store, options);

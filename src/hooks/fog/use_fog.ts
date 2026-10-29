@@ -2,6 +2,7 @@ import { viewOf } from '../../box';
 import { createFog } from '../../fog/create_fog';
 import { getActiveBox } from '../../store';
 import type { TFog, TFogOptions } from '../../fog/types/t_fog';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Puts the scene in fog: its models fade into `color` between `near` and `far` from the camera.
@@ -36,7 +37,7 @@ import type { TFog, TFogOptions } from '../../fog/types/t_fog';
 export const useFog = (options: TFogOptions = {}): TFog => {
     const box = getActiveBox();
     if (box === null) {
-        throw new Error('[NacatamalOn] useFog: call it inside a scene body.');
+        throw outsideSceneBody('useFog');
     }
 
     // The view's and not the scene's, for the reason the camera is: a screen with a world of its

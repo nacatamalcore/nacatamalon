@@ -16,6 +16,7 @@ import type { TModel } from './types/t_model';
 import type { TModelOptions } from './types/t_model_options';
 import type { TRuntimeStore } from '../../store';
 import type { TTransform3d } from '../types/t_transform_3d';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /** No tint: what a piece's own colour is multiplied by when nothing was asked for. */
 const WHITE: TColor = { r: 1, g: 1, b: 1, a: 1 };
@@ -176,7 +177,7 @@ export const createModel = (options: TModelOptions): TModel => {
     const box = getActiveBox();
     const store = getActiveGame();
     if (box === null || store === null) {
-        throw new Error('[NacatamalOn] createModel: call it inside a scene body, or inside something created with useSpawn.');
+        throw outsideSceneBody('createModel');
     }
 
     const transform: TTransform3d = { ...NOWHERE, ...options.transform };

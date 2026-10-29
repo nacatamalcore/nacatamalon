@@ -6,6 +6,7 @@ import { resolveEffect } from './create_particles';
 import { trackDrawableOwner } from '../../box';
 import type { TParticles3d } from './types/t_particles_3d';
 import type { TParticles3dOptions } from './types/t_particles_3d_options';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Where an emitter is when nobody said: on its box, unturned, at its own size.
@@ -45,7 +46,7 @@ export const createParticles3d = (options: TParticles3dOptions): TParticles3d =>
     const box = getActiveBox();
     const store = getActiveGame();
     if (box === null || store === null) {
-        throw new Error('[NacatamalOn] createParticles3d: call it inside a scene body.');
+        throw outsideSceneBody('createParticles3d');
     }
 
     const file = resolveEffect(options.effect, 'particles-3d', 'createParticles3d');

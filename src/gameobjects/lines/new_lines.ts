@@ -4,6 +4,7 @@ import { createRecord } from '../create_record';
 import { writeLines } from './lines_state';
 import type { TTransform3d } from '../types/t_transform_3d';
 import type { TLines } from './types/t_lines';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Where a set is drawn from when nobody says: its object's own place.
@@ -47,7 +48,7 @@ export const newLines = (caller: string, options: TNewLinesOptions, vertices: Fl
     const box = getActiveBox();
     const store = getActiveGame();
     if (box === null || store === null) {
-        throw new Error(`[NacatamalOn] ${caller}: call it inside a scene body, or inside something created with useSpawn.`);
+        throw outsideSceneBody(caller);
     }
 
     const lines = createRecord('lines', {

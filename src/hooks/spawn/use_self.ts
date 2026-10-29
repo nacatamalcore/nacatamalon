@@ -1,5 +1,6 @@
 import { getActiveBox } from '../../store';
 import type { TGameObject } from './use_spawn';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * The thing being built right now, so it can refer to itself later: almost always to end its own
@@ -34,7 +35,7 @@ import type { TGameObject } from './use_spawn';
 export const useSelf = (): TGameObject => {
     const self = getActiveBox();
     if (self === null) {
-        throw new Error('[NacatamalOn] useSelf: call it inside a scene body.');
+        throw outsideSceneBody('useSelf');
     }
     return self;
 };

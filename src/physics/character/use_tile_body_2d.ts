@@ -5,6 +5,7 @@ import { sceneTilemaps } from '../../gameobjects/tilemap/scene_tilemaps';
 import { createTileBody2d } from './tile_body_2d';
 import { stillColliders2d } from './still_colliders';
 import type { TCharacterBody2d, TCharacterShape2d } from './t_character_body_2d';
+import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Makes this object a platformer's character that walks on the scene's maps, with no physics engine:
@@ -56,7 +57,7 @@ export const useTileBody2d = (options: TCharacterShape2d): TCharacterBody2d => {
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw new Error('[NacatamalOn] useTileBody2d: call it inside a scene body, or inside something created with useSpawn.');
+        throw outsideSceneBody('useTileBody2d');
     }
     if (placementOf(box) === null) {
         throw new Error(`[NacatamalOn] useTileBody2d: '${box.name}' is nowhere: give it a placement, or something to draw, so the character has somewhere to be.`);

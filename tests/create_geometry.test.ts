@@ -59,7 +59,7 @@ const windingAgrees = ({ vertices, indices }: { vertices: Float32Array; indices:
 
 describe('createGeometry', () => {
     it('refuses to be called outside a scene body', () => {
-        expect(() => createGeometry(SQUARE)).toThrow('[NacatamalOn] createGeometry: call it inside a scene body');
+        expect(() => createGeometry(SQUARE)).toThrow('[NacatamalOn] createGeometry: called where nothing is being built');
     });
 
     it('puts the corners on the card, measured, with their facing worked out', () => {
