@@ -96,6 +96,12 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
      * built: a listener taken on right after this hook would otherwise miss it.
      */
     let reached = false;
+    /**
+     * How many movements have been started. What a frame passed is told about the movement that
+     * passed it: a listener that starts another, the same one again included, leaves the rest of
+     * that frame's news unsaid rather than handed to the movement it just started.
+     */
+    let run = 0;
 
     /**
      * Tells whoever is listening about every moment marked between two points of a movement.
@@ -181,6 +187,7 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
             fade = null;
         }
 
+        run += 1;
         clipName = name;
         time = 0;
         reached = false;
@@ -363,19 +370,22 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
         // movement changes the next frame rather than half of this one. A frame that went round
         // passed the tail of the time that ended, then the head of the one that started.
         const name = clipName as string;
-        for (let p = 0; p < passedCount; p++) {
+        const moved = run;
+        for (let p = 0; p < passedCount && run === moved; p++) {
             markBetween(name, passed[p * 3]!, passed[p * 3 + 1]!, passed[p * 3 + 2] === 1);
         }
         if (stepped.wentRound > 0) {
             // Each time round on its own, so a count kept by a listener is never one short.
-            for (let n = repeats - stepped.wentRound + 1; n <= repeats && clipName === name; n++) {
+            for (let n = repeats - stepped.wentRound + 1; n <= repeats && run === moved; n++) {
                 for (const listener of [...repeatListeners]) {
                     listener(name, n);
                 }
             }
         }
 
-        if (stepped.ended) {
+        // Not when a listener has started another movement: the end was this one's, and stopping
+        // here would stop the one that has only just begun.
+        if (stepped.ended && run === moved) {
             playing = false;
             const ended = clipName as string;
             // Copied first: a listener is allowed to start the next movement, and that must not
@@ -386,7 +396,7 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
             // What the movement says comes after it, unless a listener has already started
             // something else: what a script asks for on the spot wins over what was said in general.
             const next = options.clips?.[ended]?.next;
-            if (next !== undefined && !playing && clipName === ended) {
+            if (next !== undefined && !playing && run === moved) {
                 if (file.clips[next] !== undefined) {
                     start(next, defaultFade);
                 } else if (!warnedNext.has(next)) {

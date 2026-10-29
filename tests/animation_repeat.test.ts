@@ -150,6 +150,45 @@ describe('a sprite\'s run that repeats', () => {
         run(5);
         expect(anim.clip).toBe('stand');
     });
+
+    it('does not say the end of a run that onRepeat started, when one frame went round and ended', () => {
+        // Ten pictures a frame: round once and over in the same one.
+        const { anim, run } = animated({ clips: { hit: { frames: [0], fps: 100, repeat: 1 }, stand: { frames: [1, 2], fps: 10 } }, play: 'hit' });
+        const ended: string[] = [];
+        anim.onEnd((clip) => ended.push(clip));
+        anim.onRepeat(() => anim.play('stand'));
+        run(2);
+        expect(anim.clip).toBe('stand');
+        expect(anim.playing).toBe(true);
+        expect(ended).toEqual([]);
+    });
+
+    it('tells each mark of a run started from the first picture\'s mark once, its first one first', () => {
+        const { anim, run } = animated({
+            clips: {
+                hit: { frames: [0, 1], fps: 10, events: [{ at: 0, name: 'go' }] },
+                stand: { frames: [2, 3], fps: 10, events: [{ at: 0, name: 'still' }, { at: 1, name: 'sway' }] },
+            },
+            play: 'hit',
+        });
+        const marks: string[] = [];
+        anim.onEvent((event) => {
+            marks.push(event);
+            if (event === 'go') anim.play('stand');
+        });
+        run(3);
+        expect(marks).toEqual(['go', 'still', 'sway']);
+    });
+
+    it('does not end the same run started again from onRepeat', () => {
+        const { anim, run } = animated({ clips: { hit: { frames: [0], fps: 100, repeat: 1 } }, play: 'hit' });
+        const ended: string[] = [];
+        anim.onEnd((clip) => ended.push(clip));
+        anim.onRepeat(() => anim.play('hit'));
+        run(2);
+        expect(anim.playing).toBe(true);
+        expect(ended).toEqual([]);
+    });
 });
 
 describe('a sheet that says how its runs repeat', () => {
@@ -303,5 +342,27 @@ describe('each movement of a model played its own way', () => {
         moves.onEnd(() => { moves.play('Slide'); });
         step(1.25);
         expect(moves.clip).toBe('Slide');
+    });
+
+    it('does not end a movement that onRepeat started, when one frame went round and ended', async () => {
+        // A hundred times as fast: round once and over inside a frame.
+        const { moves, step } = await withRig({ play: 'Slide', repeat: 1, speed: 100 });
+        const ended: string[] = [];
+        moves.onEnd((clip) => ended.push(clip));
+        moves.onRepeat(() => moves.play('Rise'));
+        step(0.021);
+        expect(moves.clip).toBe('Rise');
+        expect(moves.playing).toBe(true);
+        expect(ended).toEqual([]);
+    });
+
+    it('does not end the same movement started again from onRepeat', async () => {
+        const { moves, step } = await withRig({ play: 'Slide', repeat: 1, speed: 100 });
+        const ended: string[] = [];
+        moves.onEnd((clip) => ended.push(clip));
+        moves.onRepeat(() => moves.play('Slide'));
+        step(0.021);
+        expect(moves.playing).toBe(true);
+        expect(ended).toEqual([]);
     });
 });

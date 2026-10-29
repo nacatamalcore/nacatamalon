@@ -92,6 +92,12 @@ export const useSpriteAnimation = (sprite: TSprite, options: TSpriteAnimationOpt
      * being built: a listener taken on right after this hook would otherwise miss a mark at `0`.
      */
     let reached = false;
+    /**
+     * How many runs have been started. What a frame passed is told about the run that passed it: a
+     * listener that starts another, the same clip again included, leaves the rest of that frame's
+     * news unsaid rather than handed to the run it just started.
+     */
+    let run = 0;
     const endListeners: Array<(clip: string) => void> = [];
     const repeatListeners: Array<(clip: string, repeats: number) => void> = [];
     const eventListeners: Array<(event: string, clip: string) => void> = [];
@@ -139,6 +145,7 @@ export const useSpriteAnimation = (sprite: TSprite, options: TSpriteAnimationOpt
 
         pending = null;
 
+        run += 1;
         clipName = name;
         frames = clip.frames;
         // Seconds per frame, worked out once per clip rather than every frame.
@@ -189,9 +196,15 @@ export const useSpriteAnimation = (sprite: TSprite, options: TSpriteAnimationOpt
             return;
         }
 
+        // The run this frame moves on. One a listener starts is the next frame's, which begins on its
+        // first picture and tells its marks there.
+        const moved = run;
         if (!reached) {
             reached = true;
             mark(index);
+            if (run !== moved) {
+                return;
+            }
         }
 
         elapsed += delta * speed;
@@ -238,14 +251,16 @@ export const useSpriteAnimation = (sprite: TSprite, options: TSpriteAnimationOpt
             const clip = clipName as string;
             // Each time round on its own, so a count kept by a listener is never one short. Copied,
             // because a listener may well stop it or start another run from here.
-            for (let n = repeats - wentRound + 1; n <= repeats && clipName === clip; n++) {
+            for (let n = repeats - wentRound + 1; n <= repeats && run === moved; n++) {
                 for (const listener of [...repeatListeners]) {
                     listener(clip, n);
                 }
             }
         }
 
-        if (finished) {
+        // Not when a listener has started another run: the end was this one's, and the new one has
+        // only just begun.
+        if (finished && run === moved) {
             const ended = clipName as string;
             // Shown before telling anybody, and the list copied, because a listener is very likely
             // to start the next run from in here.
@@ -254,7 +269,7 @@ export const useSpriteAnimation = (sprite: TSprite, options: TSpriteAnimationOpt
             }
             // The file's own follow-up, unless a listener has already started something else: what
             // a script asks for on the spot wins over what the sheet says in general.
-            if (!playing && clipName === ended) {
+            if (run === moved) {
                 playNext(options.clips[ended]?.next);
             }
         }
