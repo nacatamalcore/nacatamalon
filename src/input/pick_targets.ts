@@ -124,6 +124,53 @@ export const pickTargetsAt = (store: TRuntimeStore, points: ReadonlyArray<{ x: n
     return points.map((screen) => hitsAt(drawables, cameras, cameraIndex, screen, masked?.levels ?? null, masked?.shapes ?? null));
 };
 
+/**
+ * Where a screen point falls inside a text's block, in pixels from its top-left corner, the numbers
+ * its letters are laid out in: through the camera the text is drawn with, and undone the way it is
+ * placed (its pivot, its turn, its size, everything it hangs under). `null` for a text with nothing
+ * drawn this frame, nor a block to fall in.
+ *
+ * The point need not be inside the block: what is in it is for whoever asked to decide.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const textPointAt = (store: TRuntimeStore, text: TText, screen: { x: number; y: number }): { x: number; y: number } | null => {
+    const ctx: TFrameContext = createFrameContext();
+    fillFrameContext(store, ctx);
+    const screenPass = ctx.passes[ctx.passes.length - 1];
+    const masked = maskedPassOf(screenPass);
+    const { cameras = [] } = screenPass;
+    const drawables = (masked?.drawables ?? screenPass.drawables ?? []) as NonNullable<TFrameContext['passes'][number]['drawables']>;
+    const cameraIndex = masked?.cameraIndex ?? screenPass.cameraIndex ?? [];
+
+    // Its letters are seen through its scene's camera: the first one found says which.
+    const first = drawables.findIndex((drawable) => textOfGlyph(drawable) === text);
+    if (first === -1) {
+        return null;
+    }
+    const camera = cameraIndex[first] >= 0 ? cameras[cameraIndex[first]] : null;
+    const world = unapplyView2d(camera ?? null, screen);
+
+    const { width, height } = textBlockSize(text);
+    const anchor = text.anchor ?? TOP_LEFT;
+    const place = pivotPlace(worldOf(text), text, anchor, width, height, pivoted);
+    const held = text.pivot ?? anchor;
+    if (place.scaleX === 0 || place.scaleY === 0) {
+        return null;
+    }
+    // As `quadFraction`, without keeping it inside: turned back, unscaled, the pivot put back.
+    const dx = world.x - place.x;
+    const dy = world.y - place.y;
+    const c = Math.cos(-place.rotation);
+    const s = Math.sin(-place.rotation);
+    return {
+        x: (dx * c - dy * s) / place.scaleX + held.x * width,
+        y: (dx * s + dy * c) / place.scaleY + held.y * height,
+    };
+};
+
 /** How light a colour is, the way the masks' shaders read `'luminance'`. */
 const luminance = (r: number, g: number, b: number): number => 0.2126 * r + 0.7152 * g + 0.0722 * b;
 

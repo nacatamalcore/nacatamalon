@@ -13,6 +13,13 @@ releases are in [changelog/](./changelog/), one file each.
   `destroy(sprite)` takes only that sprite and leaves the piece running with its other sprites and
   its `useUpdate`, which `destroy`'s documentation now says.
 
+- **`letterAt(text, info)`**: the letter of a text under the pointer, `{ index, char, line }`, with
+  `text.text[index]` the one touched and `line` counting the ones `maxWidth` broke; `null` on a space,
+  between letters or lines, or outside. Seen as drawn, through the text's own camera (one on the
+  screen's layer too), turned, grown and held by its pivot. A letter is its whole step along its line,
+  so a vector font's `o` is touched above and below its ink. For spelling games, words of dialogue to
+  pick, a caret to place: `listen(word, { onClick: (info) => letterAt(word, info) })`.
+
 ### Changed
 
 - **What goes with a destroyed object says it is destroyed.** `destroy(piece)` took its sprites,

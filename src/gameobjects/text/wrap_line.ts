@@ -73,3 +73,22 @@ export const textLines = (text: string, style: TTextStyle, step: TCharStep, spac
     const maxWidth = style.maxWidth ?? 0;
     return maxWidth > 0 ? lines.flatMap((line) => wrapLine(line, maxWidth, step, spacing)) : lines;
 };
+
+/**
+ * Where in `text` each of its lines starts, as `text[start]`. The lines are pieces of the text in
+ * order, and breaking one only leaves out the `\n` or the spaces it broke at, so each is found from
+ * where the one before ended.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const lineStarts = (text: string, lines: readonly string[]): number[] => {
+    let from = 0;
+    return lines.map((line) => {
+        const start = text.indexOf(line, from);
+        const at = start === -1 ? from : start;
+        from = at + line.length;
+        return at;
+    });
+};

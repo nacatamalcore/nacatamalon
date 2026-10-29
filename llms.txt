@@ -126,6 +126,10 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   `measureText(label)` gives a text's `{ width, height }` (no scale) and its `lines`; before a text
   exists, `measureText('words', { font?, fontSize?, maxWidth?, ... })` gives what `createText`
   would make of them: it needs no game, like `drawText`, and takes the same options.
+  `letterAt(text, info)` is the letter under the pointer: `{ index, char, line }`, with
+  `text.text[index]` the one touched, or `null` on a space, between letters or outside; seen through
+  the text's camera, turned and grown as drawn. For a word to spell, a word of dialogue to pick:
+  `listen(word, { onClick: (info) => letterAt(word, info) })`.
 - **Pivot**: a sprite, a text or a panel turns and grows about its anchor, unless `pivot` (0-1, like
   `anchor`) names another point. The anchor says where it sits, the pivot what it spins on: a bike
   anchored under its back wheel (`anchor: { x: 5 / 24, y: 1 }`) wheelies about it, and set

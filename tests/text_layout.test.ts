@@ -65,7 +65,7 @@ describe('layoutText', () => {
     });
 
     it('lays out nothing while the font has not arrived', () => {
-        expect(layoutText('ABC', {}, null, new Map())).toEqual({ width: 0, height: 0, scale: 1, placements: [], lines: [] });
+        expect(layoutText('ABC', {}, null, new Map())).toEqual({ width: 0, height: 0, scale: 1, placements: [], lines: [], lineHeight: 0, lineSpacing: 0 });
     });
 });
 

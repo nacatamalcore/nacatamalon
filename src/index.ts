@@ -122,8 +122,8 @@ export { findObject, findObjects, ownerOf, sceneOf } from './box';
 // How big something is and where: what is drawn flat, how a text is set and where its lines break,
 // and a point of the world measured on an object (where a hit landed on it), or a point of an
 // object found in the world (where a shot leaves it from).
-export { boundsOf, sizeOf, measureText, worldToLocal, localToWorld, worldToLocal3d, localToWorld3d } from './layout';
-export type { TMeasurable, TMeasureTextOptions, TTextMeasure } from './layout';
+export { boundsOf, sizeOf, measureText, letterAt, worldToLocal, localToWorld, worldToLocal3d, localToWorld3d } from './layout';
+export type { TMeasurable, TMeasureTextOptions, TTextLetter, TTextMeasure } from './layout';
 // Whether two things touch, with no physics: a bullet and a brick, the player and the coins.
 export { collisionBetween } from './hitbox';
 export type { TRect, TCollisionTarget, THitbox } from './hitbox';

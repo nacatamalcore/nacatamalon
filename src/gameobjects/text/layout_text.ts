@@ -1,4 +1,4 @@
-import { textLines } from './wrap_line';
+import { lineStarts, textLines } from './wrap_line';
 import type { TBitmapFontGlyph, TBitmapFontMeta } from '../../loaders';
 import type { TTextStyle } from './types/t_text_style';
 
@@ -13,6 +13,20 @@ export type TGlyphPlacement = {
     width: number;
     height: number;
     /**
+     * Where the character is in the text: `text[index]` is the one drawn here.
+     */
+    index: number;
+    /**
+     * The line it is on, counting the ones `maxWidth` broke.
+     */
+    line: number;
+    /**
+     * The room it takes along its line, from where the pen was to where it moved on, without the
+     * spacing after it: wider than its picture where a letter's ink is narrower than its step.
+     */
+    cellX: number;
+    cellWidth: number;
+    /**
      * Where the character's picture is in the font's image, in pixels of the image.
      */
     source: { x: number; y: number; width: number; height: number };
@@ -24,14 +38,26 @@ export type TGlyphPlacement = {
  *
  * @internal
  */
-export type TTextLayout = { width: number; height: number; scale: number; placements: TGlyphPlacement[]; lines: string[] };
+export type TTextLayout = {
+    width: number;
+    height: number;
+    scale: number;
+    placements: TGlyphPlacement[];
+    lines: string[];
+    /**
+     * How tall a line is, and how far apart two are, in pixels: line `n` is from
+     * `n × (lineHeight + lineSpacing)` down.
+     */
+    lineHeight: number;
+    lineSpacing: number;
+};
 
 /**
  * A text with nothing to lay out yet, because its font has not loaded.
  *
  * @internal
  */
-export const EMPTY_LAYOUT: TTextLayout = { width: 0, height: 0, scale: 1, placements: [], lines: [] };
+export const EMPTY_LAYOUT: TTextLayout = { width: 0, height: 0, scale: 1, placements: [], lines: [], lineHeight: 0, lineSpacing: 0 };
 
 /**
  * One line of a text, laid out from the left edge: what it says, its characters and how wide it is.
@@ -61,11 +87,12 @@ export const alignLines = (lines: readonly TTextLine[], style: TTextStyle, lineH
         const offset = align === 'center' ? (width - line.width) / 2 : align === 'right' ? width - line.width : 0;
         for (const placement of line.placements) {
             placement.x += offset;
+            placement.cellX += offset;
             placements.push(placement);
         }
     }
 
-    return { width, height, scale, placements, lines: lines.map((line) => line.text) };
+    return { width, height, scale, placements, lines: lines.map((line) => line.text), lineHeight, lineSpacing };
 };
 
 /**
@@ -114,11 +141,14 @@ export const layoutText = (text: string, style: TTextStyle, meta: TBitmapFontMet
     const spaceWidth = glyphs.get(' ')?.w ?? Math.ceil(meta.glyphHeight / 2);
     const step = (char: string): number => (glyphFor(char, glyphs)?.w ?? spaceWidth) * scale + gap;
 
-    const lines = textLines(text, style, step, gap).map((line, row) => {
+    const broken = textLines(text, style, step, gap);
+    const starts = lineStarts(text, broken);
+    const lines = broken.map((line, row) => {
         const top = row * (lineHeight + lineSpacing);
         const placements: TGlyphPlacement[] = [];
         let pen = 0;
         let count = 0;
+        let index = starts[row];
 
         for (const char of line) {
             const glyph = glyphFor(char, glyphs);
@@ -128,10 +158,15 @@ export const layoutText = (text: string, style: TTextStyle, meta: TBitmapFontMet
                     y: top,
                     width: glyph.w * scale,
                     height: lineHeight,
+                    index,
+                    line: row,
+                    cellX: pen,
+                    cellWidth: glyph.w * scale,
                     source: { x: glyph.x, y: glyph.y, width: glyph.w, height: meta.glyphHeight },
                 });
             }
             pen += step(char);
+            index += char.length;
             count++;
         }
 

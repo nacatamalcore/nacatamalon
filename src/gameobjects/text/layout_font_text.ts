@@ -1,6 +1,6 @@
 import { fontGlyph, fontKerning } from '../../loaders';
 import { EMPTY_LAYOUT, alignLines } from './layout_text';
-import { textLines } from './wrap_line';
+import { lineStarts, textLines } from './wrap_line';
 import type { TFont, TFontGlyph } from '../../loaders';
 import type { TGlyphPlacement, TTextLayout } from './layout_text';
 import type { TTextStyle } from './types/t_text_style';
@@ -55,11 +55,14 @@ export const layoutFontText = (text: string, style: TTextStyle, font: TFont): TT
         return (kerning + glyph.advance) * units + letterSpacing;
     };
 
-    const lines = textLines(text, style, step, letterSpacing).map((line, row) => {
+    const broken = textLines(text, style, step, letterSpacing);
+    const starts = lineStarts(text, broken);
+    const lines = broken.map((line, row) => {
         const top = row * (lineHeight + lineSpacing) + baseline;
         const placements: TGlyphPlacement[] = [];
         let pen = 0;
         let count = 0;
+        let index = starts[row];
         let previous: TFontGlyph | undefined;
 
         for (const char of line) {
@@ -73,10 +76,17 @@ export const layoutFontText = (text: string, style: TTextStyle, font: TFont): TT
                     y: top - glyph.top * pixels,
                     width: glyph.width * pixels,
                     height: glyph.height * pixels,
+                    index,
+                    line: row,
+                    // The step it takes, not its ink: an 'o' is touched anywhere above and below
+                    // it on its line, and from one letter to the next there is no gap.
+                    cellX: pen,
+                    cellWidth: glyph.advance * units,
                     source: { x: glyph.x, y: glyph.y, width: glyph.width, height: glyph.height },
                 });
             }
             pen += glyph.advance * units + letterSpacing;
+            index += char.length;
             previous = glyph;
             count++;
         }
