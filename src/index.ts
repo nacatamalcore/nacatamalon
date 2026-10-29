@@ -286,7 +286,7 @@ export type { TGltfNodeInfo } from './loaders';
 export type { TParticleRange, TParticleColorStop, TParticleScaleStop, TEmissionDoc } from './loaders/particles';
 export type { TShaderTarget } from './loaders/shader/types/t_shader_target';
 export type { TRendererType } from './render';
-export type { TCanvasScaling, TCanvasKeep } from './DOM';
+export type { TCanvasScaling, TCanvasKeep, TCanvasAlign } from './DOM';
 export type { TUseActionsOptions, TUseDraggableOptions, TDraggableHandle, TDraggableDropInfo, TUseDropZoneOptions, TDropZoneHandle } from './hooks';
 export type { TUseLoadAudioOptions, TUseLoadBitmapFontOptions, TUseLoadFontOptions, TUseLoadLutOptions, TUseLoadPaletteOptions, TUseLoadParticlesOptions, TUseLoadPackOptions, TUseLoadSongOptions, TUseLoadTrackerSongOptions, TUseLoadMotionOptions } from './hooks/loaders';
 export type { TSongFile } from './loaders/song';

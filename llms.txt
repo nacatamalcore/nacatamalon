@@ -95,6 +95,12 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   'integer'` (whole multiples of the screen's own pixels, so crisp pixel art also on a screen at 125%,
   where the CSS size has fractions) or `'contain'` (as large as fits). `useGame().setScaling('contain')`
   changes it while the game runs (a player's option), and `getScaling()` reads it.
+- **Where it sits in its page**: `align` (`RENDER.ALIGN.CENTER`, `TOP`, `BOTTOM`, `LEFT`, `RIGHT`, or a
+  corner, `TOP_LEFT`…) says where, and wins over the page's CSS; it never changes the size, only
+  which side the space left over goes to. Left out, a container with flex or grid has it where its
+  `justify-content` / `align-items` say (a bare `display: flex` is top-left), and any other container,
+  a plain `<div id="app">`, in the middle both ways. Full screen is always the middle. Padding is room
+  it does not take.
 - **A console's screen**: `createGame('#app', { ...RENDER.CONSOLE_SCREENS.snes, scaling: 'integer' })`
   gives its size, its pictures a second and the shape of its pixels (`nes`, `snes`, `genesis`,
   `gameBoy`, `gba`, `ps1`, `n64`). `pixelAspect: 8 / 7` paints each pixel wider than tall, as the NES

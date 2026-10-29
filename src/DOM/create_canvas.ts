@@ -34,7 +34,8 @@ export const createCanvas = (parent: TGameTarget, options: TCanvasOptions): TCan
     let fit: TCanvasFit | null = null;
     const effective = (): TCanvasOptions => {
         const base = fit === null ? current : { ...current, ...fit };
-        return override === null ? base : { ...base, scaling: override };
+        // Full screen is the whole monitor: the middle of it, whatever the game asked for in a page.
+        return override === null ? base : { ...base, scaling: override, align: 'center' };
     };
     fitCanvas(canvas, current);
 

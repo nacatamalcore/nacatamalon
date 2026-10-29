@@ -16,7 +16,7 @@ import type { TNineSlice } from '../gameobjects/nine_slice/types';
  */
 export type THeadlessGameOptions = Omit<
     TGameOptions,
-    'renderer' | 'msaa' | 'scaling' | 'keep' | 'pixelRatio' | 'fullscreenScaling' | 'pauseOnBlur' | 'banner' | 'splash'
+    'renderer' | 'msaa' | 'scaling' | 'keep' | 'pixelRatio' | 'fullscreenScaling' | 'align' | 'pauseOnBlur' | 'banner' | 'splash'
 > & {
     /**
      * The scenes, by name, as `createGame` takes them.

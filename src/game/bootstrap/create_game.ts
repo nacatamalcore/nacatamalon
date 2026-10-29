@@ -99,11 +99,12 @@ export const createGame = (target: TGameTarget, game_options: TGameOptions) => {
         pixelRatio,
         pixelAspect,
         fullscreenScaling,
+        align,
         pauseOnBlur,
         banner,
         splash
     } = cleanedOptions;
-    const screen = createCanvas(target, { width, height, smooth, scaling, keep, pixelRatio, pixelAspect, fullscreenScaling });
+    const screen = createCanvas(target, { width, height, smooth, scaling, keep, pixelRatio, pixelAspect, fullscreenScaling, align });
     // Null until half 2: the store cannot exist without a renderer, and the renderer is the
     // await. Everything in half 1 that touches it, `destroy` above all, has to cope with that.
     let store: TRuntimeStore | null = null;

@@ -46,6 +46,10 @@ describe('what the groups say', () => {
         expect(PHYSICS.ALL_LAYERS).toBe((1 << LIMITS.PHYSICS_LAYERS) - 1);
         expect(RENDER.TYPE).toEqual({ AUTO: 'AUTO', WEBGPU: 'WEBGPU', WEBGL2: 'WEBGL2' });
         expect(RENDER.PIXEL_SNAP).toEqual({ SCREEN: 'screen', GAME: 'game', OFF: 'off' });
+        expect(RENDER.ALIGN).toEqual({
+            CENTER: 'center', TOP: 'top', BOTTOM: 'bottom', LEFT: 'left', RIGHT: 'right',
+            TOP_LEFT: 'top-left', TOP_RIGHT: 'top-right', BOTTOM_LEFT: 'bottom-left', BOTTOM_RIGHT: 'bottom-right',
+        });
         expect(INPUT.DEADZONE).toBe(0.2);
     });
 });

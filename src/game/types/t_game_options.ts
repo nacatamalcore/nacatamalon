@@ -4,6 +4,7 @@ import type { TCanvasKeep } from '../../DOM/types/t_canvas_keep';
 import type { TColorOption } from "../../color";
 import type { TRendererType } from '../../render';
 import type { TActionMap, TActionPersist } from '../../input';
+import type { TCanvasAlign } from '../../DOM/types/t_canvas_align';
 
 /**
  * How a game's time moves forward: `'display'`, one update per picture the screen shows, or a
@@ -183,6 +184,31 @@ export type TGameOptions = {
      * the middle of a page at 1× wants the whole monitor once the player asks for it.
      */
     fullscreenScaling?: TCanvasScaling;
+    /**
+     * Where the game sits in its container when the container is bigger than the game: `'center'`,
+     * `'top'`, `'bottom'`, `'left'`, `'right'` or a corner (`'top-left'`…), also as
+     * `RENDER.ALIGN.TOP`… It never changes the game's size, which `scaling` decides first: it only
+     * says which side the space left over goes to.
+     *
+     * **Said here, it wins over the page.** A container whose CSS asks for another place, a flexbox
+     * or a grid aligned elsewhere, has the game where `align` says all the same.
+     *
+     * **Left out, the page decides.** A container that lays its content out itself, with flex or grid,
+     * has the game where its `justify-content` and `align-items` (a grid's `justify-items`) put it: a
+     * flexbox that aligns nothing puts it top-left, as it would anything. A container that does
+     * neither, a plain `<div>`, has it in the middle both ways.
+     *
+     * While full screen it is always the middle: the container is then the whole monitor.
+     *
+     * Either way it lands on whole pixels of the screen, so the pixels stay crisp.
+     *
+     * @example
+     * ```ts
+     * // On a phone, at the top, with the controls of the page below it.
+     * createGame('#app', { width: 320, height: 180, scaling: 'integer', align: RENDER.ALIGN.TOP });
+     * ```
+     */
+    align?: TCanvasAlign;
     /**
      * Freeze the loop while nobody can see the page, and unfreeze on the way back. `true` by
      * default.

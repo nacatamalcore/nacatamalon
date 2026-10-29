@@ -6,6 +6,8 @@ import { DEFAULT_PROJECT_SETTINGS } from './default_project';
 import { MAX_STEP_RATE, MIN_STEP_RATE } from '../CONFIG';
 import type { TProjectSettings } from './types/t_project_settings';
 import type { TPixelSnap } from '../game/types/t_game_options';
+import { CANVAS_ALIGNS } from '../DOM/types/t_canvas_align';
+import type { TCanvasAlign } from '../DOM/types/t_canvas_align';
 
 /**
  * The known formats, so a file from somewhere else is caught rather than half read.
@@ -88,6 +90,7 @@ export const parseProject = (value: unknown): TProjectSettings => {
         scaling: asOneOf(raw.scaling, ['none', 'integer', 'contain', 'fill'] as const, DEFAULT_PROJECT_SETTINGS.scaling),
         keep: asOneOf(raw.keep, ['both', 'height', 'width', 'none'] as const, DEFAULT_PROJECT_SETTINGS.keep),
         fullscreenScaling: asOneOf(raw.fullscreenScaling, ['none', 'integer', 'contain', 'fill'] as const, DEFAULT_PROJECT_SETTINGS.fullscreenScaling),
+        ...(typeof raw.align === 'string' && (CANVAS_ALIGNS as readonly string[]).includes(raw.align) ? { align: raw.align as TCanvasAlign } : {}),
         // `createGame` throws on a ratio that cannot draw; a file falls back instead, like every
         // other field here.
         pixelRatio: raw.pixelRatio === 'device' || (typeof raw.pixelRatio === 'number' && Number.isFinite(raw.pixelRatio) && raw.pixelRatio > 0)

@@ -22,6 +22,7 @@ import type { TSfxPreset } from './audio/synth/types/t_song';
 import type { TSongBuiltinInfo } from './audio/synth/builtin/song_library';
 import type { TSongInstrumentInfo } from './audio/synth/builtin/song_instruments';
 import type { TSongSampleInfo } from './audio/synth/builtin/song_samples';
+import type { TCanvasAlign } from './DOM/types/t_canvas_align';
 
 /**
  * The engine's constants: what a game reads and never changes. They live on the root, in groups,
@@ -48,7 +49,9 @@ const frozen = <T>(value: T): T => {
  * screens of the consoles, and how many numbers one corner of a line takes.
  *
  * `TYPE.WEBGL2` is the same as writing `'WEBGL2'` in `createGame({ renderer })`. `PIXEL_SNAP.SCREEN`,
- * `GAME` and `OFF` are what `createGame({ pixelSnap })` and `useGame().setPixelSnap` take.
+ * `GAME` and `OFF` are what `createGame({ pixelSnap })` and `useGame().setPixelSnap` take. `ALIGN` is
+ * where `createGame({ align })` puts the game in its container: `CENTER`, a side (`TOP`, `BOTTOM`,
+ * `LEFT`, `RIGHT`) or a corner (`TOP_LEFT`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_RIGHT`).
  * `CONSOLE_SCREENS` is each console's screen, its size, the shape of its pixels (`pixelAspect`) and
  * its pictures a second, to spread into `createGame`: `nes`, `snes`, `genesis`, `gameBoy`, `gba`,
  * `ps1` and `n64`.
@@ -58,6 +61,7 @@ const frozen = <T>(value: T): T => {
  * @example
  * createGame({ renderer: RENDER.TYPE.WEBGL2, pixelSnap: RENDER.PIXEL_SNAP.GAME });
  * createGame('#app', { ...RENDER.CONSOLE_SCREENS.snes, scaling: 'integer' });
+ * createGame('#app', { width: 320, height: 180, scaling: 'integer', align: RENDER.ALIGN.TOP });
  *
  * @category Constants
  * @since 1.0.0
@@ -74,6 +78,17 @@ export const RENDER = /* @__PURE__ */ frozen({
         GAME: 'game',
         OFF: 'off',
     } as const satisfies Record<string, TPixelSnap>,
+    ALIGN: {
+        CENTER: 'center',
+        TOP: 'top',
+        BOTTOM: 'bottom',
+        LEFT: 'left',
+        RIGHT: 'right',
+        TOP_LEFT: 'top-left',
+        TOP_RIGHT: 'top-right',
+        BOTTOM_LEFT: 'bottom-left',
+        BOTTOM_RIGHT: 'bottom-right',
+    } as const satisfies Record<string, TCanvasAlign>,
     CONSOLE_SCREENS,
     LINE_VERTEX_FLOATS,
 });

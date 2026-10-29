@@ -41,6 +41,7 @@ export const gameOptionsFromProject = (settings: TProjectSettings): TGameOptions
     scaling: settings.scaling,
     keep: settings.keep,
     fullscreenScaling: settings.fullscreenScaling,
+    ...(settings.align !== undefined ? { align: settings.align } : {}),
     pixelRatio: settings.pixelRatio,
     pauseOnBlur: settings.pauseOnBlur,
     contextMenu: settings.contextMenu,

@@ -9,6 +9,7 @@ export { screenSizeOf, resolvePixelRatio } from './screen_size';
 export type { TCanvasLayout } from './types/t_canvas_layout';
 export type { TCanvasScaling } from './types/t_canvas_scaling';
 export type { TCanvasKeep } from './types/t_canvas_keep';
+export type { TCanvasAlign } from './types/t_canvas_align';
 export type { TCanvasOptions } from './types/t_canvas_options';
 export type { TCanvasFit } from './types/t_canvas_fit';
 export type { TCanvasInstance } from './types/t_canvas_instance';

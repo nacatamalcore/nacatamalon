@@ -20,6 +20,14 @@ releases are in [changelog/](./changelog/), one file each.
   so a vector font's `o` is touched above and below its ink. For spelling games, words of dialogue to
   pick, a caret to place: `listen(word, { onClick: (info) => letterAt(word, info) })`.
 
+- **`align` in `createGame` and `project.json`: where the game sits in its page.** `'center'`, a side
+  (`'top'`, `'bottom'`, `'left'`, `'right'`) or a corner (`'top-left'`…), also as `RENDER.ALIGN.TOP`…
+  It only says which side the space left over goes to, never the size, which `scaling` still
+  decides. Said, it wins over the page's CSS. Left out, the page decides: a flexbox or a grid puts it
+  where it aligns its content, and any other container in the middle both ways. Full screen is
+  always the middle. `createGame('#app', { width: 320, height: 180, scaling: 'integer', align: RENDER.ALIGN.TOP })`
+  for a phone with the page's controls below.
+
 ### Changed
 
 - **What goes with a destroyed object says it is destroyed.** `destroy(piece)` took its sprites,
@@ -40,6 +48,23 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **The canvas sits where its page asks, and centred when it asks nothing.** Since 0.3.1 the engine
+  set a margin on the left, rounded to a whole pixel of the screen, and a page that also centred it
+  with `display: flex` (every CLI template, the editor's demos, the playgrounds, full screen) added
+  half the leftover again: 5 px to the right in a 1300 px window, 80 px on a wide monitor. Now a
+  container that lays its content out itself, a flexbox or a grid, says where the game goes, by its
+  own `justify-content` and `align-items` (a grid's `justify-items`), and it goes there: a corner,
+  the far side, the middle. Any other container has said nothing, and the game is centred both ways,
+  up and down too, as it was only in full screen. The far margins are `auto`, so the page has
+  nothing left to add; in a plain container the way down is a `top`, because a margin there went out
+  through it and moved the whole container down. Either way it lands on whole pixels of the screen.
+  Measured in Chromium at densities 1 to 2 over eight kinds of page.
+- **A container's padding is room the game does not take.** It was counted as room: 40 px of it
+  round the game had the canvas sized past its edge and off-centre.
+- **A container with no size of its own no longer shrinks the game.** A bare `<div id="app">`, or
+  one a centring page shrinks round what it holds, is as big as the canvas, and the game was scaled
+  against itself, smaller every time, down to a corner. The container is measured without the canvas
+  in it now, and along a side it has no size, the game keeps its own.
 - **One file is loaded once, however its path is written.** The cache went by the path as the game
   wrote it, so a game served from a folder (`base: './'`, as on itch.io) that asked for
   `./assets/tilesets/overworld.atlas` while its map asked for the same sheet as

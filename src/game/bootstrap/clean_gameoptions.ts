@@ -3,6 +3,7 @@ import { cleanLayerNames } from '../../physics/layer_names';
 import { DEFAULT_GAME_OPTIONS, MAX_STEP_RATE, MIN_STEP_RATE } from "../../CONFIG";
 import type { TGameOptions, TPixelSnap } from "../types/t_game_options";
 import type { TRendererType } from "../../render/interface/t_renderer_capabilities";
+import { CANVAS_ALIGNS } from '../../DOM/types/t_canvas_align';
 
 /** Every renderer a game can ask for. */
 const RENDERERS: readonly TRendererType[] = ['AUTO', 'WEBGPU', 'WEBGL2'];
@@ -55,6 +56,11 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
     // Not in CONFIG: full screen is a whole monitor, and the pixel-art answer there is a whole
     // multiple, so the default is the one that keeps every game pixel square.
     const fullscreenScaling = game_options.fullscreenScaling ?? 'integer';
+    // No default: left out, the page says where the game goes (see `TGameOptions.align`).
+    const align = game_options.align;
+    if (align !== undefined && !CANVAS_ALIGNS.includes(align)) {
+        throw new Error(`[NacatamalOn] createGame: align must be ${CANVAS_ALIGNS.map((name) => `'${name}'`).join(', ')}, got ${String(align)}.`);
+    }
     // No default in CONFIG for these two: a game with no actions has an empty map, and one that
     // says nothing about keeping the player's controls does not keep them.
     const actions = game_options.actions ?? [];
@@ -89,6 +95,7 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
         pauseOnBlur,
         pixelRatio,
         fullscreenScaling,
+        align,
         actions,
         actionsPersist,
         physicsLayers,

@@ -1,5 +1,6 @@
 import type { TCanvasKeep } from './t_canvas_keep';
 import type { TCanvasScaling } from './t_canvas_scaling';
+import type { TCanvasAlign } from './t_canvas_align';
 
 /**
  * Everything that decides the canvas's size.
@@ -40,4 +41,9 @@ export type TCanvasOptions = {
      * How it scales while full screen. Defaults to `'integer'`.
      */
     fullscreenScaling?: TCanvasScaling;
+    /**
+     * Where it sits in its container, over what the page asks. Left out, the page's flexbox or grid
+     * says, and the middle when it says nothing.
+     */
+    align?: TCanvasAlign;
 };

@@ -5,6 +5,7 @@ import type { TGameStep, TPixelSnap } from '../../game/types/t_game_options';
 import type { TRendererType } from '../../render';
 import type { TActionMap } from '../../input';
 import type { TPostChain } from '../../post';
+import type { TCanvasAlign } from '../../DOM/types/t_canvas_align';
 
 /**
  * A game's own settings: everything that is true of the **game**, not of one scene.
@@ -77,6 +78,11 @@ export type TProjectSettings = {
      * `TGameOptions.fullscreenScaling`.
      */
     fullscreenScaling: TCanvasScaling;
+    /**
+     * Where the game sits in its page, over what the page's CSS asks. Left out, the page decides.
+     * See `TGameOptions.align`.
+     */
+    align?: TCanvasAlign;
     /**
      * How many real pixels each game pixel is drawn with: `1` (the default, and the one for pixel
      * art), a number, or `'device'` to follow the screen. Sharper edges for 3D and HD games, at the
