@@ -337,7 +337,7 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
                 const index = viewIndex[i] ?? -1;
                 // Nothing of it on this view's screen: skipped before it costs a thing. Per view,
                 // because what one camera leaves out another can see.
-                if (!meshInView(item, judges[index] ?? flatSpace.viewProjection, (spaces[index] ?? flatSpace).flat)) {
+                if (!meshInView(item, judges[index] ?? flatSpace.viewProjection, spaces[index] ?? flatSpace)) {
                     continue;
                 }
                 const view = views3d[index] ?? null;

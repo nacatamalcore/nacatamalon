@@ -2,6 +2,15 @@ import { describe, expect, it } from 'bun:test';
 import { cullingMatricesFor, meshInView } from '../src/render/shared/mesh_in_view';
 import { fillCameraSpace, newCameraSpace } from '../src/render/shared/compute_mvp_3d';
 import { toGlClip } from '../src/render/webgl2/mesh/depth_range';
+import { createScene } from '../src/scene/create_scene';
+import { createMesh } from '../src/gameobjects/mesh/create_mesh';
+import { useCubeGeometry } from '../src/hooks/geometry/use_cube_geometry';
+import { useCamera3d } from '../src/hooks/camera/use_camera_3d';
+import { useCamera2d } from '../src/hooks/camera/use_camera_2d';
+import { createCamera3d } from '../src/camera/create_camera_3d';
+import { fillFrameContext } from '../src/game/loop/fill_frame_context';
+import { createTestGame, startTestScene } from './helpers/test_game';
+import type { TFrameContext } from '../src/render/interface';
 import type { TDrawCamera3d } from '../src/render/interface/draw/t_draw_camera_3d';
 import type { TDrawMesh } from '../src/render/interface/draw/t_draw_mesh';
 
@@ -110,15 +119,93 @@ describe('a model the camera cannot see', () => {
 describe('a camera told to skip by another one', () => {
     it('judges by that one, and each view by its own otherwise', () => {
         const eye = camera();
-        const above = camera({ transform: { ...camera().transform, y: 30, z: 0, rotationX: -Math.PI / 2 }, cullingCamera: eye });
+        const above = camera({ transform: { ...camera().transform, y: 30, z: 0, rotationX: -Math.PI / 2 } });
         const own = fillCameraSpace(newCameraSpace(), above, W, H);
         const plain = fillCameraSpace(newCameraSpace(), eye, W, H);
-        const judges = cullingMatricesFor([{ camera: above }, { camera: eye }], [own, plain], W, H);
+        const judges = cullingMatricesFor([{ cullingCamera: eye }, {}], [own, plain], W, H);
 
         // Below the camera above, but behind the eye: it sees it, the eye does not.
         const behindTheEye = cube(0, 0, 15);
         expect(meshInView(behindTheEye, own.viewProjection)).toBe(true);
         expect(meshInView(behindTheEye, judges[0]!)).toBe(false);
         expect(judges[1]).toBe(plain.viewProjection);
+    });
+
+    // A scene has one 3D camera, so the other is made on its own, as a picture's would be.
+    const framed = (body: (cameras: { above: ReturnType<typeof useCamera3d>; eye: ReturnType<typeof useCamera3d> }) => void) => {
+        const { store } = createTestGame();
+        startTestScene(store, 'Level', () => {
+            const flat = useCamera2d();
+            flat.transform.x = 40;
+            const above = useCamera3d({ projection: 'orthographic', transform: { z: 800 }, follow2d: true });
+            const eye = createCamera3d({ projection: 'orthographic', transform: { z: 800 }, follow2d: true });
+            body({ above, eye });
+            createMesh({ geometry: useCubeGeometry() });
+            return createScene();
+        });
+        const ctx: TFrameContext = { passes: [{}], time: 0, progress: 0, phase: 0 };
+        fillFrameContext(store, ctx);
+        return ctx.passes[0]!.views3d![0]!;
+    };
+
+    it('sees that one through the same 2D camera when both follow it', () => {
+        const view = framed(({ above, eye }) => {
+            eye.transform.z = 500;
+            above.cullingCamera = eye;
+        });
+        expect(view.cullingCamera?.flat).toEqual({ x: 40, y: 0, rotation: 0, zoom: 1 });
+        expect(view.cullingCamera?.transform.z).toBe(500);
+        // Kept apart from the one the view is drawn through.
+        expect(view.cullingCamera).not.toBe(view.camera);
+    });
+
+    it('skips by its own, and says so once, when one follows the 2D camera and the other does not', () => {
+        const said: unknown[] = [];
+        const warn = console.warn;
+        console.warn = (message: unknown) => { said.push(message); };
+        try {
+            const view = framed(({ above, eye }) => {
+                eye.follow2d = false;
+                above.cullingCamera = eye;
+            });
+            expect(view.cullingCamera ?? null).toBeNull();
+            expect(said).toHaveLength(1);
+            expect(String(said[0])).toContain('[NacatamalOn] cullingCamera:');
+        } finally {
+            console.warn = warn;
+        }
+    });
+});
+
+describe('a model whose corners land on a grid', () => {
+    const space = fillCameraSpace(newCameraSpace(), camera(), W, H);
+    const snapped = { vertex: null, vertexGlsl: null, vertexSnap: 5 } as unknown as TDrawMesh['material'];
+
+    it('is kept a little past the edge, where a corner can still be pulled onto the screen', () => {
+        // Five rows on a 4:3 view is a grid 6.67 cells across, with a line at 0.9 of the way to the
+        // right edge and the next at 1.2: a corner up to 1.05 is pulled back to 0.9, on screen. This
+        // small cube is all between 1.0 and 1.05: out for a model held true, in for one on the grid.
+        const past = cube(8, 0, 0, { transform: { ...cube(0, 0, 0).transform, x: 8, scaleX: 0.1, scaleY: 0.1, scaleZ: 0.1 } });
+        expect(meshInView(past, space.viewProjection, space)).toBe(false);
+        expect(meshInView({ ...past, material: snapped }, space.viewProjection, space)).toBe(true);
+        // Far past it, still out.
+        expect(meshInView({ ...cube(40, 0, 0), material: snapped }, space.viewProjection, space)).toBe(false);
+    });
+});
+
+describe('a bending model seen more than once a frame', () => {
+    const view = viewOf(camera());
+
+    it('is measured again when its pose changes, not before', () => {
+        const rig = { ...bones([0, 0, 0]), posedOn: 1 };
+        const fighter = cube(0, 0, 0, { skeleton: rig });
+        expect(meshInView(fighter, view)).toBe(true);
+
+        // Moved out of sight in the same frame's numbers: the pose it was measured in still holds.
+        rig.jointMatrices.set([40, 0, 0], 12);
+        expect(meshInView(fighter, view)).toBe(true);
+        // The next frame's pose is measured afresh.
+        rig.posedOn = 2;
+        expect(meshInView(fighter, view)).toBe(false);
     });
 });

@@ -35,9 +35,4 @@ export type TDrawCamera3d = {
      * its own.
      */
     readonly flat?: { readonly x: number; readonly y: number; readonly rotation: number; readonly zoom: number } | null;
-    /**
-     * Another camera, which decides what this one draws: models it does not see are skipped here
-     * too. For looking at what a camera skips from outside it. `null` or absent: this camera's own.
-     */
-    readonly cullingCamera?: TDrawCamera3d | null;
 };

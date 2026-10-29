@@ -287,7 +287,7 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
                 const view = viewIndex[i] ?? -1;
                 // Nothing of it on this view's screen: skipped before it costs a thing. Per view,
                 // because what one camera leaves out another can see.
-                if (!meshInView(item, judges[view] ?? flatSpace.viewProjection, (spaces[view] ?? flatSpace).flat)) {
+                if (!meshInView(item, judges[view] ?? flatSpace.viewProjection, spaces[view] ?? flatSpace)) {
                     continue;
                 }
                 if (drawMesh(gpu.device, gpuPass, gpu.meshes, item, spaces[view] ?? flatSpace, views3d[view]?.lights ?? [], view, meshSlot, width, height, ctx.time)) {

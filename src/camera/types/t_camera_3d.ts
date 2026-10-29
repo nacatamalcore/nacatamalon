@@ -58,7 +58,9 @@ export type TCamera3d = {
      * draws. A model is skipped when it is wholly outside what the camera drawing it sees, and with
      * this set it is skipped here when it is outside what **that** one sees, so a camera looking
      * from above shows the world as the other leaves it. That one is measured as if it drew into
-     * what this one draws into. `null` or absent, the usual: this camera's own.
+     * what this one draws into. Both follow the 2D camera (`follow2d`) or neither does: one in the 2D
+     * world and one in a world of its own do not look at the same places, and that is said once and
+     * this one skips by its own. `null` or absent, the usual: this camera's own.
      *
      * @example
      * ```ts

@@ -22,7 +22,23 @@ const mvpScratch = mat.create();
 const normalScratch = mat.create();
 const uprightScratch = mat.create();
 /** A model's own `y` turned over: what stands it upright in a world whose `y` goes down. */
-const UPRIGHT = { x: 1, y: -1, z: 1 };
+export const UPRIGHT = { x: 1, y: -1, z: 1 };
+
+/**
+ * The grid a `vertexSnap` material puts its corners on in a view, as columns and rows; zero rows is
+ * no snapping. `true` is the game's own pixels; a number is that many rows, with the columns
+ * following the view's shape so the cells stay square.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const snapGridOf = (vertexSnap: boolean | number | undefined, space: TCameraSpace): [columns: number, rows: number] => {
+    const rows = vertexSnap === true
+        ? space.height
+        : typeof vertexSnap === 'number' && vertexSnap > 0 ? vertexSnap : 0;
+    return [rows * (space.width / space.height), rows];
+};
 
 /**
  * Writes everything a backend needs about one model: where it ends up on screen, where it is in the
@@ -81,14 +97,9 @@ export const fillMeshUniforms = (out: Float32Array, at: number, mesh: TDrawMesh,
 
     // The two spare fourth numbers carry the grid a `vertexSnap` material puts its corners on, its
     // columns in one and its rows in the other; zero is no snapping. They ride here rather than in a
-    // block of their own because they were free, and the layout stays the same. `true` is the game's
-    // own pixels; a number is that many rows, with the columns following the view's shape so the
-    // cells stay square.
-    const rows = surface.vertexSnap === true
-        ? space.height
-        : typeof surface.vertexSnap === 'number' && surface.vertexSnap > 0 ? surface.vertexSnap : 0;
+    // block of their own because they were free, and the layout stays the same.
+    const [columns, rows] = snapGridOf(surface.vertexSnap, space);
     const snap = rows > 0;
-    const columns = rows * (space.width / space.height);
 
     // A glow picture that is not on the card yet, or never will be, reads as white there: the glow
     // would cover the whole model rather than its windows. No glow is wrong in a smaller place.

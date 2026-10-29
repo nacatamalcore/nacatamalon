@@ -184,10 +184,21 @@ export const buildParts = (
                 skin = new Float32Array(count * SKIN_STRIDE);
                 for (let i = 0; i < count; i++) {
                     const at = i * SKIN_STRIDE;
+                    let total = 0;
                     for (let c = 0; c < 4; c++) {
                         const bone = joints[i * 4 + c] ?? 0;
                         skin[at + c] = renumber === undefined ? bone : renumber[bone] ?? bone;
                         skin[at + 4 + c] = weights[i * 4 + c] ?? 0;
+                        total += skin[at + 4 + c];
+                    }
+                    // The four are meant to add up to one, and a file rounded on the way out often
+                    // misses by a little: brought back to one, a corner is always somewhere between
+                    // where its bones would each put it, which is what a model is measured by to be
+                    // left out of a view. A corner moved by nothing is left as it is.
+                    if (total > 0 && Math.abs(total - 1) > 1e-6) {
+                        for (let c = 0; c < 4; c++) {
+                            skin[at + 4 + c] /= total;
+                        }
                     }
                 }
             }

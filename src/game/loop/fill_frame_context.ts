@@ -351,6 +351,12 @@ type TWorldSeen = { models: Array<TDrawable | TDrawSprite>; camera: TCamera3d | 
 /** A 3D camera as it is drawn when it follows the 2D one, kept per camera between frames. */
 type TFollowing = { -readonly [K in keyof TDrawCamera3d]: TDrawCamera3d[K] } & { flat: { x: number; y: number; rotation: number; zoom: number } };
 const following = new WeakMap<TCamera3d, TFollowing>();
+/**
+ * The same for a camera another one skips by, kept apart: the one camera can be drawn through in one
+ * pass and skipped by in another, each with its own 2D camera, and the lists of every pass are read
+ * after all of them are made.
+ */
+const followingToSkip = new WeakMap<TCamera3d, TFollowing>();
 
 /**
  * The camera a scene's models are drawn through: its 3D camera, or, for one that follows the 2D
@@ -358,14 +364,14 @@ const following = new WeakMap<TCamera3d, TFollowing>();
  * tool's included, so a tool panning the flat world pans the models with it. With no 2D camera, the
  * screen's pixels, as the sprites have them.
  */
-const drawnThrough = (camera3d: TCamera3d | null, camera2d: TCamera2d | null): TDrawCamera3d | null => {
-    if (camera3d === null || camera3d.follow2d !== true || camera3d.projection !== 'orthographic') {
+const drawnThrough = (camera3d: TCamera3d | null, camera2d: TCamera2d | null, kept = following): TDrawCamera3d | null => {
+    if (camera3d === null || !followsFlat(camera3d)) {
         return camera3d;
     }
-    let drawn = following.get(camera3d);
+    let drawn = kept.get(camera3d);
     if (drawn === undefined) {
         drawn = { ...camera3d, flat: { x: 0, y: 0, rotation: 0, zoom: 1 } };
-        following.set(camera3d, drawn);
+        kept.set(camera3d, drawn);
     }
     drawn.projection = camera3d.projection;
     drawn.transform = camera3d.transform;
@@ -373,12 +379,40 @@ const drawnThrough = (camera3d: TCamera3d | null, camera2d: TCamera2d | null): T
     drawn.near = camera3d.near;
     drawn.far = camera3d.far;
     drawn.zoom = camera3d.zoom;
-    drawn.cullingCamera = camera3d.cullingCamera;
     drawn.flat.x = camera2d?.transform.x ?? 0;
     drawn.flat.y = camera2d?.transform.y ?? 0;
     drawn.flat.rotation = camera2d?.transform.rotation ?? 0;
     drawn.flat.zoom = camera2d?.zoom || 1;
     return drawn;
+};
+
+/** Whether a 3D camera places its models in the 2D world, `y` down. */
+const followsFlat = (camera3d: TCamera3d): boolean => camera3d.follow2d === true && camera3d.projection === 'orthographic';
+
+/** The cameras already told they cannot skip by the one they were given. */
+const warnedSkipping = new WeakSet<TCamera3d>();
+
+/**
+ * The camera a view skips by, when its own was given another (`TCamera3d.cullingCamera`), seen as it
+ * would be drawn: through the same 2D camera, if it follows one.
+ *
+ * Only between cameras of one kind. A camera in the 2D world, `y` down, and one in a world of its own,
+ * `y` up, do not look at the same places, so one cannot say what the other leaves out: said once, and
+ * the view skips by its own.
+ */
+const skippedBy = (camera3d: TCamera3d | null, camera2d: TCamera2d | null): TDrawCamera3d | null => {
+    const other = camera3d?.cullingCamera ?? null;
+    if (camera3d === null || other === null) {
+        return null;
+    }
+    if (followsFlat(other) !== followsFlat(camera3d)) {
+        if (!warnedSkipping.has(camera3d)) {
+            warnedSkipping.add(camera3d);
+            console.warn('[NacatamalOn] cullingCamera: one camera follows the 2D one and the other does not, so they do not see the same world. Give it a camera of the same kind; until then it skips by its own.');
+        }
+        return null;
+    }
+    return drawnThrough(other, camera2d, followingToSkip);
 };
 
 type TSeenThrough = Pick<TRuntimeState['viewport'], 'camera3d' | 'camera2d' | 'layers'> & {
@@ -514,7 +548,8 @@ const gatherTree = (
     let lighting: TSceneLighting | null = null;
     if (view >= 0) {
         lighting = collectLighting(root);
-        views3d.push({ camera: drawnThrough(viewport?.camera3d ?? root.camera3d, camera2d), lights: lighting.lights, ambient: lighting.ambient, fog: root.fog });
+        const seenThrough = viewport?.camera3d ?? root.camera3d;
+        views3d.push({ camera: drawnThrough(seenThrough, camera2d), cullingCamera: skippedBy(seenThrough, camera2d), lights: lighting.lights, ambient: lighting.ambient, fog: root.fog });
     }
     for (let i = start; i < drawables.length; i++) {
         viewIndex[i] = inDepth(drawables[i]) ? view : -1;
@@ -604,7 +639,8 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
         const view = lists.views3d.length;
         const lighting = seen.lighting ?? collectLighting(rootOf(box));
         // The world's fog, unless the picture asked for one of its own: it is looking at that world.
-        lists.views3d.push({ camera: drawnThrough(box.camera3d ?? seen.camera, box.camera2d), lights: lighting.lights, ambient: lighting.ambient, fog: box.fog ?? seen.fog });
+        const seenThrough = box.camera3d ?? seen.camera;
+        lists.views3d.push({ camera: drawnThrough(seenThrough, box.camera2d), cullingCamera: skippedBy(seenThrough, box.camera2d), lights: lighting.lights, ambient: lighting.ambient, fog: box.fog ?? seen.fog });
         for (const model of seen.models) {
             if (shows(model, picture.texture)) {
                 continue;

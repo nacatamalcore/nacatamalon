@@ -243,15 +243,16 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
 - **Glows, flashes, beams of light**: `createSprite({ ..., blend: 'additive' })` (a text or a panel too) adds its colour to
   what is behind instead of covering it, the same as additive particles.
 - **A placed model is used like any drawing**: what `createModel(...)` returns has `visible`, `tint`,
-  `alpha`, `zIndex` and `castShadow` for every piece at once, set any time, even before the file
+  `alpha`, `zIndex`, `castShadow`, `alwaysDrawn` and `boundsMargin` for every piece at once, set any time, even before the file
   arrives (its pieces arrive so); `destroy(model)` takes it all. `parts` is for one piece alone (the
   glass of a car).
 - **What the camera cannot see is not drawn**: a model whose box is wholly outside a view is skipped
   there, each camera on its own, its shadow judged by the light. A material with a `vertex` hook
   moves corners no box knows about, so its model is always drawn until it says how far they go:
   `createMesh({ material: waves, boundsMargin: 0.4 })` (in its own units; bones are measured
-  already). `alwaysDrawn: true` never skips it. To see what a camera skips, a camera looking from
-  outside takes `above.cullingCamera = eye` and draws only what `eye` sees.
+  already; a `vertexSnap` grid is allowed for). `alwaysDrawn: true` never skips it. To see what a
+  camera skips, a camera looking from outside takes `above.cullingCamera = eye` and draws only what
+  `eye` sees; both follow the 2D camera (`follow2d`) or neither does.
 - **Particle effects that depend on the game** (dust the colour of the ground, a tint per level):
   write the effect in code, `createParticles({ effect: { kind: 'particles-2d', emission: { rate: 30 },
   colorOverLife: [{ t: 0, color: lerpColor(a, b, t) }], texture: createPixelTexture(puff) } })`, with

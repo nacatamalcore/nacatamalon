@@ -173,6 +173,17 @@ describe('the corners of a deformed piece', () => {
         expect(Array.from(parts[0].skin!.subarray(0, 8))).toEqual([1, 0, 0, 0, 1, 0, 0, 0]);
     });
 
+    it('brings weights that miss adding up to one back to one, and leaves a corner moved by none', () => {
+        const { parts } = parse({
+            nodes: [{ name: 'Mesh', skin: 0, primitives: [{ ...LIMB, weights: [0.3, 0.3, 0, 0, 1.2, 0, 0, 0, 0, 0, 0, 0] }] }, { name: 'Hip' }, { name: 'Knee' }],
+            skins: [{ joints: [1, 2] }],
+        });
+        const weightsOf = (corner: number) => Array.from(parts[0].skin!.subarray(corner * SKIN_STRIDE + 4, corner * SKIN_STRIDE + 8));
+        expect(weightsOf(0)).toEqual([0.5, 0.5, 0, 0]);
+        expect(weightsOf(1)).toEqual([1, 0, 0, 0]);
+        expect(weightsOf(2)).toEqual([0, 0, 0, 0]);
+    });
+
     it('reads bone numbers written a byte wide as well as two', () => {
         const narrow = parse({
             nodes: [{ name: 'Mesh', skin: 0, primitives: [{ ...LIMB, jointBits: 8 }] }, { name: 'Hip' }, { name: 'Knee' }],

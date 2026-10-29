@@ -21,6 +21,11 @@ export type TDrawSkeleton = {
      * 16 numbers a bone, worked out afresh each frame.
      */
     readonly jointMatrices: Float32Array;
+    /**
+     * Which frame those were worked out on, when it is known: what lets the box its pose covers be
+     * measured once a frame however many views and shadows it is seen in.
+     */
+    readonly posedOn?: number;
 };
 
 /**

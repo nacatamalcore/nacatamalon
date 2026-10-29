@@ -20,6 +20,11 @@ export type TDrawView3d = {
      */
     readonly camera: TDrawCamera3d | null;
     /**
+     * The camera that decides what is skipped here, when it is not `camera` (`TCamera3d.cullingCamera`):
+     * a model it does not see is not drawn in this view. `null` or absent: `camera`'s own.
+     */
+    readonly cullingCamera?: TDrawCamera3d | null;
+    /**
      * What shines on it. Never more than eight.
      */
     readonly lights: readonly TDrawLight[];

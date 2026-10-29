@@ -14,7 +14,8 @@ releases are in [changelog/](./changelog/), one file each.
   whose material moves its corners in a `vertex` hook is always drawn until it says how far with
   `boundsMargin`, in its own units; `alwaysDrawn: true` never skips one. Both on `createMesh`,
   `createModel` (every piece) and the scene document, and in the editor's inspector. To look at
-  what a camera skips from outside it, `camera.cullingCamera = other` draws only what `other` sees.
+  what a camera skips from outside it, `camera.cullingCamera = other` draws only what `other` sees,
+  between two cameras of the same kind (both following the 2D one, or neither).
 
 - **`ownerOf(drawable)`**: the object a sprite, text or mesh belongs to, the thing `useSpawn` made
   or the scene for one made in its body, and `null` once it or its piece is destroyed. The way back
@@ -79,6 +80,11 @@ releases are in [changelog/](./changelog/), one file each.
   WebGL2 does, and now leaves one, for whatever a material carries next. Nothing drawn changes.
 
 ### Fixed
+
+- **A model whose file's bone weights do not add up to one is read as if they did.** A file rounded
+  on the way out often misses by a little, which left a bending corner a hair off where its bones
+  put it; now each corner's four are brought back to one when it is read. A corner moved by no bone
+  is left as it was.
 
 - **A game shown in a window of its own runs by that window.** A host can put the canvas in another
   window (a play window popped out of a tool), and the loop took its frames from the window the
