@@ -16,7 +16,7 @@ import type { TDrawItem } from '../../render/interface';
 import { stepSceneLines } from './helper/step_scene_lines';
 import type { TFrameContext } from '../../render';
 import type { TDrawSprite } from '../../render/interface';
-import { expandText } from '../../gameobjects/text/expand_text';
+import { expandText, startTextFrame } from '../../gameobjects/text/expand_text';
 import { expandNineSlice } from '../../gameobjects/nine_slice/expand_nine_slice';
 import type { TText } from '../../gameobjects/text/types/t_text';
 import type { TRuntimeStore } from '../../store';
@@ -668,6 +668,7 @@ const secondPass = (store: TRuntimeStore, seenThrough: TSeenThrough, clearColor:
 
 export const fillFrameContext = (store: TRuntimeStore, ctx: TFrameContext, delta = 0): void => {
     pass++;
+    startTextFrame();
     snapping = store.get('config').pixelSnap;
     drawingWith = store.get('screen').renderer;
     if (drawingWith !== null) {

@@ -8,6 +8,13 @@ import type { TDrawable } from '../../../gameobjects/types';
 import type { TTransform2d } from '../../../gameobjects/types/t_transform_2d';
 import type { TCamera2d } from '../../../camera';
 import { cameraAsDrawn, onPixels, pixelsPerUnit } from '../../../camera/camera_as_drawn';
+import { pivotPlace } from '../../../render/shared/pivot_place';
+import { layoutOfText } from '../../../layout/measure_text';
+import { spriteHeight, spriteWidth } from '../../../render/shared/sprite_size';
+import { keepTextLayout } from '../../../gameobjects/text/expand_text';
+import type { TSprite } from '../../../gameobjects/sprite/types/t_sprite';
+import type { TText } from '../../../gameobjects/text/types/t_text';
+import type { TNineSlice } from '../../../gameobjects/nine_slice/types/t_nine_slice';
 import type { TPixelSnap } from '../../types/t_game_options';
 import { shapeRolesOf } from '../../../mask/create_mask';
 import { maskLevelFor, masksNow, noteShape } from '../../../mask/mask_walk';
@@ -121,6 +128,21 @@ const placeDrawable = (drawable: TDrawable, world: TWorld): void => {
  * Where each collider was placed last frame, written over rather than made again.
  */
 /**
+ * Where a flat drawable that has no frame of its own above it is drawn, moved by its parallax or put
+ * on whole pixels: kept per drawable, so neither allocates anything frame after frame.
+ */
+const keptPlaces = new WeakMap<object, TTransform2d>();
+
+const keptPlace = (drawable: TDrawable): TTransform2d => {
+    let place = keptPlaces.get(drawable);
+    if (place === undefined) {
+        place = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 };
+        keptPlaces.set(drawable, place);
+    }
+    return place;
+};
+
+/**
  * Moves a flat drawable by its parallax: by the part of the camera's travel it does not follow, so on
  * screen it goes by more slowly. Written into where it is drawn and touched, never into its placement.
  *
@@ -132,7 +154,9 @@ const applyParallax = (drawable: TDrawable, factor: { x: number; y: number }, ca
         return;
     }
     const base = drawable.worldTransform ?? drawable.transform;
-    const out = drawable.worldTransform ?? { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 };
+    // A layer loose in the scene has no place of its own drawn each frame: it is given the one kept for
+    // it, rather than a new one every frame for the collector to pick up.
+    const out = drawable.worldTransform ?? keptPlace(drawable);
     // On screen the layer is left behind by its share of the camera's travel, and that share is what
     // is put on pixels: once, so it only ever steps one way. Placed against the camera as it is
     // drawn: rounding the layer's offset and the camera each on its own left their difference
@@ -151,30 +175,106 @@ const applyParallax = (drawable: TDrawable, factor: { x: number; y: number }, ca
     drawable.worldTransform = out;
 };
 
+
+const MIDDLE = { x: 0.5, y: 0.5 };
+const TOP_LEFT = { x: 0, y: 0 };
+
+/** Where the pivot puts a picture, written over picture by picture. */
+const pivotScratch: TTransform2d = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 };
+
+/** How far the corner is from the place, written over picture by picture: a frame allocates nothing. */
+const offset = { x: 0, y: 0 };
+
 /**
- * Where a flat drawable that has no frame of its own above it is drawn on whole pixels: kept per
- * drawable, so rounding allocates nothing frame after frame.
+ * How far its top-left corner is drawn from where it is placed, into `offset`, for a picture held by
+ * something other than that corner: a sprite or a panel by its middle, a text by the anchor it was
+ * given. `false` when it is held by the corner, which is already on pixels with the place.
  */
-const snappedPlaces = new WeakMap<object, TTransform2d>();
+const cornerOffset = (drawable: TSprite | TText | TNineSlice, base: TTransform2d): boolean => {
+    const anchor = drawable.anchor ?? (drawable.type === 'text' ? TOP_LEFT : MIDDLE);
+    const held = drawable.pivot ?? anchor;
+    if (anchor.x === 0 && anchor.y === 0 && held.x === 0 && held.y === 0) {
+        return false;
+    }
+    let width: number;
+    let height: number;
+    if (drawable.type === 'sprite') {
+        width = spriteWidth(drawable);
+        height = spriteHeight(drawable);
+    } else if (drawable.type === 'nine-slice') {
+        width = drawable.width;
+        height = drawable.height;
+    } else {
+        const layout = layoutOfText(drawable);
+        // Drawing it this frame takes this layout rather than working it out again. Not one of a
+        // font still on its way: that is measured with the letters the engine carries, and drawn
+        // with none.
+        if (drawable.font.type === 'font' || drawable.font.meta !== null) {
+            keepTextLayout(drawable, layout);
+        }
+        width = layout.width;
+        height = layout.height;
+    }
+    if (held === anchor) {
+        offset.x = anchor.x * width * base.scaleX;
+        offset.y = anchor.y * height * base.scaleY;
+        return true;
+    }
+    // Drawn from where its pivot puts it, by the point it is held by.
+    const place = pivotPlace(base, drawable, anchor, width, height, pivotScratch);
+    offset.x = base.x - (place.x - held.x * width * place.scaleX);
+    offset.y = base.y - (place.y - held.y * height * place.scaleY);
+    return true;
+};
+
+/**
+ * How far back a corner goes when it falls exactly between two pixels of the grid of
+ * `pixelsPerUnit`: to the one before. Left to the graphics card, that tie went either way, so the
+ * same sprite came out a column apart in WebGPU and in WebGL2, or with a column twice and its last
+ * one gone; the one before is what WebGPU draws when it gets it right. Anywhere else the corner is
+ * left where it was: a sprite growing by a fraction would have its far edge step back a pixel now
+ * and then if its corner were pulled to the nearest one.
+ */
+const backFromTie = (corner: number, perUnit: number): number => {
+    const across = corner * perUnit;
+    return Math.abs(across - Math.floor(across) - 0.5) < 1e-4 ? 0.5 / perUnit : 0;
+};
+
+const TURN = Math.PI * 2;
+
+/**
+ * Not turned: at 0, or a whole turn round, where a spin that has gone round once stops.
+ */
+const unturned = (rotation: number): boolean => {
+    if (rotation === 0) {
+        return true;
+    }
+    const left = Math.abs(rotation % TURN);
+    return left < 1e-9 || TURN - left < 1e-9;
+};
 
 /**
  * Puts a flat drawable on pixels where it is drawn: the game's `pixelSnap`, through `pixelsPerUnit`.
  * Where it is stays as it was, fractions and all, so it moves as fast as it says; only the picture
  * lands on the grid. With the camera on the same pixels, something it follows stays on the same
  * pixel of the screen.
+ *
+ * An edge that the place leaves exactly between two pixels goes back to the one before: a sprite 5
+ * wide held by its middle on a whole pixel has its edges on halves, and is drawn half a pixel back.
+ * Turned, its edges are on no grid, and only its place is rounded.
  */
 const snapToPixels = (drawable: TDrawable, perUnit: number): void => {
     if (drawable.type !== 'sprite' && drawable.type !== 'text' && drawable.type !== 'nine-slice' && drawable.type !== 'tilemap' && drawable.type !== 'polygon') {
         return;
     }
     const base = drawable.worldTransform ?? drawable.transform;
-    let out = drawable.worldTransform;
-    if (out === undefined) {
-        out = snappedPlaces.get(drawable) ?? { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 };
-        snappedPlaces.set(drawable, out);
-    }
-    out.x = onPixels(base.x, perUnit);
-    out.y = onPixels(base.y, perUnit);
+    const out = drawable.worldTransform ?? keptPlace(drawable);
+    const byCorner = (drawable.type === 'sprite' || drawable.type === 'text' || drawable.type === 'nine-slice')
+        && unturned(base.rotation) && cornerOffset(drawable, base);
+    const x = onPixels(base.x, perUnit);
+    const y = onPixels(base.y, perUnit);
+    out.x = byCorner ? x - backFromTie(x - offset.x, perUnit) : x;
+    out.y = byCorner ? y - backFromTie(y - offset.y, perUnit) : y;
     out.rotation = base.rotation;
     out.scaleX = base.scaleX;
     out.scaleY = base.scaleY;

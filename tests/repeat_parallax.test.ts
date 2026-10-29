@@ -97,6 +97,18 @@ describe('parallax', () => {
         expect([far.transform.x, far.transform.y]).toEqual([200, 100]);
     });
 
+    it('draws a layer loose in the scene from the same place every frame, rather than a new one each', () => {
+        let far!: TSprite;
+        const store = scene(() => {
+            far = createSprite({ width: 8, height: 8, tint, transform: at(200, 100), parallax: { x: 0.5, y: 0 } });
+        });
+        const first = far.worldTransform;
+        frame(store);
+        frame(store);
+        expect(far.worldTransform).toBe(first!);
+        expect(drawnAt(far)).toEqual([250, 140]);
+    });
+
     it('is given to everything an object draws and holds, unless a drawable has its own', () => {
         let held!: TSprite;
         let own!: TSprite;

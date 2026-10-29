@@ -48,6 +48,14 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **WebGPU and WebGL2 draw a sprite of odd size held by its middle the same.** `pixelSnap` put
+  where it is drawn on a whole pixel, and a sprite 5 wide by its middle there has its edges on
+  halves. There the graphics card chose which texel each column showed, a column one way in WebGPU,
+  the other in WebGL2, and sometimes with the first twice and the last gone. Now an edge left exactly
+  between two pixels goes to the one before, for sprites, texts and panels that are not turned (a
+  whole turn counts as none); anything else is drawn where it was, so a sprite growing by fractions
+  still grows smoothly. The lines of a text centred on several lines can still fall on halves.
+  Measured with Auto Size's 167 × 167 card: 2,058 pixels different between the two, now none.
 - **The canvas sits where its page asks, and centred when it asks nothing.** Since 0.3.1 the engine
   set a margin on the left, rounded to a whole pixel of the screen, and a page that also centred it
   with `display: flex` (every CLI template, the editor's demos, the playgrounds, full screen) added

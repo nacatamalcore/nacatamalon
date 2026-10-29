@@ -1,5 +1,6 @@
 import { bitmapFontGlyphs, uploadFontAtlas } from '../../loaders';
 import { layoutText } from './layout_text';
+import type { TTextLayout } from './layout_text';
 import { layoutFontText } from './layout_font_text';
 import type { TDrawSprite } from '../../render/interface';
 import type { TText } from './types/t_text';
@@ -47,6 +48,35 @@ const glyphOwners = new WeakMap<object, TText>();
 const blockSizes = new WeakMap<TText, { width: number; height: number }>();
 
 const TOP_LEFT = { x: 0, y: 0 };
+
+/**
+ * A text laid out earlier in this same frame, by what puts its edge on a pixel, so drawing it does not
+ * lay it out a second time. Each is kept with the frame it was laid out in, and only that frame uses
+ * it: a text changed since, or not drawn that frame, is laid out again.
+ */
+const laidOut = new WeakMap<TText, TTextLayout>();
+const laidOutIn = new WeakMap<TText, number>();
+let frame = 0;
+
+/**
+ * A new frame begins: what was laid out before it is no longer this frame's.
+ *
+ * @internal
+ */
+export const startTextFrame = (): void => {
+    frame++;
+};
+
+/**
+ * Keeps a text's layout for drawing it this frame. Only one worked out exactly as drawing would: its
+ * font has arrived, or it is a vector font.
+ *
+ * @internal
+ */
+export const keepTextLayout = (text: TText, layout: TTextLayout): void => {
+    laidOut.set(text, layout);
+    laidOutIn.set(text, frame);
+};
 
 /**
  * The text a character sprite belongs to, or `undefined` for anything else.
@@ -103,7 +133,8 @@ export const expandText = (text: TText): readonly TDrawSprite[] => {
     // Where the block ends up, so a text inside a box that moved takes its characters with it.
     const transform = worldOf(text);
     const vector = font.type === 'font';
-    const layout = vector ? layoutFontText(text.text, style, font) : layoutText(text.text, style, font.meta, bitmapFontGlyphs(font));
+    const layout = laidOutIn.get(text) === frame ? laidOut.get(text)!
+        : vector ? layoutFontText(text.text, style, font) : layoutText(text.text, style, font.meta, bitmapFontGlyphs(font));
 
     if (vector) {
         // Letters drawn for the first time just now are only in memory until this sends them.
