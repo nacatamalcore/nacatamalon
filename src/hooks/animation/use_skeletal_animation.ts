@@ -64,6 +64,21 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
     let loop = options.loop ?? true;
     let speed = options.speed ?? 1;
     let time = 0;
+    /**
+     * How many more times the movement goes after this one, as a tween counts its repeats:
+     * `Infinity` for one that goes round for ever, `0` for the last time through.
+     */
+    let repeatsLeft = Infinity;
+    /**
+     * How many times it has started again since it was played.
+     */
+    let repeats = 0;
+    const yoyo = options.yoyo ?? false;
+    /**
+     * `1` going from the start of the movement to its end, `-1` coming back, which a `yoyo` does
+     * every other time.
+     */
+    let direction = 1;
     const defaultFade = options.fade ?? 0;
 
     // A movement asked for before the file arrived. Kept and honoured the frame it shows up, the
@@ -71,6 +86,8 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
     let pending: string | null = options.play ?? null;
     // Told when a movement that does not go round reaches its end.
     const listeners: Array<(clip: string) => void> = [];
+    // Told each time a movement starts again.
+    const repeatListeners: Array<(clip: string, repeats: number) => void> = [];
     // Told when a movement passes one of the moments marked on it.
     const eventListeners: Array<(event: string, clip: string) => void> = [];
     /**
@@ -158,7 +175,7 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
             // Made again if the bones arrived after the room was made for none.
             from = from !== null && from.length === model.skeletons.length ? from : roomFor(model);
             to = to !== null && to.length === model.skeletons.length ? to : roomFor(model);
-            fade = { name: clipName, time, elapsed: 0, duration: fadeSeconds, loop, speed, ended: !playing };
+            fade = { name: clipName, time, elapsed: 0, duration: fadeSeconds, loop: repeatsLeft > 0, speed: speed * direction, ended: !playing };
         } else {
             fade = null;
         }
@@ -167,6 +184,97 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
         time = 0;
         reached = false;
         playing = true;
+        // A negative repeat means for ever, as it does for a tween; with none, `loop` says yes or no.
+        const repeat = options.repeat ?? (loop ? -1 : 0);
+        repeatsLeft = repeat < 0 ? Infinity : repeat;
+        repeats = 0;
+        direction = 1;
+    };
+
+    /**
+     * The stretches of the movement passed forwards this frame, three numbers each (from, to, and 1
+     * when `from` is the start of a time through), told as marks once the bones are worked out.
+     * Written over every frame, so passing them asks for no memory.
+     */
+    const passed: number[] = [];
+    let passedCount = 0;
+
+    const pass = (from: number, to: number, fromStart: boolean): void => {
+        passed[passedCount * 3] = from;
+        passed[passedCount * 3 + 1] = to;
+        passed[passedCount * 3 + 2] = fromStart ? 1 : 0;
+        passedCount++;
+        reached = true;
+    };
+
+    /**
+     * Moves the movement playing on by `delta`, going round, coming back or stopping as it was asked
+     * to, and notes what it passed going forwards. Says how many times it started again, and whether
+     * it has finished.
+     */
+    const step = (delta: number, duration: number): { wentRound: number; ended: boolean } => {
+        passedCount = 0;
+        let wentRound = 0;
+        if (duration <= 0) {
+            return { wentRound, ended: repeatsLeft <= 0 };
+        }
+        let rate = speed * direction;
+        let at = time;
+        let next = time + delta * rate;
+        // The first stretch of a time through counts its own beginning: a mark at `0` belongs to it.
+        let fromStart = !reached;
+        for (;;) {
+            if (rate > 0 && next >= duration) {
+                pass(at, duration, fromStart);
+                if (repeatsLeft <= 0) {
+                    time = duration;
+                    return { wentRound, ended: true };
+                }
+                repeatsLeft -= 1;
+                repeats += 1;
+                wentRound += 1;
+                if (yoyo) {
+                    // Turned back at the end: the way past it is the way back from it.
+                    next = 2 * duration - next;
+                    direction = -direction;
+                    rate = -rate;
+                    at = duration;
+                    fromStart = false;
+                } else {
+                    next -= duration;
+                    at = 0;
+                    fromStart = true;
+                }
+                continue;
+            }
+            if (rate < 0 && next <= 0) {
+                if (repeatsLeft <= 0) {
+                    time = 0;
+                    return { wentRound, ended: true };
+                }
+                repeatsLeft -= 1;
+                repeats += 1;
+                wentRound += 1;
+                if (yoyo) {
+                    next = -next;
+                    direction = -direction;
+                    rate = -rate;
+                    at = 0;
+                    fromStart = true;
+                } else {
+                    next += duration;
+                    at = duration;
+                    fromStart = false;
+                }
+                continue;
+            }
+            // Backwards passes no marks, as it always has: it is the movement undone.
+            if (rate > 0) {
+                pass(at, next, fromStart);
+            }
+            time = next;
+            return { wentRound, ended: false };
+        }
     };
 
     /**
@@ -210,9 +318,7 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
             return;
         }
 
-        const was = time;
-        const stepped = advance(time, delta, clip.duration, loop, speed);
-        time = stepped.time;
+        const stepped = step(delta, clip.duration);
 
         if (fade !== null && from !== null && to !== null) {
             const outgoing = file.clips[fade.name];
@@ -249,19 +355,18 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
         }
 
         // Told after the bones have been worked out, not before, so a listener that starts another
-        // movement changes the next frame rather than half of this one.
-        if (delta * speed > 0) {
-            const name = clipName as string;
-            if (!reached) {
-                reached = true;
-                markBetween(name, 0, time, true);
-            } else if (time < was) {
-                // It went round this frame: the tail of the lap that ended, then the head of the
-                // one that started.
-                markBetween(name, was, clip.duration, false);
-                markBetween(name, 0, time, true);
-            } else {
-                markBetween(name, was, time, false);
+        // movement changes the next frame rather than half of this one. A frame that went round
+        // passed the tail of the time that ended, then the head of the one that started.
+        const name = clipName as string;
+        for (let p = 0; p < passedCount; p++) {
+            markBetween(name, passed[p * 3]!, passed[p * 3 + 1]!, passed[p * 3 + 2] === 1);
+        }
+        if (stepped.wentRound > 0) {
+            // Each time round on its own, so a count kept by a listener is never one short.
+            for (let n = repeats - stepped.wentRound + 1; n <= repeats && clipName === name; n++) {
+                for (const listener of [...repeatListeners]) {
+                    listener(name, n);
+                }
             }
         }
 
@@ -293,13 +398,25 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
             rest();
         },
         setSpeed: (value: number) => { speed = value; },
-        setLoop: (value: boolean) => { loop = value; },
+        setLoop: (value: boolean) => {
+            loop = value;
+            repeatsLeft = value ? Infinity : 0;
+        },
         onEvent: (listener: (event: string, clip: string) => void) => {
             eventListeners.push(listener);
             return () => {
                 const at = eventListeners.indexOf(listener);
                 if (at >= 0) {
                     eventListeners.splice(at, 1);
+                }
+            };
+        },
+        onRepeat: (listener: (clip: string, repeats: number) => void) => {
+            repeatListeners.push(listener);
+            return () => {
+                const at = repeatListeners.indexOf(listener);
+                if (at >= 0) {
+                    repeatListeners.splice(at, 1);
                 }
             };
         },

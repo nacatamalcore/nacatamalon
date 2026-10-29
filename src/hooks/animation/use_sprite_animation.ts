@@ -60,7 +60,21 @@ export const useSpriteAnimation = (sprite: TSprite, options: TSpriteAnimationOpt
     let frames: readonly number[] = [];
     let step = 0;
     let index = 0;
-    let loop = true;
+    /**
+     * How many more times the run goes after this one, as a tween counts its repeats: `Infinity` for
+     * a run that loops, `0` for the last time through.
+     */
+    let repeatsLeft = Infinity;
+    /**
+     * How many times it has started again since it was played.
+     */
+    let repeats = 0;
+    let yoyo = false;
+    /**
+     * Whether this time through goes from the first picture to the last. A `yoyo` comes back the
+     * other way every other time.
+     */
+    let forward = true;
     let playing = false;
     let elapsed = 0;
     let speed = options.speed ?? 1;
@@ -79,13 +93,15 @@ export const useSpriteAnimation = (sprite: TSprite, options: TSpriteAnimationOpt
      */
     let reached = false;
     const endListeners: Array<(clip: string) => void> = [];
+    const repeatListeners: Array<(clip: string, repeats: number) => void> = [];
     const eventListeners: Array<(event: string, clip: string) => void> = [];
 
     /**
      * Tells whoever is listening about every moment marked on the picture just reached.
      */
     const mark = (at: number): void => {
-        if (events.length === 0 || eventListeners.length === 0) {
+        // Passed on the way there: the way back of a `yoyo` is the same moments undone.
+        if (!forward || events.length === 0 || eventListeners.length === 0) {
             return;
         }
         const clip = clipName as string;
@@ -127,7 +143,13 @@ export const useSpriteAnimation = (sprite: TSprite, options: TSpriteAnimationOpt
         frames = clip.frames;
         // Seconds per frame, worked out once per clip rather than every frame.
         step = 1 / (clip.fps ?? DEFAULT_FPS);
-        loop = clip.loop ?? true;
+        // A negative repeat means for ever, as it does for a tween; with none, `loop` says yes or no.
+        const repeat = clip.repeat ?? ((clip.loop ?? true) ? -1 : 0);
+        repeatsLeft = repeat < 0 ? Infinity : repeat;
+        repeats = 0;
+        // With one picture there is no other way to come back.
+        yoyo = (clip.yoyo ?? false) && frames.length > 1;
+        forward = true;
         events = clip.events ?? NO_EVENTS;
         index = 0;
         elapsed = 0;
@@ -174,23 +196,35 @@ export const useSpriteAnimation = (sprite: TSprite, options: TSpriteAnimationOpt
 
         elapsed += delta * speed;
         let finished = false;
+        // How many times it started again this frame: told once the picture is on screen.
+        let wentRound = 0;
 
         // A `while`, not an `if`: a long frame or a fast clip can cross several pictures at once,
         // and skipping them is better than falling behind for ever.
         while (elapsed >= step) {
             elapsed -= step;
-            index++;
+            index += forward ? 1 : -1;
 
-            if (index >= frames.length) {
-                if (!loop) {
-                    // Rests on the last picture rather than snapping back to the first: a death
-                    // animation that returns to standing is not what anybody meant.
-                    index = frames.length - 1;
+            if (index >= frames.length || index < 0) {
+                if (repeatsLeft <= 0) {
+                    // Rests on the picture this time through ended on rather than snapping back to
+                    // the first: a death animation that returns to standing is not what anybody
+                    // meant.
+                    index = forward ? frames.length - 1 : 0;
                     playing = false;
                     finished = true;
                     break;
                 }
-                index = 0;
+                repeatsLeft -= 1;
+                repeats += 1;
+                wentRound += 1;
+                if (yoyo) {
+                    // Back the other way from the picture beside the end, so the end is shown once.
+                    forward = !forward;
+                    index = forward ? 1 : frames.length - 2;
+                } else {
+                    index = 0;
+                }
             }
             // Every picture the run lands on is a picture it reached, the ones a long frame skipped
             // over included: a blow that stops landing when the machine stutters is worse than one
@@ -199,6 +233,17 @@ export const useSpriteAnimation = (sprite: TSprite, options: TSpriteAnimationOpt
         }
 
         show();
+
+        if (wentRound > 0) {
+            const clip = clipName as string;
+            // Each time round on its own, so a count kept by a listener is never one short. Copied,
+            // because a listener may well stop it or start another run from here.
+            for (let n = repeats - wentRound + 1; n <= repeats && clipName === clip; n++) {
+                for (const listener of [...repeatListeners]) {
+                    listener(clip, n);
+                }
+            }
+        }
 
         if (finished) {
             const ended = clipName as string;
@@ -232,6 +277,15 @@ export const useSpriteAnimation = (sprite: TSprite, options: TSpriteAnimationOpt
                 const at = endListeners.indexOf(listener);
                 if (at >= 0) {
                     endListeners.splice(at, 1);
+                }
+            };
+        },
+        onRepeat: (listener: (clip: string, repeats: number) => void) => {
+            repeatListeners.push(listener);
+            return () => {
+                const at = repeatListeners.indexOf(listener);
+                if (at >= 0) {
+                    repeatListeners.splice(at, 1);
                 }
             };
         },

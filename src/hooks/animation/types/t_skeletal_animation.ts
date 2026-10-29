@@ -13,9 +13,21 @@ export type TSkeletalAnimationOptions = {
      */
     play?: string;
     /**
-     * Whether it goes round for ever. Default `true`.
+     * Whether it goes round for ever. Default `true`. A `repeat` says how many times instead.
      */
     loop?: boolean;
+    /**
+     * How many **extra** times a movement runs after the first, as a tween's `repeat`: `2` is three
+     * times, then it ends, telling `onEnd`. A negative number means for ever. Given, it says it and
+     * `loop` is not looked at.
+     */
+    repeat?: number;
+    /**
+     * Whether each time a movement runs again it comes back the other way, as a tween's `yoyo`: a
+     * breath, a sway, a door that swings to and fro, from a movement that only goes one way. Marks
+     * are passed on the way there, not on the way back. Default `false`.
+     */
+    yoyo?: boolean;
     /**
      * How fast, as a multiple. Default `1`.
      */
@@ -77,6 +89,12 @@ export type TSkeletalAnimation = {
      * opening. Hand back what it returns to stop being told.
      */
     onEnd(listener: (clip: string) => void): () => void;
+    /**
+     * Tells you each time a movement starts again, with how many times it has so far: `1` the first
+     * time it goes round. Not when it ends, which is `onEnd`. Hand back what it returns to stop being
+     * told.
+     */
+    onRepeat(listener: (clip: string, repeats: number) => void): () => void;
     /**
      * Tells you when a movement passes one of the moments marked on it, handing over what that
      * moment is called and which movement it was in. Hand back what it returns to stop being told.

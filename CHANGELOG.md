@@ -28,8 +28,19 @@ releases are in [changelog/](./changelog/), one file each.
   always the middle. `createGame('#app', { width: 320, height: 180, scaling: 'integer', align: RENDER.ALIGN.TOP })`
   for a phone with the page's controls below.
 
+- **Animations go round and there and back in a tween's words.** A sprite's run (and an `.atlas`
+  sequence) and `useSkeletalAnimation` take `repeat`, how many extra times (`2` is three times,
+  negative for ever), and `yoyo`, back the other way each time with the ends shown once: a breath or
+  a float without drawing the way back, a blow that lands three times without counting it in
+  `onEnd`. With no `repeat`, `loop` says it as before. Every one of them, tweens included, has
+  `onRepeat((…, times) => …)`, told each time it starts again; `onEnd` still says the last. Marks are
+  passed on the way there and not on the way back.
+
 ### Changed
 
+- **A model's movement played backwards that does not go round ends at its start.** With a negative
+  `setSpeed` and `loop: false` it stopped at the beginning without telling anybody; it now says so
+  with `onEnd`, as one played forwards does at its end.
 - **What goes with a destroyed object says it is destroyed.** `destroy(piece)` took its sprites,
   texts and child objects with it, but they kept `destroyed: false`, as if only what `destroy` was
   called on had gone: a game still holding a sprite of a piece it destroyed read it as alive. Now

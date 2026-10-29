@@ -68,6 +68,8 @@ export const loadAtlas = async (store: TRuntimeStore, atlas: TLoadedAtlas): Prom
                 frames,
                 ...(sequence.fps !== undefined ? { fps: sequence.fps } : {}),
                 ...(sequence.loop !== undefined ? { loop: sequence.loop } : {}),
+                ...(sequence.repeat !== undefined ? { repeat: sequence.repeat } : {}),
+                ...(sequence.yoyo !== undefined ? { yoyo: sequence.yoyo } : {}),
                 ...(sequence.next !== undefined ? { next: sequence.next } : {}),
             };
         }

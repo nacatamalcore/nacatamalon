@@ -33,11 +33,16 @@ const parseSequence = (src: string, name: string, raw: unknown): TAtlasSequenceD
     if (sequence.next !== undefined && typeof sequence.next !== 'string') {
         return fail(src, `sequence "${name}" has a non-string "next".`);
     }
+    if (sequence.repeat !== undefined && (typeof sequence.repeat !== 'number' || !Number.isInteger(sequence.repeat))) {
+        return fail(src, `sequence "${name}" has a "repeat" that is not a whole number.`);
+    }
 
     return {
         frames: sequence.frames as Array<number | string>,
         ...(sequence.fps !== undefined ? { fps: sequence.fps as number } : {}),
         ...(sequence.loop !== undefined ? { loop: Boolean(sequence.loop) } : {}),
+        ...(sequence.repeat !== undefined ? { repeat: sequence.repeat as number } : {}),
+        ...(sequence.yoyo !== undefined ? { yoyo: Boolean(sequence.yoyo) } : {}),
         ...(sequence.next !== undefined ? { next: sequence.next as string } : {}),
     };
 };

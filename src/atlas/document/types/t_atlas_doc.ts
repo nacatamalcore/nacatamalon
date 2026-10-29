@@ -72,8 +72,18 @@ export type TAtlasSequenceDoc = {
      */
     loop?: boolean;
     /**
+     * How many extra times it runs after the first: `2` is three times, then it ends. Negative is for
+     * ever. Given, it says it and `loop` is not looked at. As a tween's `repeat`.
+     */
+    repeat?: number;
+    /**
+     * Each time it runs again it comes back the other way, the ends shown once. As a tween's `yoyo`.
+     */
+    yoyo?: boolean;
+    /**
      * The run to play when this one ends: a punch that drops back to standing. Only means something
-     * with `loop: false`, since a run that loops never ends.
+     * for a run that ends (`loop: false`, or a `repeat` that is not negative), since one that loops
+     * never does.
      *
      * In the file and not in the script that starts the punch, because what follows a punch is a
      * decision about the animation, and one written into code makes retiming a character a code

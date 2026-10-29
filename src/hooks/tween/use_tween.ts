@@ -33,7 +33,12 @@ type TRunningTween = {
     ease: TEaseFn;
     repeatsLeft: number;
     yoyo: boolean;
+    /**
+     * How many times it has started again so far.
+     */
+    repeats: number;
     ends: Set<() => void>;
+    repeatListeners: Set<(repeats: number) => void>;
     cancels: Set<() => void>;
     /**
      * Seconds into the current trip.
@@ -122,6 +127,11 @@ const advance = (tween: TRunningTween, delta: number): void => {
         tween.elapsed = 0;
         if (tween.yoyo) {
             tween.forward = !tween.forward;
+        }
+        tween.repeats += 1;
+        // Over a copy, as the others are: a listener that stops listening does not skip the next.
+        for (const listener of [...tween.repeatListeners]) {
+            listener(tween.repeats);
         }
         return;
     }
@@ -313,7 +323,9 @@ export const useTween = (): TTweenStarter => {
             ease: options.ease ?? linear,
             repeatsLeft: repeat < 0 ? Infinity : repeat,
             yoyo: options.yoyo ?? false,
+            repeats: 0,
             ends: new Set(),
+            repeatListeners: new Set(),
             cancels: new Set(),
             elapsed: 0,
             delayLeft: options.delay ?? 0,
@@ -345,6 +357,10 @@ export const useTween = (): TTweenStarter => {
                 end(tween);
             },
             onEnd: (listener) => listen(tween.ends, listener),
+            onRepeat: (listener) => {
+                tween.repeatListeners.add(listener);
+                return () => { tween.repeatListeners.delete(listener); };
+            },
             onCancel: (listener) => listen(tween.cancels, listener),
             get done() {
                 return tween.state !== 'running';
@@ -403,6 +419,8 @@ export const useTween = (): TTweenStarter => {
                 for (const handle of pending) handle.finish();
             },
             onEnd: (listener) => listen(ends, listener),
+            // A group goes through once: what repeats is each of its tweens, told on their own.
+            onRepeat: () => () => {},
             onCancel: (listener) => listen(cancels, listener),
             get done() {
                 return state !== 'running';

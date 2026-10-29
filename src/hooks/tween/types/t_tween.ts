@@ -166,6 +166,20 @@ export type TTweenHandle = {
      */
     onEnd(listener: () => void): () => void;
     /**
+     * Calls `listener` each time it starts again, with how many times it has so far: `1` the first
+     * time a `repeat` begins, `2` the next. Not when it ends: that is `onEnd`. A tween made with
+     * `all` goes through once, so it never says it. Hands back what stops listening.
+     *
+     * @example
+     * ```ts
+     * // A lamp that fades out and back for ever, and how many blinks it has made: two trips each.
+     * let blinks = 0;
+     * tween({ target: lamp, to: { tint: { a: 0 } }, duration: 0.3, yoyo: true, repeat: -1 })
+     *     .onRepeat((times) => { blinks = Math.floor(times / 2); });
+     * ```
+     */
+    onRepeat(listener: (repeats: number) => void): () => void;
+    /**
      * Calls `listener` when it is cancelled before it ended. Hands back what stops listening.
      */
     onCancel(listener: () => void): () => void;
