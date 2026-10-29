@@ -384,6 +384,10 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
                 continue;
             }
             const opened = state.sprites.runs[run];
+            // A batch is a run of sprites side by side in the list, nothing between them and under one
+            // mask, so the walk goes on from the first thing after it rather than past each of them:
+            // a frame of thousands of sprites in a few batches looks at a few, not thousands.
+            i = opened.firstDrawable + opened.count - 1;
             if (opened.stencil !== null && opened.stencil.write !== 'none') {
                 drawMaskRun(gl, state.sprites, state.masks!, opened);
                 spritesReady = false;
@@ -395,7 +399,7 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
                 spritesReady = true;
             }
             spritesReady = drawSpriteRun(
-                gl, state.sprites, state.sprites.runs[run], ctx.time, width, height,
+                gl, state.sprites, opened, ctx.time, width, height,
             );
             run++;
         }
