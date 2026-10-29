@@ -5,7 +5,10 @@ import { createCanvasFullscreen } from '../src/DOM/fullscreen';
 import { createFrameContext } from '../src/game/loop/create_frame_context';
 import { tick } from '../src/game/loop/tick';
 import { createScene } from '../src/scene/create_scene';
+import { watchCanvasFit } from '../src/DOM/watch_canvas_fit';
+import { getAudioManager } from '../src/audio/create_audio_manager';
 import { createFakeCanvas, createTestGame, startTestScene } from './helpers/test_game';
+import { installFakeAudio } from './helpers/test_audio';
 
 /**
  * A canvas in a window of its own, the way a host shows a game in a play window popped out of an
@@ -79,6 +82,45 @@ describe('the window a canvas lives in', () => {
         // Its own window is the room, and its screen draws two pixels for each: a buffer of 640.
         expect(canvas.width).toBe(640);
         expect([style.width, style.height]).toEqual(['640px', '480px']);
+    });
+
+    it('watches its container with that window\'s own observer, which is the one told it changed size', () => {
+        const watched: unknown[] = [];
+        let told: (() => void) | null = null;
+        class OwnObserver {
+            constructor(callback: () => void) { told = callback; }
+            observe(target: unknown) { watched.push(target); }
+            disconnect() {}
+        }
+        const { page, asked } = ownWindow({ ResizeObserver: OwnObserver });
+        const container = { style: {} };
+        const stop = watchCanvasFit(canvasIn(page, { parentElement: container }), () => ({ width: 320, height: 240 }));
+
+        expect(watched).toEqual([container]);
+        told!();
+        expect(asked.length).toBe(1);
+        stop();
+    });
+
+    it('turns its sound on with a key or a click in that window, not in the one the engine was loaded in', () => {
+        const audio = installFakeAudio();
+        const globals = globalThis as Record<string, unknown>;
+        const loadedIn = new EventTarget();
+        globals.window = loadedIn;
+        try {
+            const { view, page } = ownWindow();
+            const { store } = createTestGame({}, canvasIn(page));
+            getAudioManager(store);
+            const context = audio.contexts[0]!;
+
+            loadedIn.dispatchEvent(new Event('pointerdown'));
+            expect(context.resumes).toBe(0);
+            view.dispatchEvent(Object.assign(new Event('keydown'), { key: 'a', code: 'KeyA' }));
+            expect(context.resumes).toBe(1);
+        } finally {
+            delete globals.window;
+            audio.restore();
+        }
     });
 
     it('asks that page for full screen, and hears it end there', async () => {

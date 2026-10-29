@@ -32,7 +32,10 @@ export const watchCanvasFit = (canvas: HTMLCanvasElement, read: () => TCanvasOpt
     };
 
     const parent = canvas.parentElement;
-    const observer = new ResizeObserver(schedule);
+    // Its window's own observer: one made in the window the engine was loaded in is never told about
+    // a container in another, so a game in a window of its own would keep its first size.
+    const Observer = (view as unknown as typeof globalThis).ResizeObserver ?? ResizeObserver;
+    const observer = new Observer(schedule);
     if (parent) observer.observe(parent);
 
     const onWindowResize = parent === view.document.body ? schedule : null;

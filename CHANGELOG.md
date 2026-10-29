@@ -101,6 +101,13 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **A game in a window of its own follows that window's size, and its sound comes back there.**
+  Tried in Chrome with a real popped-out window: the container was watched by an observer from the
+  window the engine was loaded in, which is never told about a container in another, so the game
+  kept its first size however the window was resized. And the sound was let run by a click or a key
+  in that other window only, so once the game's window had been minimised and opened again its
+  sound stayed off. Both are now the game's own window's.
+
 - **`emptyParticlesDoc` refuses a kind it does not know.** Anything but `'particles-2d'` made a 3D
   effect without a word, so a kind written the old way (`particles2d`) made a file that a 2D
   emitter then would not draw. Now it says so, as the reader does with such a file.

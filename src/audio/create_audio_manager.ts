@@ -37,11 +37,14 @@ const BUILT_IN_CHANNELS = [DEFAULT_CHANNEL, 'music'];
  * handle it, this listens once for the first click, touch or key anywhere on the page, starts the
  * engine and forgets the listeners. So the first thing the player does is what turns the sound on.
  *
+ * @param view The window the game is shown in, whose clicks and keys those are: a game in a window of
+ * its own is touched there, not in the one the engine was loaded in. `null` where there is no page.
+ *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const createAudioManager = (): TAudioManager => {
+export const createAudioManager = (view: Window | null): TAudioManager => {
     const context = new AudioContext();
     const master = context.createGain();
     master.connect(context.destination);
@@ -103,20 +106,19 @@ export const createAudioManager = (): TAudioManager => {
         settle();
         removeUnlock();
     };
-    // Guarded because a test has no page: everything else about sound can be checked without one.
-    const listening = typeof window !== 'undefined';
+    // A test has no page: everything else about sound can be checked without one.
     const removeUnlock = (): void => {
-        if (!listening) {
+        if (view === null) {
             return;
         }
-        window.removeEventListener('pointerdown', unlock);
-        window.removeEventListener('keydown', unlock);
-        window.removeEventListener('touchstart', unlock);
+        view.removeEventListener('pointerdown', unlock);
+        view.removeEventListener('keydown', unlock);
+        view.removeEventListener('touchstart', unlock);
     };
-    if (listening) {
-        window.addEventListener('pointerdown', unlock);
-        window.addEventListener('keydown', unlock);
-        window.addEventListener('touchstart', unlock);
+    if (view !== null) {
+        view.addEventListener('pointerdown', unlock);
+        view.addEventListener('keydown', unlock);
+        view.addEventListener('touchstart', unlock);
     }
 
     return {
@@ -203,7 +205,9 @@ export const getAudioManager = (store: TRuntimeStore): TAudioManager => {
     if (current !== null) {
         return current;
     }
-    const manager = createAudioManager();
+    // The window the game is shown in, which is this one for a canvas with no page of its own.
+    const view = typeof window === 'undefined' ? null : store.get('screen').canvas.ownerDocument?.defaultView ?? window;
+    const manager = createAudioManager(view);
     manager.setClock(store.get('audio').clock);
     // Opened while the browser holds the game for a hidden page: held still with it.
     if (store.get('loop').pausedBy.includes(BROWSER_PAUSE)) {
