@@ -13,6 +13,7 @@ import { runCollisions } from "../../hitbox/run_collisions";
 import { updateAudio } from "../../audio";
 import { settleCapture } from "../capture";
 import { reportFrameError } from "./report_frame_error";
+import { windowOf } from "../../DOM/window_of";
 
 /**
  * Tick one frame of the game loop.
@@ -191,8 +192,14 @@ export const tick = (store: TRuntimeStore, ctx: TFrameContext, now: number, prev
         return;
     }
 
-    // Schedule the next frame first, so an error below does not stop the loop.
-    requestAnimationFrame((next) => tick(store, ctx, next, now));
+    // Schedule the next frame first, so an error below does not stop the loop. Asked of the window
+    // the canvas is in, not this script's: a game shown in a window of its own goes on while the one
+    // that opened it is minimised, and stops when its own is closed, which gives no more frames.
+    const view = windowOf(store.get('screen').canvas);
+    if (view.closed) {
+        return;
+    }
+    view.requestAnimationFrame((next) => tick(store, ctx, next, now));
 
     measureFps(store, now - prev);
     advanceFrame(store, ctx, now - prev);

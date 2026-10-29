@@ -18,13 +18,13 @@ type TFakeStyle = Partial<Record<'display' | 'justifyContent' | 'alignItems' | '
 
 afterEach(() => {
     delete (globalThis as Record<string, unknown>).document;
-    delete (globalThis as Record<string, unknown>).window;
+    delete (globalThis as Record<string, unknown>).devicePixelRatio;
     delete (globalThis as Record<string, unknown>).getComputedStyle;
 });
 
 const fit = (page: TFakeStyle, space = { width: 733, height: 517 }, align?: TCanvasAlign) => {
     (globalThis as Record<string, unknown>).document = { body: {} };
-    (globalThis as Record<string, unknown>).window = { devicePixelRatio: 1, innerWidth: 1000, innerHeight: 1000 };
+    (globalThis as Record<string, unknown>).devicePixelRatio = 1;
     const parent = { clientWidth: space.width, clientHeight: space.height };
     (globalThis as Record<string, unknown>).getComputedStyle = () => ({
         display: 'block', justifyContent: 'normal', alignItems: 'normal', justifyItems: 'normal', flexDirection: 'row',

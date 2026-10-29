@@ -2,6 +2,7 @@ import { computeCanvasLayout } from './canvas_layout';
 import { rememberScreenSize, resolvePixelRatio } from './screen_size';
 import type { TCanvasOptions } from './types/t_canvas_options';
 import type { TCanvasAlign } from './types/t_canvas_align';
+import { windowOf } from './window_of';
 
 /**
  * Measures the space the canvas lives in. `<body>` does not count: an unstyled one is as
@@ -9,9 +10,10 @@ import type { TCanvasAlign } from './types/t_canvas_align';
  */
 const measure = (canvas: HTMLCanvasElement): { width: number; height: number } => {
     const parent = canvas.parentElement;
-    const container = parent === document.body ? null : parent;
+    const view = windowOf(canvas);
+    const container = parent === view.document.body ? null : parent;
     if (!container) {
-        return { width: window.innerWidth, height: window.innerHeight };
+        return { width: view.innerWidth, height: view.innerHeight };
     }
     // Without the canvas in it, for the same reason as `<body>`: a container with no size of its own
     // (a bare `<div id="app">`, or one a centring page shrinks round what it holds) is as big as the
@@ -21,7 +23,7 @@ const measure = (canvas: HTMLCanvasElement): { width: number; height: number } =
     canvas.style.display = 'none';
     // Inside its padding: `clientWidth` counts it, and a container with 40 px of it round the game
     // had the canvas sized and centred for room it does not have, past its edge.
-    const style = typeof getComputedStyle === 'function' ? getComputedStyle(container) : null;
+    const style = typeof view.getComputedStyle === 'function' ? view.getComputedStyle(container) : null;
     const padding = (side: 'Left' | 'Right' | 'Top' | 'Bottom'): number => parseFloat(style?.[`padding${side}`] ?? '') || 0;
     const room = {
         width: Math.max(0, container.clientWidth - padding('Left') - padding('Right')),
@@ -57,8 +59,8 @@ const fromCanvasAlign = (align: TCanvasAlign): { x: TPlace; y: TPlace } => ({
  * `justify-items`), so a page that wants the game in a corner has it there. Any other container has
  * said nothing, and the game is centred: what a game wants, and what full screen does.
  */
-const placeAsked = (container: HTMLElement | null): { x: TPlace; y: TPlace; laysOut: boolean } => {
-    const style = container !== null && typeof getComputedStyle === 'function' ? getComputedStyle(container) : null;
+const placeAsked = (container: HTMLElement | null, view: Window): { x: TPlace; y: TPlace; laysOut: boolean } => {
+    const style = container !== null && typeof view.getComputedStyle === 'function' ? view.getComputedStyle(container) : null;
     const display = style?.display ?? '';
     if (style === null || (!display.endsWith('flex') && !display.endsWith('grid'))) {
         return { x: 'center', y: 'center', laysOut: false };
@@ -101,6 +103,7 @@ const centringStep = (density: number): number => {
  * @author Francisco Pereira Alvarado
  */
 export const fitCanvas = (canvas: HTMLCanvasElement, options: TCanvasOptions): void => {
+    const view = windowOf(canvas);
     const measured = measure(canvas);
     // A side the container measures nothing along has no size of its own (a bare `<div id="app">`
     // is as wide as the page and as tall as what is in it): the game takes its own size along it,
@@ -114,11 +117,11 @@ export const fitCanvas = (canvas: HTMLCanvasElement, options: TCanvasOptions): v
         height,
         options.scaling ?? 'none',
         options.keep ?? 'both',
-        resolvePixelRatio('device'),
+        resolvePixelRatio('device', view),
         options.pixelAspect ?? 1,
     );
 
-    const pixelRatio = resolvePixelRatio(options.pixelRatio);
+    const pixelRatio = resolvePixelRatio(options.pixelRatio, view);
     const bufferWidth = Math.max(1, Math.round(layout.bufferWidth * pixelRatio));
     const bufferHeight = Math.max(1, Math.round(layout.bufferHeight * pixelRatio));
     rememberScreenSize(canvas, { width: layout.bufferWidth, height: layout.bufferHeight, pixelRatio });
@@ -141,8 +144,8 @@ export const fitCanvas = (canvas: HTMLCanvasElement, options: TCanvasOptions): v
     // templates, the playgrounds, full screen), an `auto` margin takes the leftover before the page
     // places anything, so there is nothing left for it to add. A margin on the near side alone was
     // centred again by the page: half the leftover more to the right, 80 px on a wide monitor.
-    const step = centringStep(resolvePixelRatio('device'));
-    const asked = placeAsked(canvas.parentElement === document.body ? null : canvas.parentElement);
+    const step = centringStep(resolvePixelRatio('device', view));
+    const asked = placeAsked(canvas.parentElement === view.document.body ? null : canvas.parentElement, view);
     const place = options.align === undefined ? asked : { ...fromCanvasAlign(options.align), laysOut: asked.laysOut };
     const near = (leftover: number, at: TPlace): number =>
         leftover <= 0 || at === 'start' ? 0 : Math.floor((at === 'center' ? leftover / 2 : leftover) / step) * step;

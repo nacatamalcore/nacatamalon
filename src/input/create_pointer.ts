@@ -1,4 +1,5 @@
 import { momentOf } from './moment';
+import { pageOf } from '../DOM/window_of';
 import { pointerButtonName } from './pointer_buttons';
 import type { TPointerButtonName } from './pointer_buttons';
 // Straight from its file: the box barrel reaches the store, and the store creates this pointer.
@@ -378,7 +379,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
     /**
      * Whether this canvas has the mouse. No page (a test, the native runtime) is never captured.
      */
-    const lockedHere = (): boolean => typeof document !== 'undefined' && document.pointerLockElement === canvas;
+    const lockedHere = (): boolean => pageOf(canvas)?.pointerLockElement === canvas;
 
     /**
      * Asks for the capture once and waits for the answer: a promise in most browsers, the
@@ -394,8 +395,8 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
         }
         await new Promise<void>((resolve, reject) => {
             const done = (granted: boolean): void => {
-                document.removeEventListener('pointerlockchange', onChange);
-                document.removeEventListener('pointerlockerror', onError);
+                pageOf(canvas)?.removeEventListener('pointerlockchange', onChange);
+                pageOf(canvas)?.removeEventListener('pointerlockerror', onError);
                 clearTimeout(timer);
                 if (granted) resolve();
                 else reject(new Error('refused'));
@@ -403,8 +404,8 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
             const onChange = (): void => done(lockedHere());
             const onError = (): void => done(false);
             const timer = setTimeout(() => done(lockedHere()), LOCK_ANSWER_MS);
-            document.addEventListener('pointerlockchange', onChange);
-            document.addEventListener('pointerlockerror', onError);
+            pageOf(canvas)?.addEventListener('pointerlockchange', onChange);
+            pageOf(canvas)?.addEventListener('pointerlockerror', onError);
         });
     };
 
@@ -436,7 +437,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
 
     const unlock = (): void => {
         if (lockedHere()) {
-            document.exitPointerLock();
+            pageOf(canvas)?.exitPointerLock();
         }
     };
 

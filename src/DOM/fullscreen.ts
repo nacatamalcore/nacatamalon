@@ -1,4 +1,5 @@
 import type { TCanvasScaling } from './types/t_canvas_scaling';
+import { pageOf } from './window_of';
 
 /**
  * The browser's full-screen API, under the names Safari used before it had the standard ones (an
@@ -10,8 +11,8 @@ type TPrefixedDocument = Document & {
     webkitExitFullscreen?: () => Promise<void> | void;
 };
 
-const fullscreenElement = (): Element | null =>
-    document.fullscreenElement ?? (document as TPrefixedDocument).webkitFullscreenElement ?? null;
+const fullscreenElement = (page: TPrefixedDocument): Element | null =>
+    page.fullscreenElement ?? page.webkitFullscreenElement ?? null;
 
 /**
  * The inline styles taken over while full screen, so leaving puts back exactly what was there.
@@ -60,11 +61,13 @@ export const createCanvasFullscreen = (
     scaling: () => TCanvasScaling,
     setOverride: (scaling: TCanvasScaling | null) => void,
 ): TCanvasFullscreen => {
+    // The page the canvas is in, which full screen is asked of and answers through (see pageOf).
+    const page = pageOf(canvas) as TPrefixedDocument;
     // With no container of its own the canvas lives in `<body>`, and the whole document goes full
     // screen: `fitCanvas` measures the window in that case, which is then the screen.
     const container = (): TPrefixedElement => {
         const parent = canvas.parentElement;
-        return (parent === null || parent === document.body ? document.documentElement : parent) as TPrefixedElement;
+        return (parent === null || parent === page.body ? page.documentElement : parent) as TPrefixedElement;
     };
 
     let saved: Record<(typeof BORROWED)[number], string> | null = null;
@@ -83,10 +86,10 @@ export const createCanvasFullscreen = (
     // The only reliable signal for leaving: Esc, the browser's own button and a tab switch never go
     // through `exit`, they just end it.
     const onChange = (): void => {
-        if (active !== null && fullscreenElement() !== active) restore();
+        if (active !== null && fullscreenElement(page) !== active) restore();
     };
-    document.addEventListener('fullscreenchange', onChange);
-    document.addEventListener('webkitfullscreenchange', onChange);
+    page.addEventListener('fullscreenchange', onChange);
+    page.addEventListener('webkitfullscreenchange', onChange);
 
     const request = (element: TPrefixedElement): Promise<void> | void | null => {
         if (typeof element.requestFullscreen === 'function') return element.requestFullscreen();
@@ -123,20 +126,19 @@ export const createCanvasFullscreen = (
         },
         exit: async () => {
             if (active === null) return;
-            const doc = document as TPrefixedDocument;
             try {
-                if (typeof document.exitFullscreen === 'function' && document.fullscreenElement) await document.exitFullscreen();
-                else if (typeof doc.webkitExitFullscreen === 'function') await doc.webkitExitFullscreen();
+                if (typeof page.exitFullscreen === 'function' && page.fullscreenElement) await page.exitFullscreen();
+                else if (typeof page.webkitExitFullscreen === 'function') await page.webkitExitFullscreen();
             } finally {
                 restore();
             }
         },
-        isActive: () => active !== null && fullscreenElement() === active,
+        isActive: () => active !== null && fullscreenElement(page) === active,
         destroy: () => {
-            document.removeEventListener('fullscreenchange', onChange);
-            document.removeEventListener('webkitfullscreenchange', onChange);
-            if (active !== null && fullscreenElement() === active) {
-                void (document.exitFullscreen?.() ?? (document as TPrefixedDocument).webkitExitFullscreen?.());
+            page.removeEventListener('fullscreenchange', onChange);
+            page.removeEventListener('webkitfullscreenchange', onChange);
+            if (active !== null && fullscreenElement(page) === active) {
+                void (page.exitFullscreen?.() ?? page.webkitExitFullscreen?.());
             }
             restore();
         },

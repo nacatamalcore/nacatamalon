@@ -28,16 +28,17 @@ const placedCanvas = (space = { width: 1000, height: 1000 }): HTMLCanvasElement 
 };
 
 /**
- * `fitCanvas` compares the container with `document.body`, and a test has no page.
+ * `fitCanvas` compares the container with `document.body`, and a test has no page. A canvas with no
+ * page of its own is the global window's, so the page goes there.
  */
 const withPage = (devicePixelRatio = 1): void => {
-    (globalThis as Record<string, unknown>).document = { body: {} };
-    (globalThis as Record<string, unknown>).window = { devicePixelRatio, innerWidth: 1000, innerHeight: 1000 };
+    Object.assign(globalThis, { document: { body: {} }, devicePixelRatio, innerWidth: 1000, innerHeight: 1000 });
 };
 
 afterEach(() => {
-    delete (globalThis as Record<string, unknown>).document;
-    delete (globalThis as Record<string, unknown>).window;
+    for (const name of ['document', 'devicePixelRatio', 'innerWidth', 'innerHeight']) {
+        delete (globalThis as Record<string, unknown>)[name];
+    }
 });
 
 const fit = (canvas: HTMLCanvasElement, options: Partial<TCanvasOptions>): void =>

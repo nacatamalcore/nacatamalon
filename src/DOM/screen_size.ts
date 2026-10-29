@@ -19,14 +19,15 @@ export type TScreenSize = {
 const sizes = new WeakMap<HTMLCanvasElement, TScreenSize>();
 
 /**
- * How many real pixels a game pixel gets: the number asked for, or the screen's own for `'device'`.
+ * How many real pixels a game pixel gets: the number asked for, or the screen's own for `'device'`,
+ * the screen of `view`, the window the canvas is in (see `windowOf`).
  *
  * `'device'` is read every time rather than once, so a window dragged to another monitor (or a
  * browser zoom) is picked up by the next fit.
  */
-export const resolvePixelRatio = (asked: number | 'device' | undefined): number => {
+export const resolvePixelRatio = (asked: number | 'device' | undefined, view: Window | undefined = typeof window === 'undefined' ? undefined : window): number => {
     if (asked === 'device') {
-        const device = typeof window === 'undefined' ? 1 : window.devicePixelRatio;
+        const device = view === undefined ? 1 : view.devicePixelRatio;
         return Number.isFinite(device) && device > 0 ? device : 1;
     }
     return asked ?? 1;

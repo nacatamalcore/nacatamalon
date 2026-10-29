@@ -5,6 +5,7 @@ export { fitCanvas } from './fit_canvas';
 export { watchCanvasFit } from './watch_canvas_fit';
 export { computeCanvasLayout } from './canvas_layout';
 export { screenSizeOf, resolvePixelRatio } from './screen_size';
+export { windowOf, pageOf } from './window_of';
 
 export type { TCanvasLayout } from './types/t_canvas_layout';
 export type { TCanvasScaling } from './types/t_canvas_scaling';

@@ -1,4 +1,5 @@
 import { momentOf } from './moment';
+import { windowOf } from '../DOM/window_of';
 import { normalizeKey } from './normalize_key';
 import type { TKeyboardSource } from './types/t_keyboard';
 
@@ -104,7 +105,7 @@ export const createKeyboard = (canvas: HTMLCanvasElement): TKeyboardSource => {
         down.clear();
     };
 
-    const view = canvas.ownerDocument?.defaultView ?? (globalThis as unknown as Window);
+    const view = windowOf(canvas);
     view.addEventListener('keydown', onKeyDown);
     view.addEventListener('keyup', onKeyUp);
     view.addEventListener('blur', onBlur);

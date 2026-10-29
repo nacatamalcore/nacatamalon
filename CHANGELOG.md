@@ -53,6 +53,13 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **A game shown in a window of its own runs by that window.** A host can put the canvas in another
+  window (a play window popped out of a tool), and the loop took its frames from the window the
+  engine was loaded in: closed, the game kept drawing into nothing, a WebGPU error every frame
+  (1,129 in a second, measured in Chromium), and minimising the other one froze it while it was in
+  sight. Its frames, its size, its screen's density, its full screen, its pointer capture and its
+  pause when hidden are now its own window's, the way its keyboard already was; closed, it stops.
+  A game on its own page is drawn exactly as before.
 - **WebGPU and WebGL2 draw a sprite of odd size held by its middle the same.** `pixelSnap` put
   where it is drawn on a whole pixel, and a sprite 5 wide by its middle there has its edges on
   halves. There the graphics card chose which texel each column showed, a column one way in WebGPU,

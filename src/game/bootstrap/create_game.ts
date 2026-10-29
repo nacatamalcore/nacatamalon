@@ -17,6 +17,7 @@ import { holdingSound, watchVisibility } from "./watch_visibility";
 import { watchPage } from './watch_page';
 import { VERSION } from "../../version";
 import { settleCapture } from "../capture";
+import { windowOf } from "../../DOM/window_of";
 import type { TRendererBackend } from "../../render/interface";
 
 /**
@@ -246,11 +247,14 @@ export const createGame = (target: TGameTarget, game_options: TGameOptions) => {
             });
             // `pauseOnBlur`: the browser holds the loop while the page is hidden, beside any other hold,
             // and its sound with it, every sound where it was, as a console's did when it was paused.
-            const unwatchVisibility = pauseOnBlur ? watchVisibility(holdingSound(createGameHandle(runtime), runtime)) : () => {};
-            // What happens to the page, for the game's `onHidden`, `onLeaving` and the rest. The page
-            // the canvas is in, which is not this script's when a tool shows the game in a window of
-            // its own.
+            // The page the canvas is in, which is not this script's when a tool shows the game in a
+            // window of its own: that one hidden is what holds it.
             const page = screen.canvas.ownerDocument;
+            const view = windowOf(screen.canvas);
+            const unwatchVisibility = pauseOnBlur
+                ? watchVisibility(holdingSound(createGameHandle(runtime), runtime), page, (callback) => view.requestAnimationFrame(callback))
+                : () => {};
+            // What happens to the page, for the game's `onHidden`, `onLeaving` and the rest.
             const unwatchPage = watchPage(runtime, page, page.defaultView ?? undefined);
             unwatchConfig = () => {
                 unwatchSmooth();

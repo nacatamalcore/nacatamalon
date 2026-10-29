@@ -19,7 +19,9 @@ import type { TCanvasFit } from './types/t_canvas_fit';
 export const createCanvas = (parent: TGameTarget, options: TCanvasOptions): TCanvasInstance => {
     const target = resolveTarget(parent);
     const adopted = target instanceof HTMLCanvasElement;
-    const canvas = adopted ? target : document.createElement('canvas');
+    // Made by the page it goes into, which is not this script's when a host gives a container in a
+    // window of its own.
+    const canvas = adopted ? target : target.ownerDocument.createElement('canvas');
 
     const id = nanoId();
     if (!canvas.id) canvas.id = `nacatamalon-canvas-${id}`;

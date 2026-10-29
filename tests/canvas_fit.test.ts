@@ -24,7 +24,8 @@ const pageWith = (space = { width: 1200, height: 600 }) => {
     const globals = globalThis as Record<string, unknown>;
     globals.HTMLCanvasElement = FakeCanvas;
     globals.document = doc;
-    globals.window = Object.assign(new EventTarget(), { devicePixelRatio: 2, innerWidth: space.width, innerHeight: space.height, addEventListener() {}, removeEventListener() {} });
+    // A canvas with no page of its own is the global window's, so the page goes there.
+    Object.assign(globals, { devicePixelRatio: 2, innerWidth: space.width, innerHeight: space.height });
     globals.ResizeObserver = class { observe() {} disconnect() {} };
     globals.requestAnimationFrame = () => 0;
     globals.cancelAnimationFrame = () => {};
@@ -32,7 +33,7 @@ const pageWith = (space = { width: 1200, height: 600 }) => {
 };
 
 afterEach(() => {
-    for (const name of ['HTMLCanvasElement', 'document', 'window', 'ResizeObserver', 'requestAnimationFrame', 'cancelAnimationFrame']) {
+    for (const name of ['HTMLCanvasElement', 'document', 'devicePixelRatio', 'innerWidth', 'innerHeight', 'ResizeObserver', 'requestAnimationFrame', 'cancelAnimationFrame']) {
         delete (globalThis as Record<string, unknown>)[name];
     }
 });

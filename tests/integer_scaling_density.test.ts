@@ -63,13 +63,14 @@ describe('integer scaling on screens of every density', () => {
 
 describe('fitting a canvas on a screen at 125%', () => {
     afterEach(() => {
-        delete (globalThis as Record<string, unknown>).document;
-        delete (globalThis as Record<string, unknown>).window;
+        for (const name of ['document', 'devicePixelRatio', 'innerWidth', 'innerHeight']) {
+            delete (globalThis as Record<string, unknown>)[name];
+        }
     });
 
     it('reads the screen\'s density and paints 7 of its pixels a game pixel, leaving the buffer alone', () => {
-        (globalThis as Record<string, unknown>).document = { body: {} };
-        (globalThis as Record<string, unknown>).window = { devicePixelRatio: 1.25, innerWidth: 1000, innerHeight: 1000 };
+        // A canvas with no page of its own is the global window's, so the page goes there.
+        Object.assign(globalThis, { document: { body: {} }, devicePixelRatio: 1.25, innerWidth: 1000, innerHeight: 1000 });
         const style = {} as CSSStyleDeclaration;
         const canvas = { width: 300, height: 150, style, parentElement: { clientWidth: 1000, clientHeight: 700 } } as unknown as HTMLCanvasElement;
 
@@ -82,13 +83,13 @@ describe('fitting a canvas on a screen at 125%', () => {
 
 describe('centring a canvas on a screen of any density', () => {
     afterEach(() => {
-        delete (globalThis as Record<string, unknown>).document;
-        delete (globalThis as Record<string, unknown>).window;
+        for (const name of ['document', 'devicePixelRatio', 'innerWidth', 'innerHeight']) {
+            delete (globalThis as Record<string, unknown>)[name];
+        }
     });
 
     const centred = (density: number, space: number): string => {
-        (globalThis as Record<string, unknown>).document = { body: {} };
-        (globalThis as Record<string, unknown>).window = { devicePixelRatio: density, innerWidth: 1000, innerHeight: 1000 };
+        Object.assign(globalThis, { document: { body: {} }, devicePixelRatio: density, innerWidth: 1000, innerHeight: 1000 });
         const style = {} as CSSStyleDeclaration;
         const canvas = { width: 300, height: 150, style, parentElement: { clientWidth: space, clientHeight: 517 } } as unknown as HTMLCanvasElement;
         fitCanvas(canvas, { width: 160, height: 120, scaling: 'integer' });

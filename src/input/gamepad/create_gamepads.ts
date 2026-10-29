@@ -1,4 +1,5 @@
 import { DEFAULT_DEADZONE } from '../../CONFIG';
+import { windowOf } from '../../DOM/window_of';
 import { momentOf } from '../moment';
 import { deadzoneRadial, deadzoneScalar } from './deadzone';
 import { saysMilliseconds } from '../../utils/says_milliseconds';
@@ -116,7 +117,7 @@ const ensureCapacity = (port: TPort, buttons: number, axes: number): void => {
  * @author Francisco Pereira Alvarado
  */
 export const createGamepads = (canvas: HTMLCanvasElement): TGamepadSource => {
-    const view = canvas.ownerDocument?.defaultView ?? (globalThis as unknown as Window);
+    const view = windowOf(canvas);
     const ports = new Map<number, TPort>();
 
     const padAt = (index: number): Gamepad | null => view.navigator?.getGamepads?.()[index] ?? null;
