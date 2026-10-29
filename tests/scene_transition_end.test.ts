@@ -11,8 +11,10 @@ import { useReady } from '../src/hooks/scene/use_ready';
 import { useSceneTransitionEnd } from '../src/hooks/scene/use_scene_transition_end';
 import { useUpdate } from '../src/hooks/loop/use_update';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
+import { destroy } from '../src/destroy/destroy';
 import { createFakeCanvas, createTestGame, startTestScene } from './helpers/test_game';
 import type { TSceneHandle } from '../src/hooks/scene/use_scene';
+import type { TGameObject } from '../src/hooks/spawn/use_spawn';
 
 /**
  * `useSceneTransitionEnd` is the moment a scene is in full view: after the cover a transition put
@@ -158,6 +160,43 @@ describe('useSceneTransitionEnd', () => {
             console.error = errors;
         }
         expect(log).toEqual(['second']);
+    });
+
+    it('does not run the rest when one of them stops the scene, as one sending the game elsewhere does', () => {
+        const { store, frame } = twoRooms();
+        const log: string[] = [];
+        startTestScene(store, 'C', () => {
+            useSceneTransitionEnd(() => {
+                log.push('leave');
+                stopScene(store, 'C');
+            });
+            useSceneTransitionEnd(() => log.push('stayed'));
+            return createScene();
+        });
+
+        frame();
+        expect(findScene(store, 'C')).toBeUndefined();
+        expect(log).toEqual(['leave']);
+    });
+
+    it('does not run one whose box an earlier one destroyed', () => {
+        const { store, frame } = twoRooms();
+        const log: string[] = [];
+        const Coin = () => {
+            useSceneTransitionEnd(() => log.push('coin'));
+        };
+        startTestScene(store, 'C', () => {
+            let coin: TGameObject | null = null;
+            useSceneTransitionEnd(() => {
+                log.push('scene');
+                destroy(coin!);
+            });
+            coin = useSpawn(Coin)();
+            return createScene();
+        });
+
+        frame();
+        expect(log).toEqual(['scene']);
     });
 
     it('is refused outside a scene body, a component or a script', () => {

@@ -101,6 +101,11 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **A `useSceneTransitionEnd` that leaves the scene stops the ones after it.** When one of them
+  stopped its scene (sending the game elsewhere) or destroyed a box, the ones still waiting in that
+  same frame ran anyway, in a scene already gone. Now each is asked again just before it runs. The
+  same goes for a sound set to start once a scene is no longer held.
+
 - **A material with more numbers than it holds draws the built-in look on WebGL2 too.** A material
   or a screen effect holds 64 numbers, `mu.time` and `mu.resolution` included; on WebGL2 one that
   asked for more threw out of the middle of every frame, so nothing else in the game was drawn

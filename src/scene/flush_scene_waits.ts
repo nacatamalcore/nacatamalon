@@ -10,8 +10,9 @@ import type { TRuntimeStore } from '../store';
  * Runs what was set aside until its scene got somewhere, and keeps what is still waiting.
  *
  * Each callback runs with its own box active. One whose box was destroyed meanwhile, or whose scene
- * stopped (a scene that stops is not marked destroyed, its boxes are only torn down), is dropped.
- * One that throws is reported as a failed frame and costs only itself.
+ * stopped (a scene that stops is not marked destroyed, its boxes are only torn down), is dropped,
+ * also when it was one run just before it in this same pass that did it. One that throws is
+ * reported as a failed frame and costs only itself.
  *
  * @param waiting The list, emptied of what runs. Mutated in place.
  * @param waits Whether a scene is still not where its callbacks wait for it to be.
@@ -41,6 +42,9 @@ export const flushSceneWaits = (
     waiting.splice(0, waiting.length, ...kept);
 
     for (const { box, run } of due) {
+        // Asked again before each one: the one before it may have sent the game elsewhere, stopping
+        // this scene, or destroyed this box, and what it set aside must not run in a scene that left.
+        if (box.destroyed || isSceneStopped(sceneOf(box))) continue;
         try {
             withActiveGame(store, () => withActiveBox(store, box, run));
         } catch (error) {
