@@ -29,6 +29,11 @@ export const emptyParticlesDoc = (options: {
      */
     texture?: string;
 }): TParticlesDoc => {
+    // Refused as the reader refuses it. Taken for 3D, a name written the old way (`particles2d`)
+    // made a file that a 2D emitter then would not draw, and nothing said why.
+    if (options.kind !== 'particles-2d' && options.kind !== 'particles-3d') {
+        throw new Error(`[NacatamalOn] emptyParticlesDoc: "${String(options.kind)}" is not a kind of effect. Use 'particles-2d' or 'particles-3d'.`);
+    }
     const flat = options.kind === 'particles-2d';
     const white = { r: 1, g: 1, b: 1, a: 1 };
     const base = {

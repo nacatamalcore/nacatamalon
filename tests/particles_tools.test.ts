@@ -63,6 +63,12 @@ describe('a new effect', () => {
             expect(doc.bounds).toBeNull();
         }
     });
+
+    it('is refused for a kind it does not know, the old way of writing one included', () => {
+        expect(() => emptyParticlesDoc({ kind: 'particles2d' as never })).toThrow(
+            '[NacatamalOn] emptyParticlesDoc: "particles2d" is not a kind of effect. Use \'particles-2d\' or \'particles-3d\'.',
+        );
+    });
 });
 
 describe('the footprint of an emitter', () => {

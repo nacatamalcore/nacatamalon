@@ -101,6 +101,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **`emptyParticlesDoc` refuses a kind it does not know.** Anything but `'particles-2d'` made a 3D
+  effect without a word, so a kind written the old way (`particles2d`) made a file that a 2D
+  emitter then would not draw. Now it says so, as the reader does with such a file.
+
 - **Models following the 2D camera pan with the sprites under `pixelSnap`.** The sprites were drawn
   through the 2D camera rounded to the pixels, and a `follow2d` camera's models through it as it
   was, so the two slid apart by the rounding as the camera moved: a third of a pixel at zoom 3. Now
