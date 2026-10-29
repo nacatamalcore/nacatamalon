@@ -193,12 +193,12 @@ describe('the shaders for each side', () => {
 
     it('turns a material\'s surface round on the far side, and tells its hook which side it is', () => {
         const wgsl = buildMeshMaterialShader(null, null, {}, [], false, 'none');
-        expect(wgsl).toContain('let normal = select(-in.normal, in.normal, front);');
+        expect(wgsl).toContain('let normal = select(-in.normal.xyz, in.normal.xyz, front);');
         expect(wgsl).toContain('ctx.normal = normal;');
         expect(wgsl).toContain('ctx.viewDir = viewDirOf(in.worldPos.xyz);');
         expect(wgsl).toContain('ctx.frontFacing = front;');
         const glsl = buildMeshMaterialShaderGlsl(null, null, {}, [], false, 'none');
-        expect(glsl.fragment).toContain('ctx.normal = (gl_FrontFacing ? vNormal : -vNormal);');
+        expect(glsl.fragment).toContain('ctx.normal = (gl_FrontFacing ? vNormal.xyz : -vNormal.xyz);');
         expect(glsl.fragment).toContain('ctx.viewDir = viewDirOf(vWorldPos);');
         expect(glsl.fragment).toContain('ctx.frontFacing = gl_FrontFacing;');
         expect(glsl.vertex).not.toContain('vViewDir');

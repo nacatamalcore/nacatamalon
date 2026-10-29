@@ -59,7 +59,8 @@ const VARYINGS = (direction: 'out' | 'in', cull: TCullMode): string => /* glsl *
 ${direction} vec3 vUv;
 ${direction} vec3 vLight;
 ${direction} vec3 vShine;
-${direction} vec3 vNormal;
+// Which way it faces, and in w the second picture's place across (see vScreen).
+${direction} vec4 vNormal;
 ${direction} vec3 vWorldPos;
 ${cull === 'none' ? '' : `${direction} vec3 vViewDir;
 `}// The casting light's own share of vLight and vShine, so the ending can take that one away and no
@@ -70,11 +71,12 @@ ${direction} vec3 vCasterShine;
 ${direction} vec4 vColor;
 ${direction} float vFog;
 // Where the corner lands on the screen before the division by depth (x, y and w), divided at the
-// pixel: see screenOf.
-${direction} vec3 vScreen;
+// pixel: see screenOf. In w the second picture's place down: with vNormal's w that is the second
+// picture's place, in two columns the rows already leave rather than a row of its own, as its twin
+// in WGSL carries it.
+${direction} vec4 vScreen;
 // The tangent in the world, with its hand in w.
 ${direction} vec4 vTangent;
-${direction} vec2 vUv2;
 // What the corner hook put in carry.
 ${direction} vec4 vCarry;
 ${cull === 'none' ? TWO_SIDED_VARYINGS_GLSL(direction) : ''}`;
@@ -256,15 +258,14 @@ void main() {${CORNER_CONTEXT}${normal}${skinned ? SKIN : STILL}
     vCasterLight = casterDiffuse;
     vCasterShine = casterShine;${cull === 'none' ? TWO_SIDED_WRITE_GLSL : ''}
     vUv = affineUv(aUv, gl_Position);
-    vNormal = worldNormal;
+    vNormal = vec4(worldNormal, aUv2.x);
     vWorldPos = worldPos;
 ${cull === 'none' ? '' : `    vViewDir = viewDir;
 `}    vColor = aColor;
     vFog = fogAt(worldPos);
-    vScreen = gl_Position.xyw;
+    vScreen = vec4(gl_Position.xyw, aUv2.y);
     // A direction, so it is moved by the model's own turn and stretch rather than the facing's.
     vTangent = vec4(normalize((uniforms.model * vec4(across, 0.0)).xyz), aTangent.w);
-    vUv2 = aUv2;
     vCarry = carried;
 }
 `;
@@ -297,7 +298,7 @@ void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     vec2 uv = vUv.xy / vUv.z;
     FragContext ctx;
     ctx.uv = uv;
-    ctx.normal = ${cull === 'none' ? '(gl_FrontFacing ? vNormal : -vNormal)' : 'vNormal'};
+    ctx.normal = ${cull === 'none' ? '(gl_FrontFacing ? vNormal.xyz : -vNormal.xyz)' : 'vNormal.xyz'};
     ctx.worldPos = vWorldPos;
     ctx.light = lit;
     ctx.shine = litWithShadow(${shine}, ${casterShine}, coord);
@@ -307,10 +308,10 @@ void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     // room for the light of the other side.
     ctx.viewDir = ${cull === 'none' ? 'viewDirOf(vWorldPos)' : 'vViewDir'};
     ctx.color = vColor;
-    ctx.screen = screenOf(vScreen);
+    ctx.screen = screenOf(vScreen.xyz);
     ctx.tangent = normalize(vTangent.xyz);
     ctx.bitangent = cross(normalize(ctx.normal), ctx.tangent) * vTangent.w;
-    ctx.uv2 = vUv2;
+    ctx.uv2 = vec2(vNormal.w, vScreen.w);
     ctx.frontFacing = gl_FrontFacing;
     ctx.carry = vCarry;
 

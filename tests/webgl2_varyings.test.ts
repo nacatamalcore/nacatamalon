@@ -96,12 +96,13 @@ describe('what a model hands from its corners to its pixels on WebGL2', () => {
         expect(over).toEqual([]);
     });
 
-    it('has no room left in a material drawn on both sides: the next thing it carries needs packing', () => {
-        // Six four-wides (the colour, the tangent, carry and the three of the far side's light), eight
-        // three-wides, the second picture's place and the fog: fifteen. Anything new here has to go in
-        // a spare column, as the fog does, or the material stops compiling on the phones that give 15.
+    it('leaves one row in a material drawn on both sides, with the second picture in spare columns', () => {
+        // Six four-wides (the colour, the tangent, carry and the three of the far side's light), seven
+        // three-wides, two of them carrying the second picture's place in their fourth column, and the
+        // fog in another's: fourteen. Anything new past one row more has to find a spare column, or
+        // the material stops compiling on the phones that give 15.
         const vertex = buildMeshMaterialShaderGlsl(null, null, {}, [], false, 'none').vertex;
-        expect(rowsOf(outputsOf(vertex))).toBe(ROWS);
-        expect(rowsOf(outputsOf(buildMeshMaterialShaderGlsl(null, null, {}, [], false, 'back').vertex))).toBe(13);
+        expect(rowsOf(outputsOf(vertex))).toBe(14);
+        expect(rowsOf(outputsOf(buildMeshMaterialShaderGlsl(null, null, {}, [], false, 'back').vertex))).toBe(12);
     });
 });

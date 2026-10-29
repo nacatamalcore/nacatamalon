@@ -53,9 +53,9 @@ describe('the detail a material reads', () => {
 
         // From the facing the hook is handed, which is the corner's own unless the other side of a
         // two-sided one is drawn.
-        expect(wgsl).toContain('ctx.normal = in.normal;');
+        expect(wgsl).toContain('ctx.normal = in.normal.xyz;');
         expect(wgsl).toContain('ctx.bitangent = cross(normalize(ctx.normal), ctx.tangent) * in.tangent.w;');
-        expect(glsl).toContain('ctx.normal = vNormal;');
+        expect(glsl).toContain('ctx.normal = vNormal.xyz;');
         expect(glsl).toContain('ctx.bitangent = cross(normalize(ctx.normal), ctx.tangent) * vTangent.w;');
     });
 });
@@ -65,8 +65,11 @@ describe('where on the screen a material is', () => {
         const wgsl = buildMeshMaterialShader(HOOK, null, {});
         const glsl = buildMeshMaterialShaderGlsl(HOOK_GLSL, null, {});
 
-        expect(wgsl).toContain('out.screen = out.position.xyw;');
-        expect(glsl.vertex).toContain('vScreen = gl_Position.xyw;');
+        expect(wgsl).toContain('out.screen = vec4<f32>(out.position.xyw, cornerUv2.y);');
+        expect(glsl.vertex).toContain('vScreen = vec4(gl_Position.xyw, aUv2.y);');
+        // The second picture's place rides in the spare fourth numbers of the facing and of this.
+        expect(wgsl).toContain('ctx.uv2 = vec2<f32>(in.normal.w, in.screen.w);');
+        expect(glsl.fragment).toContain('ctx.uv2 = vec2(vNormal.w, vScreen.w);');
         expect(screenMath(glsl.fragment)).toBe(screenMath(wgsl));
         // In the game's pixels, top left first: y turned over, then times the size of the game.
         expect(screenMath(wgsl)).toContain('0.5-ndc.y*0.5');

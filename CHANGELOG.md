@@ -46,6 +46,11 @@ releases are in [changelog/](./changelog/), one file each.
   (from useUpdate, a timer, a callback or after an await). Call it inside a scene body…`. A hook's
   own advice still follows it.
 
+- **A model's material carries its second picture's place in spare numbers.** `ctx.uv2` rides in
+  the fourth number of the facing and of the place on the screen instead of a slot of its own, on
+  both cards: a material drawn on both sides used all 16 slots WebGPU promises and all 15 rows
+  WebGL2 does, and now leaves one, for whatever a material carries next. Nothing drawn changes.
+
 ### Fixed
 
 - **WebGPU and WebGL2 draw a sprite of odd size held by its middle the same.** `pixelSnap` put

@@ -105,7 +105,8 @@ struct VertexOutput {
     @location(0) uv: vec3<f32>,
     @location(1) light: vec3<f32>,
     @location(2) shine: vec3<f32>,
-    @location(3) normal: vec3<f32>,
+    // Which way it faces, and in w the second picture's place across (see screen).
+    @location(3) normal: vec4<f32>,
     // Where it is in the world, and in w how far into the fog: one number did not earn a place of
     // its own once carry needed one.
     @location(4) worldPos: vec4<f32>,
@@ -121,11 +122,13 @@ ${cull === 'none' ? '' : `    @location(5) viewDir: vec3<f32>,
     @location(9) carry: vec4<f32>,
     // Where the corner lands on the screen, before the card divides by its depth (x, y and w).
     // Divided at the pixel instead: the card smears every number for depth, so the three arrive as
-    // they are at that pixel and the division gives exactly where it is. See screenOf.
-    @location(10) screen: vec3<f32>,
+    // they are at that pixel and the division gives exactly where it is. See screenOf. In w the
+    // second picture's place down: with normal's w that is the second picture's place, in two
+    // numbers places already had spare, rather than a place of its own of the sixteen a card
+    // promises, which a model drawn on both sides had filled.
+    @location(10) screen: vec4<f32>,
     // The tangent in the world, with its hand in w.
-    @location(11) tangent: vec4<f32>,
-    @location(12) uv2: vec2<f32>,${cull === 'none' ? twoSidedOutput(13) : ''}
+    @location(11) tangent: vec4<f32>,${cull === 'none' ? twoSidedOutput(12) : ''}
 };
 `;
 
@@ -290,14 +293,13 @@ fn vs(${cornerInputs(skinned)}) -> VertexOutput {${CORNER_CONTEXT}${normal}${ski
     out.casterLight = surface.casterDiffuse;
     out.casterShine = surface.casterShine;${cull === 'none' ? TWO_SIDED_WRITE : ''}
     out.uv = affineUv(uv, out.position);
-    out.normal = worldNormal;
+    out.normal = vec4<f32>(worldNormal, cornerUv2.x);
     out.worldPos = vec4<f32>(worldPos, fogAt(worldPos));${cull === 'none' ? '' : `
     out.viewDir = viewDir;`}
     out.color = color;
-    out.screen = out.position.xyw;
+    out.screen = vec4<f32>(out.position.xyw, cornerUv2.y);
     // A direction, so it is moved by the model's own turn and stretch rather than the facing's.
     out.tangent = vec4<f32>(normalize((uniforms.model * vec4<f32>(across, 0.0)).xyz), cornerTangent.w);
-    out.uv2 = cornerUv2;
     out.carry = carried;
     return out;
 }
@@ -314,7 +316,7 @@ fn screenOf(clip: vec3<f32>) -> vec2<f32> {
 fn fs(in: VertexOutput, @builtin(front_facing) front: bool) -> @location(0) vec4<f32> {${cull === 'none' ? `
     // Drawn on both sides: lit as the side it is, and facing the way that side does.
     let side = facedLight(in, front);
-    let normal = select(-in.normal, in.normal, front);` : ''}
+    let normal = select(-in.normal.xyz, in.normal.xyz, front);` : ''}
     // A shader you wrote yourself receives shadow, and receives it without being told about it:
     // ctx.light simply arrives already darkened where the casting light cannot see. Core leaves a
     // material out of the shadow on purpose, and the consequence is awkward enough to be worth
@@ -329,7 +331,7 @@ fn fs(in: VertexOutput, @builtin(front_facing) front: bool) -> @location(0) vec4
     let uv = in.uv.xy / in.uv.z;
     var ctx: FragContext;
     ctx.uv = uv;
-    ctx.normal = ${cull === 'none' ? 'normal' : 'in.normal'};
+    ctx.normal = ${cull === 'none' ? 'normal' : 'in.normal.xyz'};
     ctx.worldPos = in.worldPos.xyz;
     ctx.light = lit;
     ctx.shine = litWithShadow(${lit}.shine, ${lit}.casterShine, coord);
@@ -337,10 +339,10 @@ fn fs(in: VertexOutput, @builtin(front_facing) front: bool) -> @location(0) vec4
     ctx.emissive = uniforms.emissive.rgb * textureSampleLevel(meshEmissive, meshSampler, uv, 0.0).rgb;
     ctx.viewDir = ${cull === 'none' ? 'viewDirOf(in.worldPos.xyz)' : 'in.viewDir'};
     ctx.color = in.color;
-    ctx.screen = screenOf(in.screen);
+    ctx.screen = screenOf(in.screen.xyz);
     ctx.tangent = normalize(in.tangent.xyz);
     ctx.bitangent = cross(normalize(ctx.normal), ctx.tangent) * in.tangent.w;
-    ctx.uv2 = in.uv2;
+    ctx.uv2 = vec2<f32>(in.normal.w, in.screen.w);
     ctx.frontFacing = front;
     ctx.carry = in.carry;
 
