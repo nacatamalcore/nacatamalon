@@ -3,6 +3,7 @@ import type { TDrawable } from '../../gameobjects/types';
 import { screenSizeOf } from '../../DOM/screen_size';
 import { collectDrawables } from './helper/collect_drawables';
 import { sightOf } from '../../render/shared/sight_2d';
+import { MAX_VIEWS } from '../../render/webgpu/sprite/write_sprite_instance';
 import { lookAgainAtParticles, stepSceneParticles } from './helper/step_scene_particles';
 import { stepSceneTilemaps } from './helper/step_scene_tilemaps';
 import type { IRenderer } from '../../render';
@@ -161,9 +162,10 @@ const sortSceneByZIndex = (drawables: TDrawable[], cameraIndex: number[], start:
     // Two of the same rank are both see-through or both not, so the depth only ever parts glass.
     const before = (a: number, b: number): number => z[a] - z[b] || rank[a] - rank[b] || depth[a] - depth[b];
 
-    // The tree is walked in the same order every frame, so the list nearly always comes out the way
-    // the last sort left it: a HUD made after the level, the level's pieces in the order they were
-    // made. Seeing that is one pass, and then nothing is copied or written back.
+    // A game usually builds in the order its things are drawn, the level and then the HUD over it,
+    // so the tree often lists them in the order of their numbers already. Seeing that is one pass,
+    // and then nothing is copied or written back. One built otherwise (a HUD made first, a map's
+    // `'under'` layer added after the sprites on it) is sorted every frame, as it always was.
     let inOrder = true;
     for (let i = 1; i < count && inOrder; i++) {
         inOrder = before(i - 1, i) <= 0;
@@ -540,17 +542,19 @@ const gatherTree = (
     const start = drawables.length;
     colliders.flat.length = 0;
     colliders.deep.length = 0;
+    // What each of its cameras shows, in the size this pass is drawn: a flat drawable outside it is
+    // left out as it is collected. Not known, as for a canvas with no size yet, nothing is. A camera
+    // past what the shader holds draws through the screen, so it is judged by the screen too.
+    const drawnBy = (index: number) => (index >= 0 && index < MAX_VIEWS - 1 ? cameras[index] : null);
+    const sights = size !== null && size.width > 0 && size.height > 0
+        ? {
+            scene: sightOf(drawnBy(sceneCamera), size.width, size.height),
+            pinned: sightOf(drawnBy(screenCamera), size.width, size.height),
+        }
+        : null;
     // Parallax is measured against the scene's own camera, where the game has it, even when a tool
     // looks through one of its own: a far layer is where the game would draw it, and panning the
     // tool's view moves it with everything else rather than sliding it away by most of the pan.
-    // What each of its cameras shows, in the size this pass is drawn: a flat drawable outside it is
-    // left out as it is collected. Not known, as for a canvas with no size yet, nothing is.
-    const sights = size !== null && size.width > 0 && size.height > 0
-        ? {
-            scene: sightOf(sceneCamera >= 0 ? cameras[sceneCamera] : null, size.width, size.height),
-            pinned: sightOf(screenCamera >= 0 ? cameras[screenCamera] : null, size.width, size.height),
-        }
-        : null;
     collectDrawables(root, drawables as TDrawable[], cameraIndex, sceneCamera, false, null, 0, colliders, pictures, screenCamera, root.camera2d, null, snapping, lists.masks, null, null, sights);
     // A tool showing only some kinds: dropped before anything else is worked out for them, so a kind
     // nobody is looking at costs no sorting, no lamps and no particles stepped.

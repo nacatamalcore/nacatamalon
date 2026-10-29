@@ -60,7 +60,8 @@ releases are in [changelog/](./changelog/), one file each.
 ### Changed
 
 - **A big scene costs less a frame.** Sorting by `zIndex` reads each drawable once and does nothing
-  when the list is already in order, which is nearly every frame, and keeps what it works with
+  when the tree already lists things in the order of their numbers, as a game built level first and
+  HUD after does, and keeps what it works with
   between frames instead of making five lists of the scene's size each time. The renderer counts
   what a pass draws in one walk instead of one per kind, and goes from one batch of sprites to the
   next instead of past every sprite in it. Measured with 60,000 sprites: the sort from a fifth of

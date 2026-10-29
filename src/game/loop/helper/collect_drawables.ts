@@ -12,7 +12,7 @@ import type { TSight } from '../../../render/shared/sight_2d';
 import { pivotPlace } from '../../../render/shared/pivot_place';
 import { layoutOfText } from '../../../layout/measure_text';
 import { spriteHeight, spriteWidth } from '../../../render/shared/sprite_size';
-import { keepTextLayout } from '../../../gameobjects/text/expand_text';
+import { keepTextLayout, noteTextBlock } from '../../../gameobjects/text/expand_text';
 import type { TSprite } from '../../../gameobjects/sprite/types/t_sprite';
 import type { TText } from '../../../gameobjects/text/types/t_text';
 import type { TNineSlice } from '../../../gameobjects/nine_slice/types/t_nine_slice';
@@ -260,6 +260,9 @@ export const inSight = (drawable: TDrawable, sight: TSight): boolean => {
         if (drawable.font.type === 'font' || drawable.font.meta !== null) {
             keepTextLayout(drawable, layout);
         }
+        // Noted here as well as when it is drawn: one left out is never drawn, and its hitbox and
+        // the pointer still read how big it is.
+        noteTextBlock(drawable, layout);
         width = layout.width;
         height = layout.height;
         pad = height;
@@ -272,8 +275,8 @@ export const inSight = (drawable: TDrawable, sight: TSight): boolean => {
     // and how far it reaches from there along the world's two axes.
     const sx = width * place.scaleX;
     const sy = height * place.scaleY;
-    const c = Math.cos(place.rotation);
-    const s = Math.sin(place.rotation);
+    const c = place.rotation === 0 ? 1 : Math.cos(place.rotation);
+    const s = place.rotation === 0 ? 0 : Math.sin(place.rotation);
     const mx = (0.5 - held.x) * sx;
     const my = (0.5 - held.y) * sy;
     const cx = place.x + mx * c - my * s;

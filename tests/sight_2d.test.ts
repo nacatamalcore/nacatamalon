@@ -11,6 +11,7 @@ import { useScreenSpace } from '../src/hooks/camera/use_screen_space';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { fillFrameContext } from '../src/game/loop/fill_frame_context';
 import { inSight } from '../src/game/loop/helper/collect_drawables';
+import { textBlockSize } from '../src/gameobjects/text/expand_text';
 import { sightOf } from '../src/render/shared/sight_2d';
 import { createTestFont } from './helpers/test_font';
 import { createTestGame, startTestScene } from './helpers/test_game';
@@ -146,6 +147,23 @@ describe('a flat drawable outside what its camera shows', () => {
         // Longer this frame, it reaches in: its letters are drawn.
         label.text = 'AAAAAAAAAAAAAAAAAAAA';
         expect(kinds()).toBeGreaterThan(9);
+    });
+
+    it('as a text left out, still knows how big it is, for its hitbox and the pointer', () => {
+        const font = createTestFont();
+        let far!: ReturnType<typeof createText>;
+        let near!: ReturnType<typeof createText>;
+        const store = scene(() => {
+            near = createText({ text: 'ABC', font, transform: at(10, 10) });
+            far = createText({ text: 'ABC', font, transform: at(2000, 10) });
+        });
+        frame(store);
+        expect(textBlockSize(far)).toEqual(textBlockSize(near));
+        expect(textBlockSize(far).width).toBeGreaterThan(0);
+        // Changed while out of sight: its size follows.
+        far.text = 'ABCABC';
+        frame(store);
+        expect(textBlockSize(far).width).toBeGreaterThan(textBlockSize(near).width);
     });
 
     it('in a picture, is judged by the picture\'s own size', () => {

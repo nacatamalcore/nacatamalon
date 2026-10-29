@@ -55,7 +55,7 @@ describe('zIndex', () => {
         });
 
         expect(paintOrder(store)).toEqual([2, 3, 4, 1]);
-        // Already in order: nothing moves.
+        // The same tree the next frame: the same order.
         expect(paintOrder(store)).toEqual([2, 3, 4, 1]);
         first.zIndex = 0;
         expect(paintOrder(store)).toEqual([1, 2, 3, 4]);

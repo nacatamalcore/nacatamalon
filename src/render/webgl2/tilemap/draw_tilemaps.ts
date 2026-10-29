@@ -89,7 +89,7 @@ export const drawTilemapLayer = (
         // Only the rows of cells the camera shows, as few draws as there are stretches of them. The
         // camera the shader places it by: one past what it holds draws through the screen.
         const seenBy = camera >= 0 && camera < MAX_VIEWS - 1 ? cameras?.[camera] ?? null : null;
-        const runs = cameras !== null && mesh.grid != null ? tileRuns(mesh.grid, worldOf(layer), sightOf(seenBy, width, height)) : null;
+        const runs = cameras !== null && (mesh.grid ?? null) !== null ? tileRuns(mesh.grid!, worldOf(layer), sightOf(seenBy, width, height)) : null;
         if (runs !== null && runs.length === 0) {
             continue;
         }

@@ -68,6 +68,25 @@ export const startTextFrame = (): void => {
 };
 
 /**
+ * Notes a text's block size from a layout of it, for `textBlockSize`. Done where it is laid out to be
+ * drawn, and where a text off screen is measured to be left out: a hitbox and the pointer read this
+ * size whether or not it was drawn, and one never drawn would have none.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const noteTextBlock = (text: TText, layout: { readonly width: number; readonly height: number }): void => {
+    const size = blockSizes.get(text);
+    if (size === undefined) {
+        blockSizes.set(text, { width: layout.width, height: layout.height });
+    } else {
+        size.width = layout.width;
+        size.height = layout.height;
+    }
+};
+
+/**
  * Keeps a text's layout for drawing it this frame. Only one worked out exactly as drawing would: its
  * font has arrived, or it is a vector font.
  *
@@ -164,13 +183,7 @@ export const expandText = (text: TText): readonly TDrawSprite[] => {
     }
     pool.length = layout.placements.length;
 
-    const size = blockSizes.get(text);
-    if (size === undefined) {
-        blockSizes.set(text, { width: layout.width, height: layout.height });
-    } else {
-        size.width = layout.width;
-        size.height = layout.height;
-    }
+    noteTextBlock(text, layout);
 
     // Turned about its pivot when it has one, held by it; about its anchor otherwise.
     const place = pivotPlace(transform, text, text.anchor ?? TOP_LEFT, layout.width, layout.height, pivoted);
