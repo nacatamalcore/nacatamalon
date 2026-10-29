@@ -16,6 +16,7 @@ import type { TDrawStencil } from '../../interface/draw/t_draw_stencil';
 import { createShadowMap } from '../shadow/shadow_map';
 import { createShadowPipeline } from '../shadow/shadow_pipeline';
 import { computeModelMatrix } from '../../shared/compute_mvp_3d';
+import { cullingMatricesFor, meshInView } from '../../shared/mesh_in_view';
 import { findShadowSource, lightSpaceMatrix, reportCastersOutside } from '../../shared/light_space';
 import { cameraSpacesFor, fillCameraSpace, newCameraSpace } from '../../shared/compute_mvp_3d';
 import { toGlClip } from '../mesh/depth_range';
@@ -197,6 +198,11 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
             // pixels, as its twin tells it.
             const screenRatio = ctx.pixelRatio ?? 1;
             for (const caster of source.casters) {
+                // Judged by what the light sees, not the camera: one out of the picture can still
+                // throw a shadow into it.
+                if (!meshInView(caster, lightMatrix)) {
+                    continue;
+                }
                 state.shadowPipeline.draw(
                     state.meshes, caster, caster.worldMatrix ?? computeModelMatrix(caster.transform),
                     ctx.time, gl.drawingBufferWidth / screenRatio, gl.drawingBufferHeight / screenRatio,
@@ -283,6 +289,8 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
         }
         fillCameraSpace(flatSpace, null, width, height);
         toGlClip(flatSpace.viewProjection);
+        // After the fix on purpose: what is skipped is judged by edges the fix leaves where they are.
+        const judges = cullingMatricesFor(views3d, spaces, width, height);
 
         // Only a pass with something masked in it carries these, and only then is the stencil on.
         const stencil = drawn.stencil ?? null;
@@ -327,6 +335,11 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
             }
             if (item.type === 'mesh') {
                 const index = viewIndex[i] ?? -1;
+                // Nothing of it on this view's screen: skipped before it costs a thing. Per view,
+                // because what one camera leaves out another can see.
+                if (!meshInView(item, judges[index] ?? flatSpace.viewProjection, (spaces[index] ?? flatSpace).flat)) {
+                    continue;
+                }
                 const view = views3d[index] ?? null;
                 if (view !== null && index !== litView) {
                     writeMeshLights(gl, state.meshes, view, shadowUniforms);

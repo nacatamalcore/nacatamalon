@@ -67,6 +67,16 @@ export type TModel = {
      */
     castShadow: boolean;
     /**
+     * Whether every piece is drawn even off screen. `false` by default: a piece wholly outside what
+     * the camera sees is skipped.
+     */
+    alwaysDrawn: boolean;
+    /**
+     * How far past its shape each piece can reach, in its own units, before it is judged off screen.
+     * `undefined` until it is said.
+     */
+    boundsMargin: number | undefined;
+    /**
      * `true` once `destroy(model)` has been asked: its pieces are gone, and one still on the way
      * never comes.
      */

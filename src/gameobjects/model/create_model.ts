@@ -40,6 +40,8 @@ type TModelState = {
     alpha: number | undefined;
     zIndex: number | undefined;
     castShadow: boolean | undefined;
+    alwaysDrawn: boolean | undefined;
+    boundsMargin: number | undefined;
     destroyed: boolean;
 };
 
@@ -121,6 +123,8 @@ const buildPart = (
         visible: state.visible,
         // Absent means casting, as for any model: written down only when it was said.
         ...(state.castShadow !== undefined ? { castShadow: state.castShadow } : {}),
+        ...(state.alwaysDrawn !== undefined ? { alwaysDrawn: state.alwaysDrawn } : {}),
+        ...(state.boundsMargin !== undefined ? { boundsMargin: state.boundsMargin } : {}),
         destroyed: false,
     });
     fileTints.set(mesh, part.tint);
@@ -188,6 +192,8 @@ export const createModel = (options: TModelOptions): TModel => {
         alpha: options.alpha,
         zIndex: options.zIndex,
         castShadow: options.castShadow,
+        alwaysDrawn: options.alwaysDrawn,
+        boundsMargin: options.boundsMargin,
         destroyed: false,
     };
     const source = options.model;
@@ -227,6 +233,8 @@ export const createModel = (options: TModelOptions): TModel => {
     shared('alpha', () => state.alpha ?? 1, (value) => { state.alpha = value; }, (part) => { part.material.alpha = state.alpha ?? 1; });
     shared('zIndex', () => state.zIndex ?? 0, (value) => { state.zIndex = value; }, (part) => { part.zIndex = state.zIndex; });
     shared('castShadow', () => state.castShadow !== false, (value) => { state.castShadow = value; }, (part) => { part.castShadow = state.castShadow; });
+    shared('alwaysDrawn', () => state.alwaysDrawn === true, (value) => { state.alwaysDrawn = value; }, (part) => { part.alwaysDrawn = state.alwaysDrawn; });
+    shared('boundsMargin', () => state.boundsMargin, (value) => { state.boundsMargin = value; }, (part) => { part.boundsMargin = state.boundsMargin; });
     Object.defineProperty(model, 'destroyed', { enumerable: true, get: () => state.destroyed });
 
     const build = (): void => {

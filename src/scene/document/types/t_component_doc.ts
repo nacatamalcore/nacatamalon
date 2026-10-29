@@ -429,6 +429,16 @@ export type TMeshComponent = {
      * its default, so writing `true` would record a decision nobody took.
      */
     castShadow?: boolean;
+    /**
+     * Drawn even when nothing of it is on screen. Left out, it is skipped while it is out of view.
+     * Only `true` is ever written.
+     */
+    alwaysDrawn?: boolean;
+    /**
+     * How far past its shape it can reach, in its own units, before it is judged off screen: what a
+     * material moving its corners in its shader has to say to be skipped at all.
+     */
+    boundsMargin?: number;
 };
 
 /**

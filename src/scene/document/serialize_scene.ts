@@ -394,6 +394,8 @@ const writeMesh = (mesh: TMesh, writing: TWriting): TComponentDoc | null => {
         // Only `false` is ever written: absent means it casts, so writing `true` would put a
         // decision nobody took into somebody's file.
         ...unless('castShadow', mesh.castShadow, true),
+        ...unless('alwaysDrawn', mesh.alwaysDrawn, false),
+        ...unless('boundsMargin', mesh.boundsMargin, undefined),
     };
 };
 

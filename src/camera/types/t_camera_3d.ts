@@ -53,6 +53,22 @@ export type TCamera3d = {
      * they were built: only where they are is measured the 2D way. Default `false`.
      */
     follow2d?: boolean;
+    /**
+     * For finding out what a camera leaves out: another camera, which then decides what this one
+     * draws. A model is skipped when it is wholly outside what the camera drawing it sees, and with
+     * this set it is skipped here when it is outside what **that** one sees, so a camera looking
+     * from above shows the world as the other leaves it. That one is measured as if it drew into
+     * what this one draws into. `null` or absent, the usual: this camera's own.
+     *
+     * @example
+     * ```ts
+     * const eye = useCamera3d({ projection: 'perspective', transform: { z: 8 } });
+     * // In a picture that sees the scene (`createSpriteTexture({ sees: 'scene' })`), from above:
+     * const above = useCamera3d({ projection: 'perspective', transform: { y: 30, rotationX: -Math.PI / 2 } });
+     * above.cullingCamera = eye;
+     * ```
+     */
+    cullingCamera?: TCamera3d | null;
 };
 
 /**

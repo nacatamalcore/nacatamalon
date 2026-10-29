@@ -642,6 +642,8 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 ...optionalBoolean(raw, 'visible'),
                 ...optionalNumber(raw, 'zIndex'),
                 ...optionalBoolean(raw, 'castShadow'),
+                ...optionalBoolean(raw, 'alwaysDrawn'),
+                ...optionalNumber(raw, 'boundsMargin'),
             };
         }
         case 'tilemap': {

@@ -68,6 +68,16 @@ export type TMesh = {
      */
     castShadow?: boolean;
     /**
+     * Drawn even when nothing of it is on screen. Omitted, it is skipped while it is wholly outside
+     * what the camera sees.
+     */
+    alwaysDrawn?: boolean;
+    /**
+     * How far past its shape it can reach, in its own units, before it is judged off screen. Needed
+     * by a material that moves its corners in its shader, which is never skipped without it.
+     */
+    boundsMargin?: number;
+    /**
      * Set by `destroy`, on it or on the object it belongs to, and never cleared.
      */
     destroyed: boolean;

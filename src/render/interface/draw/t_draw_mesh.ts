@@ -105,4 +105,15 @@ export type TDrawMesh = {
      * whose lights never asked to cast, because then there is no map to be left out of.
      */
     readonly castShadow?: boolean;
+    /**
+     * Drawn even when nothing of it is on screen. Absent, a model whose box is wholly outside what a
+     * view sees is skipped there (`meshInView`).
+     */
+    readonly alwaysDrawn?: boolean;
+    /**
+     * How far past its box its corners can end up, in its own units: what a material moving them
+     * in its shader says, since only the shader knows. Absent with such a material, it is never
+     * skipped.
+     */
+    readonly boundsMargin?: number;
 };

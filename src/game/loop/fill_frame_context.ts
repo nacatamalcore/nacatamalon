@@ -373,6 +373,7 @@ const drawnThrough = (camera3d: TCamera3d | null, camera2d: TCamera2d | null): T
     drawn.near = camera3d.near;
     drawn.far = camera3d.far;
     drawn.zoom = camera3d.zoom;
+    drawn.cullingCamera = camera3d.cullingCamera;
     drawn.flat.x = camera2d?.transform.x ?? 0;
     drawn.flat.y = camera2d?.transform.y ?? 0;
     drawn.flat.rotation = camera2d?.transform.rotation ?? 0;

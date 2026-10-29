@@ -631,6 +631,20 @@ describe('the whole loop', () => {
         expect(crate).not.toHaveProperty('castShadow');
     });
 
+    it('keeps a model drawn off screen, and how far one reaches past its shape', () => {
+        const { doc } = written(() => {
+            createMesh({ geometry: useCubeGeometry({ width: 2 }), alwaysDrawn: true });
+            createMesh({ geometry: useCubeGeometry({ width: 2 }), boundsMargin: 1.5 });
+            createMesh({ geometry: useCubeGeometry({ width: 2 }) });
+        });
+
+        const [always, reaching, plain] = rebuilt(doc).root.components as TComponentDoc[];
+        expect(always).toMatchObject({ type: 'mesh', alwaysDrawn: true });
+        expect(reaching).toMatchObject({ type: 'mesh', boundsMargin: 1.5 });
+        expect(plain).not.toHaveProperty('alwaysDrawn');
+        expect(plain).not.toHaveProperty('boundsMargin');
+    });
+
     it('keeps a tree, its identities and what each box is', () => {
         const Turret = () => {
             useTransform({ x: 100, y: 50 });

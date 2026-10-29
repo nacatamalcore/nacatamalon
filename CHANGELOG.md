@@ -7,6 +7,15 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **What a camera cannot see is not drawn.** A model wholly outside a view is skipped before it
+  costs anything there (its numbers, its draw, every corner the card would have moved), judged per
+  camera, so what one leaves out another still draws, and its shadow judged by the light, so one
+  out of the picture still throws it in. A model that bends is judged in the pose it is in. One
+  whose material moves its corners in a `vertex` hook is always drawn until it says how far with
+  `boundsMargin`, in its own units; `alwaysDrawn: true` never skips one. Both on `createMesh`,
+  `createModel` (every piece) and the scene document, and in the editor's inspector. To look at
+  what a camera skips from outside it, `camera.cullingCamera = other` draws only what `other` sees.
+
 - **`ownerOf(drawable)`**: the object a sprite, text or mesh belongs to, the thing `useSpawn` made
   or the scene for one made in its body, and `null` once it or its piece is destroyed. The way back
   from what was touched to the whole piece: `destroy(ownerOf(info.target))` takes the piece, where

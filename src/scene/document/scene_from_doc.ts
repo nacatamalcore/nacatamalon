@@ -261,6 +261,8 @@ const buildModelMesh = (
         ...(component.visible !== undefined ? { visible: component.visible } : {}),
         ...(component.zIndex !== undefined ? { zIndex: component.zIndex } : {}),
         ...(component.castShadow !== undefined ? { castShadow: component.castShadow } : {}),
+        ...(component.alwaysDrawn !== undefined ? { alwaysDrawn: component.alwaysDrawn } : {}),
+        ...(component.boundsMargin !== undefined ? { boundsMargin: component.boundsMargin } : {}),
     });
     mesh.id = component.id;
 
@@ -509,6 +511,8 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                 ...(component.visible !== undefined ? { visible: component.visible } : {}),
                 ...(component.zIndex !== undefined ? { zIndex: component.zIndex } : {}),
                 ...(component.castShadow !== undefined ? { castShadow: component.castShadow } : {}),
+                ...(component.alwaysDrawn !== undefined ? { alwaysDrawn: component.alwaysDrawn } : {}),
+                ...(component.boundsMargin !== undefined ? { boundsMargin: component.boundsMargin } : {}),
             });
             model.id = component.id;
             break;

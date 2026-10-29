@@ -110,4 +110,23 @@ export type T3dOptions = TMeshSurfaceOptions & {
      * shadows the moment you gave it an effect is a surprise with nothing to explain it.
      */
     castShadow?: boolean;
+    /**
+     * Drawn even when nothing of it is on screen. Default `false`: a model whose box is wholly
+     * outside what the camera sees is skipped that frame, which is what keeps a big world cheap.
+     *
+     * For when that box lies and you would rather not say by how much: something a shader of
+     * yours throws far from where it was made. `boundsMargin` says by how much instead, and keeps
+     * the saving.
+     */
+    alwaysDrawn?: boolean;
+    /**
+     * How far past its own shape it can reach, in its own units: the height a wave of a `vertex`
+     * shader lifts it, an arm stretched further than any of its movements does. Its box grows by
+     * that much on every side before it is judged on or off screen.
+     *
+     * A material that moves its corners in its shader cannot be measured from here, so a model
+     * wearing one is never skipped until this says how far they go. Bones are measured already:
+     * a model that bends is judged in the pose it is in.
+     */
+    boundsMargin?: number;
 };

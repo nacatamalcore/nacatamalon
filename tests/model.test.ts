@@ -344,6 +344,17 @@ describe('a placed model, used like any other drawing', () => {
         restore();
     });
 
+    it('hands whether it is drawn off screen, and how far it reaches, to every piece', async () => {
+        const { placed, arrived, restore } = placedModel({ boundsMargin: 0.5 });
+        placed().alwaysDrawn = true;
+        await arrived();
+        expect(placed().parts.map((part) => [part.alwaysDrawn, part.boundsMargin])).toEqual([[true, 0.5], [true, 0.5]]);
+
+        placed().boundsMargin = 2;
+        expect(placed().parts.every((part) => part.boundsMargin === 2)).toBe(true);
+        restore();
+    });
+
     it('is destroyed whole, its pieces leaving at the end of the frame', async () => {
         const { store, placed, arrived, restore } = placedModel();
         await arrived();

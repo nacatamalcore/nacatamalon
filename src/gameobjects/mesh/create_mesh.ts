@@ -119,6 +119,8 @@ export const createMesh = (options: TMeshOptions): TMesh => {
         // Left as written rather than defaulted to `true` here: absent means casting, and writing
         // the default down would make a scene document record a decision nobody took.
         castShadow: options.castShadow,
+        alwaysDrawn: options.alwaysDrawn,
+        boundsMargin: options.boundsMargin,
         destroyed: false,
     });
 

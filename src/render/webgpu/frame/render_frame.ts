@@ -16,6 +16,7 @@ import { castsThroughHook, createShadowPipeline } from '../shadow/shadow_pipelin
 import { computeModelMatrix } from '../../shared/compute_mvp_3d';
 import { findShadowSource, lightSpaceMatrix, reportCastersOutside } from '../../shared/light_space';
 import { cameraSpacesFor, fillCameraSpace, newCameraSpace } from '../../shared/compute_mvp_3d';
+import { cullingMatricesFor, meshInView } from '../../shared/mesh_in_view';
 import { drawMesh, reserveMeshSlots, writeMeshLights } from '../mesh/draw_meshes';
 import { createMaskPipelines } from '../mask/mask_pipelines';
 import { applyStencil, drawMaskLayer, drawMaskRun } from '../mask/draw_masks';
@@ -126,6 +127,11 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         });
         let casterSlot = 0;
         for (const caster of source.casters) {
+            // Judged by what the light sees, not the camera: one out of the picture can still throw
+            // a shadow into it.
+            if (!meshInView(caster, lightMatrix)) {
+                continue;
+            }
             const model = caster.worldMatrix ?? computeModelMatrix(caster.transform);
             if (gpu.shadowPipeline.draw(shadowPass, gpu.meshes, caster, lightMatrix, model, casterSlot, ctx.time, screen.width / screenRatio, screen.height / screenRatio)) {
                 casterSlot++;
@@ -214,6 +220,7 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         // as many times as there were models.
         const spaces = cameraSpacesFor(views3d, width, height);
         fillCameraSpace(flatSpace, null, width, height);
+        const judges = cullingMatricesFor(views3d, spaces, width, height);
         // Only a pass with something masked in it carries these, and only then is anything set.
         const stencil = drawn.stencil ?? null;
         if (stencil !== null) {
@@ -278,6 +285,11 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
             }
             if (item.type === 'mesh') {
                 const view = viewIndex[i] ?? -1;
+                // Nothing of it on this view's screen: skipped before it costs a thing. Per view,
+                // because what one camera leaves out another can see.
+                if (!meshInView(item, judges[view] ?? flatSpace.viewProjection, (spaces[view] ?? flatSpace).flat)) {
+                    continue;
+                }
                 if (drawMesh(gpu.device, gpuPass, gpu.meshes, item, spaces[view] ?? flatSpace, views3d[view]?.lights ?? [], view, meshSlot, width, height, ctx.time)) {
                     meshSlot++;
                 }
