@@ -191,7 +191,9 @@ export const loadGltf = async (store: TRuntimeStore, model: TGltfModel, options:
                     store,
                     `${model.key}#${i}`,
                     { vertices: piece.vertices, indices: piece.indices, skin: piece.skin, colors: piece.colors, detail: piece.detail },
-                    { kind: 'gltf', src: model.src, ...(piece.name.length > 0 ? { node: piece.name } : {}) },
+                    // The name even when it is empty, so a scene can ask for a piece with none, and
+                    // which of that name it is when it is not the first.
+                    { kind: 'gltf', src: model.src, node: piece.name, ...(piece.occurrence > 0 ? { occurrence: piece.occurrence } : {}) },
                 ),
                 texture,
                 tint: surface.tint,

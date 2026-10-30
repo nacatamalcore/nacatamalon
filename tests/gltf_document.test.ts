@@ -8,6 +8,7 @@ import { createTestGame, startTestScene } from './helpers/test_game';
 import { asGlb, asGltf, serveGltf, TEST_QUAD } from './helpers/test_gltf';
 import type { TGltfModel } from '../src/loaders';
 import type { TMesh } from '../src/gameobjects/mesh/types/t_mesh';
+import type { TSceneDoc } from '../src/scene/document';
 
 /**
  * A model file in a scene document.
@@ -261,5 +262,161 @@ describe('a model piece the file blends', () => {
         await arrive();
 
         expect(meshesOf(store).get('glass-mesh')!.material.transparent).toBe(false);
+    });
+});
+
+describe('pieces of a model file that share a name', () => {
+    const RED: [number, number, number, number] = [1, 0, 0, 1];
+    const GREEN: [number, number, number, number] = [0, 1, 0, 1];
+
+    /**
+     * A model of two pieces, red then green, laid out as `nodes` says.
+     */
+    const serveTwo = (nodes: unknown[]): void => {
+        const glb = asGlb({ nodes: nodes as never, materials: [{ baseColorFactor: RED }, { baseColorFactor: GREEN }] });
+        served = serveGltf({ 'car.glb': glb });
+    };
+
+    const colours = (root: { drawables: unknown[]; children: unknown[] }): string[] => {
+        const out: string[] = [];
+        const walk = (box: { drawables: unknown[]; children: unknown[] }): void => {
+            for (const d of box.drawables as TMesh[]) {
+                if (d.type === 'mesh') out.push(d.material.tint.r > 0.5 ? 'red' : 'green');
+            }
+            for (const child of box.children) walk(child as typeof box);
+        };
+        walk(root);
+        return out.sort();
+    };
+
+    /**
+     * The model saved in a scene and the scene opened again in another game.
+     */
+    const saveAndOpen = async (): Promise<{ doc: TSceneDoc; before: string[]; after: string[] }> => {
+        const { store } = createTestGame();
+        let model!: TGltfModel;
+        startTestScene(store, 'Loading', () => {
+            model = useLoadGltf({ src: 'car.glb' });
+            return createScene();
+        });
+        await whenLoaded(model);
+        const shelf = startTestScene(store, 'Shelf', () => {
+            createModel({ model });
+            return createScene();
+        });
+        const doc = JSON.parse(JSON.stringify(serializeScene(shelf))) as TSceneDoc;
+        const opened = createTestGame();
+        const root = startTestScene(opened.store, 'Shelf', sceneFromDoc(parseSceneDoc(doc, '/scenes/shelf.scene')));
+        await arrive();
+        return { doc, before: colours(shelf), after: colours(root) };
+    };
+
+    const sources = (doc: TSceneDoc): unknown[] => doc.assets.map((asset) => (asset as { source: unknown }).source);
+
+    it('tells apart the two pieces of a node drawn in two materials', async () => {
+        serveTwo([{ name: 'Car', primitives: [{ ...TEST_QUAD, material: 0 }, { ...TEST_QUAD, material: 1 }] }]);
+        const { doc, before, after } = await saveAndOpen();
+        expect(sources(doc)).toEqual([
+            { kind: 'gltf', src: 'car.glb', node: 'Car' },
+            { kind: 'gltf', src: 'car.glb', node: 'Car', occurrence: 1 },
+        ]);
+        expect(after).toEqual(before);
+        expect(after).toEqual(['green', 'red']);
+    });
+
+    it('tells apart two pieces the file did not name, written with an empty name', async () => {
+        serveTwo([{ primitives: [{ ...TEST_QUAD, material: 0 }] }, { primitives: [{ ...TEST_QUAD, material: 1 }] }]);
+        const { doc, after } = await saveAndOpen();
+        expect(sources(doc)).toEqual([
+            { kind: 'gltf', src: 'car.glb', node: '' },
+            { kind: 'gltf', src: 'car.glb', node: '', occurrence: 1 },
+        ]);
+        expect(after).toEqual(['green', 'red']);
+    });
+
+    it('tells apart two nodes of the same name', async () => {
+        serveTwo([
+            { name: 'Wheel', primitives: [{ ...TEST_QUAD, material: 0 }] },
+            { name: 'Wheel', primitives: [{ ...TEST_QUAD, material: 1 }] },
+        ]);
+        const { after } = await saveAndOpen();
+        expect(after).toEqual(['green', 'red']);
+    });
+
+    it('writes no occurrence for pieces whose names already tell them apart', async () => {
+        serveTwo([
+            { name: 'Body', primitives: [{ ...TEST_QUAD, material: 0 }] },
+            { name: 'Wheel', primitives: [{ ...TEST_QUAD, material: 1 }] },
+        ]);
+        const { doc, after } = await saveAndOpen();
+        expect(sources(doc)).toEqual([
+            { kind: 'gltf', src: 'car.glb', node: 'Body' },
+            { kind: 'gltf', src: 'car.glb', node: 'Wheel' },
+        ]);
+        expect(after).toEqual(['green', 'red']);
+    });
+
+    it('counts a piece over the whole file, however much of it was loaded', async () => {
+        // A red car, and a trailer carrying a green one: the green is the second "Car" of the file,
+        // and the first of the trailer.
+        const glb = asGlb({
+            nodes: [
+                { name: 'Car', primitives: [{ ...TEST_QUAD, material: 0 }] },
+                { name: 'Trailer', primitives: [{ ...TEST_QUAD, material: 0 }], children: [2] },
+                { name: 'Car', primitives: [{ ...TEST_QUAD, material: 1 }] },
+            ],
+            roots: [0, 1],
+            materials: [{ baseColorFactor: RED }, { baseColorFactor: GREEN }],
+        });
+        served = serveGltf({ 'car.glb': glb });
+        const { store } = createTestGame();
+        let whole!: TGltfModel;
+        let trailer!: TGltfModel;
+        startTestScene(store, 'Loading', () => {
+            whole = useLoadGltf({ src: 'car.glb' });
+            trailer = useLoadGltf({ src: 'car.glb', node: 'Trailer' });
+            return createScene();
+        });
+        await whenLoaded(whole);
+        await whenLoaded(trailer);
+        const greenIn = (model: TGltfModel) => model.parts.find((part) => part.tint.g > 0.5)!.geometry.source;
+        expect(greenIn(whole)).toEqual({ kind: 'gltf', src: 'car.glb', node: 'Car', occurrence: 1 });
+        expect(greenIn(trailer)).toEqual(greenIn(whole));
+    });
+
+    it('still takes the first piece of the file for a document that names no node', async () => {
+        serveCar();
+        const { store } = createTestGame();
+        startTestScene(store, 'Garage', sceneFromDoc(carScene([{ key: 'car' }], [mesh('body-mesh', 'car')])));
+        await arrive();
+        expect(meshesOf(store).get('body-mesh')!.material.tint).toMatchObject({ r: 1, g: 0, b: 0 });
+    });
+
+    it('leaves the mesh empty and says so when the file has no piece of that number', async () => {
+        serveCar();
+        warn = spyOn(console, 'warn').mockImplementation(() => {});
+        const doc = parseSceneDoc({
+            format: SCENE_FORMAT, version: 1, name: 'Garage',
+            assets: [{ type: 'geometry', key: 'wheel', source: { kind: 'gltf', src: '/models/car.gltf', node: 'Wheel', occurrence: 1 } }],
+            root: { id: 'root', name: 'Garage', transform: null, components: [mesh('wheel-mesh', 'wheel')], children: [] },
+        }, '/scenes/garage.scene');
+        const { store } = createTestGame();
+        startTestScene(store, 'Garage', sceneFromDoc(doc));
+        await arrive();
+        expect(meshesOf(store).get('wheel-mesh')!.geometry?.status).toBe('loading');
+        expect(String(warn.mock.calls.at(-1)?.[0])).toContain('no a piece number 1 (from 0) called "Wheel"');
+    });
+
+    it('does not read an occurrence that is no count', () => {
+        warn = spyOn(console, 'warn').mockImplementation(() => {});
+        for (const occurrence of [-1, 1.5, '1', null]) {
+            const doc = parseSceneDoc({
+                format: SCENE_FORMAT, version: 1, name: 'Garage',
+                assets: [{ type: 'geometry', key: 'wheel', source: { kind: 'gltf', src: '/models/car.gltf', node: 'Wheel', occurrence } }],
+                root: { id: 'root', name: 'Garage', transform: null, components: [], children: [] },
+            }, '/scenes/garage.scene');
+            expect(doc.assets).toEqual([]);
+        }
+        expect(warn.mock.calls.some((call: unknown[]) => String(call[0]).includes('which is no count'))).toBe(true);
     });
 });

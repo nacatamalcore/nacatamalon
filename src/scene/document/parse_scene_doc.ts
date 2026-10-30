@@ -1045,7 +1045,7 @@ const parseAsset = (value: unknown): TAssetEntry | null => {
     const key = raw.key;
 
     if (raw.type === 'geometry') {
-        const source = parseGeometrySource(raw.source);
+        const source = parseGeometrySource(raw.source, key);
         return source === null ? null : { type: 'geometry', key, source };
     }
     if (raw.type === 'font') {
@@ -1063,7 +1063,7 @@ const parseAsset = (value: unknown): TAssetEntry | null => {
     return null;
 };
 
-const parseGeometrySource = (value: unknown): TGeometrySource | null => {
+const parseGeometrySource = (value: unknown, key: string): TGeometrySource | null => {
     const raw = asRecord(value);
     if (raw === null || typeof raw.kind !== 'string') {
         return null;
@@ -1087,7 +1087,22 @@ const parseGeometrySource = (value: unknown): TGeometrySource | null => {
                     : []);
             return profile.length >= 2 && profile.length === points.length ? { kind: 'lathe', profile, ...optionalNumber(raw, 'segments') } : null;
         }
-        case 'gltf': return typeof raw.src === 'string' ? { kind: 'gltf', src: raw.src, ...optionalString(raw, 'node') } : null;
+        case 'gltf': {
+            if (typeof raw.src !== 'string') return null;
+            // A count or nothing: anything else would have to be guessed into some piece, and the
+            // wrong piece looks right.
+            const occurrence = raw.occurrence;
+            if (occurrence !== undefined && !(typeof occurrence === 'number' && Number.isInteger(occurrence) && occurrence >= 0)) {
+                console.warn(`[NacatamalOn] scene: the shape "${key}" asks for occurrence ${JSON.stringify(occurrence)} of its piece, which is no count, so it is not read. Give it a whole number from 0.`);
+                return null;
+            }
+            return {
+                kind: 'gltf',
+                src: raw.src,
+                ...optionalString(raw, 'node'),
+                ...(typeof occurrence === 'number' && occurrence > 0 ? { occurrence } : {}),
+            };
+        }
         default: return null;
     }
 };

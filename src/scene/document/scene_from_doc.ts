@@ -94,9 +94,11 @@ const loadAssets = (assets: readonly TAssetEntry[], src: string): void => {
  * scene is built before that. So the manifest notes which file and which piece each key means, and a
  * mesh naming one of these keys is built at once and given its piece when the file lands.
  */
-const modelShapes = new WeakMap<TRuntimeStore, Map<string, { model: TGltfModel; node: string | undefined }>>();
+type TModelShape = { model: TGltfModel; node: string | undefined; occurrence: number };
 
-const modelShapesOf = (store: TRuntimeStore): Map<string, { model: TGltfModel; node: string | undefined }> => {
+const modelShapes = new WeakMap<TRuntimeStore, Map<string, TModelShape>>();
+
+const modelShapesOf = (store: TRuntimeStore): Map<string, TModelShape> => {
     let shapes = modelShapes.get(store);
     if (shapes === undefined) {
         shapes = new Map();
@@ -142,11 +144,11 @@ const loadGeometry = (asset: Extract<TAssetEntry, { type: 'geometry' }>, src: st
             // own, and a mesh names the one it wants.
             //
             // By the key the document gave it, which is how a mesh names it: the piece called
-            // `node`, or the first piece when there is no `node`. The same rule the old engine had,
-            // so a document written by it finds its models.
+            // `node`, the `occurrence`-th of that name, or the first piece when there is no `node`.
+            // That last is the old engine's rule, so a document written by it finds its models.
             const model = useLoadGltf({ src: source.src });
             const store = getActiveGame();
-            if (store !== null) modelShapesOf(store).set(key, { model, node: source.node });
+            if (store !== null) modelShapesOf(store).set(key, { model, node: source.node, occurrence: source.occurrence ?? 0 });
             break;
         }
         default: {
@@ -220,6 +222,12 @@ const buildTilemap = (doc: TTilemapComponent): void => {
 };
 
 /**
+ * Which of the pieces of its name a piece of a model file is.
+ */
+const occurrenceOf = (source: TGeometry['source']): number =>
+    source?.kind === 'gltf' ? source.occurrence ?? 0 : 0;
+
+/**
  * A mesh whose shape is a piece of a model file, built at once and given its piece when the file lands.
  *
  * **The file decides how it looks**: its picture, its colour, its glow and its bones all come from the
@@ -232,14 +240,19 @@ const buildTilemap = (doc: TTilemapComponent): void => {
  */
 const buildModelMesh = (
     component: Extract<TComponentDoc, { type: 'mesh' }>,
-    { model, node }: { model: TGltfModel; node: string | undefined },
+    { model, node, occurrence }: TModelShape,
     store: TRuntimeStore,
     src: string,
 ): void => {
     const surface = component.material;
     const mesh = createMesh({
         ...(component.transform !== undefined ? { transform: component.transform } : {}),
-        geometry: pendingShape(component.geometry, { kind: 'gltf', src: model.src, ...(node !== undefined ? { node } : {}) }),
+        geometry: pendingShape(component.geometry, {
+            kind: 'gltf',
+            src: model.src,
+            ...(node !== undefined ? { node } : {}),
+            ...(occurrence > 0 ? { occurrence } : {}),
+        }),
         material: createMaterial({
             shader: 'mesh3d',
             ...(surface.effect !== null ? { effect: surface.effect } : {}),
@@ -270,10 +283,15 @@ const buildModelMesh = (
         if (store.get('loop').destroyed || mesh.destroyed || model.status !== 'ready') {
             return;
         }
-        const part = node === undefined ? model.parts[0] : model.parts.find((one) => one.name === node);
+        // By the number the piece was given when the file was read, which counts the whole file,
+        // rather than by its place among those loaded.
+        const part = node === undefined
+            ? model.parts[0]
+            : model.parts.find((one) => one.name === node && occurrenceOf(one.geometry.source) === occurrence);
         if (part === undefined) {
             const names = model.parts.map((one) => `"${one.name}"`).join(', ');
-            console.warn(`[NacatamalOn] scene "${src}": the model "${model.src}" has no piece called "${node ?? ''}", so the mesh that wanted it stays empty. Its pieces are: ${names}.`);
+            const which = occurrence > 0 ? `a piece number ${occurrence} (from 0) called "${node ?? ''}"` : `a piece called "${node ?? ''}"`;
+            console.warn(`[NacatamalOn] scene "${src}": the model "${model.src}" has no ${which}, so the mesh that wanted it stays empty. Its pieces are: ${names}.`);
             return;
         }
         mesh.geometry = part.geometry;

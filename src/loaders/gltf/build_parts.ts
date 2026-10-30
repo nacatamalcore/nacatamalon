@@ -4,6 +4,7 @@ import { readColors, readFloats, readIndices, readJoints } from './read_accessor
 import { GLTF_MODE_TRIANGLES } from './types/t_gltf_doc';
 import type { Mat4 } from '../../math/mat4';
 import type { TGltfDoc } from './types/t_gltf_doc';
+import { findMeshNodes } from './find_mesh_nodes';
 import type { TMeshNode } from './find_mesh_nodes';
 import type { TShading } from './shading';
 
@@ -15,6 +16,11 @@ import type { TShading } from './shading';
  */
 export type TBuiltPart = {
     name: string;
+    /**
+     * Which of the pieces called `name` it is, from 0, counted over the whole file (see
+     * `occurrencesOf`).
+     */
+    occurrence: number;
     vertices: Float32Array;
     indices: Uint16Array | Uint32Array;
     materialIndex: number | undefined;
@@ -63,6 +69,38 @@ const moveDirection = (m: Mat4, x: number, y: number, z: number): [number, numbe
 };
 
 /**
+ * Whether a piece of a mesh is drawn: lines and points are left out rather than drawn as triangles,
+ * which would be nonsense on screen. Absent means triangles, by the format's own default.
+ */
+const drawn = (primitive: { mode?: number }): boolean =>
+    primitive.mode === undefined || primitive.mode === GLTF_MODE_TRIANGLES;
+
+/**
+ * Which of the pieces of its name each piece of the file is, from 0, by `node/primitive`.
+ *
+ * A node drawn in two materials is two pieces with the node's name, and a file may leave nodes
+ * unnamed or name two alike: the name alone does not tell them apart, and this number does. Counted
+ * in the order the loader walks the file, the same every time: the nodes of its scene depth first,
+ * each before the ones under it and those in the order the file lists them, then the pieces of each
+ * in the order its mesh lists them. Counted over the whole file even when only part of it is taken,
+ * so a piece has the same number however it was loaded.
+ */
+const occurrencesOf = (doc: TGltfDoc): Map<string, number> => {
+    const seen = new Map<string, number>();
+    const occurrences = new Map<string, number>();
+    for (const node of findMeshNodes(doc)) {
+        const primitives = doc.meshes?.[node.meshIndex]?.primitives ?? [];
+        primitives.forEach((primitive, at) => {
+            if (!drawn(primitive)) return;
+            const count = seen.get(node.name) ?? 0;
+            seen.set(node.name, count + 1);
+            occurrences.set(`${node.index}/${at}`, count);
+        });
+    }
+    return occurrences;
+};
+
+/**
  * Corners numbered straight through, for a piece that did not say which order to use.
  */
 const sequentialIndices = (count: number): Uint16Array | Uint32Array => {
@@ -94,6 +132,7 @@ export const buildParts = (
     renumbers: Int32Array[] = [],
 ): TBuiltPart[] => {
     const parts: TBuiltPart[] = [];
+    const occurrences = occurrencesOf(doc);
 
     for (const node of nodes) {
         const mesh = doc.meshes?.[node.meshIndex];
@@ -101,10 +140,9 @@ export const buildParts = (
             continue;
         }
 
-        for (const primitive of mesh.primitives) {
-            // Lines and points are left out rather than drawn as triangles, which would be nonsense
-            // on screen. Absent means triangles, by the format's own default.
-            if (primitive.mode !== undefined && primitive.mode !== GLTF_MODE_TRIANGLES) {
+        for (let at = 0; at < mesh.primitives.length; at++) {
+            const primitive = mesh.primitives[at];
+            if (!drawn(primitive)) {
                 continue;
             }
             if (primitive.attributes.POSITION === undefined) {
@@ -221,6 +259,7 @@ export const buildParts = (
                 : null;
             parts.push({
                 name: node.name,
+                occurrence: occurrences.get(`${node.index}/${at}`) ?? 0,
                 vertices: shaped.vertices,
                 indices: shaped.indices,
                 skin: shaped.skin,

@@ -14,6 +14,10 @@ export type TMeshNode = {
      * The node's own name, or `''`. It is how a part is found again from outside.
      */
     name: string;
+    /**
+     * Where the node is in the file's list of nodes.
+     */
+    index: number;
     meshIndex: number;
     world: Mat4;
     /**
@@ -81,7 +85,7 @@ export const findMeshNodes = (doc: TGltfDoc, only?: string): TMeshNode[] => {
         const mine = taking || only === undefined || name === only;
 
         if (mine && node.mesh !== undefined) {
-            found.push({ name, meshIndex: node.mesh, world, skinIndex: node.skin });
+            found.push({ name, index, meshIndex: node.mesh, world, skinIndex: node.skin });
         }
         for (const child of node.children ?? []) {
             visit(child, world, mine);

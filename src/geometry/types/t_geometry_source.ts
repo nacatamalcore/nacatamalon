@@ -25,8 +25,19 @@ export type TGeometrySource =
     | { kind: 'cylinder'; radius?: number; height?: number; segments?: number }
     | { kind: 'cone'; radius?: number; height?: number; segments?: number }
     | { kind: 'torus'; radius?: number; tube?: number; radialSegments?: number; tubularSegments?: number }
-    /**
-     * A shape read out of a model file. `node` picks one part of it; left out, the file is taken whole.
-     */
     | { kind: 'lathe'; profile: Array<{ x: number; y: number }>; segments?: number }
-    | { kind: 'gltf'; src: string; node?: string };
+    /**
+     * A piece of a model file. `node` is the name of the piece, `''` for one the file did not
+     * name. `occurrence` is which of the pieces of that name, from 0 and 0 when left out: a node
+     * drawn in two materials is two pieces with its name, and a file may name two nodes alike.
+     *
+     * They are counted in the order the file is walked: the nodes of its scene depth first, each
+     * before the ones under it and those in the order the file lists them, then the pieces of each
+     * in the order its mesh lists them, lines and points left out. So the same piece is found again
+     * in the same file, and in one exported again as long as its node keeps its name and its
+     * materials their order.
+     *
+     * With no `node`, the first piece of the file, as documents saved before `node` could be empty
+     * meant.
+     */
+    | { kind: 'gltf'; src: string; node?: string; occurrence?: number };
