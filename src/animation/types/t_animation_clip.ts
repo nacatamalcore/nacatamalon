@@ -3,8 +3,8 @@
  *
  * `'LINEAR'` walks evenly from one to the next, and is what every file this engine has been shown
  * uses. `'STEP'` holds the earlier one until the next arrives, which is how a blinking light or a
- * flicking tail is authored. `'CUBICSPLINE'` carries a slope at each key for a softer arrival; it
- * is read but walked evenly for now, with one warning.
+ * flicking tail is authored. `'CUBICSPLINE'` carries a slope at each key, and goes from one to the
+ * next along the curve those make, for a softer leaving and arrival.
  *
  * @category Animation
  * @since 1.0.0

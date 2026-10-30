@@ -28,6 +28,21 @@ const slide = (times: number[], xs: number[], interpolation: TSkeletalClip['samp
     }],
 });
 
+/**
+ * One bone moved along x through curved keys, each `[slope in, value, slope out]`.
+ */
+const curved = (times: number[], keys: Array<[number, number, number]>): TSkeletalClip => ({
+    type: 'clip',
+    name: 'curved',
+    duration: times[times.length - 1],
+    channels: [{ skeleton: 0, joint: 0, path: 'translation', sampler: 0 }],
+    samplers: [{
+        input: Float32Array.from(times),
+        output: Float32Array.from(keys.flatMap(([into, value, out]) => [into, 0, 0, value, 0, 0, out, 0, 0])),
+        interpolation: 'CUBICSPLINE',
+    }],
+});
+
 const at = (clip: TSkeletalClip, t: number, poses?: TJointPose[][]): number => {
     const target = poses ?? [[restingJoint()]];
     sampleClip(clip, t, target);
@@ -64,24 +79,52 @@ describe('between two keys', () => {
         expect(at(clip, 99)).toBeCloseTo(9);
     });
 
-    it('says once that it does not do curved arrivals, and keeps going', () => {
+    it('walks a curved channel along the curve its slopes make, and says nothing about it', () => {
         catchWarnings();
+        // Three blocks a key: the slope in, the value, the slope out. Flat slopes: it leaves and
+        // arrives gently, slower than an even walk at the ends.
+        const flat = curved([0, 1], [[0, 0, 0], [0, 10, 0]]);
+        expect(at(flat, 0)).toBeCloseTo(0, 5);
+        expect(at(flat, 0.25)).toBeCloseTo(10 * (-2 / 64 + 3 / 16), 5);
+        expect(at(flat, 0.5)).toBeCloseTo(5, 5);
+        expect(at(flat, 1)).toBeCloseTo(10, 5);
+        expect(warnings).toEqual([]);
+    });
+
+    it('scales a slope, which is per second, by the time between the two keys', () => {
+        // Leaving at one a second over two seconds, arriving flat, both keys at 0.
+        const sloped = curved([0, 2], [[0, 0, 1], [0, 0, 0]]);
+        // Half way, the slope's share of the curve is an eighth, times two seconds.
+        expect(at(sloped, 1)).toBeCloseTo(0.125 * 2, 5);
+    });
+
+    it('holds the value of the first and the last key outside them', () => {
+        const flat = curved([1, 2], [[5, 3, 5], [5, 7, 5]]);
+        expect(at(flat, 0)).toBeCloseTo(3, 5);
+        expect(at(flat, 3)).toBeCloseTo(7, 5);
+    });
+
+    it('curves a turn number by number and brings it back to a turn', () => {
+        const half = Math.SQRT1_2;
         const clip: TSkeletalClip = {
             type: 'clip',
-            name: 'curved',
+            name: 'curved turn',
             duration: 1,
-            channels: [{ skeleton: 0, joint: 0, path: 'translation', sampler: 0 }],
+            channels: [{ skeleton: 0, joint: 0, path: 'rotation', sampler: 0 }],
             samplers: [{
                 input: Float32Array.from([0, 1]),
-                // Three blocks a key: the slope in, the value, the slope out.
-                output: Float32Array.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0]),
+                // Unturned, then a quarter turn about z, both with flat slopes.
+                output: Float32Array.from([0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, half, half, 0, 0, 0, 0]),
                 interpolation: 'CUBICSPLINE',
             }],
         };
-
-        expect(at(clip, 0.5)).toBeCloseTo(5);
-        sampleClip(clip, 0.7, [[restingJoint()]]);
-        expect(warnings.filter((w) => w.includes('CUBICSPLINE'))).toHaveLength(1);
+        const poses = [[restingJoint()]];
+        sampleClip(clip, 0.5, poses);
+        const [x, y, z, w] = poses[0][0].r;
+        expect(Math.hypot(x, y, z, w)).toBeCloseTo(1, 6);
+        // Half way along flat slopes is half way: an eighth of a turn.
+        expect(z).toBeCloseTo(Math.sin(Math.PI / 8), 5);
+        expect(w).toBeCloseTo(Math.cos(Math.PI / 8), 5);
     });
 });
 

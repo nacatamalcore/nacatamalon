@@ -139,6 +139,9 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **A glTF animation with curved keys (`CUBICSPLINE`) moves along its curve.** It was walked evenly
+  from key to key, with a warning; now each key's slopes shape the way it leaves and arrives, as the
+  format defines, rotations included.
 - **A model stretched more one way than another is lit along its surface.** A model scaled unevenly
   (`scaleX: 2`, a ball squashed as it lands), or a piece of a model file inside a node stretched that
   way, had its facings turned like its surface and leaned the wrong way, so it was lit as though its

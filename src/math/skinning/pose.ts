@@ -11,8 +11,6 @@ const q1: TQuat = [0, 0, 0, 1];
 const v0: Vec3Tuple = [0, 0, 0];
 const v1: Vec3Tuple = [0, 0, 0];
 
-// CUBICSPLINE warning is emitted at most once, not once per channel per frame.
-let warnedCubic = false;
 
 /**
  * Where each channel's search left off last time, one number per channel.
@@ -43,6 +41,34 @@ const readQuat = (output: Float32Array, block: number, valueOffset: number, i: n
 };
 
 /**
+ * Where a curved channel is between two keys, written into `dst`, as glTF defines it: the curve
+ * that leaves the first key at its own value along its slope out, and reaches the second at its
+ * value along its slope in. Each key holds three blocks of `comps` numbers, the slope in, the value
+ * and the slope out; a slope is per second, so it is scaled by the time between the two keys.
+ *
+ * A rotation is curved number by number like the rest and brought back to length one after, which
+ * is what the format asks for. Number by number, so nothing is made per frame.
+ */
+const hermite = (output: Float32Array, comps: number, i0: number, i1: number, s: number, span: number, dst: number[]): void => {
+    const s2 = s * s;
+    const s3 = s2 * s;
+    const fromValue = 2 * s3 - 3 * s2 + 1;
+    const fromSlope = (s3 - 2 * s2 + s) * span;
+    const toValue = -2 * s3 + 3 * s2;
+    const toSlope = (s3 - s2) * span;
+    const a = i0 * comps * 3;
+    const b = i1 * comps * 3;
+    for (let k = 0; k < comps; k++) {
+        dst[k] = fromValue * output[a + comps + k] + fromSlope * output[a + 2 * comps + k]
+            + toValue * output[b + comps + k] + toSlope * output[b + k];
+    }
+    if (comps === 4) {
+        const length = Math.hypot(dst[0], dst[1], dst[2], dst[3]) || 1;
+        dst[0] /= length; dst[1] /= length; dst[2] /= length; dst[3] /= length;
+    }
+};
+
+/**
  * Samples every channel of `clip` at time `t` (seconds) and writes the results into the poses in
  * place: the one and only thing an animation clip does to a skeleton, so playback, skeleton, and
  * GPU upload stay decoupled ("the pose is the boundary"). `poses` is one entry per skeleton of the
@@ -50,11 +76,9 @@ const readQuat = (output: Float32Array, block: number, valueOffset: number, i: n
  * `t` must already be wrapped into `[0, duration]` by the caller (the player owns
  * looping). Times outside a channel's own keyframe range clamp to its first/last key.
  *
- * Interpolation is `LINEAR` (slerp for rotations, lerp for translation/scale) or
- * `STEP` (hold the earlier key). `CUBICSPLINE` output is laid out as
- * `[inTangent, value, outTangent]` per key; it isn't Hermite-interpolated yet: the
- * value samples are LINEAR-blended and a one-time warning is logged. The v1 target
- * (Khronos Fox) is entirely LINEAR, so this covers it exactly.
+ * Interpolation is `LINEAR` (slerp for rotations, lerp for translation/scale), `STEP` (hold the
+ * earlier key) or `CUBICSPLINE` (the curve glTF defines, through each key's value along its slopes:
+ * see `hermite`).
  */
 export const sampleClip = (clip: TSkeletalClip, t: number, poses: TJointPose[][]): void => {
     const cursor = cursorsFor(clip);
@@ -66,20 +90,17 @@ export const sampleClip = (clip: TSkeletalClip, t: number, poses: TJointPose[][]
         const isRotation = channel.path === 'rotation';
         const comps = isRotation ? 4 : 3;
 
-        // CUBICSPLINE stores 3 values (in-tangent, value, out-tangent) per key; we read
-        // only the middle value block until real Hermite support lands.
-        const block = interpolation === 'CUBICSPLINE' ? comps * 3 : comps;
-        const valueOffset = interpolation === 'CUBICSPLINE' ? comps : 0;
-
-        if (interpolation === 'CUBICSPLINE' && !warnedCubic) {
-            console.warn('[NacatamalOn] sampleClip: CUBICSPLINE interpolation is not yet supported, falling back to LINEAR on value keyframes.');
-            warnedCubic = true;
-        }
+        // A curved channel keeps three blocks a key (the slope in, the value, the slope out): a key
+        // on its own is read from the middle one.
+        const curved = interpolation === 'CUBICSPLINE';
+        const block = curved ? comps * 3 : comps;
+        const valueOffset = curved ? comps : 0;
 
         const n = input.length;
         let i0: number;
         let i1: number;
         let alpha: number;
+        let span = 0;
 
         if (t <= input[0]) {
             i0 = 0; i1 = 0; alpha = 0;
@@ -95,7 +116,7 @@ export const sampleClip = (clip: TSkeletalClip, t: number, poses: TJointPose[][]
             while (i < n - 1 && input[i + 1] <= t) i++;
             cursor[c] = i;
             i0 = i; i1 = i + 1;
-            const span = input[i1] - input[i0];
+            span = input[i1] - input[i0];
             alpha = span > 0 ? (t - input[i0]) / span : 0;
         }
 
@@ -106,6 +127,11 @@ export const sampleClip = (clip: TSkeletalClip, t: number, poses: TJointPose[][]
 
         const target = poses[channel.skeleton]?.[channel.joint];
         if (target === undefined) {
+            continue;
+        }
+        const into = isRotation ? target.r : channel.path === 'translation' ? target.t : target.s;
+        if (curved && i0 !== i1) {
+            hermite(output, comps, i0, i1, alpha, span, into);
             continue;
         }
         if (isRotation) {
