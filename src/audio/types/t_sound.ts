@@ -332,7 +332,7 @@ export type TSoundHandle = {
     setPan(pan: number, fade?: number): void;
     /**
      * Where between left (`-1`) and right (`1`) it is heard: written, it moves there at once, so a
-     * tween can carry it across, `tween({ target: sound, to: { pan: 1 }, duration: 2 })`.
+     * tween can carry it across, `tween({ target: sound, to: { pan: 1 }, duration: 2 }).play()`.
      */
     pan: number;
     /**

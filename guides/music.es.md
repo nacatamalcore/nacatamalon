@@ -367,7 +367,7 @@ const Level = () => {
     song.setVoice('noise', 1, 1);
 
     // The harmony carried from left to right in two seconds.
-    tween({ target: song.pan, to: { pulse2: 1 }, duration: 2 });
+    tween({ target: song.pan, to: { pulse2: 1 }, duration: 2 }).play();
 
     useUpdate(() => {
         // Faster as the time runs out, from the same beat it was on.
@@ -395,7 +395,7 @@ const Level = () => {
   página oculta se para donde está, con el resto del juego, y sigue desde ahí.
 - `onBeat` te avisa en cada pulso mientras suena.
 
-Un sonido (`useSound`) también tiene `pan`: `tween({ target: sound, to: { pan: 1 }, duration: 2 })`.
+Un sonido (`useSound`) también tiene `pan`: `tween({ target: sound, to: { pan: 1 }, duration: 2 }).play()`.
 
 **Un juego de ritmo** se hace con las propias notas de la canción: `song.notes` son las de todas las
 voces, en el orden en que empiezan, cada una con su voz (`voice`), su comienzo (`start`) y su

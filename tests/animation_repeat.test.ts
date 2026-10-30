@@ -49,6 +49,7 @@ describe('a tween that repeats', () => {
         const handle = tween({ from: 0, to: 1, duration: 1, repeat: 2, onUpdate: () => {} });
         handle.onRepeat((times) => told.push(times));
         handle.onEnd(() => { ended++; });
+        handle.play();
         for (let i = 0; i < 4; i++) tick(1);
         expect(told).toEqual([1, 2]);
         expect(ended).toBe(1);
@@ -59,11 +60,12 @@ describe('a tween that repeats', () => {
         const told: number[] = [];
         const handle = tween({ from: 0, to: 1, duration: 1, repeat: -1, onUpdate: () => {} });
         const stop = handle.onRepeat((times) => told.push(times));
+        handle.play();
         tick(1);
         stop();
         tick(1);
         expect(told).toEqual([1]);
-        const group = tween.all([handle]);
+        const group = tween.all(tween({ from: 0, to: 1, duration: 1, onUpdate: () => {} }));
         expect(typeof group.onRepeat(() => {})).toBe('function');
     });
 });

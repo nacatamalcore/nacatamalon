@@ -359,7 +359,7 @@ const Level = () => {
     song.setVoice('noise', 1, 1);
 
     // The harmony carried from left to right in two seconds.
-    tween({ target: song.pan, to: { pulse2: 1 }, duration: 2 });
+    tween({ target: song.pan, to: { pulse2: 1 }, duration: 2 }).play();
 
     useUpdate(() => {
         // Faster as the time runs out, from the same beat it was on.
@@ -387,7 +387,7 @@ const Level = () => {
   it stops where it is with the rest of the game, and carries on from there.
 - `onBeat` calls you on every beat while it plays.
 
-A sound (`useSound`) has a `pan` too: `tween({ target: sound, to: { pan: 1 }, duration: 2 })`.
+A sound (`useSound`) has a `pan` too: `tween({ target: sound, to: { pan: 1 }, duration: 2 }).play()`.
 
 **A rhythm game** is built from the song's own notes: `song.notes` is every voice's, in the order
 they start, each with its `voice`, its `start` and length (`beats`) in beats, and its `pitch`. It is

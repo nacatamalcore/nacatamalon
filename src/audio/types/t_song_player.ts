@@ -154,7 +154,7 @@ export type TSongHandle = {
     setPan(voice: TSongVoiceName, pan: number, fade?: number): void;
     /**
      * Where each voice is heard, left (`-1`) to right (`1`). Written, a voice moves there at once, so
-     * a tween can carry it across: `tween({ target: song.pan, to: { pulse2: 1 }, duration: 2 })`.
+     * a tween can carry it across: `tween({ target: song.pan, to: { pulse2: 1 }, duration: 2 }).play()`.
      */
     readonly pan: Record<TSongVoiceName, number>;
     /**

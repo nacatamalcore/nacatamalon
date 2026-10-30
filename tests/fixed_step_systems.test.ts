@@ -206,7 +206,7 @@ describe('timers and tweens with a fixed step', () => {
             const seen: number[] = [];
             const { picture } = onScreen(60, () => {
                 const tween = useTween();
-                tween({ from: 0, to: 100, duration: 0.25, onUpdate: (v: number) => { seen.push(v); } });
+                tween({ from: 0, to: 100, duration: 0.25, onUpdate: (v: number) => { seen.push(v); } }).play();
                 return createScene();
             });
             for (let i = 0; i < hz / 2; i++) {

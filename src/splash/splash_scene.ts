@@ -221,7 +221,7 @@ export const createSplashScene = (canvas: HTMLCanvasElement, done: () => void): 
                 mark.height = markHeight * size;
                 mark.tint = withAlpha(mark.tint, Math.min(1, t * 1.6));
             },
-        });
+        }).play();
         tween({
             from: 0,
             to: 1,
@@ -230,7 +230,7 @@ export const createSplashScene = (canvas: HTMLCanvasElement, done: () => void): 
             onUpdate: (t) => {
                 madeWith.tint = withAlpha(muted, t);
             },
-        });
+        }).play();
         tween({
             from: 0,
             to: 1,
@@ -244,7 +244,7 @@ export const createSplashScene = (canvas: HTMLCanvasElement, done: () => void): 
                 nacatamal.tint = withAlpha(bone, t);
                 on.tint = withAlpha(orange, t);
             },
-        });
+        }).play();
     }
 
     // Over when its time is up, or straight away on a key or a click. Listened to on the page

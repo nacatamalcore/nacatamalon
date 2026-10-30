@@ -47,7 +47,7 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  *     const mask = useMask({ by: light, soft: true });
  *     mask.add(useSpawn(Ground)());
  *     mask.add(useSpawn(Bats)());
- *     useTween()({ from: 40, to: 300, duration: 2, yoyo: true, repeat: -1, onUpdate: (x) => { light.transform!.x = x; } });
+ *     useTween()({ from: 40, to: 300, duration: 2, yoyo: true, repeat: -1, onUpdate: (x) => { light.transform!.x = x; } }).play();
  *     return createScene();
  * };
  *

@@ -70,7 +70,7 @@ describe('useLateUpdate', () => {
         let value = 0;
         const { frame } = drivenGame(() => {
             const tween = useTween();
-            tween({ from: 0, to: 100, duration: 1, onUpdate: (v: number) => { value = v; } });
+            tween({ from: 0, to: 100, duration: 1, onUpdate: (v: number) => { value = v; } }).play();
             useLateUpdate(() => { seen = value; });
             return createScene();
         });

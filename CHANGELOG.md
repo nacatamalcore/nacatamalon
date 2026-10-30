@@ -7,6 +7,20 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **Tweens are declared once and played as many times as needed, and put together.** A tween made
+  while the scene is built is kept and played on every hit, every press, every level:
+  `const hurt = tween({ ... }); useCollisionWith(Enemy, () => hurt.play());`.
+  - `tween.chain(a, b, c)` plays them one after another, and a step with no `from` starts where the
+    one before left it. The time one leaves over goes to the next, so a chain lasts exactly what its
+    steps add up to, where a chain written by hand with `onEnd` lost a frame between steps.
+  - `tween.all(a, b)` plays them at the same time. Both are tweens, nest in each other, and are
+    what is played: a tween inside one is played by it, and calling `play`, `pause` or `stop` on it
+    is an error that says so.
+  - `by: { transform: { x: -12 } }` moves a field by an amount, from wherever it is each time it is
+    played: a knockback, a jump. `to` makes the same trip from the same start every time.
+  - `reset()` puts every value back where the play started.
+  - A tween declared from a callback and never played warns once, the forgotten `.play()`.
+
 - **What a 2D camera cannot see is not drawn.** A sprite, a text or a panel wholly outside what its
   camera shows, in the size each pass is drawn (the screen, a picture, a capture), is left out as
   the frame is collected: nothing after that sorts it, lays it out, counts it or writes it for the
@@ -58,6 +72,19 @@ releases are in [changelog/](./changelog/), one file each.
   passed on the way there and not on the way back.
 
 ### Changed
+
+- **A tween does not move until `play()`.** `useTween()`'s function declares it. Every tween
+  started by hand needs `.play()` at the end: `tween({ target: coin, to: { ... }, duration: 1 }).play()`.
+  - `play()` starts it from the beginning whether it never played, is over, stopped or playing,
+    as a sound and a motion do.
+  - `cancel()` is now `stop()` and `onCancel` is `onStop`, the word the sound, the music, the motion
+    and the animations already used. They do the same: it stays where it is, `onEnd` does not run.
+  - `done` is now `playing`, which is true from `play()` until it ends or is stopped.
+  - `tween.all` takes the tweens one by one, `tween.all(a, b)` or `tween.all(...list)`, never
+    played and in no other chain or group, and plays them itself. It no longer waits for tweens
+    something else already started.
+  - `finish()` on a tween with `yoyo` and repeats left ends where its last trip ends, not where the
+    trip it was on would have.
 
 - **A big scene costs less a frame.** Sorting by `zIndex` reads each drawable once and does nothing
   when the tree already lists things in the order of their numbers, as a game built level first and

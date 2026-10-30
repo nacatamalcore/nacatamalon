@@ -104,7 +104,7 @@ describe('a sound', () => {
         sound.setPan(-1, 2);
         expect(stereo.pan.events.filter((event) => event.kind === 'ramp').at(-1)).toEqual({ kind: 'ramp', value: -1, time: 3 });
 
-        tween({ target: sound, to: { pan: 1 }, duration: 1 });
+        tween({ target: sound, to: { pan: 1 }, duration: 1 }).play();
         runHookUpdates(root, 0.5);
         expect(sound.pan).toBeCloseTo(0, 1);
         runHookUpdates(root, 0.5);
@@ -158,7 +158,7 @@ describe('a song', () => {
         song.setPan('pulse2', 1, 0.5);
         expect(pulse2.pan.events.filter((event) => event.kind === 'ramp').at(-1)).toEqual({ kind: 'ramp', value: 1, time: 2.5 });
 
-        tween({ target: song.pan, to: { pulse2: -1 }, duration: 1 });
+        tween({ target: song.pan, to: { pulse2: -1 }, duration: 1 }).play();
         runHookUpdates(root, 1);
         expect(song.pan.pulse2).toBe(-1);
         expect(pulse2.pan.value).toBe(-1);
