@@ -252,10 +252,10 @@ describe('the surface a cut shadow tells its colour hook', () => {
         for (const skinned of [false, true]) {
             const wgsl = buildMeshMaterialShadowShader(WAVE, {}, [], skinned, { fragment: FACING });
             expect(wgsl).toContain('let moved1 = vertex(position + tangent');
-            expect(wgsl).toContain('turn * shaped');
+            expect(wgsl).toContain(skinned ? 'facingTurnOf(turn) * shaped' : 'facingTurnOf(place) * shaped');
             const glsl = buildMeshMaterialShadowShaderGlsl(WAVE_GLSL, {}, skinned, { fragment: FACING_GLSL, mapNames: [] }).vertex;
             expect(glsl).toContain('vec3 moved1 = vertex(aPosition + tangent');
-            expect(glsl).toContain('turn * shaped');
+            expect(glsl).toContain(skinned ? 'facingTurnOf(turn) * shaped' : 'facingTurnOf(mat3(uModel)) * shaped');
         }
     });
 

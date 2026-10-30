@@ -181,7 +181,7 @@ mat4 boneMatrix(int bone) {
         texelFetch(uJoints, ivec2(x + 3, 0), 0)
     );
 }
-`;
+${FACING_TURN_GLSL}`;
 
 /**
  * The bones, mixed by how much of the corner each one owns, applied after the corner hook: the hook
@@ -194,7 +194,9 @@ const SKIN = /* glsl */ `
         aWeights.z * boneMatrix(int(aBones.z)) +
         aWeights.w * boneMatrix(int(aBones.w));
     vec4 placed = skin * vec4(local, 1.0);
-    vec3 facing = mat3(skin) * shaped;
+    // The facing by the inverse of the mix, so a bone stretched more one way than another leans it
+    // the right way; what lies along the surface by the mix itself.
+    vec3 facing = facingTurnOf(mat3(skin)) * shaped;
     vec3 across = mat3(skin) * aTangent.xyz;
 `;
 
@@ -443,7 +445,8 @@ void main() {${CORNER_CONTEXT}${bend}
             glslUniformBlock(sig),
             'uniform mat4 uLightViewProj;\nuniform mat4 uModel;',
             'out vec2 vUv;\nout vec3 vNormal;\nout vec3 vWorldPos;\nout vec4 vColor;\nout vec4 vTangent;\nout vec2 vUv2;\nout vec4 vCarry;',
-            FACING_TURN_GLSL,
+            // Already among the bones' helpers when it bends.
+            skinned ? '' : FACING_TURN_GLSL,
             VERT_CONTEXT,
             vertex ?? DEFAULT_VERTEX,
             /* glsl */ `
@@ -454,7 +457,7 @@ void main() {${CORNER_CONTEXT}${vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL
     mat3 turn = ${skinned ? 'mat3(skin)' : 'mat3(1.0)'};
     gl_Position = uLightViewProj * uModel * placed;
     vUv = aUv;
-    vNormal = normalize(facingTurnOf(mat3(uModel)) * (turn * shaped));
+    vNormal = normalize(facingTurnOf(mat3(uModel)) * ${skinned ? '(facingTurnOf(turn) * shaped)' : 'shaped'});
     vWorldPos = (uModel * placed).xyz;
     vColor = aColor;
     vTangent = vec4(normalize((uModel * vec4(turn * aTangent.xyz, 0.0)).xyz), aTangent.w);

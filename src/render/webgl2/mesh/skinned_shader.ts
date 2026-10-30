@@ -1,4 +1,4 @@
-import { meshVertexHeadGlsl, meshVertexLightGlsl, worldNormalOfGlsl } from './mesh_shader';
+import { FACING_TURN_GLSL, meshVertexHeadGlsl, meshVertexLightGlsl, worldNormalOfGlsl } from './mesh_shader';
 import type { TCullMode } from '../../../materials/types/t_material';
 
 /**
@@ -34,7 +34,7 @@ mat4 boneMatrix(int bone) {
         texelFetch(uJoints, ivec2(x + 3, 0), 0)
     );
 }
-
+${FACING_TURN_GLSL}
 void main() {
     // The four bones, mixed by how much of the corner each one owns. Mixing the movements and
     // applying the result once is what keeps a bend smooth: moving the corner four times and
@@ -47,8 +47,9 @@ void main() {
 
     vec4 bent = skin * vec4(aPosition, 1.0);
     // The way the surface faces is turned by the same mixture, with the move dropped: a direction
-    // has no place. Without this an arm bends and is lit as though it never had.
-    vec3 bentNormal = mat3(skin) * aNormal;
+    // has no place. Without this an arm bends and is lit as though it never had. By the inverse of
+    // the mix, so a bone stretched more one way than another leans it the right way.
+    vec3 bentNormal = facingTurnOf(mat3(skin)) * aNormal;
 
     gl_Position = snapToPixels(uniforms.mvp * bent);
 

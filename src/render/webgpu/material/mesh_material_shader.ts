@@ -230,7 +230,9 @@ const SKIN = /* wgsl */ `
         weights.w * joints[u32(bones.w)];
     let placed = skin * vec4<f32>(local, 1.0);
     let turn = mat3x3<f32>(skin[0].xyz, skin[1].xyz, skin[2].xyz);
-    let facing = turn * shaped;
+    // The facing by the inverse of the mix, so a bone stretched more one way than another leans it
+    // the right way; what lies along the surface by the mix itself.
+    let facing = facingTurnOf(turn) * shaped;
     let across = turn * cornerTangent.xyz;
 `;
 
@@ -276,7 +278,7 @@ const body = (normal: string, skinned: boolean, cull: TCullMode): string => {
     // A model drawn on both sides reads the light of the side it is; any other has one.
     const lit = cull === 'none' ? 'side' : 'in';
     return /* wgsl */ `
-${skinned ? `@group(${MESH_MATERIAL_GROUP}) @binding(${MESH_MATERIAL_JOINTS_BINDING}) var<storage, read> joints: array<mat4x4<f32>>;` : ''}
+${skinned ? `@group(${MESH_MATERIAL_GROUP}) @binding(${MESH_MATERIAL_JOINTS_BINDING}) var<storage, read> joints: array<mat4x4<f32>>;${FACING_TURN}` : ''}
 
 @vertex
 fn vs(${cornerInputs(skinned)}) -> VertexOutput {${CORNER_CONTEXT}${normal}${skinned ? SKIN : STILL}
@@ -491,7 +493,7 @@ fn vs(${cornerInputs(skinned)}) -> CutOutput {${CORNER_CONTEXT}${vertex === null
     var out: CutOutput;
     out.position = shadow.lightViewProj * shadow.model * placed;
     out.uv = uv;
-    out.normal = normalize(facingTurnOf(place) * (turn * shaped));
+    out.normal = normalize(facingTurnOf(place) * ${skinned ? '(facingTurnOf(turn) * shaped)' : 'shaped'});
     out.worldPos = (shadow.model * placed).xyz;
     out.color = color;
     out.tangent = vec4<f32>(normalize((shadow.model * vec4<f32>(turn * cornerTangent.xyz, 0.0)).xyz), cornerTangent.w);

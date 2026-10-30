@@ -130,10 +130,17 @@ describe('the shadow of a material cut out of its picture', () => {
         for (const skinned of [false, true]) {
             const shadow = buildMeshMaterialShadowShader(null, SIG, [], skinned, { fragment: EFFECT });
             expect(shadow).toContain('fn facingTurnOf(m: mat3x3<f32>) -> mat3x3<f32> {');
-            expect(shadow).toContain('out.normal = normalize(facingTurnOf(place) * (turn * shaped));');
+            expect(shadow).toContain(skinned
+                ? 'out.normal = normalize(facingTurnOf(place) * (facingTurnOf(turn) * shaped));'
+                : 'out.normal = normalize(facingTurnOf(place) * shaped);');
             const glsl = buildMeshMaterialShadowShaderGlsl(null, SIG, skinned, { fragment: EFFECT_GLSL, mapNames: [] });
             expect(glsl.vertex).toContain('mat3 facingTurnOf(mat3 m) {');
-            expect(glsl.vertex).toContain('vNormal = normalize(facingTurnOf(mat3(uModel)) * (turn * shaped));');
+            expect(glsl.vertex).toContain(skinned
+                ? 'vNormal = normalize(facingTurnOf(mat3(uModel)) * (facingTurnOf(turn) * shaped));'
+                : 'vNormal = normalize(facingTurnOf(mat3(uModel)) * shaped);');
+            // Declared once, whether the bones bring it or the shadow does.
+            expect(glsl.vertex.split('mat3 facingTurnOf(').length).toBe(2);
+            expect(shadow.split('fn facingTurnOf(').length).toBe(2);
         }
         // A shadow that cuts nothing has no facing to work out.
         expect(buildMeshMaterialShadowShader(null, SIG, [], false)).not.toContain('facingTurnOf');

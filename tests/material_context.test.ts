@@ -37,13 +37,13 @@ describe('the detail a material reads', () => {
         expect(MESH_DETAIL.attributes.map((a) => a.shaderLocation)).toEqual([6, 7]);
     });
 
-    it('bends the tangent with the bones the same way it bends the facing', () => {
+    it('bends the tangent with the bones, and the facing by the inverse of the same mix', () => {
         const wgsl = buildMeshMaterialShader(HOOK, null, {}, [], true);
         const glsl = buildMeshMaterialShaderGlsl(HOOK_GLSL, null, {}, [], true).vertex;
 
-        expect(wgsl).toContain('let facing = turn * shaped;');
+        expect(wgsl).toContain('let facing = facingTurnOf(turn) * shaped;');
         expect(wgsl).toContain('let across = turn * cornerTangent.xyz;');
-        expect(glsl).toContain('vec3 facing = mat3(skin) * shaped;');
+        expect(glsl).toContain('vec3 facing = facingTurnOf(mat3(skin)) * shaped;');
         expect(glsl).toContain('vec3 across = mat3(skin) * aTangent.xyz;');
     });
 

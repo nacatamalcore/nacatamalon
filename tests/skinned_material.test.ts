@@ -77,3 +77,30 @@ describe('a material on a model that bends, GLSL', () => {
         expect(blendOfGlsl(skinned)).toBe(blendOfGlsl(SKINNED_VERTEX_GLSL));
     });
 });
+
+describe('the facing of a model that bends', () => {
+    // A bone stretched more one way than another leans a facing the other way from its surface: the
+    // facing is turned by the inverse of the bones' mix, what lies along the surface by the mix.
+    it('is turned by the inverse of the mix, built in and in a material, on both cards', () => {
+        const material = buildMeshMaterialShader(HOOK, VERTEX, {}, [], true);
+        expect(material).toContain('let facing = facingTurnOf(turn) * shaped;');
+        expect(material).toContain('let across = turn * cornerTangent.xyz;');
+        expect(SKINNED_SHADER).toContain('let bentNormal = facingTurnOf(mat3x3<f32>(skin[0].xyz, skin[1].xyz, skin[2].xyz)) * normal;');
+        for (const source of [material, SKINNED_SHADER]) {
+            expect(source.split('fn facingTurnOf(').length).toBe(2);
+        }
+
+        const materialGlsl = buildMeshMaterialShaderGlsl(null, VERTEX_GLSL, {}, [], true).vertex;
+        expect(materialGlsl).toContain('vec3 facing = facingTurnOf(mat3(skin)) * shaped;');
+        expect(materialGlsl).toContain('vec3 across = mat3(skin) * aTangent.xyz;');
+        expect(SKINNED_VERTEX_GLSL).toContain('vec3 bentNormal = facingTurnOf(mat3(skin)) * aNormal;');
+        for (const source of [materialGlsl, SKINNED_VERTEX_GLSL]) {
+            expect(source.split('mat3 facingTurnOf(').length).toBe(2);
+        }
+    });
+
+    it('leaves a model that does not bend without it', () => {
+        expect(buildMeshMaterialShader(HOOK, VERTEX, {}, [])).not.toContain('facingTurnOf');
+        expect(buildMeshMaterialShaderGlsl(null, VERTEX_GLSL, {}, []).vertex).not.toContain('facingTurnOf');
+    });
+});

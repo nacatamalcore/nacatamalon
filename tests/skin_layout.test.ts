@@ -41,9 +41,10 @@ describe('the weighted mix', () => {
 
     it('turns the way a surface faces by the same mix, with the move dropped', () => {
         // The 3x3 corner of the mixture: a direction has no place, and without this an arm bends
-        // and is lit as though it never had.
-        expect(SKINNED_SHADER).toContain('mat3x3<f32>(skin[0].xyz, skin[1].xyz, skin[2].xyz) * normal');
-        expect(SKINNED_VERTEX_GLSL).toContain('mat3(skin) * aNormal');
+        // and is lit as though it never had. By its inverse flipped, so a bone stretched unevenly
+        // leans a facing the right way.
+        expect(SKINNED_SHADER).toContain('facingTurnOf(mat3x3<f32>(skin[0].xyz, skin[1].xyz, skin[2].xyz)) * normal');
+        expect(SKINNED_VERTEX_GLSL).toContain('facingTurnOf(mat3(skin)) * aNormal');
     });
 });
 

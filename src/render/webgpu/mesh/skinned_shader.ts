@@ -1,4 +1,4 @@
-import { meshFragment, meshShaderCommon, TWO_SIDED_WRITE, worldNormalOf } from './mesh_shader';
+import { FACING_TURN, meshFragment, meshShaderCommon, TWO_SIDED_WRITE, worldNormalOf } from './mesh_shader';
 import type { TCullMode } from '../../../materials/types/t_material';
 
 /**
@@ -24,7 +24,7 @@ import type { TCullMode } from '../../../materials/types/t_material';
  */
 export const skinnedShaderFor = (cull: TCullMode): string => meshShaderCommon(cull) + /* wgsl */ `
 @group(3) @binding(0) var<storage, read> joints: array<mat4x4<f32>>;
-
+${FACING_TURN}
 @vertex
 fn vs(
     @location(0) position: vec3<f32>,
@@ -45,8 +45,9 @@ fn vs(
 
     let bent = skin * vec4<f32>(position, 1.0);
     // The way the surface faces is turned by the same mixture, with the move dropped: a direction
-    // has no place. Without this an arm bends and is lit as though it never had.
-    let bentNormal = mat3x3<f32>(skin[0].xyz, skin[1].xyz, skin[2].xyz) * normal;
+    // has no place. Without this an arm bends and is lit as though it never had. By the inverse of
+    // the mix, so a bone stretched more one way than another leans it the right way.
+    let bentNormal = facingTurnOf(mat3x3<f32>(skin[0].xyz, skin[1].xyz, skin[2].xyz)) * normal;
 
     var out: VertexOutput;
     out.position = snapToPixels(uniforms.mvp * bent);
