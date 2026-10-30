@@ -76,6 +76,12 @@ export type TSceneLaunchOptions<P extends object = Record<string, unknown>> = {
      * What the scene's function is called with. Left out, it gets `{}` and its defaults.
      */
     props?: P;
+    /**
+     * Covers the screen while the scene starts, and uncovers it with the scene on top: a menu that
+     * opens with an iris. The scenes already running go on underneath, as they do with `change`:
+     * pause them first if the game should freeze. Without one, the scene is simply there.
+     */
+    transition?: TTransition;
 };
 
 /**
@@ -86,6 +92,19 @@ export type TSceneLaunchOptions<P extends object = Record<string, unknown>> = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TSceneChangeOptions<P extends object = Record<string, unknown>> = TSceneLaunchOptions<P> & {
+export type TSceneChangeOptions<P extends object = Record<string, unknown>> = TSceneLaunchOptions<P>;
+
+/**
+ * What `useScene().stop` accepts beyond the scene.
+ *
+ * @category Scenes
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TSceneStopOptions = {
+    /**
+     * Covers the screen, stops the scene behind the cover and uncovers what is left: a menu that
+     * closes with an iris. Without one, it is gone at once.
+     */
     transition?: TTransition;
 };

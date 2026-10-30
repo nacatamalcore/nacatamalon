@@ -164,6 +164,7 @@ export const createTileBody2d = (deps: {
 
     const moveX = (grids: readonly TGrid[], blocks: readonly TBlock[], dx: number): void => {
         if (dx === 0) return;
+        const from = centre.x;
         centre.x += dx;
         const feet = centre.y + hh;
         // On the ground, the floor is followed: up a slope, and down one.
@@ -176,17 +177,23 @@ export const createTileBody2d = (deps: {
         }
         // Walls: solid cells beside it, above its feet. On a slope its lower corners may sink into the
         // cells around the slope by as much as the slope rises under half of it, as the picture does.
+        //
+        // Only what is ahead of where it was stops it. Landing past the corner of a step can leave it
+        // up to `INSET` into the wall beside it, and walking away from that wall slowly enough to
+        // still touch it would otherwise be stopped by it, which puts it out the wall's far side.
         const bottom = centre.y + hh - EPS;
         const low = onSlope ? bottom - hw - Math.abs(dx) - 1 : Infinity;
         let stop: number | null = null;
         eachCell(grids, centre.x - hw, centre.y - hh + EPS, centre.x + hw, bottom, (grid, column, row, cellLeft, cellTop) => {
             if (!cellOf(grid.map, column, row).solid || cellTop >= low) return;
+            if (dx > 0 ? cellLeft + grid.w / 2 <= from : cellLeft + grid.w / 2 >= from) return;
             const edge = dx > 0 ? cellLeft - hw : cellLeft + grid.w + hw;
             if (stop === null || (dx > 0 ? edge < stop : edge > stop)) stop = edge;
         });
         for (const block of blocks) {
             if (block.bottom <= centre.y - hh + EPS || block.top >= bottom || block.top >= low) continue;
             if (block.right <= centre.x - hw || block.left >= centre.x + hw) continue;
+            if (dx > 0 ? (block.left + block.right) / 2 <= from : (block.left + block.right) / 2 >= from) continue;
             const edge = dx > 0 ? block.left - hw : block.right + hw;
             if (stop === null || (dx > 0 ? edge < stop : edge > stop)) stop = edge;
         }

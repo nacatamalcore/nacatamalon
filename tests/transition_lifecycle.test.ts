@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, spyOn } from 'bun:test';
 import { createFrameContext } from '../src/game/loop/create_frame_context';
 import { createScene } from '../src/scene/create_scene';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
@@ -11,6 +11,8 @@ import { trackLoad } from '../src/loaders/track_load';
 import { usePointer } from '../src/hooks/input/use_pointer';
 import { useScene } from '../src/hooks/scene/use_scene';
 import { useCleanup } from '../src/hooks/scene/use_cleanup';
+import { useReady } from '../src/hooks/scene/use_ready';
+import { useSceneTransitionEnd } from '../src/hooks/scene/use_scene_transition_end';
 import { useUpdate } from '../src/hooks/loop/use_update';
 import { createFakeCanvas, createTestGame, startTestScene } from './helpers/test_game';
 import type { TLoadStatus } from '../src/loaders';
@@ -265,7 +267,7 @@ describe('a change that cannot be made', () => {
         frame();
         expect(findScene(store, 'D')).toBeUndefined();
         expect(store.get('transition').active).not.toBeNull();
-        expect(store.get('transition').active!.incoming.name).toBe('B');
+        expect(store.get('transition').active!.incoming!.name).toBe('B');
     });
 
     it('will not let either end be stopped out from under it', () => {
@@ -298,5 +300,130 @@ describe('a change that cannot be made', () => {
         expect(store.get('transition').active).toBeNull();
         expect(findScene(store, 'A')).toBeDefined();
         expect(store.get('world').scenes).toHaveLength(1);
+    });
+});
+
+describe('a scene launched or stopped with a transition', () => {
+    it('launches behind the cover, with the scene underneath still running, and shows it at the swap', () => {
+        const { store, frame, frames, counted, handle } = twoRooms();
+        handle().launch('B', { transition: fade(0.2) });
+
+        const menu = findScene(store, 'B')!;
+        expect(menu.held).toBe(true);
+        expect(store.get('transition').active!.outgoing).toBeNull();
+
+        frames(0.1);
+        frame();
+        expect(menu.held).toBe(false);
+        expect(store.get('world').scenes.map((scene) => scene.name)).toEqual(['A', 'B']);
+        expect(counted.updates).toBeGreaterThan(0);
+        expect(counted.unmounted).toBe(0);
+
+        frames(0.2);
+        expect(store.get('transition').active).toBeNull();
+    });
+
+    it('stops behind the cover, its cleanups at the swap, and leaves the rest', () => {
+        const { store, frame, frames, handle } = twoRooms();
+        let closed = 0;
+        registerScene(store, 'Menu', () => {
+            useCleanup(() => { closed += 1; });
+            return createScene();
+        });
+        handle().launch('Menu');
+
+        expect(handle().stop('Menu', { transition: fade(0.2) })).toBe(true);
+        frame();
+        expect(findScene(store, 'Menu')).toBeDefined();
+        expect(closed).toBe(0);
+
+        frames(0.1);
+        frame();
+        expect(findScene(store, 'Menu')).toBeUndefined();
+        expect(closed).toBe(1);
+        expect(findScene(store, 'A')).toBeDefined();
+    });
+
+    it('stops the scene that asked, given only the options', () => {
+        const { store, frames, handle } = twoRooms();
+        let menu!: TSceneHandle;
+        registerScene(store, 'Menu', () => {
+            menu = useScene();
+            return createScene();
+        });
+        handle().launch('Menu');
+
+        expect(menu.stop({ transition: fade(0.2) })).toBe(true);
+        frames(0.15);
+        expect(findScene(store, 'Menu')).toBeUndefined();
+        expect(findScene(store, 'A')).toBeDefined();
+    });
+
+    it('is refused while another one is being covered, and the scene is not started or stopped', () => {
+        const { store, handle } = twoRooms();
+        registerScene(store, 'Menu', () => createScene());
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        try {
+            handle().launch('B', { transition: fade(0.2) });
+            handle().launch('Menu', { transition: fade(0.2) });
+            expect(findScene(store, 'Menu')).toBeUndefined();
+            expect(handle().stop('A', { transition: fade(0.2) })).toBe(false);
+            expect(findScene(store, 'A')).toBeDefined();
+            expect(warn.mock.calls.some((call) => String(call[0]).includes('already being covered'))).toBe(true);
+        } finally {
+            warn.mockRestore();
+        }
+    });
+
+    it('runs the launched scene\'s useSceneTransitionEnd once it is uncovered', () => {
+        const { store, frame, frames, handle } = twoRooms();
+        let seen = 0;
+        registerScene(store, 'Menu', () => {
+            useSceneTransitionEnd(() => { seen += 1; });
+            return createScene();
+        });
+        handle().launch('Menu', { transition: fade(0.2) });
+
+        frames(0.1);
+        frame();
+        expect(seen).toBe(0);
+        frames(0.2);
+        expect(seen).toBe(1);
+    });
+});
+
+describe('a covered change asked for while the scene of another is being built', () => {
+    for (const via of ['launch', 'change'] as const) {
+        it(`is refused, so the first one, by ${via}, keeps its scene and lets it go`, () => {
+            const { store, frames, handle } = twoRooms();
+            registerScene(store, 'Dialog', () => createScene());
+            registerScene(store, 'Menu', () => {
+                const menu = useScene();
+                useReady(() => { menu.launch('Dialog', { transition: fade(0.2) }); });
+                return createScene();
+            });
+            const warn = spyOn(console, 'warn').mockImplementation(() => {});
+            try {
+                if (via === 'launch') handle().launch('Menu', { transition: fade(0.2) });
+                else handle().change('Menu', { transition: fade(0.2) });
+
+                expect(findScene(store, 'Dialog')).toBeUndefined();
+                expect(store.get('transition').active!.incoming!.name).toBe('Menu');
+                frames(0.5);
+                expect(store.get('transition').active).toBeNull();
+                expect(findScene(store, 'Menu')!.held).toBe(false);
+                expect(warn.mock.calls.some((call) => String(call[0]).includes('already being covered'))).toBe(true);
+            } finally {
+                warn.mockRestore();
+            }
+        });
+    }
+
+    it('lets go of the cover when the scene it was bringing in fails to build', () => {
+        const { store, frame, handle } = twoRooms();
+        registerScene(store, 'Broken', () => { throw new Error('broken'); });
+        expect(() => handle().launch('Broken', { transition: fade(0.2) })).toThrow('broken');
+        frame();
+        expect(store.get('transition').active).toBeNull();
     });
 });

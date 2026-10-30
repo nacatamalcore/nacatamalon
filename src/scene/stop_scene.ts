@@ -33,7 +33,9 @@ export const stopScene = (store: TRuntimeStore, name: string): boolean => {
     // calls in here the transition names neither end.
     const transition = store.get('transition').active;
     if (transition !== null && (transition.incoming === root || transition.outgoing === root)) {
-        transition.incoming.held = false;
+        if (transition.incoming !== null) {
+            transition.incoming.held = false;
+        }
         store.setState('transition', { active: null });
     }
 

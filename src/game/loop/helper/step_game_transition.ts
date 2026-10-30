@@ -37,7 +37,9 @@ export const stepGameTransition = (store: TRuntimeStore, delta: number): void =>
     }
 
     if (stepTransition(state, delta) === 'swap') {
-        state.incoming.held = false;
+        if (state.incoming !== null) {
+            state.incoming.held = false;
+        }
         // Let go of before it is stopped, so that `stopScene` sees a transition that no longer
         // names it and leaves the transition alone. Its cleanups run here, at the swap, and not
         // back when `change` was called: a scene leaves when it stops being seen.

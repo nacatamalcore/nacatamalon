@@ -49,10 +49,11 @@ export type TTransitionState = {
     progress: number;
     phase: TTransitionPhase;
     /**
-     * The scene coming in. It is running from the moment `change` was called, so its loading has
-     * started, but it is **held**: it neither updates, nor draws, nor answers the pointer.
+     * The scene coming in. It is running from the moment `change` or `launch` was called, so its
+     * loading has started, but it is **held**: it neither updates, nor draws, nor answers the
+     * pointer. `null` when a scene is only being stopped.
      */
-    incoming: TBox;
+    incoming: TBox | null;
     /**
      * The scene on its way out, which keeps running normally until the swap.
      *

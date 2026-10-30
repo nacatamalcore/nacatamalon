@@ -2,8 +2,8 @@ import { rootOf } from '../../box';
 import { findScene, isScenePaused, setScenePaused, startScene, stopScene } from '../../scene';
 import { getActiveBox, getActiveGame } from '../../store';
 import { onGameMoment } from '../../signal/game_moments';
-import { canDrawTransition, startTransition } from '../../transition';
-import type { TSceneChangeOptions, TSceneLaunchOptions } from '../../transition';
+import { canDrawTransition, startTransition, startTransitionBuilding } from '../../transition';
+import type { TSceneChangeOptions, TSceneLaunchOptions, TSceneStopOptions, TTransition } from '../../transition';
 import type { TSceneFn } from '../../scene/types/t_scene_fn';
 import { outsideSceneBody } from '../../utils/outside_scene_body';
 
@@ -23,6 +23,16 @@ export type TSceneHandle = {
     /**
      * Starts another scene **alongside** the running ones, drawn on top of those started before it:
      * a HUD over the level. Throws if the name is not registered or is already running.
+     *
+     * Given a transition, it comes in covered, as with `change`: the screen is covered, the scene
+     * waits behind it until it has loaded, and it is uncovered with the scene on top. The scenes
+     * underneath go on running: pause them first if the game should freeze behind a menu.
+     *
+     * @example
+     * ```ts
+     * scene.pause('Level');
+     * scene.launch('PauseMenu', { transition: iris(0.4) });
+     * ```
      */
     launch<P extends object>(scene: TSceneFn<P>, options?: TSceneLaunchOptions<P>): void;
     launch(name: string, options?: TSceneLaunchOptions): void;
@@ -31,9 +41,21 @@ export type TSceneHandle = {
      * scene stops itself (a menu closing on its own button). Stopping the last scene is allowed and
      * warned about: the game keeps running with nothing in it.
      *
-     * @returns Whether a scene was stopped. `false` means it was not running, which is also warned.
+     * Given a transition, the screen is covered first, the scene is stopped behind the cover, and
+     * what is left is uncovered. Its cleanups run then, at the swap.
+     *
+     * @example
+     * ```ts
+     * scene.stop('PauseMenu', { transition: iris(0.4) });
+     * scene.stop({ transition: iris(0.4) }); // the menu closing itself
+     * ```
+     *
+     * @returns Whether a scene was stopped, or will be once the screen is covered. `false` means it
+     * was not running, or a transition was asked for while another one is being covered, both
+     * warned.
      */
-    stop(name?: string): boolean;
+    stop(name?: string, options?: TSceneStopOptions): boolean;
+    stop(options: TSceneStopOptions): boolean;
     /**
      * Replaces the calling scene with `name`: the new one starts, then this one stops. Changing to
      * its own name restarts it.
@@ -176,11 +198,43 @@ export const useScene = (): TSceneHandle => {
         console.warn(`[NacatamalOn] useScene().${action}: ${which} is not running.`);
     };
 
+    /**
+     * Whether another covered change is on screen now, which a new one must wait for, warned. It is
+     * refused rather than cut over: the one on screen would be left with an end nobody moves.
+     */
+    const busy = (action: string, name: string): boolean => {
+        if (store.get('transition').active === null) {
+            return false;
+        }
+        console.warn(`[NacatamalOn] useScene().${action}: '${name}' was ignored because a scene change is already being covered. Wait for it to finish.`);
+        return true;
+    };
+
+    /**
+     * The transition a call goes ahead with: the one asked for, or none when this card cannot draw
+     * it, which `canDrawTransition` says.
+     */
+    const drawable = (transition: TTransition | undefined, action: string): TTransition | undefined =>
+        transition !== undefined && canDrawTransition(store, transition, `useScene().${action}`) ? transition : undefined;
+
     return {
         launch: (scene: string | TSceneFn<never>, options?: TSceneLaunchOptions<object>) => {
-            startScene(store, nameOf(scene, 'launch'), options?.props);
+            const name = nameOf(scene, 'launch');
+            if (options?.transition !== undefined && busy('launch', name)) {
+                return;
+            }
+            const transition = drawable(options?.transition, 'launch');
+            if (transition === undefined) {
+                startScene(store, name, options?.props);
+                return;
+            }
+            // In flight before the scene is built, so a covered change its body or its `useReady`
+            // asks for is refused rather than written over.
+            startTransitionBuilding(store, transition, null, () => startScene(store, name, options?.props));
         },
-        stop: (name) => {
+        stop: (nameOrOptions?: string | TSceneStopOptions, given?: TSceneStopOptions) => {
+            const name = typeof nameOrOptions === 'string' ? nameOrOptions : undefined;
+            const options = typeof nameOrOptions === 'object' && nameOrOptions !== null ? nameOrOptions : given;
             const target = running(name);
             if (target === undefined) {
                 warnNotRunning('stop', name);
@@ -195,11 +249,25 @@ export const useScene = (): TSceneHandle => {
                 console.warn(`[NacatamalOn] useScene().stop: '${target}' is part of a scene change being covered right now, so it was left alone. Wait for the change to finish.`);
                 return false;
             }
+            if (options?.transition !== undefined && busy('stop', target)) {
+                return false;
+            }
 
-            if (findScene(store, target) === owner) {
+            if (root === owner) {
                 // A scene that closed itself must not `change` afterwards: it would start the next
                 // scene and stop nothing, quietly behaving as a `launch`.
                 leaving = true;
+            }
+
+            const transition = drawable(options?.transition, 'stop');
+            if (transition !== undefined && root !== undefined) {
+                // Stopped at the swap, behind the cover. Said now rather than then: by then the
+                // call that did it is long gone from anybody's mind.
+                if (store.get('world').scenes.length === 1) {
+                    console.warn(`[NacatamalOn] useScene().stop: '${target}' is the last scene, so the game will be running with nothing in it. Use change() to replace a scene, or launch() the next one first.`);
+                }
+                startTransition(store, transition, null, root);
+                return true;
             }
 
             stopScene(store, target);
@@ -220,8 +288,7 @@ export const useScene = (): TSceneHandle => {
             // about the change already running. Cutting now would leave that change with neither of
             // its ends: its outgoing scene would never be stopped and would sit in the list for the
             // rest of the game, and the screen would be left covered by a transition nobody moves.
-            if (store.get('transition').active !== null) {
-                console.warn(`[NacatamalOn] useScene().change: '${name}' was ignored because a scene change is already being covered. Wait for it to finish.`);
+            if (busy('change', name)) {
                 return;
             }
 
@@ -234,18 +301,17 @@ export const useScene = (): TSceneHandle => {
                 transition = undefined;
             }
             // A card that cannot draw it makes it a cut too, and says so: see `canDrawTransition`.
-            if (transition !== undefined && !canDrawTransition(store, transition)) {
-                transition = undefined;
-            }
+            transition = drawable(transition, 'change');
 
             leaving = true;
 
             try {
                 if (transition !== undefined) {
-                    // The new scene first here as well, so an unknown name throws before anything
-                    // is held or covered. Nothing stops yet: the scene going out is what the screen
-                    // is still showing, and it is stopped at the swap.
-                    startTransition(store, transition, startScene(store, name, props), owner);
+                    // In flight before the new scene is built, so a covered change its body or its
+                    // `useReady` asks for is refused rather than written over; a name that is not
+                    // there throws and takes the cover with it. Nothing stops yet: the scene going
+                    // out is what the screen is still showing, and it is stopped at the swap.
+                    startTransitionBuilding(store, transition, owner, () => startScene(store, name, props));
                 } else if (name === owner.name) {
                     // Restarting: the old copy has to be gone before the name can start again.
                     stopScene(store, owner.name);

@@ -194,6 +194,26 @@ for (const kind of KINDS) {
                 expect(new Set(steps)).toEqual(new Set([1]));
             });
 
+            it('walks away from a wall it rests a little inside of, rather than through the wall', async () => {
+                // Landing past the corner of a step can leave the body up to half a pixel into the
+                // wall beside it. Walking away from that wall must not throw it out the far side,
+                // even so slowly that the first step does not get it clear: on ice, say.
+                let h!: ReturnType<typeof hero>;
+                const { frames } = await level([
+                    '          ',
+                    '          ',
+                    '          ',
+                    '      ####',
+                    '      ####',
+                    '##########',
+                ], () => { h = hero(96 - 6 + 0.3, 68, (b) => { b.velocity.x = -6; }); });
+
+                frames(1);
+
+                expect(h.sprite.transform.x).toBeCloseTo(96 - 6 + 0.3 - 0.1, 3);
+                expect(h.body.onWall).toBeNull();
+            });
+
             it('walks off an edge and falls, rather than staying stuck to the floor it left', async () => {
                 let h!: ReturnType<typeof hero>;
                 const air: boolean[] = [];

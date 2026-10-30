@@ -329,6 +329,9 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   real time and does not wait (a `play()`, a vibration): start it in
   `useSceneTransitionEnd(() => song.play())`, which runs once the cover is off. Without a transition
   it runs on the scene's first frame.
+- `launch` and `stop` take a transition too: `launch('PauseMenu', { transition: iris(0.4) })` opens a
+  menu on top behind an iris, `stop({ transition: iris(0.4) })` closes the menu that calls it. What is
+  underneath keeps running: `scene.pause()` it first to freeze the game behind the menu.
 - **Two scenes cross their music** with `fadeOut` on the one leaving and `fadeIn` on the one coming
   in (`useSong(file, { autoplay: true, fadeIn: 1, fadeOut: 1 })`, the same on `useMusic`, in seconds):
   when its scene stops the music goes down over `fadeOut` instead of being cut, heard after the scene

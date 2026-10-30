@@ -17,15 +17,15 @@ import type { TTransitionState } from './types/t_transition_state';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const canDrawTransition = (store: TRuntimeStore, transition: TTransition): boolean => {
+export const canDrawTransition = (store: TRuntimeStore, transition: TTransition, who = 'useScene().change'): boolean => {
     const backend = store.get('screen').renderer.capabilities.backend;
     if (backend !== 'WEBGL2' || transition.fragmentGlsl !== undefined) {
         return true;
     }
 
     console.warn(
-        `[NacatamalOn] useScene().change: the transition '${transition.name ?? 'unnamed'}' has no GLSL half, ` +
-        'so it cannot be drawn on WebGL2. The scene was changed without it. Give it a `fragmentGlsl` to ' +
+        `[NacatamalOn] ${who}: the transition '${transition.name ?? 'unnamed'}' has no GLSL half, ` +
+        'so it cannot be drawn on WebGL2. It was done as a cut instead. Give it a `fragmentGlsl` to ' +
         'have it run on both cards.',
     );
     return false;
@@ -40,6 +40,9 @@ const LONG_TRANSITION = 10;
  * Puts a transition in flight: builds the effect that draws it, holds the scene coming in, and
  * starts watching what that scene asked to load.
  *
+ * Either end may be missing, never both: a scene launched has nothing going out, and a scene
+ * stopped has nothing coming in.
+ *
  * The effect is made **here and once**, and the record is then kept for the life of the transition:
  * a compiled shader is cached against that object's identity, so building a fresh one each frame
  * would compile each frame and never once find the cache. Its knobs are copied out of the recipe
@@ -48,8 +51,10 @@ const LONG_TRANSITION = 10;
  *
  * @param store The runtime store of the game the change belongs to.
  * @param transition What was asked for.
- * @param incoming The scene already started and about to be held back.
- * @param outgoing The scene it replaces, which goes on running until the swap.
+ * @param incoming The scene already started and about to be held back, or `null` when one is only
+ * being stopped.
+ * @param outgoing The scene going away, which goes on running until the swap, or `null` when one is
+ * only being launched.
  *
  * @internal
  * @since 1.0.0
@@ -58,9 +63,68 @@ const LONG_TRANSITION = 10;
 export const startTransition = (
     store: TRuntimeStore,
     transition: TTransition,
-    incoming: TBox,
-    outgoing: TBox,
+    incoming: TBox | null,
+    outgoing: TBox | null,
 ): TTransitionState => {
+    const state = cover(store, transition, outgoing);
+    if (incoming !== null) {
+        bringIn(state, incoming);
+    }
+    return state;
+};
+
+/**
+ * Puts a transition in flight **before** the scene it brings in is built, and hands it that scene
+ * once it is.
+ *
+ * Building a scene runs its body and its `useReady`, and either may ask for a covered change of its
+ * own. Asked while this one is not in flight yet, that one would be taken, and then written over by
+ * this one: its scene held for ever, with nothing left to let it go. In flight first, this one is
+ * what that one finds, and that one is refused.
+ *
+ * A scene that fails to build takes the cover with it. One whose cover was dropped while it was
+ * being built (the scene going out stopped from in there) is simply shown: holding it would leave it
+ * held with nothing to let it go.
+ *
+ * @param store The runtime store of the game the change belongs to.
+ * @param transition What was asked for.
+ * @param outgoing The scene going away, or `null` when one is only being launched.
+ * @param build Starts the scene coming in and gives it back.
+ * @returns The scene built.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const startTransitionBuilding = (
+    store: TRuntimeStore,
+    transition: TTransition,
+    outgoing: TBox | null,
+    build: () => TBox,
+): TBox => {
+    const state = cover(store, transition, outgoing);
+    // Not loaded until it is here: nothing has asked for anything yet.
+    state.loaded = false;
+    let incoming: TBox;
+    try {
+        incoming = build();
+    } catch (error) {
+        if (store.get('transition').active === state) {
+            store.setState('transition', { active: null });
+        }
+        throw error;
+    }
+    if (store.get('transition').active === state) {
+        bringIn(state, incoming);
+    }
+    return incoming;
+};
+
+/**
+ * The transition in flight with nothing coming in yet: the effect, the clock, and the scene going
+ * out.
+ */
+const cover = (store: TRuntimeStore, transition: TTransition, outgoing: TBox | null): TTransitionState => {
     // Ten seconds of cover is no transition anyone meant: it is almost always a number written in
     // milliseconds, which is what transitions took before.
     if (transition.duration > LONG_TRANSITION) {
@@ -81,16 +145,25 @@ export const startTransition = (
         elapsed: 0,
         progress: 0,
         phase: 'cover',
-        incoming,
+        incoming: null,
         outgoing,
-        loaded: false,
+        // Nothing to wait for while nothing is coming in: the swap comes as soon as the screen is
+        // covered.
+        loaded: true,
         done: false,
     };
+    store.setState('transition', { active: state });
+    return state;
+};
 
+/**
+ * Hands a transition in flight the scene it brings in: held, and waited for.
+ */
+const bringIn = (state: TTransitionState, incoming: TBox): void => {
+    state.incoming = incoming;
     // Held from this moment: it exists, and its loading has already started, but it neither
     // updates, nor draws, nor answers the pointer until the swap.
     incoming.held = true;
-    store.setState('transition', { active: state });
 
     // Everything the scene's body asked for, which is the list `useLoader` counts. The body is
     // over, so nothing can be added to it: a held scene does not run, so it cannot ask for more.
@@ -104,6 +177,4 @@ export const startTransition = (
             void whenLoaded(asset).then(() => { state.loaded = settled(); });
         }
     }
-
-    return state;
 };

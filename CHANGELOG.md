@@ -7,6 +7,12 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **`useScene().launch` and `stop` take a transition**, as `change` does: `launch('PauseMenu', {
+  transition: iris(0.4) })` opens a menu on top behind an iris, and `stop('PauseMenu', { transition })`,
+  or `stop({ transition })` from the menu itself, closes it behind one. The scene launched waits
+  behind the cover until it has loaded, and the one stopped goes, cleanups and all, at the swap. The
+  scenes underneath keep running: pause them first to freeze the game behind a menu. One covered
+  change at a time, as before, and a transition WebGL2 cannot draw is a cut.
 - **Tweens are declared once and played as many times as needed, and put together.** A tween made
   while the scene is built is kept and played on every hit, every press, every level:
   `const hurt = tween({ ... }); useCollisionWith(Enemy, () => hurt.play());`.
@@ -133,6 +139,14 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **A covered scene change asked for while the scene of another is being built is refused.** A
+  `change` with a transition whose new scene asked for one of its own from its body or its
+  `useReady` had that one written over, leaving its scene held, never drawn or updated. The cover is
+  in flight before the scene is built now, so the second is refused with a warning, as it is later.
+- **A tile body standing a little inside a wall no longer goes through it when it walks away.**
+  Landing past the corner of a step could leave `useTileBody2d` up to half a pixel into the wall
+  beside it, and walking away slowly enough to still touch it (on ice, say) threw it out of the
+  wall's far side. Only a wall ahead of where it was stops it now.
 - **A scene saved with a model whose pieces share a name opens with each piece in its place.** A
   node drawn in two materials, two nodes the file left unnamed or two named alike all came back as
   copies of the first. A model's piece now says which of its name it is: its geometry source has
