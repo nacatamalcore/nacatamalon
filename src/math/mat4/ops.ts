@@ -17,6 +17,54 @@ export const invert = (m: Mat4, dst?: Mat4): Mat4 => mat4.inverse(m, dst) as Flo
 export const transpose = (m: Mat4, dst?: Mat4): Mat4 => mat4.transpose(m, dst) as Float32Array;
 
 /**
+ * What turns a surface's facing the way a placement turns the surface: the inverse of its turn and
+ * size, flipped, with no move.
+ *
+ * Not the placement itself with each axis brought back to length one. That is the same answer when
+ * the size is even, and the wrong one when it is not: a ball squashed flat has its sides lean the
+ * other way from how its surface did, and lit by the placement they face the light they should be
+ * turned away from.
+ *
+ * Worked out from the cofactors of the 3x3 rather than by inverting the 4x4, a few dozen
+ * multiplications, and scaled so an even size gives back exactly the turn: the length of what it
+ * gives is the length of what it was given, as before. A placement that flattens to nothing (a size
+ * of 0) has no inverse, and gets each axis brought back to length one instead.
+ *
+ * Only the top-left 3x3 is written; the rest of `dst` is the identity's.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const normalMatrix = (m: Mat4, dst?: Mat4): Mat4 => {
+    // Read before anything is written, so `dst` may be `m` itself.
+    const a = m[0], b = m[1], c = m[2];
+    const d = m[4], e = m[5], f = m[6];
+    const g = m[8], h = m[9], i = m[10];
+    const out = dst === undefined ? (mat4.identity() as Float32Array) : (mat4.identity(dst) as Float32Array);
+    // Each column of the cofactors is the cross of the other two columns: what a face between
+    // those two axes faces once they have been moved.
+    const x0 = e * i - f * h, y0 = f * g - d * i, z0 = d * h - e * g;
+    const x1 = h * c - i * b, y1 = i * a - g * c, z1 = g * b - h * a;
+    const x2 = b * f - c * e, y2 = c * d - a * f, z2 = a * e - b * d;
+    const det = a * x0 + b * y0 + c * z0;
+    if (det === 0 || !Number.isFinite(det)) {
+        const l0 = Math.hypot(a, b, c) || 1, l1 = Math.hypot(d, e, f) || 1, l2 = Math.hypot(g, h, i) || 1;
+        out[0] = a / l0; out[1] = b / l0; out[2] = c / l0;
+        out[4] = d / l1; out[5] = e / l1; out[6] = f / l1;
+        out[8] = g / l2; out[9] = h / l2; out[10] = i / l2;
+        return out;
+    }
+    // The cofactors are the inverse flipped, times the determinant. Divided by it, and times its
+    // cube root, an even size cancels out: a turned and scaled model gets its plain turn.
+    const k = Math.cbrt(Math.abs(det)) / det;
+    out[0] = x0 * k; out[1] = y0 * k; out[2] = z0 * k;
+    out[4] = x1 * k; out[5] = y1 * k; out[6] = z1 * k;
+    out[8] = x2 * k; out[9] = y2 * k; out[10] = z2 * k;
+    return out;
+};
+
+/**
  * Splits a column-major TRS matrix back into the three parts a `TransformRecord` stores.
  *
  * The engine composes transforms and never needs to take one apart: nothing inside it stores a

@@ -33,6 +33,7 @@ const operations: Array<{ name: string; run: (a: mat.Mat4, b: mat.Mat4, dst?: ma
     { name: 'multiply', run: (a, b, dst) => mat.multiply(a, b, dst) },
     { name: 'invert', run: (a, _b, dst) => mat.invert(a, dst) },
     { name: 'transpose', run: (a, _b, dst) => mat.transpose(a, dst) },
+    { name: 'normalMatrix', run: (a, _b, dst) => mat.normalMatrix(a, dst) },
     { name: 'translate', run: (a, _b, dst) => mat.translate(a, vec, dst) },
     { name: 'scale', run: (a, _b, dst) => mat.scale(a, vec, dst) },
     { name: 'rotateX', run: (a, _b, dst) => mat.rotateX(a, 0.7, dst) },

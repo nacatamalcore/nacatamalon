@@ -73,8 +73,9 @@ export const fillMeshUniforms = (out: Float32Array, at: number, mesh: TDrawMesh,
     mat.multiply(space.viewProjection, model, mvpScratch);
     out.set(mvpScratch, at);
     out.set(model, at + 16);
-    // Turning only, and taken from where it ended up: a model inside something that turned has to
-    // have its surfaces turn with it. Written straight into its place rather than built and copied.
+    // How its facings turn, taken from where it ended up: a model inside something that turned has
+    // to have its surfaces turn with it, and one stretched unevenly to have them lean the other way.
+    // Written straight into its place rather than built and copied.
     normalMatrixOf(model, normalScratch);
     out.set(normalScratch, at + 32);
     // Its fourth column is never read as a matrix (every shader turns a direction with it, w = 0),

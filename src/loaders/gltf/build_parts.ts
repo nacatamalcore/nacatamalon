@@ -2,6 +2,7 @@ import { computeDetail, GEOMETRY_STRIDE, SKIN_STRIDE } from '../../geometry';
 import { computeNormals, splitPerCorner, toFlatShaded } from './shading';
 import { readColors, readFloats, readIndices, readJoints } from './read_accessors';
 import { GLTF_MODE_TRIANGLES } from './types/t_gltf_doc';
+import * as mat from '../../math/mat4';
 import type { Mat4 } from '../../math/mat4';
 import type { TGltfDoc } from './types/t_gltf_doc';
 import { findMeshNodes } from './find_mesh_nodes';
@@ -53,12 +54,11 @@ const movePoint = (m: Mat4, x: number, y: number, z: number): [number, number, n
 ];
 
 /**
- * Turns a facing by a placement, and brings it back to length one.
+ * Turns a direction by a matrix, and brings it back to length one.
  *
- * The honest answer needs the placement inverted and flipped, which differs from this one only when
- * a piece was stretched more one way than another. Files do that rarely, and paying for an inverted
- * matrix per piece to be right about it is not the trade this engine makes. The limit is real and
- * is written down here so it is found when it bites.
+ * A direction along the surface (a tangent) is turned by the placement itself; a facing is turned by
+ * `mat.normalMatrix` of it, which tells the two apart when a piece was stretched more one way than
+ * another.
  */
 const moveDirection = (m: Mat4, x: number, y: number, z: number): [number, number, number] => {
     const nx = m[0] * x + m[4] * y + m[8] * z;
@@ -156,6 +156,7 @@ export const buildParts = (
                 && primitive.attributes.JOINTS_0 !== undefined
                 && primitive.attributes.WEIGHTS_0 !== undefined;
             const place = deformed ? null : node.world;
+            const facing = place === null ? null : mat.normalMatrix(place);
 
             const positions = readFloats(doc, buffers, primitive.attributes.POSITION);
             const count = positions.length / 3;
@@ -177,7 +178,8 @@ export const buildParts = (
                 : new Float32Array(count * 2);
 
             // The file's own tangents (the way across, and its hand) and second coordinates, when it
-            // has them. A tangent is a direction, so it is turned with the piece like a facing is.
+            // has them. A tangent lies along the surface, so it is turned by the piece's placement
+            // itself, where a facing is turned by the inverse of it.
             const tangents = primitive.attributes.TANGENT !== undefined && shading !== 'flat'
                 ? readFloats(doc, buffers, primitive.attributes.TANGENT)
                 : null;
@@ -198,9 +200,9 @@ export const buildParts = (
                 const [px, py, pz] = place === null
                     ? [positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]]
                     : movePoint(place, positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
-                const [nx, ny, nz] = place === null
+                const [nx, ny, nz] = facing === null
                     ? [normals[i * 3], normals[i * 3 + 1], normals[i * 3 + 2]]
-                    : moveDirection(place, normals[i * 3], normals[i * 3 + 1], normals[i * 3 + 2]);
+                    : moveDirection(facing, normals[i * 3], normals[i * 3 + 1], normals[i * 3 + 2]);
                 const base = i * GEOMETRY_STRIDE;
                 vertices[base] = px;
                 vertices[base + 1] = py;

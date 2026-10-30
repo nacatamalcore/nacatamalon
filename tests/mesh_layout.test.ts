@@ -95,14 +95,16 @@ describe('one model, sixty-four numbers', () => {
         expect(Array.from(out.subarray(16 + 12, 16 + 15))).toEqual([7, 8, 9]);
     });
 
-    it('keeps directions out of the projection, and out of the scale', () => {
+    it('keeps directions out of the projection, and undoes an uneven scale', () => {
         const out = new Float32Array(MESH_UNIFORM_FLOATS);
         fillMeshUniforms(out, 0, mesh({ transform: at({ x: 50, scaleX: 3 }) }), seenFrom(camera(), 400, 300));
 
-        // No move in it, because a direction has no place, and no scale, because a stretched
-        // direction reads as a surface facing somewhere it does not.
+        // No move in it, because a direction has no place. Stretched three times as wide, a facing
+        // leans three times less towards x: the inverse of the stretch, so it stays square to the
+        // surface it belongs to.
         expect(Array.from(out.subarray(32 + 12, 32 + 15))).toEqual([0, 0, 0]);
-        expect(out[32]).toBeCloseTo(1, 6);
+        expect(out[32] / out[37]).toBeCloseTo(1 / 3, 6);
+        expect(out[37]).toBeCloseTo(out[42], 6);
     });
 
     it('turns the directions with whatever turned the model', () => {
@@ -113,7 +115,8 @@ describe('one model, sixty-four numbers', () => {
 
         // Taken from where the model ended up, not from the angles it was written with: a model
         // inside something that turned would otherwise be lit as though it had never moved.
-        expect(Array.from(out.subarray(32, 44))).toEqual([0, 0, -1, 0, 0, 1, 0, 0, 1, 0, 0, 0]);
+        // `+ 0` so a zero worked out as -0 reads as the zero it is.
+        expect(Array.from(out.subarray(32, 44), (n) => n + 0)).toEqual([0, 0, -1, 0, 0, 1, 0, 0, 1, 0, 0, 0]);
     });
 });
 

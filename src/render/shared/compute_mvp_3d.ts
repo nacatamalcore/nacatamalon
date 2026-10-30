@@ -51,25 +51,14 @@ export const rotationMatrix = (transform: TTransform3d, dst?: Mat4): Mat4 => {
  * composed one: a model inside something that turned has to have its surfaces turn with it, or a
  * turned parent moves its child and lights it as though it had never moved.
  *
- * The move is dropped, because a direction has no place, and each of the three axes is brought back
- * to length one, which drops an even scale. An uneven one is not handled, and does not need to be in
- * a world of mostly even scaling: the proper answer costs an inverted matrix per model per frame.
+ * The move is dropped, because a direction has no place, and an uneven size is undone the other way
+ * round, so a model squashed or stretched is still lit along its surface: see `mat.normalMatrix`.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const normalMatrixOf = (model: Mat4, dst?: Mat4): Mat4 => {
-    const out = dst === undefined ? mat.create() : mat.identity(dst);
-    for (let column = 0; column < 3; column++) {
-        const at = column * 4;
-        const length = Math.hypot(model[at], model[at + 1], model[at + 2]) || 1;
-        out[at] = model[at] / length;
-        out[at + 1] = model[at + 1] / length;
-        out[at + 2] = model[at + 2] / length;
-    }
-    return out;
-};
+export const normalMatrixOf = (model: Mat4, dst?: Mat4): Mat4 => mat.normalMatrix(model, dst);
 
 /**
  * Where something is, as a matrix: move, then turn, then scale.
