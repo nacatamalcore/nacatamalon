@@ -1,13 +1,68 @@
 import { crc32 } from './crc32';
+import { deflate } from './deflate';
 import type { TPixels } from './types/t_pixels';
+
+/**
+ * Each row of the picture behind the filter that leaves it smallest, one byte naming the filter first.
+ *
+ * A filter writes each byte as its difference from a neighbour (the pixel to the left, the one
+ * above, both, or a guess from the three), which turns a smooth gradient or a flat area into runs of
+ * small and repeated numbers that compress far better than the colours themselves. Which one a row
+ * takes is the usual rule: the one whose bytes, read as signed, add up to least.
+ */
+const filtered = (pixels: TPixels): Uint8Array => {
+    const { width, height, data } = pixels;
+    const stride = width * 4;
+    const out = new Uint8Array((stride + 1) * height);
+    const trial = new Uint8Array(stride);
+    const best = new Uint8Array(stride);
+    for (let y = 0; y < height; y++) {
+        const row = y * stride;
+        const above = row - stride;
+        let bestFilter = 0;
+        let bestCost = Infinity;
+        for (let filter = 0; filter < 5; filter++) {
+            let cost = 0;
+            for (let x = 0; x < stride; x++) {
+                const value = data[row + x]!;
+                const left = x >= 4 ? data[row + x - 4]! : 0;
+                const up = y > 0 ? data[above + x]! : 0;
+                const corner = y > 0 && x >= 4 ? data[above + x - 4]! : 0;
+                let guess = 0;
+                if (filter === 1) guess = left;
+                else if (filter === 2) guess = up;
+                else if (filter === 3) guess = (left + up) >>> 1;
+                else if (filter === 4) {
+                    const p = left + up - corner;
+                    const pa = Math.abs(p - left);
+                    const pb = Math.abs(p - up);
+                    const pc = Math.abs(p - corner);
+                    guess = pa <= pb && pa <= pc ? left : pb <= pc ? up : corner;
+                }
+                const written = (value - guess) & 0xff;
+                trial[x] = written;
+                cost += written < 128 ? written : 256 - written;
+                if (cost >= bestCost) break;
+            }
+            if (cost < bestCost) {
+                bestCost = cost;
+                bestFilter = filter;
+                best.set(trial);
+            }
+        }
+        out[y * (stride + 1)] = bestFilter;
+        out.set(best, y * (stride + 1) + 1);
+    }
+    return out;
+};
 
 /**
  * Writes a picture as a PNG file, in plain JavaScript: no page, no canvas, no library. A build script
  * or a tool can paint with the `pixels` functions and save what it made, on any runtime.
  *
- * The file is **valid but not compressed**: the image data is stored as it is, which a PNG is allowed
- * to do. Every program reads it; it is only bigger than one an image editor would save, which for the
- * small pictures of pixel art rarely matters.
+ * The file is compressed, as an image editor would save it: each row behind the filter that suits it,
+ * and the whole squeezed with deflate. Nothing is lost by it: every pixel reads back exactly as it was
+ * written, which is what PNG is. Done at once, with nothing to wait for.
  *
  * @param pixels - The picture, from `createPixels`.
  * @returns The bytes of the file.
@@ -27,15 +82,9 @@ import type { TPixels } from './types/t_pixels';
  * @author Francisco Pereira Alvarado
  */
 export const encodePng = (pixels: TPixels): Uint8Array => {
-    const { width, height, data } = pixels;
-    const row = width * 4 + 1;
-    const raw = row * height;
-
-    // The image data as a zlib stream of stored blocks: a two-byte header, blocks of at most 65535
-    // bytes each with their length written twice (once inverted), and a checksum of the raw data.
-    const blocks = Math.max(1, Math.ceil(raw / 65535));
-    const zlibLength = 2 + blocks * 5 + raw + 4;
-    const length = 8 + (12 + 13) + (12 + zlibLength) + 12;
+    const { width, height } = pixels;
+    const compressed = deflate(filtered(pixels));
+    const length = 8 + (12 + 13) + (12 + compressed.length) + 12;
     const out = new Uint8Array(length);
     const view = new DataView(out.buffer);
     let at = 0;
@@ -62,27 +111,9 @@ export const encodePng = (pixels: TPixels): Uint8Array => {
         u32(height);
         bytes(8, 6, 0, 0, 0);
     });
-    chunk('IDAT', zlibLength, () => {
-        bytes(0x78, 0x01);
-        let a = 1;
-        let b = 0;
-        let written = 0;
-        let rowAt = 0;
-        for (let block = 0; block < blocks; block++) {
-            const size = Math.min(65535, raw - written);
-            bytes(block === blocks - 1 ? 1 : 0, size & 0xff, size >>> 8, ~size & 0xff, (~size >>> 8) & 0xff);
-            for (let i = 0; i < size; i++) {
-                // Each row of the image starts with a filter byte; `0` is "none".
-                const column = (written + i) % row;
-                const value = column === 0 ? 0 : data[rowAt + column - 1]!;
-                if (column === row - 1) rowAt += width * 4;
-                out[at++] = value;
-                a = (a + value) % 65521;
-                b = (b + a) % 65521;
-            }
-            written += size;
-        }
-        u32(((b << 16) | a) >>> 0);
+    chunk('IDAT', compressed.length, () => {
+        out.set(compressed, at);
+        at += compressed.length;
     });
     chunk('IEND', 0, () => {});
     return out;

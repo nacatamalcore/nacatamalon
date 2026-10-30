@@ -191,7 +191,7 @@ describe('encodePng', () => {
     };
 
     it('writes a PNG that any reader decodes back to the same pixels', () => {
-        // Tall enough for the image data to need more than one stored block.
+        // Big enough for the rows to take different filters and the data to repeat itself.
         const pixels = fillGradient(createPixels(130, 140), { from: RED, to: { r: 0, g: 0, b: 1, a: 0.5 }, bands: 6 });
         const png = encodePng(pixels);
 
@@ -205,9 +205,23 @@ describe('encodePng', () => {
         // zlib checks the stream's own checksum as it inflates.
         const raw = inflateSync(chunks[1]!.body);
         const row = 130 * 4;
+        // Each row behind one of the five filters, undone here by the book rather than by the
+        // engine's own reader.
+        const image = new Uint8Array(row * 140);
         for (let y = 0; y < 140; y++) {
-            expect(raw[y * (row + 1)]).toBe(0);
-            expect([...raw.subarray(y * (row + 1) + 1, (y + 1) * (row + 1))]).toEqual([...pixels.data.subarray(y * row, (y + 1) * row)]);
+            const filter = raw[y * (row + 1)]!;
+            expect(filter).toBeLessThan(5);
+            for (let x = 0; x < row; x++) {
+                const left = x >= 4 ? image[y * row + x - 4]! : 0;
+                const up = y > 0 ? image[(y - 1) * row + x]! : 0;
+                const corner = y > 0 && x >= 4 ? image[(y - 1) * row + x - 4]! : 0;
+                const p = left + up - corner;
+                const paeth = Math.abs(p - left) <= Math.abs(p - up) && Math.abs(p - left) <= Math.abs(p - corner) ? left
+                    : Math.abs(p - up) <= Math.abs(p - corner) ? up : corner;
+                const guess = [0, left, up, (left + up) >> 1, paeth][filter]!;
+                image[y * row + x] = (raw[y * (row + 1) + 1 + x]! + guess) & 0xff;
+            }
         }
+        expect(image).toEqual(pixels.data);
     });
 });
