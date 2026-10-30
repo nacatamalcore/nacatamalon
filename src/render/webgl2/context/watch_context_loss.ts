@@ -1,5 +1,6 @@
 import { createGpuResources } from '../create_gpu_resources';
 import { restoreTexture } from '../texture';
+import { restoreWebGL2Buffer } from '../resources';
 import type { TWebGL2State } from '../types/t_webgl2_state';
 
 /**
@@ -11,10 +12,10 @@ import type { TWebGL2State } from '../types/t_webgl2_state';
  * device), but this is where it happens most.
  *
  * - **Lost**: `preventDefault()` first, because without it the browser never offers the context
- *   back. Then the backend stops touching the GPU: frames draw nothing, and every texture forgets
- *   its GL object.
- * - **Restored**: everything is built again with the same function as the boot, and every texture
- *   is uploaded again from the image it kept. The game holds the same handles as before, so it never
+ *   back. Then the backend stops touching the GPU: frames draw nothing, and every texture and
+ *   buffer forgets its GL object.
+ * - **Restored**: everything is built again with the same function as the boot, every texture is
+ *   uploaded again from the image it kept, and every buffer from its bytes. The game holds the same handles as before, so it never
  *   learns anything happened.
  *
  * Returns the function that stops watching.
@@ -29,6 +30,9 @@ export const watchContextLoss = (canvas: HTMLCanvasElement, state: TWebGL2State)
         state.lost = true;
         for (const texture of state.textures) {
             texture.glTexture = null;
+        }
+        for (const buffer of state.buffers) {
+            buffer.glBuffer = null;
         }
     };
 
@@ -62,6 +66,11 @@ export const watchContextLoss = (canvas: HTMLCanvasElement, state: TWebGL2State)
         state.masks = null;
         for (const texture of state.textures) {
             texture.glTexture = restoreTexture(gl, texture);
+        }
+        // A model's corners, a map layer's, a shape's. The bindings that pointed at the old ones
+        // went with `meshes` above.
+        for (const buffer of state.buffers) {
+            buffer.glBuffer = restoreWebGL2Buffer(gl, buffer);
         }
         state.lost = false;
     };

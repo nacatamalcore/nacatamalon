@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { watchContextLoss } from '../src/render/webgl2/context/watch_context_loss';
 import type { TWebGL2State } from '../src/render/webgl2/types/t_webgl2_state';
+import { createWebGL2Buffer, updateWebGL2Buffer, type TWebGL2Buffer } from '../src/render/webgl2/resources';
 
 /**
  * What survives the browser taking the GPU away, and what must not pretend to.
@@ -34,6 +35,7 @@ const stateWithEverything = (): TWebGL2State => ({
     multisampled: new Map(),
     multisampledUsed: new Set(),
     textures: new Set(),
+    buffers: new Set(),
     lost: false,
     particles: nothing() as TWebGL2State['particles'],
     lines: nothing() as TWebGL2State['lines'],
@@ -42,6 +44,40 @@ const stateWithEverything = (): TWebGL2State => ({
     shadowPipeline: nothing() as TWebGL2State['shadowPipeline'],
     masks: nothing() as TWebGL2State['masks'],
 });
+
+/**
+ * A card that remembers what each of its buffers was last given. Anything else asked of it does
+ * nothing.
+ */
+const cardThatKeeps = () => {
+    const contents = new Map<WebGLBuffer, Uint8Array>();
+    let bound: WebGLBuffer | null = null;
+    const own = {
+        ARRAY_BUFFER: 1,
+        ELEMENT_ARRAY_BUFFER: 2,
+        UNIFORM_BUFFER: 3,
+        DYNAMIC_DRAW: 4,
+        createBuffer: () => ({}) as WebGLBuffer,
+        bindBuffer: (_target: number, buffer: WebGLBuffer | null) => {
+            bound = buffer;
+        },
+        // The boot's own buffers are given a size rather than bytes.
+        bufferData: (_target: number, bytes: Uint8Array | number) => {
+            contents.set(bound!, typeof bytes === 'number' ? new Uint8Array(bytes) : bytes.slice());
+        },
+        bufferSubData: (_target: number, offset: number, data: Float32Array) => {
+            contents.get(bound!)!.set(new Uint8Array(data.buffer, data.byteOffset, data.byteLength), offset);
+        },
+    };
+    const gl = new Proxy(own, { get: (target, key) => (key in target ? target[key as keyof typeof own] : nothing()) }) as unknown as WebGL2RenderingContext;
+    return {
+        gl,
+        // What the old context had goes with it.
+        forget: () => contents.clear(),
+        holds: (numbers: number[]) => [...contents.values()].some((bytes) => bytes.byteLength === numbers.length * 4 && [...new Float32Array(bytes.slice().buffer)].every((n, i) => n === numbers[i])),
+        contentsOf: (buffer: TWebGL2Buffer) => [...new Float32Array(contents.get(buffer.glBuffer!)!.slice().buffer)],
+    };
+};
 
 describe('coming back from a lost context', () => {
     it('drops everything that was built on demand, so the next frame builds it against the new context', () => {
@@ -84,5 +120,61 @@ describe('coming back from a lost context', () => {
 
         expect(state.lost).toBe(true);
         expect((texture as { glTexture: unknown }).glTexture).toBeNull();
+    });
+
+    it('gives back the corners of every model, map layer and shape, as last written', () => {
+        const card = cardThatKeeps();
+        const canvas = new EventTarget() as HTMLCanvasElement;
+        const state = { ...stateWithEverything(), gl: card.gl };
+        watchContextLoss(canvas, state);
+        // A shape hands over a view of corners it keeps rewriting: the buffer must not follow it.
+        const corners = new Float32Array([1, 2, 3, 4, 9, 9]);
+        const buffer = createWebGL2Buffer(card.gl, false, corners.subarray(0, 4), 'vertex');
+        state.buffers.add(buffer);
+        corners.set([7, 7, 7, 7]);
+        updateWebGL2Buffer(card.gl, false, buffer, new Float32Array([5, 6]));
+
+        canvas.dispatchEvent(new Event('webglcontextlost'));
+        expect(buffer.glBuffer).toBeNull();
+        canvas.dispatchEvent(new Event('webglcontextrestored'));
+
+        expect(buffer.glBuffer).not.toBeNull();
+        expect(card.contentsOf(buffer)).toEqual([5, 6, 3, 4]);
+    });
+
+    it('keeps what is made or written while lost, and uploads it with the restore', () => {
+        const card = cardThatKeeps();
+        const canvas = new EventTarget() as HTMLCanvasElement;
+        const state = { ...stateWithEverything(), gl: card.gl };
+        watchContextLoss(canvas, state);
+        const before = createWebGL2Buffer(card.gl, false, new Float32Array([1, 2]), 'vertex');
+        state.buffers.add(before);
+
+        canvas.dispatchEvent(new Event('webglcontextlost'));
+        // A tile changed while there was no card, and a new layer was made.
+        updateWebGL2Buffer(card.gl, true, before, new Float32Array([8]));
+        const during = createWebGL2Buffer(card.gl, true, new Float32Array([3, 4]), 'vertex');
+        state.buffers.add(during);
+        expect(during.glBuffer).toBeNull();
+        canvas.dispatchEvent(new Event('webglcontextrestored'));
+
+        expect(card.contentsOf(before)).toEqual([8, 2]);
+        expect(card.contentsOf(during)).toEqual([3, 4]);
+    });
+
+    it('does not bring back a buffer let go of', () => {
+        const card = cardThatKeeps();
+        const canvas = new EventTarget() as HTMLCanvasElement;
+        const state = { ...stateWithEverything(), gl: card.gl };
+        watchContextLoss(canvas, state);
+        const buffer = createWebGL2Buffer(card.gl, false, new Float32Array([1, 2, 3]), 'vertex');
+        state.buffers.add(buffer);
+        state.buffers.delete(buffer);
+
+        canvas.dispatchEvent(new Event('webglcontextlost'));
+        card.forget();
+        canvas.dispatchEvent(new Event('webglcontextrestored'));
+
+        expect(card.holds([1, 2, 3])).toBe(false);
     });
 });

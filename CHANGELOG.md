@@ -101,6 +101,12 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **Models, map layers and shapes come back after WebGL2 loses its context.** The browser can take
+  the card away (a phone sending the tab to the background, a driver reset), and on its return
+  sprites, text, pictures, particles and effects were drawn again, but every model and map layer
+  was gone and `createPolygon` shapes left stray lines: their corners lived only on the old card.
+  Each buffer now keeps a copy of its bytes on this side and is uploaded again with the restore,
+  including one made or rewritten while the card was away. Only WebGL2 keeps that copy.
 - **A game in a window of its own follows that window's size, and its sound comes back there.**
   Tried in Chrome with a real popped-out window: the container was watched by an observer from the
   window the engine was loaded in, which is never told about a container in another, so the game

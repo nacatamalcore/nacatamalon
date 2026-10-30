@@ -5,7 +5,7 @@ import { createGpuResources } from './create_gpu_resources';
 import { renderFrame } from './frame';
 import { FRAME_UNIFORM_FLOATS } from './frame/write_frame_uniforms';
 import { uploadTexture, type TWebGL2Texture } from './texture';
-import { createWebGL2Buffer, createWebGL2DataTexture, createWebGL2RenderTexture, destroyWebGL2Texture, readWebGL2Texture, toGlBuffer, updateWebGL2Buffer, updateWebGL2DataTexture } from './resources';
+import { createWebGL2Buffer, createWebGL2DataTexture, createWebGL2RenderTexture, destroyWebGL2Texture, readWebGL2Texture, toGlBuffer, updateWebGL2Buffer, updateWebGL2DataTexture, type TWebGL2Buffer } from './resources';
 import type { TWebGL2State } from './types/t_webgl2_state';
 import { createContext } from './utils';
 
@@ -60,6 +60,7 @@ export const createWebGL2Renderer = async (
         multisampled: new Map(),
         multisampledUsed: new Set(),
         textures: new Set(),
+        buffers: new Set(),
         lost: gl.isContextLost(),
     };
     const unwatchContext = watchContextLoss(canvas, state);
@@ -83,9 +84,15 @@ export const createWebGL2Renderer = async (
             state.textures.add(texture);
             return texture;
         },
-        createBuffer: (data, usage) => createWebGL2Buffer(gl, data, usage),
-        updateBuffer: (buffer, data) => updateWebGL2Buffer(gl, buffer, data),
+        createBuffer: (data, usage) => {
+            // Kept like a texture: what a restore uploads again.
+            const buffer = createWebGL2Buffer(gl, state.lost, data, usage);
+            state.buffers.add(buffer);
+            return buffer;
+        },
+        updateBuffer: (buffer, data) => updateWebGL2Buffer(gl, state.lost, buffer, data),
         destroyBuffer: (buffer) => {
+            state.buffers.delete(buffer as TWebGL2Buffer);
             // A shape's bindings are kept by its corners' buffer, and go with it: a shape that grows
             // past its room, or goes with its object, would otherwise leave them on the card.
             for (const held of [state.meshes.vertexArrays, state.meshes.skinnedVertexArrays]) {
@@ -129,6 +136,7 @@ export const createWebGL2Renderer = async (
                 }
             }
             state.textures.clear();
+            state.buffers.clear();
             state.lost = true;
             gl.getExtension('WEBGL_lose_context')?.loseContext();
         },

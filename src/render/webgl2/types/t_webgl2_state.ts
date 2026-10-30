@@ -4,6 +4,7 @@ import type { TSpritePipeline } from '../sprite/types/t_sprite_pipeline';
 import type { TTilemapPipeline } from '../tilemap/types/t_tilemap_pipeline';
 import type { TMeshPipeline } from '../mesh/types/t_mesh_pipeline';
 import type { TWebGL2Texture } from '../texture';
+import type { TWebGL2Buffer } from '../resources';
 import type { TPostPipelines } from '../post/post_pipeline';
 import type { TParticlesPipeline } from '../particles/create_particles_pipeline';
 import type { TLinesPipeline } from '../lines/create_lines_pipeline';
@@ -15,8 +16,8 @@ import type { TMaskPrograms } from '../mask/mask_programs';
  * Everything the WebGL2 backend holds between frames.
  *
  * The GL objects (`frameUniforms.buffer`, `sprites`) die with the context and are built again on a
- * restore. `textures` is what survives it: every handle given to the game, with its image, so each
- * one can be uploaded again.
+ * restore. `textures` and `buffers` are what survives it: every handle given to the game, with its
+ * image or its bytes, so each one can be uploaded again.
  *
  * @internal
  */
@@ -80,6 +81,11 @@ export type TWebGL2State = {
      * Every texture this backend handed out, kept so a restore can upload them again.
      */
     textures: Set<TWebGL2Texture>;
+    /**
+     * Every buffer this backend handed out (a model's corners, a map layer's, a shape's), with a copy
+     * of its bytes, kept so a restore can upload them again.
+     */
+    buffers: Set<TWebGL2Buffer>;
     /**
      * True between `webglcontextlost` and `webglcontextrestored`: nothing on the GPU can be touched.
      */
