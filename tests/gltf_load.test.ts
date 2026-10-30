@@ -300,6 +300,57 @@ describe('pictures', () => {
     });
 });
 
+describe('a picture kept inside a model file, the same in more than one', () => {
+    /**
+     * Several binary models loaded into one game, each from the materials given.
+     */
+    const loadAll = async (files: Record<string, Array<{ embeddedImage: string }>>) => {
+        const served = serveGltf(Object.fromEntries(Object.entries(files).map(([name, materials]) => [name, asGlb({
+            nodes: materials.map((_, i) => ({ name: `Part${i}`, primitives: [{ ...TEST_QUAD, material: i }] })),
+            materials,
+        })])));
+        try {
+            const { store } = createTestGame();
+            const models: TGltfModel[] = [];
+            startTestScene(store, 'Shop', () => {
+                for (const name of Object.keys(files)) models.push(useLoadGltf({ src: name }));
+                return createScene();
+            });
+            for (const model of models) await whenLoaded(model);
+            // Every record once, whichever names it is kept under.
+            const pictures = new Set(store.get('assets').textures.values());
+            return { models, pictures };
+        } finally {
+            served.restore();
+        }
+    };
+
+    it('goes up once when two files carry it', async () => {
+        const { models, pictures } = await loadAll({ 'crate.glb': [{ embeddedImage: 'sheet' }], 'barrel.glb': [{ embeddedImage: 'sheet' }] });
+
+        expect(models.map((model) => model.status)).toEqual(['ready', 'ready']);
+        expect(models[0]!.parts[0]!.texture).toBe(models[1]!.parts[0]!.texture);
+        expect(models[0]!.parts[0]!.texture?.status).toBe('ready');
+        expect(pictures.size).toBe(1);
+        // Named after the first model that brought it, which is what a message about it can say.
+        expect(models[0]!.parts[0]!.texture?.key).toMatch(/#image:/);
+    });
+
+    it('goes up once when one file carries it twice', async () => {
+        const { models, pictures } = await loadAll({ 'shelf.glb': [{ embeddedImage: 'sheet' }, { embeddedImage: 'sheet' }] });
+
+        expect(models[0]!.parts[0]!.texture).toBe(models[0]!.parts[1]!.texture);
+        expect(pictures.size).toBe(1);
+    });
+
+    it('goes up twice when the pictures differ, even by one byte', async () => {
+        const { models, pictures } = await loadAll({ 'crate.glb': [{ embeddedImage: 'sheet-a' }], 'barrel.glb': [{ embeddedImage: 'sheet-b' }] });
+
+        expect(models[0]!.parts[0]!.texture).not.toBe(models[1]!.parts[0]!.texture);
+        expect(pictures.size).toBe(2);
+    });
+});
+
 /**
  * Catches the warnings a loader writes, so a test can read them instead of the console.
  */

@@ -20,6 +20,7 @@ import type { TRuntimeStore } from '../../store';
 import type { TShading } from './shading';
 import type { TTexture } from '../texture/types/t_texture';
 import { findAssetFile } from '../asset_key';
+import { crc32 } from '../../pixels/crc32';
 
 /** No light of its own. */
 const NO_GLOW = { r: 0, g: 0, b: 0, a: 1 };
@@ -65,6 +66,21 @@ const readBuffers = async (doc: TGltfDoc, src: string, embedded: ArrayBuffer | n
     }));
 
 /**
+ * A name for a picture kept inside a model file, from what it holds rather than where it sits: its
+ * length and two checksums of different kinds, which two different pictures do not share. Two files
+ * carrying the same picture (props exported with one colour sheet) find each other by it.
+ */
+const contentKeyOf = (bytes: Uint8Array): string => {
+    // FNV-1a, a checksum of another kind than the CRC beside it.
+    let fnv = 0x811c9dc5;
+    for (let i = 0; i < bytes.length; i++) {
+        fnv ^= bytes[i]!;
+        fnv = Math.imul(fnv, 0x01000193);
+    }
+    return `gltf-image:${bytes.length}:${crc32(bytes, 0, bytes.length).toString(16)}:${(fnv >>> 0).toString(16)}`;
+};
+
+/**
  * A picture a piece wears, its colour or its glow, shared through the game's own store of them.
  *
  * A model and a sprite showing the same file end up on one upload, and so do two pieces of one
@@ -85,23 +101,34 @@ const surfaceTexture = async (
     }
 
     if (image.bufferView !== undefined) {
-        // Kept inside the model. Its name is the model's plus where in the file it sits, because it
-        // has no name of its own and two models must not collide over it.
-        const key = `${model.key}#image:${image.bufferView}`;
-        const cached = textures.get(key);
+        // Kept inside the model. Found again by what it holds, so the same picture in two files, or
+        // twice in one, goes up to the card once. Named after the model and where in the file it
+        // sits, which is what a message about it can usefully say.
+        const bytes = readBufferView(doc, buffers, image.bufferView);
+        const content = contentKeyOf(new Uint8Array(bytes));
+        const cached = textures.get(content);
         if (cached !== undefined) {
+            // In the store is not the same as arrived: another model may still be sending it up.
+            await whenLoaded(cached);
             return cached;
         }
 
+        const key = `${model.key}#image:${image.bufferView}`;
         const texture = newTexture(key, key);
         textures.set(key, texture);
-        try {
-            await uploadTexture(store, texture, new Blob([readBufferView(doc, buffers, image.bufferView)], { type: image.type }));
-        } catch (error) {
-            texture.status = 'error';
-            bumpVersion(texture);
-            console.warn(`[NacatamalOn] useLoadGltf: a picture inside '${model.src}' could not be read. That piece draws as its tint.`, error);
-        }
+        textures.set(content, texture);
+        const sending = (async () => {
+            try {
+                await uploadTexture(store, texture, new Blob([bytes], { type: image.type }));
+            } catch (error) {
+                texture.status = 'error';
+                bumpVersion(texture);
+                console.warn(`[NacatamalOn] useLoadGltf: a picture inside '${model.src}' could not be read. That piece draws as its tint.`, error);
+            }
+        })();
+        // Tracked, so the wait above has something to wait on when the next model asks for it.
+        trackLoad(texture, sending);
+        await sending;
         return texture;
     }
 

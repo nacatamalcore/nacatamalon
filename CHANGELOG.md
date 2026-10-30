@@ -144,6 +144,9 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **A picture kept inside a model file goes up to the card once however many files carry it.** It
+  was named after the model and where in the file it sat, so two `.glb` files exported with the same
+  colour sheet, or one carrying it twice, sent it up twice. It is found by what it holds now.
 - **A glTF animation with curved keys (`CUBICSPLINE`) moves along its curve.** It was walked evenly
   from key to key, with a warning; now each key's slopes shape the way it leaves and arrives, as the
   format defines, rotations included.
