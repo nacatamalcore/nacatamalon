@@ -10,6 +10,7 @@ import { useCubeGeometry } from '../src/hooks/geometry/use_cube_geometry';
 import { newTexture, uploadTexture } from '../src/loaders';
 import { newAudio } from '../src/loaders/audio/new_audio';
 import { newPalette } from '../src/loaders/palette/new_palette';
+import { newParticlesFile } from '../src/loaders/particles/new_particles_file';
 import { createGameHandle } from '../src/game/handle';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import type { TLoadStatus, TTexture } from '../src/loaders';
@@ -205,5 +206,24 @@ describe('releaseAsset', () => {
         expect(store.get('assets').textures.has('floor')).toBe(true);
         expect(sound.status).toBe('ready');
         expect(() => game.releaseAsset(shape)).toThrow('was made with createGeometry');
+    });
+
+    it('takes a picture a particle file and its child both wear, when the file goes', () => {
+        const { store } = createTestGame();
+        const spark = loaded(store, 'spark');
+        const parent = newParticlesFile('/fx/burst.particles', 'burst');
+        const child = newParticlesFile('/fx/trail.particles', 'trail');
+        for (const file of [parent, child]) {
+            file.texture = spark;
+            file.status = 'ready';
+            store.get('assets').particles.set(file.key, file);
+        }
+        parent.children = [child];
+
+        createGameHandle(store).releaseAsset(parent);
+
+        expect([parent.status, child.status]).toEqual(['released', 'released']);
+        expect(spark.status).toBe('released');
+        expect(spark.gpu).toBeNull();
     });
 });

@@ -146,7 +146,13 @@ releases are in [changelog/](./changelog/), one file each.
 
 - **A picture kept inside a model file goes up to the card once however many files carry it.** It
   was named after the model and where in the file it sat, so two `.glb` files exported with the same
-  colour sheet, or one carrying it twice, sent it up twice. It is found by what it holds now.
+  colour sheet, or one carrying it twice, sent it up twice. It is found by what it holds now (the
+  same bytes, not the same pixels saved differently).
+- **Letting go of a model, an atlas, a font or a particle file keeps a picture another one still
+  wears**, a model still loading that has already found it included. `releaseAsset` took it off the
+  card for all of them, so the model left showed nothing; the last one to go takes it now, and a
+  particle file that shares one with its child lets go of it with the child. Letting go of the
+  picture itself, by its own key, still takes it.
 - **A glTF animation with curved keys (`CUBICSPLINE`) moves along its curve.** It was walked evenly
   from key to key, with a warning; now each key's slopes shape the way it leaves and arrives, as the
   format defines, rotations included.

@@ -21,6 +21,7 @@ import type { TShading } from './shading';
 import type { TTexture } from '../texture/types/t_texture';
 import { findAssetFile } from '../asset_key';
 import { crc32 } from '../../pixels/crc32';
+import { wearPicture } from '../worn_pictures';
 
 /** No light of its own. */
 const NO_GLOW = { r: 0, g: 0, b: 0, a: 1 };
@@ -69,6 +70,9 @@ const readBuffers = async (doc: TGltfDoc, src: string, embedded: ArrayBuffer | n
  * A name for a picture kept inside a model file, from what it holds rather than where it sits: its
  * length and two checksums of different kinds, which two different pictures do not share. Two files
  * carrying the same picture (props exported with one colour sheet) find each other by it.
+ *
+ * The same bytes, not the same picture: two files that saved the same pixels compressed differently
+ * are two pictures here. Telling those apart would mean unpacking every picture to compare it.
  */
 const contentKeyOf = (bytes: Uint8Array): string => {
     // FNV-1a, a checksum of another kind than the CRC beside it.
@@ -86,6 +90,9 @@ const contentKeyOf = (bytes: Uint8Array): string => {
  * A model and a sprite showing the same file end up on one upload, and so do two pieces of one
  * model sharing a sheet, which is the ordinary case: an exported prop usually paints every part of
  * itself from one image.
+ *
+ * `seen` is the pictures inside this file already found while it is read, by where they sit, so a
+ * sheet every piece wears is copied out and checked once rather than once a piece.
  */
 const surfaceTexture = async (
     store: TRuntimeStore,
@@ -93,45 +100,81 @@ const surfaceTexture = async (
     doc: TGltfDoc,
     buffers: ArrayBuffer[],
     image: TGltfImage | null,
+    seen: Map<number, Promise<TTexture>>,
 ): Promise<TTexture | null> => {
-    const { textures } = store.get('assets');
-
     if (image === null) {
         return null;
     }
 
     if (image.bufferView !== undefined) {
-        // Kept inside the model. Found again by what it holds, so the same picture in two files, or
-        // twice in one, goes up to the card once. Named after the model and where in the file it
-        // sits, which is what a message about it can usefully say.
-        const bytes = readBufferView(doc, buffers, image.bufferView);
-        const content = contentKeyOf(new Uint8Array(bytes));
-        const cached = textures.get(content);
-        if (cached !== undefined) {
-            // In the store is not the same as arrived: another model may still be sending it up.
-            await whenLoaded(cached);
-            return cached;
+        let found = seen.get(image.bufferView);
+        if (found === undefined) {
+            found = keptPicture(store, model, doc, buffers, image as TGltfImage & { bufferView: number });
+            seen.set(image.bufferView, found);
         }
-
-        const key = `${model.key}#image:${image.bufferView}`;
-        const texture = newTexture(key, key);
-        textures.set(key, texture);
-        textures.set(content, texture);
-        const sending = (async () => {
-            try {
-                await uploadTexture(store, texture, new Blob([bytes], { type: image.type }));
-            } catch (error) {
-                texture.status = 'error';
-                bumpVersion(texture);
-                console.warn(`[NacatamalOn] useLoadGltf: a picture inside '${model.src}' could not be read. That piece draws as its tint.`, error);
-            }
-        })();
-        // Tracked, so the wait above has something to wait on when the next model asks for it.
-        trackLoad(texture, sending);
-        await sending;
-        return texture;
+        return found;
     }
 
+    return filePicture(store, model, image);
+};
+
+/**
+ * Notes, as soon as it is found, that `model` wears `texture`: before its pieces are out, so letting
+ * go of another model that shares it leaves it for this one.
+ */
+const worn = (model: TGltfModel, texture: TTexture): TTexture => {
+    wearPicture(texture, model);
+    return texture;
+};
+
+/**
+ * A picture kept inside the model file, the first time this file is read asking for it.
+ */
+const keptPicture = async (
+    store: TRuntimeStore,
+    model: TGltfModel,
+    doc: TGltfDoc,
+    buffers: ArrayBuffer[],
+    image: TGltfImage & { bufferView: number },
+): Promise<TTexture> => {
+    const { textures } = store.get('assets');
+    // Found again by what it holds, so the same picture in two files, or twice in one, goes up to
+    // the card once. Named after the model and where in the file it sits, which is what a message
+    // about it can usefully say.
+    const bytes = readBufferView(doc, buffers, image.bufferView);
+    const content = contentKeyOf(new Uint8Array(bytes));
+    const cached = textures.get(content);
+    if (cached !== undefined) {
+        worn(model, cached);
+        // In the store is not the same as arrived: another model may still be sending it up.
+        await whenLoaded(cached);
+        return cached;
+    }
+
+    const key = `${model.key}#image:${image.bufferView}`;
+    const texture = worn(model, newTexture(key, key));
+    textures.set(key, texture);
+    textures.set(content, texture);
+    const sending = (async () => {
+        try {
+            await uploadTexture(store, texture, new Blob([bytes], { type: image.type }));
+        } catch (error) {
+            texture.status = 'error';
+            bumpVersion(texture);
+            console.warn(`[NacatamalOn] useLoadGltf: a picture inside '${model.src}' could not be read. That piece draws as its tint.`, error);
+        }
+    })();
+    // Tracked, so the wait above has something to wait on when the next model asks for it.
+    trackLoad(texture, sending);
+    await sending;
+    return texture;
+};
+
+/**
+ * A picture the model file points at, shared with anything else that showed the same file.
+ */
+const filePicture = async (store: TRuntimeStore, model: TGltfModel, image: TGltfImage): Promise<TTexture | null> => {
+    const { textures } = store.get('assets');
     if (image.uri === null) {
         return null;
     }
@@ -139,6 +182,7 @@ const surfaceTexture = async (
     const src = isDataUri(image.uri) ? image.uri : resolveAssetPath(model.src, image.uri);
     const cached = findAssetFile(textures, src);
     if (cached !== undefined) {
+        worn(model, cached);
         // In the store is not the same as arrived: another piece may have asked for it a moment ago
         // and still be waiting. Waiting here is what keeps the model from calling itself ready
         // while one of its pictures is still on the way.
@@ -146,7 +190,7 @@ const surfaceTexture = async (
         return cached;
     }
 
-    const texture = newTexture(src, src);
+    const texture = worn(model, newTexture(src, src));
     textures.set(src, texture);
     // Tracked, so the wait above has something to wait on when the next piece asks for it.
     const loading = loadTexture(store, texture);
@@ -200,11 +244,12 @@ export const loadGltf = async (store: TRuntimeStore, model: TGltfModel, options:
         }
 
         const parts: TGltfPart[] = [];
+        const seen = new Map<number, Promise<TTexture>>();
         for (let i = 0; i < built.length; i++) {
             const piece = built[i];
             const surface = readMaterial(doc, piece.materialIndex);
-            const texture = options.textures ? await surfaceTexture(store, model, doc, buffers, surface.image) : null;
-            const emissiveTexture = options.textures ? await surfaceTexture(store, model, doc, buffers, surface.emissiveImage) : null;
+            const texture = options.textures ? await surfaceTexture(store, model, doc, buffers, surface.image, seen) : null;
+            const emissiveTexture = options.textures ? await surfaceTexture(store, model, doc, buffers, surface.emissiveImage, seen) : null;
             if (store.get('loop').destroyed) {
                 return;
             }

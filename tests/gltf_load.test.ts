@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, mock } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
 import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
-import { whenLoaded } from '../src/loaders';
+import { releaseAsset, whenLoaded } from '../src/loaders';
+import { wearersOf } from '../src/loaders/worn_pictures';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { asGlb, asGltf, serveGltf, TEST_QUAD } from './helpers/test_gltf';
 import type { TGltfModel } from '../src/loaders';
@@ -341,6 +342,116 @@ describe('a picture kept inside a model file, the same in more than one', () => 
 
         expect(models[0]!.parts[0]!.texture).toBe(models[0]!.parts[1]!.texture);
         expect(pictures.size).toBe(1);
+    });
+
+    it('stays for the model still wearing it when the other is let go of', async () => {
+        const served = serveGltf({
+            'crate.glb': asGlb({ nodes: [{ name: 'Crate', primitives: [{ ...TEST_QUAD, material: 0 }] }], materials: [{ embeddedImage: 'sheet' }] }),
+            'barrel.glb': asGlb({ nodes: [{ name: 'Barrel', primitives: [{ ...TEST_QUAD, material: 0 }] }], materials: [{ embeddedImage: 'sheet' }] }),
+        });
+        try {
+            const { store } = createTestGame();
+            let crate!: TGltfModel;
+            let barrel!: TGltfModel;
+            startTestScene(store, 'Shop', () => {
+                crate = useLoadGltf({ src: 'crate.glb' });
+                barrel = useLoadGltf({ src: 'barrel.glb' });
+                return createScene();
+            });
+            await whenLoaded(crate);
+            await whenLoaded(barrel);
+            const sheet = barrel.parts[0]!.texture!;
+
+            expect(releaseAsset(store, crate)).toBe(true);
+            expect(crate.status).toBe('released');
+            expect(sheet.status).toBe('ready');
+            expect(sheet.gpu).not.toBeNull();
+
+            // And goes with the last one wearing it.
+            releaseAsset(store, barrel);
+            expect(sheet.status).toBe('released');
+            expect(sheet.gpu).toBeNull();
+        } finally {
+            served.restore();
+        }
+    });
+
+    it('stays for a model still loading that has already found it', async () => {
+        // The barrel finds the shared sheet, then waits for a picture of its own beside it: its parts
+        // are not out yet when the crate is let go of.
+        const served = serveGltf({
+            'crate.glb': asGlb({ nodes: [{ name: 'Crate', primitives: [{ ...TEST_QUAD, material: 0 }] }], materials: [{ embeddedImage: 'sheet' }] }),
+            'barrel.glb': asGlb({
+                nodes: [{ name: 'Lid', primitives: [{ ...TEST_QUAD, material: 0 }] }, { name: 'Body', primitives: [{ ...TEST_QUAD, material: 1 }] }],
+                materials: [{ embeddedImage: 'sheet' }, { image: 'slow.png' }],
+            }),
+            'slow.png': 'png',
+        });
+        const answered = globalThis.fetch;
+        let letThrough!: () => void;
+        const gate = new Promise<void>((resolve) => { letThrough = resolve; });
+        globalThis.fetch = (async (input: string) => {
+            if (String(input).includes('slow.png')) await gate;
+            return answered(input);
+        }) as typeof fetch;
+        try {
+            const { store } = createTestGame();
+            let crate!: TGltfModel;
+            let barrel!: TGltfModel;
+            startTestScene(store, 'Shop', () => {
+                crate = useLoadGltf({ src: 'crate.glb' });
+                barrel = useLoadGltf({ src: 'barrel.glb' });
+                return createScene();
+            });
+            await whenLoaded(crate);
+            for (let i = 0; i < 20; i++) await new Promise((resolve) => setTimeout(resolve, 0));
+            expect(barrel.status).toBe('loading');
+
+            releaseAsset(store, crate);
+            letThrough();
+            await whenLoaded(barrel);
+
+            expect(barrel.status).toBe('ready');
+            expect(barrel.parts[0]!.texture?.status).toBe('ready');
+            expect(barrel.parts[0]!.texture?.gpu).not.toBeNull();
+        } finally {
+            globalThis.fetch = answered;
+            served.restore();
+        }
+    });
+
+    it('forgets a model that wore it once it is let go of, however often that happens', async () => {
+        const served = serveGltf({
+            'crate.glb': asGlb({ nodes: [{ name: 'Crate', primitives: [{ ...TEST_QUAD, material: 0 }] }], materials: [{ embeddedImage: 'sheet' }] }),
+            'barrel.glb': asGlb({ nodes: [{ name: 'Barrel', primitives: [{ ...TEST_QUAD, material: 0 }] }], materials: [{ embeddedImage: 'sheet' }] }),
+        });
+        try {
+            const { store } = createTestGame();
+            let crate!: TGltfModel;
+            startTestScene(store, 'Shop', () => {
+                crate = useLoadGltf({ src: 'crate.glb' });
+                return createScene();
+            });
+            await whenLoaded(crate);
+            const sheet = crate.parts[0]!.texture!;
+
+            // A barrel brought in and let go of, again and again, while the crate keeps the sheet.
+            for (let round = 0; round < 5; round++) {
+                let barrel!: TGltfModel;
+                startTestScene(store, `Aisle${round}`, () => {
+                    barrel = useLoadGltf({ src: 'barrel.glb' });
+                    return createScene();
+                });
+                await whenLoaded(barrel);
+                expect(barrel.parts[0]!.texture).toBe(sheet);
+                releaseAsset(store, barrel);
+            }
+
+            expect(sheet.status).toBe('ready');
+            expect(wearersOf(sheet)).toEqual([crate]);
+        } finally {
+            served.restore();
+        }
     });
 
     it('goes up twice when the pictures differ, even by one byte', async () => {
