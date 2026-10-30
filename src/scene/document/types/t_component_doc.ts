@@ -1100,7 +1100,8 @@ export type TParticleCollider3dComponent = {
  * way it asks for a loaded image. It is made before any object in the scene, so a model that comes
  * earlier in the file than the screen it shows still finds it.
  *
- * `sees` is written only when it is `'scene'`, the way every field at its default is left out.
+ * `sees` is written only when it is `'3d'`, the way every field at its default is left out. A
+ * document saved when that was called `"scene"` is read as `'3d'`, and saving it writes the new name.
  *
  * @category Scenes
  * @since 1.0.0
@@ -1113,5 +1114,5 @@ export type TSpriteTextureComponent = {
     width: number;
     height: number;
     background: TColor;
-    sees?: 'scene';
+    sees?: '3d';
 };

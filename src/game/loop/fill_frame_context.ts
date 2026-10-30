@@ -710,7 +710,7 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
     }
 
     const lists = newLists();
-    if (picture.sees === 'scene' && seen.models.length > 0) {
+    if (picture.sees === '3d' && seen.models.length > 0) {
         const view = lists.views3d.length;
         const lighting = seen.lighting ?? collectLighting(rootOf(box));
         // The world's fog, unless the picture asked for one of its own: it is looking at that world.
@@ -746,7 +746,7 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
     pass.renderTarget = picture.texture.gpu;
     pass.postProcess = false;
     finishPass(pass, lists, { width: picture.texture.width, height: picture.texture.height, pixelRatio: 1 });
-    (picture.sees === 'scene' ? watching : inside).push(pass);
+    (picture.sees === '3d' ? watching : inside).push(pass);
 
     for (const inner of found) {
         gatherPicture(inner, own, delta);

@@ -65,7 +65,7 @@ export type TCamera3d = {
      * @example
      * ```ts
      * const eye = useCamera3d({ projection: 'perspective', transform: { z: 8 } });
-     * // In a picture that sees the scene (`createSpriteTexture({ sees: 'scene' })`), from above:
+     * // In a picture that sees the 3D around it (`createSpriteTexture({ sees: '3d' })`), from above:
      * const above = useCamera3d({ projection: 'perspective', transform: { y: 30, rotationX: -Math.PI / 2 } });
      * above.cullingCamera = eye;
      * ```

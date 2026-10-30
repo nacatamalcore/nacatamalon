@@ -36,6 +36,13 @@ export const isSpriteTexture = (texture: TTexture): boolean => pictures.has(text
 export const newSpriteTexture = (store: TRuntimeStore, options: TSpriteTextureOptions, id: string = nanoId()): TSpriteTexture => {
     const width = Math.max(1, Math.floor(options.width));
     const height = Math.max(1, Math.floor(options.height));
+    const sees = options.sees ?? 'inside';
+    // Said rather than taken as 'inside': a picture that should show the room and shows nothing
+    // gives no clue why.
+    if (sees !== 'inside' && sees !== '3d') {
+        const was = (sees as string) === 'scene' ? " What was 'scene' is '3d' now." : '';
+        throw new Error(`[NacatamalOn] createSpriteTexture: it sees 'inside' or '3d', not '${String(sees)}'.${was} Give it one of those.`);
+    }
     // Random rather than counted: a counted name written into a scene would be handed out again to
     // the next picture made without one, and the two would draw into each other.
     const key = options.key ?? `sprite-texture-${nanoId(10)}`;
@@ -69,7 +76,7 @@ export const newSpriteTexture = (store: TRuntimeStore, options: TSpriteTextureOp
         id,
         width,
         height,
-        sees: options.sees ?? 'inside',
+        sees,
         background: { ...getColor(options.background ?? { r: 0, g: 0, b: 0, a: 1 }) },
         texture,
     };
@@ -103,7 +110,7 @@ const releasePicture = (store: TRuntimeStore, texture: TTexture): void => {
  * top-left corner, the way a scene without a camera is. A camera it asks for is the picture's own
  * and leaves the scene's alone, and a lamp it holds lights only the picture.
  *
- * With `sees: 'scene'` the picture also shows the models of the world around it, from the
+ * With `sees: '3d'` the picture also shows the models of the world around it, from the
  * component's own 3D camera: a security camera, and the monitor is whatever shows the picture.
  *
  * Whatever you pass after the component reaches it as its arguments, as with `useSpawn`.

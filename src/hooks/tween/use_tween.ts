@@ -27,6 +27,10 @@ type TNode = {
      */
     owned: boolean;
     /**
+     * That chain or group itself, once it is made.
+     */
+    holder: TNode | null;
+    /**
      * Counts every start. Whoever runs a listener and then carries on reads it first and again
      * after: a listener that started it again, or stopped it, has already decided what happens
      * next, and what was about to happen must not.
@@ -101,13 +105,25 @@ const end = (node: TNode): void => {
 };
 
 /**
+ * Whether it, or whatever holds it, is paused. Only the outermost can be paused by hand, so one
+ * inside asks up the line.
+ */
+const held = (node: TNode): boolean => {
+    for (let at: TNode | null = node; at !== null; at = at.holder) {
+        if (at.paused) return true;
+    }
+    return false;
+};
+
+/**
  * What a node starts as: never played, in nothing, with no one listening.
  */
-const blank = (): Pick<TNode, 'state' | 'paused' | 'played' | 'owned' | 'run' | 'ends' | 'repeatListeners' | 'stops'> => ({
+const blank = (): Pick<TNode, 'state' | 'paused' | 'played' | 'owned' | 'holder' | 'run' | 'ends' | 'repeatListeners' | 'stops'> => ({
     state: 'idle',
     paused: false,
     played: false,
     owned: false,
+    holder: null,
     run: 0,
     ends: new Set(),
     repeatListeners: new Set(),
@@ -410,7 +426,12 @@ const chainNode = (steps: TNode[]): TNode => {
                 if (node.run !== run || node.state !== 'playing') return -1;
                 if (left < 0) return -1;
                 at += 1;
-                if (at < steps.length) steps[at].begin();
+                if (at < steps.length) {
+                    steps[at].begin();
+                    // Paused from that `onEnd`: the next step waits at its start, and the rest of
+                    // the frame is after the pause, so it is not given to anyone.
+                    if (held(node)) return -1;
+                }
             }
             end(node);
             return left;
@@ -697,8 +718,22 @@ export const useTween = (): TTweenStarter => {
         return node;
     });
 
-    const chain = (...handles: TTweenHandle[]): TTweenHandle => declare(chainNode(take('tween.chain', handles)));
-    const all = (...handles: TTweenHandle[]): TTweenHandle => declare(groupNode(take('tween.all', handles)));
+    /**
+     * Tells each node taken who holds it now.
+     */
+    const hold = (holder: TNode, nodes: readonly TNode[]): TNode => {
+        for (const node of nodes) node.holder = holder;
+        return holder;
+    };
+
+    const chain = (...handles: TTweenHandle[]): TTweenHandle => {
+        const steps = take('tween.chain', handles);
+        return declare(hold(chainNode(steps), steps));
+    };
+    const all = (...handles: TTweenHandle[]): TTweenHandle => {
+        const members = take('tween.all', handles);
+        return declare(hold(groupNode(members), members));
+    };
 
     return Object.assign(tween, { chain, all }) as TTweenStarter;
 };

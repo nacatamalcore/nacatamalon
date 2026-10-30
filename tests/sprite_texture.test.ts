@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, spyOn } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { createMesh } from '../src/gameobjects/mesh';
@@ -404,7 +404,7 @@ describe('the world inside a picture', () => {
     });
 });
 
-describe('a picture that sees the scene', () => {
+describe('a picture that sees the 3D around it', () => {
     /**
      * A room with a model, a flat sprite, a monitor showing the camera, and the camera.
      */
@@ -425,7 +425,7 @@ describe('a picture that sees the scene', () => {
             made.handheld = createSpriteTexture({ width: 8, height: 8 }, block);
             made.model = createMesh({ geometry: cube, texture: made.handheld });
             made.flat = block();
-            made.feed = createSpriteTexture({ width: 16, height: 16, sees: 'scene' }, () => {
+            made.feed = createSpriteTexture({ width: 16, height: 16, sees: '3d' }, () => {
                 made.camera = useCamera3d({ projection: 'perspective', transform: { y: 5 } });
                 made.rec = block(4, 4);
             });
@@ -464,7 +464,7 @@ describe('a picture that sees the scene', () => {
         let feed!: TTexture;
         startTestScene(store, 'S', () => {
             createMesh({ geometry: useCubeGeometry() });
-            feed = createSpriteTexture({ width: 16, height: 16, sees: 'scene' }, () => {
+            feed = createSpriteTexture({ width: 16, height: 16, sees: '3d' }, () => {
                 const flat = useCamera2d();
                 flat.transform.x = 0.4;
                 flat.zoom = 3;
@@ -487,7 +487,7 @@ describe('a picture that sees the scene', () => {
             useCamera2d().transform.x = 100;
             useCamera3d({ projection: 'orthographic', follow2d: true });
             createMesh({ geometry: useCubeGeometry() });
-            feed = createSpriteTexture({ width: 16, height: 16, sees: 'scene' }, () => {
+            feed = createSpriteTexture({ width: 16, height: 16, sees: '3d' }, () => {
                 useCamera2d().transform.x = 7;
             });
             return createScene();
@@ -506,7 +506,7 @@ describe('a picture that sees the scene', () => {
         startTestScene(store, 'S', () => {
             scene = useCamera3d({ projection: 'perspective', transform: { z: 5 } });
             createMesh({ geometry: useCubeGeometry() });
-            feed = createSpriteTexture({ width: 8, height: 8, sees: 'scene' });
+            feed = createSpriteTexture({ width: 8, height: 8, sees: '3d' });
             return createScene();
         });
 
@@ -520,7 +520,7 @@ describe('a picture in a scene document', () => {
     it('comes back from a file drawn into the same picture, with the model showing it', () => {
         const { store } = createTestGame();
         startTestScene(store, 'S', () => {
-            const tv = createSpriteTexture({ width: 32, height: 16, key: 'tv', background: { r: 1, g: 0, b: 0, a: 1 }, sees: 'scene' }, () => {
+            const tv = createSpriteTexture({ width: 32, height: 16, key: 'tv', background: { r: 1, g: 0, b: 0, a: 1 }, sees: '3d' }, () => {
                 useCamera2d({ transform: { x: 3 } });
                 block();
             });
@@ -532,7 +532,7 @@ describe('a picture in a scene document', () => {
 
         // First on its object, ahead of the camera it owns.
         expect(written.components.map((c) => c.type)).toEqual(['sprite-texture', 'camera-2d', 'sprite']);
-        expect(written.components[0]).toEqual({ type: 'sprite-texture', id: expect.any(String), key: 'tv', width: 32, height: 16, background: { r: 1, g: 0, b: 0, a: 1 }, sees: 'scene' });
+        expect(written.components[0]).toEqual({ type: 'sprite-texture', id: expect.any(String), key: 'tv', width: 32, height: 16, background: { r: 1, g: 0, b: 0, a: 1 }, sees: '3d' });
 
         const again = createTestGame().store;
         registerScene(again, 'T', sceneFromDoc(parseSceneDoc(JSON.parse(JSON.stringify(doc)), 'x.scene')));
@@ -541,7 +541,7 @@ describe('a picture in a scene document', () => {
         const picture = again.get('assets').textures.get('tv')!;
         const box = pictureBox(root);
         expect(box.spriteTexture!.texture).toBe(picture);
-        expect(box.spriteTexture!.sees).toBe('scene');
+        expect(box.spriteTexture!.sees).toBe('3d');
         expect(box.camera2d!.transform.x).toBe(3);
         expect(root.camera2d).toBeNull();
         const model = root.drawables.find((d) => d.type === 'mesh') as ReturnType<typeof createMesh>;
@@ -587,5 +587,43 @@ describe('a picture in a scene document', () => {
         }, 'x.scene');
 
         expect(doc.root.components).toEqual([]);
+    });
+    it('reads a picture saved when \'3d\' was called "scene" as \'3d\', and writes the new name', () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        try {
+            const doc = parseSceneDoc({
+                format: SCENE_FORMAT,
+                version: 1,
+                name: 'x',
+                assets: [],
+                root: {
+                    id: 'root', name: 'root', transform: null, children: [],
+                    components: [{ type: 'sprite-texture', id: 'p', key: 'tv', width: 8, height: 8, sees: 'scene' }],
+                },
+            }, 'x.scene');
+
+            expect(doc.root.components[0]).toMatchObject({ type: 'sprite-texture', sees: '3d' });
+            expect(warn).toHaveBeenCalledTimes(1);
+            expect(String(warn.mock.calls[0][0])).toContain("'3d'");
+
+            const again = createTestGame().store;
+            registerScene(again, 'x', sceneFromDoc(doc));
+            const root = startScene(again, 'x');
+            expect(root.spriteTexture!.sees).toBe('3d');
+            expect(serializeScene(root).root.components[0]).toMatchObject({ sees: '3d' });
+        } finally {
+            warn.mockRestore();
+        }
+    });
+});
+
+describe('what a picture sees', () => {
+    it('refuses a value it does not know, and says what "scene" is called now', () => {
+        const { store } = createTestGame();
+        startTestScene(store, 'S', () => {
+            expect(() => createSpriteTexture({ width: 8, height: 8, sees: 'scene' as never })).toThrow("What was 'scene' is '3d' now.");
+            expect(() => createSpriteTexture({ width: 8, height: 8, sees: 'world' as never })).toThrow("it sees 'inside' or '3d', not 'world'.");
+            return createScene();
+        });
     });
 });

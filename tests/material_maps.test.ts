@@ -120,7 +120,7 @@ describe('a picture being drawn into', () => {
         let feed!: TTexture;
         startTestScene(store, 'S', () => {
             useCamera3d({ projection: 'perspective', transform: { z: 5 } });
-            feed = createSpriteTexture({ width: 8, height: 8, sees: 'scene' });
+            feed = createSpriteTexture({ width: 8, height: 8, sees: '3d' });
             monitor = createMesh({
                 geometry: useCubeGeometry(),
                 material: createMaterial({ shader: 'mesh3d', maps: { feed } }),

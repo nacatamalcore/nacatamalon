@@ -18,7 +18,7 @@ export type TSpriteTextureOptions = {
      */
     height: number;
     /**
-     * `'inside'`, the default: only what the component draws, a world of its own. `'scene'`: the
+     * `'inside'`, the default: only what the component draws, a world of its own. `'3d'`: the
      * models and particles in depth of the world around it as well, seen from the component's own
      * 3D camera (or the scene's, if it asks for none) and lit by the scene's lamps, with whatever
      * the component draws on top. That is a security camera: the flat part of the scene, its sprites

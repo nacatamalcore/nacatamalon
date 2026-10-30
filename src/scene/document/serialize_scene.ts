@@ -664,7 +664,7 @@ const writeBox = (box: TBox, writing: TWriting): TBoxNode => {
             width: picture.width,
             height: picture.height,
             background: { ...picture.background },
-            ...(picture.sees === 'scene' ? { sees: 'scene' as const } : {}),
+            ...(picture.sees === '3d' ? { sees: '3d' as const } : {}),
         });
     }
 

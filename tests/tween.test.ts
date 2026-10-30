@@ -1007,6 +1007,41 @@ describe('tween.all', () => {
 });
 
 describe('what the review of declared tweens found', () => {
+    it('stays between two steps when the onEnd of one pauses the chain', () => {
+        const { tween, tick } = scened();
+        const hero = thing();
+        const a = tween({ target: hero, to: { transform: { x: 10 } }, duration: 0.5 });
+        const b = tween({ target: hero, to: { transform: { x: 20 } }, duration: 1 });
+        const both = tween.chain(a, b);
+        a.onEnd(() => both.pause());
+        both.play();
+        tick(0.6);
+        expect(hero.transform.x).toBe(10);
+        tick(1);
+        expect(hero.transform.x).toBe(10);
+        both.resume();
+        tick(0.5);
+        expect(hero.transform.x).toBe(15);
+        tick(0.5);
+        expect(hero.transform.x).toBe(20);
+        expect(both.playing).toBe(false);
+    });
+
+    it('stays between two steps of a chain inside another, paused from outside', () => {
+        const { tween, tick } = scened();
+        const hero = thing();
+        const a = tween({ target: hero, to: { transform: { x: 10 } }, duration: 0.5 });
+        const inner = tween.chain(a, tween({ target: hero, to: { transform: { x: 20 } }, duration: 1 }));
+        const outer = tween.all(inner, tween({ target: hero, to: { transform: { y: 10 } }, duration: 2 }));
+        a.onEnd(() => outer.pause());
+        outer.play();
+        tick(0.6);
+        expect(hero.transform.x).toBe(10);
+        outer.resume();
+        tick(0.5);
+        expect(hero.transform.x).toBe(15);
+    });
+
     it('finishes a chain asked from the onEnd of its own step, once', () => {
         const { tween, tick } = scened();
         const hero = thing();

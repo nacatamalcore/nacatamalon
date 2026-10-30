@@ -73,6 +73,11 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- **`createSpriteTexture({ sees: 'scene' })` is now `sees: '3d'`**, the name for what it takes from
+  the world around it: its models and particles, not its sprites or texts. What the picture's own
+  component draws is drawn either way. `'scene'` is refused with a message that names the new value.
+  A scene document saved with `"sees": "scene"` is read as `'3d'` with a warning, and saving it
+  writes `"3d"`.
 - **A tween does not move until `play()`.** `useTween()`'s function declares it. Every tween
   started by hand needs `.play()` at the end: `tween({ target: coin, to: { ... }, duration: 1 }).play()`.
   - `play()` starts it from the beginning whether it never played, is over, stopped or playing,

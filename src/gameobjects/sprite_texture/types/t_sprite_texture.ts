@@ -2,13 +2,14 @@ import type { TColor } from '../../../color';
 import type { TTexture } from '../../../loaders';
 
 /**
- * What a picture made by `createSpriteTexture` shows: a world of its own, or the one around it too.
+ * What a picture made by `createSpriteTexture` takes from outside itself: nothing, a world of its
+ * own, or the 3D of the world around it.
  *
  * @category Sprites
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TSpriteTextureSees = 'inside' | 'scene';
+export type TSpriteTextureSees = 'inside' | '3d';
 
 /**
  * A picture that part of a scene is drawn into instead of the screen: a screen inside the game, a
@@ -38,8 +39,9 @@ export type TSpriteTexture = {
     height: number;
     /**
      * What is drawn into it. `'inside'`: only what is on its object and under it, a world of its own.
-     * `'scene'`: the models of the world around it as well, seen from its own camera, which is a
-     * security camera and a monitor showing it.
+     * `'3d'`: the models of the world around it as well, seen from its own camera, which is a
+     * security camera and a monitor showing it. What is on its object, sprites and texts too, is
+     * drawn either way: `'3d'` says only what comes in from outside.
      */
     sees: TSpriteTextureSees;
     /**

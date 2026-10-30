@@ -523,6 +523,18 @@ const parseNineSliceMode = (raw: unknown): TNineSliceComponent['mode'] => {
 };
 
 /**
+ * What a picture in a document sees from outside itself. `"scene"` is what `'3d'` was called when
+ * the document was saved: it meant the models then, and that is all it will ever mean.
+ */
+const seesOf = (value: unknown, key: string): '3d' | undefined => {
+    if (value === 'scene') {
+        console.warn(`[NacatamalOn] scene: the picture '${key}' says it sees "scene", which is called '3d' now. It is read as '3d', and saving the scene writes it.`);
+        return '3d';
+    }
+    return value === '3d' ? '3d' : undefined;
+};
+
+/**
  * One component, or `null` when this version has no idea what it is.
  *
  * `null` does **not** mean thrown away: the caller keeps the entry verbatim, so a component from a
@@ -788,7 +800,7 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 width,
                 height,
                 background: asColor(raw.background, BLACK),
-                ...(raw.sees === 'scene' ? { sees: 'scene' as const } : {}),
+                ...(seesOf(raw.sees, key) === '3d' ? { sees: '3d' as const } : {}),
             };
         }
         case 'physics-body-2d': {
