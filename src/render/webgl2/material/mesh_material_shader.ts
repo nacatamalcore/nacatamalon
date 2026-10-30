@@ -1,6 +1,6 @@
 import { MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import {
-    FACED_LIGHT_GLSL, LIT_BY_GLSL, MESH_FRAGMENT_HEAD_GLSL, MESH_SAMPLE_LIGHT_GLSL, MESH_VERTEX_ATTRIBUTES_GLSL,
+    FACED_LIGHT_GLSL, FACING_TURN_GLSL, LIT_BY_GLSL, MESH_FRAGMENT_HEAD_GLSL, MESH_SAMPLE_LIGHT_GLSL, MESH_VERTEX_ATTRIBUTES_GLSL,
     TWO_SIDED_VARYINGS_GLSL, TWO_SIDED_WRITE_GLSL, worldNormalOfGlsl,
 } from '../mesh/mesh_shader';
 import { MAX_LIGHTS } from '../../../light';
@@ -443,16 +443,18 @@ void main() {${CORNER_CONTEXT}${bend}
             glslUniformBlock(sig),
             'uniform mat4 uLightViewProj;\nuniform mat4 uModel;',
             'out vec2 vUv;\nout vec3 vNormal;\nout vec3 vWorldPos;\nout vec4 vColor;\nout vec4 vTangent;\nout vec2 vUv2;\nout vec4 vCarry;',
+            FACING_TURN_GLSL,
             VERT_CONTEXT,
             vertex ?? DEFAULT_VERTEX,
             /* glsl */ `
 void main() {${CORNER_CONTEXT}${vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL}${bend}
-    // Turned as the model is, by its own placement, and measured again where the hook moved it, as
-    // the drawn model's is: what the colour hook reads of the surface.
+    // Turned as the model is, and measured again where the hook moved it, as the drawn model's is:
+    // what the colour hook reads of the surface. The facing by the inverse of the placement, as the
+    // drawn model's normal matrix turns it, so a model stretched unevenly is cut by the same facing.
     mat3 turn = ${skinned ? 'mat3(skin)' : 'mat3(1.0)'};
     gl_Position = uLightViewProj * uModel * placed;
     vUv = aUv;
-    vNormal = normalize((uModel * vec4(turn * shaped, 0.0)).xyz);
+    vNormal = normalize(facingTurnOf(mat3(uModel)) * (turn * shaped));
     vWorldPos = (uModel * placed).xyz;
     vColor = aColor;
     vTangent = vec4(normalize((uModel * vec4(turn * aTangent.xyz, 0.0)).xyz), aTangent.w);

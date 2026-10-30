@@ -124,6 +124,22 @@ describe('the shadow of a material cut out of its picture', () => {
         expect(buildMeshMaterialShadowShader(HOOK, SIG, [], false)).not.toContain('@fragment');
     });
 
+    it('hands the colour hook the facing the drawn model has, a model stretched unevenly too', () => {
+        // The drawn model's facing is turned by its normal matrix, the inverse of its placement
+        // flipped; the shadow works the same out of its placement, on both cards.
+        for (const skinned of [false, true]) {
+            const shadow = buildMeshMaterialShadowShader(null, SIG, [], skinned, { fragment: EFFECT });
+            expect(shadow).toContain('fn facingTurnOf(m: mat3x3<f32>) -> mat3x3<f32> {');
+            expect(shadow).toContain('out.normal = normalize(facingTurnOf(place) * (turn * shaped));');
+            const glsl = buildMeshMaterialShadowShaderGlsl(null, SIG, skinned, { fragment: EFFECT_GLSL, mapNames: [] });
+            expect(glsl.vertex).toContain('mat3 facingTurnOf(mat3 m) {');
+            expect(glsl.vertex).toContain('vNormal = normalize(facingTurnOf(mat3(uModel)) * (turn * shaped));');
+        }
+        // A shadow that cuts nothing has no facing to work out.
+        expect(buildMeshMaterialShadowShader(null, SIG, [], false)).not.toContain('facingTurnOf');
+        expect(buildMeshMaterialShadowShaderGlsl(null, SIG, false).vertex).not.toContain('facingTurnOf');
+    });
+
     it('reads the maps its colour hook reads', () => {
         expect(buildMeshMaterialShadowShader(null, SIG, ['noise'], false, { fragment: EFFECT })).toContain('fn sampleMap_noise(uv: vec2<f32>) -> vec4<f32>');
     });

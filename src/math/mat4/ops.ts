@@ -28,7 +28,9 @@ export const transpose = (m: Mat4, dst?: Mat4): Mat4 => mat4.transpose(m, dst) a
  * Worked out from the cofactors of the 3x3 rather than by inverting the 4x4, a few dozen
  * multiplications, and scaled so an even size gives back exactly the turn: the length of what it
  * gives is the length of what it was given, as before. A placement that flattens to nothing (a size
- * of 0) has no inverse, and gets each axis brought back to length one instead.
+ * of 0), or nearly (its determinant under a millionth of what its three axes' lengths make), has no
+ * inverse worth trusting, and gets each axis brought back to length one instead. The shaders that
+ * work the same out for themselves (`facingTurnOf`) draw that line in the same place, the same way.
  *
  * Only the top-left 3x3 is written; the rest of `dst` is the identity's.
  *
@@ -48,11 +50,12 @@ export const normalMatrix = (m: Mat4, dst?: Mat4): Mat4 => {
     const x1 = h * c - i * b, y1 = i * a - g * c, z1 = g * b - h * a;
     const x2 = b * f - c * e, y2 = c * d - a * f, z2 = a * e - b * d;
     const det = a * x0 + b * y0 + c * z0;
-    if (det === 0 || !Number.isFinite(det)) {
-        const l0 = Math.hypot(a, b, c) || 1, l1 = Math.hypot(d, e, f) || 1, l2 = Math.hypot(g, h, i) || 1;
-        out[0] = a / l0; out[1] = b / l0; out[2] = c / l0;
-        out[4] = d / l1; out[5] = e / l1; out[6] = f / l1;
-        out[8] = g / l2; out[9] = h / l2; out[10] = i / l2;
+    const l0 = Math.hypot(a, b, c), l1 = Math.hypot(d, e, f), l2 = Math.hypot(g, h, i);
+    if (!(Math.abs(det) > l0 * l1 * l2 * 1e-6)) {
+        const k0 = l0 || 1, k1 = l1 || 1, k2 = l2 || 1;
+        out[0] = a / k0; out[1] = b / k0; out[2] = c / k0;
+        out[4] = d / k1; out[5] = e / k1; out[6] = f / k1;
+        out[8] = g / k2; out[9] = h / k2; out[10] = i / k2;
         return out;
     }
     // The cofactors are the inverse flipped, times the determinant. Divided by it, and times its

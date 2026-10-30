@@ -1,4 +1,4 @@
-import { FACED_LIGHT, MESH_SHADER_TYPES, twoSidedOutput, TWO_SIDED_WRITE, worldNormalOf } from '../mesh/mesh_shader';
+import { FACED_LIGHT, FACING_TURN, MESH_SHADER_TYPES, twoSidedOutput, TWO_SIDED_WRITE, worldNormalOf } from '../mesh/mesh_shader';
 import { buildUniformLayout } from '../../shared/material_uniforms';
 import { SHADOW_CUT_UNIFORMS_WGSL, SHADOW_UNIFORMS_WGSL } from '../shadow/shadow_shader';
 import { MAX_MATERIAL_MAPS } from '../../shared/material_maps';
@@ -459,6 +459,7 @@ export const buildMeshMaterialShadowShader = (
         // Declared because the map readers bring a helper that names it; filled only when cut.
         FRAG_CONTEXT,
         cut === null ? '' : SAMPLE,
+        cut === null ? '' : FACING_TURN,
         maps(mapNames),
         vertex ?? DEFAULT_VERTEX,
         cut === null ? '' : cut.fragment ?? DEFAULT_EFFECT,
@@ -482,13 +483,15 @@ struct CutOutput {
 
 @vertex
 fn vs(${cornerInputs(skinned)}) -> CutOutput {${CORNER_CONTEXT}${vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL}${bend}
-    // Turned as the model is, by its own placement, and measured again where the hook moved it, as
-    // the drawn model's is: what the colour hook reads of the surface.
+    // Turned as the model is, and measured again where the hook moved it, as the drawn model's is:
+    // what the colour hook reads of the surface. The facing by the inverse of the placement, as the
+    // drawn model's normal matrix turns it, so a model stretched unevenly is cut by the same facing.
     let turn = ${skinned ? 'mat3x3<f32>(skin[0].xyz, skin[1].xyz, skin[2].xyz)' : 'mat3x3<f32>(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)'};
+    let place = mat3x3<f32>(shadow.model[0].xyz, shadow.model[1].xyz, shadow.model[2].xyz);
     var out: CutOutput;
     out.position = shadow.lightViewProj * shadow.model * placed;
     out.uv = uv;
-    out.normal = normalize((shadow.model * vec4<f32>(turn * shaped, 0.0)).xyz);
+    out.normal = normalize(facingTurnOf(place) * (turn * shaped));
     out.worldPos = (shadow.model * placed).xyz;
     out.color = color;
     out.tangent = vec4<f32>(normalize((shadow.model * vec4<f32>(turn * cornerTangent.xyz, 0.0)).xyz), cornerTangent.w);

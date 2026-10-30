@@ -383,6 +383,29 @@ fn facedLight(in: VertexOutput, front: bool) -> FacedLight {
 `;
 
 /**
+ * What turns a facing the way a 3x3 turns a surface, for a matrix worked out in the shader: its
+ * inverse flipped, the same answer `mat.normalMatrix` gives the one each model is handed, at a length
+ * of its own, since every facing is brought back to length one after. A mirror flips it as it flips
+ * the surface. One that flattens an axis, even nearly, has none worth trusting, and turns the facing
+ * by its axes brought back to length one: where `mat.normalMatrix` draws the line, and what it does
+ * past it, so a facing worked out here is the one the drawn model is handed.
+ *
+ * @internal
+ */
+export const FACING_TURN = /* wgsl */ `
+fn facingTurnOf(m: mat3x3<f32>) -> mat3x3<f32> {
+    let flipped = mat3x3<f32>(cross(m[1], m[2]), cross(m[2], m[0]), cross(m[0], m[1]));
+    let det = dot(m[0], flipped[0]);
+    let sizes = vec3<f32>(length(m[0]), length(m[1]), length(m[2]));
+    if (!(abs(det) > sizes.x * sizes.y * sizes.z * 1e-6)) {
+        let k = select(sizes, vec3<f32>(1.0), sizes == vec3<f32>(0.0));
+        return mat3x3<f32>(m[0] / k.x, m[1] / k.y, m[2] / k.z);
+    }
+    return flipped * sign(det);
+}
+`;
+
+/**
  * The way a corner's surface faces in the world, for the side that is drawn: turned round when only
  * the inside is, so a dome of sky is lit from within.
  *

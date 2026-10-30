@@ -143,7 +143,8 @@ releases are in [changelog/](./changelog/), one file each.
   (`scaleX: 2`, a ball squashed as it lands), or a piece of a model file inside a node stretched that
   way, had its facings turned like its surface and leaned the wrong way, so it was lit as though its
   sides faced somewhere else. They are turned by the inverse of the placement now. Evenly scaled
-  models look as they did. A skinned model whose bones stretch unevenly is still lit the old way.
+  models look as they did. The shadow of a material cut by its own colour hook is cut by the same
+  facing as the model. A skinned model whose bones stretch unevenly is still lit the old way.
 - **A covered scene change asked for while the scene of another is being built is refused.** A
   `change` with a transition whose new scene asked for one of its own from its body or its
   `useReady` had that one written over, leaving its scene held, never drawn or updated. The cover is

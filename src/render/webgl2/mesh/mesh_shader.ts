@@ -236,6 +236,25 @@ export const FACED_LIGHT_GLSL = /* glsl */ `
 `;
 
 /**
+ * What turns a facing the way a 3x3 turns a surface, for a matrix worked out in the shader. The
+ * twin of FACING_TURN in webgpu/mesh/mesh_shader.ts, which says why.
+ *
+ * @internal
+ */
+export const FACING_TURN_GLSL = /* glsl */ `
+mat3 facingTurnOf(mat3 m) {
+    mat3 flipped = mat3(cross(m[1], m[2]), cross(m[2], m[0]), cross(m[0], m[1]));
+    float det = dot(m[0], flipped[0]);
+    vec3 sizes = vec3(length(m[0]), length(m[1]), length(m[2]));
+    if (!(abs(det) > sizes.x * sizes.y * sizes.z * 1e-6)) {
+        vec3 k = vec3(sizes.x == 0.0 ? 1.0 : sizes.x, sizes.y == 0.0 ? 1.0 : sizes.y, sizes.z == 0.0 ? 1.0 : sizes.z);
+        return mat3(m[0] / k.x, m[1] / k.y, m[2] / k.z);
+    }
+    return flipped * sign(det);
+}
+`;
+
+/**
  * The way a corner's surface faces in the world, for the side that is drawn: turned round when only
  * the inside is. The twin of worldNormalOf in webgpu/mesh/mesh_shader.ts.
  *
