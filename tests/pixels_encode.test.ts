@@ -107,4 +107,44 @@ describe('deflate', () => {
             expect(new Uint8Array(inflateSync(packed))).toEqual(data);
         }
     });
+
+    it('writes a block in a code of its own when that is shorter, and in the fixed one when it is not', () => {
+        // The third bit of the first block's first byte, after "last", is the low bit of its kind:
+        // 1 fixed, 2 its own code.
+        const kindOf = (packed: Uint8Array): number => (packed[2]! >> 1) & 3;
+        const flat = new Uint8Array(20000).map((_, i) => [10, 20, 30, 255][i % 4]!);
+        const noise = random(11);
+        const plenty = Uint8Array.from({ length: 20000 }, () => Math.floor(noise() * 6) * 40);
+        expect(kindOf(deflate(plenty))).toBe(2);
+        expect(kindOf(deflate(Uint8Array.of(1, 2, 3)))).toBe(1);
+        for (const data of [flat, plenty]) {
+            expect(new Uint8Array(inflateSync(deflate(data)))).toEqual(data);
+        }
+    });
+
+    it('reads back the same over many blocks, each with its own code', () => {
+        const noise = random(5);
+        // Few distinct bytes, rarely repeating in threes: hundreds of thousands of symbols.
+        const data = Uint8Array.from({ length: 400000 }, () => Math.floor(noise() * 12) * 21);
+        const packed = deflate(data);
+        expect(inflate(packed)).toEqual(data);
+        expect(new Uint8Array(inflateSync(packed))).toEqual(data);
+    });
+
+    it('keeps every code within fifteen bits, even when how often things come up asks for more', () => {
+        // Each byte as often as the two before it together, which would make a code deeper than
+        // fifteen bits left alone; shuffled, so they are not repeats.
+        const counts: number[] = [1, 1];
+        while (counts.length < 24) counts.push(counts[counts.length - 1]! + counts[counts.length - 2]!);
+        const bytes: number[] = [];
+        counts.forEach((count, symbol) => { for (let i = 0; i < count; i++) bytes.push(symbol * 7); });
+        const noise = random(9);
+        for (let i = bytes.length - 1; i > 0; i--) {
+            const j = Math.floor(noise() * (i + 1));
+            [bytes[i], bytes[j]] = [bytes[j]!, bytes[i]!];
+        }
+        const data = Uint8Array.from(bytes);
+        expect(inflate(deflate(data))).toEqual(data);
+        expect(new Uint8Array(inflateSync(deflate(data)))).toEqual(data);
+    });
 });

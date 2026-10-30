@@ -80,9 +80,10 @@ releases are in [changelog/](./changelog/), one file each.
 ### Changed
 
 - **`encodePng` writes compressed files.** Each row behind the PNG filter that suits it and the whole
-  squeezed with deflate, as an image editor saves, so a painted 320×180 sky is under 2 KB instead of
-  225. Nothing is lost: every pixel reads back exactly. Still in plain JavaScript and at once, with
-  nothing to wait for. What the editor saves from its drawing tools shrinks with it.
+  squeezed with deflate, each block in a code built for it when that is shorter, as an image editor
+  saves: a painted 320×180 sky is under 1 KB instead of 225. Nothing is lost: every pixel reads back
+  exactly. Still in plain JavaScript and at once, with nothing to wait for. What the editor saves
+  from its drawing tools shrinks with it.
 - **`createSpriteTexture({ sees: 'scene' })` is now `sees: '3d'`**, the name for what it takes from
   the world around it: its models and particles, not its sprites or texts. What the picture's own
   component draws is drawn either way. `'scene'` is refused with a message that names the new value.

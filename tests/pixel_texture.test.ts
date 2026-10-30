@@ -222,6 +222,6 @@ describe('encodePng', () => {
                 image[y * row + x] = (raw[y * (row + 1) + 1 + x]! + guess) & 0xff;
             }
         }
-        expect(image).toEqual(pixels.data);
+        expect(image).toEqual(new Uint8Array(pixels.data));
     });
 });
