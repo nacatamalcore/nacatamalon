@@ -34,10 +34,11 @@ export type TGeometrySource =
      * They are counted in the order the file is walked: the nodes of its scene depth first, each
      * before the ones under it and those in the order the file lists them, then the pieces of each
      * in the order its mesh lists them, lines and points left out. So the same piece is found again
-     * in the same file, and in one exported again as long as its node keeps its name and its
-     * materials their order.
+     * in the same file, and in one exported again as long as the pieces of its name keep their
+     * order and how many there are: one more material on an earlier node of the same name moves
+     * the number of every piece of that name after it.
      *
-     * With no `node`, the first piece of the file, as documents saved before `node` could be empty
-     * meant.
+     * With neither `node` nor `occurrence`, the first piece of the file, as documents saved before
+     * `node` could be empty meant. An `occurrence` with no `node` is not read.
      */
     | { kind: 'gltf'; src: string; node?: string; occurrence?: number };

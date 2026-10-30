@@ -419,4 +419,22 @@ describe('pieces of a model file that share a name', () => {
         }
         expect(warn.mock.calls.some((call: unknown[]) => String(call[0]).includes('which is no count'))).toBe(true);
     });
+
+    it('does not read half a reference: a number with no name, or a name that is no text', () => {
+        warn = spyOn(console, 'warn').mockImplementation(() => {});
+        for (const source of [
+            { kind: 'gltf', src: '/models/car.gltf', occurrence: 99 },
+            { kind: 'gltf', src: '/models/car.gltf', occurrence: 0 },
+            { kind: 'gltf', src: '/models/car.gltf', node: 3 },
+        ]) {
+            const doc = parseSceneDoc({
+                format: SCENE_FORMAT, version: 1, name: 'Garage',
+                assets: [{ type: 'geometry', key: 'wheel', source }],
+                root: { id: 'root', name: 'Garage', transform: null, components: [], children: [] },
+            }, '/scenes/garage.scene');
+            expect(doc.assets).toEqual([]);
+        }
+        expect(warn.mock.calls.some((call: unknown[]) => String(call[0]).includes('but not the name'))).toBe(true);
+        expect(warn.mock.calls.some((call: unknown[]) => String(call[0]).includes('which is no name'))).toBe(true);
+    });
 });

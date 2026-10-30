@@ -138,9 +138,10 @@ releases are in [changelog/](./changelog/), one file each.
   copies of the first. A model's piece now says which of its name it is: its geometry source has
   `occurrence` (from 0, written only when it is not 0), and `node` is written as `""` for a piece
   with no name. They are counted over the whole file, in the order it is walked, so the number is
-  the same however much of the file was loaded. A document that names no `node` still takes the
-  first piece of the file, and an `occurrence` that is not a whole number from 0 is not read. A
-  document saved before this cannot be told apart: its pieces come back as they did.
+  the same however much of the file was loaded. A document with neither `node` nor `occurrence`
+  still takes the first piece of the file. An `occurrence` that is not a whole number from 0, one
+  with no `node`, or a `node` that is not text is not read. A document saved before this cannot be
+  told apart: its pieces come back as they did.
 - **Models, map layers and shapes come back after WebGL2 loses its context.** The browser can take
   the card away (a phone sending the tab to the background, a driver reset), and on its return
   sprites, text, pictures, particles and effects were drawn again, but every model and map layer

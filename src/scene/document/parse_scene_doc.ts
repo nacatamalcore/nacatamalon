@@ -1096,6 +1096,17 @@ const parseGeometrySource = (value: unknown, key: string): TGeometrySource | nul
                 console.warn(`[NacatamalOn] scene: the shape "${key}" asks for occurrence ${JSON.stringify(occurrence)} of its piece, which is no count, so it is not read. Give it a whole number from 0.`);
                 return null;
             }
+            // Only a reference with neither is an old one, meaning the first piece of the file. A
+            // number with no name, or a name that is no text, is half a reference: taking the first
+            // piece for it would draw something that looks right and is not.
+            if (raw.node !== undefined && typeof raw.node !== 'string') {
+                console.warn(`[NacatamalOn] scene: the shape "${key}" names its piece ${JSON.stringify(raw.node)}, which is no name, so it is not read. Give it the piece's name, or "" for one with none.`);
+                return null;
+            }
+            if (occurrence !== undefined && raw.node === undefined) {
+                console.warn(`[NacatamalOn] scene: the shape "${key}" says which piece of a name it is (occurrence ${occurrence}) but not the name, so it is not read. Give it a "node" too, "" for a piece with none.`);
+                return null;
+            }
             return {
                 kind: 'gltf',
                 src: raw.src,
