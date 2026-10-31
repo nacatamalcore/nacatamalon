@@ -332,6 +332,9 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
 - `launch` and `stop` take a transition too: `launch('PauseMenu', { transition: iris(0.4) })` opens a
   menu on top behind an iris, `stop({ transition: iris(0.4) })` closes the menu that calls it. What is
   underneath keeps running: `scene.pause()` it first to freeze the game behind the menu.
+- One covered change at a time, and the first one wins: a `change`, or a `launch` or `stop` with a
+  transition, asked while another is covering is ignored with a warning, not queued. A scene that
+  moves on as soon as it arrives asks from `useSceneTransitionEnd`, once the cover is off.
 - **Two scenes cross their music** with `fadeOut` on the one leaving and `fadeIn` on the one coming
   in (`useSong(file, { autoplay: true, fadeIn: 1, fadeOut: 1 })`, the same on `useMusic`, in seconds):
   when its scene stops the music goes down over `fadeOut` instead of being cut, heard after the scene

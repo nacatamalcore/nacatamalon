@@ -3,6 +3,15 @@
 What changed in the current release of `nacatamalon`, and what is waiting for the next one. Earlier
 releases are in [changelog/](./changelog/), one file each.
 
+## Unreleased
+
+### Changed
+
+- **The warning for a covered change asked while another is covering says what to do.** The first
+  one wins, and the second is ignored rather than queued, since it is nearly always late (the timer
+  running out after the goal was reached) and played afterwards would undo the first. A scene that
+  moves on as soon as it arrives asks from `useSceneTransitionEnd`, which the warning now names.
+
 ## 0.4.0 — 2026-10-31
 
 ### Added

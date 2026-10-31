@@ -199,14 +199,16 @@ export const useScene = (): TSceneHandle => {
     };
 
     /**
-     * Whether another covered change is on screen now, which a new one must wait for, warned. It is
-     * refused rather than cut over: the one on screen would be left with an end nobody moves.
+     * Whether another covered change is on screen now, warned. The new one is refused rather than
+     * cut over, since the one on screen would be left with an end nobody moves, and rather than
+     * queued: asked while another is covering, it is nearly always late (the timer running out
+     * after the goal was reached), and played afterwards it would undo the change that won.
      */
     const busy = (action: string, name: string): boolean => {
         if (store.get('transition').active === null) {
             return false;
         }
-        console.warn(`[NacatamalOn] useScene().${action}: '${name}' was ignored because a scene change is already being covered. Wait for it to finish.`);
+        console.warn(`[NacatamalOn] useScene().${action}: '${name}' was ignored because a scene change is already being covered, and the first one wins. To ${action} once the scene coming in is on screen, call it from useSceneTransitionEnd.`);
         return true;
     };
 
