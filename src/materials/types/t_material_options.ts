@@ -3,7 +3,7 @@ import type { TColorOption } from '../../color';
 import type { TTexture } from '../../loaders';
 import type { TShader } from '../../loaders/shader/types/t_shader';
 import type { TUniformValues } from './t_uniforms';
-import type { TCullMode, TMaterialMap, TTextureWrap } from './t_material';
+import type { TCullMode, TMaterialMap, TMaterialOcclusion, TTextureWrap } from './t_material';
 
 /**
  * The shader half of what a material can be asked for, which both kinds share.
@@ -29,9 +29,11 @@ export type TMaterialShaderOptions = {
      * light reaching it already worked out; `color`, the colour painted on the corners; `screen`,
      * where it is on the screen in the game's pixels, `(0, 0)` at the top left; `tangent` and
      * `bitangent`, the way across and down the surface the picture runs, in the world; `uv2`, a
-     * second picture coordinate (the file's own, or `uv` again); `frontFacing`; and `carry`, what the
-     * corner hook carried here (see `vertex`). The corner hook's `VertContext` has `normal`, `uv`,
-     * `color`, `tangent`, `bitangent` and `uv2`, before anything is moved.
+     * second picture coordinate (the file's own, or `uv` again; stretched as `uv` is when affine);
+     * `frontFacing`; `carry`, what the corner hook carried here (see `vertex`); and `occlusion`, how
+     * open the place is to the light from all around, 1 to 0 (see `occlusion`, already in `light`).
+     * The corner hook's `VertContext` has `normal`, `uv`, `color`, `tangent`, `bitangent` and `uv2`,
+     * before anything is moved.
      */
     fragment?: string;
     /**
@@ -112,6 +114,14 @@ export type TMeshMaterialOptions = TMaterialShaderOptions & {
      * same edges and corners as `texture`. Default none, the glow the same all over.
      */
     emissiveTexture?: TTexture;
+    /**
+     * Where the light from all around is kept out of its creases, the shading a modelling program
+     * calls occlusion: a picture whose red is white where the surface is open and black where it is
+     * shut in. It darkens only the scene's `ambient`, never a lamp or the sun. The picture alone, or
+     * `{ texture, strength, uv, wrap }` to apply less of it, lay it out by a second picture coordinate
+     * or give it edges of its own (see {@link TMaterialOcclusion}). Default none.
+     */
+    occlusion?: TTexture | TMaterialOcclusion;
     /**
      * The colour of its shine. Default none, which is matt.
      */

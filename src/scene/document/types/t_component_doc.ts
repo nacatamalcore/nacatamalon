@@ -87,6 +87,13 @@ export type TMeshMaterialDoc = TMaterialDoc & {
      * piece of a model file, which brings its own.
      */
     emissiveTexture?: string;
+    /**
+     * Where the light from all around is kept out of its creases: the picture by asset key, how much
+     * of it (left out when all), which picture coordinate lays it out (left out when `'uv'`), and what
+     * it does past its edge (left out when it does what the colour picture does).
+     * Left out when there is none, and for a piece of a model file, which brings its own.
+     */
+    occlusion?: { texture: string; strength?: number; uv?: 'uv2'; wrap?: TTextureWrap | { u: TTextureWrap; v: TTextureWrap } };
     specular: TColor;
     shininess: number;
     alpha: number;

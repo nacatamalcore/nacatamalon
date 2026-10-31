@@ -78,7 +78,7 @@ export const createMesh = (options: TMeshOptions): TMesh => {
         throw outsideSceneBody('createMesh');
     }
     if (options.material !== undefined) {
-        const ignored = (['tint', 'emissive', 'emissiveTexture', 'specular', 'cull', 'alphaCutoff', 'affine', 'vertexSnap'] as const).filter((key) => options[key] !== undefined);
+        const ignored = (['tint', 'emissive', 'emissiveTexture', 'occlusion', 'specular', 'cull', 'alphaCutoff', 'affine', 'vertexSnap'] as const).filter((key) => options[key] !== undefined);
         // Said once per game: a game that builds many models from one material would say it for
         // every one of them.
         if (ignored.length > 0 && firstTimeIn(store, 'createMesh: options beside a material')) {
@@ -100,6 +100,7 @@ export const createMesh = (options: TMeshOptions): TMesh => {
                 tint: options.tint,
                 emissive: options.emissive,
                 emissiveTexture: options.emissiveTexture,
+                occlusion: options.occlusion,
                 specular: options.specular,
                 shininess: options.shininess,
                 vertexSnap: options.vertexSnap,

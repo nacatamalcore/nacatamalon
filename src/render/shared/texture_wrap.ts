@@ -17,6 +17,17 @@ export const textureWrapOf = (material: Pick<TDrawMaterial, 'wrap'>): { u: TText
 };
 
 /**
+ * What a model's occlusion picture does past its edge: its own, or the colour picture's when it
+ * says nothing.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const occlusionWrapOf = (material: Pick<TDrawMaterial, 'wrap' | 'occlusion'>): { u: TTextureWrap; v: TTextureWrap } =>
+    textureWrapOf({ wrap: material.occlusion?.wrap ?? material.wrap });
+
+/**
  * Every thing a model's picture can do past its edge, for a backend making one sampler for each.
  *
  * @internal

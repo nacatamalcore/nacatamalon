@@ -91,7 +91,7 @@ const picturesOf = (asset: TAsset): Array<TTexture | null> => {
         case 'particles-file':
             return [asset.texture];
         case 'gltf':
-            return asset.parts.flatMap((part) => [part.texture, part.emissiveTexture]);
+            return asset.parts.flatMap((part) => [part.texture, part.emissiveTexture, part.occlusion?.texture ?? null]);
         default:
             return [];
     }
@@ -171,6 +171,7 @@ const releaseOne = (store: TRuntimeStore, asset: TAsset): void => {
                 releaseGeometry(store, part.geometry);
                 releaseWorn(store, part.texture, asset);
                 releaseWorn(store, part.emissiveTexture, asset);
+                releaseWorn(store, part.occlusion?.texture ?? null, asset);
             }
             break;
         case 'particles-file':

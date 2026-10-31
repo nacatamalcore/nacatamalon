@@ -133,6 +133,27 @@ const parseMaterial = (value: unknown): TMaterialDoc | undefined => {
     };
 };
 
+/**
+ * The occlusion as a document wrote it: a picture by key, and only what differs from all of it laid
+ * out by the first coordinate. A strength is kept from 0 to 1, as a model file's is; one that is not
+ * a number is left out, which is all of it.
+ */
+const parseOcclusion = (value: unknown): Pick<TMeshMaterialDoc, 'occlusion'> => {
+    const raw = asRecord(value);
+    if (raw === null || typeof raw.texture !== 'string' || raw.texture.length === 0) {
+        return {};
+    }
+    const strength = typeof raw.strength === 'number' && Number.isFinite(raw.strength) ? Math.min(Math.max(raw.strength, 0), 1) : 1;
+    return {
+        occlusion: {
+            texture: raw.texture,
+            ...(strength < 1 ? { strength } : {}),
+            ...(raw.uv === 'uv2' ? { uv: 'uv2' as const } : {}),
+            ...parseWrap(raw.wrap),
+        },
+    };
+};
+
 const parseMeshMaterial = (value: unknown): TMeshMaterialDoc => {
     const raw = asRecord(value) ?? {};
     const base = parseMaterial(raw) ?? {
@@ -144,6 +165,7 @@ const parseMeshMaterial = (value: unknown): TMeshMaterialDoc => {
         tint: asColor(raw.tint, WHITE),
         emissive: asColor(raw.emissive, BLACK),
         ...(typeof raw.emissiveTexture === 'string' ? { emissiveTexture: raw.emissiveTexture } : {}),
+        ...parseOcclusion(raw.occlusion),
         specular: asColor(raw.specular, BLACK),
         shininess: asNumber(raw.shininess, 32),
         alpha: asNumber(raw.alpha, 1),

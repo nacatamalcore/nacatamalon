@@ -151,6 +151,11 @@ export type TGltfMaterial = {
      * A picture masking where the glow actually is: the factor multiplies it.
      */
     emissiveTexture?: { index: number };
+    /**
+     * Where the light from all around is kept out: the picture's red, `strength` how much of it (absent
+     * is 1), and `texCoord` which picture coordinate lays it out (absent is the first).
+     */
+    occlusionTexture?: { index: number; strength?: number; texCoord?: number };
     extensions?: { KHR_materials_emissive_strength?: { emissiveStrength?: number } };
 };
 

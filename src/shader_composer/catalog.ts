@@ -2,7 +2,7 @@ import { composerFloat, composerSwizzle, composerVec2, composerVec3, composerVec
 import {
     composerEmissive, composerEnvUv, composerLight, composerMapSample, composerShine, composerResolution, composerSurface, composerTextureSample, composerTime,
     composerUniform, composerUv, composerVertexColor, composerVertexNormal, composerVertexPosition, composerViewDir, composerWorldNormal,
-    composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent, composerFrontFacing, composerCarry,
+    composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent, composerFrontFacing, composerCarry, composerOcclusion,
     composerWorldPos,
 } from './inputs';
 import {
@@ -202,6 +202,7 @@ const DEFS: TNodeDef[] = [
     inputNode('vertexTangent', 'Vertex Tangent', V3, 'The vertex\'s tangent in the model\'s own space. Vertex stage only.', ['mesh3d']),
     inputNode('vertexBitangent', 'Vertex Bitangent', V3, 'The vertex\'s bitangent in the model\'s own space. Vertex stage only.', ['mesh3d']),
     inputNode('carry', 'Carry', V4, 'What the Carry Output worked out at each corner, smeared across the triangle: a wave\'s height, a light of your own, the local position. Zeros when nothing is carried.', ['mesh3d']),
+    inputNode('occlusion', 'Occlusion', F32, 'How open this place is to the light from all around, from the material\'s occlusion: 1 wide open, 0 shut in a crease. Already part of Light.', ['mesh3d']),
     inputNode('frontFacing', 'Front Facing', F32, '1 on the side of the triangle facing the camera, 0 on the other: only ever 0 when the material keeps the other side (cull front or none).', ['mesh3d']),
 
     {
@@ -597,6 +598,7 @@ export const INPUT_BUILDERS: Record<string, () => TComposerNode> = {
     vertexBitangent: composerVertexBitangent,
     frontFacing: composerFrontFacing,
     carry: composerCarry,
+    occlusion: composerOcclusion,
 };
 
 /**

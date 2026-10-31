@@ -175,13 +175,13 @@ describe('the shadow a material receives', () => {
             for (const skinned of [false, true]) {
                 const wgsl = buildMeshMaterialShader(null, null, {}, [], skinned, cull);
                 expect(wgsl).toContain('let coord = shadowCoordOf(in.worldPos.xyz);');
-                expect(wgsl).toMatch(/let lit = max\(litWithShadow\([^)]*, coord\), lights\.ambient\.rgb\);/);
+                expect(wgsl).toMatch(/let lit = max\(litWithShadow\([^)]*, coord\), lights\.ambient\.rgb \* occlusion\);/);
                 expect(wgsl).toContain('ctx.light = lit;');
                 expect(wgsl).toMatch(/ctx\.shine = litWithShadow\([^)]*, coord\);/);
 
                 const glsl = buildMeshMaterialShaderGlsl(null, null, {}, [], skinned, cull).fragment;
                 expect(glsl).toContain('vec4 coord = shadowCoordOf(vWorldPos);');
-                expect(glsl).toMatch(/vec3 lit = max\(litWithShadow\([^)]*, coord\), lights\.ambient\.rgb\);/);
+                expect(glsl).toMatch(/vec3 lit = max\(litWithShadow\([^)]*, coord\), lights\.ambient\.rgb \* occlusion\);/);
                 expect(glsl).toContain('ctx.light = lit;');
                 expect(glsl).toMatch(/ctx\.shine = litWithShadow\([^)]*, coord\);/);
             }

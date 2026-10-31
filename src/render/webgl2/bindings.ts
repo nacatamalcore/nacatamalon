@@ -57,3 +57,11 @@ export const MESH_MAP_UNITS: readonly number[] = [3, 4, 5, 6];
  * @internal
  */
 export const MESH_EMISSIVE_UNIT = 7;
+
+/**
+ * Where the picture a model's occlusion is read from is bound, after the glow's. Set on every model
+ * program by name, for the same reason the others are.
+ *
+ * @internal
+ */
+export const MESH_OCCLUSION_UNIT = 8;

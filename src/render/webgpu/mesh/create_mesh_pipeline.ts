@@ -4,7 +4,7 @@ import { SHADOW_FORMAT } from '../shadow/shadow_map';
 import { SKINNED_SHADER, skinnedShaderFor } from './skinned_shader';
 import { createJointPalette } from './joint_palette';
 import { createMeshMaterials } from '../material/mesh_materials';
-import { describeMeshPipeline, MESH_BONES, MESH_COLORS, MESH_CORNERS } from './pipeline_state';
+import { describeMeshPipeline, MESH_BONES, MESH_COLORS, MESH_CORNERS, MESH_DETAIL } from './pipeline_state';
 import type { TMeshPipeline, TSidedMeshPipelines } from './types/t_mesh_pipeline';
 import { TEXTURE_WRAPS, wrapKey } from '../../shared/texture_wrap';
 import type { TTextureWrap } from '../../../materials/types/t_material';
@@ -81,6 +81,10 @@ export const createMeshPipeline = (
             // The picture the glow comes through, read with the same sampler as the colour. White
             // when there is none, so the glow is its colour all over, as it was before pictures.
             { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: {} },
+            // Where the light from all around is kept out, and its own sampler: the same filter, its own
+            // edges, which a model file may give it apart from the colour's. White when there is none.
+            { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: {} },
+            { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
         ],
     });
     const uniformsLayout = device.createBindGroupLayout({
@@ -139,6 +143,28 @@ export const createMeshPipeline = (
         return made;
     };
 
+    // And the same four again for a model whose occlusion is laid out by its second picture
+    // coordinate, which they read from the corner's detail run, after the bones when it bends. Made
+    // the first time one is drawn: most games never have one.
+    const secondUvSides = new Map<'back' | 'front' | 'none', TSidedMeshPipelines>();
+    const secondUv = (cull: 'back' | 'front' | 'none'): TSidedMeshPipelines => {
+        let made = secondUvSides.get(cull);
+        if (made === undefined) {
+            const still = device.createShaderModule({ label: `mesh shader, cull ${cull}, second uv`, code: meshShaderFor(cull, true) });
+            const bending = device.createShaderModule({ label: `skinned mesh shader, cull ${cull}, second uv`, code: skinnedShaderFor(cull, true) });
+            const plain = [CORNERS, COLORS, MESH_DETAIL];
+            const bent = [CORNERS, COLORS, BONES, MESH_DETAIL];
+            made = {
+                pipeline: device.createRenderPipeline(describe(`mesh pipeline, cull ${cull}, second uv`, still, meshLayout, plain, true, cull)),
+                transparentPipeline: device.createRenderPipeline(describe(`see-through mesh pipeline, cull ${cull}, second uv`, still, meshLayout, plain, false, cull)),
+                skinnedPipeline: device.createRenderPipeline(describe(`skinned mesh pipeline, cull ${cull}, second uv`, bending, skinnedLayout, bent, true, cull)),
+                transparentSkinnedPipeline: device.createRenderPipeline(describe(`see-through skinned mesh pipeline, cull ${cull}, second uv`, bending, skinnedLayout, bent, false, cull)),
+            };
+            secondUvSides.set(cull, made);
+        }
+        return made;
+    };
+
     // One step of depth, bound wherever a scene casts no shadow. Four bytes, and what they buy is
     // that there is one layout and one pipeline instead of two of each: the shader is told there is
     // nothing to read by the `-1` in its numbers and never looks at this at all.
@@ -171,11 +197,17 @@ export const createMeshPipeline = (
     const textureGroups = (texture: GPUTexture) => ({
         nearest: device.createBindGroup({
             layout: textureLayout,
-            entries: [{ binding: 0, resource: samplers.nearest }, { binding: 1, resource: texture.createView() }, { binding: 2, resource: texture.createView() }],
+            entries: [
+                { binding: 0, resource: samplers.nearest }, { binding: 1, resource: texture.createView() }, { binding: 2, resource: texture.createView() },
+                { binding: 3, resource: texture.createView() }, { binding: 4, resource: samplers.nearest },
+            ],
         }),
         linear: device.createBindGroup({
             layout: textureLayout,
-            entries: [{ binding: 0, resource: samplers.linear }, { binding: 1, resource: texture.createView() }, { binding: 2, resource: texture.createView() }],
+            entries: [
+                { binding: 0, resource: samplers.linear }, { binding: 1, resource: texture.createView() }, { binding: 2, resource: texture.createView() },
+                { binding: 3, resource: texture.createView() }, { binding: 4, resource: samplers.linear },
+            ],
         }),
     });
 
@@ -206,6 +238,7 @@ export const createMeshPipeline = (
         transparentPipeline,
         transparentSkinnedPipeline,
         sided,
+        secondUv,
         layouts,
         materials: createMeshMaterials(device, format, samples, layouts, whiteTexture, wrapSamplers),
         joints: createJointPalette(device),

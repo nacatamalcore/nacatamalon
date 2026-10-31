@@ -49,6 +49,9 @@ struct FragContext {
     vec2 uv2;
     bool frontFacing;
     vec4 carry;
+    // How open this place is to the light from all around, 1 wide open to 0 shut in. Already in
+    // light; 1 with no occlusion.
+    float occlusion;
 };
 `;
 
@@ -260,12 +263,14 @@ void main() {${CORNER_CONTEXT}${normal}${skinned ? SKIN : STILL}
     vCasterLight = casterDiffuse;
     vCasterShine = casterShine;${cull === 'none' ? TWO_SIDED_WRITE_GLSL : ''}
     vUv = affineUv(aUv, gl_Position);
-    vNormal = vec4(worldNormal, aUv2.x);
+    // The second picture coordinate stretched the way the first is, as its twin does.
+    vec2 stretched2 = affineUv(aUv2, gl_Position).xy;
+    vNormal = vec4(worldNormal, stretched2.x);
     vWorldPos = worldPos;
 ${cull === 'none' ? '' : `    vViewDir = viewDir;
 `}    vColor = aColor;
     vFog = fogAt(worldPos);
-    vScreen = vec4(gl_Position.xyw, aUv2.y);
+    vScreen = vec4(gl_Position.xyw, stretched2.y);
     // A direction, so it is moved by the model's own turn and stretch rather than the facing's.
     vTangent = vec4(normalize((uniforms.model * vec4(across, 0.0)).xyz), aTangent.w);
     vCarry = carried;
@@ -293,11 +298,15 @@ void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     // A shader you wrote yourself receives shadow, and receives it without being told about it:
     // ctx.light simply arrives already darkened where the casting light cannot see.
     vec4 coord = shadowCoordOf(vWorldPos);
-    vec3 lit = max(litWithShadow(${light}, ${casterLight}, coord), lights.ambient.rgb);
 
     // Divided here, once: a shader of your own receives the picture already stretched when the
     // material is affine, and the corrected one when it is not (see affineUv).
     vec2 uv = vUv.xy / vUv.z;
+    vec2 uv2 = vec2(vNormal.w, vScreen.w) / vUv.z;
+    // Laid out by the coordinate the material says, which rides beside its amount.
+    float occlusion = occlusionAt(uniforms.normalMatrix[1].w > 0.5 ? uv2 : uv);
+    // A crease lowers the floor and nothing else, as in the built-in ending.
+    vec3 lit = max(litWithShadow(${light}, ${casterLight}, coord), lights.ambient.rgb * occlusion);
     FragContext ctx;
     ctx.uv = uv;
     ctx.normal = ${cull === 'none' ? '(gl_FrontFacing ? vNormal.xyz : -vNormal.xyz)' : 'vNormal.xyz'};
@@ -313,9 +322,10 @@ void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     ctx.screen = screenOf(vScreen.xyz);
     ctx.tangent = normalize(vTangent.xyz);
     ctx.bitangent = cross(normalize(ctx.normal), ctx.tangent) * vTangent.w;
-    ctx.uv2 = vec2(vNormal.w, vScreen.w);
+    ctx.uv2 = uv2;
     ctx.frontFacing = gl_FrontFacing;
     ctx.carry = vCarry;
+    ctx.occlusion = occlusion;
 
     // The painted colour is part of the surface, as it is in the built-in ending. The fog goes over
     // what the hook made, so a shader of your own sits in the scene's fog without asking for it.
@@ -492,6 +502,7 @@ void main() {
     ctx.uv2 = vUv2;
     ctx.frontFacing = gl_FrontFacing;
     ctx.carry = vCarry;
+    ctx.occlusion = 1.0;
     // The alpha the drawn model is cut by: its tint's colour does not change it, its alpha does.
     vec4 shaded = effect(sampleTexture(vUv) * vec4(1.0, 1.0, 1.0, uCut.y) * vColor, ctx);
     if (shaded.a < uCut.x) {

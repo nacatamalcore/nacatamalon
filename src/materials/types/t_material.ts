@@ -130,6 +130,43 @@ export type TMaterialMap = {
 };
 
 /**
+ * How much of the light from all around reaches each part of a model's surface: a crease, an
+ * armpit, the gap between two pieces, where little of the room can see in.
+ *
+ * Its picture's red is how open a place is, white wide open and black shut in. It darkens only the
+ * light from all around (the scene's `ambient`), never a lamp's or the sun's: a crease turned to the
+ * sun is lit, and the same crease in the shade is darker than the open surface beside it. It is what
+ * a model file calls its occlusion, the shading its author saw in the modelling program, and one
+ * picture with the roughness and metalness in its other channels serves as it is.
+ *
+ * @category Materials
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TMaterialOcclusion = {
+    /**
+     * The picture, read in its red. One still loading reads as white, wide open, until it lands.
+     */
+    texture: TTexture;
+    /**
+     * How much of it is applied, `0` none to `1` all. Default `1`.
+     */
+    strength?: number;
+    /**
+     * Which picture coordinate it is laid out by: `'uv'`, the one the colour picture uses, or
+     * `'uv2'`, a second one the model file brings (shapes with none read their first again).
+     * Default `'uv'`.
+     */
+    uv?: 'uv' | 'uv2';
+    /**
+     * What the picture does past its edge, one word for both ways or one each: `'repeat'`,
+     * `'clamp'` or `'mirror'`. Omitted, what the colour picture does (the material's `wrap`). It is
+     * read with the material's filtering.
+     */
+    wrap?: TTextureWrap | { u: TTextureWrap; v: TTextureWrap };
+};
+
+/**
  * A material for models: a surface, and optionally a shader over it.
  *
  * Here the surface **is** the material's, because that is what a hundred crates want to share. They
@@ -163,6 +200,12 @@ export type TMeshMaterial = TShaderHalf & {
      * same edges and corners as `texture`. Omitted, the glow is the same all over.
      */
     emissiveTexture?: TTexture | null;
+    /**
+     * Where the light from all around is kept out of its creases. See {@link TMaterialOcclusion}.
+     * Always the long form here, `{ texture, strength, uv, wrap }`, whichever was given to make it: to
+     * change it later, write that. Omitted, nothing is.
+     */
+    occlusion?: TMaterialOcclusion | null;
     /**
      * The colour of its shine. Black is a surface that does not shine at all.
      */

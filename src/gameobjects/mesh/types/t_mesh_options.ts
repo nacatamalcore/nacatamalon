@@ -1,7 +1,7 @@
 import type { T3dOptions } from '../../types/t_3d_options';
 import type { TColorOption } from '../../../color';
 import type { TGeometry } from '../../../geometry';
-import type { TMeshMaterial } from '../../../materials';
+import type { TMaterialOcclusion, TMeshMaterial } from '../../../materials';
 import type { TTexture } from '../../../loaders';
 
 /**
@@ -42,4 +42,12 @@ export type TMeshOptions = T3dOptions & {
      * it does not. Default none, the glow the same all over.
      */
     emissiveTexture?: TTexture;
+    /**
+     * Where the light from all around is kept out of its creases, the shading a modelling program
+     * calls occlusion: a picture whose red is white where the surface is open and black where it is
+     * shut in. It darkens only the scene's `ambient`, never a lamp or the sun. The picture alone, or
+     * `{ texture, strength, uv, wrap }` to apply less of it, lay it out by a second picture coordinate
+     * or give it edges of its own (see {@link TMaterialOcclusion}). Default none.
+     */
+    occlusion?: TTexture | TMaterialOcclusion;
 };

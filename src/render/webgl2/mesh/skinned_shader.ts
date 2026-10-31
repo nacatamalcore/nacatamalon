@@ -19,7 +19,7 @@ import type { TCullMode } from '../../../materials/types/t_material';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const skinnedVertexGlsl = (cull: TCullMode): string => meshVertexHeadGlsl(cull) + /* glsl */ `
+export const skinnedVertexGlsl = (cull: TCullMode, secondUv = false): string => meshVertexHeadGlsl(cull, secondUv) + /* glsl */ `
 layout(location = 3) in vec4 aBones;
 layout(location = 4) in vec4 aWeights;
 
@@ -55,6 +55,6 @@ void main() {
 
     vec3 worldPos = (uniforms.model * bent).xyz;
     vec3 worldNormal = ${worldNormalOfGlsl(cull, 'bentNormal')};
-` + meshVertexLightGlsl(cull);
+` + meshVertexLightGlsl(cull, secondUv);
 
 export const SKINNED_VERTEX_GLSL = skinnedVertexGlsl('back');

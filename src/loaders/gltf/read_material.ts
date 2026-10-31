@@ -31,6 +31,13 @@ export type TGltfSurface = {
      */
     emissiveMasked: boolean;
     /**
+     * Where the light from all around is kept out of its creases, or `null` when the file says
+     * nothing, or lays it out by a picture coordinate past the second, which no piece carries here.
+     * What it does past its edge is its own sampler's, written only when it is not the colour
+     * picture's: left out, it follows the colour's, and so whatever a game or a scene says instead.
+     */
+    occlusion: { image: TGltfImage; strength: number; uv: 'uv' | 'uv2'; wrap?: { u: TTextureWrap; v: TTextureWrap } } | null;
+    /**
      * Whether the file says the surface is seen through (`alphaMode: 'BLEND'`). Only this mode:
      * `'MASK'` cuts holes at a threshold rather than blending, and is `alphaCutoff`.
      */
@@ -93,13 +100,55 @@ const imageOf = (doc: TGltfDoc, textureIndex: number | undefined): TGltfImage | 
 
 
 /**
- * Reads what a piece looks like: its colour, its picture, and any light it gives off by itself.
+ * The files already told their occlusion is laid out by a coordinate past the second, so a file of
+ * fifty pieces sharing one surface says it once.
+ */
+const toldPastSecond = new WeakSet<TGltfDoc>();
+
+/**
+ * Where a surface keeps the light from all around out of its creases, read from the file, or `null`.
+ */
+const occlusionOf = (
+    doc: TGltfDoc,
+    asked: { index: number; strength?: number; texCoord?: number } | undefined,
+    colour: { u: TTextureWrap; v: TTextureWrap },
+): TGltfSurface['occlusion'] => {
+    const image = imageOf(doc, asked?.index);
+    if (asked === undefined || image === null) {
+        return null;
+    }
+    const set = asked.texCoord ?? 0;
+    if (set > 1) {
+        // Only the first two are read off a piece, so a third has nothing to lay it out by.
+        if (toldPastSecond.has(doc)) {
+            return null;
+        }
+        toldPastSecond.add(doc);
+        console.warn(`[NacatamalOn] useLoadGltf: a surface lays its occlusion out by picture coordinate ${set}, and only the first two (TEXCOORD_0 and TEXCOORD_1) are read. It is drawn without it.`);
+        return null;
+    }
+    // Kept from 0 to 1, as the format says; anything that is not a number is all of it.
+    const strength = typeof asked.strength === 'number' && Number.isFinite(asked.strength) ? Math.min(Math.max(asked.strength, 0), 1) : 1;
+    // Its own sampler, which need not be the colour picture's: a file may clamp one and repeat the
+    // other. Kept only when it differs, so a model whose two agree, nearly every one, takes a game's
+    // or a scene's wrap on both.
+    const texture = doc.textures?.[asked.index];
+    const sampler = texture?.sampler !== undefined ? doc.samplers?.[texture.sampler] : undefined;
+    const wrap = { u: wrapOf(sampler?.wrapS), v: wrapOf(sampler?.wrapT) };
+    const own = wrap.u !== colour.u || wrap.v !== colour.v;
+    return { image, strength, uv: set === 1 ? 'uv2' : 'uv', ...(own ? { wrap } : {}) };
+};
+
+/**
+ * Reads what a piece looks like: its colour, its picture, any light it gives off by itself, and
+ * where its creases keep the light from all around out.
  *
  * **Most of what a modern file says about a surface is deliberately walked past.** How metallic
- * something is, how rough, its bumps, where it is shadowed in its own creases: those describe light
- * behaving in a way the consoles this engine aims at never computed, and reading them would mean
- * promising a look it does not produce. Colour, picture and glow are what survive, and they are
- * what the era actually had.
+ * something is, how rough, its bumps: those describe light behaving in a way the consoles this
+ * engine aims at never computed, and reading them would mean promising a look it does not produce.
+ * Colour, picture and glow are what survive, and they are what the era actually had. The occlusion
+ * is kept too, because it is not a way light behaves but a shading the artist made and saw: the
+ * era painted the same darkness into its pictures and its corners by hand.
  *
  * @internal
  * @since 1.0.0
@@ -108,7 +157,7 @@ const imageOf = (doc: TGltfDoc, textureIndex: number | undefined): TGltfImage | 
 export const readMaterial = (doc: TGltfDoc, index: number | undefined): TGltfSurface => {
     const material = index !== undefined ? doc.materials?.[index] : undefined;
     if (material === undefined) {
-        return { name: '', tint: WHITE, emissive: BLACK, image: null, emissiveImage: null, emissiveMasked: false, transparent: false, doubleSided: false, alphaCutoff: null, wrap: REPEAT };
+        return { name: '', tint: WHITE, emissive: BLACK, image: null, emissiveImage: null, emissiveMasked: false, occlusion: null, transparent: false, doubleSided: false, alphaCutoff: null, wrap: REPEAT };
     }
 
     const [r, g, b, a] = material.pbrMetallicRoughness?.baseColorFactor ?? [1, 1, 1, 1];
@@ -131,6 +180,7 @@ export const readMaterial = (doc: TGltfDoc, index: number | undefined): TGltfSur
         image: imageOf(doc, textureIndex),
         emissiveImage: imageOf(doc, material.emissiveTexture?.index),
         emissiveMasked: material.emissiveTexture !== undefined,
+        occlusion: occlusionOf(doc, material.occlusionTexture, { u: wrapOf(sampler?.wrapS), v: wrapOf(sampler?.wrapT) }),
         transparent: material.alphaMode === 'BLEND',
         doubleSided: material.doubleSided === true,
         // Kept in range: a file that says more than 1 cuts everything, which is what it asked for.

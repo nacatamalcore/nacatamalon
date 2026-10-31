@@ -113,8 +113,8 @@ export const MESH_BONES: GPUVertexBufferLayout = {
  * Each corner's detail, from a run of its own: the tangent and its hand, then a second picture
  * coordinate, six numbers in all.
  *
- * Only a material's pipelines read it. The engine's own drawing has no use for it and never binds
- * it, so it costs a model with no material of its own nothing on the card.
+ * A material's pipelines read it, and the engine's own drawing only for a model whose occlusion is
+ * laid out by the second coordinate. Any other model never binds it, so it costs nothing on the card.
  *
  * @internal
  * @since 1.0.0

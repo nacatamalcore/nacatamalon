@@ -65,11 +65,14 @@ describe('where on the screen a material is', () => {
         const wgsl = buildMeshMaterialShader(HOOK, null, {});
         const glsl = buildMeshMaterialShaderGlsl(HOOK_GLSL, null, {});
 
-        expect(wgsl).toContain('out.screen = vec4<f32>(out.position.xyw, cornerUv2.y);');
-        expect(glsl.vertex).toContain('vScreen = vec4(gl_Position.xyw, aUv2.y);');
-        // The second picture's place rides in the spare fourth numbers of the facing and of this.
-        expect(wgsl).toContain('ctx.uv2 = vec2<f32>(in.normal.w, in.screen.w);');
-        expect(glsl.fragment).toContain('ctx.uv2 = vec2(vNormal.w, vScreen.w);');
+        expect(wgsl).toContain('out.screen = vec4<f32>(out.position.xyw, stretched2.y);');
+        expect(glsl.vertex).toContain('vScreen = vec4(gl_Position.xyw, stretched2.y);');
+        // The second picture's place rides in the spare fourth numbers of the facing and of this,
+        // stretched as the first is and divided by the same depth at the pixel.
+        expect(wgsl).toContain('let uv2 = vec2<f32>(in.normal.w, in.screen.w) / in.uv.z;');
+        expect(wgsl).toContain('ctx.uv2 = uv2;');
+        expect(glsl.fragment).toContain('vec2 uv2 = vec2(vNormal.w, vScreen.w) / vUv.z;');
+        expect(glsl.fragment).toContain('ctx.uv2 = uv2;');
         expect(screenMath(glsl.fragment)).toBe(screenMath(wgsl));
         // In the game's pixels, top left first: y turned over, then times the size of the game.
         expect(screenMath(wgsl)).toContain('0.5-ndc.y*0.5');

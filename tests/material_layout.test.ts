@@ -118,7 +118,7 @@ describe('the two model material shaders', () => {
         expect(membersOf(glsl.vertex, 'struct VertContext {'))
             .toEqual(membersOf(wgsl, 'struct VertContext {'));
         expect(membersOf(wgsl, 'struct FragContext {'))
-            .toEqual(['uv', 'normal', 'worldPos', 'light', 'shine', 'emissive', 'viewDir', 'color', 'screen', 'tangent', 'bitangent', 'uv2', 'frontFacing', 'carry']);
+            .toEqual(['uv', 'normal', 'worldPos', 'light', 'shine', 'emissive', 'viewDir', 'color', 'screen', 'tangent', 'bitangent', 'uv2', 'frontFacing', 'carry', 'occlusion']);
         expect(membersOf(wgsl, 'struct VertContext {'))
             .toEqual(['normal', 'uv', 'color', 'tangent', 'bitangent', 'uv2']);
     });

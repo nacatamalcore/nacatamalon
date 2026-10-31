@@ -193,6 +193,10 @@ const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting, fromFile:
     if (glow !== null) {
         listTexture(glow, writing);
     }
+    const occlusion = fromFile ? null : material.occlusion ?? null;
+    if (occlusion !== null) {
+        listTexture(occlusion.texture, writing);
+    }
     // A material made by looks writes the looks and not the colour hook they made: the recipe is
     // the truth, and the shader is made again from it, by whatever version opens the scene.
     const looked = material.lighting !== undefined || material.steps !== undefined;
@@ -225,6 +229,21 @@ const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting, fromFile:
         tint: { ...material.tint },
         emissive: { ...material.emissive },
         ...(glow !== null ? { emissiveTexture: glow.key } : {}),
+        // Only what differs from all of it, laid out by the first coordinate.
+        ...(occlusion !== null
+            ? {
+                occlusion: {
+                    texture: occlusion.texture.key,
+                    ...(occlusion.strength !== undefined && occlusion.strength !== 1 ? { strength: occlusion.strength } : {}),
+                    ...(occlusion.uv === 'uv2' ? { uv: 'uv2' as const } : {}),
+                    // Written whenever it says one, repeating included: left out, it is the colour
+                    // picture's, which may be something else.
+                    ...(occlusion.wrap !== undefined
+                        ? { wrap: typeof occlusion.wrap === 'string' ? occlusion.wrap : { u: occlusion.wrap.u, v: occlusion.wrap.v } }
+                        : {}),
+                },
+            }
+            : {}),
         specular: { ...material.specular },
         shininess: material.shininess,
         alpha: material.alpha,

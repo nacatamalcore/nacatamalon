@@ -1,7 +1,7 @@
 import { fillLightUniforms, fillMeshUniforms, LIGHT_UNIFORM_FLOATS, MESH_UNIFORM_FLOATS } from '../../shared';
 import { cullOf } from '../../shared/cull_of';
 import { isTransparentMesh } from '../../shared/is_transparent_mesh';
-import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
+import { occlusionWrapOf, textureWrapOf, wrapKey } from '../../shared/texture_wrap';
 import { toGpuBuffer } from '../resources';
 import { toGpuTexture } from '../texture';
 import { isAway } from '../../../loaders/texture/is_away';
@@ -18,9 +18,9 @@ const gpuOf = (texture: TDrawMesh['material']['texture'] | undefined): GPUTextur
     texture !== null && texture !== undefined && texture.status === 'ready' && texture.gpu !== null ? toGpuTexture(texture.gpu) : null;
 
 /**
- * The pictures of a model, its colour and its glow, read the way it asked (its filter, and what
- * they do past their edge), made the first time that pairing is drawn. The shadow pass reads the
- * same group to cut a caster out of its picture.
+ * The pictures of a model, its colour, its glow and its occlusion, read the way it asked (its
+ * filter, and what they do past their edge), made the first time that set is drawn. The shadow pass
+ * reads the same group to cut a caster out of its picture.
  *
  * @internal
  */
@@ -28,39 +28,60 @@ export const textureBindGroup = (device: GPUDevice, meshes: TMeshPipeline, mesh:
     const filter = (mesh.material.smooth ?? meshes.defaultSmooth) ? 'linear' : 'nearest';
     const picture = gpuOf(mesh.material.texture);
     const glow = gpuOf(mesh.material.emissiveTexture);
-    if (picture === null && glow === null) {
+    const crease = gpuOf(mesh.material.occlusion?.texture);
+    if (picture === null && glow === null && crease === null) {
         // One white pixel reads the same whatever it does past its edge.
         return meshes.whiteBindGroups[filter];
     }
 
     const color = picture ?? meshes.whiteTexture;
     const lit = glow ?? meshes.whiteTexture;
+    const shut = crease ?? meshes.whiteTexture;
     const { u, v } = textureWrapOf(mesh.material);
-    const key = wrapKey(filter, u, v);
+    const shutWrap = occlusionWrapOf(mesh.material);
+    const shutKey = wrapKey(filter, shutWrap.u, shutWrap.v);
+    // Both ways of reading: the colour's and the occlusion's, which may differ past the edge.
+    const key = `${wrapKey(filter, u, v)}|${shutKey}`;
     let byGlow = meshes.textureBindGroups.get(color);
     if (byGlow === undefined) {
         byGlow = new WeakMap();
         meshes.textureBindGroups.set(color, byGlow);
     }
-    let cached = byGlow.get(lit);
+    let byCrease = byGlow.get(lit);
+    if (byCrease === undefined) {
+        byCrease = new WeakMap();
+        byGlow.set(lit, byCrease);
+    }
+    let cached = byCrease.get(shut);
     if (cached === undefined) {
         cached = new Map();
-        byGlow.set(lit, cached);
+        byCrease.set(shut, cached);
     }
     let group = cached.get(key);
     if (group === undefined) {
         group = device.createBindGroup({
             layout: meshes.layouts.texture,
             entries: [
-                { binding: 0, resource: meshes.wrapSamplers.get(key)! },
+                { binding: 0, resource: meshes.wrapSamplers.get(wrapKey(filter, u, v))! },
                 { binding: 1, resource: color.createView() },
                 { binding: 2, resource: lit.createView() },
+                { binding: 3, resource: shut.createView() },
+                { binding: 4, resource: meshes.wrapSamplers.get(shutKey)! },
             ],
         });
         cached.set(key, group);
     }
     return group;
 };
+
+/**
+ * Whether a model's occlusion is laid out by its second picture coordinate and it has one to read:
+ * a picture to read it from, and a detail run to read the coordinate from.
+ *
+ * @internal
+ */
+export const laidOutBySecondUv = (mesh: TDrawMesh): boolean =>
+    mesh.material.occlusion?.uv === 'uv2' && gpuOf(mesh.material.occlusion.texture) !== null && mesh.geometry?.detailBuffer !== null && mesh.geometry?.detailBuffer !== undefined;
 
 /**
  * Makes room for more of something than the buffer holds, doubling so it settles after a frame or two.
@@ -242,7 +263,11 @@ export const drawMesh = (
     const glass = isTransparentMesh(mesh);
     // Which side of its triangles is thrown away. The usual one is the set made at the start.
     const cull = cullOf(mesh);
-    const set = cull === 'back' ? meshes : meshes.sided(cull);
+    // An occlusion laid out by the second picture coordinate takes the set that reads it, from the
+    // detail run. A shape with no detail run has no second coordinate of its own, and its first
+    // stands in, as it does for a material's `ctx.uv2`.
+    const secondUv = effect === null && laidOutBySecondUv(mesh);
+    const set = secondUv ? meshes.secondUv(cull) : cull === 'back' ? meshes : meshes.sided(cull);
     const pipeline = effect !== null
         ? (glass ? effect.transparentPipeline : effect.pipeline)!
         : bends
@@ -259,6 +284,9 @@ export const drawMesh = (
 
     if (bends) {
         pass.setVertexBuffer(2, toGpuBuffer(geometry.skinBuffer!));
+    }
+    if (secondUv) {
+        pass.setVertexBuffer(bends ? 3 : 2, toGpuBuffer(geometry.detailBuffer!));
     }
     if (effect !== null) {
         // The detail run, which only a material's pipeline reads: after the bones when it bends.

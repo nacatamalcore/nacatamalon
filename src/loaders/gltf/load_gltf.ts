@@ -250,6 +250,11 @@ export const loadGltf = async (store: TRuntimeStore, model: TGltfModel, options:
             const surface = readMaterial(doc, piece.materialIndex);
             const texture = options.textures ? await surfaceTexture(store, model, doc, buffers, surface.image, seen) : null;
             const emissiveTexture = options.textures ? await surfaceTexture(store, model, doc, buffers, surface.emissiveImage, seen) : null;
+            // Often the same picture as another of the surface's (its roughness and metalness ride in
+            // the other channels), and then one copy serves both.
+            const occlusionTexture = options.textures && surface.occlusion !== null
+                ? await surfaceTexture(store, model, doc, buffers, surface.occlusion.image, seen)
+                : null;
             if (store.get('loop').destroyed) {
                 return;
             }
@@ -276,6 +281,14 @@ export const loadGltf = async (store: TRuntimeStore, model: TGltfModel, options:
                 // wrong in one small place, an unmasked one all over.
                 emissive: surface.emissiveMasked && emissiveTexture === null ? NO_GLOW : surface.emissive,
                 emissiveTexture,
+                occlusion: occlusionTexture === null || surface.occlusion === null
+                    ? null
+                    : {
+                        texture: occlusionTexture,
+                        strength: surface.occlusion.strength,
+                        uv: surface.occlusion.uv,
+                        ...(surface.occlusion.wrap !== undefined ? { wrap: surface.occlusion.wrap } : {}),
+                    },
                 transparent: surface.transparent,
                 doubleSided: surface.doubleSided,
                 alphaCutoff: surface.alphaCutoff,

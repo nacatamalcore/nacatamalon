@@ -78,6 +78,18 @@ export const fillMeshUniforms = (out: Float32Array, at: number, mesh: TDrawMesh,
     // Written straight into its place rather than built and copied.
     normalMatrixOf(model, normalScratch);
     out.set(normalScratch, at + 32);
+    // The fourth number of each of its first three columns is free too, since a direction is turned
+    // with w = 0 and only x, y and z of the answer are read. The first carries how much of its
+    // occlusion is applied, zero for a model with none, and the second whether that occlusion is laid
+    // out by the second picture coordinate, which a material reads; the built-in drawing has a
+    // pipeline of its own for it.
+    const occlusion = surface.occlusion;
+    // Kept from 0 to 1 here too, for one changed after the material was made; one that is not a
+    // number is all of it, as a file's is, rather than a value the card does as it likes with.
+    const strength = occlusion?.strength ?? 1;
+    out[at + 35] = occlusion === null || occlusion === undefined ? 0 : Number.isFinite(strength) ? Math.min(Math.max(strength, 0), 1) : 1;
+    out[at + 39] = occlusion?.uv === 'uv2' ? 1 : 0;
+    out[at + 43] = 0;
     // Its fourth column is never read as a matrix (every shader turns a direction with it, w = 0),
     // so its last number carries whether the picture is stretched straight across the screen, the
     // PlayStation's swimming textures: one for `affine`, zero for held true to the surface.

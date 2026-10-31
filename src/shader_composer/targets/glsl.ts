@@ -41,6 +41,7 @@ const INPUT_SOURCE: Record<TInputKind, Partial<Record<TStageCtx, string>>> = {
     vertexBitangent: { 'mesh3d.vert': 'ctx.bitangent', 'preview.frag': 'cross(sgPreviewNormal(uv), sgPreviewTangent(uv))' },
     frontFacing:    { 'mesh3d.frag': '(ctx.frontFacing ? 1.0 : 0.0)', 'preview.frag': '1.0' },
     carry:          { 'mesh3d.frag': 'ctx.carry', 'preview.frag': 'vec4(0.0)' },
+    occlusion:      { 'mesh3d.frag': 'ctx.occlusion', 'preview.frag': '1.0' },
 };
 
 /**

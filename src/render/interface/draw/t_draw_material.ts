@@ -68,6 +68,16 @@ export type TDrawMaterial = TDrawShader & {
      * The picture the glow comes through. Omitted, the glow is the same all over.
      */
     readonly emissiveTexture?: TDrawTexture | null;
+    /**
+     * Where the light from all around is kept out: its picture's red, how much of it, and which
+     * picture coordinate lays it out. Omitted, nothing is.
+     */
+    readonly occlusion?: {
+        readonly texture: TDrawTexture;
+        readonly strength?: number;
+        readonly uv?: 'uv' | 'uv2';
+        readonly wrap?: TTextureWrap | { readonly u: TTextureWrap; readonly v: TTextureWrap };
+    } | null;
     readonly specular: TColor;
     readonly shininess: number;
     readonly alpha: number;

@@ -294,6 +294,27 @@ export const composerFrontFacing = (): TComposerNode => newNode('input', 'f32', 
 export const composerCarry = (): TComposerNode => newNode('input', 'vec4<f32>', [], { input: 'carry' });
 
 /**
+ * How open this place is to the light from all around (`f32`): 1 wide open, 0 shut in a crease,
+ * from the material's `occlusion`, and 1 with none. It is already in `composerLight()`; this is it on
+ * its own, to dim a shine inside the creases or gather dirt in them. Models only, colour stage.
+ * @returns The node, to use as the input of another.
+ *
+ * @example
+ * ```ts
+ * // The shine kept out of the creases too, as the light from all around already is.
+ * const lit = composerAdd(
+ *     composerMul(composerSwizzle(composerSurface(), 'rgb'), composerLight()),
+ *     composerMul(composerShine(), composerOcclusion()),
+ * );
+ * ```
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const composerOcclusion = (): TComposerNode => newNode('input', 'f32', [], { input: 'occlusion' });
+
+/**
  * Which way across the surface the picture runs, in the world (`vec3`, one long, square to the
  * normal). With the bitangent and the normal it is the frame a relief or a ripple moves the picture
  * in. Models only, colour stage.

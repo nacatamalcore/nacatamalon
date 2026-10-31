@@ -28,6 +28,11 @@ export type TMeshPipeline = {
      */
     sided: (cull: 'front' | 'none') => { program: WebGLProgram; skinnedProgram: WebGLProgram };
     /**
+     * The same two for a model whose occlusion is laid out by its second picture coordinate, for
+     * each side thrown away. Built the first time one is drawn.
+     */
+    secondUv: (cull: 'back' | 'front' | 'none') => { program: WebGLProgram; skinnedProgram: WebGLProgram };
+    /**
      * Each skeleton's bones as a picture, filled once a frame however many models wear them.
      */
     joints: TJointTextures;

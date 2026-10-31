@@ -342,14 +342,27 @@ void sampleLight(int index, vec3 worldPos, vec3 normal, vec3 viewDir, out vec3 d
 `;
 
 /**
- * Everything the built-in vertex declares before it runs.
+ * The second picture coordinate, read from the corner's detail run and carried to the pixel, for a
+ * model whose occlusion is laid out by it.
+ */
+const SECOND_UV_GLSL = /* glsl */ `
+// The second picture coordinate, for an occlusion laid out by it, times the same depth as the first
+// (see affineUv), so it stretches as the colour does. Only a model whose occlusion asks for it
+// carries it.
+layout(location = 7) in vec2 aUv2;
+out vec2 vUv2;
+`;
+
+/**
+ * Everything the built-in vertex declares before it runs. `secondUv` is the twin of the one in
+ * webgpu/mesh/mesh_shader.ts.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const meshVertexHeadGlsl = (cull: TCullMode): string =>
-    MESH_VERTEX_ATTRIBUTES_GLSL + meshVertexVaryingsGlsl(cull) + MESH_SAMPLE_LIGHT_GLSL + (cull === 'none' ? LIT_BY_GLSL : '');
+export const meshVertexHeadGlsl = (cull: TCullMode, secondUv = false): string =>
+    MESH_VERTEX_ATTRIBUTES_GLSL + meshVertexVaryingsGlsl(cull) + (secondUv ? SECOND_UV_GLSL : '') + MESH_SAMPLE_LIGHT_GLSL + (cull === 'none' ? LIT_BY_GLSL : '');
 
 export const MESH_VERTEX_HEAD_GLSL = meshVertexHeadGlsl('back');
 
@@ -362,7 +375,7 @@ export const MESH_VERTEX_HEAD_GLSL = meshVertexHeadGlsl('back');
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const meshVertexLightGlsl = (cull: TCullMode): string => /* glsl */ `
+export const meshVertexLightGlsl = (cull: TCullMode, secondUv = false): string => /* glsl */ `
     vec3 viewDir = viewDirOf(worldPos);
 
     vec3 diffuse = vec3(0.0);
@@ -393,7 +406,8 @@ export const meshVertexLightGlsl = (cull: TCullMode): string => /* glsl */ `
     vShadowCoord = shadowCoordOf(worldPos);
     vUv = affineUv(aUv, gl_Position);
     vColor = aColor;
-    vFog = fogAt(worldPos);
+    vFog = fogAt(worldPos);${secondUv ? `
+    vUv2 = affineUv(aUv2, gl_Position).xy;` : ''}
 }
 `;
 
@@ -406,13 +420,13 @@ export const MESH_VERTEX_LIGHT_GLSL = meshVertexLightGlsl('back');
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const meshVertexGlsl = (cull: TCullMode): string => meshVertexHeadGlsl(cull) + /* glsl */ `
+export const meshVertexGlsl = (cull: TCullMode, secondUv = false): string => meshVertexHeadGlsl(cull, secondUv) + /* glsl */ `
 void main() {
     gl_Position = snapToPixels(uniforms.mvp * vec4(aPosition, 1.0));
 
     vec3 worldPos = (uniforms.model * vec4(aPosition, 1.0)).xyz;
     vec3 worldNormal = ${worldNormalOfGlsl(cull, 'aNormal')};
-` + meshVertexLightGlsl(cull);
+` + meshVertexLightGlsl(cull, secondUv);
 
 export const MESH_VERTEX_GLSL = meshVertexGlsl('back');
 
@@ -474,7 +488,16 @@ ${MESH_UNIFORMS_GLSL}
 uniform sampler2D meshTexture;
 // The picture the glow comes through, read the colour's way. White when there is none.
 uniform sampler2D meshEmissive;
+// Where the light from all around is kept out, in its red: the colour's filter, its own edges. White
+// when there is none.
+uniform sampler2D meshOcclusion;
 ${MESH_SHADOW_GLSL}
+// How open a place is to the light from all around, 1 wide open to 0 shut in. The twin of
+// occlusionAt in webgpu/mesh/mesh_shader.ts: the amount rides in a spare number of the turning
+// matrix, zero for a model with none.
+float occlusionAt(vec2 uv) {
+    return 1.0 + uniforms.normalMatrix[0].w * (textureLod(meshOcclusion, uv, 0.0).r - 1.0);
+}
 `;
 
 /**
@@ -484,7 +507,7 @@ ${MESH_SHADOW_GLSL}
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const meshFragmentGlsl = (cull: TCullMode): string => {
+export const meshFragmentGlsl = (cull: TCullMode, secondUv = false): string => {
     // A model drawn on both sides reads the light of the side it is; any other has one.
     const [light, shine, casterLight, casterShine] = cull === 'none'
         ? ['sideLight', 'sideShine', 'sideCasterLight', 'sideCasterShine']
@@ -498,7 +521,7 @@ in vec3 vCasterLight;
 in vec3 vCasterShine;
 in vec4 vColor;
 in float vFog;
-${cull === 'none' ? TWO_SIDED_VARYINGS_GLSL('in') : ''}out vec4 fragColor;
+${cull === 'none' ? TWO_SIDED_VARYINGS_GLSL('in') : ''}${secondUv ? 'in vec2 vUv2;\n' : ''}out vec4 fragColor;
 
 void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     vec2 uv = vUv.xy / vUv.z;
@@ -506,8 +529,8 @@ void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     // Its glow, through its picture when it has one: lit windows on a dark wall.
     vec3 glow = uniforms.emissive.rgb * texture(meshEmissive, uv).rgb;
     // Only the casting light's share is taken away, so a thing in the sun's shadow is still lit by
-    // the lamp beside it.
-    vec3 lit = max(litWithShadow(${light}, ${casterLight}, vShadowCoord), lights.ambient.rgb);
+    // the lamp beside it. A crease lowers the floor and nothing else.
+    vec3 lit = max(litWithShadow(${light}, ${casterLight}, vShadowCoord), lights.ambient.rgb * occlusionAt(${secondUv ? 'vUv2 / vUv.z' : 'uv'}));
     // The colour painted on the corners multiplies in with the picture. Unpainted corners are white.
     vec4 color = texColor * uniforms.tint * vColor * vec4(lit, 1.0);
     // Cut out rather than blended: below the material's cutoff the pixel is not there at all, and

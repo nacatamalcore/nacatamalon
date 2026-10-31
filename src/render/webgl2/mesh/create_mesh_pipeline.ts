@@ -6,7 +6,7 @@ import { SKINNED_VERTEX_GLSL, skinnedVertexGlsl } from './skinned_shader';
 import { createJointTextures } from './joint_texture';
 import { TEXTURE_WRAPS, wrapKey } from '../../shared/texture_wrap';
 import type { TMeshPipeline } from './types/t_mesh_pipeline';
-import { MESH_EMISSIVE_UNIT, MESH_JOINTS_UNIT, MESH_LIGHTS_BINDING, MESH_SHADOW_UNIT, MESH_TEXTURE_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
+import { MESH_EMISSIVE_UNIT, MESH_OCCLUSION_UNIT, MESH_JOINTS_UNIT, MESH_LIGHTS_BINDING, MESH_SHADOW_UNIT, MESH_TEXTURE_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
 
 /**
  * Creates the program that draws models, its vertex array and the two blocks it reads.
@@ -63,6 +63,7 @@ export const createMeshPipeline = (gl: WebGL2RenderingContext, samplers: { neare
         }
         gl.uniform1i(gl.getUniformLocation(p, 'shadowMap'), MESH_SHADOW_UNIT);
         gl.uniform1i(gl.getUniformLocation(p, 'meshEmissive'), MESH_EMISSIVE_UNIT);
+        gl.uniform1i(gl.getUniformLocation(p, 'meshOcclusion'), MESH_OCCLUSION_UNIT);
         gl.useProgram(null);
     };
     prepare(program, false);
@@ -81,6 +82,24 @@ export const createMeshPipeline = (gl: WebGL2RenderingContext, samplers: { neare
             prepare(made.program, false);
             prepare(made.skinnedProgram, true);
             sides.set(cull, made);
+        }
+        return made;
+    };
+
+    // And the same two again for a model whose occlusion is laid out by its second picture
+    // coordinate, which they read at attribute 7, from the detail run its vertex array already
+    // points at. Built the first time one is drawn.
+    const secondUvSides = new Map<'back' | 'front' | 'none', { program: WebGLProgram; skinnedProgram: WebGLProgram }>();
+    const secondUv = (cull: 'back' | 'front' | 'none'): { program: WebGLProgram; skinnedProgram: WebGLProgram } => {
+        let made = secondUvSides.get(cull);
+        if (made === undefined) {
+            made = {
+                program: compileProgram(gl, meshVertexGlsl(cull, true), meshFragmentGlsl(cull, true), `mesh, cull ${cull}, second uv`),
+                skinnedProgram: compileProgram(gl, skinnedVertexGlsl(cull, true), meshFragmentGlsl(cull, true), `skinned mesh, cull ${cull}, second uv`),
+            };
+            prepare(made.program, false);
+            prepare(made.skinnedProgram, true);
+            secondUvSides.set(cull, made);
         }
         return made;
     };
@@ -116,6 +135,7 @@ export const createMeshPipeline = (gl: WebGL2RenderingContext, samplers: { neare
         program,
         skinnedProgram,
         sided,
+        secondUv,
         joints: createJointTextures(gl),
         skinnedVertexArrays: new WeakMap(),
         vertexArrays: new WeakMap(),

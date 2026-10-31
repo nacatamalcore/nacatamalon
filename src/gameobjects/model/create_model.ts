@@ -96,6 +96,7 @@ const buildPart = (
                 tint: multiply(part.tint, state.tint),
                 emissive: part.emissive,
                 emissiveTexture: part.emissiveTexture ?? undefined,
+                occlusion: part.occlusion ?? undefined,
                 specular: options.specular === undefined ? undefined : getColor(options.specular),
                 shininess: options.shininess,
                 vertexSnap: options.vertexSnap,

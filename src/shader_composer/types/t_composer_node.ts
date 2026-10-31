@@ -34,7 +34,8 @@ export type TInputKind =
     | 'vertexTangent'
     | 'vertexBitangent'
     | 'frontFacing'
-    | 'carry';
+    | 'carry'
+    | 'occlusion';
 
 /**
  * A function a node needs written once at the top of the shader (the noise functions, for

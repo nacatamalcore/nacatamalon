@@ -1,11 +1,11 @@
 import { fillLightUniforms, fillMeshUniforms } from '../../shared';
 import { cullOf } from '../../shared/cull_of';
 import { isTransparentMesh } from '../../shared/is_transparent_mesh';
-import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
+import { occlusionWrapOf, textureWrapOf, wrapKey } from '../../shared/texture_wrap';
 import { toGlBuffer } from '../resources';
 import { toGlTexture } from '../texture';
 import { isAway } from '../../../loaders/texture/is_away';
-import { MESH_EMISSIVE_UNIT, MESH_JOINTS_UNIT, MESH_LIGHTS_BINDING, MESH_MAP_UNITS, MESH_SHADOW_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
+import { MESH_EMISSIVE_UNIT, MESH_OCCLUSION_UNIT, MESH_JOINTS_UNIT, MESH_LIGHTS_BINDING, MESH_MAP_UNITS, MESH_SHADOW_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
 import type { TCameraSpace } from '../../shared/compute_mvp_3d';
 import type { TDrawLight, TDrawMesh, TDrawView3d } from '../../interface';
 import type { TShadowUniforms } from '../../shared/fill_light_uniforms';
@@ -56,9 +56,10 @@ export const vertexArrayFor = (gl: WebGL2RenderingContext, meshes: TMeshPipeline
     gl.enableVertexAttribArray(5);
     gl.vertexAttribPointer(5, 4, gl.UNSIGNED_BYTE, true, 4, 0);
 
-    // Each corner's tangent and second picture coordinate, from a run of their own: 24 bytes. Only a
-    // material's program reads them; the built-in one declares nothing at 6 and 7, and an attribute
-    // nobody reads costs nothing.
+    // Each corner's tangent and second picture coordinate, from a run of their own: 24 bytes. A
+    // material's program reads them, and the built-in one only the second coordinate, and only for an
+    // occlusion laid out by it; the others declare nothing at 6 and 7, and an attribute nobody reads
+    // costs nothing.
     if (geometry.detailBuffer !== null) {
         gl.bindBuffer(gl.ARRAY_BUFFER, toGlBuffer(geometry.detailBuffer));
         gl.enableVertexAttribArray(6);
@@ -177,7 +178,6 @@ export const drawMesh = (
     const surface = mesh.material;
     // Which side of its triangles is thrown away. The usual one is the pair built at the start.
     const cull = cullOf(mesh);
-    const set = cull === 'back' ? meshes : meshes.sided(cull);
     let effect: ReturnType<TMeshPipeline['materials']['get']> | null = null;
     if (surface.fragment !== null || surface.vertex !== null) {
         meshes.materials.warnIfWgpuOnly(surface);
@@ -190,6 +190,13 @@ export const drawMesh = (
         }
     }
 
+    // An occlusion laid out by the second picture coordinate takes the pair that reads it, at the
+    // attribute the detail run is already on. A shape with no detail run has no second coordinate of
+    // its own, and its first stands in, as it does for a material's `ctx.uv2`.
+    const crease = surface.occlusion?.texture;
+    const creaseReady = crease !== undefined && crease.status === 'ready' && crease.gpu !== null;
+    const secondUv = effect === null && surface.occlusion?.uv === 'uv2' && creaseReady && mesh.geometry.detailBuffer !== null;
+    const set = secondUv ? meshes.secondUv(cull) : cull === 'back' ? meshes : meshes.sided(cull);
     gl.useProgram(effect !== null ? effect.program! : bends ? set.skinnedProgram : set.program);
     gl.bindBufferBase(gl.UNIFORM_BUFFER, MESH_UNIFORMS_BINDING, meshes.uniforms);
     gl.bindBufferBase(gl.UNIFORM_BUFFER, MESH_LIGHTS_BINDING, meshes.lights);
@@ -230,6 +237,14 @@ export const drawMesh = (
     gl.activeTexture(gl.TEXTURE0 + MESH_EMISSIVE_UNIT);
     gl.bindTexture(gl.TEXTURE_2D, glowReady ? toGlTexture(glow.gpu!) : meshes.whiteTexture);
     gl.bindSampler(MESH_EMISSIVE_UNIT, sampler);
+
+    // Where the light from all around is kept out. White when there is none or it has not arrived,
+    // which is wide open.
+    gl.activeTexture(gl.TEXTURE0 + MESH_OCCLUSION_UNIT);
+    gl.bindTexture(gl.TEXTURE_2D, creaseReady ? toGlTexture(crease.gpu!) : meshes.whiteTexture);
+    // Its own edges, which a model file may give it apart from the colour's; the same filter.
+    const shutWrap = occlusionWrapOf(mesh.material);
+    gl.bindSampler(MESH_OCCLUSION_UNIT, meshes.wrapSamplers.get(wrapKey((mesh.material.smooth ?? meshes.defaultSmooth) ? 'linear' : 'nearest', shutWrap.u, shutWrap.v))!);
     gl.activeTexture(gl.TEXTURE0);
 
     gl.enable(gl.DEPTH_TEST);

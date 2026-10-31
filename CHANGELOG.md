@@ -5,8 +5,27 @@ releases are in [changelog/](./changelog/), one file each.
 
 ## Unreleased
 
+### Added
+
+- **A model's occlusion: its creases darker, as its author saw them.** A glTF's `occlusionTexture`
+  is read, its `strength` and either of its first two picture coordinates, and one picture that packs
+  the occlusion with the roughness and metalness serves as it is. In code, `occlusion` on
+  `createMaterial({ shader: 'mesh3d' })` and `createMesh`: the picture alone, or
+  `{ texture, strength, uv: 'uv2', wrap }`, its own edges the colour picture's unless it says (a
+  file's comes from its own sampler). It lowers only the scene's ambient light, so a crease turned to
+  a lamp or the sun is as lit as anywhere and the same crease in the shade is darker. A material of
+  your own gets it already in `ctx.light`, and on its own as `ctx.occlusion` (`composerOcclusion()`
+  in the shader composer). Saved in a scene document; a model file's pieces bring theirs back from
+  the file.
+
 ### Changed
 
+- **A `wrap` the engine has no word for is refused** on a model's material, its maps and its
+  occlusion, naming where it was. It left the card with no way to read the picture: on WebGPU every
+  frame threw, on WebGL2 the picture was read some other way with no word why.
+- **`ctx.uv2` stretches as `ctx.uv` does on an `affine` material**, so what a material lays out by
+  its second picture coordinate swims with its picture instead of sliding across it. It was held
+  true to the surface while the first was stretched.
 - **The warning for a covered change asked while another is covering says what to do.** The first
   one wins, and the second is ignored rather than queued, since it is nearly always late (the timer
   running out after the goal was reached) and played afterwards would undo the first. A scene that

@@ -104,6 +104,13 @@ export type TTestMaterial = {
      */
     emissiveUnreadable?: boolean;
     /**
+     * Where the light from all around is kept out: a picture beside the file (`image`), one kept
+     * inside it (`embedded`), or the colour picture's own texture (`sameAsColor`), the way a file
+     * that packs its occlusion with other things in one picture points at it twice. `strength` and
+     * `texCoord` are written as given.
+     */
+    occlusion?: { image?: string; embedded?: string; sameAsColor?: boolean; strength?: number; texCoord?: number };
+    /**
      * What the picture does past its edge each way, in the format's numbers. Left out, no sampler.
      */
     wrapS?: number;
@@ -339,6 +346,22 @@ const assemble = (model: TTestModel) => {
         }
         if (material.emissiveStrength !== undefined) {
             out.extensions = { KHR_materials_emissive_strength: { emissiveStrength: material.emissiveStrength } };
+        }
+        if (material.occlusion !== undefined) {
+            const { image, embedded, sameAsColor, strength, texCoord } = material.occlusion;
+            let index = sameAsColor === true ? (pbr.baseColorTexture as { index: number } | undefined)?.index : undefined;
+            if (image !== undefined) {
+                images.push({ uri: image });
+                textures.push({ source: images.length - 1 });
+                index = textures.length - 1;
+            } else if (embedded !== undefined) {
+                images.push({ bufferView: putRaw(new TextEncoder().encode(embedded)), mimeType: 'image/png' });
+                textures.push({ source: images.length - 1 });
+                index = textures.length - 1;
+            }
+            if (index !== undefined) {
+                out.occlusionTexture = { index, ...(strength !== undefined ? { strength } : {}), ...(texCoord !== undefined ? { texCoord } : {}) };
+            }
         }
         return out;
     });

@@ -658,14 +658,14 @@ const gatherTree = (
 };
 
 /**
- * Whether a model shows `texture`, as its picture, its glow's or one of its maps, which it must not
- * while that texture is being drawn into.
+ * Whether a model shows `texture`, as its picture, its glow's, its occlusion's or one of its maps,
+ * which it must not while that texture is being drawn into.
  */
 const shows = (item: TDrawable | TDrawSprite, texture: TTexture): boolean => {
     if (item.type !== 'mesh') {
         return false;
     }
-    if (item.material.texture === texture || item.material.emissiveTexture === texture) {
+    if (item.material.texture === texture || item.material.emissiveTexture === texture || item.material.occlusion?.texture === texture) {
         return true;
     }
     const maps = item.material.maps;

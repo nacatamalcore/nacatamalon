@@ -43,6 +43,12 @@ export type TMeshPipeline = {
      */
     sided: (cull: 'front' | 'none') => TSidedMeshPipelines;
     /**
+     * The same four for a model whose occlusion is laid out by its second picture coordinate, for
+     * each side thrown away: they read the corner's detail run, which the others never bind. Built
+     * the first time one is drawn.
+     */
+    secondUv: (cull: 'back' | 'front' | 'none') => TSidedMeshPipelines;
+    /**
      * Spelled out and shared, so a bind group made once works with either pipeline. Worked out from
      * each shader instead, they would be two sets that look identical and are not interchangeable.
      */
@@ -77,10 +83,10 @@ export type TMeshPipeline = {
      */
     wrapSamplers: Map<string, GPUSampler>;
     /**
-     * Each picture's groups, by the picture its glow comes through (white for none) and then by the
-     * way it is read, made the first time that pairing is drawn.
+     * Each picture's groups, by the picture its glow comes through, then the one its occlusion is
+     * (white for none), and then by the way it is read, made the first time that set is drawn.
      */
-    textureBindGroups: WeakMap<GPUTexture, WeakMap<GPUTexture, Map<string, GPUBindGroup>>>;
+    textureBindGroups: WeakMap<GPUTexture, WeakMap<GPUTexture, WeakMap<GPUTexture, Map<string, GPUBindGroup>>>>;
     whiteBindGroups: { nearest: GPUBindGroup; linear: GPUBindGroup };
     /**
      * One slot per scene that has models: what shines on it and how dark its dark side is.

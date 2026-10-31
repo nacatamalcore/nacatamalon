@@ -3,7 +3,7 @@ import type { TSkeletalClip, TSkeleton } from '../../../animation';
 import type { TGeometry } from '../../../geometry';
 import type { TLoadStatus } from '../../types/t_load_status';
 import type { TTexture } from '../../texture/types/t_texture';
-import type { TTextureWrap } from '../../../materials';
+import type { TMaterialOcclusion, TTextureWrap } from '../../../materials';
 
 /**
  * One drawable piece of a model: a shape and the surface it wears.
@@ -39,6 +39,11 @@ export type TGltfPart = {
      * The picture its glow comes through, or `null` when the glow is the same all over.
      */
     emissiveTexture: TTexture | null;
+    /**
+     * Where the light from all around is kept out of its creases, as the file says, or `null` when
+     * it says nothing.
+     */
+    occlusion: TMaterialOcclusion | null;
     /**
      * Whether the file says it is seen through, whatever its colour's alpha: a picture with
      * see-through parts is the usual reason, and nothing else would tell.

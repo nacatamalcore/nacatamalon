@@ -22,7 +22,7 @@ import type { TCullMode } from '../../../materials/types/t_material';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const skinnedShaderFor = (cull: TCullMode): string => meshShaderCommon(cull) + /* wgsl */ `
+export const skinnedShaderFor = (cull: TCullMode, secondUv = false): string => meshShaderCommon(cull, secondUv) + /* wgsl */ `
 @group(3) @binding(0) var<storage, read> joints: array<mat4x4<f32>>;
 ${FACING_TURN}
 @vertex
@@ -32,7 +32,8 @@ fn vs(
     @location(2) uv: vec2<f32>,
     @location(3) bones: vec4<f32>,
     @location(4) weights: vec4<f32>,
-    @location(5) color: vec4<f32>,
+    @location(5) color: vec4<f32>,${secondUv ? `
+    @location(7) uv2: vec2<f32>,` : ''}
 ) -> VertexOutput {
     // The four bones, mixed by how much of the corner each one owns. Mixing the movements and
     // applying the result once is what keeps a bend smooth: moving the corner four times and
@@ -65,9 +66,10 @@ fn vs(
     out.shadowCoord = shadowCoordOf(worldPos);
     out.uv = affineUv(uv, out.position);
     out.color = color;
-    out.fog = fogAt(worldPos);
+    out.fog = fogAt(worldPos);${secondUv ? `
+    out.uv2 = affineUv(uv2, out.position).xy;` : ''}
     return out;
 }
-` + meshFragment(cull);
+` + meshFragment(cull, secondUv);
 
 export const SKINNED_SHADER = skinnedShaderFor('back');

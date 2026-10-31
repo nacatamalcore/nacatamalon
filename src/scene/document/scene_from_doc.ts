@@ -302,6 +302,9 @@ const buildModelMesh = (
         if (part.emissiveTexture !== null) {
             mesh.material.emissiveTexture = part.emissiveTexture;
         }
+        if (part.occlusion !== null) {
+            mesh.material.occlusion = { ...part.occlusion };
+        }
         // The file's word unless the scene has one of its own, as with the side and the cut below.
         if (surface.transparent === undefined && part.transparent) {
             mesh.material.transparent = true;
@@ -483,6 +486,8 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
             const surface = component.material;
             const texture = surface.texture === null ? undefined : found(assets.textures, surface.texture, 'model', src);
             const emissiveTexture = surface.emissiveTexture === undefined ? undefined : found(assets.textures, surface.emissiveTexture, 'model', src);
+            // One whose picture is not there is left out, and the model is drawn wide open.
+            const occlusionTexture = surface.occlusion === undefined ? undefined : found(assets.textures, surface.occlusion.texture, 'model', src);
             // Each map by its picture's key; one whose picture is not there is left out and reads white.
             const maps: Record<string, TMaterialMap> = {};
             for (const [name, map] of Object.entries(surface.maps ?? {})) {
@@ -511,6 +516,16 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                     tint: surface.tint,
                     emissive: surface.emissive,
                     ...(emissiveTexture !== undefined ? { emissiveTexture } : {}),
+                    ...(occlusionTexture !== undefined && surface.occlusion !== undefined
+                        ? {
+                            occlusion: {
+                                texture: occlusionTexture,
+                                ...(surface.occlusion.strength !== undefined ? { strength: surface.occlusion.strength } : {}),
+                                ...(surface.occlusion.uv !== undefined ? { uv: surface.occlusion.uv } : {}),
+                                ...(surface.occlusion.wrap !== undefined ? { wrap: surface.occlusion.wrap } : {}),
+                            },
+                        }
+                        : {}),
                     specular: surface.specular,
                     shininess: surface.shininess,
                     alpha: surface.alpha,

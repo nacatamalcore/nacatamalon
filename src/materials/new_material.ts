@@ -5,7 +5,7 @@ import { deriveSignature, MATERIAL_RULES } from './derive_signature';
 import { checkParameterRoom } from './check_parameter_room';
 import { compileShader } from '../shader_composer/compile_shader';
 import { MAP_NAME, MAX_MATERIAL_MAPS } from '../render/shared/material_maps';
-import type { TMaterial, TMaterialMap, TMeshMaterial, TSpriteMaterial } from './types/t_material';
+import type { TMaterial, TMaterialMap, TMaterialOcclusion, TMeshMaterial, TSpriteMaterial } from './types/t_material';
 import type { TMaterialOptions, TMeshMaterialOptions } from './types/t_material_options';
 import type { TShader } from '../loaders/shader/types/t_shader';
 import type { TTexture } from '../loaders';
@@ -55,8 +55,50 @@ const mapsOf = (asked: Record<string, TTexture | TMaterialMap> | undefined): Rec
         }
         const given = asked[name]!;
         maps[name] = 'type' in given && given.type === 'texture' ? { texture: given } : { ...(given as TMaterialMap) };
+        checkWrap(maps[name]!.wrap, `the map '${name}' wrap`);
     }
     return maps;
+};
+
+/**
+ * A `wrap` checked: one word the engine knows, or one for each way. A word it does not know would
+ * leave the card with no sampler to read the picture by, so it is refused, naming where it was.
+ */
+const checkWrap = (wrap: unknown, where: string): void => {
+    const known = (word: unknown): boolean => word === 'repeat' || word === 'clamp' || word === 'mirror';
+    if (wrap === undefined || known(wrap)) {
+        return;
+    }
+    const pair = wrap as { u?: unknown; v?: unknown } | null;
+    if (typeof pair === 'object' && pair !== null && known(pair.u) && known(pair.v)) {
+        return;
+    }
+    throw new Error(`[NacatamalOn] createMaterial: ${where} is ${JSON.stringify(wrap)}, and it takes 'repeat', 'clamp' or 'mirror', or { u, v } with one of them each way.`);
+};
+
+/**
+ * The occlusion as the record keeps it: always the long form, checked. A strength outside 0 to 1 or
+ * a coordinate the engine has no name for would shade the model wrong with no word why, so both are
+ * refused.
+ */
+const occlusionOf = (asked: TTexture | TMaterialOcclusion | null | undefined): TMaterialOcclusion | undefined => {
+    // `null` is none too: a material's own record says so, and one spread into another passes it on.
+    if (asked === undefined || asked === null) {
+        return undefined;
+    }
+    const occlusion: TMaterialOcclusion = 'type' in asked && asked.type === 'texture' ? { texture: asked } : { ...(asked as TMaterialOcclusion) };
+    const { texture, strength, uv } = occlusion;
+    if (typeof texture !== 'object' || texture === null || texture.type !== 'texture') {
+        throw new Error('[NacatamalOn] createMaterial: occlusion has no picture. Give it a texture, alone or as { texture, strength, uv }.');
+    }
+    if (strength !== undefined && (typeof strength !== 'number' || !Number.isFinite(strength) || strength < 0 || strength > 1)) {
+        throw new Error(`[NacatamalOn] createMaterial: occlusion.strength is ${String(strength)}, and it takes how much of the occlusion is applied, from 0 to 1.`);
+    }
+    if (uv !== undefined && uv !== 'uv' && uv !== 'uv2') {
+        throw new Error(`[NacatamalOn] createMaterial: occlusion.uv is '${String(uv)}', and it takes 'uv' or 'uv2', the picture coordinate the occlusion is laid out by.`);
+    }
+    checkWrap(occlusion.wrap, 'occlusion.wrap');
+    return occlusion;
 };
 
 /**
@@ -133,6 +175,9 @@ export const newMaterial = (
         checkParameterRoom(half.uniformSig, MATERIAL_RULES, half.name);
     }
 
+    if (options.shader === 'mesh3d') {
+        checkWrap((options as TMeshMaterialOptions).wrap, 'wrap');
+    }
     const material: TMaterial = options.shader === 'mesh3d'
         ? createRecord('material', {
             ...half,
@@ -143,6 +188,10 @@ export const newMaterial = (
             // Left out when not asked for, so a material that never had one saves as before.
             ...((options as TMeshMaterialOptions).emissiveTexture !== undefined
                 ? { emissiveTexture: (options as TMeshMaterialOptions).emissiveTexture }
+                : {}),
+            // The same: left out when not asked for.
+            ...(occlusionOf((options as TMeshMaterialOptions).occlusion) !== undefined
+                ? { occlusion: occlusionOf((options as TMeshMaterialOptions).occlusion) }
                 : {}),
             specular: getColor((options as TMeshMaterialOptions).specular ?? 'black'),
             shininess: (options as TMeshMaterialOptions).shininess ?? 32,

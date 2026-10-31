@@ -20,6 +20,10 @@ import type { TCullMode } from '../../../materials/types/t_material';
  * and no floor. That is how the glowing panels of the era worked, and it is what makes lava read as
  * lava in a dark cave.
  *
+ * Its occlusion, where its creases keep the light from all around out, lowers the floor and nothing
+ * else: the level everything is lit to is less in a crease, and a lamp or the sun reaching it is as
+ * bright as anywhere.
+ *
  * Its twin in GLSL is `webgl2/mesh/mesh_shader.ts`, and the two have to say the same thing.
  *
  * @internal
@@ -84,7 +88,20 @@ struct Lights {
 @group(1) @binding(1) var meshTexture: texture_2d<f32>;
 // The picture the glow comes through, read with the colour's sampler. White when there is none.
 @group(1) @binding(2) var meshEmissive: texture_2d<f32>;
+// Where the light from all around is kept out, in its red, with a sampler of its own: the colour's
+// filter, and its own edges. White when there is none.
+@group(1) @binding(3) var meshOcclusion: texture_2d<f32>;
+@group(1) @binding(4) var occlusionSampler: sampler;
 @group(2) @binding(0) var<uniform> uniforms: Uniforms;
+
+// How open a place is to the light from all around: 1 wide open, 0 shut in, from the occlusion
+// picture's red and how much of it the material asks for. The amount rides in a spare number of the
+// turning matrix (see fill_mesh_uniforms.ts), and a model with none has zero there, so whatever its
+// white picture says it is wide open. At level 0, as every picture here is: a material calls this
+// before its hook and the hook may branch.
+fn occlusionAt(uv: vec2<f32>) -> f32 {
+    return 1.0 + uniforms.normalMatrix[0].w * (textureSampleLevel(meshOcclusion, occlusionSampler, uv, 0.0).r - 1.0);
+}
 
 // The way from a point towards whoever is looking, which the shine and the fresnel need. An
 // orthographic camera has no eye for it to point at: its rays are parallel, so the way is one.
@@ -302,7 +319,7 @@ fn litWithShadow(light: vec3<f32>, casterLight: vec3<f32>, coord: vec4<f32>) -> 
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-const meshVertexOutput = (cull: TCullMode): string => /* wgsl */ `struct VertexOutput {
+const meshVertexOutput = (cull: TCullMode, secondUv: boolean): string => /* wgsl */ `struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     // Where in the picture, times a depth to undo the card's correction with (see affineUv).
     @location(0) uv: vec3<f32>,
@@ -317,12 +334,16 @@ const meshVertexOutput = (cull: TCullMode): string => /* wgsl */ `struct VertexO
     // The colour painted on the corner, smeared across the triangle like the light is.
     @location(6) color: vec4<f32>,
     // How much of the corner the fog has taken, smeared like the light.
-    @location(7) fog: f32,${cull === 'none' ? twoSidedOutput(8) : ''}
+    @location(7) fog: f32,${cull === 'none' ? twoSidedOutput(8) : ''}${secondUv ? `
+    // The second picture coordinate, for an occlusion laid out by it, times the same depth as the
+    // first (see affineUv), so it stretches as the colour does. Only a model whose occlusion asks for
+    // it carries it.
+    @location(${cull === 'none' ? 11 : 8}) uv2: vec2<f32>,` : ''}
 };
 
 `;
 
-export const MESH_VERTEX_OUTPUT = meshVertexOutput('back');
+export const MESH_VERTEX_OUTPUT = meshVertexOutput('back', false);
 
 /**
  * The light of the side facing away, for a model drawn on both sides: the four colours a side is lit
@@ -417,12 +438,15 @@ export const worldNormalOf = (cull: TCullMode, facing: string): string =>
 /**
  * Everything both mesh shaders declare before either of them draws anything.
  *
+ * `secondUv` is for a model whose occlusion is laid out by its second picture coordinate: it reads
+ * that coordinate from the corner's detail run and carries it to the pixel.
+ *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const meshShaderCommon = (cull: TCullMode): string =>
-    MESH_SHADER_TYPES + meshVertexOutput(cull) + (cull === 'none' ? FACED_LIGHT : '');
+export const meshShaderCommon = (cull: TCullMode, secondUv = false): string =>
+    MESH_SHADER_TYPES + meshVertexOutput(cull, secondUv) + (cull === 'none' ? FACED_LIGHT : '');
 
 export const MESH_SHADER_COMMON = meshShaderCommon('back');
 
@@ -437,7 +461,7 @@ export const MESH_SHADER_COMMON = meshShaderCommon('back');
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const meshFragment = (cull: TCullMode): string => {
+export const meshFragment = (cull: TCullMode, secondUv = false): string => {
     // A model drawn on both sides reads the light of the side it is; any other has one.
     const lit = cull === 'none' ? 'side' : 'in';
     return /* wgsl */ `
@@ -453,7 +477,9 @@ fn fs(in: VertexOutput${cull === 'none' ? ', @builtin(front_facing) front: bool'
     // Only the casting light's share is taken away, so a thing in the sun's shadow is still lit by
     // the lamp beside it. Taking the whole lot away is what makes a shadow read as a dark smudge.
     let shaded = litWithShadow(${lit}.light, ${lit}.casterLight, in.shadowCoord);
-    let lit = max(shaded, lights.ambient.rgb);
+    // A crease lowers the floor and nothing else: a lamp reaching into it lights it as it would
+    // anywhere.
+    let lit = max(shaded, lights.ambient.rgb * occlusionAt(${secondUv ? 'in.uv2 / in.uv.z' : 'uv'}));
     // The colour painted on the corners multiplies in with the picture, the way the era's hardware
     // combined them: a green corner over a dirt picture is grass. Unpainted corners are white.
     let color = texColor * uniforms.tint * in.color * vec4<f32>(lit, 1.0);
@@ -475,19 +501,21 @@ fn fs(in: VertexOutput${cull === 'none' ? ', @builtin(front_facing) front: bool'
 export const MESH_SHADER_FRAGMENT = meshFragment('back');
 
 /**
- * What draws a model that does not bend. See {@link MESH_SHADER_COMMON} for the whole of it.
+ * What draws a model that does not bend. See {@link MESH_SHADER_COMMON} for the whole of it, and
+ * {@link meshShaderCommon} for `secondUv`.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const meshShaderFor = (cull: TCullMode): string => meshShaderCommon(cull) + /* wgsl */ `
+export const meshShaderFor = (cull: TCullMode, secondUv = false): string => meshShaderCommon(cull, secondUv) + /* wgsl */ `
 @vertex
 fn vs(
     @location(0) position: vec3<f32>,
     @location(1) normal: vec3<f32>,
     @location(2) uv: vec2<f32>,
-    @location(5) color: vec4<f32>,
+    @location(5) color: vec4<f32>,${secondUv ? `
+    @location(7) uv2: vec2<f32>,` : ''}
 ) -> VertexOutput {
     var out: VertexOutput;
     out.position = snapToPixels(uniforms.mvp * vec4<f32>(position, 1.0));
@@ -504,10 +532,11 @@ fn vs(
     out.shadowCoord = shadowCoordOf(worldPos);
     out.uv = affineUv(uv, out.position);
     out.color = color;
-    out.fog = fogAt(worldPos);
+    out.fog = fogAt(worldPos);${secondUv ? `
+    out.uv2 = affineUv(uv2, out.position).xy;` : ''}
     return out;
 }
 
-` + meshFragment(cull);
+` + meshFragment(cull, secondUv);
 
 export const MESH_SHADER = meshShaderFor('back');

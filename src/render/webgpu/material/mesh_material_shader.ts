@@ -85,6 +85,10 @@ struct FragContext {
     frontFacing: bool,
     // What the corner hook put in carry, smeared across the triangle. Nothing put, nothing.
     carry: vec4<f32>,
+    // How open this place is to the light from all around, 1 wide open to 0 shut in, from the
+    // material's occlusion. Already in light; this is it on its own, for a hook that dims its shine
+    // in a crease or dirties it. 1 with no occlusion.
+    occlusion: f32,
 };
 `;
 
@@ -295,11 +299,14 @@ fn vs(${cornerInputs(skinned)}) -> VertexOutput {${CORNER_CONTEXT}${normal}${ski
     out.casterLight = surface.casterDiffuse;
     out.casterShine = surface.casterShine;${cull === 'none' ? TWO_SIDED_WRITE : ''}
     out.uv = affineUv(uv, out.position);
-    out.normal = vec4<f32>(worldNormal, cornerUv2.x);
+    // The second picture coordinate stretched the way the first is, so whatever is laid out by it
+    // stays on what the first lays out when the material is affine.
+    let stretched2 = affineUv(cornerUv2, out.position).xy;
+    out.normal = vec4<f32>(worldNormal, stretched2.x);
     out.worldPos = vec4<f32>(worldPos, fogAt(worldPos));${cull === 'none' ? '' : `
     out.viewDir = viewDir;`}
     out.color = color;
-    out.screen = vec4<f32>(out.position.xyw, cornerUv2.y);
+    out.screen = vec4<f32>(out.position.xyw, stretched2.y);
     // A direction, so it is moved by the model's own turn and stretch rather than the facing's.
     out.tangent = vec4<f32>(normalize((uniforms.model * vec4<f32>(across, 0.0)).xyz), cornerTangent.w);
     out.carry = carried;
@@ -325,12 +332,18 @@ fn fs(in: VertexOutput, @builtin(front_facing) front: bool) -> @location(0) vec4
     // avoiding: a blob shadow's own disc is a material, so it would not receive either. There is
     // one model here, and it is that a model is a model.
     let coord = shadowCoordOf(in.worldPos.xyz);
-    // The floor is a floor and not an addition, exactly as the built-in ending has it.
-    let lit = max(litWithShadow(${lit}.light, ${lit}.casterLight, coord), lights.ambient.rgb);
 
     // Divided here, once: a shader of your own receives the picture already stretched when the
     // material is affine, and the corrected one when it is not (see affineUv).
     let uv = in.uv.xy / in.uv.z;
+    let uv2 = vec2<f32>(in.normal.w, in.screen.w) / in.uv.z;
+    // Laid out by the coordinate the material says, which rides beside its amount (see
+    // fill_mesh_uniforms.ts).
+    let occlusion = occlusionAt(select(uv, uv2, uniforms.normalMatrix[1].w > 0.5));
+    // The floor is a floor and not an addition, and a crease lowers it, exactly as the built-in
+    // ending has it.
+    let lit = max(litWithShadow(${lit}.light, ${lit}.casterLight, coord), lights.ambient.rgb * occlusion);
+
     var ctx: FragContext;
     ctx.uv = uv;
     ctx.normal = ${cull === 'none' ? 'normal' : 'in.normal.xyz'};
@@ -344,9 +357,10 @@ fn fs(in: VertexOutput, @builtin(front_facing) front: bool) -> @location(0) vec4
     ctx.screen = screenOf(in.screen.xyz);
     ctx.tangent = normalize(in.tangent.xyz);
     ctx.bitangent = cross(normalize(ctx.normal), ctx.tangent) * in.tangent.w;
-    ctx.uv2 = vec2<f32>(in.normal.w, in.screen.w);
+    ctx.uv2 = uv2;
     ctx.frontFacing = front;
     ctx.carry = in.carry;
+    ctx.occlusion = occlusion;
 
     // The painted colour is part of the surface, as it is in the built-in ending. The fog goes over
     // what the hook made, so a shader of your own sits in the scene's fog without asking for it.
@@ -519,6 +533,7 @@ fn fs(in: CutOutput, @builtin(front_facing) front: bool) {
     ctx.uv2 = in.uv2;
     ctx.frontFacing = front;
     ctx.carry = in.carry;
+    ctx.occlusion = 1.0;
     // The alpha the drawn model is cut by: its tint's colour does not change it, its alpha does.
     let shaded = effect(sampleTexture(in.uv) * vec4<f32>(1.0, 1.0, 1.0, shadow.cut.y) * in.color, ctx);
     if (shaded.a < shadow.cut.x) {
