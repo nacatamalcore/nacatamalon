@@ -3,10 +3,11 @@
  *
  * Its own and not the sprite's, for the same reason its instance is narrower: a particle is square,
  * placed by its middle and sized by one number, so the arithmetic that gives a sprite an anchor, two
- * scales and a window into a sheet is arithmetic a particle would pay for and never use.
+ * scales, a repeat and a flip is arithmetic a particle would pay for and never use.
  *
  * What it **does** share is the view table, read exactly the way a sprite reads it: slot 0 is the
- * screen and a camera is its own slot. Working that out a second way here is how a cloud of sparks
+ * screen and a camera is its own slot. And the window into a sheet, read the same way too, kept half
+ * a texel inside the frame. Working that out a second way here is how a cloud of sparks
  * would end up not quite following the camera the sprites follow.
  *
  * @internal
@@ -28,13 +29,27 @@ struct Instance {
     @location(3) rotation: f32,
     @location(4) tint: vec4f,
     @location(5) view: f32,
+    // Where its picture starts in the sheet, and how wide and tall it is: the whole picture without one.
+    @location(6) window: vec4f,
 };
 
 struct VertexOut {
     @builtin(position) clip: vec4f,
     @location(0) tint: vec4f,
     @location(1) uv: vec2f,
+    // The lowest corner of the window and the highest, the same over the whole square.
+    @location(2) @interpolate(flat) window: vec4f,
 };
+
+// Kept half a texel inside its window, as a sprite's read is: a pixel that lands on the boundary
+// between two frames of a sheet would otherwise come back with a line of the frame next door.
+fn insideWindow(uv: vec2f, window: vec4f) -> vec2f {
+    let texel = 0.5 / vec2f(textureDimensions(particleTexture, 0));
+    let lowest = window.xy + texel;
+    // Guarded for a window thinner than one texel, where the two would cross over.
+    let highest = max(lowest, window.zw - texel);
+    return clamp(uv, lowest, highest);
+}
 
 @vertex
 fn vs(@location(0) corner: vec2f, inst: Instance) -> VertexOut {
@@ -59,12 +74,13 @@ fn vs(@location(0) corner: vec2f, inst: Instance) -> VertexOut {
     var out: VertexOut;
     out.clip = vec4f(clip.x, -clip.y, 0.0, 1.0);
     out.tint = inst.tint;
-    out.uv = corner + 0.5;
+    out.uv = inst.window.xy + (corner + 0.5) * inst.window.zw;
+    out.window = vec4f(inst.window.xy, inst.window.xy + inst.window.zw);
     return out;
 }
 
 @fragment
 fn fs(in: VertexOut) -> @location(0) vec4f {
-    return textureSample(particleTexture, particleSampler, in.uv) * in.tint;
+    return textureSample(particleTexture, particleSampler, insideWindow(in.uv, in.window)) * in.tint;
 }
 `;

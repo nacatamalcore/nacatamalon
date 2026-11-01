@@ -1,3 +1,4 @@
+import { markAskedByGame } from '../../loaders/asked_by_game';
 import { warnIfKeyTaken } from '../../loaders/key_taken';
 import { rootOf } from '../../box';
 import { loadAtlas, newAtlas, trackLoad } from '../../loaders';
@@ -77,6 +78,10 @@ export const useLoadAtlas = ({ src, key }: TUseLoadAtlasOptions): TLoadedAtlas =
         atlases.set(cacheKey, atlas);
         trackLoad(atlas, loadAtlas(store, atlas));
     }
+
+    // Asked for by the game, which a file naming the same one does not undo: letting go of the file
+    // leaves it.
+    markAskedByGame(atlas);
 
     // Listed on the scene even when it came from the cache, so `useLoader()` counts everything
     // the scene asked for and a cached sheet counts as already loaded.

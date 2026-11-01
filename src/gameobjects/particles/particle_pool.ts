@@ -3,6 +3,7 @@ import { createRandom } from '../../math/random';
 import { PARTICLE_FLOATS } from '../../render/shared/particle_instance';
 import type { TParticlePool, TParticleState } from './types/t_particle_pool';
 import type { TParticlesDoc } from '../../loaders/particles/types/t_particles_doc';
+import type { TParticlesFile } from '../../loaders/particles/types/t_particles_file';
 
 /**
  * How often a tail keeps a place, in seconds: sixty times a second whatever the frame rate, so a
@@ -110,13 +111,15 @@ export const killParticle = (pool: TParticlePool, index: number): void => {
  * Everything one emitter owns beyond its own record, built the moment its file lands.
  *
  * Not before: until the document is here nobody knows how many particles to make room for, and
- * guessing would mean either a wasted allocation or a second one.
+ * guessing would mean either a wasted allocation or a second one. `file` is where its frames come
+ * from, and `null` for particles nothing draws (a measurement).
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const createParticleState = (doc: TParticlesDoc, seed: number | null): TParticleState => ({
+export const createParticleState = (doc: TParticlesDoc, seed: number | null, file: TParticlesFile | null = null): TParticleState => ({
+    file,
     pool: createParticlePool(doc.max, doc.trail?.length ?? 0),
     random: createRandom(seed ?? undefined),
     cycleTime: 0,

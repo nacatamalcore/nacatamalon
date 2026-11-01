@@ -1,7 +1,10 @@
 import type { TColor } from '../../../color';
 import type { TTexture } from '../../texture/types/t_texture';
+import type { TLoadedAtlas } from '../../atlas/types/t_loaded_atlas';
+import type { TSpriteAtlas } from '../../../atlas/types/t_sprite_atlas';
+import type { TAnimationClip } from '../../../hooks/animation/types/t_sprite_animation';
 import type {
-    TChildEmitter, TEmissionDoc, TEmitShape2d, TEmitShape3d, TParticleBlend, TParticleCollision, TParticleRange,
+    TChildEmitter, TEmissionDoc, TEmitShape2d, TEmitShape3d, TParticleAnimPace, TParticleBlend, TParticleCollision, TParticleRange,
     TParticleScaleStop, TParticlesBounds, TParticleTrail,
 } from './t_particles_doc';
 
@@ -26,6 +29,28 @@ type TParticlesEffectCommon = {
      * `createPixelTexture` gives back. Left out, a particle is a square of its colour.
      */
     texture?: string | TTexture | null;
+    /**
+     * A sheet to take the frames from instead, which wins over `texture`: a path to an `.atlas`, a
+     * sheet `useLoadAtlas` gave back, or one cut in code with `createSpriteAtlas`. Frames are drawn
+     * on a square, so a long or tall one comes out stretched.
+     */
+    atlas?: string | TLoadedAtlas | TSpriteAtlas | null;
+    /**
+     * Which frame of the sheet, by its place or, in a packed sheet, its name. With neither this nor
+     * `anim`, the first.
+     */
+    frame?: number | string | null;
+    /**
+     * A run every particle plays from its birth: one the sheet names (its `sequences`), or one
+     * written here, `{ frames: [0, 1, 2, 3], fps: 12 }`, which is what a sheet cut in code needs,
+     * having none of its own. `frame` wins when both are given.
+     */
+    anim?: string | TAnimationClip | null;
+    /**
+     * How `anim` is paced: over each particle's life (`'life'`, the default) or at its own `fps`
+     * (`'clip'`). See `TParticleAnimPace`.
+     */
+    animPace?: TParticleAnimPace;
     max?: number;
     blend?: TParticleBlend;
     worldSpace?: boolean;

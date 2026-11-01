@@ -9,6 +9,7 @@ import { resolveLayerOrder } from './types/t_tilemap_doc';
 import type { TRuntimeStore } from '../../store';
 import type { TTilemap, TTilemapLayer } from '../../gameobjects/tilemap/types/t_tilemap';
 import { findAssetFile } from '../asset_key';
+import { noteSheetUser } from '../sheet_users';
 
 /**
  * An empty batch: what a layer has before its corners have been built.
@@ -43,9 +44,12 @@ export const loadTilemap = async (store: TRuntimeStore, map: TTilemap): Promise<
         const atlases = store.get('assets').atlases;
         // Through the same cache as everything else, so a map and the characters walking over it
         // share one sheet instead of loading it twice.
-        let atlas = findAssetFile(atlases, atlasSrc);
-        if (atlas === undefined) {
-            atlas = newAtlas(atlasSrc, atlasSrc);
+        const found = findAssetFile(atlases, atlasSrc);
+        const atlas = found ?? newAtlas(atlasSrc, atlasSrc);
+        // Noted before waiting, not once the sheet is here: an effect on the same sheet let go of
+        // meanwhile must leave it for this map.
+        noteSheetUser(atlas, map);
+        if (found === undefined) {
             atlases.set(atlasSrc, atlas);
             // Tracked, so a second map on the same sheet that asks while this one is still on its
             // way waits for it rather than finding it unfinished and calling it broken.

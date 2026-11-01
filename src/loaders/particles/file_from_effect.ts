@@ -1,5 +1,6 @@
 import { markWatchable } from '../../store/record_version';
-import { childFileFor, particlesTexture } from './load_particles';
+import { childFileFor, particlesAtlas, particlesTexture } from './load_particles';
+import { noteSheetUser } from '../sheet_users';
 import { parseParticlesDoc } from './parse_particles_doc';
 import type { TParticlesEffect } from './types/t_particles_effect';
 import type { TParticlesFile } from './types/t_particles_file';
@@ -36,13 +37,24 @@ const fromCode = new WeakSet<TParticlesFile>();
 export const fileFromEffect = (store: TRuntimeStore, effect: TParticlesEffect): TParticlesFile => {
     const known = files.get(effect);
     if (known !== undefined) {
+        // Used again after its sheet was let go of, while nothing drew it: asked for afresh, as the
+        // first time, when it names it by path. One the game handed over is the game's to load again.
+        const sheet = known.atlas;
+        if (typeof effect.atlas === 'string' && sheet !== null && 'type' in sheet && sheet.status === 'released') {
+            known.atlas = particlesAtlas(store, IN_CODE, effect.atlas, known, true);
+        }
         return known;
     }
 
-    // A texture made in code is not something a file could say, so it is taken out before reading
-    // and laid on afterwards.
-    const picture = effect.texture;
-    const doc = parseParticlesDoc({ ...effect, texture: typeof picture === 'string' ? picture : null }, IN_CODE);
+    // A texture, a sheet or a run made in code is not something a file could say, so each is taken
+    // out before reading and laid on afterwards.
+    const { texture: picture, atlas: sheet, anim: run } = effect;
+    const doc = parseParticlesDoc({
+        ...effect,
+        texture: typeof picture === 'string' ? picture : null,
+        atlas: typeof sheet === 'string' ? sheet : null,
+        anim: typeof run === 'string' ? run : null,
+    }, IN_CODE);
     const file: TParticlesFile = markWatchable({
         type: 'particles-file',
         key: IN_CODE,
@@ -50,10 +62,22 @@ export const fileFromEffect = (store: TRuntimeStore, effect: TParticlesEffect): 
         status: 'ready',
         doc,
         texture: null,
+        atlas: null,
+        // `frame` wins over a run, as it does in a file.
+        clip: run !== null && typeof run === 'object' && (effect.frame === undefined || effect.frame === null) ? run : null,
         bound: [],
         children: [],
     });
-    if (typeof picture === 'string' && picture.trim() !== '') {
+    if (typeof sheet === 'string' && sheet.trim() !== '') {
+        file.atlas = particlesAtlas(store, IN_CODE, sheet, file, true);
+    } else if (sheet !== null && sheet !== undefined && typeof sheet === 'object') {
+        file.atlas = sheet;
+        if ('type' in sheet) {
+            // A sheet the game loaded, which letting go of a file on the same sheet must leave
+            // while this effect is drawn.
+            noteSheetUser(sheet, file, true);
+        }
+    } else if (typeof picture === 'string' && picture.trim() !== '') {
         file.texture = particlesTexture(store, IN_CODE, picture);
     } else if (picture !== null && picture !== undefined && typeof picture === 'object') {
         file.texture = picture;

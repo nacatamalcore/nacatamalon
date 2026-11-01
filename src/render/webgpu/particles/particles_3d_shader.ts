@@ -29,13 +29,23 @@ struct Instance {
     @location(2) size: f32,
     @location(3) rotation: f32,
     @location(4) tint: vec4f,
+    @location(5) window: vec4f,
 };
 
 struct VertexOut {
     @builtin(position) clip: vec4f,
     @location(0) tint: vec4f,
     @location(1) uv: vec2f,
+    @location(2) @interpolate(flat) window: vec4f,
 };
+
+// The read kept half a texel inside the frame's window, as the flat particles keep theirs.
+fn insideWindow(uv: vec2f, window: vec4f) -> vec2f {
+    let texel = 0.5 / vec2f(textureDimensions(particleTexture, 0));
+    let lowest = window.xy + texel;
+    let highest = max(lowest, window.zw - texel);
+    return clamp(uv, lowest, highest);
+}
 
 @vertex
 fn vs(@location(0) corner: vec2f, inst: Instance) -> VertexOut {
@@ -48,12 +58,13 @@ fn vs(@location(0) corner: vec2f, inst: Instance) -> VertexOut {
     var out: VertexOut;
     out.clip = view.viewProjection * vec4f(world, 1.0);
     out.tint = inst.tint;
-    out.uv = corner + 0.5;
+    out.uv = inst.window.xy + (corner + 0.5) * inst.window.zw;
+    out.window = vec4f(inst.window.xy, inst.window.xy + inst.window.zw);
     return out;
 }
 
 @fragment
 fn fs(in: VertexOut) -> @location(0) vec4f {
-    return textureSample(particleTexture, particleSampler, in.uv) * in.tint;
+    return textureSample(particleTexture, particleSampler, insideWindow(in.uv, in.window)) * in.tint;
 }
 `;

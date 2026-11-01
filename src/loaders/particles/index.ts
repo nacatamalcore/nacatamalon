@@ -10,6 +10,6 @@ export { fileFromEffect, isEffectFromCode } from './file_from_effect';
 export type { TParticlesFile } from './types/t_particles_file';
 export type { TParticlesEffect, TParticlesEffect2d, TParticlesEffect3d, TParticleColorStopInput } from './types/t_particles_effect';
 export type {
-    TParticlesDoc, TParticlesDoc2d, TParticlesDoc3d, TParticleBlend, TParticleRange, TEmitShape2d, TEmitShape3d, TEmissionDoc, TParticleCollision,
+    TParticlesDoc, TParticlesDoc2d, TParticlesDoc3d, TParticleBlend, TParticleAnimPace, TParticleRange, TEmitShape2d, TEmitShape3d, TEmissionDoc, TParticleCollision,
     TParticleColorStop, TParticleScaleStop, TParticleTrail, TParticlesBounds, TChildEmitter,
 } from './types/t_particles_doc';

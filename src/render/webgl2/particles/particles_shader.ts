@@ -27,9 +27,11 @@ layout(location = 2) in float size;
 layout(location = 3) in float rotation;
 layout(location = 4) in vec4 tint;
 layout(location = 5) in float view;
+layout(location = 6) in vec4 uvWindow;
 
 out vec4 vTint;
 out vec2 vUv;
+flat out vec4 vWindow;
 
 void main() {
     // Square, and turned about its own middle: no anchor, because a particle has nothing to stand on.
@@ -49,7 +51,8 @@ void main() {
 
     gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
     vTint = tint;
-    vUv = corner + 0.5;
+    vUv = uvWindow.xy + (corner + 0.5) * uvWindow.zw;
+    vWindow = vec4(uvWindow.xy, uvWindow.xy + uvWindow.zw);
 }
 `;
 
@@ -67,10 +70,20 @@ uniform sampler2D particleTexture;
 
 in vec4 vTint;
 in vec2 vUv;
+flat in vec4 vWindow;
 out vec4 fragColor;
 
+// Kept half a texel inside its window, as a sprite's read is, so a frame of a sheet never shows a
+// line of the one next door.
+vec2 insideWindow(vec2 uv, vec4 window) {
+    vec2 texel = 0.5 / vec2(textureSize(particleTexture, 0));
+    vec2 lowest = window.xy + texel;
+    vec2 highest = max(lowest, window.zw - texel);
+    return clamp(uv, lowest, highest);
+}
+
 void main() {
-    fragColor = texture(particleTexture, vUv) * vTint;
+    fragColor = texture(particleTexture, insideWindow(vUv, vWindow)) * vTint;
 }
 `;
 
@@ -98,9 +111,11 @@ layout(location = 1) in vec3 position;
 layout(location = 2) in float size;
 layout(location = 3) in float rotation;
 layout(location = 4) in vec4 tint;
+layout(location = 5) in vec4 uvWindow;
 
 out vec4 vTint;
 out vec2 vUv;
+flat out vec4 vWindow;
 
 void main() {
     vec2 local = corner * size;
@@ -111,6 +126,7 @@ void main() {
 
     gl_Position = viewProjection * vec4(world, 1.0);
     vTint = tint;
-    vUv = corner + 0.5;
+    vUv = uvWindow.xy + (corner + 0.5) * uvWindow.zw;
+    vWindow = vec4(uvWindow.xy, uvWindow.xy + uvWindow.zw);
 }
 `;

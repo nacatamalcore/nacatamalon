@@ -4,11 +4,7 @@ import type { TClipEvent } from '../../animation';
 import type { TSprite } from '../../gameobjects/sprite/types/t_sprite';
 import { useUpdate } from '../loop';
 import type { TSpriteAnimation, TSpriteAnimationOptions } from './types/t_sprite_animation';
-
-/**
- * The pace of a clip that does not say, in frames per second.
- */
-const DEFAULT_FPS = 12;
+import { DEFAULT_CLIP_FPS as DEFAULT_FPS } from './run_place';
 
 /**
  * Shared by every clip that marks no moments, so the ordinary case asks for no memory.

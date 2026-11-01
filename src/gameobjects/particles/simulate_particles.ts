@@ -6,6 +6,8 @@ import type { TPlacedCollider2d, TPlacedCollider3d } from './collide';
 import { createParticleState, killParticle, TRAIL_SAMPLE_SECONDS } from './particle_pool';
 import { childrenOf } from './particle_state';
 import { MAX_CHILD_DEPTH } from '../../loaders/particles/load_particles';
+import { particleRunOf, runWindowAt } from './particle_run';
+import type { TParticleRun } from './particle_run';
 import { PARTICLE_3D_OFFSET, PARTICLE_FLOATS, PARTICLE_OFFSET } from '../../render/shared/particle_instance';
 import type { TParticleOverrides } from './types/t_particles';
 import type { TParticlesDoc, TParticlesDoc2d, TParticlesDoc3d, TParticleTrail } from '../../loaders/particles/types/t_particles_doc';
@@ -41,6 +43,24 @@ const tailsOf = (state: TParticleState, trail: TParticleTrail | null): number =>
 const ringAt = (state: TParticleState, i: number, j: number): number => {
     const length = state.pool.trailLength;
     return i * length + ((state.pool.trailHead[i]! - 1 - j + 2 * length) % length);
+};
+
+/**
+ * The whole picture, for particles without a sheet.
+ */
+const WHOLE = new Float32Array([0, 0, 1, 1]);
+
+/**
+ * Writes the window of the picture particle `i` shows at `at`, the same for its tail: every copy of
+ * the tail shows the frame the particle shows now.
+ */
+const writeWindow = (instances: Float32Array, at: number, run: TParticleRun | null, age: number, life: number): void => {
+    const windows = run === null ? WHOLE : run.windows;
+    const from = run === null ? 0 : runWindowAt(run, age, life);
+    instances[at + PARTICLE_OFFSET.window] = windows[from]!;
+    instances[at + PARTICLE_OFFSET.window + 1] = windows[from + 1]!;
+    instances[at + PARTICLE_OFFSET.window + 2] = windows[from + 2]!;
+    instances[at + PARTICLE_OFFSET.window + 3] = windows[from + 3]!;
 };
 
 /**
@@ -117,6 +137,7 @@ const packInstances = (
     };
 
     const tails = tailsOf(state, trail);
+    const run = state.file === null ? null : particleRunOf(state.file);
     let cursor = 0;
     for (let i = 0; i < pool.live; i++) {
         const at = (tails + i) * PARTICLE_FLOATS;
@@ -124,6 +145,7 @@ const packInstances = (
         const size = pool.size[i]! * scaleTable[step]!;
         place(at, pool.x[i]!, pool.y[i]!);
         write(at, size, pool.rotation[i]!, step, 1);
+        writeWindow(instances, at, run, pool.age[i]!, pool.life[i]!);
 
         if (tails === 0) {
             continue;
@@ -135,6 +157,7 @@ const packInstances = (
             const to = cursor++ * PARTICLE_FLOATS;
             place(to, pool.tx[ring]!, pool.ty[ring]!);
             write(to, size * trail!.width * taper, pool.rotation[i]!, step, trail!.fade ? taper : 1);
+            writeWindow(instances, to, run, pool.age[i]!, pool.life[i]!);
         }
     }
     state.instanceCount = tails + pool.live;
@@ -175,6 +198,7 @@ const packInstances3d = (
     };
 
     const tails = tailsOf(state, trail);
+    const run = state.file === null ? null : particleRunOf(state.file);
     let cursor = 0;
     for (let i = 0; i < pool.live; i++) {
         const at = (tails + i) * PARTICLE_FLOATS;
@@ -182,6 +206,7 @@ const packInstances3d = (
         const size = pool.size[i]! * scaleTable[step]!;
         place(at, pool.x[i]!, pool.y[i]!, pool.z[i]!);
         write(at, size, pool.rotation[i]!, step, 1);
+        writeWindow(instances, at, run, pool.age[i]!, pool.life[i]!);
 
         if (tails === 0) {
             continue;
@@ -193,6 +218,7 @@ const packInstances3d = (
             const to = cursor++ * PARTICLE_FLOATS;
             place(to, pool.tx[ring]!, pool.ty[ring]!, pool.tz[ring]!);
             write(to, size * trail!.width * taper, pool.rotation[i]!, step, trail!.fade ? taper : 1);
+            writeWindow(instances, to, run, pool.age[i]!, pool.life[i]!);
         }
     }
     state.instanceCount = tails + pool.live;
@@ -252,7 +278,7 @@ const particlesOf = (child: TChildParticles, kind: 'particles-2d' | 'particles-3
         }
         return null;
     }
-    child.state = createParticleState(doc, Math.floor(parent.random.rand() * 0x7fffffff));
+    child.state = createParticleState(doc, Math.floor(parent.random.rand() * 0x7fffffff), child.file);
     child.state.children = childrenOf(child.file);
     return child.state;
 };

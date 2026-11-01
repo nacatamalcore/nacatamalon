@@ -27,6 +27,27 @@ export const PARTICLES_FORMAT = 1;
 export type TParticleBlend = 'alpha' | 'additive';
 
 /**
+ * How a particle's run of frames is paced.
+ *
+ * `'life'`, the default, stretches the run over each particle's own life: a spark that lives half
+ * as long plays it twice as fast, and every particle shows the last frame as it dies, which is what
+ * an explosion that ends in smoke wants. The run's `fps` and `loop` mean nothing there, since a life
+ * always ends; a `repeat` and a `yoyo` say how many times it goes and which way, counted the way a
+ * sprite counts them, and a `repeat` for ever plays it once.
+ *
+ * `'clip'` plays it at its own `fps`, exactly as `useSpriteAnimation` would, from the moment the
+ * particle is born: for a fire that flickers or a coin that spins as it falls. One that does not
+ * loop rests on its last frame until the particle dies; a particle that dies first cuts it short.
+ *
+ * Neither tells anybody anything: a run's `events` and `next` belong to sprites.
+ *
+ * @category Particles
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TParticleAnimPace = 'life' | 'clip';
+
+/**
  * A pair of numbers a particle draws one value from when it is born.
  *
  * Written as `[min, max]`, or as a bare number when every particle should get the same one.
@@ -180,6 +201,7 @@ export type TParticleCollision = {
  * It is more of the same particle and not a ribbon: copies of it, smaller and fainter towards the
  * end, which is how a trail was drawn in that era and needs nothing the draw does not already have.
  * `length` is in copies because that is what it costs: `max × length` more of them, set aside once.
+ * Every copy shows the frame its particle shows now, not the one it showed when it was there.
  *
  * @category Assets & loading
  * @since 1.0.0
@@ -269,18 +291,28 @@ export type TParticlesDoc2d = {
      */
     texture: string | null;
     /**
-     * A sheet to take the picture from instead, relative to the file. Read and written back, and
-     * **not drawn yet**: this version shows the particles without a picture when it is given one.
+     * A sheet (`.atlas`) to take the picture from instead, relative to the file. Wins over
+     * `texture` when both are given. A frame cut long or tall is still drawn on a square, so it
+     * comes out stretched: draw particle frames square.
      */
     atlas: string | null;
     /**
-     * Which frame of that sheet, by its place or its name. At most one of this and `anim`.
+     * Which frame of that sheet, by its place or, in a packed sheet, its name. At most one of this
+     * and `anim`. With neither, the first frame. One the sheet does not have is said once and the
+     * first frame is drawn.
      */
     frame: number | string | null;
     /**
-     * A run of that sheet played over each particle's whole life. At most one of this and `frame`.
+     * A run of the sheet's (its `sequences`), played by every particle from the moment it is born.
+     * At most one of this and `frame`; `animPace` says how fast.
      */
     anim: string | null;
+    /**
+     * How `anim` is paced. `'life'` stretches the run over each particle's life, so it ends as the
+     * particle dies whatever it lives; `'clip'` plays it at its own `fps`, as a sprite would, and
+     * rests on its last frame if it ends first.
+     */
+    animPace: TParticleAnimPace;
     /**
      * How many may be alive at once. Asked for once and never grown.
      */

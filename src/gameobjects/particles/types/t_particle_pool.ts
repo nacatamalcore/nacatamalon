@@ -83,6 +83,11 @@ export type TParticlePool = {
  * @author Francisco Pereira Alvarado
  */
 export type TParticleState = {
+    /**
+     * The file its particles come from, where their frames are found once its sheet is here. `null`
+     * for particles made only to be measured.
+     */
+    file: TParticlesFile | null;
     pool: TParticlePool;
     /**
      * This emitter's own stream of chance.

@@ -1,7 +1,7 @@
 import { createRecord } from '../create_record';
 import { getActiveBox, getActiveGame } from '../../store';
 import { getColor } from '../../color';
-import { openParticleState, wrongDimension } from './particle_state';
+import { bindParticles, openParticleState, wrongDimension } from './particle_state';
 import { trackDrawableOwner } from '../../box';
 import type { TParticles } from './types/t_particles';
 import { fileFromEffect } from '../../loaders/particles/file_from_effect';
@@ -115,7 +115,7 @@ export const createParticles = (options: TParticlesOptions): TParticles => {
 
     // Waiting on the file, whether it is already here or still coming. The list is what the loader
     // walks when the bytes land, because only then is there a number to size the particles by.
-    file.bound.push(emitter);
+    bindParticles(emitter);
     if (file.status === 'ready') {
         openParticleState(emitter);
     }

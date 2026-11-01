@@ -34,6 +34,7 @@ export const serializeParticlesDoc = (doc: TParticlesDoc): string => {
         ...(doc.texture !== null ? { texture: doc.texture } : {}),
         ...(doc.frame !== null ? { frame: doc.frame } : {}),
         ...(doc.anim !== null ? { anim: doc.anim } : {}),
+        ...(doc.animPace === 'clip' ? { animPace: doc.animPace } : {}),
         max: doc.max,
         blend: doc.blend,
         worldSpace: doc.worldSpace,

@@ -5,6 +5,9 @@ import { worldOf } from '../../../render/shared/world_of';
 import { computeModelMatrix } from '../../../render/shared/compute_mvp_3d';
 import * as mat from '../../../math/mat4';
 import { PARTICLE_FLOATS, PARTICLE_OFFSET } from '../../../render/shared/particle_instance';
+import { waitsForSheet } from '../../../gameobjects/particles/particle_run';
+import type { TParticlesFile } from '../../../loaders/particles/types/t_particles_file';
+import type { TDrawTexture } from '../../../render/interface/draw/t_draw_texture';
 import type { TDrawable } from '../../../gameobjects/types';
 import type { TDrawParticles, TDrawParticles3d } from '../../../render/interface';
 import type { TParticles } from '../../../gameobjects/particles/types/t_particles';
@@ -30,6 +33,11 @@ const stand = new WeakMap<
 const childStand = new WeakMap<TChildParticles, { -readonly [K in keyof TDrawParticles]: TDrawParticles[K] }>();
 
 /**
+ * The picture a file's particles show: its sheet's when it has one, otherwise its own.
+ */
+const pictureOf = (file: TParticlesFile): TDrawTexture | null => file.atlas?.texture ?? file.texture;
+
+/**
  * What stands in for the effects an emitter's particles set off, however deep, each drawn after its
  * parent. Only those whose particles exist yet: one whose file is still on its way draws nothing.
  */
@@ -53,8 +61,9 @@ const childrenDrawn = (
         }
         (drawn as { type: string }).type = type;
         drawn.instances = child.state.instances;
-        drawn.count = child.state.instanceCount;
-        drawn.texture = child.file.texture;
+        // Simulated all along, and drawn once its sheet is here, as a sprite on a sheet on its way is not.
+        drawn.count = waitsForSheet(child.file) ? 0 : child.state.instanceCount;
+        drawn.texture = pictureOf(child.file);
         drawn.blend = child.file.doc.blend;
         drawn.smooth = smooth;
         drawn.children = childrenDrawn(child.state, type, smooth);
@@ -151,8 +160,8 @@ export const stepSceneParticles = (
 
         // Now it has something to say.
         drawn.instances = state.instances;
-        drawn.count = emitter.visible === false ? 0 : state.instanceCount;
-        drawn.texture = emitter.file.texture;
+        drawn.count = emitter.visible === false || waitsForSheet(emitter.file) ? 0 : state.instanceCount;
+        drawn.texture = pictureOf(emitter.file);
         drawn.blend = doc.blend;
         drawn.smooth = emitter.smooth;
         (drawn as { children?: unknown }).children = emitter.visible === false ? undefined : childrenDrawn(state, emitter.type, emitter.smooth);

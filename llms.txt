@@ -259,6 +259,14 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   write the effect in code, `createParticles({ effect: { kind: 'particles-2d', emission: { rate: 30 },
   colorOverLife: [{ t: 0, color: lerpColor(a, b, t) }], texture: createPixelTexture(puff) } })`, with
   the fields of a `.particles` file; it is ready at once. Pass the same object to share one effect.
+- **Particles drawn from a sheet** (sparks, an explosion, smoke): `atlas` in the effect (a `.atlas`
+  next to the file, or in code a sheet from `useLoadAtlas` or `createSpriteAtlas`) wins over
+  `texture`. `frame: 2` or, in a packed sheet, `frame: 'spark'` shows one frame; `anim: 'burn'` plays
+  one of the sheet's runs (in code also `anim: { frames: [0, 1, 2, 3], fps: 12 }`) from each
+  particle's birth. `animPace: 'life'`, the default, stretches it over the particle's life, so it ends
+  as the particle dies; `'clip'` plays it at its own `fps`, as a sprite would, and one that does not
+  loop rests on its last frame. `repeat` and `yoyo` count as they do for a sprite. Frames are drawn on a square, so draw them
+  square; a tail shows the frame its particle shows now.
 - **Angles** are radians.
 - **Types** come from the same imports as the functions, all starting with `T`:
   `import type { TSprite, TText } from 'nacatamalon';`.

@@ -17,9 +17,19 @@ releases are in [changelog/](./changelog/), one file each.
   your own gets it already in `ctx.light`, and on its own as `ctx.occlusion` (`composerOcclusion()`
   in the shader composer). Saved in a scene document; a model file's pieces bring theirs back from
   the file.
+- **Particles drawn from a sheet.** A `.particles` file's `atlas`, `frame` and `anim` are drawn: one
+  frame by its place or its name, or one of the sheet's runs played by every particle from its birth,
+  over its life (`animPace: 'life'`, the default: it ends as the particle dies) or at its own `fps`
+  (`'clip'`, as a sprite plays it; one that does not loop rests on its last frame). `repeat` and `yoyo` count the way they
+  do for a sprite. In code, `atlas` also takes a sheet from `useLoadAtlas` or `createSpriteAtlas`,
+  and `anim` a run written there. The sheet comes from the game's cache, shared with its sprites and
+  maps, and the particles wait for it to land before they are drawn. In 2D and 3D, with tails and
+  with the effects they set off.
 
 ### Changed
 
+- **A `.particles` file with an `atlas` is drawn with it.** It used to say the sheet was not drawn
+  and show its particles as squares of their colour.
 - **A `wrap` the engine has no word for is refused** on a model's material, its maps and its
   occlusion, naming where it was. It left the card with no way to read the picture: on WebGPU every
   frame threw, on WebGL2 the picture was read some other way with no word why.
@@ -30,6 +40,16 @@ releases are in [changelog/](./changelog/), one file each.
   one wins, and the second is ignored rather than queued, since it is nearly always late (the timer
   running out after the goal was reached) and played afterwards would undo the first. A scene that
   moves on as soon as it arrives asks from `useSceneTransitionEnd`, which the warning now names.
+
+### Fixed
+
+- **Letting go of an effect or a model no longer takes a picture the game loaded itself.** A sprite
+  showing the spark `useLoadTexture` gave went blank when an effect naming the same picture was let
+  go of. What the game asked for goes when the game lets go of it; the same holds for a sheet from
+  `useLoadAtlas`.
+- **An emitter that is destroyed is let go of by its effect.** Each one stayed on the effect's list
+  for as long as the game ran, and one destroyed while its file was on its way had its particles
+  made for it when the file landed.
 
 ## 0.4.0 — 2026-10-31
 

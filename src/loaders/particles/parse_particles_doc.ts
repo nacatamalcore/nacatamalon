@@ -3,7 +3,7 @@ import { getColor } from '../../color';
 import { PARTICLES_FORMAT } from './types/t_particles_doc';
 import type { TColor } from '../../color';
 import type {
-    TChildEmitter, TEmissionDoc, TEmitShape2d, TEmitShape3d, TParticleBlend, TParticleColorStop, TParticleRange,
+    TChildEmitter, TEmissionDoc, TEmitShape2d, TEmitShape3d, TParticleAnimPace, TParticleBlend, TParticleColorStop, TParticleRange,
     TParticleCollision, TParticleScaleStop, TParticlesBounds, TParticlesDoc, TParticlesDoc2d, TParticlesDoc3d,
     TParticleTrail,
 } from './types/t_particles_doc';
@@ -14,7 +14,7 @@ import type {
 const KNOWN = new Set([
     'format', 'kind', 'texture', 'max', 'blend', 'worldSpace', 'emission', 'shape', 'direction',
     'spread', 'life', 'speed', 'size', 'spin', 'gravity', 'damping', 'colorOverLife', 'sizeOverLife',
-    'collision', 'atlas', 'frame', 'anim', 'trail', 'bounds', 'children',
+    'collision', 'atlas', 'frame', 'anim', 'animPace', 'trail', 'bounds', 'children',
 ]);
 
 /**
@@ -349,7 +349,8 @@ export const parseParticlesDoc = (value: unknown, src: string): TParticlesDoc =>
         atlas: typeof read.atlas === 'string' && read.atlas.trim() !== '' ? read.atlas : null,
         frame: typeof read.frame === 'number' || typeof read.frame === 'string' ? read.frame : null,
         // `frame` wins when a file says both, since a particle can only show one of the two.
-        anim: typeof read.anim === 'string' && read.frame === undefined ? read.anim : null,
+        anim: typeof read.anim === 'string' && (read.frame === undefined || read.frame === null) ? read.anim : null,
+        animPace: read.animPace === 'clip' ? 'clip' : 'life' as TParticleAnimPace,
         max: Math.max(1, Math.round(asNumber(read.max, 100))),
         blend: read.blend === 'additive' ? 'additive' : 'alpha' as TParticleBlend,
         worldSpace: asBoolean(read.worldSpace, true),

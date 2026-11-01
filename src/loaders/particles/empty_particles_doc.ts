@@ -42,6 +42,7 @@ export const emptyParticlesDoc = (options: {
         texture: options.atlas !== undefined ? null : options.texture ?? null,
         frame: null,
         anim: null,
+        animPace: 'life' as const,
         max: 128,
         blend: 'alpha' as const,
         worldSpace: true,

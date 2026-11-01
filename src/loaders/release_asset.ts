@@ -9,6 +9,9 @@ import type { TGeometry } from '../geometry/types/t_geometry';
 import type { TAsset } from './types/t_asset';
 import { findAsset } from './asset_key';
 import { stopWearing, wornByAnother } from './worn_pictures';
+import { askedByGame } from './asked_by_game';
+import { leaveSheet } from './sheet_users';
+import type { TLoadedAtlas } from './atlas/types/t_loaded_atlas';
 
 /**
  * Whether a drawing shows `thing`: as its picture (a sprite, a panel, particles), as a model's
@@ -103,7 +106,8 @@ const picturesOf = (asset: TAsset): Array<TTexture | null> => {
  * of one of them must not take it from the other. The last one to go takes it.
  */
 const releaseWorn = (store: TRuntimeStore, texture: TTexture | null, leaving: TAsset): void => {
-    if (texture === null || wornByAnother(texture, leaving)) {
+    // One the game asked for itself goes when the game lets go of it, not with a file that names it.
+    if (texture === null || askedByGame(texture) || wornByAnother(texture, leaving)) {
         return;
     }
     for (const cache of Object.values(store.get('assets')) as Map<string, TAsset>[]) {
@@ -114,6 +118,24 @@ const releaseWorn = (store: TRuntimeStore, texture: TTexture | null, leaving: TA
         }
     }
     releaseTexture(store, texture);
+};
+
+/**
+ * Lets go of the sheet a particle file took its frames from, unless something else still uses it:
+ * the game, which asked for it itself (`useLoadAtlas`, for its sprites), another effect (from a file
+ * or written in code), or a map, loaded or still waiting for it. A sheet cut in code is not the
+ * cache's and is left alone.
+ */
+const releaseSheet = (store: TRuntimeStore, sheet: unknown, leaving: TAsset): void => {
+    if (sheet === null || (sheet as { type?: unknown }).type !== 'atlas') {
+        return;
+    }
+    const atlas = sheet as TLoadedAtlas;
+    const othersLeft = leaveSheet(atlas, leaving);
+    if (atlas.status === 'released' || askedByGame(atlas) || othersLeft) {
+        return;
+    }
+    releaseOne(store, atlas);
 };
 
 /**
@@ -183,6 +205,7 @@ const releaseOne = (store: TRuntimeStore, asset: TAsset): void => {
                 }
             }
             releaseWorn(store, asset.texture, asset);
+            releaseSheet(store, asset.atlas, asset);
             break;
         case 'palette':
         case 'lut':
@@ -200,8 +223,13 @@ const releaseOne = (store: TRuntimeStore, asset: TAsset): void => {
         case 'loaded-pixels':
             asset.pixels = null;
             break;
-        // Plain data, and nothing of the card's or the sound's: out of the cache is all there is.
         case 'tilemap-asset':
+            // Its sheet stays (a map never lets its sheet go), but no longer on this map's account.
+            if (asset.atlas !== null) {
+                leaveSheet(asset.atlas, asset);
+            }
+            break;
+        // Plain data, and nothing of the card's or the sound's: out of the cache is all there is.
         case 'shader':
         case 'motion-file':
         case 'pack':

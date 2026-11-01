@@ -1,6 +1,6 @@
 import { ADDITIVE_BLEND, ALPHA_BLEND } from '../frame/blend';
 import { DEPTH_FORMAT, FLAT_DEPTH, STENCIL_TEST } from '../frame/depth';
-import { PARTICLE_3D_OFFSET, PARTICLE_FLOATS } from '../../shared/particle_instance';
+import { PARTICLE_3D_OFFSET, PARTICLE_FLOATS, PARTICLE_OFFSET } from '../../shared/particle_instance';
 import { PARTICLES_SHADER } from './particles_shader';
 import { PARTICLES_3D_SHADER } from './particles_3d_shader';
 import type { TCameraSpace } from '../../shared/compute_mvp_3d';
@@ -12,7 +12,7 @@ import type { TParticleBlend } from '../../../loaders/particles';
 const INITIAL_CAPACITY = 512;
 
 /**
- * What the card reads per particle: nine numbers in a run of twelve.
+ * What the card reads per particle: thirteen numbers in a run of sixteen.
  *
  * Location 0 is the shared quad, so these start at 1, the way a sprite's do.
  */
@@ -25,6 +25,7 @@ const INSTANCE_LAYOUT: GPUVertexBufferLayout = {
         { shaderLocation: 3, offset: 3 * 4, format: 'float32' },
         { shaderLocation: 4, offset: 4 * 4, format: 'float32x4' },
         { shaderLocation: 5, offset: 8 * 4, format: 'float32' },
+        { shaderLocation: 6, offset: PARTICLE_OFFSET.window * 4, format: 'float32x4' },
     ],
 };
 
@@ -39,6 +40,7 @@ const INSTANCE_3D_LAYOUT: GPUVertexBufferLayout = {
         { shaderLocation: 2, offset: PARTICLE_3D_OFFSET.size * 4, format: 'float32' },
         { shaderLocation: 3, offset: PARTICLE_3D_OFFSET.rotation * 4, format: 'float32' },
         { shaderLocation: 4, offset: PARTICLE_3D_OFFSET.r * 4, format: 'float32x4' },
+        { shaderLocation: 5, offset: PARTICLE_3D_OFFSET.window * 4, format: 'float32x4' },
     ],
 };
 

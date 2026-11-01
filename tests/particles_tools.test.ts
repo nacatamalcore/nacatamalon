@@ -45,7 +45,7 @@ describe('writing an effect back out', () => {
         expect(JSON.parse(text).glow).toEqual({ strength: 2 });
     });
 
-    it('keeps a sheet, a frame or a run, which it reads and writes even though it does not draw them yet', () => {
+    it('keeps a sheet, a frame or a run, as it reads and writes them', () => {
         const doc = effectDoc({ texture: undefined, atlas: 'sheet.atlas', anim: 'burn' });
         const back = JSON.parse(serializeParticlesDoc(doc));
 

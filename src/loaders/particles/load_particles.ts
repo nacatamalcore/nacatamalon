@@ -9,6 +9,11 @@ import type { TParticlesFile } from './types/t_particles_file';
 import type { TRuntimeStore } from '../../store';
 import type { TTexture } from '../texture/types/t_texture';
 import { findAssetFile } from '../asset_key';
+import { newAtlas } from '../atlas/new_atlas';
+import { loadAtlas } from '../atlas/load_atlas';
+import { trackLoad } from '../track_load';
+import type { TLoadedAtlas } from '../atlas/types/t_loaded_atlas';
+import { noteSheetUser } from '../sheet_users';
 
 /**
  * Said once per file, never per emitter and never per frame.
@@ -51,6 +56,32 @@ export const particlesTexture = (store: TRuntimeStore, fromSrc: string, src: str
         void loadTexture(store, texture);
     }
     return texture;
+};
+
+/**
+ * The sheet an effect names, found next to the file that names it, from the game's cache like any
+ * other: an effect, a map and the sprites the game loads it for share one sheet and fetch it once.
+ * `by` is the effect's file, noted as using it; `drawn` for an effect written in code, which uses it
+ * only while it has emitters.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const particlesAtlas = (store: TRuntimeStore, fromSrc: string, src: string, by: TParticlesFile, drawn = false): TLoadedAtlas => {
+    const path = resolveAssetPath(fromSrc, src);
+    const { atlases } = store.get('assets');
+    let atlas = findAssetFile(atlases, path);
+    if (atlas === undefined) {
+        atlas = newAtlas(path, path);
+        atlases.set(path, atlas);
+        // Tracked, so a map or a scene asking for the same sheet while it is on its way waits for
+        // this load instead of calling the sheet broken.
+        trackLoad(atlas, loadAtlas(store, atlas));
+    }
+    // So letting go of another effect or a map on the same sheet leaves it for this one.
+    noteSheetUser(atlas, by, drawn);
+    return atlas;
 };
 
 /**
@@ -106,12 +137,13 @@ export const loadParticles = async (store: TRuntimeStore, file: TParticlesFile, 
         }
         const doc = parseParticlesDoc(await response.json(), file.src);
 
-        if (store.get('loop').destroyed) {
+        // A game that ended, or a file let go of while it was on its way: what it names is not
+        // fetched for nobody.
+        if (store.get('loop').destroyed || file.status === 'released') {
             return;
         }
 
-        // A sheet is read and kept but not drawn yet: its particles are drawn without a picture.
-        warnUnsupported(file.src, [...Object.keys(doc.unsupported), ...(doc.atlas !== null ? ['atlas'] : [])]);
+        warnUnsupported(file.src, Object.keys(doc.unsupported));
         if (doc.collision !== null && !doc.worldSpace) {
             // Said once, here, rather than every frame the simulation skips it.
             console.warn(
@@ -121,7 +153,11 @@ export const loadParticles = async (store: TRuntimeStore, file: TParticlesFile, 
             );
         }
 
-        if (doc.texture !== null) {
+        // A sheet wins over a picture, so the picture is not fetched for nothing. Its frames are
+        // worked out once it has landed, which can be after this file (see `particleRunOf`).
+        if (doc.atlas !== null) {
+            file.atlas = particlesAtlas(store, file.src, doc.atlas, file);
+        } else if (doc.texture !== null) {
             file.texture = particlesTexture(store, file.src, doc.texture);
         }
 
@@ -135,7 +171,10 @@ export const loadParticles = async (store: TRuntimeStore, file: TParticlesFile, 
         // Everything built against this file can only be sized now, because only now is there a
         // number to size it by.
         for (const emitter of file.bound) {
-            openParticleState(emitter);
+            // One destroyed this frame is still on the list until the sweep takes it off.
+            if (!emitter.destroyed) {
+                openParticleState(emitter);
+            }
         }
     } catch (error: unknown) {
         file.status = 'error';

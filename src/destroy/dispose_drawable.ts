@@ -1,4 +1,4 @@
-import { closeParticleState } from '../gameobjects/particles/particle_state';
+import { closeParticleState, unbindParticles } from '../gameobjects/particles/particle_state';
 import { releaseLayer } from '../gameobjects/tilemap/release_layer';
 import { releasePolygon } from '../gameobjects/polygon/polygon_state';
 import type { TDrawable } from '../gameobjects/types';
@@ -55,6 +55,7 @@ export const disposeDrawable = (store: TRuntimeStore, drawable: TDrawable): void
             // emitter writes into one buffer the pipeline owns, at an offset of its own. There is no
             // per-emitter buffer that could be forgotten here.
             closeParticleState(drawable);
+            unbindParticles(drawable);
             return;
         }
         case 'polygon': {

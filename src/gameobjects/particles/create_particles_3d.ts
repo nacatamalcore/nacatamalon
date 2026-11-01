@@ -1,7 +1,7 @@
 import { createRecord } from '../create_record';
 import { getActiveBox, getActiveGame } from '../../store';
 import { getColor } from '../../color';
-import { openParticleState } from './particle_state';
+import { bindParticles, openParticleState } from './particle_state';
 import { resolveEffect } from './create_particles';
 import { trackDrawableOwner } from '../../box';
 import type { TParticles3d } from './types/t_particles_3d';
@@ -73,7 +73,7 @@ export const createParticles3d = (options: TParticles3dOptions): TParticles3d =>
     box.drawables.push(emitter);
     trackDrawableOwner(emitter, box, store);
 
-    file.bound.push(emitter);
+    bindParticles(emitter);
     if (file.status === 'ready') {
         openParticleState(emitter);
     }

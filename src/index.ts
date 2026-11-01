@@ -75,7 +75,7 @@ export { parseParticlesDoc, PARTICLES_FORMAT } from './loaders/particles';
 export type { TParticles, TParticlesOptions, TParticleOverrides, TParticles3d, TParticles3dOptions } from './gameobjects/particles';
 export type { TParticleCollider2d, TParticleCollider3d, TParticleColliderShape2d, TParticleColliderShape3d } from './gameobjects/particles/colliders/t_particle_collider';
 export type { TParticlesEffect, TParticlesEffect2d, TParticlesEffect3d, TParticleColorStopInput } from './loaders/particles';
-export type { TParticlesFile, TParticlesDoc, TParticlesDoc2d, TParticlesDoc3d, TParticleBlend, TEmitShape2d, TEmitShape3d, TParticleCollision, TParticleTrail, TParticlesBounds, TChildEmitter } from './loaders/particles';
+export type { TParticlesFile, TParticlesDoc, TParticlesDoc2d, TParticlesDoc3d, TParticleBlend, TParticleAnimPace, TEmitShape2d, TEmitShape3d, TParticleCollision, TParticleTrail, TParticlesBounds, TChildEmitter } from './loaders/particles';
 export {
     dither, posterize, paletteMatch, lutGrade,
     crt, colorAdjust, mosaic, rgbSplit, wave, shockwave, distort, glitch, grain, oldFilm, halftone, ascii, ntsc, lcd, zoomBlur, motionBlur, blur, bloom, godrays, tiltShift, phosphor,

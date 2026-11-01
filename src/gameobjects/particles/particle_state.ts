@@ -3,6 +3,7 @@ import type { TParticles } from './types/t_particles';
 import type { TParticles3d } from './types/t_particles_3d';
 import type { TChildParticles, TParticleState } from './types/t_particle_pool';
 import type { TParticlesFile } from '../../loaders/particles/types/t_particles_file';
+import { dropIdleSheetUser, noteSheetUser } from '../../loaders/sheet_users';
 
 /**
  * What each emitter owns beyond its record, found by the record rather than kept in it.
@@ -61,7 +62,7 @@ export const openParticleState = (emitter: TParticles | TParticles3d): TParticle
     if (existing !== undefined) {
         return existing;
     }
-    const state = createParticleState(doc, emitter.seed);
+    const state = createParticleState(doc, emitter.seed, emitter.file);
     state.children = childrenOf(emitter.file);
     states.set(emitter, state);
     return state;
@@ -96,7 +97,8 @@ export const childrenOf = (file: TParticlesFile): TChildParticles[] => {
 export const particleStateOf = (emitter: TParticles | TParticles3d): TParticleState | null => states.get(emitter) ?? null;
 
 /**
- * Lets go of everything an emitter owned. Called when it leaves the tree.
+ * Lets go of everything an emitter owned. Called when it leaves the tree, and when a new document
+ * needs its particles made again.
  *
  * @internal
  * @since 1.0.0
@@ -104,4 +106,42 @@ export const particleStateOf = (emitter: TParticles | TParticles3d): TParticleSt
  */
 export const closeParticleState = (emitter: TParticles | TParticles3d): void => {
     states.delete(emitter);
+};
+
+/**
+ * Takes an emitter that left the tree off its file's list. A file is kept by the cache for as long
+ * as the game runs, so an emitter left on it would be held for ever, and one destroyed while the file
+ * was still on its way would have its particles made for it when the file lands.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const unbindParticles = (emitter: TParticles | TParticles3d): void => {
+    const { file } = emitter;
+    const at = file.bound.indexOf(emitter);
+    if (at >= 0) {
+        file.bound.splice(at, 1);
+    }
+    // An effect written in code holds its sheet only while it is drawn: with its last emitter gone,
+    // it lets go of its place on the sheet, and is taken on again if it is used again.
+    if (file.atlas !== null && 'type' in file.atlas) {
+        dropIdleSheetUser(file.atlas, file);
+    }
+};
+
+/**
+ * Puts an emitter on its file's list, where the loader finds it when the file lands, and notes the
+ * file again as using its sheet: an effect written in code used again after its last emitter went.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const bindParticles = (emitter: TParticles | TParticles3d): void => {
+    const { file } = emitter;
+    file.bound.push(emitter);
+    if (file.atlas !== null && 'type' in file.atlas) {
+        noteSheetUser(file.atlas, file);
+    }
 };

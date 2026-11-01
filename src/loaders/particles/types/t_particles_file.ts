@@ -3,6 +3,9 @@ import type { TParticlesDoc } from './t_particles_doc';
 import type { TParticles } from '../../../gameobjects/particles/types/t_particles';
 import type { TParticles3d } from '../../../gameobjects/particles/types/t_particles_3d';
 import type { TTexture } from '../../texture/types/t_texture';
+import type { TLoadedAtlas } from '../../atlas/types/t_loaded_atlas';
+import type { TSpriteAtlas } from '../../../atlas/types/t_sprite_atlas';
+import type { TAnimationClip } from '../../../hooks/animation/types/t_sprite_animation';
 
 /**
  * A `.particles` file, on its way in or already here.
@@ -38,7 +41,19 @@ export type TParticlesFile = {
      */
     texture: TTexture | null;
     /**
-     * The emitters built on this file, filled in when it lands. Never written out.
+     * The sheet its particles take their frames from, which wins over `texture`: one loaded from
+     * the file's `atlas` through the game's own cache, or, for an effect in code, the one it was
+     * given. `null` for an effect without one.
+     */
+    atlas: TLoadedAtlas | TSpriteAtlas | null;
+    /**
+     * A run given in code (`anim: { frames, fps }`) instead of one named on the sheet. A file only
+     * names its runs, so for one read from a file this is `null`.
+     */
+    clip: TAnimationClip | null;
+    /**
+     * The emitters built on this file and not yet destroyed, filled in when it lands. Never written
+     * out.
      */
     bound: Array<TParticles | TParticles3d>;
     /**

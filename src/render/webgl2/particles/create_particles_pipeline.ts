@@ -1,6 +1,6 @@
 import { compileProgram } from '../utils/compile_program';
 import { FRAME_UNIFORMS_BINDING } from '../bindings';
-import { PARTICLE_3D_OFFSET, PARTICLE_FLOATS } from '../../shared/particle_instance';
+import { PARTICLE_3D_OFFSET, PARTICLE_FLOATS, PARTICLE_OFFSET } from '../../shared/particle_instance';
 import { PARTICLES_3D_VERTEX_SHADER, PARTICLES_FRAGMENT_SHADER, PARTICLES_VERTEX_SHADER } from './particles_shader';
 import type { TCameraSpace } from '../../shared/compute_mvp_3d';
 
@@ -59,11 +59,11 @@ export const createParticlesPipeline = (gl: WebGL2RenderingContext, quad: WebGLB
 
     gl.bindBuffer(gl.ARRAY_BUFFER, instances);
     const stride = PARTICLE_FLOATS * 4;
-    // The five per-particle fields. The divisor is what makes each one belong to a particle rather
+    // The six per-particle fields. The divisor is what makes each one belong to a particle rather
     // than to a corner, and **forgetting it on a single attribute** is the classic failure here:
     // every particle then reads the first entry for that one field, so a whole cloud comes out the
     // same colour or the same size and nothing says why.
-    const fields: [number, number, number][] = [[1, 2, 0], [2, 1, 2], [3, 1, 3], [4, 4, 4], [5, 1, 8]];
+    const fields: [number, number, number][] = [[1, 2, 0], [2, 1, 2], [3, 1, 3], [4, 4, 4], [5, 1, 8], [6, 4, PARTICLE_OFFSET.window]];
     for (const [location, size, offset] of fields) {
         gl.enableVertexAttribArray(location);
         gl.vertexAttribPointer(location, size, gl.FLOAT, false, stride, offset * 4);
@@ -77,6 +77,7 @@ export const createParticlesPipeline = (gl: WebGL2RenderingContext, quad: WebGLB
     // of them for the reason given above.
     const fields3d: [number, number, number][] = [
         [1, 3, PARTICLE_3D_OFFSET.x], [2, 1, PARTICLE_3D_OFFSET.size], [3, 1, PARTICLE_3D_OFFSET.rotation], [4, 4, PARTICLE_3D_OFFSET.r],
+        [5, 4, PARTICLE_3D_OFFSET.window],
     ];
     const vao3d = gl.createVertexArray();
     gl.bindVertexArray(vao3d);

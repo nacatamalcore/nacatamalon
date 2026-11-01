@@ -19,6 +19,8 @@ export const newParticlesFile = (src: string, key: string): TParticlesFile => ma
     status: 'loading',
     doc: null,
     texture: null,
+    atlas: null,
+    clip: null,
     bound: [],
     children: [],
 });
