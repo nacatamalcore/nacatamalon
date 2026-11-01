@@ -26,6 +26,20 @@ releases are in [changelog/](./changelog/), one file each.
   maps, and the particles wait for it to land before they are drawn. In 2D and 3D, with tails and
   with the effects they set off.
 
+- **Views of the world: a minimap, a rear-view mirror, a split screen.** `createSpriteTexture({
+  sees: 'world' })` draws the whole world of its scene again, sprites, maps, texts, particles and
+  models, through the cameras its component asks for, without running it twice: each thing is placed
+  for the view, its parallax and pixel steps included, and the screen draws exactly as it did. What
+  is pinned to the screen and what shows the view itself are never in it; `hide` and `only` choose
+  the rest by tag, kind or object, and `setViewFilter` changes them. `viewToWorld`, `worldToView`
+  and `viewToRay` turn points between the sprite showing a view and the world it sees, a point off
+  the view included. `useWorldOffScreen()` has the screen draw only what is pinned, for a split
+  screen, and `resizeSpriteTexture` makes a picture another size and keeps it the same picture. A 2D
+  camera has a `cullingCamera`, as a 3D one does. Saved in a scene document.
+- **Pictures are drawn after the pictures they show**, a monitor showing a handheld's screen or a
+  minimap showing a monitor, whatever kind each one is; two that show each other are drawn in the
+  order they were made, and the first shows the other a frame late.
+
 ### Changed
 
 - **A `.particles` file with an `atlas` is drawn with it.** It used to say the sheet was not drawn

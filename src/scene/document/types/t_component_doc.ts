@@ -1107,8 +1107,9 @@ export type TParticleCollider3dComponent = {
  * way it asks for a loaded image. It is made before any object in the scene, so a model that comes
  * earlier in the file than the screen it shows still finds it.
  *
- * `sees` is written only when it is `'3d'`, the way every field at its default is left out. A
- * document saved when that was called `"scene"` is read as `'3d'`, and saving it writes the new name.
+ * `sees` is written only when it is not `'inside'`, the way every field at its default is left out.
+ * A document saved when `'3d'` was called `"scene"` is read as `'3d'`, and saving it writes the new
+ * name.
  *
  * @category Scenes
  * @since 1.0.0
@@ -1121,5 +1122,23 @@ export type TSpriteTextureComponent = {
     width: number;
     height: number;
     background: TColor;
-    sees?: '3d';
+    sees?: '3d' | 'world';
+    /**
+     * For a view of the world: what it leaves out and what alone it takes in, by tag and by kind. A
+     * filter's objects are not here: an object cannot be written into a file.
+     */
+    hide?: TViewFilterDoc;
+    only?: TViewFilterDoc;
+};
+
+/**
+ * A view's filter as a document keeps it: its tags and its kinds, each written only when it has any.
+ *
+ * @category Scenes
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TViewFilterDoc = {
+    tags?: string[];
+    kinds?: string[];
 };

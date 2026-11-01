@@ -22,7 +22,7 @@ import { useCamera3d } from '../../hooks/camera/use_camera_3d';
 import { useFog } from '../../hooks/fog/use_fog';
 import { useSpriteAnimation } from '../../hooks/animation/use_sprite_animation';
 import { useParticleCollider2d, useParticleCollider3d } from '../../hooks/particles';
-import { newSpriteTexture } from '../../gameobjects/sprite_texture';
+import { attachPicture, newSpriteTexture } from '../../gameobjects/sprite_texture';
 import type { TSpriteTexture } from '../../gameobjects/sprite_texture';
 import {
     useCircleGeometry, useConeGeometry, useCubeGeometry, useCylinderGeometry,
@@ -31,6 +31,8 @@ import {
 import { useLoadAtlas, useLoadAudio, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadParticles, useLoadShader, useLoadSong, useLoadMotion, useLoadTexture } from '../../hooks/loaders';
 import { useMotion } from '../../hooks/motion';
 import { useScreenSpace } from '../../hooks/camera/use_screen_space';
+import { useWorldOffScreen } from '../../hooks/camera/use_world_off_screen';
+import type { TViewFilter } from '../../gameobjects/sprite_texture/types';
 import { useTransform } from '../../hooks/transform/use_transform';
 import { whenLoaded } from '../../loaders';
 import { createRecord } from '../../gameobjects/create_record';
@@ -795,6 +797,8 @@ const makePictures = (node: TBoxNode, store: TRuntimeStore): void => {
                 height: component.height,
                 background: component.background,
                 ...(component.sees !== undefined ? { sees: component.sees } : {}),
+                ...(component.sees === 'world' && component.hide !== undefined ? { hide: component.hide as TViewFilter } : {}),
+                ...(component.sees === 'world' && component.only !== undefined ? { only: component.only as TViewFilter } : {}),
             }, component.id));
         }
     }
@@ -829,6 +833,7 @@ const buildBox = (node: TBoxNode, store: TRuntimeStore, src: string): void => {
     if (node.tags !== undefined) box.tags = [...node.tags];
     if (node.visible === false) box.visible = false;
     if (node.screenSpace === true) useScreenSpace();
+    if (node.worldOffScreen === true) useWorldOffScreen();
     if (node.transform !== null) useTransform(node.transform);
     if (node.extra !== undefined) rememberBoxExtra(box, node.extra);
 
@@ -836,7 +841,10 @@ const buildBox = (node: TBoxNode, store: TRuntimeStore, src: string): void => {
     // picture, and it can only tell once the picture is there.
     for (const component of node.components) {
         if (component.type === 'sprite-texture') {
-            box.spriteTexture = madePictures.get(component) ?? null;
+            const picture = madePictures.get(component);
+            if (picture !== undefined) {
+                attachPicture(box, picture);
+            }
         }
     }
 

@@ -1,7 +1,11 @@
 import type { TFog } from '../../fog/types/t_fog';
 import type { TDrawable } from '../../gameobjects/types';
 import { screenSizeOf } from '../../DOM/screen_size';
-import { collectDrawables } from './helper/collect_drawables';
+import { collectDrawables, notePinnedInto } from './helper/collect_drawables';
+import { viewWalk, walkingView } from './helper/view_walk';
+import type { TViewWalk } from './helper/view_walk';
+import { pictureMadeAt } from '../../gameobjects/sprite_texture/create_sprite_texture';
+import type { TSpriteTexture } from '../../gameobjects/sprite_texture/types';
 import { sightOf } from '../../render/shared/sight_2d';
 import { MAX_VIEWS } from '../../render/webgpu/sprite/write_sprite_instance';
 import { lookAgainAtParticles, stepSceneParticles } from './helper/step_scene_particles';
@@ -23,7 +27,7 @@ import { expandNineSlice } from '../../gameobjects/nine_slice/expand_nine_slice'
 import type { TText } from '../../gameobjects/text/types/t_text';
 import type { TRuntimeStore } from '../../store';
 import type { TRuntimeState } from '../../store/types/t_runtime_state';
-import { collectLighting } from './helper/collect_lights';
+import { collectLighting, holdsLights } from './helper/collect_lights';
 import { computeJointMatrices } from '../../math/skinning';
 import { buildPostChain } from '../../post/build_post_chain';
 import type { TCamera2d } from '../../camera';
@@ -478,9 +482,19 @@ const skippedBy = (camera3d: TCamera3d | null, camera2d: TCamera2d | null): TDra
 
 type TSeenThrough = Pick<TRuntimeState['viewport'], 'camera3d' | 'camera2d' | 'layers'> & {
     screen2d?: TCamera2d | null;
+    /**
+     * A view's own 2D camera, as it is and not as it is drawn: what parallax, the pixels things are
+     * put on and what is skipped (its `cullingCamera`) are measured by. Left out, the scene's.
+     */
+    ownCamera2d?: TCamera2d | null;
     /** Boxes and drawables a capture leaves out, and the only ones it keeps (`TCaptureRequest`). */
     hide?: ReadonlySet<TBox | TDrawable> | null;
     only?: ReadonlySet<TBox | TDrawable> | null;
+    /**
+     * The scene a view of the world looks at. What the view makes itself is in that world: its models
+     * are lit by the scene's lamps and stand in its fog, unless the view has lamps or fog of its own.
+     */
+    worldOf?: TBox;
 };
 
 /**
@@ -507,6 +521,12 @@ const keptByBoxes = (drawable: TDrawable, hide: ReadonlySet<TBox | TDrawable> | 
  * Which pixels this frame draws flat things on: the game's `pixelSnap`, read once a frame.
  */
 let snapping: TPixelSnap = 'off';
+
+/**
+ * The game's screen, in its pixels, this frame: what a 2D camera skipping for another is measured
+ * over. `null` before there is one.
+ */
+let screenNow: { width: number; height: number } | null = null;
 
 /**
  * The renderer of the game being filled in, for the shapes whose corners go up every frame.
@@ -556,16 +576,79 @@ const gatherTree = (
     // left out as it is collected. Not known, as for a canvas with no size yet, nothing is. A camera
     // past what the shader holds draws through the screen, so it is judged by the screen too.
     const drawnBy = (index: number) => (index >= 0 && index < MAX_VIEWS - 1 ? cameras[index] : null);
+    // What parallax, pixel steps and skipping are measured by: the scene's camera, or a view's own.
+    const measuredBy = viewport?.ownCamera2d !== undefined ? viewport.ownCamera2d : root.camera2d;
+    // Skipped as another camera would skip, over the screen it draws: see `TCamera2d.cullingCamera`.
+    const culling = measuredBy?.cullingCamera ?? null;
     const sights = size !== null && size.width > 0 && size.height > 0
         ? {
-            scene: sightOf(drawnBy(sceneCamera), size.width, size.height),
+            scene: culling !== null
+                ? sightOf(cameraAsDrawn(culling, snapping), screenNow?.width ?? size.width, screenNow?.height ?? size.height)
+                : sightOf(drawnBy(sceneCamera), size.width, size.height),
             pinned: sightOf(drawnBy(screenCamera), size.width, size.height),
         }
         : null;
     // Parallax is measured against the scene's own camera, where the game has it, even when a tool
     // looks through one of its own: a far layer is where the game would draw it, and panning the
     // tool's view moves it with everything else rather than sliding it away by most of the pan.
-    collectDrawables(root, drawables as TDrawable[], cameraIndex, sceneCamera, false, null, 0, colliders, pictures, screenCamera, root.camera2d, null, snapping, lists.masks, null, null, sights);
+    // A scene whose world is seen only through views keeps on the screen what is pinned to it, and
+    // nothing else: noted as it is collected, since only the walk knows what is pinned. On the screen
+    // and in a capture of it, while they look through the game's own cameras; a tool looking through
+    // one of its own (the editor's edit mode, a camera's preview) or a capture asked for through
+    // another camera wants the world itself. A view's own walk always does.
+    const ownSight = viewport === null || (viewport.camera2d == null && viewport.camera3d == null);
+    const pinnedOnly = root.worldOffScreen && root.parent === null && viewWalk() === null && ownSight ? [] as boolean[] : null;
+    notePinnedInto(pinnedOnly);
+    try {
+        collectDrawables(root, drawables as TDrawable[], cameraIndex, sceneCamera, false, null, 0, colliders, pictures, screenCamera, measuredBy, null, snapping, lists.masks, null, null, sights);
+    } finally {
+        notePinnedInto(null);
+    }
+    // The models the screen leaves out with its world, which a picture watching the world around it
+    // still sees (see the end of the walk).
+    let modelsOffScreen: Array<TDrawable | TDrawSprite> | null = null;
+    if (pinnedOnly !== null) {
+        let kept = start;
+        const unseen: TDrawable[] = [];
+        const unseenCameras: number[] = [];
+        // A second look (a capture) shows no picture, so it keeps no models for one.
+        modelsOffScreen = again ? null : [];
+        for (let i = start; i < drawables.length; i++) {
+            if (!pinnedOnly[i - start]) {
+                // Not drawn here, still going on: its particles move, so a view finds them where they
+                // got to.
+                const drawable = drawables[i] as TDrawable;
+                if (drawable.type === 'particles' || drawable.type === 'particles-3d') {
+                    unseen.push(drawable);
+                    unseenCameras.push(cameraIndex[i]!);
+                } else if (inDepth(drawable)) {
+                    modelsOffScreen?.push(drawable);
+                }
+                continue;
+            }
+            drawables[kept] = drawables[i];
+            cameraIndex[kept] = cameraIndex[i];
+            if (levels !== null) levels[kept] = levels[i] ?? null;
+            kept++;
+        }
+        drawables.length = kept;
+        cameraIndex.length = kept;
+        if (levels !== null) levels.length = kept;
+        if (unseen.length > 0 && !again) {
+            stepSceneParticles(unseen, unseenCameras, 0, rootOf(root).paused ? 0 : delta, colliders);
+        }
+        // Posed and placed as the screen would have them, and the particles as they were just moved:
+        // a monitor in the room (`sees: '3d'`) shows them all the same.
+        if (modelsOffScreen !== null) {
+            for (const drawn of unseen) {
+                if (drawn.type === 'particles-3d') {
+                    modelsOffScreen.push(drawn);
+                }
+            }
+            poseSkeletons(modelsOffScreen, 0);
+            stepSceneLines(modelsOffScreen as TDrawable[], 0);
+        }
+    }
     // A tool showing only some kinds: dropped before anything else is worked out for them, so a kind
     // nobody is looking at costs no sorting, no lamps and no particles stepped.
     const layers = viewport?.layers ?? null;
@@ -622,9 +705,18 @@ const gatherTree = (
     const view = drawables.slice(start).some(inDepth) ? views3d.length : -1;
     let lighting: TSceneLighting | null = null;
     if (view >= 0) {
-        lighting = collectLighting(root);
+        const world = viewport?.worldOf;
+        if (world !== undefined && world !== root && !holdsLights(root)) {
+            // The world's lamps, borrowed to light what a view makes itself, and never to cast: there
+            // is one shadow map, and it belongs to how the world itself is seen.
+            const borrowed = collectLighting(world);
+            lighting = { lights: borrowed.lights.map((light) => (light.castShadow === true ? { ...light, castShadow: false } : light)), ambient: borrowed.ambient };
+        } else {
+            lighting = collectLighting(root);
+        }
+        const fog = root.fog ?? world?.fog ?? null;
         const seenThrough = viewport?.camera3d ?? root.camera3d;
-        views3d.push({ camera: drawnThrough(seenThrough, camera2d), cullingCamera: skippedBy(seenThrough, camera2d), lights: lighting.lights, ambient: lighting.ambient, fog: root.fog });
+        views3d.push({ camera: drawnThrough(seenThrough, camera2d), cullingCamera: skippedBy(seenThrough, camera2d), lights: lighting.lights, ambient: lighting.ambient, fog });
     }
     for (let i = start; i < drawables.length; i++) {
         viewIndex[i] = inDepth(drawables[i]) ? view : -1;
@@ -654,7 +746,11 @@ const gatherTree = (
     // After the sort, so a text or a nine-slice moves as one block and its parts stay together.
     expandSceneIntoSprites(drawables, cameraIndex, start, viewIndex, levels);
 
-    return { models: drawables.slice(start).filter(inDepth), camera: root.camera3d, lighting, fog: root.fog };
+    const models = drawables.slice(start).filter(inDepth);
+    if (modelsOffScreen !== null) {
+        models.push(...modelsOffScreen);
+    }
+    return { models, camera: root.camera3d, lighting, fog: root.fog };
 };
 
 /**
@@ -691,10 +787,107 @@ const picturePasses = new WeakMap<TBox, TRenderPass>();
 const screenPasses = new WeakMap<TFrameContext, TRenderPass>();
 
 /**
- * Pictures with a world of their own, and pictures watching the one around them, in the order found.
+ * Every picture drawn this frame, with its pass, in the order found.
  */
-const inside: TRenderPass[] = [];
-const watching: TRenderPass[] = [];
+const pictureEntries: Array<{ pass: TRenderPass; record: TSpriteTexture }> = [];
+
+/**
+ * Each view's walk of the world, kept between frames: its stand-ins live in it.
+ */
+const viewWalks = new WeakMap<TBox, TViewWalk>();
+
+/**
+ * Notes into `into` every picture something a pass draws shows: the picture of a sprite, a letter, a
+ * map, a shape or an effect's particles, or one a model wears.
+ */
+const notePicturesShown = (items: ReadonlyArray<unknown>, into: Set<unknown>): void => {
+    for (const item of items) {
+        const drawn = item as { type?: string; texture?: unknown; children?: ReadonlyArray<unknown> };
+        if (drawn.texture !== undefined) {
+            into.add(drawn.texture);
+        }
+        if (drawn.type === 'mesh') {
+            const material = (item as TDrawable & { type: 'mesh' }).material;
+            into.add(material.texture);
+            into.add(material.emissiveTexture);
+            into.add(material.occlusion?.texture);
+            for (const name in material.maps ?? {}) {
+                into.add(material.maps![name]!.texture);
+            }
+        } else if ((drawn.type === 'particles' || drawn.type === 'particles-3d') && 'file' in drawn) {
+            const file = (item as TDrawable & { type: 'particles' }).file;
+            into.add(file.atlas?.texture ?? file.texture);
+        }
+        if (drawn.children !== undefined) {
+            notePicturesShown(drawn.children, into);
+        }
+    }
+};
+
+/**
+ * Every picture a pass shows, its soft masks' passes included: what is under a soft mask is drawn
+ * there, not in the pass itself.
+ */
+const picturesShownIn = (pass: TRenderPass): Set<unknown> => {
+    const shown = new Set<unknown>();
+    notePicturesShown(pass.drawables ?? [], shown);
+    for (const first of passesBefore.get(pass) ?? []) {
+        notePicturesShown(first.drawables ?? [], shown);
+    }
+    return shown;
+};
+
+/**
+ * The pictures' passes in the order they have to be drawn: each after the pictures it shows, so it
+ * shows them as they are this frame.
+ *
+ * Pictures that watch one another round in a ring cannot all go after each other. The ring is broken
+ * where the earliest made of them is: it is drawn first, and shows the others as they were last
+ * frame, which is what their textures still hold. Two monitors facing each other are a fair thing
+ * to build, and a frame late is all it costs, so nothing is said. A picture that only shows one in a
+ * ring waits for it like any other.
+ */
+const orderPicturePasses = (entries: ReadonlyArray<{ pass: TRenderPass; record: TSpriteTexture }>): TRenderPass[] => {
+    // One picture or none has nothing to wait for.
+    if (entries.length < 2) {
+        return entries.map((entry) => entry.pass);
+    }
+    const left = [...entries].sort((a, b) => pictureMadeAt(a.record) - pictureMadeAt(b.record));
+    const reads = new Map(left.map((entry) => {
+        const shown = picturesShownIn(entry.pass);
+        return [entry, left.filter((other) => other !== entry && shown.has(other.record.texture))];
+    }));
+    const done = new Set<object>();
+    // Whether `start` is in a ring of pictures still waiting: whether what it waits for waits, some
+    // way round, for it.
+    const inRing = (start: (typeof left)[number]): boolean => {
+        const visited = new Set<object>();
+        const stack = [...reads.get(start)!];
+        while (stack.length > 0) {
+            const at = stack.pop()!;
+            if (at === start) {
+                return true;
+            }
+            if (done.has(at) || visited.has(at)) {
+                continue;
+            }
+            visited.add(at);
+            stack.push(...reads.get(at)!);
+        }
+        return false;
+    };
+    const out: TRenderPass[] = [];
+    while (left.length > 0) {
+        let next = left.findIndex((entry) => reads.get(entry)!.every((other) => done.has(other)));
+        if (next < 0) {
+            next = Math.max(0, left.findIndex(inRing));
+        }
+        const [entry] = left.splice(next, 1);
+        done.add(entry!);
+        out.push(entry!.pass);
+    }
+    return out;
+};
 
 /**
  * Collects one picture into its own pass, and then every picture found inside it.
@@ -710,6 +903,34 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
     }
 
     const lists = newLists();
+    // The cameras a view looks through, its own or its scene's, which what it draws itself shares:
+    // a marker on the hero is where the hero is.
+    let lookedThrough: TSeenThrough | null = null;
+    if (picture.sees === 'world') {
+        // The world of its scene once more, through the view's own cameras: moved by nothing, since
+        // the screen's walk has already moved everything this frame, and placed for this view by
+        // copies of its own (see `standInFor`).
+        const scene = rootOf(box);
+        const own2d = box.camera2d ?? scene.camera2d;
+        let walk = viewWalks.get(box);
+        if (walk === undefined) {
+            walk = { standIns: new WeakMap(), own: picture.texture, hide: null, only: null };
+            viewWalks.set(box, walk);
+        }
+        walk.own = picture.texture;
+        walk.hide = picture.hide;
+        walk.only = picture.only;
+        const firstView = lists.views3d.length;
+        const through: TSeenThrough = { camera2d: cameraAsDrawn(own2d, snapping), camera3d: box.camera3d ?? scene.camera3d, layers: null, ownCamera2d: own2d, worldOf: scene };
+        lookedThrough = through;
+        walkingView(walk, () => gatherTree(scene, lists, 0, { flat: [], deep: [] }, [], through, true, { width: picture.texture.width, height: picture.texture.height }));
+        // Its own fog, when it asked for one: it is looking at that world.
+        if (box.fog !== null) {
+            for (let i = firstView; i < lists.views3d.length; i++) {
+                lists.views3d[i] = { ...lists.views3d[i]!, fog: box.fog };
+            }
+        }
+    }
     if (picture.sees === '3d' && seen.models.length > 0) {
         const view = lists.views3d.length;
         const lighting = seen.lighting ?? collectLighting(rootOf(box));
@@ -735,7 +956,7 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
         pictureColliders.set(box, colliders);
     }
     const found: TBox[] = [];
-    const own = gatherTree(box, lists, delta, colliders, found, null, false, { width: picture.texture.width, height: picture.texture.height });
+    const own = gatherTree(box, lists, delta, colliders, found, lookedThrough, false, { width: picture.texture.width, height: picture.texture.height });
 
     let pass = picturePasses.get(box);
     if (pass === undefined) {
@@ -746,10 +967,17 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
     pass.renderTarget = picture.texture.gpu;
     pass.postProcess = false;
     finishPass(pass, lists, { width: picture.texture.width, height: picture.texture.height, pixelRatio: 1 });
-    (picture.sees === '3d' ? watching : inside).push(pass);
+    pictureEntries.push({ pass, record: picture });
 
+    // A monitor inside a view looks through the cameras the view does, into its fog and by its light.
+    const seenHere = lookedThrough === null || found.length === 0 ? own : {
+        ...own,
+        camera: lookedThrough.camera3d,
+        fog: box.fog ?? rootOf(box).fog,
+        lighting: own.lighting ?? (holdsLights(box) ? collectLighting(box) : null),
+    };
     for (const inner of found) {
-        gatherPicture(inner, own, delta);
+        gatherPicture(inner, seenHere, delta);
     }
 };
 
@@ -796,8 +1024,8 @@ export const fillFrameContext = (store: TRuntimeStore, ctx: TFrameContext, delta
     const shown = store.get('screen').canvas;
     const ratio = shown === null || shown === undefined ? 1 : screenSizeOf(shown).pixelRatio;
     const screenSize = shown === null || shown === undefined ? null : { width: shown.width / ratio, height: shown.height / ratio };
-    inside.length = 0;
-    watching.length = 0;
+    screenNow = screenSize;
+    pictureEntries.length = 0;
 
     // Sorted one scene at a time, never across them: scenes stay stacked in the order they
     // started, so nothing in a level can climb over the HUD launched on top of it.
@@ -819,20 +1047,16 @@ export const fillFrameContext = (store: TRuntimeStore, ctx: TFrameContext, delta
     });
 
     // The screen last and the pictures before it, so a model shows this frame's picture and not the
-    // last one. A picture found inside another is drawn before it, which is why the order found is
-    // turned round. The ones watching a world go after the ones with a world of their own, because
-    // what they watch can be showing one of those: the monitor sees the handheld's screen lit.
+    // last one, and each picture after the pictures it shows: the monitor sees the handheld's screen
+    // lit, and the minimap the monitor in the room.
     let screen = screenPasses.get(ctx);
     if (screen === undefined) {
         screen = ctx.passes[0];
         screenPasses.set(ctx, screen);
     }
     ctx.passes.length = 0;
-    for (let i = inside.length - 1; i >= 0; i--) {
-        pushPass(ctx.passes, inside[i]);
-    }
-    for (let i = watching.length - 1; i >= 0; i--) {
-        pushPass(ctx.passes, watching[i]);
+    for (const pass of orderPicturePasses(pictureEntries)) {
+        pushPass(ctx.passes, pass);
     }
     // After the pictures, like the screen, so they show them as they are this frame.
     const capture = store.get('capture').request;

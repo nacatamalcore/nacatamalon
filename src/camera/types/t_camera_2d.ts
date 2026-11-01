@@ -27,6 +27,22 @@ export type TCamera2d = {
      * Magnification. `1` is none, `2` twice as big.
      */
     zoom: number;
+    /**
+     * For finding out what a camera leaves out: another camera, which then decides what this one
+     * draws. A sprite, a text or a panel wholly outside what **that** one sees is skipped here, so a
+     * camera looking from further out shows the world as the other leaves it. That one is measured
+     * over the game's screen, which is where a scene's camera draws. `null` or absent, the usual:
+     * this camera's own.
+     *
+     * @example
+     * ```ts
+     * const eye = useCamera2d();
+     * // In a view that sees the world around it (`createSpriteTexture({ sees: 'world' })`), zoomed out:
+     * const above = useCamera2d({ zoom: 0.25 });
+     * above.cullingCamera = eye;
+     * ```
+     */
+    cullingCamera?: TCamera2d | null;
 };
 
 /**

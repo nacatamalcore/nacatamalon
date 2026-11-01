@@ -32,6 +32,19 @@ const isInsideQuad = (transform: TQuadTransform, width: number, height: number, 
  * Where across and down a quad a world point falls, 0 to 1 each, or `null` when it is outside.
  */
 const quadFraction = (transform: TQuadTransform, width: number, height: number, anchor: { x: number; y: number }, x: number, y: number): { u: number; v: number } | null => {
+    const at = quadFractionAnywhere(transform, width, height, anchor, x, y);
+    return at !== null && at.u >= 0 && at.u <= 1 && at.v >= 0 && at.v <= 1 ? at : null;
+};
+
+/**
+ * Where across and down a quad a world point falls, 0 to 1 each inside it and past them outside, or
+ * `null` for a quad with no area.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const quadFractionAnywhere = (transform: TQuadTransform, width: number, height: number, anchor: { x: number; y: number }, x: number, y: number): { u: number; v: number } | null => {
     const sizeX = width * transform.scaleX;
     const sizeY = height * transform.scaleY;
     // Something with no area covers nothing, and dividing by it below would say otherwise.
@@ -49,9 +62,7 @@ const quadFraction = (transform: TQuadTransform, width: number, height: number, 
     // The shader places a corner at `(corner + 0.5 - anchor) * size * scale`, so a point is inside
     // when that fraction, anchor added back, lands between 0 and 1. A negative scale flips the sign
     // of the fraction, and the same test still holds.
-    const u = localX / sizeX + anchor.x;
-    const v = localY / sizeY + anchor.y;
-    return u >= 0 && u <= 1 && v >= 0 && v <= 1 ? { u, v } : null;
+    return { u: localX / sizeX + anchor.x, v: localY / sizeY + anchor.y };
 };
 
 const CENTRE = { x: 0.5, y: 0.5 };

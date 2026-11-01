@@ -74,6 +74,20 @@ const gather = (box: TBox, out: TLight[], parent: TTransform3d | null, top = tru
 };
 
 /**
+ * Whether `box` holds any light of its own, itself or anywhere under it (leaving out what is drawn
+ * into a picture inside it, as `collectLighting` does).
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const holdsLights = (box: TBox): boolean => {
+    const found: TLight[] = [];
+    gather(box, found, null);
+    return found.length > 0;
+};
+
+/**
  * What lights a scene, worked out once a frame.
  *
  * Three rules, and each one is a decision rather than an implementation detail:

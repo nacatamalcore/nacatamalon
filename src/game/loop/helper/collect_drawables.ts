@@ -21,6 +21,7 @@ import { shapeRolesOf } from '../../../mask/create_mask';
 import { maskLevelFor, masksNow, noteShape } from '../../../mask/mask_walk';
 import type { TMask } from '../../../mask/types/t_mask';
 import type { TMaskLevel, TMaskWalk } from '../../../mask/mask_walk';
+import { showsPicture, standInFor, viewKeeps, viewWalk } from './view_walk';
 
 /**
  * A placement to put children inside, or `null` for "nothing above has moved anything".
@@ -371,6 +372,24 @@ const placeCollider = (box: TBox, world: TWorld, colliders: TSceneColliders): vo
 };
 
 /**
+ * Where the walk notes, alongside what it collects, whether each one is pinned to the screen, or
+ * `null` when nobody asked: a scene whose world is seen only through views (`useWorldOffScreen`)
+ * keeps on the screen only what is pinned.
+ */
+let pinnedOut: boolean[] | null = null;
+
+/**
+ * Asks the next walks to note what is pinned into `into`, or stops asking with `null`.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const notePinnedInto = (into: boolean[] | null): void => {
+    pinnedOut = into;
+};
+
+/**
  * @param cameraIndex Filled alongside `out`, one entry per drawable: which camera draws it, `-1`
  * for screen pixels.
  * @param sceneCamera The index of the scene's camera, or `-1` if the scene has none.
@@ -427,6 +446,12 @@ export const collectDrawables = (
     }
 
     const pinned = onScreen || box.screenSpace;
+    // A view of the world: what is pinned to the screen is the screen's, and is never in one. Its
+    // walk stops here, which takes everything under this box with it.
+    const walk = viewWalk();
+    if (walk !== null && pinned) {
+        return;
+    }
     const view = pinned ? screenCamera : sceneCamera;
     const world = worldOfBox(parent, box, depth);
     if (colliders !== null) {
@@ -451,7 +476,19 @@ export const collectDrawables = (
     const parallax = pinned ? null : box.parallax ?? inherited;
     // What is pinned to the screen is drawn at zoom 1, where a pixel of the screen is one of the game.
     const perUnit = pixelsPerUnit(snap, pinned ? null : camera);
-    for (const drawable of box.drawables) {
+    for (const record of box.drawables) {
+        // A view leaves out what shows its own picture, and does not draw what its filter does not
+        // take in; what it keeps whose place hangs on the camera, it draws as a copy of its own (see
+        // `standInFor`). What the filter leaves out may still be a mask's shape, which cuts what the
+        // view does draw.
+        if (walk !== null && showsPicture(record, walk.own)) {
+            continue;
+        }
+        const filtered = walk !== null && !viewKeeps(walk, record, box);
+        if (filtered && shapes === null) {
+            continue;
+        }
+        const drawable = walk === null ? record : standInFor(walk, record);
         placeDrawable(drawable, world);
         const factor = pinned ? null : (drawable as { parallax?: { x: number; y: number } }).parallax ?? parallax;
         if (factor !== null && camera !== null) {
@@ -467,7 +504,7 @@ export const collectDrawables = (
         }
         if (shapes !== null) {
             noteShape(masks!, shapes, drawable, view);
-            if (!shown) {
+            if (!shown || filtered) {
                 continue;
             }
         }
@@ -480,6 +517,7 @@ export const collectDrawables = (
         out.push(drawable);
         cameraIndex.push(view);
         masks?.levels.push(here);
+        pinnedOut?.push(pinned);
     }
     for (const child of box.children) {
         collectDrawables(child, out, cameraIndex, sceneCamera, pinned, world, depth + 1, colliders, pictures, screenCamera, camera, parallax, snap, masks, here, shapes, sights);

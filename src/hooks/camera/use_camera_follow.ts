@@ -342,7 +342,11 @@ export const useCameraFollow = (target: TCameraTarget | null, options: TCameraFo
 
     useLateUpdate((delta) => {
         const camera = cameraOf();
-        const screen = screenSizeOf(store.get('screen').canvas);
+        // What the camera draws into: a picture's own size for a camera in a picture (a view, half of
+        // a split screen), the screen's otherwise. Centred on the screen, a view half as wide had what
+        // it followed at its edge.
+        const picture = scene.spriteTexture;
+        const screen = picture !== null ? { width: picture.texture.width, height: picture.texture.height } : screenSizeOf(store.get('screen').canvas);
         const zoom = camera.zoom > 0 ? camera.zoom : 1;
         const half = { x: screen.width / zoom / 2, y: screen.height / zoom / 2 };
 

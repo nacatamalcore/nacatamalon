@@ -312,6 +312,26 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   scoring; a box with hitboxes counts once, by them. To show it, make the print in the body
   (`createPixels`, `createPixelTexture`, a sprite) and later `film.data.set(photo.data);
   updatePixelTexture(print)`. Do not read the canvas yourself.
+- **Another view of the world** (a minimap, a rear-view mirror, a split screen):
+  `createSpriteTexture({ width, height, sees: 'world' }, View)` draws the whole world of its scene
+  again (sprites, maps, texts, particles, models) through the cameras `View` asks for
+  (`useCamera2d`, `useCameraFollow`, `useCamera3d`; one that `follow2d` follows the view's 2D),
+  without running it twice; parallax and pixel steps are the view's own. Show it with a sprite,
+  which can be masked round or carry a material. What `View` draws goes on top and only there (a
+  minimap's marker), through the same cameras, lit by the scene's lamps and in its fog unless the
+  view has its own. Never in a view: what is pinned to the screen, and what shows the view itself.
+  `hide` and `only` choose the rest, each `{ tags, kinds, objects }` (`kinds: ['particles']`, `tags`
+  from `useSpawn(Piece, { tags })` or a sprite's own from `useTag(name).add(sprite)`); `hide` wins,
+  `visible: false` hides everywhere, `setViewFilter` changes them. Pin the sprites showing views in
+  a piece of their own (`useSpawn(Hud)()` with `useScreenSpace()` inside it): called in the scene's
+  body, `useScreenSpace` pins the whole scene. `viewToWorld(shownSprite, info)` turns a click on it
+  into the view's 2D world (`inside`, `picture`), `worldToView(shownSprite, point)` puts a world
+  point on it (`edge` for an arrow at its border), `viewToRay` gives the 3D camera's ray. A split
+  screen calls `useWorldOffScreen()` in the scene, so the screen draws only what is pinned (a
+  capture of the game too; the editor, camera previews and a capture through another camera see the
+  world), and `resizeSpriteTexture(view, w, h)` from `onResized`. Views showing each other are drawn
+  in order; in a ring, the earliest made one shows the others a frame late. Not yet: a view of
+  another scene, and clicks reaching sprites through a view.
 - **Data that outlives a scene** goes in a store, created once at module level:
   `const session = createGameStore({ key: 'session', state: { score: 0 } });`, then
   `session.set((s) => { s.score += 10; })` in one scene and `session.state.score` in the next.

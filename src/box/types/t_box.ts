@@ -272,6 +272,12 @@ export type TBox = {
      */
     screenSpace: boolean;
     /**
+     * On a scene's top box: the screen draws only what is pinned to it (`useScreenSpace`), and the
+     * rest of the scene, its world, is seen only through views of it
+     * (`createSpriteTexture({ sees: 'world' })`). The scene runs as ever. Set by `useWorldOffScreen`.
+     */
+    worldOffScreen: boolean;
+    /**
      * The mask that keeps this box, and everything under it, to a rectangle or a shape, or `null`.
      * Set by the mask's `add` (`useMask`), never by hand.
      */

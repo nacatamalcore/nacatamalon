@@ -220,13 +220,14 @@ describe('the passes of a frame with pictures', () => {
         holds(screenOf(ctx).drawables, outside);
     });
 
-    it('draws a picture found inside another before the one it is in', () => {
+    it('draws a picture found inside another, and shown by it, before the one it is in', () => {
         const { store } = createTestGame();
         let outer!: TTexture;
         let inner!: TTexture;
         startTestScene(store, 'S', () => {
             outer = createSpriteTexture({ width: 8, height: 8 }, () => {
                 inner = createSpriteTexture({ width: 4, height: 4 }, block);
+                createSprite({ texture: inner });
             });
             return createScene();
         });
@@ -622,7 +623,7 @@ describe('what a picture sees', () => {
         const { store } = createTestGame();
         startTestScene(store, 'S', () => {
             expect(() => createSpriteTexture({ width: 8, height: 8, sees: 'scene' as never })).toThrow("What was 'scene' is '3d' now.");
-            expect(() => createSpriteTexture({ width: 8, height: 8, sees: 'world' as never })).toThrow("it sees 'inside' or '3d', not 'world'.");
+            expect(() => createSpriteTexture({ width: 8, height: 8, sees: 'everything' as never })).toThrow("it sees 'inside', '3d' or 'world', not 'everything'.");
             return createScene();
         });
     });

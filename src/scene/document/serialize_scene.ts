@@ -29,6 +29,8 @@ import type { TText } from '../../gameobjects/text/types/t_text';
 import type { TTilemapLayer } from '../../gameobjects/tilemap';
 import type { TTransform2d } from '../../gameobjects/types/t_transform_2d';
 import type { TTransform3d } from '../../gameobjects/types/t_transform_3d';
+import type { TViewFilter } from '../../gameobjects/sprite_texture/types';
+import type { TViewFilterDoc } from './types/t_component_doc';
 
 /**
  * Everything the walk collects on its way down, so a document comes out of one pass.
@@ -669,6 +671,25 @@ const writeDrawable = (drawable: TDrawable, writing: TWriting): TComponentDoc | 
     }
 };
 
+/**
+ * A view's filter as a document writes it: its tags and kinds. A filter naming nothing is written
+ * all the same, since an `only` that names nothing takes in nothing, and left out it would take in
+ * everything. Its objects are left behind, since an object cannot be written into a file, and that
+ * is said.
+ */
+const viewFilterDoc = <K extends 'hide' | 'only'>(key: K, filter: TViewFilter | null, view: string): Partial<Record<K, TViewFilterDoc>> => {
+    if (filter === null) {
+        return {};
+    }
+    if (filter.objects !== undefined && filter.objects.length > 0) {
+        const nothingElse = key === 'only' && (filter.tags ?? []).length === 0 && (filter.kinds ?? []).length === 0;
+        console.warn(`[NacatamalOn] serializeScene: the view "${view}" names objects in its ${key}, which a document cannot keep. They are left out of it${nothingElse ? ', so read again it takes in nothing' : ''}; give them a tag and name the tag instead.`);
+    }
+    const tags = filter.tags ?? [];
+    const kinds = filter.kinds ?? [];
+    return { [key]: { ...(tags.length > 0 ? { tags: [...tags] } : {}), ...(kinds.length > 0 ? { kinds: [...kinds] } : {}) } } as Partial<Record<K, TViewFilterDoc>>;
+};
+
 const writeBox = (box: TBox, writing: TWriting): TBoxNode => {
     const components: TComponentDoc[] = [];
 
@@ -683,7 +704,9 @@ const writeBox = (box: TBox, writing: TWriting): TBoxNode => {
             width: picture.width,
             height: picture.height,
             background: { ...picture.background },
-            ...(picture.sees === '3d' ? { sees: '3d' as const } : {}),
+            ...(picture.sees !== 'inside' ? { sees: picture.sees } : {}),
+            ...viewFilterDoc('hide', picture.hide, box.name),
+            ...viewFilterDoc('only', picture.only, box.name),
         });
     }
 
@@ -814,6 +837,7 @@ const writeBox = (box: TBox, writing: TWriting): TBoxNode => {
         ...(box.data.length > 0 ? { data: box.data.map((record) => ({ value: record.value })) } : {}),
         ...unless('visible', box.visible, true),
         ...unless('screenSpace', box.screenSpace, false),
+        ...unless('worldOffScreen', box.worldOffScreen, false),
         ...(Object.keys(extra).length > 0 ? { extra } : {}),
     };
 };

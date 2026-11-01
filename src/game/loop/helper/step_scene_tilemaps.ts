@@ -1,6 +1,25 @@
 import { openLayerState } from '../../../gameobjects/tilemap/layer_state';
 import type { TDrawable } from '../../../gameobjects/types';
 import type { TTilemapLayer } from '../../../gameobjects/tilemap';
+import { recordOf } from './view_walk';
+
+/**
+ * Each view copy's own stand-in, kept between frames.
+ */
+const copies = new WeakMap<object, object>();
+
+/**
+ * The stand-in a view's copy of a layer is drawn with: the layer's, field for field, refreshed every
+ * frame so it holds the corners as they are now.
+ */
+const copyFor = <T extends object>(copy: object, shared: T): T => {
+    let own = copies.get(copy) as T | undefined;
+    if (own === undefined) {
+        own = {} as T;
+        copies.set(copy, own);
+    }
+    return Object.assign(own, shared);
+};
 
 /**
  * Puts each map layer's stand-in in the list in its place.
@@ -30,7 +49,11 @@ export const stepSceneTilemaps = (drawables: TDrawable[], start: number): void =
         // A layer and its stand-in both answer to `type: 'tilemap'`, so one left in the list would
         // reach a backend pretending to be the other and be missing every field drawing reads. The
         // swap therefore happens first and on every path, exactly as it does for an emitter.
-        const drawn = openLayerState(layer as TTilemapLayer).drawn;
+        // A view's copy of a layer shares the layer's corners on the card, and has a stand-in of its
+        // own to carry where the view draws it.
+        const record = recordOf(layer as TTilemapLayer);
+        const shared = openLayerState(record).drawn;
+        const drawn = record === layer ? shared : copyFor(layer, shared);
         drawables[i] = drawn as unknown as TDrawable;
 
         const source = layer as TTilemapLayer;

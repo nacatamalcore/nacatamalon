@@ -14,6 +14,32 @@ import type { TBox } from './types/t_box';
 const owners = new WeakMap<TDrawable, { box: TBox; store: TRuntimeStore }>();
 
 /**
+ * The drawing each view's stand-in stands in for (`standInFor`). A stand-in is drawn in the drawing's
+ * place, so it belongs where the drawing does.
+ */
+const standingFor = new WeakMap<object, TDrawable>();
+
+/**
+ * Remembers that `standIn` is drawn by a view in place of `drawable`.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const noteStandIn = (standIn: object, drawable: TDrawable): void => {
+    standingFor.set(standIn, drawable);
+};
+
+/**
+ * The drawing a view's stand-in stands in for, or `undefined` for anything else.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const standingInFor = (standIn: object): TDrawable | undefined => standingFor.get(standIn);
+
+/**
  * Remembers where `drawable` was placed. Called by the creator right after it attaches it.
  *
  * @internal
@@ -25,13 +51,21 @@ export const trackDrawableOwner = (drawable: TDrawable, box: TBox, store: TRunti
 };
 
 /**
- * Where `drawable` lives, or `undefined` for one that was never attached or has already left.
+ * Where `drawable` lives, or `undefined` for one that was never attached or has already left. A view's
+ * stand-in lives where the drawing it stands in for does.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const ownerOfDrawable = (drawable: TDrawable): { box: TBox; store: TRuntimeStore } | undefined => owners.get(drawable);
+export const ownerOfDrawable = (drawable: TDrawable): { box: TBox; store: TRuntimeStore } | undefined => {
+    const owner = owners.get(drawable);
+    if (owner !== undefined) {
+        return owner;
+    }
+    const record = standingFor.get(drawable);
+    return record === undefined ? undefined : owners.get(record);
+};
 
 /**
  * Drops the link once `drawable` is out of the tree, so asking again says it has no owner.

@@ -101,6 +101,11 @@ export type TBoxNode = {
      */
     screenSpace?: boolean;
     /**
+     * On the scene's top box: the screen draws only what is pinned to it, and the world is seen
+     * through views alone (`useWorldOffScreen`). Only ever written when it is `true`.
+     */
+    worldOffScreen?: boolean;
+    /**
      * Whatever else the file said about this box, kept exactly as written and **not acted on**.
      *
      * Two things land here, and both would otherwise be lost. A field from a newer version of this

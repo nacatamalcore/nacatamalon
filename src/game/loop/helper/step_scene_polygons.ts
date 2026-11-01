@@ -3,6 +3,24 @@ import type { IRenderer } from '../../../render';
 import type { TDrawTexture } from '../../../render/interface';
 import type { TDrawable } from '../../../gameobjects/types';
 import type { TPolygon } from '../../../gameobjects/polygon';
+import { recordOf } from './view_walk';
+
+/**
+ * Each view copy's own stand-in, kept between frames.
+ */
+const copies = new WeakMap<object, object>();
+
+/**
+ * The stand-in a view's copy of a shape is drawn with: the shape's, refreshed every frame.
+ */
+const copyFor = <T extends object>(copy: object, shared: T): T => {
+    let own = copies.get(copy) as T | undefined;
+    if (own === undefined) {
+        own = {} as T;
+        copies.set(copy, own);
+    }
+    return Object.assign(own, shared);
+};
 
 /**
  * A plain white picture, one per renderer, for shapes with no picture of their own: their colour is
@@ -38,7 +56,11 @@ export const stepScenePolygons = (drawables: TDrawable[], start: number, rendere
             continue;
         }
         const polygon = item as TPolygon;
-        const drawn = uploadPolygon(renderer, polygon).drawn;
+        // A view's copy shares the shape's corners on the card, and has a stand-in of its own to carry
+        // where the view draws it.
+        const record = recordOf(polygon);
+        const shared = uploadPolygon(renderer, record).drawn;
+        const drawn = record === polygon ? shared : copyFor(polygon, shared);
         drawn.transform = polygon.transform;
         drawn.worldTransform = polygon.worldTransform;
         drawn.texture = polygon.texture ?? whiteFor(renderer);

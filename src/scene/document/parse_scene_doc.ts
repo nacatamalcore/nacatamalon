@@ -2,6 +2,7 @@ import { findMaterialLook } from '../../shader_composer/surface/looks';
 import type { TLook } from '../../shader_composer/surface/types';
 import { MAP_NAME, MAX_MATERIAL_MAPS } from '../../render/shared/material_maps';
 import { SCENE_FORMAT, SCENE_VERSION } from './types/t_scene_doc';
+import { VIEW_KINDS } from '../../gameobjects/sprite_texture/view_kinds';
 import { asArray, asBoolean, asColor, asNumber, asOneOf, asRecord, asString } from '../../utils';
 import { nanoId } from '../../utils';
 import type { TColor } from '../../color';
@@ -14,6 +15,7 @@ import type {
     TNineSliceComponent,
     TSpriteAnimationDoc,
     TTilemapLayerOverride,
+    TViewFilterDoc,
 } from './types/t_component_doc';
 import type { TTransform2d } from '../../gameobjects/types/t_transform_2d';
 import type { TNineSliceBorders } from '../../gameobjects/nine_slice/types/t_nine_slice';
@@ -34,7 +36,7 @@ const BLACK: TColor = { r: 0, g: 0, b: 0, a: 1 };
 /**
  * Which keys of a box node the reader consumes. Everything else is somebody else's and is kept.
  */
-const BOX_KEYS = new Set(['id', 'name', 'tags', 'transform', 'components', 'children', 'data', 'visible', 'screenSpace', 'extra']);
+const BOX_KEYS = new Set(['id', 'name', 'tags', 'transform', 'components', 'children', 'data', 'visible', 'screenSpace', 'worldOffScreen', 'extra']);
 
 /**
  * Where an unknown component is kept, so that writing the document back puts it where it was.
@@ -548,12 +550,34 @@ const parseNineSliceMode = (raw: unknown): TNineSliceComponent['mode'] => {
  * What a picture in a document sees from outside itself. `"scene"` is what `'3d'` was called when
  * the document was saved: it meant the models then, and that is all it will ever mean.
  */
-const seesOf = (value: unknown, key: string): '3d' | undefined => {
+const seesOf = (value: unknown, key: string): '3d' | 'world' | undefined => {
     if (value === 'scene') {
         console.warn(`[NacatamalOn] scene: the picture '${key}' says it sees "scene", which is called '3d' now. It is read as '3d', and saving the scene writes it.`);
         return '3d';
     }
-    return value === '3d' ? '3d' : undefined;
+    return value === '3d' || value === 'world' ? value : undefined;
+};
+
+/**
+ * A view's filter, its tags and the kinds this version knows; `undefined` for one that names nothing.
+ * A kind it does not know is said once and left out, rather than refusing the whole scene.
+ */
+const viewFilterOf = (value: unknown, key: string): TViewFilterDoc | undefined => {
+    const raw = asRecord(value);
+    if (raw === null) {
+        return undefined;
+    }
+    const tags = tagsOf(raw.tags).tags;
+    const kinds: string[] = [];
+    for (const kind of asArray(raw.kinds)) {
+        if (typeof kind === 'string' && VIEW_KINDS.has(kind)) {
+            kinds.push(kind);
+        } else {
+            console.warn(`[NacatamalOn] scene: the view '${key}' names the kind ${JSON.stringify(kind)}, which is not a kind of drawing. It is left out of its filter; name one of ${[...VIEW_KINDS].map((one) => `'${one}'`).join(', ')}, or open the scene with the version that wrote it.`);
+        }
+    }
+    // Naming nothing is kept as it is: an `only` that names nothing takes in nothing.
+    return { ...(tags !== undefined ? { tags } : {}), ...(kinds.length > 0 ? { kinds } : {}) };
 };
 
 /**
@@ -815,6 +839,9 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
             if (key === '' || width < 1 || height < 1) {
                 return null;
             }
+            const sees = seesOf(raw.sees, key);
+            const hide = viewFilterOf(raw.hide, key);
+            const only = viewFilterOf(raw.only, key);
             return {
                 type: 'sprite-texture',
                 id,
@@ -822,7 +849,9 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 width,
                 height,
                 background: asColor(raw.background, BLACK),
-                ...(seesOf(raw.sees, key) === '3d' ? { sees: '3d' as const } : {}),
+                ...(sees !== undefined ? { sees } : {}),
+                ...(sees === 'world' && hide !== undefined ? { hide } : {}),
+                ...(sees === 'world' && only !== undefined ? { only } : {}),
             };
         }
         case 'physics-body-2d': {
@@ -1197,6 +1226,7 @@ const parseBox = (value: unknown, unknowns: TUnknowns): TBoxNode => {
         ...(Array.isArray(raw.data) && raw.data.length > 0 ? { data: parseData(raw.data) } : {}),
         ...optionalBoolean(raw, 'visible'),
         ...optionalBoolean(raw, 'screenSpace'),
+        ...optionalBoolean(raw, 'worldOffScreen'),
         ...(Object.keys(extra).length > 0 ? { extra } : {}),
     };
 };
