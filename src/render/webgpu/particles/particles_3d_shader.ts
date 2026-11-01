@@ -1,3 +1,4 @@
+import { OFF_THE_SEAM_WGSL } from '../../shared/texel_seam';
 /**
  * The shader a particle in three dimensions is drawn with: a square that always faces the camera.
  *
@@ -40,11 +41,13 @@ struct VertexOut {
 };
 
 // The read kept half a texel inside the frame's window, as the flat particles keep theirs.
+${OFF_THE_SEAM_WGSL}
 fn insideWindow(uv: vec2f, window: vec4f) -> vec2f {
     let texel = 0.5 / vec2f(textureDimensions(particleTexture, 0));
     let lowest = window.xy + texel;
     let highest = max(lowest, window.zw - texel);
-    return clamp(uv, lowest, highest);
+    // A read on a seam takes the same texel on both cards, as a sprite's does.
+    return clamp(offTheSeam(uv, vec2f(textureDimensions(particleTexture, 0))), lowest, highest);
 }
 
 @vertex

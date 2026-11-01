@@ -1,3 +1,4 @@
+import { OFF_THE_SEAM_WGSL } from '../../shared/texel_seam';
 import { DISTANCE_FIELD_RANGE } from '../../shared/distance_field';
 
 /**
@@ -80,6 +81,7 @@ struct VertexOut {
 //
 // A repeated sprite's read runs on past its window, once for each time the picture is laid, and is
 // wrapped back into it first.
+${OFF_THE_SEAM_WGSL}
 fn insideWindow(uv: vec2f, window: vec4f, repeat: f32) -> vec2f {
     let texel = 0.5 / vec2f(textureDimensions(spriteTexture, 0));
     let size = window.zw - window.xy;
@@ -87,6 +89,8 @@ fn insideWindow(uv: vec2f, window: vec4f, repeat: f32) -> vec2f {
     if (repeat > 0.5) {
         read = window.xy + (uv - window.xy) - floor((uv - window.xy) / size) * size;
     }
+    // A read on a seam takes the same texel on both cards: see OFF_THE_SEAM_WGSL.
+    read = offTheSeam(read, vec2f(textureDimensions(spriteTexture, 0)));
     let lowest = window.xy + texel;
     // Guarded for a window thinner than one texel, where the two would cross over.
     let highest = max(lowest, window.zw - texel);

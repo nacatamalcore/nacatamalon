@@ -7,6 +7,12 @@ import { useCamera2d } from '../src/hooks/camera/use_camera_2d';
 import { fillFrameContext } from '../src/game/loop/fill_frame_context';
 import { PARTICLE_OFFSET } from '../src/render/shared/particle_instance';
 import { createTestGame, startTestScene } from './helpers/test_game';
+import { SPRITE_SHADER_HEAD } from '../src/render/webgpu/sprite/sprite_shader';
+import { SPRITE_FRAGMENT_HEAD_GLSL } from '../src/render/webgl2/sprite/sprite_shader';
+import { PARTICLES_SHADER } from '../src/render/webgpu/particles/particles_shader';
+import { PARTICLES_3D_SHADER } from '../src/render/webgpu/particles/particles_3d_shader';
+import { PARTICLES_FRAGMENT_SHADER } from '../src/render/webgl2/particles/particles_shader';
+import { OFF_THE_SEAM_GLSL, OFF_THE_SEAM_WGSL } from '../src/render/shared/texel_seam';
 import type { TFrameContext, TRenderPass } from '../src/render';
 import type { TDrawParticles } from '../src/render/interface';
 import type { TParticles } from '../src/gameobjects/particles/types/t_particles';
@@ -151,5 +157,24 @@ describe('flat particles under pixelSnap', () => {
         expect(first(looks[0]!.cloud.instances).x).toBe(9.5);
         expect(first(looks[1]!.cloud.instances).x).toBe(10.5);
         expect(first(particleStateOf(emitter)!.instances).x).toBeCloseTo(10.3, 4);
+    });
+});
+
+describe('a read on the seam between two texels', () => {
+    // Each card works out the read at a pixel by its own rounding, so one landing on a seam took one
+    // texel in WebGPU and the one before in WebGL2: a minimap's tiny sprite a row of its picture apart.
+    // What it does on the card is checked in Chrome by nacative's parity/texel_seams.ts.
+    it('is moved just past it, in every shader that reads a window, and only when it is on one', () => {
+        for (const shader of [SPRITE_SHADER_HEAD, PARTICLES_SHADER, PARTICLES_3D_SHADER]) {
+            expect(shader).toContain(OFF_THE_SEAM_WGSL);
+            expect(shader).toContain('offTheSeam(');
+        }
+        for (const shader of [SPRITE_FRAGMENT_HEAD_GLSL, PARTICLES_FRAGMENT_SHADER]) {
+            expect(shader).toContain(OFF_THE_SEAM_GLSL);
+            expect(shader).toContain('offTheSeam(');
+        }
+        // Only on a seam: the read is left as it is unless it is within SEAM of one.
+        expect(OFF_THE_SEAM_WGSL).toContain('select(read, seam + SEAM, abs(read - seam) < vec2f(SEAM))');
+        expect(OFF_THE_SEAM_GLSL).toContain('mix(read, seam + SEAM, lessThan(abs(read - seam), vec2(SEAM)))');
     });
 });

@@ -1,3 +1,4 @@
+import { OFF_THE_SEAM_GLSL } from '../../shared/texel_seam';
 import { DISTANCE_FIELD_RANGE } from '../../shared/distance_field';
 
 /**
@@ -106,10 +107,13 @@ out vec4 fragColor;
 // the sheet cannot come back with the frame next door. Half a texel in is the middle of the
 // outermost texel, so nothing visible is lost. A repeated sprite's read runs on past its window,
 // once for each time the picture is laid, and is wrapped back into it first.
+${OFF_THE_SEAM_GLSL}
 vec2 insideWindow(vec2 uv, vec4 window) {
     vec2 texel = 0.5 / vec2(textureSize(spriteTexture, 0));
     vec2 size = window.zw - window.xy;
     vec2 read = vRepeat > 0.5 ? window.xy + (uv - window.xy) - floor((uv - window.xy) / size) * size : uv;
+    // A read on a seam takes the same texel on both cards: see OFF_THE_SEAM_GLSL.
+    read = offTheSeam(read, vec2(textureSize(spriteTexture, 0)));
     vec2 lowest = window.xy + texel;
     vec2 highest = max(lowest, window.zw - texel);
     return clamp(read, lowest, highest);

@@ -1,3 +1,4 @@
+import { OFF_THE_SEAM_WGSL } from '../../shared/texel_seam';
 /**
  * The whole shader a particle is drawn with.
  *
@@ -43,12 +44,14 @@ struct VertexOut {
 
 // Kept half a texel inside its window, as a sprite's read is: a pixel that lands on the boundary
 // between two frames of a sheet would otherwise come back with a line of the frame next door.
+${OFF_THE_SEAM_WGSL}
 fn insideWindow(uv: vec2f, window: vec4f) -> vec2f {
     let texel = 0.5 / vec2f(textureDimensions(particleTexture, 0));
     let lowest = window.xy + texel;
     // Guarded for a window thinner than one texel, where the two would cross over.
     let highest = max(lowest, window.zw - texel);
-    return clamp(uv, lowest, highest);
+    // A read on a seam takes the same texel on both cards, as a sprite's does.
+    return clamp(offTheSeam(uv, vec2f(textureDimensions(particleTexture, 0))), lowest, highest);
 }
 
 @vertex

@@ -63,6 +63,12 @@ releases are in [changelog/](./changelog/), one file each.
   and WebGPU and WebGL2 each covered that row or not, so the same frame came out a row apart. A
   turned particle has only its middle rounded, so its edges can still fall anywhere. Nothing changes
   under `'off'`.
+- **A picture read exactly on the seam between two of its texels takes the same one in WebGPU and in
+  WebGL2.** A sprite drawn much smaller than its picture, as in a minimap, or a particle on whole
+  pixels showing a frame of a sheet, could have a pixel's read land on the seam, and each card took
+  the texel on its own side of it: the same frame a row of the picture apart. A read within a hair of
+  a seam is now put just past it, in sprites, texts, panels, masks and particles; every other read is
+  left where it was, a picture blown up 256 times keeping its seam on the same column.
 - **Letting go of an effect or a model no longer takes a picture the game loaded itself.** A sprite
   showing the spark `useLoadTexture` gave went blank when an effect naming the same picture was let
   go of. What the game asked for goes when the game lets go of it; the same holds for a sheet from

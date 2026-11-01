@@ -1,3 +1,4 @@
+import { OFF_THE_SEAM_GLSL } from '../../shared/texel_seam';
 /**
  * The GLSL twin of `render/webgpu/particles/particles_shader.ts`.
  *
@@ -75,11 +76,13 @@ out vec4 fragColor;
 
 // Kept half a texel inside its window, as a sprite's read is, so a frame of a sheet never shows a
 // line of the one next door.
+${OFF_THE_SEAM_GLSL}
 vec2 insideWindow(vec2 uv, vec4 window) {
     vec2 texel = 0.5 / vec2(textureSize(particleTexture, 0));
     vec2 lowest = window.xy + texel;
     vec2 highest = max(lowest, window.zw - texel);
-    return clamp(uv, lowest, highest);
+    // A read on a seam takes the same texel on both cards, as a sprite's does.
+    return clamp(offTheSeam(uv, vec2(textureSize(particleTexture, 0))), lowest, highest);
 }
 
 void main() {
