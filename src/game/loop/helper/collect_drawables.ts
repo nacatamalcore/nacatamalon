@@ -7,7 +7,7 @@ import type { TPlacedCollider2d, TPlacedCollider3d, TSceneColliders } from '../.
 import type { TDrawable } from '../../../gameobjects/types';
 import type { TTransform2d } from '../../../gameobjects/types/t_transform_2d';
 import type { TCamera2d } from '../../../camera';
-import { cameraAsDrawn, onPixels, pixelsPerUnit } from '../../../camera/camera_as_drawn';
+import { backFromTie, cameraAsDrawn, onPixels, pixelsPerUnit, unturned } from '../../../camera/camera_as_drawn';
 import type { TSight } from '../../../render/shared/sight_2d';
 import { pivotPlace } from '../../../render/shared/pivot_place';
 import { layoutOfText } from '../../../layout/measure_text';
@@ -285,32 +285,6 @@ export const inSight = (drawable: TDrawable, sight: TSight): boolean => {
     const hx = (Math.abs(sx * c) + Math.abs(sy * s)) / 2 + pad;
     const hy = (Math.abs(sx * s) + Math.abs(sy * c)) / 2 + pad;
     return cx + hx >= sight.minX && cx - hx <= sight.maxX && cy + hy >= sight.minY && cy - hy <= sight.maxY;
-};
-
-/**
- * How far back a corner goes when it falls exactly between two pixels of the grid of
- * `pixelsPerUnit`: to the one before. Left to the graphics card, that tie went either way, so the
- * same sprite came out a column apart in WebGPU and in WebGL2, or with a column twice and its last
- * one gone; the one before is what WebGPU draws when it gets it right. Anywhere else the corner is
- * left where it was: a sprite growing by a fraction would have its far edge step back a pixel now
- * and then if its corner were pulled to the nearest one.
- */
-const backFromTie = (corner: number, perUnit: number): number => {
-    const across = corner * perUnit;
-    return Math.abs(across - Math.floor(across) - 0.5) < 1e-4 ? 0.5 / perUnit : 0;
-};
-
-const TURN = Math.PI * 2;
-
-/**
- * Not turned: at 0, or a whole turn round, where a spin that has gone round once stops.
- */
-const unturned = (rotation: number): boolean => {
-    if (rotation === 0) {
-        return true;
-    }
-    const left = Math.abs(rotation % TURN);
-    return left < 1e-9 || TURN - left < 1e-9;
 };
 
 /**

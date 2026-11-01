@@ -57,6 +57,12 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **Flat particles are drawn on the pixels the sprites are on.** Under `pixelSnap` their size is
+  whole pixels and, unturned, their edges land between two pixels, through the camera of the screen
+  or of each view. Before, a particle's edge could fall almost on the middle of a row of pixels,
+  and WebGPU and WebGL2 each covered that row or not, so the same frame came out a row apart. A
+  turned particle has only its middle rounded, so its edges can still fall anywhere. Nothing changes
+  under `'off'`.
 - **Letting go of an effect or a model no longer takes a picture the game loaded itself.** A sprite
   showing the spark `useLoadTexture` gave went blank when an effect naming the same picture was let
   go of. What the game asked for goes when the game lets go of it; the same holds for a sheet from

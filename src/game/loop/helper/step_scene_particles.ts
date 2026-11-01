@@ -6,6 +6,7 @@ import { computeModelMatrix } from '../../../render/shared/compute_mvp_3d';
 import * as mat from '../../../math/mat4';
 import { PARTICLE_FLOATS, PARTICLE_OFFSET } from '../../../render/shared/particle_instance';
 import { waitsForSheet } from '../../../gameobjects/particles/particle_run';
+import { backFromTie, onPixels, unturned } from '../../../camera/camera_as_drawn';
 import type { TParticlesFile } from '../../../loaders/particles/types/t_particles_file';
 import type { TDrawTexture } from '../../../render/interface/draw/t_draw_texture';
 import type { TDrawable } from '../../../gameobjects/types';
@@ -89,6 +90,90 @@ const NOTHING_SOLID: TSceneColliders = { flat: [], deep: [] };
 const EMPTY = new Float32Array(0);
 
 /**
+ * The pixels a pass puts flat particles on: how many of them a unit of the world takes for those seen
+ * through the scene's camera (`pixelsPerUnit`, `0` under `pixelSnap: 'off'`), and which camera that
+ * is in the pass. Pinned ones are drawn at zoom 1, as a pinned sprite is.
+ *
+ * @internal
+ * @since 1.0.0
+ */
+export type TParticlePixels = { perUnit: number; camera: number };
+
+/**
+ * Nothing put on pixels: what a pass is that does not say.
+ */
+const NO_PIXELS: TParticlePixels = { perUnit: 0, camera: -1 };
+
+/**
+ * The grid the particles of the drawable at `i` go on.
+ */
+const perUnitAt = (pixels: TParticlePixels, cameraIndex: number[], i: number): number => {
+    if (pixels.perUnit === 0) {
+        return 0;
+    }
+    return pixels.camera >= 0 && cameraIndex[i] === pixels.camera ? pixels.perUnit : 1;
+};
+
+/**
+ * The simulation's own numbers behind each stand-in, before they were put on pixels: what a second
+ * look starts from, so a view with another zoom puts them on its own grid and not on the screen's.
+ */
+const rawOf = new WeakMap<object, Float32Array>();
+
+/**
+ * The numbers each stand-in draws once put on pixels, kept between frames so nothing is made frame
+ * after frame.
+ */
+const onPixelsOf = new WeakMap<object, Float32Array>();
+
+/**
+ * Copies `count` particles from `from` into `into`, put on the grid of `perUnit` by the rule a sprite
+ * follows: its size made whole pixels, its middle on a pixel, and, unturned, held back half a pixel
+ * when that leaves its edges between two, so its edges land on the grid and never on a pixel's
+ * middle, where each graphics card would cover that row or not by its own rounding. A turned one has
+ * its edges on no grid, and only its middle is put on one.
+ */
+const putOnPixels = (from: Float32Array, into: Float32Array, count: number, perUnit: number): void => {
+    for (let at = 0; at < count * PARTICLE_FLOATS; at += PARTICLE_FLOATS) {
+        for (let k = 0; k < PARTICLE_FLOATS; k++) {
+            into[at + k] = from[at + k]!;
+        }
+        // Rounded and not held at one at least: a particle shrinking away goes, as it does unsnapped.
+        const size = Math.round(from[at + PARTICLE_OFFSET.size]! * perUnit) / perUnit;
+        let x = onPixels(from[at + PARTICLE_OFFSET.x]!, perUnit);
+        let y = onPixels(from[at + PARTICLE_OFFSET.y]!, perUnit);
+        if (unturned(from[at + PARTICLE_OFFSET.rotation]!)) {
+            x -= backFromTie(x - size / 2, perUnit);
+            y -= backFromTie(y - size / 2, perUnit);
+        }
+        into[at + PARTICLE_OFFSET.size] = size;
+        into[at + PARTICLE_OFFSET.x] = x;
+        into[at + PARTICLE_OFFSET.y] = y;
+    }
+};
+
+/**
+ * Puts a flat cloud the screen draws, and the effects it set off, on pixels: into a copy of its own,
+ * so the simulation's numbers stay as they were for whoever looks again.
+ */
+const drawnOnPixels = (drawn: TDrawParticles, perUnit: number): void => {
+    rawOf.set(drawn, drawn.instances);
+    if (perUnit > 0 && drawn.count > 0) {
+        const needed = drawn.count * PARTICLE_FLOATS;
+        let into = onPixelsOf.get(drawn);
+        if (into === undefined || into.length < needed) {
+            into = new Float32Array(Math.max(needed, drawn.instances.length));
+            onPixelsOf.set(drawn, into);
+        }
+        putOnPixels(drawn.instances, into, drawn.count, perUnit);
+        (drawn as { instances: Float32Array }).instances = into;
+    }
+    for (const child of drawn.children ?? []) {
+        drawnOnPixels(child, perUnit);
+    }
+};
+
+/**
  * Moves every emitter in this stretch of the list on by `delta`, and leaves it ready to draw.
  *
  * Here, rather than among the ordinary updates, for one reason: a particle is born **where the
@@ -108,6 +193,7 @@ export const stepSceneParticles = (
     start: number,
     delta: number,
     colliders: TSceneColliders = NOTHING_SOLID,
+    pixels: TParticlePixels = NO_PIXELS,
 ): void => {
     for (let i = start; i < drawables.length; i++) {
         const emitter = drawables[i];
@@ -165,18 +251,28 @@ export const stepSceneParticles = (
         drawn.blend = doc.blend;
         drawn.smooth = emitter.smooth;
         (drawn as { children?: unknown }).children = emitter.visible === false ? undefined : childrenDrawn(state, emitter.type, emitter.smooth);
+        // Flat ones on the pixels the sprites around them are on; a cloud in depth is not on any.
+        if (emitter.type === 'particles') {
+            drawnOnPixels(drawn as TDrawParticles, perUnitAt(pixels, cameraIndex, i));
+        }
     }
 };
 
 /**
- * A flat cloud and the effects it set off, copied with `view` written into every particle.
+ * A flat cloud and the effects it set off, copied with `view` written into every particle, and put
+ * on this look's pixels from the simulation's own numbers: never from the screen's, which are on the
+ * screen's grid, and never into them.
  */
-const seenThrough = (drawn: TDrawParticles, view: number): TDrawParticles => {
-    const instances = drawn.instances.slice(0, drawn.count * PARTICLE_FLOATS);
+const seenThrough = (drawn: TDrawParticles, view: number, perUnit: number): TDrawParticles => {
+    const raw = rawOf.get(drawn) ?? drawn.instances;
+    const instances = raw.slice(0, drawn.count * PARTICLE_FLOATS);
+    if (perUnit > 0) {
+        putOnPixels(instances, instances, drawn.count, perUnit);
+    }
     for (let at = 0; at < instances.length; at += PARTICLE_FLOATS) {
         instances[at + PARTICLE_OFFSET.view] = view;
     }
-    return { ...drawn, instances, children: drawn.children?.map((child) => seenThrough(child, view)) };
+    return { ...drawn, instances, children: drawn.children?.map((child) => seenThrough(child, view, perUnit)) };
 };
 
 /**
@@ -194,7 +290,7 @@ const seenThrough = (drawn: TDrawParticles, view: number): TDrawParticles => {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const lookAgainAtParticles = (drawables: TDrawable[], cameraIndex: number[], start: number): void => {
+export const lookAgainAtParticles = (drawables: TDrawable[], cameraIndex: number[], start: number, pixels: TParticlePixels = NO_PIXELS): void => {
     for (let i = start; i < drawables.length; i++) {
         const emitter = drawables[i];
         if (emitter.type !== 'particles' && emitter.type !== 'particles-3d') {
@@ -214,6 +310,6 @@ export const lookAgainAtParticles = (drawables: TDrawable[], cameraIndex: number
 
         const camera = cameraIndex[i] ?? -1;
         const view = camera >= 0 && camera < MAX_VIEWS - 1 ? camera + 1 : 0;
-        drawables[i] = seenThrough(drawn as TDrawParticles, view) as unknown as TDrawable;
+        drawables[i] = seenThrough(drawn as TDrawParticles, view, perUnitAt(pixels, cameraIndex, i)) as unknown as TDrawable;
     }
 };

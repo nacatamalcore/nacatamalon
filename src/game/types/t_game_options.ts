@@ -89,7 +89,10 @@ export type TGameOptions = {
      *
      * An edge left exactly between two pixels goes back to the one before: a sprite 5 wide held by its
      * middle at x 10 has its edge on 7.5, and is drawn from 7, so its columns start on pixels and
-     * WebGPU and WebGL2 draw it the same. Turned, only where it is drawn is rounded.
+     * WebGPU and WebGL2 draw it the same. Turned, only where it is drawn is rounded. Flat particles
+     * follow the same rule, their size made whole pixels too, through the camera of whatever draws
+     * them (the screen, or a view); a turned one has its edges on no grid, and only its middle is
+     * rounded.
      *
      * - `'screen'`: whole pixels of the screen. With the camera zoomed in to 3, a pixel of the art is
      *   three of the screen and stays three wide, and things move a screen pixel at a time: pixel art

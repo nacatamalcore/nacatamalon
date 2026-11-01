@@ -31,7 +31,7 @@ import { collectLighting, holdsLights } from './helper/collect_lights';
 import { computeJointMatrices } from '../../math/skinning';
 import { buildPostChain } from '../../post/build_post_chain';
 import type { TCamera2d } from '../../camera';
-import { cameraAsDrawn } from '../../camera/camera_as_drawn';
+import { cameraAsDrawn, pixelsPerUnit } from '../../camera/camera_as_drawn';
 import type { TPixelSnap } from '../types/t_game_options';
 import type { TDrawView3d } from '../../render/interface/draw/t_draw_view_3d';
 import type { TDrawCamera3d } from '../../render/interface/draw/t_draw_camera_3d';
@@ -728,10 +728,12 @@ const gatherTree = (
     // is frozen rather than skipped: it keeps drawing the cloud it last had.
     //
     // A second look in the same frame (a capture, a preview) shows what this one stepped instead.
+    // Flat ones on the pixels the sprites of this pass are on, by the camera they are measured by.
+    const particlePixels = { perUnit: pixelsPerUnit(snapping, measuredBy), camera: sceneCamera };
     if (again) {
-        lookAgainAtParticles(drawables as TDrawable[], cameraIndex, start);
+        lookAgainAtParticles(drawables as TDrawable[], cameraIndex, start, particlePixels);
     } else {
-        stepSceneParticles(drawables as TDrawable[], cameraIndex, start, rootOf(root).paused ? 0 : delta, colliders);
+        stepSceneParticles(drawables as TDrawable[], cameraIndex, start, rootOf(root).paused ? 0 : delta, colliders, particlePixels);
     }
 
     // After the walk too, and for the same reason an emitter needs it: a layer's corners live

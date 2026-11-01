@@ -41,6 +41,40 @@ export const pixelsPerUnit = (snap: TPixelSnap, camera: TCamera2d | null): numbe
 export const onPixels = (value: number, perUnit: number): number => perUnit === 1 ? Math.round(value) : Math.round(value * perUnit) / perUnit;
 
 /**
+ * How far back a corner goes when it falls exactly between two pixels of the grid of
+ * `pixelsPerUnit`: to the one before. Left to the graphics card, that tie went either way, so the
+ * same sprite came out a column apart in WebGPU and in WebGL2, or with a column twice and its last
+ * one gone; the one before is what WebGPU draws when it gets it right. Anywhere else the corner is
+ * left where it was: a sprite growing by a fraction would have its far edge step back a pixel now
+ * and then if its corner were pulled to the nearest one. Particles follow it too.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const backFromTie = (corner: number, perUnit: number): number => {
+    const across = corner * perUnit;
+    return Math.abs(across - Math.floor(across) - 0.5) < 1e-4 ? 0.5 / perUnit : 0;
+};
+
+const TURN = Math.PI * 2;
+
+/**
+ * Not turned: at 0, or a whole turn round, where a spin that has gone round once stops.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const unturned = (rotation: number): boolean => {
+    if (rotation === 0) {
+        return true;
+    }
+    const left = Math.abs(rotation % TURN);
+    return left < 1e-9 || TURN - left < 1e-9;
+};
+
+/**
  * A scene's camera as the picture is drawn through it. Under `pixelSnap` that is on the same pixels
  * as each object, so a camera moved by hand (a `useCamera2d` panned in an update) does not shimmer
  * the picture by a fraction of a pixel. Where it is keeps its fractions, so it moves as fast as it
