@@ -163,7 +163,20 @@ export const replaceProjectPostChain = (store: TRuntimeStore, chain: TPostChain)
     const state = store.get('post');
     const scenes = state.effects.filter((effect) => effect.source === 'scene');
 
+    // Off the file each one came from too, or that file would go on holding effects that are gone,
+    // one more for every change made while the game runs.
+    for (const effect of state.effects) {
+        if (effect.source === 'project' && effect.effect !== null) {
+            const { bound } = effect.effect;
+            const at = bound.indexOf(effect);
+            if (at !== -1) {
+                bound.splice(at, 1);
+            }
+        }
+    }
+
     state.effects.length = 0;
     installPostChain(store, chain);
     state.effects.push(...scenes);
+    store.setState('post', { chain: state.chain + 1 });
 };

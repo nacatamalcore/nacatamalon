@@ -107,6 +107,12 @@ releases are in [changelog/](./changelog/), one file each.
   was still to be told that frame and the movement's `next` went ahead regardless.
 - **A model's movement asked for by a name the file does not have says so**, also when it was asked
   for before the file arrived or the file has none. It waited for ever without a word.
+- **Changing the post chain of a running game lets go of the effects it replaced.** The shader file of
+  an effect kept every one of them. A motion moving one of them follows the new one, rather than
+  going on moving the one that is gone.
+- **A shader, a palette or a colour table let go of while it is loading stays let go of.** It came back
+  as `'ready'` when it arrived, the last two with their texture on the card, or as `'error'` if it
+  failed.
 - **A model let go of with `releaseAsset` while it is loading stays let go of.** It came back as
   `'ready'` when it arrived, with its shapes on the card, or as `'error'` if it failed. The pictures it
   had found go with it, unless something else wears them, and it sends for no more.

@@ -82,8 +82,8 @@ export const loadShader = async (store: TRuntimeStore, shader: TShader): Promise
             parsed = mergeGlsl(parsed, parseShaderFile(glslSource, shader.glslSrc), shader.src, shader.glslSrc);
         }
 
-        // The game may have been thrown away while the bytes were in the air.
-        if (store.get('loop').destroyed) {
+        // The game may have been thrown away while the bytes were in the air, or this let go of.
+        if (store.get('loop').destroyed || shader.status === 'released') {
             return;
         }
 
@@ -99,6 +99,9 @@ export const loadShader = async (store: TRuntimeStore, shader: TShader): Promise
 
         syncBoundTargets(shader);
     } catch (error) {
+        if (shader.status === 'released') {
+            return;
+        }
         shader.status = 'error';
         bumpVersion(shader);
         console.warn(

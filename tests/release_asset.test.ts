@@ -1,4 +1,4 @@
-import { describe, expect, it, spyOn } from 'bun:test';
+import { afterEach, describe, expect, it, spyOn } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { createMesh } from '../src/gameobjects/mesh';
@@ -9,7 +9,10 @@ import { useLoadTexture } from '../src/hooks/loaders/use_load_texture';
 import { useCubeGeometry } from '../src/hooks/geometry/use_cube_geometry';
 import { newTexture, uploadTexture } from '../src/loaders';
 import { newAudio } from '../src/loaders/audio/new_audio';
-import { newPalette } from '../src/loaders/palette/new_palette';
+import { loadLut, newLut } from '../src/loaders/lut';
+import { loadPalette, newPalette } from '../src/loaders/palette';
+import { loadShader, newShader } from '../src/loaders/shader';
+import { DOCUMENTS } from '../src/CONST';
 import { newParticlesFile } from '../src/loaders/particles/new_particles_file';
 import { createGameHandle } from '../src/game/handle';
 import { createTestGame, startTestScene } from './helpers/test_game';
@@ -123,6 +126,74 @@ describe('releaseAsset', () => {
         warn.mockRestore();
         expect(said).toHaveLength(0);
         expect(again.status).toBe('released');
+    });
+
+    describe('a load of an effect\'s file that arrives after it was released', () => {
+        const answered = globalThis.fetch;
+        afterEach(() => { globalThis.fetch = answered; });
+
+        const answers = (response: () => Response) => {
+            globalThis.fetch = (async () => response()) as unknown as typeof fetch;
+        };
+
+        it('stays released: a shader', async () => {
+            const { store } = createTestGame();
+            const shader = newShader('/fx.wgsl', 'fx');
+            store.get('assets').shaders.set('fx', shader);
+            answers(() => new Response('fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> { return color; }'));
+            const loading = loadShader(store, shader);
+            createGameHandle(store).releaseAsset(shader);
+            await loading;
+
+            expect(shader.status).toBe('released');
+            expect(shader.fragment).toBeNull();
+        });
+
+        it('stays released: a palette, with nothing on the card', async () => {
+            const { store, renderer } = createTestGame();
+            const palette = newPalette('/colors.palette', 'colors');
+            store.get('assets').palettes.set('colors', palette);
+            answers(() => new Response(JSON.stringify({ format: DOCUMENTS.PALETTE.FORMAT, name: 'Colors', colors: ['#000000', '#ffffff'] })));
+            const made = spyOn(renderer, 'createDataTexture');
+            const loading = loadPalette(store, palette);
+            createGameHandle(store).releaseAsset(palette);
+            await loading;
+
+            expect(palette.status).toBe('released');
+            expect(palette.gpu).toBeNull();
+            expect(made).not.toHaveBeenCalled();
+        });
+
+        it('stays released: a colour table, with nothing on the card', async () => {
+            const { store, renderer } = createTestGame();
+            const lut = newLut('/grade.cube', 'grade');
+            store.get('assets').luts.set('grade', lut);
+            answers(() => new Response('LUT_3D_SIZE 2\n0 0 0\n1 0 0\n0 1 0\n1 1 0\n0 0 1\n1 0 1\n0 1 1\n1 1 1\n'));
+            const made = spyOn(renderer, 'createDataTexture');
+            const loading = loadLut(store, lut);
+            createGameHandle(store).releaseAsset(lut);
+            await loading;
+
+            expect(lut.status).toBe('released');
+            expect(lut.gpu).toBeNull();
+            expect(made).not.toHaveBeenCalled();
+        });
+
+        it('says nothing when it then could not be fetched', async () => {
+            const { store } = createTestGame();
+            const palette = newPalette('/gone.palette', 'gone');
+            store.get('assets').palettes.set('gone', palette);
+            answers(() => new Response('', { status: 404 }));
+            const warn = spyOn(console, 'warn');
+            const loading = loadPalette(store, palette);
+            createGameHandle(store).releaseAsset(palette);
+            await loading;
+            const said = warn.mock.calls.length;
+            warn.mockRestore();
+
+            expect(palette.status).toBe('released');
+            expect(said).toBe(0);
+        });
     });
 
     it('throws away a load that arrives after it was released', async () => {

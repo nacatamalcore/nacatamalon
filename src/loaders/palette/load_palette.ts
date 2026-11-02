@@ -22,7 +22,7 @@ export const loadPalette = async (store: TRuntimeStore, palette: TPalette): Prom
         }
         const doc = parsePaletteDoc(await response.json(), palette.src);
 
-        if (store.get('loop').destroyed) {
+        if (store.get('loop').destroyed || palette.status === 'released') {
             return;
         }
 
@@ -38,6 +38,9 @@ export const loadPalette = async (store: TRuntimeStore, palette: TPalette): Prom
         palette.status = 'ready';
         bumpVersion(palette);
     } catch (error: unknown) {
+        if (palette.status === 'released') {
+            return;
+        }
         palette.status = 'error';
         bumpVersion(palette);
         console.warn(

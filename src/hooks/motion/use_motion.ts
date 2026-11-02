@@ -99,6 +99,7 @@ export const useMotion = (motion: TMotionFile | TMotionDoc, options: TMotionOpti
     let sought = false;
     let bound: TBoundTracks | null = null;
     let boundFrom = -1;
+    let boundChain = -1;
     const warned = new Set<string>();
     const marks = new Map<string, Set<() => void>>();
     const ends = new Set<() => void>();
@@ -111,13 +112,16 @@ export const useMotion = (motion: TMotionFile | TMotionDoc, options: TMotionOpti
     };
 
     /**
-     * The tracks found on the scene, again whenever the file has changed.
+     * The tracks found on the scene, again whenever the file has changed or the project's screen
+     * effects were made again, as a track may hold one that is gone.
      */
     const tracks = (): TBoundTracks | null => {
         if (file.doc === null) return null;
-        if (bound === null || boundFrom !== getVersion(file)) {
-            bound = bindMotionTracks([rootOf(box)], file.doc, store.get('post').effects);
+        const { effects, chain } = store.get('post');
+        if (bound === null || boundFrom !== getVersion(file) || boundChain !== chain) {
+            bound = bindMotionTracks([rootOf(box)], file.doc, effects);
             boundFrom = getVersion(file);
+            boundChain = chain;
             for (const problem of bound.problems) warnOnce(`${problem}, so it moves nothing`);
         }
         return bound;

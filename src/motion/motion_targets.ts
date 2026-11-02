@@ -84,7 +84,7 @@ const isObject = (value: unknown): value is Record<string, unknown> => typeof va
 /**
  * Finds what a track moves on the running scene, or says why it cannot: no such box, no such
  * component, or a field that is not a number or a yes/no there. Found once, when a motion starts
- * playing, and again when its file changes.
+ * playing, and again when its file changes or the project's screen effects are made again.
  *
  * Without a component, the box's own placement is moved (`x`, `y`, `rotation`, `scaleX`…), and
  * `visible` is the box's own.

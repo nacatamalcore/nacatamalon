@@ -30,7 +30,7 @@ export const loadLut = async (store: TRuntimeStore, lut: TLut): Promise<void> =>
 
         if (isCube(lut.src)) {
             const doc = parseCubeDoc(await response.text());
-            if (store.get('loop').destroyed) {
+            if (store.get('loop').destroyed || lut.status === 'released') {
                 return;
             }
             lut.size = doc.size;
@@ -43,7 +43,7 @@ export const loadLut = async (store: TRuntimeStore, lut: TLut): Promise<void> =>
         // `premultiplyAlpha: 'none'`: a table is numbers that happen to be stored as a picture, and
         // a browser helpfully multiplying them by their alpha would quietly change every one.
         const bitmap = await createImageBitmap(await response.blob(), { premultiplyAlpha: 'none' });
-        if (store.get('loop').destroyed) {
+        if (store.get('loop').destroyed || lut.status === 'released') {
             bitmap.close();
             return;
         }
@@ -62,6 +62,9 @@ export const loadLut = async (store: TRuntimeStore, lut: TLut): Promise<void> =>
         lut.status = 'ready';
         bumpVersion(lut);
     } catch (error: unknown) {
+        if (lut.status === 'released') {
+            return;
+        }
         lut.status = 'error';
         bumpVersion(lut);
         console.warn(

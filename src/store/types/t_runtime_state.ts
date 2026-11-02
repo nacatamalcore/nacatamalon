@@ -358,6 +358,10 @@ export type TRuntimeState = {
     post: {
         effects: TPostEffect[];
         /**
+         * How many times the project's effects have been made again, for what holds one of them.
+         */
+        chain: number;
+        /**
          * The single switch for the lot, for a host showing the game as a viewport.
          *
          * Off is exactly as cheap as an empty chain, which is what makes it usable as a toggle

@@ -111,7 +111,7 @@ export const createRuntimeStore = (init: TRuntimeStoreInit): TRuntimeStore => {
         assets: { textures: new Map(), atlases: new Map(), bitmapFonts: new Map(), fonts: new Map(), sounds: new Map(), tilemaps: new Map(), geometries: new Map(), gltf: new Map(), shaders: new Map(), particles: new Map(), songs: new Map(), motions: new Map(), palettes: new Map(), luts: new Map(), packs: new Map(), scenes: new Map(), pixels: new Map() },
         // Empty, and empty has to stay free: with no effects the frame is drawn exactly as it was
         // before any of this existed. See `TRuntimeState.post`.
-        post: { effects: [], enabled: true },
+        post: { effects: [], enabled: true, chain: 0 },
         // Nothing is being covered, which is the state a game is in for all but a few frames of its
         // life. See `TRuntimeState.transition`.
         transition: { active: null },
