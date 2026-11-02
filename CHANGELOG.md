@@ -68,6 +68,11 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **Each half of a split screen in 3D has its shadows.** There was one shadow map, around the first
+  view's camera, and the other half was drawn without shadows; two monitors that `sees: '3d'` the
+  same. Now each view whose scene has a light casting has a map of its own, around its own camera,
+  up to four in a frame, the screen's first. Each is made the first frame a view needs it, so a game
+  with one camera keeps one, and let go of after a few seconds unused.
 - **Particles in space are drawn among see-through models by how far they are.** Smoke behind a pane
   of glass is drawn before the glass and seen through it, and smoke in front of it after, whichever
   was made first. A cloud is as far as its emitter. They used to go after every model, so smoke

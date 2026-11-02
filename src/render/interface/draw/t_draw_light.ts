@@ -48,8 +48,8 @@ export type TDrawLight = {
     /**
      * Whether the scene's shadows are drawn from this one. Absent is no.
      *
-     * Only one light in a scene casts, because there is one map. A bulb never does, whatever it
-     * says: shining every way at once needs six pictures rather than one.
+     * Only one light in a scene casts, because a view of it has one map. A bulb never does,
+     * whatever it says: shining every way at once needs six pictures rather than one.
      */
     readonly castShadow?: boolean;
     /**

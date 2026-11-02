@@ -14,7 +14,7 @@ import type { TDrawCamera3d } from '../interface/draw/t_draw_camera_3d';
  */
 export type TShadowUniforms = {
     /**
-     * The scene it was drawn for.
+     * The view it was drawn for.
      *
      * Kept so that only that scene is told about it. Scenes stack, each numbers its own lights from
      * zero, and a menu drawn over a level would otherwise read "light 1 casts" against a lamp of
@@ -37,6 +37,35 @@ export type TShadowUniforms = {
      * How many steps across the map is, so the shader knows how far one step is.
      */
     mapSize: number;
+};
+
+/**
+ * A shadow a backend drew this frame: what the view's lights are told about it, and its map, in the
+ * backend's own kind of picture.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TDrawnShadow<TMap> = {
+    uniforms: TShadowUniforms;
+    map: TMap;
+};
+
+/**
+ * The shadow drawn for `view`, or `null` when its scene casts none or it was past the last map.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const shadowOf = <TMap>(shadows: readonly TDrawnShadow<TMap>[], view: TDrawView3d): TDrawnShadow<TMap> | null => {
+    for (const shadow of shadows) {
+        if (shadow.uniforms.view === view) {
+            return shadow;
+        }
+    }
+    return null;
 };
 
 /**

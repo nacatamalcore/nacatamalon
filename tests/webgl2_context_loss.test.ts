@@ -40,7 +40,8 @@ const stateWithEverything = (): TWebGL2State => ({
     particles: nothing() as TWebGL2State['particles'],
     lines: nothing() as TWebGL2State['lines'],
     post: nothing() as TWebGL2State['post'],
-    shadow: nothing() as TWebGL2State['shadow'],
+    shadows: [nothing() as TWebGL2State['shadows'][number]],
+    shadowsSpareFor: 0,
     shadowPipeline: nothing() as TWebGL2State['shadowPipeline'],
     masks: nothing() as TWebGL2State['masks'],
 });
@@ -92,7 +93,7 @@ describe('coming back from a lost context', () => {
         expect(state.post).toBeNull();
         expect(state.particles).toBeNull();
         expect(state.lines).toBeNull();
-        expect(state.shadow).toBeNull();
+        expect(state.shadows).toEqual([]);
         expect(state.shadowPipeline).toBeNull();
         expect(state.masks).toBeNull();
         expect(state.lost).toBe(false);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { findShadowSource } from '../src/render/shared/light_space';
+import { findShadowSources, MAX_SHADOW_MAPS } from '../src/render/shared/light_space';
 import type { TDrawItem, TDrawLight, TDrawMesh, TFrameContext, TDrawView3d } from '../src/render/interface';
 
 /**
@@ -45,17 +45,17 @@ describe('a scene that never asked for shadows', () => {
             viewIndex: [0],
         });
 
-        expect(findShadowSource(ctx)).toBeNull();
+        expect(findShadowSources(ctx)).toEqual([]);
     });
 
     it('gets none from a scene with no models and no lights at all', () => {
-        expect(findShadowSource(frame({}))).toBeNull();
+        expect(findShadowSources(frame({}))).toEqual([]);
     });
 
     it('gets none when the only light that asked is a bulb', () => {
         const ctx = frame({ views3d: [view([light({ type: 'point', castShadow: true })])] });
 
-        expect(findShadowSource(ctx)).toBeNull();
+        expect(findShadowSources(ctx)).toEqual([]);
     });
 });
 
@@ -69,13 +69,13 @@ describe('a scene that did ask', () => {
             viewIndex: [0, 0],
         });
 
-        const source = findShadowSource(ctx)!;
+        const [source] = findShadowSources(ctx);
 
-        expect(source).not.toBeNull();
-        expect(source.lightIndex).toBe(1);
+        expect(source).toBeDefined();
+        expect(source!.lightIndex).toBe(1);
         // The floor is left out of the map and still receives: being drawn into it is about
         // casting, never about receiving.
-        expect(source.casters).toEqual([crate]);
+        expect(source!.casters).toEqual([crate]);
     });
 
     it("takes only its own scene's models, so a menu over a level does not cast into it", () => {
@@ -87,15 +87,15 @@ describe('a scene that did ask', () => {
             viewIndex: [0, 1],
         });
 
-        expect(findShadowSource(ctx)!.casters).toEqual([inLevel]);
+        expect(findShadowSources(ctx).map((source) => source.casters)).toEqual([[inLevel]]);
     });
 
-    it('is the first scene that asked, not the last one drawn', () => {
+    it('is one for each scene that asked, the first one drawn first', () => {
         const first = light({ castShadow: true, intensity: 0.5 });
         const second = light({ castShadow: true, intensity: 9 });
         const ctx = frame({ views3d: [view([first]), view([second])] });
 
-        expect(findShadowSource(ctx)!.light).toBe(first);
+        expect(findShadowSources(ctx).map((source) => source.light)).toEqual([first, second]);
     });
 
     it('leaves out a model with no shape on the card, because there is nothing to draw', () => {
@@ -107,6 +107,62 @@ describe('a scene that did ask', () => {
 
         // It is still counted as a caster here: whether a shape has arrived is the pass's question,
         // asked at the moment of drawing, exactly as the pass that lights the scene asks it.
-        expect(findShadowSource(ctx)!.casters).toHaveLength(1);
+        expect(findShadowSources(ctx)[0]!.casters).toHaveLength(1);
+    });
+});
+
+describe('a frame with several views that asked', () => {
+    it('gives each pass\'s view its own, the screen\'s first, with its own camera and its own casters', () => {
+        const left = mesh();
+        const right = mesh();
+        const ahead = { projection: 'perspective', transform: { ...at(), x: -50 } } as TDrawView3d['camera'];
+        const behind = { projection: 'perspective', transform: { ...at(), x: 50 } } as TDrawView3d['camera'];
+        const ctx: TFrameContext = {
+            time: 0,
+            progress: 0,
+            phase: 0,
+            passes: [
+                { views3d: [{ ...view([light({ castShadow: true })]), camera: behind }], drawables: [right] as TDrawItem[], viewIndex: [0] },
+                { views3d: [{ ...view([light({ castShadow: true })]), camera: ahead }], drawables: [left] as TDrawItem[], viewIndex: [0] },
+            ],
+        };
+
+        const sources = findShadowSources(ctx);
+
+        // The last pass is the screen's, and comes first.
+        expect(sources.map((source) => source.camera)).toEqual([ahead, behind]);
+        expect(sources.map((source) => source.casters)).toEqual([[left], [right]]);
+    });
+
+    it('is one for a view found in two passes, as a soft mask\'s passes share the views they mask', () => {
+        const views3d = [view([light({ castShadow: true })])];
+        const crate = mesh();
+        const ctx: TFrameContext = {
+            time: 0,
+            progress: 0,
+            phase: 0,
+            passes: [{ views3d, drawables: [] }, { views3d, drawables: [crate] as TDrawItem[], viewIndex: [0] }],
+        };
+
+        const sources = findShadowSources(ctx);
+
+        // The last pass's, which is the one that draws it.
+        expect(sources).toHaveLength(1);
+        expect(sources[0]!.casters).toEqual([crate]);
+    });
+
+    it('stops at the last map there is, the screen\'s views keeping theirs', () => {
+        const ctx: TFrameContext = {
+            time: 0,
+            progress: 0,
+            phase: 0,
+            passes: Array.from({ length: MAX_SHADOW_MAPS + 1 }, (_, i) => ({ views3d: [view([light({ castShadow: true, intensity: i })])] })),
+        };
+
+        const kept = findShadowSources(ctx).map((source) => source.light.intensity);
+
+        expect(kept).toHaveLength(MAX_SHADOW_MAPS);
+        expect(kept[0]).toBe(MAX_SHADOW_MAPS);
+        expect(kept).not.toContain(0);
     });
 });

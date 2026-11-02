@@ -15,7 +15,7 @@ import { canvasContextFor } from './canvas_context';
 import { createShadowMap } from '../shadow/shadow_map';
 import { castsThroughHook, createShadowPipeline } from '../shadow/shadow_pipeline';
 import { computeModelMatrix } from '../../shared/compute_mvp_3d';
-import { findShadowSource, lightSpaceMatrix, reportCastersOutside } from '../../shared/light_space';
+import { findShadowSources, lightSpaceMatrix, reportCastersOutside, SPARE_SHADOW_FRAMES } from '../../shared/light_space';
 import { cameraSpacesFor, fillCameraSpace, newCameraSpace } from '../../shared/compute_mvp_3d';
 import { cullingMatricesFor, meshInView } from '../../shared/mesh_in_view';
 import { drawMesh, reserveMeshSlots, writeMeshLights } from '../mesh/draw_meshes';
@@ -23,7 +23,7 @@ import { createMaskPipelines } from '../mask/mask_pipelines';
 import { applyStencil, drawMaskLayer, drawMaskRun } from '../mask/draw_masks';
 import type { TDrawStencil } from '../../interface/draw/t_draw_stencil';
 import type { TFrameContext, TRenderPass } from '../../interface';
-import type { TShadowUniforms } from '../../shared/fill_light_uniforms';
+import type { TDrawnShadow } from '../../shared/fill_light_uniforms';
 import type { TWebGPUState } from '../types/t_webgpu_state';
 
 /**
@@ -59,13 +59,30 @@ const targetOf = (gpu: TWebGPUState, pass: TRenderPass): { view: GPUTextureView;
  * @author Francisco Pereira Alvarado
  */
 /**
- * Where the light's matrix is worked out, once a frame and into the same place every time.
+ * Where each shadow's light matrix is worked out, once a frame and into the same place every time,
+ * one for each map.
  *
- * At module level rather than inside the frame because it is one matrix for the whole frame however
- * many models cast into it: what changes per model is its own placement, and that is multiplied in
- * by the shader.
+ * At module level rather than inside the frame because it is one matrix per map however many models
+ * cast into it: what changes per model is its own placement, and that is multiplied in by the
+ * shader.
  */
-const lightMatrix = new Float32Array(16);
+const lightMatrices: Float32Array[] = [];
+
+/**
+ * Lets go of the maps past the `used` ones once they have gone unused for `SPARE_SHADOW_FRAMES`
+ * frames in a row, with the groups made against them.
+ */
+const letGoOfSpareShadows = (gpu: TWebGPUState, used: number): void => {
+    gpu.shadowsSpareFor = gpu.shadows.length > used ? gpu.shadowsSpareFor + 1 : 0;
+    if (gpu.shadowsSpareFor < SPARE_SHADOW_FRAMES) {
+        return;
+    }
+    for (const map of gpu.shadows.splice(used)) {
+        gpu.meshes.lights.groupsByMap.delete(map.view);
+        map.destroy();
+    }
+    gpu.shadowsSpareFor = 0;
+};
 
 /**
  * What a model belonging to no scene is looked at through: flat on, in the game's own pixels.
@@ -93,21 +110,22 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         gpu.post.beginFrame(countPostSteps(chain));
     }
 
-    // Drawn before anything that reads it, once for the whole frame. `null` is the ordinary answer
-    // and costs one walk of the passes: no map is made, no pass is recorded, and a game that never
-    // asks for a shadow never pays for one.
-    const source = findShadowSource(ctx);
-    let shadowUniforms: TShadowUniforms | null = null;
-    if (source !== null) {
-        gpu.shadow ??= createShadowMap(gpu.device);
-        gpu.shadowPipeline ??= createShadowPipeline(gpu.device);
-        lightSpaceMatrix(source.light, source.camera, lightMatrix);
-        reportCastersOutside(source.casters, source.light, lightMatrix, gpu);
-        gpu.shadowPipeline.beginFrame(source.casters.length);
+    // Drawn before anything that reads them, once for the whole frame, a map for each view that
+    // casts. Empty is the ordinary answer and costs one walk of the passes: no map is made, no pass
+    // is recorded, and a game that never asks for a shadow never pays for one.
+    const sources = findShadowSources(ctx);
+    const shadows: TDrawnShadow<GPUTextureView>[] = [];
+    letGoOfSpareShadows(gpu, sources.length);
+    if (sources.length > 0) {
+        const pipeline = gpu.shadowPipeline ??= createShadowPipeline(gpu.device);
+        pipeline.beginFrame(sources.reduce((n, source) => n + source.casters.length, 0));
         // A material whose hook moves its corners, or whose colour hook cuts it out, casts with its own
-        // numbers, written into the slots the passes below write theirs into: so the shadow is sent on
-        // its own before they do.
-        const hooked = source.casters.reduce((n, caster) => n + (castsThroughHook(caster.material) ? 1 : 0), 0);
+        // numbers, written into the slots the passes below write theirs into: so the shadows are sent
+        // on their own before they do.
+        let hooked = 0;
+        for (const source of sources) {
+            hooked += source.casters.reduce((n, caster) => n + (castsThroughHook(caster.material) ? 1 : 0), 0);
+        }
         if (hooked > 0) {
             gpu.meshes.materials.beginFrame(hooked);
         }
@@ -116,41 +134,45 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         const screenRatio = ctx.pixelRatio ?? 1;
         const screen = gpu.context.canvas as { width: number; height: number };
 
-        const shadowPass = encoder.beginRenderPass({
-            label: 'shadow',
-            colorAttachments: [],
-            depthStencilAttachment: {
-                view: gpu.shadow.view,
-                depthClearValue: 1,
-                depthLoadOp: 'clear',
-                depthStoreOp: 'store',
-            },
-        });
         let casterSlot = 0;
-        for (const caster of source.casters) {
-            // Judged by what the light sees, not the camera: one out of the picture can still throw
-            // a shadow into it.
-            if (!meshInView(caster, lightMatrix)) {
-                continue;
+        sources.forEach((source, s) => {
+            const map = gpu.shadows[s] ??= createShadowMap(gpu.device);
+            const lightMatrix = lightMatrices[s] ??= new Float32Array(16);
+            lightSpaceMatrix(source.light, source.camera, lightMatrix);
+            reportCastersOutside(source.casters, source.light, lightMatrix, gpu);
+
+            const shadowPass = encoder.beginRenderPass({
+                label: 'shadow',
+                colorAttachments: [],
+                depthStencilAttachment: {
+                    view: map.view,
+                    depthClearValue: 1,
+                    depthLoadOp: 'clear',
+                    depthStoreOp: 'store',
+                },
+            });
+            for (const caster of source.casters) {
+                // Judged by what the light sees, not the camera: one out of the picture can still throw
+                // a shadow into it.
+                if (!meshInView(caster, lightMatrix)) {
+                    continue;
+                }
+                const model = caster.worldMatrix ?? computeModelMatrix(caster.transform);
+                if (pipeline.draw(shadowPass, gpu.meshes, caster, lightMatrix, model, casterSlot, ctx.time, screen.width / screenRatio, screen.height / screenRatio)) {
+                    casterSlot++;
+                }
             }
-            const model = caster.worldMatrix ?? computeModelMatrix(caster.transform);
-            if (gpu.shadowPipeline.draw(shadowPass, gpu.meshes, caster, lightMatrix, model, casterSlot, ctx.time, screen.width / screenRatio, screen.height / screenRatio)) {
-                casterSlot++;
-            }
-        }
-        shadowPass.end();
+            shadowPass.end();
+
+            shadows.push({
+                uniforms: { view: source.view, matrix: lightMatrix, light: source.light, lightIndex: source.lightIndex, mapSize: map.size },
+                map: map.view,
+            });
+        });
         if (hooked > 0) {
             gpu.device.queue.submit([encoder.finish()]);
             encoder = gpu.device.createCommandEncoder();
         }
-
-        shadowUniforms = {
-            view: source.view,
-            matrix: lightMatrix,
-            light: source.light,
-            lightIndex: source.lightIndex,
-            mapSize: gpu.shadow.size,
-        };
     }
 
     for (let p = 0; p < ctx.passes.length; p++) {
@@ -232,7 +254,7 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
 
         // All of these before anything is drawn: growing any of these buffers throws away the slots
         // already written, so the room has to be there first.
-        writeMeshLights(gpu.device, gpu.meshes, views3d, shadowUniforms, gpu.shadow?.view ?? null);
+        writeMeshLights(gpu.device, gpu.meshes, views3d, shadows);
         // One walk for all of them, before anything is drawn.
         const { meshes: meshCount, layers: layerCount, particles: particleCount, lineCorners } = countDrawn(drawables);
         reserveMeshSlots(gpu.device, gpu.meshes, meshCount);

@@ -42,9 +42,10 @@ export const createWebGL2Renderer = async (
         meshes,
         // Built on the first frame that has an effect, never before: see `TWebGL2State.post`.
         post: null,
-        // Same promise, same reason: see `TWebGL2State.shadow`.
-        shadow: null,
+        // Same promise, same reason: see `TWebGL2State.shadows`.
+        shadows: [],
         shadowPipeline: null,
+        shadowsSpareFor: 0,
         // The same, for the first frame that draws an emitter.
         particles: null,
         lines: null,
@@ -126,7 +127,7 @@ export const createWebGL2Renderer = async (
         destroy: () => {
             unwatchContext();
             state.post?.destroy();
-            state.shadow?.destroy();
+            for (const map of state.shadows) map?.destroy();
             state.shadowPipeline?.destroy();
             state.particles?.destroy();
             state.lines?.destroy();

@@ -8,7 +8,8 @@ import { isAway } from '../../../loaders/texture/is_away';
 import { LIGHT_STRIDE, MESH_STRIDE } from './create_mesh_pipeline';
 import type { TCameraSpace } from '../../shared/compute_mvp_3d';
 import type { TDrawLight, TDrawMesh, TDrawView3d } from '../../interface';
-import type { TShadowUniforms } from '../../shared/fill_light_uniforms';
+import { shadowOf } from '../../shared/fill_light_uniforms';
+import type { TDrawnShadow } from '../../shared/fill_light_uniforms';
 import type { TMeshPipeline } from './types/t_mesh_pipeline';
 
 /**
@@ -114,34 +115,35 @@ export const writeMeshLights = (
     device: GPUDevice,
     meshes: TMeshPipeline,
     views: readonly TDrawView3d[],
-    shadow: TShadowUniforms | null = null,
-    shadowView: GPUTextureView | null = null,
+    shadows: readonly TDrawnShadow<GPUTextureView>[] = [],
 ): void => {
     if (views.length === 0) {
         return;
     }
     if (views.length > meshes.lights.capacity) {
         grow(device, meshes.lights, views.length, LIGHT_STRIDE, 'mesh lights');
-    }
-
-    // The map the groups below will point at, and whether that is a change. A group is made once
-    // and kept, so the frame a shadow first appears is the frame they all have to be made again.
-    const map = shadowView ?? meshes.lights.blankShadow;
-    if (meshes.lights.boundShadow !== map) {
-        meshes.lights.boundShadow = map;
-        meshes.lights.bindGroups = [];
+        // Every group kept pointed at the buffer that just went.
+        meshes.lights.groupsByMap.clear();
     }
 
     const floats = meshes.lights.data;
     views.forEach((view, index) => {
         const at = index * LIGHT_STRIDE / 4;
-        // Only the scene the shadow was drawn for is told about it. Another scene stacked over it
-        // has its own lights and its own numbering, so the index would point at a different lamp.
-        const its = shadow !== null && shadow.view === view ? shadow : null;
-        fillLightUniforms(floats.subarray(at, at + LIGHT_UNIFORM_FLOATS), view.lights, view.ambient, its, view.fog ?? null, view.camera);
+        // Each view is told about its own shadow and no other's. Another scene stacked over it has
+        // its own lights and its own numbering, so the index would point at a different lamp.
+        const its = shadowOf(shadows, view);
+        fillLightUniforms(floats.subarray(at, at + LIGHT_UNIFORM_FLOATS), view.lights, view.ambient, its?.uniforms ?? null, view.fog ?? null, view.camera);
 
-        if (meshes.lights.bindGroups[index] === undefined) {
-            meshes.lights.bindGroups[index] = device.createBindGroup({
+        // The group for this slot and this map, made the first time the two meet and kept: the
+        // same slot reads one half's map in one pass and the other's in the next.
+        const map = its?.map ?? meshes.lights.blankShadow;
+        let groups = meshes.lights.groupsByMap.get(map);
+        if (groups === undefined) {
+            groups = [];
+            meshes.lights.groupsByMap.set(map, groups);
+        }
+        if (groups[index] === undefined) {
+            groups[index] = device.createBindGroup({
                 label: `mesh lights ${index}`,
                 layout: meshes.layouts.lights,
                 entries: [
@@ -151,6 +153,7 @@ export const writeMeshLights = (
                 ],
             });
         }
+        meshes.lights.bindGroups[index] = groups[index]!;
     });
 
     device.queue.writeBuffer(meshes.lights.buffer, 0, floats, 0, views.length * LIGHT_STRIDE / 4);

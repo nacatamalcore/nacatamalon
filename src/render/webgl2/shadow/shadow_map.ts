@@ -27,9 +27,9 @@ export type TShadowMap = {
 };
 
 /**
- * Makes the one shadow map this backend keeps.
+ * Makes one of the shadow maps this backend keeps, one for each view casting.
  *
- * Made on the first frame that has a light asking to cast, and never at boot, the same as the
+ * Made on the first frame that a view has a light asking to cast, and never at boot, the same as the
  * effects chain and for the same reason: it is 16 MB.
  *
  * **This is a texture and not a renderbuffer, and that is the whole of this step.** The frame

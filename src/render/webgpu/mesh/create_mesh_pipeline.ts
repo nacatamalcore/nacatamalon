@@ -183,8 +183,8 @@ export const createMeshPipeline = (
         bindGroups: [] as GPUBindGroup[],
         blankShadow,
         shadowSampler,
-        // Which map the groups above were made against, so they are made again when it appears.
-        boundShadow: null as GPUTextureView | null,
+        // The groups made against each map, kept between passes and frames.
+        groupsByMap: new Map<GPUTextureView, GPUBindGroup[]>(),
     };
 
     const meshes = {

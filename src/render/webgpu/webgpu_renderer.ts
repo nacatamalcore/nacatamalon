@@ -87,9 +87,10 @@ export const createWebGPURenderer = async (
         format,
         // Built on the first frame that has an effect, and never before: see `TWebGPUState.post`.
         post: null,
-        // Same promise, same reason: see `TWebGPUState.shadow`.
-        shadow: null,
+        // Same promise, same reason: see `TWebGPUState.shadows`.
+        shadows: [],
         shadowPipeline: null,
+        shadowsSpareFor: 0,
         // The same, for the first frame that draws an emitter.
         particles: null,
         // And for the first frame that draws a line.
@@ -138,7 +139,7 @@ export const createWebGPURenderer = async (
         },
         destroy: () => {
             gpu.post?.destroy();
-            gpu.shadow?.destroy();
+            for (const map of gpu.shadows) map.destroy();
             gpu.shadowPipeline?.destroy();
             gpu.particles?.destroy();
             gpu.lines?.destroy();

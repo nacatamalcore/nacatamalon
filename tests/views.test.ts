@@ -27,7 +27,7 @@ import { startScene } from '../src/scene/start_scene';
 import { createFakeCanvas, createTestGame, startTestScene } from './helpers/test_game';
 import { useDirectionalLight } from '../src/hooks/light/use_directional_light';
 import { captureScreen } from '../src/game/capture';
-import { findShadowSource } from '../src/render/shared/light_space';
+import { findShadowSources } from '../src/render/shared/light_space';
 import type { ITexture } from '../src/render/interface';
 import { setCameraPreview } from '../src/game/preview';
 import { createCamera2d } from '../src/camera/create_camera_2d';
@@ -716,9 +716,10 @@ describe('the light on what a view makes itself', () => {
         expect(lit('world', true)).toEqual([0.3]);
     });
 
-    it('lights what the view makes with the scene\'s lamps without taking the shadows from the world', () => {
+    it('lights what the view makes with the scene\'s lamps without casting from them a second time', () => {
         const { store } = createTestGame();
         let main!: TTexture;
+        let mini!: TTexture;
         const Main = () => {
             useCamera3d({ projection: 'perspective', transform: { z: 10 } });
         };
@@ -731,12 +732,18 @@ describe('the light on what a view makes itself', () => {
             useDirectionalLight({ castShadow: true });
             createMesh({ geometry: useCubeGeometry() });
             main = createSpriteTexture({ width: 32, height: 32, sees: 'world' }, Main);
-            createSpriteTexture({ width: 32, height: 32, sees: 'world', only: { tags: ['marker'] } }, Mini);
+            mini = createSpriteTexture({ width: 32, height: 32, sees: 'world', only: { tags: ['marker'] } }, Mini);
             return createScene();
         });
         const ctx = frameOf(store);
 
-        expect(findShadowSource(ctx)?.view).toBe(passFor(ctx, main).views3d![0]!);
+        const cast = findShadowSources(ctx).map((source) => source.view);
+
+        // The view of the world has its shadow, around its own camera. The minimap shows only its
+        // markers, so it has no view of the world's models, and what it makes itself is lit by the
+        // sun and casts nothing of its own.
+        expect(cast).toEqual([passFor(ctx, main).views3d![0]!]);
+        expect(cast).not.toContain(passFor(ctx, mini).views3d![0]!);
     });
 
     it('in a picture of its own world, is only what is in it', () => {

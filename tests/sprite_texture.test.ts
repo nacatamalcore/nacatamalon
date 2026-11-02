@@ -12,7 +12,7 @@ import { destroy } from '../src/destroy/destroy';
 import { flushDestroyed } from '../src/destroy/flush_destroyed';
 import { fillFrameContext } from '../src/game/loop/fill_frame_context';
 import { pickTargets } from '../src/input/pick_targets';
-import { findShadowSource } from '../src/render/shared/light_space';
+import { findShadowSources } from '../src/render/shared/light_space';
 import { parseSceneDoc, sceneFromDoc, serializeScene } from '../src/scene/document';
 import { registerScene } from '../src/scene/register_scene';
 import { startScene } from '../src/scene/start_scene';
@@ -388,7 +388,7 @@ describe('the world inside a picture', () => {
         expect(lightsOf(screenOf(ctx))).toEqual([0.25]);
     });
 
-    it('does not take the shadow from the screen when both ask for one', () => {
+    it('has a shadow of its own when both ask for one, the screen\'s first', () => {
         const { store } = createTestGame();
         startTestScene(store, 'S', () => {
             const cube = useCubeGeometry();
@@ -401,7 +401,7 @@ describe('the world inside a picture', () => {
             return createScene();
         });
 
-        expect(findShadowSource(frameOf(store))!.light.intensity).toBe(0.25);
+        expect(findShadowSources(frameOf(store)).map((source) => source.light.intensity)).toEqual([0.25, 0.75]);
     });
 });
 

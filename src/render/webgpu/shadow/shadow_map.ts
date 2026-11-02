@@ -50,9 +50,9 @@ export type TShadowMap = {
 };
 
 /**
- * Makes the one shadow map this backend keeps.
+ * Makes one of the shadow maps this backend keeps, one for each view casting.
  *
- * Made on the first frame that has a light asking to cast, and never at boot: it is 16 MB, and a
+ * Made on the first frame that a view has a light asking to cast, and never at boot: it is 16 MB, and a
  * game that never asks for a shadow must not be holding it. That is the same promise the effects
  * chain makes, kept the same way.
  *

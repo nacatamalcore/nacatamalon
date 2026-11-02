@@ -105,9 +105,11 @@ export type TMeshPipeline = {
          */
         shadowSampler: GPUSampler;
         /**
-         * Which map the groups were made against, so they are remade when that changes.
+         * The groups made against each map, by view slot: kept, so a split screen whose halves
+         * read two maps from the same slot does not make its groups again pass after pass.
+         * `bindGroups` holds the ones this pass draws with.
          */
-        boundShadow: GPUTextureView | null;
+        groupsByMap: Map<GPUTextureView, GPUBindGroup[]>;
     };
     /**
      * One slot per model drawn this frame, not per model in the game.

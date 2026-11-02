@@ -81,17 +81,24 @@ export type TWebGPUState = {
      */
     post: TPostPipelines | null;
     /**
-     * The one depth picture drawn from a light, or `null` for a game whose scenes have never had a
-     * light asking to cast.
+     * The depth pictures drawn from a light, one for each view casting this frame, up to
+     * `MAX_SHADOW_MAPS`. Empty for a game whose scenes have never had a light asking to cast.
      *
-     * Null until the first frame that actually needs it, and that is the point: it is 16 MB, and
-     * nothing about a scene lit by eight ordinary lamps should be paying for it.
+     * Each made the first frame that needs it, and that is the point: each is 16 MB, and nothing
+     * about a scene lit by eight ordinary lamps should be paying for one, nor a game with one camera
+     * for a second.
      */
-    shadow: TShadowMap | null;
+    shadows: TShadowMap[];
     /**
-     * What draws into it: two pipelines and a slot per caster. Made with the map and dies with it.
+     * What draws into them: two pipelines and a slot per caster. Made with the first map and dies
+     * with them.
      */
     shadowPipeline: TShadowPipeline | null;
+    /**
+     * How many frames in a row the maps past the ones this frame used have gone unused: at
+     * `SPARE_SHADOW_FRAMES` they are let go of.
+     */
+    shadowsSpareFor: number;
     /** What writes masks and lays soft ones over a pass, made the first time a frame has one. */
     masks: TMaskPipelines | null;
 };

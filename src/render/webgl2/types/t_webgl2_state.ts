@@ -107,17 +107,25 @@ export type TWebGL2State = {
      */
     post: TPostPipelines | null;
     /**
-     * The one depth picture drawn from a light, or `null` for a game whose scenes have never had a
-     * light asking to cast.
+     * The depth pictures drawn from a light, one for each view casting this frame, up to
+     * `MAX_SHADOW_MAPS`. Empty for a game whose scenes have never had a light asking to cast; `null`
+     * in a place means the card would not give one the last time it was asked, which is every frame
+     * that wants it, as it always was.
      *
-     * Null until the first frame that actually needs it: it is 16 MB. It dies with the context like
-     * everything else on the card here, and is made again on the next frame that wants it.
+     * Each made the first frame that needs it: each is 16 MB. They die with the context like
+     * everything else on the card here, and are made again on the next frame that wants them.
      */
-    shadow: TShadowMap | null;
+    shadows: Array<TShadowMap | null>;
     /**
-     * What draws into it: two programs. Made with the map and goes with it when the context does.
+     * What draws into them: two programs. Made with the first map and goes with them when the
+     * context does.
      */
     shadowPipeline: TShadowPipeline | null;
+    /**
+     * How many frames in a row the maps past the ones this frame used have gone unused: at
+     * `SPARE_SHADOW_FRAMES` they are let go of.
+     */
+    shadowsSpareFor: number;
     /** What writes masks and lays soft ones over a pass, made the first time a frame has one. */
     masks: TMaskPrograms | null;
 };

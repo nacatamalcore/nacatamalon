@@ -47,13 +47,39 @@ export type TShadowSource = {
  *
  * 2048 square is the era's answer, and this engine's: a GameCube did this at 512 or 1024, a square
  * map costs one number instead of two, and the whole thing is 16 MB of depth, which is affordable
- * once and unaffordable per light. That is also why there is only ever one.
+ * once and unaffordable per light. That is also why a scene casts from one light only, and why a
+ * frame keeps at most `MAX_SHADOW_MAPS` of them.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
 export const SHADOW_MAP_SIZE = 2048;
+
+/**
+ * How many shadow maps a frame draws at most: one for each view whose scene has a light casting,
+ * so each half of a split screen has its shadows around its own camera.
+ *
+ * Four, which is four players on one screen. Each is 16 MB and a pass over everything that casts,
+ * made the first frame a view needs it, so a game with one camera keeps one. A fifth view casting
+ * is drawn without shadows, the screen's own views being the first to have theirs.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const MAX_SHADOW_MAPS = 4;
+
+/**
+ * How many frames in a row a shadow map may go unused before it is let go of: a few seconds, so a
+ * number of views going up and down (a capture taken, a preview opened and closed) does not make
+ * maps again and again, and a split screen back to one camera gives its 16 MB back.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const SPARE_SHADOW_FRAMES = 180;
 
 /**
  * How far a surface is pushed away from the light while the map is drawn, so it does not shadow
@@ -249,29 +275,33 @@ export const lightSpaceMatrix = (light: TDrawLight, camera: TDrawCamera3d | null
 };
 
 /**
- * The one light a frame draws its shadows from, with everything the pass needs to draw them.
+ * The lights a frame draws its shadows from, one for each view whose scene has a light asking to
+ * cast, with everything each pass needs to draw them.
  *
- * `null` is the ordinary answer and the important one: a frame whose scenes never asked for a
- * shadow gets no map, no pass and no extra work anywhere, and that is what keeps this feature free
- * for the games that do not use it.
+ * Empty is the ordinary answer and the important one: a frame whose scenes never asked for a shadow
+ * gets no map, no pass and no extra work anywhere, and that is what keeps this feature free for the
+ * games that do not use it.
  *
- * A frame can hold several passes and each pass several scenes, so the search is ordered: the first
- * scene, of the last pass (the screen's), that has a light asking to cast. A menu stacked over a
- * level does not take the level's shadows away by being drawn second.
+ * Each view has its own, around its own camera: two halves of a split screen look at two places in
+ * the world, and one map around one of them left the other half without shadows. A frame holds
+ * several passes and each pass several views, so the search is ordered: the last pass (the
+ * screen's) first, its views in order, then the pictures drawn inside the game, up to
+ * `MAX_SHADOW_MAPS`. A menu stacked over a level does not take the level's shadows away by being
+ * drawn second. A view found again in another pass (the passes a soft mask draws share the views of
+ * the pass they mask) keeps the one it has, so it never spends a second map.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const findShadowSource = (ctx: TFrameContext): TShadowSource | null => {
-    // From the last pass back, which is the screen: there is one shadow map, and a picture drawn
-    // inside the game must not take it from the world a person is looking at.
+export const findShadowSources = (ctx: TFrameContext): TShadowSource[] => {
+    const sources: TShadowSource[] = [];
     for (let p = ctx.passes.length - 1; p >= 0; p--) {
         const pass = ctx.passes[p];
         const views = pass.views3d ?? [];
         for (let view = 0; view < views.length; view++) {
             const index = shadowCasterIndex(views[view].lights);
-            if (index === -1) {
+            if (index === -1 || sources.some((source) => source.view === views[view])) {
                 continue;
             }
 
@@ -280,17 +310,20 @@ export const findShadowSource = (ctx: TFrameContext): TShadowSource | null => {
             const casters: TDrawMesh[] = [];
             for (let i = 0; i < drawables.length; i++) {
                 const item = drawables[i];
-                // Its own scene's, and only the ones that asked to be in it. A floor left out here
+                // Its own view's, and only the ones that asked to be in it. A floor left out here
                 // still receives: being drawn into the map is about casting, never about receiving.
                 if (item.type === 'mesh' && (viewIndex[i] ?? -1) === view && item.castShadow !== false) {
                     casters.push(item);
                 }
             }
 
-            return { view: views[view], light: views[view].lights[index], lightIndex: index, camera: views[view].camera, casters };
+            sources.push({ view: views[view], light: views[view].lights[index], lightIndex: index, camera: views[view].camera, casters });
+            if (sources.length === MAX_SHADOW_MAPS) {
+                return sources;
+            }
         }
     }
-    return null;
+    return sources;
 };
 
 /**

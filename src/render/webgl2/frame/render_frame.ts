@@ -18,11 +18,12 @@ import { createShadowMap } from '../shadow/shadow_map';
 import { createShadowPipeline } from '../shadow/shadow_pipeline';
 import { computeModelMatrix } from '../../shared/compute_mvp_3d';
 import { cullingMatricesFor, meshInView } from '../../shared/mesh_in_view';
-import { findShadowSource, lightSpaceMatrix, reportCastersOutside } from '../../shared/light_space';
+import { findShadowSources, lightSpaceMatrix, reportCastersOutside, SPARE_SHADOW_FRAMES } from '../../shared/light_space';
 import { cameraSpacesFor, fillCameraSpace, newCameraSpace } from '../../shared/compute_mvp_3d';
 import { toGlClip } from '../mesh/depth_range';
 import type { TFrameContext, TRenderPass } from '../../interface';
-import type { TShadowUniforms } from '../../shared/fill_light_uniforms';
+import { shadowOf } from '../../shared/fill_light_uniforms';
+import type { TDrawnShadow } from '../../shared/fill_light_uniforms';
 import type { TWebGL2State } from '../types/t_webgl2_state';
 import type { TWebGL2Texture } from '../texture';
 
@@ -151,12 +152,28 @@ const copyUpright = (state: TWebGL2State, pass: TRenderPass, width: number, heig
  * @author Francisco Pereira Alvarado
  */
 /**
- * Where the light's matrix is worked out, once a frame and into the same place every time.
+ * Where each shadow's light matrix is worked out, once a frame and into the same place every time,
+ * one for each map.
  *
- * At module level rather than inside the frame because it is one matrix for the whole frame however
- * many models cast into it: what changes per model is its own placement.
+ * At module level rather than inside the frame because it is one matrix per map however many models
+ * cast into it: what changes per model is its own placement.
  */
-const lightMatrix = new Float32Array(16);
+const lightMatrices: Float32Array[] = [];
+
+/**
+ * Lets go of the maps past the `used` ones once they have gone unused for `SPARE_SHADOW_FRAMES`
+ * frames in a row.
+ */
+const letGoOfSpareShadows = (state: TWebGL2State, used: number): void => {
+    state.shadowsSpareFor = state.shadows.length > used ? state.shadowsSpareFor + 1 : 0;
+    if (state.shadowsSpareFor < SPARE_SHADOW_FRAMES) {
+        return;
+    }
+    for (const map of state.shadows.splice(used)) {
+        map?.destroy();
+    }
+    state.shadowsSpareFor = 0;
+};
 
 /**
  * What a model belonging to no scene is looked at through: flat on, in the game's own pixels.
@@ -181,44 +198,45 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
         state.post ??= createPostPipelines(gl);
     }
 
-    // Drawn before anything that reads it, once for the whole frame. `null` is the ordinary answer
-    // and costs one walk of the passes: no map is made, no pass is drawn, and a game that never
-    // asks for a shadow never pays for one.
-    const source = findShadowSource(ctx);
-    let shadowUniforms: TShadowUniforms | null = null;
-    if (source !== null) {
-        state.shadow ??= createShadowMap(gl);
+    // Drawn before anything that reads them, once for the whole frame, a map for each view that
+    // casts. Empty is the ordinary answer and costs one walk of the passes: no map is made, no pass
+    // is drawn, and a game that never asks for a shadow never pays for one.
+    const sources = findShadowSources(ctx);
+    letGoOfSpareShadows(state, sources.length);
+    const shadows: TDrawnShadow<WebGLTexture>[] = [];
+    // What a material's corner hook is told about the screen: the screen's size, in the game's
+    // pixels, as its twin tells it.
+    const screenRatio = ctx.pixelRatio ?? 1;
+    for (let s = 0; s < sources.length; s++) {
+        const source = sources[s]!;
         // A card that would not give a depth picture said so when it was asked. The scene is lit
         // without shadows rather than not lit at all.
-        if (state.shadow !== null) {
-            state.shadowPipeline ??= createShadowPipeline(gl);
-            lightSpaceMatrix(source.light, source.camera, lightMatrix);
-            reportCastersOutside(source.casters, source.light, lightMatrix, state);
-            state.shadowPipeline.begin(state.shadow, lightMatrix);
-            // What a material's corner hook is told about the screen: the screen's size, in the game's
-            // pixels, as its twin tells it.
-            const screenRatio = ctx.pixelRatio ?? 1;
-            for (const caster of source.casters) {
-                // Judged by what the light sees, not the camera: one out of the picture can still
-                // throw a shadow into it.
-                if (!meshInView(caster, lightMatrix)) {
-                    continue;
-                }
-                state.shadowPipeline.draw(
-                    state.meshes, caster, caster.worldMatrix ?? computeModelMatrix(caster.transform),
-                    ctx.time, gl.drawingBufferWidth / screenRatio, gl.drawingBufferHeight / screenRatio,
-                );
-            }
-            state.shadowPipeline.end();
-
-            shadowUniforms = {
-                view: source.view,
-                matrix: lightMatrix,
-                light: source.light,
-                lightIndex: source.lightIndex,
-                mapSize: state.shadow.size,
-            };
+        const map = state.shadows[s] ??= createShadowMap(gl);
+        if (map === null) {
+            break;
         }
+        state.shadowPipeline ??= createShadowPipeline(gl);
+        const lightMatrix = lightMatrices[s] ??= new Float32Array(16);
+        lightSpaceMatrix(source.light, source.camera, lightMatrix);
+        reportCastersOutside(source.casters, source.light, lightMatrix, state);
+        state.shadowPipeline.begin(map, lightMatrix);
+        for (const caster of source.casters) {
+            // Judged by what the light sees, not the camera: one out of the picture can still
+            // throw a shadow into it.
+            if (!meshInView(caster, lightMatrix)) {
+                continue;
+            }
+            state.shadowPipeline.draw(
+                state.meshes, caster, caster.worldMatrix ?? computeModelMatrix(caster.transform),
+                ctx.time, gl.drawingBufferWidth / screenRatio, gl.drawingBufferHeight / screenRatio,
+            );
+        }
+        state.shadowPipeline.end();
+
+        shadows.push({
+            uniforms: { view: source.view, matrix: lightMatrix, light: source.light, lightIndex: source.lightIndex, mapSize: map.size },
+            map: map.texture,
+        });
     }
 
     for (const asked of ctx.passes) {
@@ -320,6 +338,8 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
         let spritesReady = false;
         // Which scene's lights are on the card right now, so a frame of one scene sends them once.
         let litView = -1;
+        // The map the view being drawn reads its shadow from, found when that view changes.
+        let litShadow: WebGLTexture | null = null;
         for (let i = 0; i < drawables.length; i++) {
             const item = drawables[i];
             if (stencil !== null) {
@@ -342,10 +362,12 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
                 }
                 const view = views3d[index] ?? null;
                 if (view !== null && index !== litView) {
-                    writeMeshLights(gl, state.meshes, view, shadowUniforms);
+                    const its = shadowOf(shadows, view);
+                    writeMeshLights(gl, state.meshes, view, its?.uniforms ?? null);
+                    litShadow = its?.map ?? null;
                     litView = index;
                 }
-                drawMesh(gl, state.meshes, item, spaces[index] ?? flatSpace, view?.lights ?? [], width, height, ctx.time, state.shadow?.texture ?? null);
+                drawMesh(gl, state.meshes, item, spaces[index] ?? flatSpace, view?.lights ?? [], width, height, ctx.time, view !== null ? litShadow : null);
                 // Its program left none of the sprite state set.
                 spritesReady = false;
                 continue;

@@ -735,8 +735,8 @@ const gatherTree = (
     if (view >= 0) {
         const world = viewport?.worldOf;
         if (world !== undefined && world !== root && !holdsLights(root)) {
-            // The world's lamps, borrowed to light what a view makes itself, and never to cast: there
-            // is one shadow map, and it belongs to how the world itself is seen.
+            // The world's lamps, borrowed to light what a view makes itself, and never to cast: the
+            // view's shadow map belongs to how the world itself is seen.
             const borrowed = collectLighting(world);
             lighting = { lights: borrowed.lights.map((light) => (light.castShadow === true ? { ...light, castShadow: false } : light)), ambient: borrowed.ambient };
         } else {
