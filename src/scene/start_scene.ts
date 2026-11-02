@@ -5,6 +5,21 @@ import { flushReady } from './flush_ready';
 import type { TRuntimeStore } from '../store';
 
 /**
+ * The name each root was started under. Not always the name it has: a scene built from a document
+ * takes the one its document gives its root.
+ */
+const startedUnder = new WeakMap<TBox, string>();
+
+/**
+ * The name `root` was started under, which is the one to restart it by.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const startedAs = (root: TBox): string => startedUnder.get(root) ?? root.name;
+
+/**
  * Turns a registered scene into a running one: creates its root box, runs the body with that
  * root active so every hook lands on it, attaches the children the body returns, and adds the
  * root to `world.scenes`. Returns the root.
@@ -30,11 +45,14 @@ export const startScene = (store: TRuntimeStore, name: string, props: object = {
             ? `[NacatamalOn] startScene: '${name}' is not registered yet, and ${arriving.join(', ')} ${arriving.length === 1 ? 'is' : 'are'} still loading. Wait for useLoadScene with useLoader before changing to it.`
             : `[NacatamalOn] startScene: '${name}' is not registered. Add it to the object passed to createGame, or load its .scene file with useLoadScene.`);
     }
-    if (scenes.some((scene) => scene.name === name)) {
+    // By either name: a scene built from a document answers to the one its document gave it, and
+    // is still the scene started under this one.
+    if (scenes.some((scene) => scene.name === name || startedAs(scene) === name)) {
         throw new Error(`[NacatamalOn] startScene: '${name}' is already running.`);
     }
 
     const root = newBox(name);
+    startedUnder.set(root, name);
     trackBoxGame(root, store);
     const result = withActiveGame(store, () => withActiveBox(store, root, () => body(props)));
 

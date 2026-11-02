@@ -3,8 +3,10 @@ import type { TTransitionState } from './types/t_transition_state';
 /**
  * What the frame has to do about the transition now that it has been moved on.
  *
- * `'swap'` is asked for once in the life of a transition and is the only moment anything outside
- * this function changes: the scene on its way out is stopped and the one coming in is let go.
+ * `'swap'` is the only moment anything outside this function changes: the scene on its way out is
+ * stopped and the one coming in is let go. It is asked for once in the life of a transition, or
+ * twice for a scene restarting itself whose new copy, built at the first, still has something to
+ * load: it is let go at the second.
  *
  * @internal
  * @since 1.0.0

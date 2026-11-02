@@ -1,6 +1,7 @@
 import { teardownBox } from '../box';
+import type { TBox } from '../box';
 import type { TRuntimeStore } from '../store';
-import { findScene } from './find_scene';
+import { runningScene } from './find_scene';
 import { markSceneStopped } from './stopped_scenes';
 
 /**
@@ -12,22 +13,25 @@ import { markSceneStopped } from './stopped_scenes';
  * Takes effect at once: the tick checks the list again before updating each scene, so a scene
  * stopped from a `useUpdate` neither updates nor draws for the rest of that frame.
  *
- * @returns Whether a scene was stopped. `false` means no scene with that name was running.
+ * @param scene Its name, or its root: by its root it is that scene and no other, even when another
+ * running scene answers to the same name.
+ * @returns Whether a scene was stopped. `false` means no such scene was running.
  *
  * @category Scenes
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const stopScene = (store: TRuntimeStore, name: string): boolean => {
-    const root = findScene(store, name);
+export const stopScene = (store: TRuntimeStore, scene: string | TBox): boolean => {
+    const root = runningScene(store, scene);
     if (root === undefined) {
         return false;
     }
 
     // A transition that still names this scene has just lost one of its two ends, so it is dropped
-    // rather than left pointing at a tree about to be torn down. This is the door every removal
-    // goes through, including a game being destroyed and a host loading another scene, which is
-    // why the check belongs here and not in the one caller that happens to be polite about it.
+    // rather than left pointing at a tree about to be torn down. This is the door a scene's removal
+    // goes through, a host loading another scene among them, which is why the check belongs here
+    // and not in the one caller that happens to be polite about it. (A game being destroyed tears
+    // its scenes down directly, and steps no transition again.)
     //
     // The swap is not this case: it lets go of the scene it is stopping first, so by the time it
     // calls in here the transition names neither end.

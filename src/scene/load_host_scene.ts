@@ -15,8 +15,8 @@ import type { TSceneFn } from './types/t_scene_fn';
  * that is a typo pointing two doors at one room. And a scene built from a document takes the name
  * its document gives its root, so the name it was registered under is no longer the name it answers
  * to, and stopping it by that name finds nothing and says nothing. So every running scene is stopped
- * by the name it has **now**, and the old body under this name is let go before the new one is
- * registered.
+ * by its root, whatever it answers to now, and the old body under this name is let go before the new
+ * one is registered.
  *
  * Synchronous, like the first scene `createGame` starts, which also runs outside a frame.
  *
@@ -27,7 +27,7 @@ import type { TSceneFn } from './types/t_scene_fn';
 export const loadHostScene = (store: TRuntimeStore, name: string, scene: TSceneFn): TBox => {
     // A copy, because each stop takes a scene out of the list being walked.
     for (const running of [...store.get('world').scenes]) {
-        stopScene(store, running.name);
+        stopScene(store, running);
     }
 
     const { names } = store.get('world');

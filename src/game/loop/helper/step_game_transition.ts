@@ -1,4 +1,4 @@
-import { stepTransition } from '../../../transition';
+import { rebuildBehindCover, stepTransition } from '../../../transition';
 import { stopScene } from '../../../scene';
 import type { TRuntimeStore } from '../../../store';
 
@@ -6,9 +6,9 @@ import type { TRuntimeStore } from '../../../store';
  * Moves the scene change being covered on by one frame, and does the one thing it asks for.
  *
  * The arithmetic is not here: `stepTransition` owns that and owns nothing else, so the timing can
- * be tested with no game around it. What is here is the side effect it cannot have, which happens
- * once in the life of a transition: at the swap the scene coming in is let go and the one going out
- * is stopped, cleanups and all.
+ * be tested with no game around it. What is here is the side effect it cannot have, at the swap:
+ * the scene coming in is let go and the one going out is stopped, cleanups and all. A scene
+ * restarting itself is built there too, once the old copy has stopped: see `rebuildBehindCover`.
  *
  * Run **before** the updates, so the cover is sized for the frame about to be produced rather than
  * for the one before it. That ordering is also what makes the swap frame clean: the scene coming in
@@ -37,6 +37,11 @@ export const stepGameTransition = (store: TRuntimeStore, delta: number): void =>
     }
 
     if (stepTransition(state, delta) === 'swap') {
+        // A scene restarting itself has nothing coming in yet: it is built now.
+        if (state.rebuild !== null) {
+            rebuildBehindCover(store, state);
+            return;
+        }
         if (state.incoming !== null) {
             state.incoming.held = false;
         }
@@ -46,7 +51,7 @@ export const stepGameTransition = (store: TRuntimeStore, delta: number): void =>
         const leaving = state.outgoing;
         state.outgoing = null;
         if (leaving !== null) {
-            stopScene(store, leaving.name);
+            stopScene(store, leaving);
         }
     }
 };

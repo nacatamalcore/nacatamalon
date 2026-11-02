@@ -102,6 +102,20 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **A scene restarting itself with a transition is covered.** `change` to its own name with a
+  `transition` was done as a hard cut, with a warning. Now the screen is covered over the old copy,
+  which runs until then as the scene going out of any change does, and the new copy is built behind
+  the cover once the old one has stopped. Being the same scene it has usually nothing left to load
+  and is uncovered at once; if it asks for something new, the screen stays covered until it lands.
+- **A scene built from a document is one scene by either of its names.** Its root answers to the
+  name its document gives it, and `launch` by the name it was registered under started a second
+  copy beside the first; it now says it is already running, and `change` to that name restarts it.
+- **A `useScene()` handle kept by a scene someone else stopped says so on `change`**, and does
+  nothing. Called later, from a promise, it started the next scene without replacing anything.
+- **`stop`, `pause`, `resume` and `isPaused` with no name reach the scene that asked**, by itself
+  and not by its name. A scene built from a document whose root answers to another running
+  scene's name stopped or paused that one instead, and its `onPaused` and `onResumed` heard that
+  one too.
 - **`stop` on a model's movement stops it from anywhere.** Called before the file arrived, the movement
   played anyway when it did; a `play` with no name after it starts it. Called from a listener, what
   was still to be told that frame and the movement's `next` went ahead regardless.

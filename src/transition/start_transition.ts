@@ -1,5 +1,7 @@
 import { newPostEffect } from '../post/new_post_effect';
 import { whenLoaded } from '../loaders';
+import { stopScene } from '../scene/stop_scene';
+import { startedAs } from '../scene/start_scene';
 import type { TBox } from '../box';
 import type { TRuntimeStore } from '../store';
 import type { TTransition } from './types/t_transition';
@@ -121,6 +123,102 @@ export const startTransitionBuilding = (
 };
 
 /**
+ * Puts in flight a scene restarting itself: the screen is covered over the old copy, still running,
+ * and the new one is built at the swap, by `rebuildBehindCover`, once the old one has stopped.
+ *
+ * Not built first like any other scene coming in, because then both copies would run at once under
+ * one name, and both would reach for what the scene keeps under a key (a picture painted in code, a
+ * pause heard by name) while the player still sees the old one.
+ *
+ * @param store The runtime store of the game the restart belongs to.
+ * @param transition What was asked for.
+ * @param outgoing The old copy.
+ * @param build Starts the new copy and gives it back.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const startTransitionRestart = (
+    store: TRuntimeStore,
+    transition: TTransition,
+    outgoing: TBox,
+    build: () => TBox,
+): void => {
+    cover(store, transition, outgoing).rebuild = build;
+};
+
+/**
+ * The swap of a restart: stops the old copy and builds the new one behind the cover.
+ *
+ * Usually the new copy has nothing left to load, being the same scene, and is uncovered at once. One
+ * that asks for something new is held, and the screen stays covered until it lands, as any other
+ * scene coming in would. A body that throws takes the cover with it and is said in the console,
+ * every time and not only the first like a script that throws: the old copy has already stopped,
+ * so the game is left as a restart without a transition that throws leaves it.
+ *
+ * @param store The runtime store of the game being stepped.
+ * @param state The transition, at its swap.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const rebuildBehindCover = (store: TRuntimeStore, state: TTransitionState): void => {
+    const build = state.rebuild!;
+    state.rebuild = null;
+    // Let go of before it is stopped, as at any swap: see `stepGameTransition`.
+    const leaving = state.outgoing;
+    state.outgoing = null;
+    // By its root: another running scene may answer to the same name.
+    if (leaving !== null) {
+        stopScene(store, leaving);
+    }
+
+    let incoming: TBox;
+    try {
+        incoming = build();
+    } catch (error) {
+        if (store.get('transition').active === state) {
+            store.setState('transition', { active: null });
+        }
+        const failure = error instanceof Error ? error : new Error(String(error));
+        console.error(
+            `[NacatamalOn] useScene().change: ${leaving === null ? 'a scene' : `'${startedAs(leaving)}'`} threw while it was being restarted, ` +
+            'with the old copy already stopped behind the cover. Fix what throws in its body or its useReady.',
+            failure,
+        );
+        // What the editor and a headless run read to know the game failed.
+        if (store.get('loop').failure === null) {
+            store.setState('loop', { failure });
+        }
+        return;
+    }
+    // As in `startTransitionBuilding`: a cover dropped while the scene was being built has nothing
+    // left to hold it for.
+    if (store.get('transition').active !== state) {
+        return;
+    }
+    // Stopped from its own `useReady`: nothing to hold, and the screen uncovers onto what is left.
+    if (!store.get('world').scenes.includes(incoming)) {
+        return;
+    }
+
+    // Named as the scene coming in even when nothing holds it, so its `useSceneTransitionEnd`
+    // waits for the uncover, as the scene coming in of any change does.
+    bringIn(state, incoming);
+    if (state.loaded) {
+        incoming.held = false;
+        return;
+    }
+    // Back to fully covered, to wait: the next step swaps again once it has landed, and that swap
+    // lets it go as any other.
+    state.phase = 'cover';
+    state.elapsed = state.half;
+    state.progress = 1;
+};
+
+/**
  * The transition in flight with nothing coming in yet: the effect, the clock, and the scene going
  * out.
  */
@@ -147,6 +245,7 @@ const cover = (store: TRuntimeStore, transition: TTransition, outgoing: TBox | n
         phase: 'cover',
         incoming: null,
         outgoing,
+        rebuild: null,
         // Nothing to wait for while nothing is coming in: the swap comes as soon as the screen is
         // covered.
         loaded: true,

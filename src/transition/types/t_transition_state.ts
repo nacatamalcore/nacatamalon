@@ -51,7 +51,8 @@ export type TTransitionState = {
     /**
      * The scene coming in. It is running from the moment `change` or `launch` was called, so its
      * loading has started, but it is **held**: it neither updates, nor draws, nor answers the
-     * pointer. `null` when a scene is only being stopped.
+     * pointer. `null` when a scene is only being stopped, and until the swap for a scene restarting
+     * itself, which is built there: see `rebuild`.
      */
     incoming: TBox | null;
     /**
@@ -64,6 +65,13 @@ export type TTransitionState = {
      * would otherwise be held alive until the uncover finished.
      */
     outgoing: TBox | null;
+    /**
+     * Builds the scene coming in **at the swap**, once the one going out has stopped, instead of
+     * when the change was asked for. Set only for a scene restarting itself: its new copy cannot run
+     * beside the old one, since a name means one scene, and it has nothing new to load while the
+     * screen covers, being the same scene. `null` for every other change, and from the swap on.
+     */
+    rebuild: (() => TBox) | null;
     /**
      * Whether everything `incoming` asked to load has settled. The other half of what the swap waits for.
      */

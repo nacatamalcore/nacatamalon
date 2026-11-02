@@ -1,8 +1,11 @@
 import { rootOf } from '../../box';
-import { findScene, isScenePaused, setScenePaused, startScene, stopScene } from '../../scene';
+import { findScene, isScenePaused, setScenePaused, startedAs, startScene, stopScene } from '../../scene';
+import { isSceneStopped } from '../../scene/stopped_scenes';
+import { scenePauseTold } from '../../scene/pause_scene';
+import type { TBox } from '../../box';
 import { getActiveBox, getActiveGame } from '../../store';
 import { onGameMoment } from '../../signal/game_moments';
-import { canDrawTransition, startTransition, startTransitionBuilding } from '../../transition';
+import { canDrawTransition, startTransition, startTransitionBuilding, startTransitionRestart } from '../../transition';
 import type { TSceneChangeOptions, TSceneLaunchOptions, TSceneStopOptions, TTransition } from '../../transition';
 import type { TSceneFn } from '../../scene/types/t_scene_fn';
 import { outsideSceneBody } from '../../utils/outside_scene_body';
@@ -71,12 +74,16 @@ export type TSceneHandle = {
      * the screen being covered, and everything the new scene asked for having landed. That is what
      * makes a transition worth having twice over, hiding the cut and hiding the load.
      *
+     * A scene restarting itself is covered too, a little differently: the new copy is built only
+     * once the screen is covered and the old one has stopped, so the two never run at once.
+     *
      * @example
      * ```ts
      * scene.change('Level2');                                  // the hard cut
      * scene.change('Level2', { transition: fade(0.3) });        // covered
      * scene.change('Level2', { transition: iris(0.4, black, { x: 0.2, y: 0.6 }) });
      * scene.change(Level, { props: { level: 3 } });            // its props, checked
+     * scene.change('Level', { transition: fade(0.3) });         // a restart, covered
      * ```
      */
     change<P extends object>(scene: TSceneFn<P>, options?: TSceneChangeOptions<P>): void;
@@ -168,14 +175,15 @@ export const useScene = (): TSceneHandle => {
 
     /**
      * The running scene a call is about: the one named, or, with no name, the calling scene as long
-     * as it is still running. Checked by root and not by name, so a handle kept from a scene that
-     * was restarted cannot reach the new copy that took its name.
+     * as it is still running. Its root and not its name, so a handle kept from a scene that was
+     * restarted cannot reach the new copy that took its name, and a scene built from a document
+     * reaches itself even when another running scene answers to the name its document gave it.
      */
-    const running = (name: string | undefined): string | undefined => {
+    const running = (name: string | undefined): TBox | undefined => {
         if (name !== undefined) {
-            return findScene(store, name) === undefined ? undefined : name;
+            return findScene(store, name);
         }
-        return store.get('world').scenes.includes(owner) ? owner.name : undefined;
+        return store.get('world').scenes.includes(owner) ? owner : undefined;
     };
 
     /**
@@ -191,6 +199,14 @@ export const useScene = (): TSceneHandle => {
             }
         }
         throw new Error(`[NacatamalOn] useScene().${action}: this function is not one of the game's scenes. Add it to the object passed to createGame.`);
+    };
+
+    /**
+     * A listener that hears a pause or a resume of this scene only, and not of another answering
+     * to its name.
+     */
+    const own = (listener: () => void) => (): void => {
+        if (scenePauseTold() === owner) listener();
     };
 
     const warnNotRunning = (action: string, name: string | undefined): void => {
@@ -237,17 +253,17 @@ export const useScene = (): TSceneHandle => {
         stop: (nameOrOptions?: string | TSceneStopOptions, given?: TSceneStopOptions) => {
             const name = typeof nameOrOptions === 'string' ? nameOrOptions : undefined;
             const options = typeof nameOrOptions === 'object' && nameOrOptions !== null ? nameOrOptions : given;
-            const target = running(name);
-            if (target === undefined) {
+            const root = running(name);
+            if (root === undefined) {
                 warnNotRunning('stop', name);
                 return false;
             }
+            const target = root.name;
             // Neither end of a change being covered can be taken out from under it: stopping the
             // one going out would uncover onto nothing, and stopping the one coming in would leave
             // the screen covered with nothing behind it to show.
             const covering = store.get('transition').active;
-            const root = findScene(store, target);
-            if (covering !== null && root !== undefined && (covering.incoming === root || covering.outgoing === root)) {
+            if (covering !== null && (covering.incoming === root || covering.outgoing === root)) {
                 console.warn(`[NacatamalOn] useScene().stop: '${target}' is part of a scene change being covered right now, so it was left alone. Wait for the change to finish.`);
                 return false;
             }
@@ -262,7 +278,7 @@ export const useScene = (): TSceneHandle => {
             }
 
             const transition = drawable(options?.transition, 'stop');
-            if (transition !== undefined && root !== undefined) {
+            if (transition !== undefined) {
                 // Stopped at the swap, behind the cover. Said now rather than then: by then the
                 // call that did it is long gone from anybody's mind.
                 if (store.get('world').scenes.length === 1) {
@@ -272,7 +288,7 @@ export const useScene = (): TSceneHandle => {
                 return true;
             }
 
-            stopScene(store, target);
+            stopScene(store, root);
             if (store.get('world').scenes.length === 0) {
                 console.warn(`[NacatamalOn] useScene().stop: '${target}' was the last scene, so the game is running with nothing in it. Use change() to replace a scene, or launch() the next one first.`);
             }
@@ -280,6 +296,12 @@ export const useScene = (): TSceneHandle => {
         },
         change: (scene: string | TSceneFn<never>, options?: TSceneChangeOptions<object>) => {
             if (leaving) {
+                return;
+            }
+            // A handle kept by a copy someone else stopped, called later from a promise: there is
+            // nothing of it left to replace.
+            if (isSceneStopped(owner)) {
+                warnNotRunning('change', undefined);
                 return;
             }
             const name = nameOf(scene, 'change');
@@ -294,34 +316,34 @@ export const useScene = (): TSceneHandle => {
                 return;
             }
 
-            let transition = options?.transition;
-            if (transition !== undefined && name === owner.name) {
-                // Both copies would have to run at once for the old one to stay on screen, and a
-                // name means one scene. Said rather than swallowed, because a restart that silently
-                // lost its fade looks like the transition is broken.
-                console.warn(`[NacatamalOn] useScene().change: '${name}' is restarting itself, which cannot be covered because both copies would have to run at once. It was changed without the transition.`);
-                transition = undefined;
-            }
-            // A card that cannot draw it makes it a cut too, and says so: see `canDrawTransition`.
-            transition = drawable(transition, 'change');
+            // A card that cannot draw it makes it a cut, and says so: see `canDrawTransition`.
+            const transition = drawable(options?.transition, 'change');
+            // By the name it was started under, which a scene built from a document does not answer
+            // to. Registered still, or the restart would only find out behind the cover.
+            const restarting = name === startedAs(owner) && store.get('world').names.has(name);
 
             leaving = true;
 
             try {
-                if (transition !== undefined) {
+                if (transition !== undefined && restarting) {
+                    // Restarting under the cover: the old copy stays on screen until it is covered,
+                    // and the new one is built then, once the old one has stopped. Never both at
+                    // once, since a name means one scene.
+                    startTransitionRestart(store, transition, owner, () => startScene(store, name, props));
+                } else if (transition !== undefined) {
                     // In flight before the new scene is built, so a covered change its body or its
                     // `useReady` asks for is refused rather than written over; a name that is not
                     // there throws and takes the cover with it. Nothing stops yet: the scene going
                     // out is what the screen is still showing, and it is stopped at the swap.
                     startTransitionBuilding(store, transition, owner, () => startScene(store, name, props));
-                } else if (name === owner.name) {
+                } else if (restarting) {
                     // Restarting: the old copy has to be gone before the name can start again.
-                    stopScene(store, owner.name);
+                    stopScene(store, owner);
                     startScene(store, name, props);
                 } else {
                     // The new scene first, so a name that does not exist throws before anything stops.
                     startScene(store, name, props);
-                    stopScene(store, owner.name);
+                    stopScene(store, owner);
                 }
             } catch (error) {
                 leaving = false;
@@ -348,8 +370,9 @@ export const useScene = (): TSceneHandle => {
             const target = running(name);
             return target === undefined ? false : isScenePaused(store, target);
         },
-        // By name, so a HUD listening to 'Level' still hears it after the level restarts.
-        onPaused: (listener, name = owner.name) => onGameMoment(store, `scene paused: ${name}`, active, listener),
-        onResumed: (listener, name = owner.name) => onGameMoment(store, `scene resumed: ${name}`, active, listener),
+        // By name, so a HUD listening to 'Level' still hears it after the level restarts. With no
+        // name, about this scene only: another running scene can answer to the same name.
+        onPaused: (listener, name) => onGameMoment(store, `scene paused: ${name ?? owner.name}`, active, name === undefined ? own(listener) : listener),
+        onResumed: (listener, name) => onGameMoment(store, `scene resumed: ${name ?? owner.name}`, active, name === undefined ? own(listener) : listener),
     };
 };

@@ -1,7 +1,7 @@
 export { fade, wipe, iris, pixelate } from './builtin';
 export type { TWipeDirection } from './builtin';
 
-export { canDrawTransition, startTransition, startTransitionBuilding } from './start_transition';
+export { canDrawTransition, rebuildBehindCover, startTransition, startTransitionBuilding, startTransitionRestart } from './start_transition';
 export { stepTransition } from './step_transition';
 
 export type { TTransition, TSceneChangeOptions, TSceneLaunchOptions, TSceneStopOptions } from './types/t_transition';
