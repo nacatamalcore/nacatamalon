@@ -159,6 +159,9 @@ const keptPicture = async (
         try {
             await uploadTexture(store, texture, new Blob([bytes], { type: image.type }));
         } catch (error) {
+            if (texture.status === 'released') {
+                return;
+            }
             texture.status = 'error';
             bumpVersion(texture);
             console.warn(`[NacatamalOn] useLoadGltf: a picture inside '${model.src}' could not be read. That piece draws as its tint.`, error);
@@ -238,27 +241,39 @@ export const loadGltf = async (store: TRuntimeStore, model: TGltfModel, options:
         const built = buildParts(doc, buffers, nodes, options.shading, renumbers);
         const clips = readAnimations(doc, buffers, jointLookup(doc, renumbers));
 
-        // The game may have ended while the file was in the air, and the renderer with it.
-        if (store.get('loop').destroyed) {
+        // The game may have ended while the file was in the air, and the renderer with it. Or the
+        // game let go of this file, and then nobody wants what it holds.
+        const gone = (): boolean => store.get('loop').destroyed || model.status === 'released';
+        if (gone()) {
             return;
         }
 
-        const parts: TGltfPart[] = [];
+        // Every picture first, waiting for each. Nothing goes to the card until they are all here, so
+        // a file let go of on the way leaves no shapes behind that nobody will ever free.
+        const pictures = [];
         const seen = new Map<number, Promise<TTexture>>();
         for (let i = 0; i < built.length; i++) {
             const piece = built[i];
             const surface = readMaterial(doc, piece.materialIndex);
-            const texture = options.textures ? await surfaceTexture(store, model, doc, buffers, surface.image, seen) : null;
-            const emissiveTexture = options.textures ? await surfaceTexture(store, model, doc, buffers, surface.emissiveImage, seen) : null;
+            // Asked for one at a time, each only if the file is still wanted: what is let go of while
+            // waiting for one picture does not send for the next.
+            const picture = async (image: TGltfImage | null): Promise<TTexture | null> =>
+                (options.textures && !gone() ? surfaceTexture(store, model, doc, buffers, image, seen) : null);
+            const texture = await picture(surface.image);
+            const emissiveTexture = await picture(surface.emissiveImage);
             // Often the same picture as another of the surface's (its roughness and metalness ride in
             // the other channels), and then one copy serves both.
-            const occlusionTexture = options.textures && surface.occlusion !== null
-                ? await surfaceTexture(store, model, doc, buffers, surface.occlusion.image, seen)
-                : null;
-            if (store.get('loop').destroyed) {
+            const occlusionTexture = await picture(surface.occlusion === null ? null : surface.occlusion.image);
+            if (gone()) {
                 return;
             }
+            pictures.push({ surface, texture, emissiveTexture, occlusionTexture });
+        }
 
+        const parts: TGltfPart[] = [];
+        for (let i = 0; i < built.length; i++) {
+            const piece = built[i];
+            const { surface, texture, emissiveTexture, occlusionTexture } = pictures[i];
             parts.push({
                 name: piece.name,
                 material: surface.name,
@@ -305,6 +320,10 @@ export const loadGltf = async (store: TRuntimeStore, model: TGltfModel, options:
         model.status = 'ready';
         bumpVersion(model);
     } catch (error: unknown) {
+        // Nobody is waiting for a file that was let go of, to hear that it did not arrive either.
+        if (model.status === 'released') {
+            return;
+        }
         model.status = 'error';
         bumpVersion(model);
         console.warn(`[NacatamalOn] useLoadGltf: '${model.src}' could not be loaded. Nothing is drawn for it.`, error);

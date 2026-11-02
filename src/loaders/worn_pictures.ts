@@ -53,6 +53,16 @@ export const stopWearing = (asset: TAsset): void => {
 };
 
 /**
+ * The pictures `asset` has taken: its pieces' if it has them, and what it had found so far if it was
+ * let go of or failed before they came out.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const picturesWornBy = (asset: TAsset): TTexture[] => [...(wornBy.get(asset) ?? [])];
+
+/**
  * Whether anything still loaded, or still loading, other than `leaving`, has taken `texture`.
  *
  * @internal

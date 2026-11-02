@@ -105,8 +105,11 @@ releases are in [changelog/](./changelog/), one file each.
 - **`stop` on a model's movement stops it from anywhere.** Called before the file arrived, the movement
   played anyway when it did; a `play` with no name after it starts it. Called from a listener, what
   was still to be told that frame and the movement's `next` went ahead regardless.
-- **A model's movement asked for by a name the file does not have says so**, when it was asked for
-  before the file arrived. It waited for ever without a word.
+- **A model's movement asked for by a name the file does not have says so**, also when it was asked
+  for before the file arrived or the file has none. It waited for ever without a word.
+- **A model let go of with `releaseAsset` while it is loading stays let go of.** It came back as
+  `'ready'` when it arrived, with its shapes on the card, or as `'error'` if it failed. The pictures it
+  had found go with it, unless something else wears them, and it sends for no more.
 - **A movement's listener that starts another leaves the rest of that frame's marks unsaid**, even when
   several fall in the same stretch.
 - **Easing between two movements no longer takes a bone neither of them turns to nothing.** It went

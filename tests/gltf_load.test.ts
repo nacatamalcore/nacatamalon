@@ -420,6 +420,208 @@ describe('a picture kept inside a model file, the same in more than one', () => 
         }
     });
 
+    it('stays let go of when it was let go of while it was on its way', async () => {
+        const served = serveGltf({
+            'crate.glb': asGlb({ nodes: [{ name: 'Crate', primitives: [{ ...TEST_QUAD, material: 0 }] }], materials: [{ embeddedImage: 'sheet' }] }),
+        });
+        try {
+            const { store } = createTestGame();
+            let crate!: TGltfModel;
+            startTestScene(store, 'Shop', () => {
+                crate = useLoadGltf({ src: 'crate.glb' });
+                return createScene();
+            });
+            const geometries = store.get('assets').geometries.size;
+            expect(releaseAsset(store, crate)).toBe(true);
+            await whenLoaded(crate);
+            for (let i = 0; i < 20; i++) await new Promise((resolve) => setTimeout(resolve, 0));
+
+            expect(crate.status).toBe('released');
+            expect(crate.parts).toEqual([]);
+            expect(store.get('assets').geometries.size).toBe(geometries);
+        } finally {
+            served.restore();
+        }
+    });
+
+    it('leaves no shapes behind when let go of while waiting for a picture of its second piece', async () => {
+        const served = serveGltf({
+            'barrel.glb': asGlb({
+                nodes: [{ name: 'Lid', primitives: [{ ...TEST_QUAD, material: 0 }] }, { name: 'Body', primitives: [{ ...TEST_QUAD, material: 1 }] }],
+                materials: [{}, { image: 'slow.png' }],
+            }),
+            'slow.png': 'png',
+        });
+        const answered = globalThis.fetch;
+        let letThrough!: () => void;
+        const gate = new Promise<void>((resolve) => { letThrough = resolve; });
+        globalThis.fetch = (async (input: string) => {
+            if (String(input).includes('slow.png')) await gate;
+            return answered(input);
+        }) as typeof fetch;
+        try {
+            const { store } = createTestGame();
+            let barrel!: TGltfModel;
+            startTestScene(store, 'Shop', () => {
+                barrel = useLoadGltf({ src: 'barrel.glb' });
+                return createScene();
+            });
+            const geometries = store.get('assets').geometries.size;
+            for (let i = 0; i < 20; i++) await new Promise((resolve) => setTimeout(resolve, 0));
+            expect(barrel.status).toBe('loading');
+
+            releaseAsset(store, barrel);
+            letThrough();
+            await whenLoaded(barrel);
+            for (let i = 0; i < 20; i++) await new Promise((resolve) => setTimeout(resolve, 0));
+
+            expect(barrel.status).toBe('released');
+            expect(barrel.parts).toEqual([]);
+            expect(store.get('assets').geometries.size).toBe(geometries);
+        } finally {
+            globalThis.fetch = answered;
+            served.restore();
+        }
+    });
+
+    it('takes with it the pictures it had found, and the one on its way, and asks for no more', async () => {
+        const served = serveGltf({
+            'barrel.glb': asGlb({
+                nodes: [
+                    { name: 'Lid', primitives: [{ ...TEST_QUAD, material: 0 }] },
+                    { name: 'Body', primitives: [{ ...TEST_QUAD, material: 1 }] },
+                    { name: 'Base', primitives: [{ ...TEST_QUAD, material: 2 }] },
+                ],
+                materials: [{ embeddedImage: 'sheet' }, { image: 'slow.png' }, { image: 'never.png' }],
+            }),
+            'slow.png': 'png',
+            'never.png': 'png',
+        });
+        const answered = globalThis.fetch;
+        const asked: string[] = [];
+        let letThrough!: () => void;
+        const gate = new Promise<void>((resolve) => { letThrough = resolve; });
+        globalThis.fetch = (async (input: string) => {
+            asked.push(String(input));
+            if (String(input).includes('slow.png')) await gate;
+            return answered(input);
+        }) as typeof fetch;
+        try {
+            const { store } = createTestGame();
+            let barrel!: TGltfModel;
+            startTestScene(store, 'Shop', () => {
+                barrel = useLoadGltf({ src: 'barrel.glb' });
+                return createScene();
+            });
+            for (let i = 0; i < 20; i++) await new Promise((resolve) => setTimeout(resolve, 0));
+            const found = [...new Set(store.get('assets').textures.values())];
+            expect(found.length).toBe(2);
+
+            releaseAsset(store, barrel);
+            letThrough();
+            await whenLoaded(barrel);
+            for (let i = 0; i < 20; i++) await new Promise((resolve) => setTimeout(resolve, 0));
+
+            for (const texture of found) {
+                expect(texture.status).toBe('released');
+                expect(texture.gpu).toBeNull();
+            }
+            expect(store.get('assets').textures.size).toBe(0);
+            expect(asked.some((src) => src.includes('never.png'))).toBe(false);
+        } finally {
+            globalThis.fetch = answered;
+            served.restore();
+        }
+    });
+
+    it('leaves a picture it had found for another model still wearing it, when let go of on the way', async () => {
+        const served = serveGltf({
+            'crate.glb': asGlb({ nodes: [{ name: 'Crate', primitives: [{ ...TEST_QUAD, material: 0 }] }], materials: [{ embeddedImage: 'sheet' }] }),
+            'barrel.glb': asGlb({
+                nodes: [{ name: 'Lid', primitives: [{ ...TEST_QUAD, material: 0 }] }, { name: 'Body', primitives: [{ ...TEST_QUAD, material: 1 }] }],
+                materials: [{ embeddedImage: 'sheet' }, { image: 'slow.png' }],
+            }),
+            'slow.png': 'png',
+        });
+        const answered = globalThis.fetch;
+        let letThrough!: () => void;
+        const gate = new Promise<void>((resolve) => { letThrough = resolve; });
+        globalThis.fetch = (async (input: string) => {
+            if (String(input).includes('slow.png')) await gate;
+            return answered(input);
+        }) as typeof fetch;
+        try {
+            const { store } = createTestGame();
+            let crate!: TGltfModel;
+            let barrel!: TGltfModel;
+            startTestScene(store, 'Shop', () => {
+                crate = useLoadGltf({ src: 'crate.glb' });
+                barrel = useLoadGltf({ src: 'barrel.glb' });
+                return createScene();
+            });
+            await whenLoaded(crate);
+            for (let i = 0; i < 20; i++) await new Promise((resolve) => setTimeout(resolve, 0));
+
+            releaseAsset(store, barrel);
+            letThrough();
+            await whenLoaded(barrel);
+
+            const sheet = crate.parts[0]!.texture!;
+            expect(sheet.status).toBe('ready');
+            expect(sheet.gpu).not.toBeNull();
+        } finally {
+            globalThis.fetch = answered;
+            served.restore();
+        }
+    });
+
+    it('can be let go of after failing to load', async () => {
+        const served = serveGltf({
+            'bad.gltf': { asset: { version: '2.0' }, buffers: [{ uri: 'bad.bin', byteLength: 4 }], nodes: [{ name: 'Rock', mesh: 0 }], meshes: [{ primitives: [{ attributes: { POSITION: 9 } }] }] },
+        });
+        const warn = console.warn;
+        console.warn = () => {};
+        try {
+            const { store } = createTestGame();
+            let bad!: TGltfModel;
+            startTestScene(store, 'Shop', () => {
+                bad = useLoadGltf({ src: 'bad.gltf' });
+                return createScene();
+            });
+            await whenLoaded(bad);
+            expect(bad.status).toBe('error');
+            expect(releaseAsset(store, bad)).toBe(true);
+            expect(bad.status).toBe('released');
+        } finally {
+            console.warn = warn;
+            served.restore();
+        }
+    });
+
+    it('says nothing about a file let go of that then could not be fetched', async () => {
+        const served = serveGltf({});
+        const warn = mock();
+        const original = console.warn;
+        console.warn = warn;
+        try {
+            const { store } = createTestGame();
+            let crate!: TGltfModel;
+            startTestScene(store, 'Shop', () => {
+                crate = useLoadGltf({ src: 'nowhere.glb' });
+                return createScene();
+            });
+            releaseAsset(store, crate);
+            await whenLoaded(crate);
+            for (let i = 0; i < 20; i++) await new Promise((resolve) => setTimeout(resolve, 0));
+
+            expect(crate.status).toBe('released');
+            expect(warn).not.toHaveBeenCalled();
+        } finally {
+            console.warn = original;
+            served.restore();
+        }
+    });
+
     it('forgets a model that wore it once it is let go of, however often that happens', async () => {
         const served = serveGltf({
             'crate.glb': asGlb({ nodes: [{ name: 'Crate', primitives: [{ ...TEST_QUAD, material: 0 }] }], materials: [{ embeddedImage: 'sheet' }] }),

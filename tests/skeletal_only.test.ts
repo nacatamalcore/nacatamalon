@@ -243,6 +243,21 @@ describe('only', () => {
         restore();
     });
 
+    it('says when a movement it was told to play from the start is not in the file, and stays out of the way', async () => {
+        const warn = mock();
+        const original = console.warn;
+        console.warn = warn;
+        const { above, step, bone, restore } = await withBody({ only: ['Spine'], play: 'Dance' });
+        step(0.25);
+        console.warn = original;
+
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(warn.mock.calls[0]?.[0]).toContain("no movement called 'Dance'");
+        expect(above.clip).toBeNull();
+        expect(bone('Spine')).toEqual([2.5, 0, 0]);
+        restore();
+    });
+
     it('waits for the file like any other, when told what to play from the start', async () => {
         const { above, step, bone, restore } = await withBody({ only: ['Spine'], play: 'Wave' });
         step(0.25);

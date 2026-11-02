@@ -215,6 +215,11 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
     } | null = null;
 
     const known = (): string[] => Object.keys(file.clips);
+    /**
+     * Whether the file is here to be asked, which an empty table of movements does not say: it may
+     * still be on its way, or have arrived with none.
+     */
+    const arrived = (): boolean => file.status === 'ready' || known().length > 0;
     const warnedNext = new Set<string>();
 
     /**
@@ -232,10 +237,11 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
     const start = (name: string, fadeSeconds: number): void => {
         const clip = file.clips[name];
         if (clip === undefined) {
-            // An empty table has not arrived yet; one with other names in it is a typo, and that
-            // is worth saying out loud.
-            if (known().length > 0) {
-                console.warn(`[NacatamalOn] useSkeletalAnimation: no movement called '${name}'. It knows: ${known().join(', ')}.`);
+            // A file still on its way is waited for; one that is here without that name is a typo,
+            // and that is worth saying out loud.
+            if (arrived()) {
+                const has = known().length > 0 ? `It knows: ${known().join(', ')}` : 'The file has none';
+                console.warn(`[NacatamalOn] useSkeletalAnimation: no movement called '${name}'. ${has}.`);
                 return;
             }
             pending = name;
@@ -478,7 +484,7 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
             // Cheap while it lasts, and it lasts until the file lands.
             if (file.clips[pending] !== undefined) {
                 start(pending, pendingFade);
-            } else if (known().length > 0) {
+            } else if (arrived()) {
                 // The file is here and that name is not in it, which `start` says out loud. Waiting
                 // any longer would be waiting for ever.
                 const missing = pending;

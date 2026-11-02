@@ -8,7 +8,7 @@ import type { TTexture } from './texture/types/t_texture';
 import type { TGeometry } from '../geometry/types/t_geometry';
 import type { TAsset } from './types/t_asset';
 import { findAsset } from './asset_key';
-import { stopWearing, wornByAnother } from './worn_pictures';
+import { picturesWornBy, stopWearing, wornByAnother } from './worn_pictures';
 import { askedByGame } from './asked_by_game';
 import { leaveSheet } from './sheet_users';
 import type { TLoadedAtlas } from './atlas/types/t_loaded_atlas';
@@ -194,6 +194,10 @@ const releaseOne = (store: TRuntimeStore, asset: TAsset): void => {
                 releaseWorn(store, part.texture, asset);
                 releaseWorn(store, part.emissiveTexture, asset);
                 releaseWorn(store, part.occlusion?.texture ?? null, asset);
+            }
+            // One still on its way, or that failed on the way, has no pieces to name what it found.
+            for (const texture of picturesWornBy(asset)) {
+                releaseWorn(store, texture, asset);
             }
             break;
         case 'particles-file':

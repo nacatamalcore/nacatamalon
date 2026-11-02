@@ -354,6 +354,56 @@ describe('when something is asked for that is not there', () => {
         restore();
     });
 
+    it('says so when the file arrives with no movements at all, and when asked later', async () => {
+        const warnings: string[] = [];
+        const original = console.warn;
+        console.warn = (...args: unknown[]) => { warnings.push(args.map(String).join(' ')); };
+        const { json, bin } = asGltf({ ...RIGGED, animations: [] });
+        const fake = serveGltf({ 'model.gltf': json, 'model.bin': bin });
+        const { store } = createTestGame();
+        let file!: TGltfModel;
+        let moves!: TSkeletalAnimation;
+        const scene: TBox = startTestScene(store, 'Level', () => {
+            file = useLoadGltf({ src: 'model.gltf' });
+            moves = useSkeletalAnimation(createModel({ model: file }), { play: 'Dance' });
+            return createScene();
+        });
+        await whenLoaded(file);
+        step(scene, 0);
+        step(scene, 0.25);
+        expect(warnings.length).toBe(1);
+        expect(warnings[0]).toContain("no movement called 'Dance'. The file has none.");
+
+        moves.play('Bow');
+        step(scene, 0.25);
+        console.warn = original;
+        expect(warnings.length).toBe(2);
+        expect(warnings[1]).toContain("no movement called 'Bow'");
+        expect(moves.clip).toBeNull();
+        fake.restore();
+    });
+
+    it('says nothing about a file that has no movements when none was asked for', async () => {
+        const warnings: string[] = [];
+        const original = console.warn;
+        console.warn = (...args: unknown[]) => { warnings.push(args.map(String).join(' ')); };
+        const { json, bin } = asGltf({ ...RIGGED, animations: [] });
+        const fake = serveGltf({ 'model.gltf': json, 'model.bin': bin });
+        const { store } = createTestGame();
+        let file!: TGltfModel;
+        const scene: TBox = startTestScene(store, 'Level', () => {
+            file = useLoadGltf({ src: 'model.gltf' });
+            useSkeletalAnimation(createModel({ model: file }));
+            return createScene();
+        });
+        await whenLoaded(file);
+        step(scene, 0);
+        step(scene, 0.25);
+        console.warn = original;
+        expect(warnings).toEqual([]);
+        fake.restore();
+    });
+
     it('says so once the file has arrived and lists what it does know', async () => {
         const warnings: string[] = [];
         const original = console.warn;
