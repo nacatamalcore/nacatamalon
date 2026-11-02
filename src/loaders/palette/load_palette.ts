@@ -20,7 +20,7 @@ export const loadPalette = async (store: TRuntimeStore, palette: TPalette): Prom
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
-        const doc = parsePaletteDoc(await response.json());
+        const doc = parsePaletteDoc(await response.json(), palette.src);
 
         if (store.get('loop').destroyed) {
             return;

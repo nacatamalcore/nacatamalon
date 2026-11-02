@@ -35,19 +35,23 @@ const asHex = (value: unknown): string | null => {
  * what it was handed, which is the honest answer to "reduce this to no colours".
  *
  * @param value Whatever `JSON.parse` gave back.
+ * @param src Where it came from, named in anything it has to report. Left out, its own name.
  * @returns The palette, always: whatever could not be read is left out, with a warning.
  *
  * @category Assets & loading
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const parsePaletteDoc = (value: unknown): TPaletteDoc => {
+export const parsePaletteDoc = (value: unknown, src?: string): TPaletteDoc => {
     const empty: TPaletteDoc = { format: PALETTE_FORMAT, kind: 'palette', name: '', colors: [] };
     if (typeof value !== 'object' || value === null) {
         return empty;
     }
 
     const read = value as Record<string, unknown>;
+    if (typeof read.format === 'number' && read.format > PALETTE_FORMAT) {
+        console.warn(`[NacatamalOn] palette "${src ?? String(read.name ?? '')}": written by a newer version (format ${read.format}, this engine reads ${PALETTE_FORMAT}). What it can read is used. Update the engine to have all of it.`);
+    }
     const colors: string[] = [];
     if (Array.isArray(read.colors)) {
         for (const raw of read.colors) {

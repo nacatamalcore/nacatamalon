@@ -106,6 +106,9 @@ export const parseStoreDoc = (raw: unknown, src: string): TStoreDoc => {
     if (record.format !== undefined && record.format !== STORE_FORMAT) {
         console.warn(`[NacatamalOn] store "${src}": this says it is a "${String(record.format)}" and not a ${STORE_FORMAT}. Read anyway.`);
     }
+    if (typeof record.version === 'number' && record.version > STORE_VERSION) {
+        console.warn(`[NacatamalOn] store "${src}": written by a newer version (${record.version}, this engine reads ${STORE_VERSION}). What it can read opens. Update the engine to have all of it.`);
+    }
 
     const rows = asArray(record.fields);
     const fields: TStoreField[] = [];

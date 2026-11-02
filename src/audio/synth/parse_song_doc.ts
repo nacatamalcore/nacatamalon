@@ -47,6 +47,9 @@ const isCount = (value: unknown): value is number => typeof value === 'number' &
  */
 export const parseSongDoc = (raw: unknown, src = 'song'): TSongDoc => {
     const file = asRecord(raw) ?? fail(src, 'a song is a JSON object, with its tempo, meter and voices.');
+    if (typeof file.format === 'number' && file.format > SONG_FORMAT) {
+        console.warn(`[NacatamalOn] song "${src}": written by a newer version (format ${file.format}, this engine reads ${SONG_FORMAT}). What it can read plays. Update the engine to hear all of it.`);
+    }
 
     const tempo = file.tempo;
     if (typeof tempo !== 'number' || !Number.isFinite(tempo) || tempo <= 0) {

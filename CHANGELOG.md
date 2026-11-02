@@ -97,6 +97,9 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **A song, a palette or a store written by a newer engine says so.** They were read as though
+  nothing had changed, so an older game would play a newer `.song` wrong with no word why. Now each
+  warns and reads what it can, as a scene and a motion already did.
 - **Each half of a split screen in 3D has its shadows.** There was one shadow map, around the first
   view's camera, and the other half was drawn without shadows; two monitors that `sees: '3d'` the
   same. Now each view whose scene has a light casting has a map of its own, around its own camera,
