@@ -8,9 +8,9 @@ import type { TTexture } from './texture/types/t_texture';
 import type { TGeometry } from '../geometry/types/t_geometry';
 import type { TAsset } from './types/t_asset';
 import { findAsset } from './asset_key';
-import { picturesWornBy, stopWearing, wornByAnother } from './worn_pictures';
+import { picturesWornBy, releaseWhenUnworn, stopWearing, wornByAnother } from './worn_pictures';
 import { askedByGame } from './asked_by_game';
-import { leaveSheet } from './sheet_users';
+import { leaveSheet, releaseWhenUnused } from './sheet_users';
 import type { TLoadedAtlas } from './atlas/types/t_loaded_atlas';
 
 /**
@@ -107,7 +107,13 @@ const picturesOf = (asset: TAsset): Array<TTexture | null> => {
  */
 const releaseWorn = (store: TRuntimeStore, texture: TTexture | null, leaving: TAsset): void => {
     // One the game asked for itself goes when the game lets go of it, not with a file that names it.
-    if (texture === null || askedByGame(texture) || wornByAnother(texture, leaving)) {
+    if (texture === null || askedByGame(texture)) {
+        return;
+    }
+    if (wornByAnother(texture, leaving)) {
+        // Another model goes the same way when it is let go of; an effect written in code is let go
+        // of by nobody, so it finishes this when it stops being drawn.
+        releaseWhenUnworn(texture, () => { releaseWorn(store, texture, leaving); });
         return;
     }
     for (const cache of Object.values(store.get('assets')) as Map<string, TAsset>[]) {
@@ -132,7 +138,13 @@ const releaseSheet = (store: TRuntimeStore, sheet: unknown, leaving: TAsset): vo
     }
     const atlas = sheet as TLoadedAtlas;
     const othersLeft = leaveSheet(atlas, leaving);
-    if (atlas.status === 'released' || askedByGame(atlas) || othersLeft) {
+    if (atlas.status === 'released' || askedByGame(atlas)) {
+        return;
+    }
+    if (othersLeft) {
+        // Another effect goes the same way when it is let go of, and a map never lets its sheet go; an
+        // effect written in code is let go of by nobody, so it finishes this when it stops being drawn.
+        releaseWhenUnused(atlas, () => { releaseSheet(store, atlas, leaving); });
         return;
     }
     releaseOne(store, atlas);

@@ -24,6 +24,12 @@ const users = new WeakMap<TLoadedAtlas, Set<TSheetUser>>();
 const whileDrawn = new WeakSet<TSheetUser>();
 
 /**
+ * Sheets something let go of while another still used them, with what finishes letting them go:
+ * when the last effect written in code on one stops being drawn, nothing else would.
+ */
+const waiting = new WeakMap<TLoadedAtlas, () => void>();
+
+/**
  * Notes that `by` uses `sheet`. `drawn` for one that counts only while it has emitters.
  *
  * @internal
@@ -51,7 +57,7 @@ const wants = (user: TSheetUser): boolean =>
 
 /**
  * Takes `by` off `sheet` once it no longer wants it: an effect written in code whose last emitter
- * has gone. Nothing is let go here; whatever lets go of the sheet's last other user takes it then.
+ * has gone. A sheet that was let go of while it was drawn goes now, if nothing else uses it.
  *
  * @internal
  * @since 1.0.0
@@ -60,7 +66,25 @@ const wants = (user: TSheetUser): boolean =>
 export const dropIdleSheetUser = (sheet: TLoadedAtlas, by: TSheetUser): void => {
     if (!wants(by)) {
         users.get(sheet)?.delete(by);
+        const finish = waiting.get(sheet);
+        if (finish !== undefined) {
+            waiting.delete(sheet);
+            // Asked again from the start: what else may use it is decided there, not here.
+            finish();
+        }
     }
+};
+
+/**
+ * Notes that letting go of `sheet` waits on something still using it, and what to do to try again
+ * once an effect written in code on it stops being drawn.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const releaseWhenUnused = (sheet: TLoadedAtlas, finish: () => void): void => {
+    waiting.set(sheet, finish);
 };
 
 /**

@@ -20,6 +20,12 @@ const wornBy = new WeakMap<TAsset, Set<TTexture>>();
 const whileDrawn = new WeakSet<TAsset>();
 
 /**
+ * Pictures something let go of while another still wore them, with what finishes letting them go:
+ * when the last effect written in code that wore one stops being drawn, nothing else would.
+ */
+const waiting = new WeakMap<TTexture, () => void>();
+
+/**
  * Whether `wearer` still wants its picture: not let go of, and, for one that counts only while drawn,
  * with an emitter.
  */
@@ -99,7 +105,7 @@ export const wornByAnother = (texture: TTexture, leaving: TAsset): boolean => {
 
 /**
  * Takes `by` off `texture` once it no longer wants it: an effect written in code whose last emitter
- * has gone. Nothing is let go here; whatever lets go of the picture's last other wearer takes it then.
+ * has gone. A picture that was let go of while it was drawn goes now, if nothing else wears it.
  *
  * @internal
  * @since 1.0.0
@@ -109,7 +115,25 @@ export const dropIdleWearer = (texture: TTexture, by: TAsset): void => {
     if (!wants(by)) {
         wearers.get(texture)?.delete(by);
         wornBy.get(by)?.delete(texture);
+        const finish = waiting.get(texture);
+        if (finish !== undefined) {
+            waiting.delete(texture);
+            // Asked again from the start: what else may hold it is decided there, not here.
+            finish();
+        }
     }
+};
+
+/**
+ * Notes that letting go of `texture` waits on something still wearing it, and what to do to try
+ * again once an effect written in code wearing it stops being drawn.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const releaseWhenUnworn = (texture: TTexture, finish: () => void): void => {
+    waiting.set(texture, finish);
 };
 
 /**

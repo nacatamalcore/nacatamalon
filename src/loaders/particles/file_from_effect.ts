@@ -23,7 +23,7 @@ const files = new WeakMap<TParticlesEffect, TParticlesFile>();
 /**
  * The files made here, which have no file behind them to write into a scene.
  */
-const fromCode = new WeakSet<TParticlesFile>();
+const fromCode = new WeakMap<TParticlesFile, TParticlesEffect>();
 
 /**
  * The file for an effect written in code: read now, ready now, never downloaded.
@@ -94,7 +94,7 @@ export const fileFromEffect = (store: TRuntimeStore, effect: TParticlesEffect): 
     file.children = doc.children.map((child) => childFileFor(store, file, child.src, []));
 
     files.set(effect, file);
-    fromCode.add(file);
+    fromCode.set(file, effect);
     return file;
 };
 
@@ -106,3 +106,12 @@ export const fileFromEffect = (store: TRuntimeStore, effect: TParticlesEffect): 
  * @author Francisco Pereira Alvarado
  */
 export const isEffectFromCode = (file: TParticlesFile): boolean => fromCode.has(file);
+
+/**
+ * The effect written in code a file was made from, or `undefined` for one loaded from a file.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const effectFromCode = (file: TParticlesFile): TParticlesEffect | undefined => fromCode.get(file);

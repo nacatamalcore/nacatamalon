@@ -1,7 +1,7 @@
 import { createRecord } from '../create_record';
 import { getActiveBox, getActiveGame } from '../../store';
 import { getColor } from '../../color';
-import { bindParticles, openParticleState } from './particle_state';
+import { bindParticles, openParticleState, unbindParticles } from './particle_state';
 import { resolveEffect } from './create_particles';
 import { trackDrawableOwner } from '../../box';
 import type { TParticles3d } from './types/t_particles_3d';
@@ -74,6 +74,10 @@ export const createParticles3d = (options: TParticles3dOptions): TParticles3d =>
     trackDrawableOwner(emitter, box, store);
 
     bindParticles(emitter);
+    // Off its file when the scene it is in goes too, not only when it is destroyed: a stopped scene
+    // runs its cleanups and nothing more, and an effect written in code holds its picture and its
+    // sheet for as long as an emitter is on it.
+    box.cleanups.push(() => { unbindParticles(emitter); });
     if (file.status === 'ready') {
         openParticleState(emitter);
     }

@@ -1,10 +1,10 @@
 import { createRecord } from '../create_record';
 import { getActiveBox, getActiveGame } from '../../store';
 import { getColor } from '../../color';
-import { bindParticles, openParticleState, wrongDimension } from './particle_state';
+import { bindParticles, openParticleState, unbindParticles, wrongDimension } from './particle_state';
 import { trackDrawableOwner } from '../../box';
 import type { TParticles } from './types/t_particles';
-import { fileFromEffect } from '../../loaders/particles/file_from_effect';
+import { effectFromCode, fileFromEffect } from '../../loaders/particles/file_from_effect';
 import type { TParticlesEffect } from '../../loaders/particles/types/t_particles_effect';
 import type { TParticlesFile } from '../../loaders/particles/types/t_particles_file';
 import type { TParticlesOptions } from './types/t_particles_options';
@@ -30,6 +30,13 @@ export const resolveEffect = (
     let found: TParticlesFile | undefined;
     if (typeof effect === 'object' && effect !== null && (effect as { type?: unknown }).type === 'particles-file') {
         found = effect as TParticlesFile;
+        // One made from an effect written in code, handed back: read as that effect is, so a picture
+        // or a sheet let go of meanwhile is asked for again.
+        const written = effectFromCode(found);
+        const store = getActiveGame();
+        if (written !== undefined && store !== null) {
+            found = fileFromEffect(store, written);
+        }
     } else if (typeof effect === 'object' && effect !== null) {
         // Written in code: read on the spot, so a mistake in it is reported on the line that made it.
         const store = getActiveGame();
@@ -116,6 +123,10 @@ export const createParticles = (options: TParticlesOptions): TParticles => {
     // Waiting on the file, whether it is already here or still coming. The list is what the loader
     // walks when the bytes land, because only then is there a number to size the particles by.
     bindParticles(emitter);
+    // Off its file when the scene it is in goes too, not only when it is destroyed: a stopped scene
+    // runs its cleanups and nothing more, and an effect written in code holds its picture and its
+    // sheet for as long as an emitter is on it.
+    box.cleanups.push(() => { unbindParticles(emitter); });
     if (file.status === 'ready') {
         openParticleState(emitter);
     }

@@ -110,6 +110,11 @@ releases are in [changelog/](./changelog/), one file each.
 - **Changing the post chain of a running game lets go of the effects it replaced.** The shader file of
   an effect kept every one of them. A motion moving one of them follows the new one, rather than
   going on moving the one that is gone.
+- **A picture or a sheet let go of while an effect written in code still showed it goes once the
+  effect stops being drawn, or its scene stops.** It stayed on the card for ever, with nothing left to
+  let go of it; a scene that stopped left its emitters on their effects. Handing
+  an emitter's own `file` to a new one asks again for a picture or a sheet let go of meanwhile, as
+  handing it the effect does.
 - **A picture an effect written in code is showing stays when a model wearing it is let go of.** The
   effect is in no cache, so nothing counted it and the picture went from under it. It holds the picture
   while it has emitters, as it holds a sheet, and asks for it again if it is used after it went.

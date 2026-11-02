@@ -4,6 +4,7 @@ import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { createSpriteAtlas } from '../src/atlas/create_sprite_atlas';
 import { createParticles, particleCount, particleStateOf } from '../src/gameobjects/particles';
 import { destroy } from '../src/destroy/destroy';
+import { flushDestroyed } from '../src/destroy';
 import { runHookUpdates } from '../src/game/loop/runHookUpdates';
 import { createFrameContext } from '../src/game/loop/create_frame_context';
 import { fillFrameContext } from '../src/game/loop/fill_frame_context';
@@ -497,6 +498,78 @@ describe('letting go of an effect on a sheet', () => {
 
         expect(atlas.status).toBe('released');
         expect(sheetUsersOf(atlas)).toHaveLength(0);
+    });
+
+    it('lets a sheet go once the effect written in code that kept it stops being drawn', () => {
+        quiet();
+        const effect: TParticlesEffect2d = { ...BURST, atlas: '/fx/sheet.atlas' };
+        let emitter!: TParticles;
+        const { store } = running(() => {
+            emitter = createParticles({ effect });
+        });
+        const file = effectOn(store, '/fx/a.particles');
+        const atlas = sheetOf(file);
+        createGameHandle(store).releaseAsset(file);
+        expect(atlas.status).not.toBe('released');
+
+        destroy(emitter, { immediate: true });
+        expect(atlas.status).toBe('released');
+        expect(sheetUsersOf(atlas)).toHaveLength(0);
+    });
+
+    it('lets a sheet go when its effect\'s emitter is destroyed in the same frame as the file is let go of', () => {
+        quiet();
+        const effect: TParticlesEffect2d = { ...BURST, atlas: '/fx/sheet.atlas' };
+        let emitter!: TParticles;
+        const { store } = running(() => {
+            emitter = createParticles({ effect });
+        });
+        const file = effectOn(store, '/fx/a.particles');
+        const atlas = sheetOf(file);
+        destroy(emitter);
+        createGameHandle(store).releaseAsset(file);
+        flushDestroyed(store);
+
+        expect(atlas.status).toBe('released');
+    });
+
+    it('keeps a sheet a map still uses, when the effect written in code that also kept it stops being drawn', () => {
+        quiet();
+        const effect: TParticlesEffect2d = { ...BURST, atlas: '/fx/sheet.atlas' };
+        let emitter!: TParticles;
+        const { store } = running(() => {
+            emitter = createParticles({ effect });
+        });
+        const file = effectOn(store, '/fx/a.particles');
+        const atlas = sheetOf(file);
+        const map = { status: 'ready' };
+        noteSheetUser(atlas, map);
+        createGameHandle(store).releaseAsset(file);
+        destroy(emitter, { immediate: true });
+
+        expect(atlas.status).not.toBe('released');
+    });
+
+    it('asks afresh for a sheet let go of meanwhile, when its own file is handed back to a new emitter', () => {
+        quiet();
+        const effect: TParticlesEffect2d = { ...BURST, atlas: '/fx/sheet.atlas' };
+        let first!: TParticles;
+        const { store } = running(() => {
+            first = createParticles({ effect });
+        });
+        const inCode = fileFromEffect(store, effect);
+        const old = sheetOf(inCode);
+        destroy(first, { immediate: true });
+        createGameHandle(store).releaseAsset(old);
+
+        let again!: TParticles;
+        startTestScene(store, 'Again', () => {
+            again = createParticles({ effect: inCode });
+            return createScene();
+        });
+        expect(again.file).toBe(inCode);
+        expect(sheetOf(inCode)).not.toBe(old);
+        expect(sheetOf(inCode).status).not.toBe('released');
     });
 
     it('takes an effect written in code on again when it is used again, asking afresh for a sheet let go of meanwhile', () => {

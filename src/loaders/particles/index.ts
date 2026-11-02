@@ -5,7 +5,7 @@ export { serializeParticlesDoc } from './serialize_particles_doc';
 export { emptyParticlesDoc } from './empty_particles_doc';
 export { PARTICLES_FORMAT } from './types/t_particles_doc';
 
-export { fileFromEffect, isEffectFromCode } from './file_from_effect';
+export { effectFromCode, fileFromEffect, isEffectFromCode } from './file_from_effect';
 
 export type { TParticlesFile } from './types/t_particles_file';
 export type { TParticlesEffect, TParticlesEffect2d, TParticlesEffect3d, TParticleColorStopInput } from './types/t_particles_effect';
