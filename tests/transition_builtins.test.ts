@@ -2,6 +2,7 @@ import { describe, expect, it, spyOn } from 'bun:test';
 import { fade, iris, pixelate, wipe } from '../src/transition/builtin';
 import { canDrawTransition, startTransition } from '../src/transition/start_transition';
 import { stepTransition } from '../src/transition/step_transition';
+import { easeInBack, easeInOutSine, easeInQuad, easeOutBack } from '../src/math/easing';
 import { createTestGame } from './helpers/test_game';
 import { newBox } from '../src/box';
 import type { TBox } from '../src/box';
@@ -33,6 +34,7 @@ const inFlight = (duration: number, loaded = true): TTransitionState => ({
     half: duration / 2,
     elapsed: 0,
     progress: 0,
+    ease: null,
     phase: 'cover',
     incoming: { name: 'in' } as TBox,
     outgoing: { name: 'out' } as TBox,
@@ -155,6 +157,68 @@ describe('how a transition is moved on', () => {
 
         state.loaded = true;
         expect(stepTransition(state, 0.016)).toBe('swap');
+    });
+});
+
+describe('a transition with a curve', () => {
+    it('spreads each half along it, and keeps to the same clock', () => {
+        const state = { ...inFlight(0.3), ease: easeInQuad };
+
+        expect(stepTransition(state, 0.075)).toBe('running');
+        expect(state.progress).toBeCloseTo(0.25, 6);
+        // The swap comes when the half is over by the clock, whatever the curve says.
+        expect(stepTransition(state, 0.075)).toBe('swap');
+        expect(state.progress).toBeCloseTo(0, 6);
+
+        expect(stepTransition(state, 0.075)).toBe('running');
+        expect(state.progress).toBeCloseTo(0.25, 6);
+        expect(stepTransition(state, 0.075)).toBe('running');
+        expect(state.progress).toBe(1);
+        expect(state.done).toBe(true);
+    });
+
+    it('never hands the shader more than 1 or less than 0, even from a curve that overshoots', () => {
+        const over = { ...inFlight(0.3), ease: easeOutBack };
+        const under = { ...inFlight(0.3), ease: easeInBack };
+        for (let i = 0; i < 9; i++) {
+            stepTransition(over, 0.015);
+            stepTransition(under, 0.015);
+            expect(over.progress).toBeLessThanOrEqual(1);
+            expect(under.progress).toBeGreaterThanOrEqual(0);
+        }
+        // Past the middle the overshooting curve is above 1, so it is held at full cover.
+        expect(easeOutBack(0.9)).toBeGreaterThan(1);
+        expect(over.progress).toBe(1);
+        expect(over.phase).toBe('cover');
+    });
+
+    it('reaches the end with a curve of your own that falls short, and goes straight on one that gives no number', () => {
+        // Held at the end of the cover while a load lands: fully covered, not 90% of the way.
+        const waiting = { ...inFlight(0.3, false), ease: (t: number) => 0.9 * t };
+        stepTransition(waiting, 0.15);
+        expect(waiting.phase).toBe('cover');
+        expect(waiting.progress).toBe(1);
+
+        // And the last frame of the uncover is fully open.
+        const short = { ...inFlight(0.3), ease: (t: number) => 0.9 * t };
+        stepTransition(short, 0.15);
+        expect(short.phase).toBe('reveal');
+        stepTransition(short, 0.15);
+        expect(short.progress).toBe(1);
+        expect(short.done).toBe(true);
+
+        const broken = { ...inFlight(0.3), ease: () => Number.NaN };
+        stepTransition(broken, 0.075);
+        expect(broken.progress).toBeCloseTo(0.5, 6);
+    });
+
+    it('is taken from the transition asked for, and is a straight line without one', () => {
+        const { store } = createTestGame();
+        const out = newBox('out');
+        const curved = startTransition(store, { ...fade(0.3), ease: easeInOutSine }, null, out);
+        expect(curved.ease).toBe(easeInOutSine);
+        store.setState('transition', { active: null });
+        expect(startTransition(store, fade(0.3), null, out).ease).toBeNull();
     });
 });
 

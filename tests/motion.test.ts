@@ -10,6 +10,7 @@ import { serializeMotionDoc } from '../src/motion/serialize_motion_doc';
 import { useMotion } from '../src/hooks/motion';
 import { createScene } from '../src/scene/create_scene';
 import { registerScene } from '../src/scene/register_scene';
+import { easeOutBounce } from '../src/math/easing';
 import { getActiveBox } from '../src/store';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { newPostEffect } from '../src/post/new_post_effect';
@@ -137,13 +138,20 @@ describe('reading a .motion file', () => {
         const given = [
             { type: 'fade', duration: 0.3, color: red },
             { type: 'wipe', duration: 0.4, direction: 'down' },
-            { type: 'iris', duration: 0.5, center: { x: 0.2, y: 0.8 } },
+            { type: 'iris', duration: 0.5, center: { x: 0.2, y: 0.8 }, ease: 'easeInOutSine' },
             { type: 'pixelate', duration: 0.4, blocks: 4 },
             { type: 'dissolve', duration: 0.8, mask: 'masks/star.png', softness: 0.1, color: red },
         ];
         const read = motion({ events: given.map((transition, i) => ({ t: i, kind: 'scene', scene: 'A', transition })) });
         expect(read.events.map((e) => (e as { transition?: unknown }).transition)).toEqual(given);
         expect(parseMotionDoc(JSON.parse(serializeMotionDoc(read)), 'again')).toEqual(read);
+    });
+
+    it('moves a transition with a curve it does not have in a straight line, and says so', () => {
+        const said = quiet();
+        const read = motion({ events: [{ t: 0, kind: 'scene', scene: 'A', transition: { type: 'fade', ease: 'easeSideways' } }] });
+        expect((read.events[0] as { transition?: unknown }).transition).toEqual({ type: 'fade' });
+        expect(String(said.mock.calls[0]![0])).toContain('easeSideways');
     });
 
     it('refuses what a transition does not take, and a dissolve with no mask', () => {
@@ -342,8 +350,9 @@ describe('a scene changed by a motion', () => {
     };
 
     it('is covered by the transition the file asks for, made with what it gives', () => {
-        const { active } = changing({ type: 'wipe', duration: 0.4, direction: 'down', color: { r: 1, g: 1, b: 1, a: 1 } });
+        const { active } = changing({ type: 'wipe', duration: 0.4, direction: 'down', color: { r: 1, g: 1, b: 1, a: 1 }, ease: 'easeOutBounce' });
         expect(active).not.toBeNull();
+        expect(active!.ease).toBe(easeOutBounce);
         expect(active!.effect.name).toBe('wipe');
         expect(active!.half).toBeCloseTo(0.2, 6);
         expect(active!.effect.uniforms).toEqual({ color: [1, 1, 1, 1], direction: [0, 1] });

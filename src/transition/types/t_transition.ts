@@ -1,3 +1,4 @@
+import type { TEaseFn } from '../../math/easing';
 import type { TTexture } from '../../loaders/texture/types/t_texture';
 import type { TUniformSignature, TUniformValues } from '../../materials/types/t_uniforms';
 
@@ -74,6 +75,22 @@ export type TTransition = {
      * by the scene going out still has the uncover to draw after that scene has stopped.
      */
     mask?: TTexture;
+    /**
+     * How each half moves along, a curve from `useTween`'s: `easeInOutSine` starts and ends gently.
+     * In a straight line unless you say.
+     *
+     * It changes only how `progress` is spread over the half, never how long the half takes or
+     * when the swap comes, which the clock decides. What the hook is handed stays between 0 and 1,
+     * so a curve that overshoots (`easeOutBack`, `easeOutElastic`) holds at the end for a moment
+     * rather than handing a shader a number it was not written for. The end of each half is the
+     * clock's: a curve of your own that stops short of 1 still ends fully covered, and fully open.
+     *
+     * @example
+     * ```ts
+     * scene.change('Level2', { transition: { ...iris(0.6), ease: easeInOutSine } });
+     * ```
+     */
+    ease?: TEaseFn;
 };
 
 /**

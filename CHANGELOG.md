@@ -20,6 +20,11 @@ releases are in [changelog/](./changelog/), one file each.
   iris's `center`, pixelate's `blocks`. A field given to a transition that does not take it is
   refused, naming it. The masks are fetched when the motion arrives. The editor's `set_motion_event`
   writes them all, and checks the picture is in the project.
+- **A transition can move along a curve.** `ease` on any transition, one of `useTween`'s curves:
+  `{ ...iris(0.6), ease: easeInOutSine }` closes and opens gently, `easeOutBounce` lands. Each half
+  is spread along it, while the clock still decides how long it lasts and when the swap comes, and
+  what the shader is handed stays between 0 and 1. In a `.motion`, `"ease": "easeInOutSine"` by
+  name, as a key's. Left out, it is a straight line, as before.
 - **A movement on part of the body.** `useSkeletalAnimation(model, { only: ['spine'] })` is a second
   animator on top of the first, on those bones and all that hangs from them: the legs run while the
   arms wave. With nothing playing it leaves them to the one below, and a movement that ends or is

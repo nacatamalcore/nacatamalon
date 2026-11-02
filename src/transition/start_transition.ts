@@ -242,6 +242,7 @@ const cover = (store: TRuntimeStore, transition: TTransition, outgoing: TBox | n
         half: Math.max(0, transition.duration) / 2,
         elapsed: 0,
         progress: 0,
+        ease: transition.ease ?? null,
         phase: 'cover',
         incoming: null,
         outgoing,

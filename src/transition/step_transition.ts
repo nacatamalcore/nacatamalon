@@ -34,15 +34,13 @@ export type TTransitionStep = 'running' | 'swap';
  */
 export const stepTransition = (state: TTransitionState, delta: number): TTransitionStep => {
     state.elapsed += delta;
-    // A transition with no duration is always at its end, so it covers for exactly as long as the
-    // incoming scene takes to load and not one frame more.
-    state.progress = state.half > 0 ? Math.min(1, state.elapsed / state.half) : 1;
+    const through = moveOn(state);
 
     if (state.phase === 'cover') {
         // The two things it waits for, and it waits for the later of them: the screen has to be
         // covered, and what is about to be shown has to have arrived. That is what makes a
         // transition pay for itself twice, hiding the cut and hiding the load.
-        if (state.progress < 1 || !state.loaded) {
+        if (through < 1 || !state.loaded) {
             return 'running';
         }
 
@@ -51,15 +49,34 @@ export const stepTransition = (state: TTransitionState, delta: number): TTransit
         // is capped at one frame: when the cover was waiting on a slow load the overshoot is the
         // length of that wait, and carrying it would skip the uncover entirely.
         state.elapsed = Math.min(Math.max(0, state.elapsed - state.half), delta);
-        state.progress = state.half > 0 ? Math.min(1, state.elapsed / state.half) : 1;
+        moveOn(state);
         return 'swap';
     }
 
     // Marked, not removed. The frame that reaches the end still has to be drawn with the effect in
     // it, or the last cover anybody saw is the one before this: a few percent short of gone, which
     // a fade forgives and a wipe does not.
-    if (state.progress >= 1) {
+    if (through >= 1) {
         state.done = true;
     }
     return 'running';
+};
+
+/**
+ * Works out `progress` from the clock, through the transition's curve, and gives back how far
+ * through the half the clock itself is.
+ *
+ * The two are kept apart on purpose. The swap and the end are the clock's to decide, so a curve can
+ * change how the cover moves but never how long it lasts; and what the shader is handed is kept
+ * between 0 and 1, so a curve that overshoots holds at the end instead of going past it.
+ */
+const moveOn = (state: TTransitionState): number => {
+    // A transition with no duration is always at its end, so it covers for exactly as long as the
+    // incoming scene takes to load and not one frame more.
+    const through = state.half > 0 ? Math.min(1, state.elapsed / state.half) : 1;
+    // The ends are the clock's too: a curve of your own that does not quite reach 1 must not leave
+    // the swap or the last frame a little short, and one that gives no number is a straight line.
+    const curved = state.ease === null || through >= 1 ? through : state.ease(through);
+    state.progress = Number.isFinite(curved) ? Math.min(1, Math.max(0, curved)) : through;
+    return through;
 };

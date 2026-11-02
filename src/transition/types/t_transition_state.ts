@@ -1,5 +1,6 @@
 import type { TBox } from '../../box';
 import type { TPostEffect } from '../../post/types/t_post_effect';
+import type { TEaseFn } from '../../math/easing';
 
 /**
  * Which half of a transition is running.
@@ -47,6 +48,10 @@ export type TTransitionState = {
      * the number the shader is given and the number the swap was decided on are the same one.
      */
     progress: number;
+    /**
+     * The curve `progress` is put through, or `null` for a straight line.
+     */
+    ease: TEaseFn | null;
     phase: TTransitionPhase;
     /**
      * The scene coming in. It is running from the moment `change` or `launch` was called, so its

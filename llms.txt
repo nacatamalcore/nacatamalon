@@ -368,7 +368,9 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   grain by grain, a picture of a star closes as a star. The mask is a `useLoadTexture` or a
   `createPixelTexture`, stretched over the screen; the transition waits for it to load, and keeps it
   until it is over even if the scene that painted it has stopped. A transition of your own takes a
-  `mask` the same way and reads it with `sampleMask(uv)`.
+  `mask` the same way and reads it with `sampleMask(uv)`. Any transition takes `ease`, a tween
+  curve, for how each half moves along: `{ ...iris(0.6), ease: easeInOutSine }`; its length stays
+  the same.
 - `launch` and `stop` take a transition too: `launch('PauseMenu', { transition: iris(0.4) })` opens a
   menu on top behind an iris, `stop({ transition: iris(0.4) })` closes the menu that calls it. What is
   underneath keeps running: `scene.pause()` it first to freeze the game behind the menu.

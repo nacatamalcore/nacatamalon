@@ -126,6 +126,11 @@ export type TMotionTransition = {
      */
     color?: TColor;
     /**
+     * Every one: the curve each half moves along, by the name a key's `ease` uses. In a straight line
+     * unless the file says.
+     */
+    ease?: TMotionEase;
+    /**
      * A wipe: which way the edge travels.
      */
     direction?: TWipeDirection;

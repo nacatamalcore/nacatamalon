@@ -9,6 +9,7 @@ import { playAttachment } from '../../audio/attachment_players';
 import { dissolve, fade, iris, pixelate, wipe } from '../../transition';
 import { applyMotionTracks, bindMotionTracks } from '../../motion/motion_tracks';
 import { findMotionBox } from '../../motion/motion_targets';
+import { MOTION_EASES } from '../../motion/motion_eases';
 import { useScene } from '../scene/use_scene';
 import { isShowingOnly } from '../physics/is_showing_only';
 import type { TMotionFile } from '../../loaders/motion';
@@ -48,6 +49,21 @@ const maskOf = (store: TRuntimeStore, file: TMotionFile, src: string): TTexture 
  * done as a fade, which is the nearest thing to what was asked.
  */
 const transitionOf = (
+    transition: TMotionTransition | undefined,
+    mask: (src: string) => TTexture,
+    warnOnce: (message: string) => void,
+): TTransition | undefined => {
+    const made = madeFrom(transition, mask, warnOnce);
+    // A name the engine does not have, which only a motion written in code can carry, is a straight
+    // line.
+    const ease = transition?.ease !== undefined ? MOTION_EASES[transition.ease] : undefined;
+    return made !== undefined && ease !== undefined ? { ...made, ease } : made;
+};
+
+/**
+ * The transition itself, before its curve.
+ */
+const madeFrom = (
     transition: TMotionTransition | undefined,
     mask: (src: string) => TTexture,
     warnOnce: (message: string) => void,

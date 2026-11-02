@@ -150,6 +150,14 @@ const readTransition = (raw: unknown, src: string, where: string): TMotionTransi
         }
         read.color = asColor(color, { r: 0, g: 0, b: 0, a: 1 });
     }
+    if (given.ease !== undefined) {
+        if (isMotionEase(given.ease)) {
+            read.ease = given.ease;
+        } else {
+            // As for a key: a curve this engine does not have is a straight line, and said.
+            console.warn(`[NacatamalOn] motion "${src}": ${where}'s transition names the curve ${JSON.stringify(given.ease)}, which does not exist, so it moves in a straight line. The curves are linear, easeInQuad, easeOutBounce and the rest of the easing names.`);
+        }
+    }
     if (given.direction !== undefined) {
         if (!DIRECTIONS.has(given.direction as string)) {
             fail(src, `${where}: a wipe's "direction" has to be "left", "right", "up" or "down".`);
