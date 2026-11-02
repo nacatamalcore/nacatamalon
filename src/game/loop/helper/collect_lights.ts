@@ -88,6 +88,55 @@ export const holdsLights = (box: TBox): boolean => {
 };
 
 /**
+ * The level of the dark side that the last of these ambient lights asks for, or `null` with none.
+ */
+const levelOf = (found: readonly TLight[]): TColor | null => {
+    let last: TLight | null = null;
+    for (const light of found) {
+        if (light.type === 'ambient') last = light;
+    }
+    return last === null ? null : { r: last.color.r * last.intensity, g: last.color.g * last.intensity, b: last.color.b * last.intensity, a: 1 };
+};
+
+/**
+ * How dark the shade is in what a view shows, when the view says so with a `useAmbientLight` of its
+ * own: the world it looks at included, as with its fog. A minimap of a dark dungeon reads in full.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const ownAmbientOf = (view: TBox): TColor | null => {
+    const found: TLight[] = [];
+    gather(view, found, null);
+    return levelOf(found);
+};
+
+/**
+ * What lights the models a view makes itself (a minimap's marker).
+ *
+ * Its own lamps when it brings any, and otherwise the world's, borrowed and never casting: the
+ * view's shadow map belongs to how the world itself is seen. An ambient light alone is not a lamp,
+ * so a view with only that keeps the world's lamps and sets just how dark its shade is.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const viewLighting = (view: TBox, world: TBox): TSceneLighting => {
+    const found: TLight[] = [];
+    gather(view, found, null);
+    if (found.some(isPunctualLight)) {
+        return collectLighting(view);
+    }
+    const borrowed = collectLighting(world);
+    return {
+        lights: borrowed.lights.map((light) => (light.castShadow === true ? { ...light, castShadow: false } : light)),
+        ambient: levelOf(found) ?? borrowed.ambient,
+    };
+};
+
+/**
  * What lights a scene, worked out once a frame.
  *
  * Three rules, and each one is a decision rather than an implementation detail:
@@ -134,9 +183,7 @@ export const collectLighting = (scene: TBox): TSceneLighting => {
         if (declared.length > 1 && firstTimeIn(game, 'lights: a second ambient')) {
             console.warn(`[NacatamalOn] a scene has ${declared.length} ambient lights and one sets how dark its shade is: the last one made.`);
         }
-        const last = declared[declared.length - 1]!;
-        const ambient = { r: last.color.r * last.intensity, g: last.color.g * last.intensity, b: last.color.b * last.intensity, a: 1 };
-        return { lights: lights.length > 0 ? lights : [], ambient };
+        return { lights: lights.length > 0 ? lights : [], ambient: levelOf(declared)! };
     }
 
     const source = lights.length > 0 ? lights : [DEFAULT_LIGHT];

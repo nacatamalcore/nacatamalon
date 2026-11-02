@@ -319,7 +319,9 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   without running it twice; parallax and pixel steps are the view's own. Show it with a sprite,
   which can be masked round or carry a material. What `View` draws goes on top and only there (a
   minimap's marker), through the same cameras, lit by the scene's lamps and in its fog unless the
-  view has its own. Never in a view: what is pinned to the screen, and what shows the view itself.
+  view has its own. A `useAmbientLight` in `View` keeps the scene's lamps and sets the shade of all
+  it shows, the world too: a minimap at `intensity: 1` reads in full in a dark game. Never in a
+  view: what is pinned to the screen, and what shows the view itself.
   `hide` and `only` choose the rest, each `{ tags, kinds, objects }` (`kinds: ['particles']`, `tags`
   from `useSpawn(Piece, { tags })` or a sprite's own from `useTag(name).add(sprite)`); `hide` wins,
   `visible: false` hides everywhere, `setViewFilter` changes them. Pin the sprites showing views in

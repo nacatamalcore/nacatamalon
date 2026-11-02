@@ -73,6 +73,12 @@ releases are in [changelog/](./changelog/), one file each.
   same. Now each view whose scene has a light casting has a map of its own, around its own camera,
   up to four in a frame, the screen's first. Each is made the first frame a view needs it, so a game
   with one camera keeps one, and let go of after a few seconds unused.
+- **A view with only a `useAmbientLight` of its own keeps the scene's lamps.** It counted as lights
+  of its own, so what the view drew was lit by the ambient alone and lost the sun, and the world it
+  showed did not take it at all. Now it sets how dark the shade is in all the view shows, the world
+  included, as its fog does: a minimap at `intensity: 1` reads in full while the game around it is
+  dark. A picture that sees `'3d'` takes it for the room it shows. A view with lamps of its own is
+  lit by those, as before.
 - **Particles in space are drawn among see-through models by how far they are.** Smoke behind a pane
   of glass is drawn before the glass and seen through it, and smoke in front of it after, whichever
   was made first. A cloud is as far as its emitter. They used to go after every model, so smoke

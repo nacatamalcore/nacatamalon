@@ -13,6 +13,11 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  * that asks for more than one keeps the last made, and says so: a cave can set its own on the way
  * in.
  *
+ * In a view (`createSpriteTexture` with `sees: 'world'`) it sets the level in all the view shows, and
+ * the scene's lamps still light it unless the view brings lamps of its own: a minimap at
+ * `intensity: 1` reads in full while the game around it is dark. In a picture that sees `'3d'`, it
+ * sets the level of the room it shows.
+ *
  * @param options Its colour and how strong it is.
  * @returns The light, to read and to change.
  *

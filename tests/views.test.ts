@@ -26,6 +26,7 @@ import { registerScene } from '../src/scene/register_scene';
 import { startScene } from '../src/scene/start_scene';
 import { createFakeCanvas, createTestGame, startTestScene } from './helpers/test_game';
 import { useDirectionalLight } from '../src/hooks/light/use_directional_light';
+import { useAmbientLight } from '../src/hooks/light/use_ambient_light';
 import { captureScreen } from '../src/game/capture';
 import { findShadowSources } from '../src/render/shared/light_space';
 import type { ITexture } from '../src/render/interface';
@@ -749,6 +750,57 @@ describe('the light on what a view makes itself', () => {
     it('in a picture of its own world, is only what is in it', () => {
         expect(lit('inside', false)).not.toContain(0.7);
         expect(lit('inside', true)).toEqual([0.3]);
+    });
+
+    it('with only an ambient light of its own, keeps the scene\'s lamps and sets the shade of all it shows', () => {
+        const { store } = createTestGame();
+        let map!: TTexture;
+        let screen!: TTexture;
+        const Minimap = () => {
+            useCamera3d({ projection: 'orthographic', transform: { z: 20 } });
+            useAmbientLight({ intensity: 1 });
+            createMesh({ geometry: useCubeGeometry() });
+        };
+        const Screen = () => {
+            useCamera3d({ projection: 'perspective', transform: { z: 10 } });
+        };
+        startTestScene(store, 'S', () => {
+            useDirectionalLight({ intensity: 0.3, ambient: 0.1, castShadow: true });
+            createMesh({ geometry: useCubeGeometry() });
+            map = createSpriteTexture({ width: 32, height: 32, sees: 'world' }, Minimap);
+            screen = createSpriteTexture({ width: 32, height: 32, sees: 'world' }, Screen);
+            return createScene();
+        });
+        const ctx = frameOf(store);
+        const [world, marker] = passFor(ctx, map).views3d!;
+
+        // The dungeon in the minimap reads in full, and so does its marker, lit by the scene's sun
+        // without casting from it a second time.
+        expect(world!.ambient.r).toBeCloseTo(1);
+        expect(world!.lights.map((light) => light.intensity)).toEqual([0.3]);
+        expect(marker!.ambient.r).toBeCloseTo(1);
+        expect(marker!.lights.map((light) => [light.intensity, light.castShadow])).toEqual([[0.3, false]]);
+        // The dungeon in it still has its shadow map, found by the view it ended up as.
+        expect(findShadowSources(ctx).map((source) => source.view)).toContain(world!);
+        // The other view keeps the scene's dark.
+        expect(passFor(ctx, screen).views3d![0]!.ambient.r).toBeCloseTo(0.03);
+    });
+
+    it('in a picture of the room it is in, sets the shade of the room it shows', () => {
+        const { store } = createTestGame();
+        let monitor!: TTexture;
+        const Feed = () => {
+            useCamera3d({ projection: 'perspective', transform: { z: 10 } });
+            useAmbientLight({ intensity: 0.8 });
+        };
+        startTestScene(store, 'S', () => {
+            useCamera3d({ projection: 'perspective', transform: { z: 10 } });
+            useDirectionalLight({ intensity: 0.3, ambient: 0.1 });
+            createMesh({ geometry: useCubeGeometry() });
+            monitor = createSpriteTexture({ width: 32, height: 32, sees: '3d' }, Feed);
+            return createScene();
+        });
+        expect(passFor(frameOf(store), monitor).views3d![0]!.ambient.r).toBeCloseTo(0.8);
     });
 });
 

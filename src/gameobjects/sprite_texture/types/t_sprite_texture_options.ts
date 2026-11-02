@@ -32,8 +32,11 @@ export type TSpriteTextureOptions = {
      * screen's and is never in a view, and neither is anything showing the view itself. What the
      * component draws goes on top, and is seen only there: a minimap's marker. It is in the world the
      * view looks at, through the same cameras, lit by the scene's lamps and in its fog, unless the
-     * view brings lamps or fog of its own. A picture that sees `'inside'` is a world of its own and
-     * is lit only by what is in it.
+     * view brings lamps or fog of its own. A `useAmbientLight` of its own is not a lamp: it keeps the
+     * scene's and sets how dark the shade is in all the view shows, the world too, like its fog (a
+     * minimap of a dark dungeon at `intensity: 1` reads in full). In a picture that sees `'3d'` it
+     * sets the level of the room the picture shows. A picture that sees `'inside'` is a world of its
+     * own and is lit only by what is in it.
      */
     sees?: TSpriteTextureSees;
     /**

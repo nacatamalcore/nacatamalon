@@ -27,7 +27,7 @@ import { expandNineSlice } from '../../gameobjects/nine_slice/expand_nine_slice'
 import type { TText } from '../../gameobjects/text/types/t_text';
 import type { TRuntimeStore } from '../../store';
 import type { TRuntimeState } from '../../store/types/t_runtime_state';
-import { collectLighting, holdsLights } from './helper/collect_lights';
+import { collectLighting, holdsLights, ownAmbientOf, viewLighting } from './helper/collect_lights';
 import { computeJointMatrices } from '../../math/skinning';
 import { buildPostChain } from '../../post/build_post_chain';
 import type { TCamera2d } from '../../camera';
@@ -734,14 +734,7 @@ const gatherTree = (
     let lighting: TSceneLighting | null = null;
     if (view >= 0) {
         const world = viewport?.worldOf;
-        if (world !== undefined && world !== root && !holdsLights(root)) {
-            // The world's lamps, borrowed to light what a view makes itself, and never to cast: the
-            // view's shadow map belongs to how the world itself is seen.
-            const borrowed = collectLighting(world);
-            lighting = { lights: borrowed.lights.map((light) => (light.castShadow === true ? { ...light, castShadow: false } : light)), ambient: borrowed.ambient };
-        } else {
-            lighting = collectLighting(root);
-        }
+        lighting = world !== undefined && world !== root ? viewLighting(root, world) : collectLighting(root);
         const fog = root.fog ?? world?.fog ?? null;
         const seenThrough = viewport?.camera3d ?? root.camera3d;
         views3d.push({ camera: drawnThrough(seenThrough, camera2d), cullingCamera: skippedBy(seenThrough, camera2d), lights: lighting.lights, ambient: lighting.ambient, fog });
@@ -954,10 +947,13 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
         const through: TSeenThrough = { camera2d: cameraAsDrawn(own2d, snapping), camera3d: box.camera3d ?? scene.camera3d, layers: null, ownCamera2d: own2d, worldOf: scene };
         lookedThrough = through;
         walkingView(walk, () => gatherTree(scene, lists, 0, { flat: [], deep: [] }, [], through, true, { width: picture.texture.width, height: picture.texture.height }));
-        // Its own fog, when it asked for one: it is looking at that world.
-        if (box.fog !== null) {
+        // Its own fog and its own shade, when it asked for them: it is looking at that world, and a
+        // minimap of a dark dungeon can read in full.
+        const ambient = firstView < lists.views3d.length ? ownAmbientOf(box) : null;
+        if (box.fog !== null || ambient !== null) {
             for (let i = firstView; i < lists.views3d.length; i++) {
-                lists.views3d[i] = { ...lists.views3d[i]!, fog: box.fog };
+                const view = lists.views3d[i]!;
+                lists.views3d[i] = { ...view, fog: box.fog ?? view.fog, ambient: ambient ?? view.ambient };
             }
         }
     }
@@ -968,7 +964,7 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
         const seenThrough = box.camera3d ?? seen.camera;
         // Through its 2D camera as the picture draws its own sprites with it, rounded the same.
         const flat = cameraAsDrawn(box.camera2d, snapping);
-        lists.views3d.push({ camera: drawnThrough(seenThrough, flat), cullingCamera: skippedBy(seenThrough, flat), lights: lighting.lights, ambient: lighting.ambient, fog: box.fog ?? seen.fog });
+        lists.views3d.push({ camera: drawnThrough(seenThrough, flat), cullingCamera: skippedBy(seenThrough, flat), lights: lighting.lights, ambient: ownAmbientOf(box) ?? lighting.ambient, fog: box.fog ?? seen.fog });
         const first = lists.drawables.length;
         for (const model of seen.models) {
             if (shows(model, picture.texture)) {
@@ -1008,7 +1004,7 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
         ...own,
         camera: lookedThrough.camera3d,
         fog: box.fog ?? rootOf(box).fog,
-        lighting: own.lighting ?? (holdsLights(box) ? collectLighting(box) : null),
+        lighting: own.lighting ?? (holdsLights(box) ? viewLighting(box, rootOf(box)) : null),
     };
     for (const inner of found) {
         gatherPicture(inner, seenHere, delta);
