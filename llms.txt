@@ -324,16 +324,20 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   view: what is pinned to the screen, and what shows the view itself.
   `hide` and `only` choose the rest, each `{ tags, kinds, objects }` (`kinds: ['particles']`, `tags`
   from `useSpawn(Piece, { tags })` or a sprite's own from `useTag(name).add(sprite)`); `hide` wins,
-  `visible: false` hides everywhere, `setViewFilter` changes them. Pin the sprites showing views in
-  a piece of their own (`useSpawn(Hud)()` with `useScreenSpace()` inside it): called in the scene's
-  body, `useScreenSpace` pins the whole scene. `viewToWorld(shownSprite, info)` turns a click on it
-  into the view's 2D world (`inside`, `picture`), `worldToView(shownSprite, point)` puts a world
-  point on it (`edge` for an arrow at its border), `viewToRay` gives the 3D camera's ray. A split
-  screen calls `useWorldOffScreen()` in the scene, so the screen draws only what is pinned (a
-  capture of the game too; the editor, camera previews and a capture through another camera see the
-  world), and `resizeSpriteTexture(view, w, h)` from `onResized`. Views showing each other are drawn
-  in order; in a ring, the earliest made one shows the others a frame late. Not yet: a view of
-  another scene, and clicks reaching sprites through a view.
+  `visible: false` hides everywhere, `setViewFilter` changes them. The short way for a view in a
+  rectangle of the screen: `createView({ x, y, width, height }, View, ...args)` makes the picture
+  and the sprite pinned there showing it, and gives back that sprite (`.texture` is the picture;
+  `ownerOf(sprite)` is the whole view, to hide or `destroy`); same options as the picture, `sees`
+  aside. By hand, pin the sprites showing views in a piece of their own (`useSpawn(Hud)()` with
+  `useScreenSpace()` inside it): called in the scene's body, `useScreenSpace` pins the whole scene.
+  `viewToWorld(shownSprite, info)` turns a click on it into the view's 2D world (`inside`,
+  `picture`), `worldToView(shownSprite, point)` puts a world point on it (`edge` for an arrow at its
+  border), `viewToRay` gives the 3D camera's ray. A split screen calls `useWorldOffScreen()` in the
+  scene, so the screen draws only what is pinned (a capture of the game too; the editor, camera
+  previews and a capture through another camera see the world), and
+  `resizeSpriteTexture(view, w, h)` from `onResized`. Views showing each other are drawn in order;
+  in a ring, the earliest made one shows the others a frame late. Not yet: a view of another scene,
+  and clicks reaching sprites through a view.
 - **Data that outlives a scene** goes in a store, created once at module level:
   `const session = createGameStore({ key: 'session', state: { score: 0 } });`, then
   `session.set((s) => { s.score += 10; })` in one scene and `session.state.score` in the next.

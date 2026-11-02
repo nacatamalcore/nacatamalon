@@ -7,6 +7,14 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **`createView`: a view of the world in a rectangle of the screen.**
+  `createView({ x, y, width, height }, View, ...args)` makes the view
+  (`createSpriteTexture({ sees: 'world' })`) and the sprite pinned to the screen that shows it, in
+  one go: half of a split screen is one line. It gives back that sprite, for `viewToWorld` and to
+  move it; its `texture` is the picture, and its piece, `ownerOf(sprite)`, is the whole view, to
+  hide or `destroy`. It does not take the world off the screen: a split screen still says
+  `useWorldOffScreen`. A view that is round or carries a material is made as before.
+
 - **A model's occlusion: its creases darker, as its author saw them.** A glTF's `occlusionTexture`
   is read, its `strength` and either of its first two picture coordinates, and one picture that packs
   the occlusion with the roughness and metalness serves as it is. In code, `occlusion` on

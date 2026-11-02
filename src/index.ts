@@ -8,8 +8,8 @@ export type { TMesh, TMeshOptions } from './gameobjects/mesh';
 export { createModel } from './gameobjects/model';
 export { createPack } from './gameobjects/pack';
 export type { TPackOptions } from './gameobjects/pack';
-export { createSpriteTexture, setViewFilter, resizeSpriteTexture, viewToWorld, worldToView, viewToRay } from './gameobjects/sprite_texture';
-export type { TSpriteTexture, TSpriteTextureSees, TSpriteTextureOptions, TViewFilter, TViewPointInput, TViewToWorld, TWorldToView, TViewRay } from './gameobjects/sprite_texture';
+export { createSpriteTexture, createView, setViewFilter, resizeSpriteTexture, viewToWorld, worldToView, viewToRay } from './gameobjects/sprite_texture';
+export type { TSpriteTexture, TSpriteTextureSees, TSpriteTextureOptions, TViewFilter, TViewOptions, TViewPointInput, TViewToWorld, TWorldToView, TViewRay } from './gameobjects/sprite_texture';
 // Pictures painted in code, in plain JavaScript, and the textures made from them: a game's own art
 // with no image files and no page, the same in the browser, on the native runtime and in a test.
 export {
