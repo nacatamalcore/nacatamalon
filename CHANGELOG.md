@@ -40,11 +40,12 @@ releases are in [changelog/](./changelog/), one file each.
   minimap showing a monitor, whatever kind each one is; two that show each other are drawn in the
   order they were made, and the first shows the other a frame late.
 - **`useLoadScene`: a scene laid out in the editor, loaded like a picture.**
-  `useLoadScene({ src: 'scenes/cave.scene' })` fetches the file, adds the scene under the name
-  written in it so `change('cave')` starts it, and asks at once for what it uses; `useLoader` counts
-  it until all of that has arrived. A game no longer has to fetch and read every document before it
-  starts, and a level can be loaded when the player gets near it. Changing to a scene whose file is
-  still on its way says so, rather than that there is no such scene.
+  `const cave = useLoadScene({ src: 'scenes/cave.scene' })` fetches the file, adds the scene under
+  the name written in it (`cave.name`, not always the file's) so `change(cave.name)` starts it,
+  and asks at once for what it uses; `useLoader` counts it until all of that has arrived. A game
+  no longer has to fetch and read every document before it starts, and a level can be loaded when
+  the player gets near it. Changing to a scene whose file is still on its way says so, rather than
+  that there is no such scene.
 
 ### Changed
 

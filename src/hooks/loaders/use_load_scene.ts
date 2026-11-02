@@ -30,7 +30,8 @@ export type TUseLoadSceneOptions = {
 /**
  * Loads a scene laid out in the editor: a `.scene` file.
  *
- * When it lands it is added to the game under the name written in it, so `change('cave')` starts it
+ * When it lands it is added to the game under the name written in it, which is not always the file's
+ * (`cave.scene` may be the scene `Cave`): its `name` says which, and `change(cave.name)` starts it
  * like a scene written in code, and what it uses (its pictures, sounds, models) is asked for at once,
  * so it starts with all of it there.
  *
@@ -48,10 +49,10 @@ export type TUseLoadSceneOptions = {
  * ```ts
  * const Loading: TSceneFn = () => {
  *     const scene = useScene();
- *     useLoadScene({ src: 'scenes/cave.scene' });
+ *     const cave = useLoadScene({ src: 'scenes/cave.scene' });
  *     const loader = useLoader();
  *     useUpdate(() => {
- *         if (loader.done) scene.change('cave');
+ *         if (loader.done) scene.change(cave.name);
  *     });
  *     return createScene();
  * };
