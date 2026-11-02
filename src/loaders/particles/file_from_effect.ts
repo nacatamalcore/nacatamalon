@@ -1,6 +1,7 @@
 import { markWatchable } from '../../store/record_version';
 import { childFileFor, particlesAtlas, particlesTexture } from './load_particles';
 import { noteSheetUser } from '../sheet_users';
+import { wearPicture } from '../worn_pictures';
 import { parseParticlesDoc } from './parse_particles_doc';
 import type { TParticlesEffect } from './types/t_particles_effect';
 import type { TParticlesFile } from './types/t_particles_file';
@@ -43,6 +44,11 @@ export const fileFromEffect = (store: TRuntimeStore, effect: TParticlesEffect): 
         if (typeof effect.atlas === 'string' && sheet !== null && 'type' in sheet && sheet.status === 'released') {
             known.atlas = particlesAtlas(store, IN_CODE, effect.atlas, known, true);
         }
+        // Its picture the same.
+        if (typeof effect.texture === 'string' && known.texture !== null && known.texture.status === 'released') {
+            known.texture = particlesTexture(store, IN_CODE, effect.texture);
+            wearPicture(known.texture, known, true);
+        }
         return known;
     }
 
@@ -79,6 +85,9 @@ export const fileFromEffect = (store: TRuntimeStore, effect: TParticlesEffect): 
         }
     } else if (typeof picture === 'string' && picture.trim() !== '') {
         file.texture = particlesTexture(store, IN_CODE, picture);
+        // A picture from the cache, which letting go of a model wearing it must leave while this
+        // effect is drawn.
+        wearPicture(file.texture, file, true);
     } else if (picture !== null && picture !== undefined && typeof picture === 'object') {
         file.texture = picture;
     }

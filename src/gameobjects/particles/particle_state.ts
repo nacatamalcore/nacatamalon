@@ -4,6 +4,7 @@ import type { TParticles3d } from './types/t_particles_3d';
 import type { TChildParticles, TParticleState } from './types/t_particle_pool';
 import type { TParticlesFile } from '../../loaders/particles/types/t_particles_file';
 import { dropIdleSheetUser, noteSheetUser } from '../../loaders/sheet_users';
+import { dropIdleWearer, wearAgainWhileDrawn } from '../../loaders/worn_pictures';
 
 /**
  * What each emitter owns beyond its record, found by the record rather than kept in it.
@@ -123,16 +124,20 @@ export const unbindParticles = (emitter: TParticles | TParticles3d): void => {
     if (at >= 0) {
         file.bound.splice(at, 1);
     }
-    // An effect written in code holds its sheet only while it is drawn: with its last emitter gone,
-    // it lets go of its place on the sheet, and is taken on again if it is used again.
+    // An effect written in code holds its sheet and its picture only while it is drawn: with its last
+    // emitter gone, it lets go of its place on them, and is taken on again if it is used again.
     if (file.atlas !== null && 'type' in file.atlas) {
         dropIdleSheetUser(file.atlas, file);
+    }
+    if (file.texture !== null) {
+        dropIdleWearer(file.texture, file);
     }
 };
 
 /**
  * Puts an emitter on its file's list, where the loader finds it when the file lands, and notes the
- * file again as using its sheet: an effect written in code used again after its last emitter went.
+ * file again as using its sheet and its picture: an effect written in code used again after its last
+ * emitter went.
  *
  * @internal
  * @since 1.0.0
@@ -143,5 +148,8 @@ export const bindParticles = (emitter: TParticles | TParticles3d): void => {
     file.bound.push(emitter);
     if (file.atlas !== null && 'type' in file.atlas) {
         noteSheetUser(file.atlas, file);
+    }
+    if (file.texture !== null) {
+        wearAgainWhileDrawn(file.texture, file);
     }
 };
