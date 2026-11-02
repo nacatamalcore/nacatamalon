@@ -67,6 +67,13 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **Particles in space are drawn among see-through models by how far they are.** Smoke behind a pane
+  of glass is drawn before the glass and seen through it, and smoke in front of it after, whichever
+  was made first. A cloud is as far as its emitter. They used to go after every model, so smoke
+  behind glass covered it. At a tie in `zIndex` with something flat, the cloud is now drawn first
+  and the flat thing over it, as a model already was. A picture that `sees: '3d'` sorts what is
+  see-through by its own camera, so a monitor looking the other way sees it the other way round,
+  and with `useWorldOffScreen` its models are sorted too, where they were not before.
 - **Flat particles are drawn on the pixels the sprites are on.** Under `pixelSnap` their size is
   whole pixels and, unturned, their edges land between two pixels, through the camera of the screen
   or of each view. Before, a particle's edge could fall almost on the middle of a row of pixels,

@@ -8,7 +8,7 @@ import { pictureMadeAt } from '../../gameobjects/sprite_texture/create_sprite_te
 import type { TSpriteTexture } from '../../gameobjects/sprite_texture/types';
 import { sightOf } from '../../render/shared/sight_2d';
 import { MAX_VIEWS } from '../../render/webgpu/sprite/write_sprite_instance';
-import { lookAgainAtParticles, stepSceneParticles } from './helper/step_scene_particles';
+import { emitterDrawnBy, lookAgainAtParticles, stepSceneParticles } from './helper/step_scene_particles';
 import { stepSceneTilemaps } from './helper/step_scene_tilemaps';
 import type { IRenderer } from '../../render';
 import { stepScenePolygons, whiteFor } from './helper/step_scene_polygons';
@@ -55,9 +55,17 @@ const inDepth = (drawable: TDrawable | TDrawSprite): boolean =>
     drawable.type === 'mesh' || drawable.type === 'particles-3d' || drawable.type === 'lines';
 
 /**
- * Which half of the engine a drawable belongs to: models and lines first, everything 2D over them.
+ * Which half of the engine a drawable belongs to: what is in depth first (models, particles and lines
+ * in space), everything 2D over them.
  */
-const layerRank = (drawable: TDrawable): number => (drawable.type === 'mesh' || drawable.type === 'lines' ? 0 : 1);
+const layerRank = (drawable: TDrawable): number => (inDepth(drawable) ? 0 : 1);
+
+/**
+ * Whether a drawable blends over what is behind it in depth, and so is drawn after the solid models,
+ * furthest first: a see-through model, or particles in space, which are always blended.
+ */
+const blendsOver = (drawable: TDrawable): boolean =>
+    (drawable.type === 'mesh' && isTransparentMesh(drawable)) || drawable.type === 'particles-3d';
 
 /**
  * The camera's view, kept between frames so sorting glass allocates nothing.
@@ -65,19 +73,32 @@ const layerRank = (drawable: TDrawable): number => (drawable.type === 'mesh' || 
 const sortView = mat.create();
 
 /**
- * How far in front of the camera a see-through model is, along the way the camera looks: the more
- * negative, the further. Along the view rather than a straight distance, so an orthographic camera
- * sorts as correctly as a perspective one. Measured from the model's own place, so two see-through
- * models that cross each other can still come out the wrong way round, as they do in most engines.
+ * What a drawable is sorted as: itself, or, for a cloud already swapped for its stand-in (the models
+ * a monitor shows), its emitter, which has the place and the `zIndex` the stand-in does not.
+ */
+const sortedAs = (drawable: TDrawable): TDrawable =>
+    drawable.type === 'particles-3d' ? (emitterDrawnBy(drawable) as TDrawable | undefined) ?? drawable : drawable;
+
+/**
+ * How far in front of the camera a see-through model or a cloud of particles is, along the way the
+ * camera looks: the more negative, the further. Along the view rather than a straight distance, so an
+ * orthographic camera sorts as correctly as a perspective one. Measured from the model's or the
+ * emitter's own place, so two that cross each other can still come out the wrong way round, as they
+ * do in most engines, and a cloud is as far as its emitter even when its particles have drifted.
  */
 const viewDepth = (drawable: TDrawable, view: Float32Array): number => {
-    if (drawable.type !== 'mesh') {
+    const placed = sortedAs(drawable);
+    if (placed.type !== 'mesh' && placed.type !== 'particles-3d') {
         return 0;
     }
-    const world = drawable.worldMatrix;
-    const x = world !== undefined ? world[12] : drawable.transform.x;
-    const y = world !== undefined ? world[13] : drawable.transform.y;
-    const z = world !== undefined ? world[14] : drawable.transform.z;
+    const world = placed.worldMatrix;
+    // A stand-in nobody knows the emitter of has no place to be measured from.
+    if (world === undefined && placed.transform === undefined) {
+        return 0;
+    }
+    const x = world !== undefined ? world[12] : placed.transform.x;
+    const y = world !== undefined ? world[13] : placed.transform.y;
+    const z = world !== undefined ? world[14] : placed.transform.z;
     return view[2] * x + view[6] * y + view[10] * z + view[14];
 };
 
@@ -91,6 +112,7 @@ let sortDepth = new Float64Array(256);
 const sortOrder: number[] = [];
 const sortDrawables: TDrawable[] = [];
 const sortCameras: number[] = [];
+const sortLevels: Array<TMaskLevel | null> = [];
 
 /**
  * Sorts by `zIndex` the drawables from `start` to the end, in place, and only if one of them asks
@@ -101,22 +123,22 @@ const sortCameras: number[] = [];
  * `cameraIndex` is reordered with them: each entry belongs to its drawable, and sorting one list
  * without the other would draw a HUD through the world's camera.
  *
- * **See-through models go after the solid ones at their number, furthest first.** They blend over
- * what is already drawn, so what is behind them has to be there first, and among themselves the
- * nearest has to be last. `zIndex` still wins over all of it, so a scene that ordered its glass by
- * hand keeps that order.
+ * **See-through models and particles in space go after the solid ones at their number, furthest
+ * first.** They blend over what is already drawn, so what is behind them has to be there first, and
+ * among themselves the nearest has to be last. `zIndex` still wins over all of it, so a scene that
+ * ordered its glass by hand keeps that order.
  */
 const sortSceneByZIndex = (drawables: TDrawable[], cameraIndex: number[], start: number, camera: TCamera3d | null, levels: Array<TMaskLevel | null> | null): void => {
     let needed = false;
     let models = false;
     for (let i = start; i < drawables.length; i++) {
-        if (drawables[i].zIndex !== undefined) {
+        if (sortedAs(drawables[i]).zIndex !== undefined) {
             needed = true;
             break;
         }
         // A scene that mixes models and sprites has to be sorted even when nobody named a number,
         // or which one is on top would depend on the order they were made in.
-        models = models || drawables[i].type === 'mesh' || drawables[i].type === 'lines';
+        models = models || inDepth(drawables[i]);
     }
     needed = needed || (models && drawables.length - start > 1);
     if (!needed) {
@@ -151,8 +173,8 @@ const sortSceneByZIndex = (drawables: TDrawable[], cameraIndex: number[], start:
     let seeThrough = false;
     for (let i = 0; i < count; i++) {
         const drawable = drawables[start + i];
-        const glass = drawable.type === 'mesh' && isTransparentMesh(drawable);
-        z[i] = drawable.zIndex ?? 0;
+        const glass = blendsOver(drawable);
+        z[i] = sortedAs(drawable).zIndex ?? 0;
         rank[i] = layerRank(drawable) * 2 + (glass ? 1 : 0);
         depth[i] = 0;
         seeThrough = seeThrough || glass;
@@ -194,16 +216,22 @@ const sortSceneByZIndex = (drawables: TDrawable[], cameraIndex: number[], start:
         sortedCameras[i] = cameraIndex[start + order[i]];
     }
     // A drawable's masks go with it, like its camera.
-    const sortedLevels = levels === null ? null : order.map((i) => levels[start + i] ?? null);
+    if (levels !== null) {
+        sortLevels.length = count;
+        for (let i = 0; i < count; i++) {
+            sortLevels[i] = levels[start + order[i]] ?? null;
+        }
+    }
     for (let i = 0; i < count; i++) {
         drawables[start + i] = sortedDrawables[i];
         cameraIndex[start + i] = sortedCameras[i];
-        if (sortedLevels !== null) {
-            levels![start + i] = sortedLevels[i]!;
+        if (levels !== null) {
+            levels[start + i] = sortLevels[i]!;
         }
     }
     // Let go of what was sorted, so a scene that is gone is not kept alive by the last frame's copy.
     sortedDrawables.length = 0;
+    sortLevels.length = 0;
 };
 
 /**
@@ -941,6 +969,7 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
         // Through its 2D camera as the picture draws its own sprites with it, rounded the same.
         const flat = cameraAsDrawn(box.camera2d, snapping);
         lists.views3d.push({ camera: drawnThrough(seenThrough, flat), cullingCamera: skippedBy(seenThrough, flat), lights: lighting.lights, ambient: lighting.ambient, fog: box.fog ?? seen.fog });
+        const first = lists.drawables.length;
         for (const model of seen.models) {
             if (shows(model, picture.texture)) {
                 continue;
@@ -950,6 +979,9 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
             lists.viewIndex.push(view);
             lists.masks?.levels.push(null);
         }
+        // What is see-through again, furthest first, through this picture's own camera: the screen's
+        // order is the screen's, and a monitor looking the other way sees it the other way round.
+        sortSceneByZIndex(lists.drawables as TDrawable[], lists.cameraIndex, first, seenThrough, lists.masks?.levels ?? null);
     }
 
     let colliders = pictureColliders.get(box);

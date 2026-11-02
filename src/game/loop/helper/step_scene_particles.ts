@@ -29,6 +29,21 @@ const stand = new WeakMap<
 >();
 
 /**
+ * The emitter each stand-in draws, the other way round: what a sort reads to know where a cloud
+ * already swapped for its stand-in is.
+ */
+const emitterOf = new WeakMap<object, TParticles | TParticles3d>();
+
+/**
+ * The emitter a stand-in draws, or `undefined` for anything else.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const emitterDrawnBy = (drawn: object): TParticles | TParticles3d | undefined => emitterOf.get(drawn);
+
+/**
  * A child effect's stand-in, kept like an emitter's.
  */
 const childStand = new WeakMap<TChildParticles, { -readonly [K in keyof TDrawParticles]: TDrawParticles[K] }>();
@@ -210,6 +225,7 @@ export const stepSceneParticles = (
         if (drawn === undefined) {
             drawn = { type: emitter.type, instances: EMPTY, count: 0, texture: null, blend: 'alpha' };
             stand.set(emitter, drawn);
+            emitterOf.set(drawn, emitter);
         }
         drawn.count = 0;
         (drawn as { children?: unknown }).children = undefined;

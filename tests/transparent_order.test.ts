@@ -9,6 +9,12 @@ import { fillFrameContext } from '../src/game/loop/fill_frame_context';
 import { parseSceneDoc, sceneFromDoc, serializeScene } from '../src/scene/document';
 import { isTransparentMesh } from '../src/render/shared/is_transparent_mesh';
 import { createTestGame, startTestScene } from './helpers/test_game';
+import { createParticles3d } from '../src/gameobjects/particles';
+import { createSpriteTexture } from '../src/gameobjects/sprite_texture';
+import { useWorldOffScreen } from '../src/hooks/camera/use_world_off_screen';
+import type { TTexture } from '../src/loaders';
+import { newParticlesFile } from '../src/loaders/particles/new_particles_file';
+import { parseParticlesDoc } from '../src/loaders/particles/parse_particles_doc';
 import type { TMesh } from '../src/gameobjects/mesh/types/t_mesh';
 import type { TFrameContext } from '../src/render';
 import type { TRuntimeStore } from '../src/store';
@@ -184,5 +190,116 @@ describe('see-through in a scene document', () => {
         const doc = written(true);
         materialOf(doc).transparent = 'yes';
         expect(materialOf(parseSceneDoc(doc, '/scenes/level.scene'))).not.toHaveProperty('transparent');
+    });
+});
+
+describe('particles in space', () => {
+    /**
+     * A cloud of particles at depth `z`, as many as `count` so the order can tell the clouds apart:
+     * what reaches the frame is a copy of the emitter for drawing, not the emitter.
+     */
+    const cloud = (store: TRuntimeStore, count: number, z: number, zIndex?: number): void => {
+        const key = `smoke-${count}`;
+        const file = newParticlesFile(key, key);
+        file.doc = parseParticlesDoc({ kind: 'particles-3d', emission: { burst: count } }, `/${key}.particles`);
+        file.status = 'ready';
+        store.get('assets').particles.set(key, file);
+        useSpawn(() => {
+            useTransform({ z });
+            createParticles3d({ effect: key, seed: 1, ...(zIndex !== undefined ? { zIndex } : {}) });
+        })();
+    };
+
+    /** The order, a cloud read as `smoke×count`. */
+    const order = (store: TRuntimeStore): string[] => {
+        const ctx: TFrameContext = { passes: [{}], time: 0, progress: 0, phase: 0 };
+        fillFrameContext(store, ctx, 1 / 60);
+        return (ctx.passes[0].drawables ?? []).map((drawable) => drawable.type === 'particles-3d'
+            ? `smoke×${(drawable as unknown as { count: number }).count}`
+            : names.get(drawable) ?? '?');
+    };
+
+    it('are drawn among see-through models by how far they are, whichever was made first', () => {
+        for (const madeFirst of ['smoke', 'glass'] as const) {
+            const { store } = createTestGame();
+            startTestScene(store, 'Level', () => {
+                camera();
+                if (madeFirst === 'smoke') cloud(store, 2, -4);
+                cube('glass', 0, { alpha: 0.4 });
+                if (madeFirst === 'glass') cloud(store, 2, -4);
+                cloud(store, 4, 4);
+                cube('wall', -8);
+                return createScene();
+            });
+
+            // The wall first, solid; then from the furthest: the smoke behind the glass (2), the
+            // glass, the smoke in front of it (4).
+            expect(order(store)).toEqual(['wall', 'smoke×2', 'glass', 'smoke×4']);
+        }
+    });
+
+    it('are drawn in a monitor by how far they are from its own camera, not the screen\'s', () => {
+        for (const offScreen of [false, true]) {
+            const { store } = createTestGame();
+            let monitor!: TTexture;
+            // Behind the scene, looking back at it: what is far for the screen is near for it.
+            const Behind = () => {
+                useCamera3d({ projection: 'perspective', fov: 60, transform: { z: -10, rotationY: Math.PI } });
+            };
+            startTestScene(store, 'Level', () => {
+                if (offScreen) useWorldOffScreen();
+                camera();
+                cloud(store, 2, -4);
+                cube('glass', 0, { alpha: 0.4 });
+                monitor = createSpriteTexture({ width: 16, height: 16, sees: '3d' }, Behind);
+                return createScene();
+            });
+            const ctx: TFrameContext = { passes: [{}], time: 0, progress: 0, phase: 0 };
+            fillFrameContext(store, ctx, 1 / 60);
+            const read = (drawables: readonly unknown[]) => drawables.map((drawable) => (drawable as { type: string }).type === 'particles-3d'
+                ? `smoke×${(drawable as { count: number }).count}`
+                : names.get(drawable) ?? '?');
+            const watched = ctx.passes.find((pass) => pass.renderTarget === monitor.gpu)!;
+
+            if (!offScreen) expect(read(ctx.passes[ctx.passes.length - 1]!.drawables ?? [])).toEqual(['smoke×2', 'glass']);
+            expect(read(watched.drawables ?? [])).toEqual(['glass', 'smoke×2']);
+        }
+    });
+
+    it('keep their zIndex in a monitor too, where they are drawn by a stand-in', () => {
+        const { store } = createTestGame();
+        let monitor!: TTexture;
+        const Behind = () => {
+            useCamera3d({ projection: 'perspective', fov: 60, transform: { z: -10, rotationY: Math.PI } });
+        };
+        startTestScene(store, 'Level', () => {
+            camera();
+            cube('glass', 0, { alpha: 0.4 });
+            // In front of the glass on the screen, behind it for the monitor, and after it by hand.
+            cloud(store, 2, 4, 1);
+            monitor = createSpriteTexture({ width: 16, height: 16, sees: '3d' }, Behind);
+            return createScene();
+        });
+        const ctx: TFrameContext = { passes: [{}], time: 0, progress: 0, phase: 0 };
+        fillFrameContext(store, ctx, 1 / 60);
+        const read = (drawables: readonly unknown[]) => drawables.map((drawable) => (drawable as { type: string }).type === 'particles-3d'
+            ? `smoke×${(drawable as { count: number }).count}`
+            : names.get(drawable) ?? '?');
+
+        expect(read(ctx.passes[ctx.passes.length - 1]!.drawables ?? [])).toEqual(['glass', 'smoke×2']);
+        expect(read(ctx.passes.find((pass) => pass.renderTarget === monitor.gpu)!.drawables ?? [])).toEqual(['glass', 'smoke×2']);
+    });
+
+    it('still give way to a zIndex written by hand', () => {
+        const { store } = createTestGame();
+        startTestScene(store, 'Level', () => {
+            camera();
+            cube('glass', -4, { alpha: 0.4, zIndex: 1 });
+            cloud(store, 2, 4);
+            return createScene();
+        });
+
+        // Nearer than the glass, and drawn under it all the same.
+        expect(order(store)).toEqual(['smoke×2', 'glass']);
     });
 });
