@@ -51,9 +51,13 @@ describe('parseProject', () => {
         const fromFile = cleanGameOptions(gameOptionsFromProject(parseProject({})));
         const fromCode = cleanGameOptions({ width: 0, height: 0 });
 
-        for (const key of ['width', 'height', 'background', 'renderer', 'smooth', 'pixelSnap', 'msaa', 'scaling', 'keep', 'pixelRatio', 'fullscreenScaling', 'pauseOnBlur', 'contextMenu', 'banner', 'splash', 'step'] as const) {
+        for (const key of ['width', 'height', 'background', 'renderer', 'smooth', 'pixelSnap', 'pixelAspect', 'msaa', 'scaling', 'keep', 'pixelRatio', 'fullscreenScaling', 'pauseOnBlur', 'actions', 'contextMenu', 'banner', 'splash', 'step'] as const) {
             expect({ key, value: fromFile[key] }).toEqual({ key, value: fromCode[key] });
         }
+    });
+
+    it('gives each game a map of actions of its own', () => {
+        expect(cleanGameOptions({ width: 1, height: 1 }).actions).not.toBe(cleanGameOptions({ width: 1, height: 1 }).actions);
     });
 
     it('fills in what is missing', () => {

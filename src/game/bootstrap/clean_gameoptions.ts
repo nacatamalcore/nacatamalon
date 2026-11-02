@@ -40,7 +40,7 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
     if (!PIXEL_SNAPS.includes(pixelSnap)) {
         throw new Error(`[NacatamalOn] createGame: pixelSnap must be ${PIXEL_SNAPS.map((name) => `'${name}'`).join(', ')}, got ${String(game_options.pixelSnap)}.`);
     }
-    const pixelAspect = game_options.pixelAspect ?? 1;
+    const pixelAspect = game_options.pixelAspect ?? DEFAULT_GAME_OPTIONS.pixelAspect!;
     if (!(typeof pixelAspect === 'number' && Number.isFinite(pixelAspect) && pixelAspect > 0)) {
         throw new Error(`[NacatamalOn] createGame: pixelAspect must be a number above 0 (1 for square pixels, 8 / 7 for the NES and the SNES), got ${String(game_options.pixelAspect)}.`);
     }
@@ -48,33 +48,27 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
     const scaling = game_options.scaling ?? DEFAULT_GAME_OPTIONS.scaling;
     const keep = game_options.keep ?? DEFAULT_GAME_OPTIONS.keep;
     const pauseOnBlur = game_options.pauseOnBlur ?? DEFAULT_GAME_OPTIONS.pauseOnBlur;
-    // Not in DEFAULTS either: 1 is not a preference, it is "draw what was asked for".
-    const pixelRatio = game_options.pixelRatio ?? 1;
+    const pixelRatio = game_options.pixelRatio ?? DEFAULT_GAME_OPTIONS.pixelRatio!;
     if (pixelRatio !== 'device' && !(Number.isFinite(pixelRatio) && pixelRatio > 0)) {
         throw new Error(`[NacatamalOn] createGame: pixelRatio must be a number above 0 or 'device', got ${String(pixelRatio)}.`);
     }
-    // Not in DEFAULTS: full screen is a whole monitor, and the pixel-art answer there is a whole
-    // multiple, so the default is the one that keeps every game pixel square.
-    const fullscreenScaling = game_options.fullscreenScaling ?? 'integer';
+    const fullscreenScaling = game_options.fullscreenScaling ?? DEFAULT_GAME_OPTIONS.fullscreenScaling!;
     // No default: left out, the page says where the game goes (see `TGameOptions.align`).
     const align = game_options.align;
     if (align !== undefined && !CANVAS_ALIGNS.includes(align)) {
         throw new Error(`[NacatamalOn] createGame: align must be ${CANVAS_ALIGNS.map((name) => `'${name}'`).join(', ')}, got ${String(align)}.`);
     }
-    // No default in DEFAULTS for these two: a game with no actions has an empty map, and one that
-    // says nothing about keeping the player's controls does not keep them.
-    const actions = game_options.actions ?? [];
+    // A copy, since the default is every game's.
+    const actions = game_options.actions ?? [...DEFAULT_GAME_OPTIONS.actions!];
+    // A game that says nothing about keeping the player's controls does not keep them.
     const actionsPersist = game_options.actionsPersist;
-    // Nor for the layers' names: a game that names none says them by number.
+    // A game that names no layers says them by number.
     const physicsLayers = cleanLayerNames(game_options.physicsLayers);
-    // Nor for the browser's menu: the right button is the game's unless it says otherwise.
-    const contextMenu = game_options.contextMenu ?? false;
-    // Nor for the project's screen effects: none is none.
+    const contextMenu = game_options.contextMenu ?? DEFAULT_GAME_OPTIONS.contextMenu!;
+    // No screen effects is none.
     const post = game_options.post;
-    // Nor for the startup line: it is on unless the game says otherwise.
-    const banner = game_options.banner ?? true;
-    // Nor for the splash: off unless the game asks for it.
-    const splash = game_options.splash ?? false;
+    const banner = game_options.banner ?? DEFAULT_GAME_OPTIONS.banner!;
+    const splash = game_options.splash ?? DEFAULT_GAME_OPTIONS.splash!;
     const step = game_options.step ?? DEFAULT_GAME_OPTIONS.step!;
     if (step !== 'display' && !(Number.isFinite(step) && step >= MIN_STEP_RATE && step <= MAX_STEP_RATE)) {
         throw new Error(`[NacatamalOn] createGame: step must be 'display' or a number of steps a second from ${MIN_STEP_RATE} to ${MAX_STEP_RATE} (60, or 50 for PAL), got ${String(step)}.`);

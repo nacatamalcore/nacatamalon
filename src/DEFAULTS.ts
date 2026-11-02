@@ -2,7 +2,13 @@ import { getColor } from './color';
 import type { TGameOptions } from './game/types/t_game_options';
 
 /**
- * Default configuration for the game engine.
+ * What a game is when `createGame` is not told otherwise: the values, written here by hand.
+ * `cleanGameOptions` reads them and does the rest.
+ *
+ * Left out on purpose, because they are not a value: `pixelSnap`, which follows `smooth`; `align`,
+ * where the page decides; `actionsPersist`, `post` and `physicsLayers`, where saying nothing means
+ * having none.
+ *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -15,10 +21,25 @@ export const DEFAULT_GAME_OPTIONS: TGameOptions = {
     seed: undefined,
     smooth: false,
     msaa: 1,
+    // Square pixels.
+    pixelAspect: 1,
+    // Not a preference: it is "draw what was asked for".
+    pixelRatio: 1,
     scaling: 'none',
     keep: 'both',
+    // Full screen is a whole monitor, and the pixel-art answer there is a whole multiple, so the
+    // default is the one that keeps every game pixel square.
+    fullscreenScaling: 'integer',
     pauseOnBlur: true,
-    step: 'display'
+    step: 'display',
+    // A game with no actions has an empty map.
+    actions: [],
+    // The right button is the game's unless it says otherwise.
+    contextMenu: false,
+    // The startup line is on unless the game says otherwise.
+    banner: true,
+    // The splash is off unless the game asks for it.
+    splash: false,
 };
 
 /**
