@@ -9,6 +9,7 @@ import type { TRuntimeStore } from '../../store';
 import type { TSpriteTexture, TSpriteTextureOptions, TViewFilter } from './types';
 import { outsideSceneBody } from '../../utils/outside_scene_body';
 import type { TBox } from '../../box';
+import { freeTexture } from '../../loaders/texture/free_texture';
 
 /**
  * Tells the pictures made here from images somebody loaded, which a key must never quietly take over.
@@ -248,17 +249,16 @@ export const resizeSpriteTexture = (picture: TTexture, width: number, height: nu
 /**
  * Lets a picture go: out of the game's textures, and off the graphics card. Its `gpu` is emptied
  * first-hand and it ends `'released'`, so anything still showing it draws nothing, instead of reading
- * a texture that is gone or being drawn as a square of its tint.
+ * a texture that is gone or being drawn as a square of its tint. The one exception is the mask of a
+ * transition still covering: that stays on the card until the transition is over.
  */
 const releasePicture = (store: TRuntimeStore, texture: TTexture): void => {
     const textures = store.get('assets').textures;
     if (textures.get(texture.key) === texture) {
         textures.delete(texture.key);
     }
-    if (texture.gpu !== null) {
-        store.get('screen').renderer.destroyTexture(texture.gpu);
-        texture.gpu = null;
-    }
+    // Kept on the card while a transition is still covering with it: see `freeTexture`.
+    freeTexture(store, texture);
     texture.status = 'released';
 };
 

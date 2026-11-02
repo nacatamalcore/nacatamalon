@@ -11,6 +11,7 @@ import { findAsset } from './asset_key';
 import { picturesWornBy, releaseWhenUnworn, stopWearing, wornByAnother } from './worn_pictures';
 import { askedByGame } from './asked_by_game';
 import { leaveSheet, releaseWhenUnused } from './sheet_users';
+import { freeTexture } from './texture/free_texture';
 import type { TLoadedAtlas } from './atlas/types/t_loaded_atlas';
 
 /**
@@ -75,10 +76,7 @@ const releaseTexture = (store: TRuntimeStore, texture: TTexture | null): void =>
     if (texture === null || texture.status === 'released') {
         return;
     }
-    if (texture.gpu !== null) {
-        store.get('screen').renderer.destroyTexture(texture.gpu);
-        texture.gpu = null;
-    }
+    freeTexture(store, texture);
     end(store, texture);
     sayStillShown(store, texture);
 };

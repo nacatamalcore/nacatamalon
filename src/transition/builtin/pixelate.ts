@@ -8,7 +8,7 @@ const BLACK: TColor = { r: 0, g: 0, b: 0, a: 1 };
 /**
  * The picture falls apart into bigger and bigger blocks, then into flat colour, then back.
  *
- * The only one of the four that **reads the frame again** rather than painting over what it was
+ * The only one of the five that **reads the frame again** rather than painting over what it was
  * handed: it snaps the point it reads to a grid, so one block's worth of screen all comes back the
  * same colour.
  *

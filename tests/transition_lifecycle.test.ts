@@ -706,3 +706,51 @@ describe('a covered change asked for while the scene of another is being built',
         expect(store.get('transition').active).toBeNull();
     });
 });
+
+describe('a change called off behind the cover', () => {
+    it('leaves the scene that asked for it on screen, free to change again', () => {
+        const { store, frames, counted, handle } = twoRooms();
+        handle().change('B', { transition: fade(0.3) });
+        frames(0.05);
+
+        // Something else stops the scene coming in: the cover goes with it.
+        stopScene(store, findScene(store, 'B')!);
+        expect(store.get('transition').active).toBeNull();
+        expect(store.get('world').scenes.map((scene) => scene.name)).toEqual(['A']);
+
+        handle().change('B', { transition: fade(0.3) });
+        expect(store.get('transition').active).not.toBeNull();
+        frames(0.4);
+        expect(store.get('world').scenes.map((scene) => scene.name)).toEqual(['B']);
+        expect(counted.unmounted).toBe(1);
+    });
+
+    it('still ignores a second change while the first is covering', () => {
+        const { store, frames, handle } = twoRooms();
+        registerScene(store, 'C', () => createScene());
+        handle().change('B', { transition: fade(0.3) });
+        handle().change('C', { transition: fade(0.3) });
+        frames(0.4);
+        expect(store.get('world').scenes.map((scene) => scene.name)).toEqual(['B']);
+    });
+});
+
+describe('a hard cut whose scene coming in reaches back', () => {
+    it('ignores a second change asked of the scene going out while the first is being made', () => {
+        const { store } = drivenGame();
+        let first!: TSceneHandle;
+        registerScene(store, 'C', () => createScene());
+        registerScene(store, 'B', () => {
+            // Something in B's body that ends up asking A to go somewhere else.
+            first.change('C');
+            return createScene();
+        });
+        startTestScene(store, 'A', () => {
+            first = useScene();
+            return createScene();
+        });
+
+        first.change('B');
+        expect(store.get('world').scenes.map((scene) => scene.name)).toEqual(['B']);
+    });
+});

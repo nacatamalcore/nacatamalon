@@ -1,4 +1,6 @@
 import type * as easing from '../../math/easing/functions';
+import type { TColor } from '../../color';
+import type { TWipeDirection } from '../../transition/builtin/wipe';
 
 /**
  * The name of a curve a motion moves along between two keys: one of the engine's easing curves,
@@ -94,16 +96,58 @@ export type TMotionEvent =
     | { t: number; kind: 'mark'; name: string };
 
 /**
- * The cover a `scene` event changes under: one of the engine's transitions, by name, and how long it
- * takes in seconds. A file that says `ms`, as they did before, is read in milliseconds.
+ * The cover a `scene` event changes under: one of the engine's transitions, by name, how long it
+ * takes in seconds, and what that one is given in code. A file that says `ms`, as they did before, is
+ * read in milliseconds.
+ *
+ * Each field past `duration` belongs to the transitions named beside it, and a file that gives one to
+ * another is refused: a `direction` on a fade would be a choice somebody made that does nothing.
+ *
+ * @example
+ * ```json
+ * { "type": "wipe", "duration": 0.4, "direction": "down" }
+ * { "type": "iris", "duration": 0.5, "center": { "x": 0.2, "y": 0.8 } }
+ * { "type": "dissolve", "duration": 0.8, "mask": "/assets/masks/star.png", "softness": 0.1 }
+ * ```
  *
  * @category Animation
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
 export type TMotionTransition = {
-    type: 'fade' | 'wipe' | 'iris' | 'pixelate';
+    type: 'fade' | 'wipe' | 'iris' | 'pixelate' | 'dissolve';
+    /**
+     * Seconds, covering and uncovering together. Left out, what the transition takes in code when
+     * it is not told, and 0.6 for a dissolve.
+     */
     duration?: number;
+    /**
+     * Every one: what the screen is covered with. Black unless the file says.
+     */
+    color?: TColor;
+    /**
+     * A wipe: which way the edge travels.
+     */
+    direction?: TWipeDirection;
+    /**
+     * An iris: where it closes on, in screen fractions, `{ x: 0, y: 0 }` the top left corner.
+     */
+    center?: { x: number; y: number };
+    /**
+     * Pixelate: how many blocks across the short side of the screen at the worst of it, 2 or more.
+     */
+    blocks?: number;
+    /**
+     * A dissolve, which needs it: the picture whose greys say the order the screen is covered in.
+     * Found next to the motion file, or from the root of the game with a leading `/`; for a motion
+     * written in code, which has no file, from the page. It is fetched when the motion arrives, so it
+     * is usually there by the time it is needed, and the transition waits for it when it is not.
+     */
+    mask?: string;
+    /**
+     * A dissolve: how soft the edge of the shape is, from `0`, hard, to `1`.
+     */
+    softness?: number;
 };
 
 /**

@@ -82,8 +82,8 @@ export {
 } from './post';
 export type { TPostEffect, TPostPass, TPostChain, TPostChainEntry, TPostProcessOptions, TBuiltinPostEffect, TEffectField, TCrtOptions, TCrtUniforms } from './post';
 
-export { fade, wipe, iris, pixelate } from './transition';
-export type { TTransition, TSceneChangeOptions, TSceneLaunchOptions, TSceneStopOptions, TWipeDirection } from './transition';
+export { fade, wipe, iris, pixelate, dissolve } from './transition';
+export type { TTransition, TSceneChangeOptions, TSceneLaunchOptions, TSceneStopOptions, TWipeDirection, TDissolveOptions } from './transition';
 export type { TPalette, TPaletteDoc } from './loaders/palette';
 export { parsePaletteDoc } from './loaders/palette';
 export type { TLut } from './loaders/lut';

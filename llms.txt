@@ -363,6 +363,12 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   real time and does not wait (a `play()`, a vibration): start it in
   `useSceneTransitionEnd(() => song.play())`, which runs once the cover is off. Without a transition
   it runs on the scene's first frame.
+- The transitions are `fade`, `wipe`, `iris`, `pixelate` and `dissolve(0.6, mask, { color, softness })`,
+  which covers in the order a picture's greys say, darkest first: noise (`fillNoise`) eats the screen
+  grain by grain, a picture of a star closes as a star. The mask is a `useLoadTexture` or a
+  `createPixelTexture`, stretched over the screen; the transition waits for it to load, and keeps it
+  until it is over even if the scene that painted it has stopped. A transition of your own takes a
+  `mask` the same way and reads it with `sampleMask(uv)`.
 - `launch` and `stop` take a transition too: `launch('PauseMenu', { transition: iris(0.4) })` opens a
   menu on top behind an iris, `stop({ transition: iris(0.4) })` closes the menu that calls it. What is
   underneath keeps running: `scene.pause()` it first to freeze the game behind the menu.
@@ -569,8 +575,9 @@ surroundings (`sampleMap_env(envUv(ctx))`).
 | `sampleHistory(uv)` | What the effect showed last frame (black at first; white if it did not ask for it). |
 | `paletteSize()`, `paletteColor(i)` | The palette given to the effect: how many colours, and colour `i`. |
 | `lutSize()`, `lutTexel(x, y, slice, size)`, `lutColor(rgb)` | The colour table given to it: `lutColor` grades a colour. |
+| `sampleMask(uv)` | A transition's `mask`, stretched over the screen and blended between its pixels (white if it has none). |
 
-An effect reads one data picture: a palette or a colour table, never both.
+An effect reads one data picture: a palette or a colour table, never both. A transition reads its mask instead.
 
 ## Getting help and sharing
 

@@ -2,6 +2,7 @@ import { newPostEffect } from '../post/new_post_effect';
 import { whenLoaded } from '../loaders';
 import { stopScene } from '../scene/stop_scene';
 import { startedAs } from '../scene/start_scene';
+import { endTransition } from './end_transition';
 import type { TBox } from '../box';
 import type { TRuntimeStore } from '../store';
 import type { TTransition } from './types/t_transition';
@@ -111,9 +112,7 @@ export const startTransitionBuilding = (
     try {
         incoming = build();
     } catch (error) {
-        if (store.get('transition').active === state) {
-            store.setState('transition', { active: null });
-        }
+        endTransition(store, state);
         throw error;
     }
     if (store.get('transition').active === state) {
@@ -179,9 +178,7 @@ export const rebuildBehindCover = (store: TRuntimeStore, state: TTransitionState
     try {
         incoming = build();
     } catch (error) {
-        if (store.get('transition').active === state) {
-            store.setState('transition', { active: null });
-        }
+        endTransition(store, state);
         const failure = error instanceof Error ? error : new Error(String(error));
         console.error(
             `[NacatamalOn] useScene().change: ${leaving === null ? 'a scene' : `'${startedAs(leaving)}'`} threw while it was being restarted, ` +
@@ -235,6 +232,9 @@ const cover = (store: TRuntimeStore, transition: TTransition, outgoing: TBox | n
         uniforms: { ...(transition.uniforms ?? {}) },
         uniformSig: transition.uniformSig,
     }, null, 'transition');
+    if (transition.mask !== undefined) {
+        effect.mask = transition.mask;
+    }
 
     const state: TTransitionState = {
         effect,

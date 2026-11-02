@@ -9,6 +9,7 @@ import type { TPixelRegion, TPixels } from '../../pixels';
 import type { TRuntimeStore } from '../../store';
 import type { TTexture } from '../../loaders';
 import { outsideSceneBody } from '../../utils/outside_scene_body';
+import { freeTexture } from '../../loaders/texture/free_texture';
 
 /**
  * Where each painted texture reads its bytes from, and the game it lives in.
@@ -47,10 +48,7 @@ const release = (store: TRuntimeStore, texture: TTexture): void => {
     if (textures.get(texture.key) === texture) {
         textures.delete(texture.key);
     }
-    if (texture.gpu !== null) {
-        store.get('screen').renderer.destroyTexture(texture.gpu);
-        texture.gpu = null;
-    }
+    freeTexture(store, texture);
     texture.status = 'released';
 };
 
@@ -290,8 +288,9 @@ export const updatePixelTexture = (texture: TTexture, region?: TPixelRegion): vo
     if (entry === undefined) {
         throw new Error(`[NacatamalOn] updatePixelTexture: '${texture.key}' was not made by createPixelTexture, so it has no picture to update from.`);
     }
-    // Let go already: there is nothing on the graphics card to write to.
-    if (texture.gpu === null) {
+    // Let go already: there is nothing on the graphics card to write to, or what is there is only
+    // kept for a transition still covering with it.
+    if (texture.gpu === null || texture.status === 'released') {
         return;
     }
 

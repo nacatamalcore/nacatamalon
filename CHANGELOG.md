@@ -7,6 +7,19 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **`dissolve`: a scene change in the shape of a picture.** `dissolve(0.6, mask, { color, softness })`
+  covers the screen in the order the picture's greys say, darkest first, and uncovers it the same way
+  back: noise eats the screen grain by grain, a star closes as a star, stripes are blinds. The mask is
+  a file (`useLoadTexture`) or painted in code (`createPixelTexture`), stretched over the screen and
+  read smoothly, so a small one keeps smooth edges. The clock waits for it to load, and it is kept
+  until the uncover is over even when the scene that painted it has already stopped. A transition of
+  your own takes a `mask` too and reads it with `sampleMask(uv)`, on both cards.
+- **A `.motion` changes scene under any transition, as code would.** A scene event's `transition`
+  takes `dissolve` with its `mask` (a picture next to the motion file, or from the root with `/`) and
+  `softness`, and every transition takes what it takes in code: a `color`, a wipe's `direction`, an
+  iris's `center`, pixelate's `blocks`. A field given to a transition that does not take it is
+  refused, naming it. The masks are fetched when the motion arrives. The editor's `set_motion_event`
+  writes them all, and checks the picture is in the project.
 - **A movement on part of the body.** `useSkeletalAnimation(model, { only: ['spine'] })` is a second
   animator on top of the first, on those bones and all that hangs from them: the legs run while the
   arms wave. With nothing playing it leaves them to the one below, and a movement that ends or is
@@ -102,6 +115,11 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **A scene whose change was called off can change again.** When the scene it was bringing in was
+  stopped behind the cover by something other than the game (a host loading another scene, as the
+  editor does), the cover went with it and the scene that asked stayed on screen, but every
+  `change` it asked for afterwards was ignored without a word. It now moves on as if the first had
+  never been asked.
 - **A scene restarting itself with a transition is covered.** `change` to its own name with a
   `transition` was done as a hard cut, with a warning. Now the screen is covered over the old copy,
   which runs until then as the scene going out of any change does, and the new copy is built behind

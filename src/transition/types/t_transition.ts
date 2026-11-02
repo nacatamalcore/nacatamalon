@@ -1,3 +1,4 @@
+import type { TTexture } from '../../loaders/texture/types/t_texture';
 import type { TUniformSignature, TUniformValues } from '../../materials/types/t_uniforms';
 
 /**
@@ -62,6 +63,17 @@ export type TTransition = {
      * What kind each one is. Worked out from the values when left out.
      */
     uniformSig?: TUniformSignature;
+    /**
+     * A picture the hook reads with `sampleMask(uv)`, stretched over the screen: the shape a
+     * `dissolve` covers in, or anything else a transition of your own wants to read. A file
+     * (`useLoadTexture`), one painted in code (`createPixelTexture`), or a picture a component draws
+     * into (`createSpriteTexture`), which is shown as it was last drawn once its scene stops.
+     *
+     * The clock does not start until it has landed, so the cover never begins with half a shape.
+     * And it is kept until the transition is over even if what made it goes first: a mask painted
+     * by the scene going out still has the uncover to draw after that scene has stopped.
+     */
+    mask?: TTexture;
 };
 
 /**

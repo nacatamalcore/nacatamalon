@@ -17,8 +17,8 @@ import type { TUniformLayout } from '../../shared/material_uniforms';
 export const POST_UNIFORMS_BINDING = 4;
 
 /**
- * Which texture unit reads the frame, which reads a palette or a table, which the effect's input,
- * which its history, and which reads the frame again blended between its pixels.
+ * Which texture unit reads the frame, which reads a palette, a table or a transition's mask, which
+ * the effect's input, which its history, and which reads the frame again blended between its pixels.
  */
 const SCENE_UNIT = 0;
 const DATA_UNIT = 1;
@@ -342,7 +342,10 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
                 gl.bindBufferBase(gl.UNIFORM_BUFFER, POST_UNIFORMS_BINDING, parameters);
 
                 bindUnit(SCENE_UNIT, read);
-                bindUnit(DATA_UNIT, effect.palette?.gpu ?? effect.lut?.gpu ?? blankTexture());
+                bindUnit(DATA_UNIT, effect.palette?.gpu ?? effect.lut?.gpu ?? effect.mask?.gpu ?? blankTexture());
+                // A mask is read blended between its pixels, and in GL that belongs to the unit. A
+                // palette and a table are fetched by the texel, which no sampler changes.
+                gl.bindSampler(DATA_UNIT, (effect.mask?.gpu ?? null) !== null ? smoothSampler : sampler);
                 bindUnit(INPUT_UNIT, input);
                 bindUnit(HISTORY_UNIT, history);
                 bindUnit(SMOOTH_UNIT, read);

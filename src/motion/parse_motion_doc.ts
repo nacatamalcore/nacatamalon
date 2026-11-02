@@ -1,4 +1,4 @@
-import { asRecord } from '../utils';
+import { asColor, asRecord } from '../utils';
 import { isMotionEase } from './motion_eases';
 import { MOTION_FORMAT, MOTION_VERSION } from './types/t_motion_doc';
 import { findPostBuiltin, POST_BUILTINS } from '../post/builtin/catalog';
@@ -6,7 +6,30 @@ import type { TPostBuiltinInfo } from '../post/builtin/types/t_builtin';
 import { MATERIAL_LOOKS } from '../shader_composer/surface/looks';
 import type { TMotionDoc, TMotionEvent, TMotionKey, TMotionTrack, TMotionTransition } from './types/t_motion_doc';
 
-const TRANSITIONS = new Set(['fade', 'wipe', 'iris', 'pixelate']);
+const TRANSITIONS = new Set(['fade', 'wipe', 'iris', 'pixelate', 'dissolve']);
+
+/**
+ * What each transition takes past its duration and its colour, which every one takes.
+ */
+const OWN_FIELDS: Record<string, string[]> = {
+    fade: [],
+    wipe: ['direction'],
+    iris: ['center'],
+    pixelate: ['blocks'],
+    dissolve: ['mask', 'softness'],
+};
+const ALL_OWN = ['direction', 'center', 'blocks', 'mask', 'softness'];
+const DIRECTIONS = new Set(['left', 'right', 'up', 'down']);
+
+/**
+ * A transition's name as a sentence says it: "an iris", "a fade".
+ */
+const named = (type: string): string => `${/^[aeiou]/.test(type) ? 'an' : 'a'} ${type}`;
+
+/**
+ * Whether a colour channel is a number from 0 to 1.
+ */
+const isChannel = (value: unknown): boolean => typeof value === 'number' && value >= 0 && value <= 1;
 
 /**
  * Every refusal goes through here, so the file always names itself.
@@ -110,9 +133,54 @@ const readTransition = (raw: unknown, src: string, where: string): TMotionTransi
     }
     const transition = asRecord(raw);
     if (transition === null || !TRANSITIONS.has(transition.type as string)) {
-        fail(src, `${where}: "transition" has to be { "type": "fade" | "wipe" | "iris" | "pixelate", "duration": 0.4 }.`);
+        fail(src, `${where}: "transition" has to be { "type": "fade" | "wipe" | "iris" | "pixelate" | "dissolve", "duration": 0.4 }.`);
     }
-    const read: TMotionTransition = { type: (transition as Record<string, unknown>).type as TMotionTransition['type'] };
+    const type = (transition as Record<string, unknown>).type as TMotionTransition['type'];
+    const read: TMotionTransition = { type };
+    const given = transition as Record<string, unknown>;
+    for (const field of ALL_OWN) {
+        if (given[field] !== undefined && !OWN_FIELDS[type]!.includes(field)) {
+            fail(src, `${where}: "${field}" is not something ${named(type)} takes. Take it out, or change the "type".`);
+        }
+    }
+    if (given.color !== undefined) {
+        const color = asRecord(given.color);
+        if (color === null || !['r', 'g', 'b'].every((channel) => isChannel(color[channel])) || (color.a !== undefined && !isChannel(color.a))) {
+            fail(src, `${where}: the transition's "color" has to be { "r", "g", "b" }, each from 0 to 1, and an "a" if it is not solid.`);
+        }
+        read.color = asColor(color, { r: 0, g: 0, b: 0, a: 1 });
+    }
+    if (given.direction !== undefined) {
+        if (!DIRECTIONS.has(given.direction as string)) {
+            fail(src, `${where}: a wipe's "direction" has to be "left", "right", "up" or "down".`);
+        }
+        read.direction = given.direction as NonNullable<TMotionTransition['direction']>;
+    }
+    if (given.center !== undefined) {
+        const center = asRecord(given.center);
+        if (center === null || !Number.isFinite(center.x) || !Number.isFinite(center.y)) {
+            fail(src, `${where}: an iris's "center" has to be { "x", "y" }, in screen fractions: { "x": 0.5, "y": 0.5 } is the middle.`);
+        }
+        read.center = { x: center!.x as number, y: center!.y as number };
+    }
+    if (given.blocks !== undefined) {
+        if (typeof given.blocks !== 'number' || !Number.isFinite(given.blocks) || given.blocks < 2) {
+            fail(src, `${where}: pixelate's "blocks" has to be how many blocks across the short side of the screen, 2 or more.`);
+        }
+        read.blocks = given.blocks as number;
+    }
+    if (type === 'dissolve') {
+        if (typeof given.mask !== 'string' || given.mask === '') {
+            fail(src, `${where}: a dissolve needs its "mask", the path of the picture whose greys say the order the screen is covered in.`);
+        }
+        read.mask = given.mask as string;
+    }
+    if (given.softness !== undefined) {
+        if (typeof given.softness !== 'number' || !Number.isFinite(given.softness) || given.softness < 0 || given.softness > 1) {
+            fail(src, `${where}: a dissolve's "softness" has to be from 0, a hard edge, to 1.`);
+        }
+        read.softness = given.softness as number;
+    }
     const duration = (transition as Record<string, unknown>).duration;
     // What the files said before: the same, in milliseconds. Read, and written back in seconds.
     const ms = (transition as Record<string, unknown>).ms;

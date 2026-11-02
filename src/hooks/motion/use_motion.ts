@@ -2,15 +2,18 @@ import { getActiveBox, getActiveGame } from '../../store';
 import { getVersion } from '../../store/record_version';
 import { rootOf } from '../../box';
 import { nanoId } from '../../utils';
-import { whenLoaded } from '../../loaders';
+import { loadTexture, newTexture, resolveAssetPath, trackLoad, whenLoaded } from '../../loaders';
+import { findAssetFile } from '../../loaders/asset_key';
 import { motionFileOf } from '../../loaders/motion';
 import { playAttachment } from '../../audio/attachment_players';
-import { fade, iris, pixelate, wipe } from '../../transition';
+import { dissolve, fade, iris, pixelate, wipe } from '../../transition';
 import { applyMotionTracks, bindMotionTracks } from '../../motion/motion_tracks';
 import { findMotionBox } from '../../motion/motion_targets';
 import { useScene } from '../scene/use_scene';
 import { isShowingOnly } from '../physics/is_showing_only';
 import type { TMotionFile } from '../../loaders/motion';
+import type { TTexture } from '../../loaders';
+import type { TRuntimeStore } from '../../store';
 import type { TTransition } from '../../transition';
 import type { TBoundTracks } from '../../motion/motion_tracks';
 import type { TMotionDoc, TMotionEvent, TMotionTransition } from '../../motion/types/t_motion_doc';
@@ -23,13 +26,44 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  */
 const MAX_LOOPS_PER_FRAME = 8;
 
-const transitionOf = (transition: TMotionTransition | undefined): TTransition | undefined => {
+/**
+ * A dissolve's picture, found next to the motion file that names it, from the game's cache like any
+ * other so two motions sharing one fetch it once.
+ */
+const maskOf = (store: TRuntimeStore, file: TMotionFile, src: string): TTexture => {
+    const path = resolveAssetPath(file.src, src);
+    const { textures } = store.get('assets');
+    let texture = findAssetFile(textures, path);
+    if (texture === undefined) {
+        texture = newTexture(path, path);
+        textures.set(path, texture);
+        trackLoad(texture, loadTexture(store, texture));
+    }
+    return texture;
+};
+
+/**
+ * The transition a scene event asks for, made as a game would make it in code. A file has been read
+ * by the parser; a motion written in code has not, and a dissolve there with no mask is said and
+ * done as a fade, which is the nearest thing to what was asked.
+ */
+const transitionOf = (
+    transition: TMotionTransition | undefined,
+    mask: (src: string) => TTexture,
+    warnOnce: (message: string) => void,
+): TTransition | undefined => {
     if (transition === undefined) return undefined;
+    const { duration, color } = transition;
+    if (transition.type === 'dissolve' && (transition.mask === undefined || transition.mask === '')) {
+        warnOnce('a dissolve has no "mask", the picture it covers in the shape of, so it was done as a fade');
+        return fade(duration, color);
+    }
     switch (transition.type) {
-        case 'fade': return fade(transition.duration);
-        case 'wipe': return wipe(transition.duration);
-        case 'iris': return iris(transition.duration);
-        case 'pixelate': return pixelate(transition.duration);
+        case 'fade': return fade(duration, color);
+        case 'wipe': return wipe(duration, transition.direction, color);
+        case 'iris': return iris(duration, color, transition.center);
+        case 'pixelate': return pixelate(duration, color, transition.blocks);
+        case 'dissolve': return dissolve(duration ?? 0.6, mask(transition.mask!), { color, softness: transition.softness });
     }
 };
 
@@ -133,7 +167,13 @@ export const useMotion = (motion: TMotionFile | TMotionDoc, options: TMotionOpti
                 for (const listener of [...(marks.get(event.name) ?? [])]) listener();
                 break;
             case 'scene': {
-                const transition = transitionOf(event.transition);
+                const transition = transitionOf(event.transition, (src) => {
+                    const picture = maskOf(store, file, src);
+                    if (picture.status === 'error') {
+                        warnOnce(`the mask '${src}' of the change at ${event.t} s could not be loaded, so the dissolve covers all at once`);
+                    }
+                    return picture;
+                }, warnOnce);
                 scene.change(event.scene, transition !== undefined ? { transition } : undefined);
                 break;
             }
@@ -257,6 +297,13 @@ export const useMotion = (motion: TMotionFile | TMotionDoc, options: TMotionOpti
     };
 
     void whenLoaded(file).then(() => {
+        // Its masks asked for now, so a dissolve near the start does not wait for one.
+        if (!box.destroyed && file.doc !== null && !showingOnly) {
+            for (const event of file.doc.events) {
+                const transition = event.kind === 'scene' ? event.transition : undefined;
+                if (transition?.type === 'dissolve' && typeof transition.mask === 'string' && transition.mask !== '') maskOf(store, file, transition.mask);
+            }
+        }
         if (!box.destroyed && file.status === 'ready' && attachment.autoplay && !showingOnly) {
             handle.play();
         }

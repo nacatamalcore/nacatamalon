@@ -172,6 +172,11 @@ export const useScene = (): TSceneHandle => {
 
     const owner = rootOf(active);
     let leaving = false;
+    /**
+     * Inside a `change` of this handle: a hard cut builds the scene coming in before it stops this
+     * one, and that body may reach back here.
+     */
+    let changing = false;
 
     /**
      * The running scene a call is about: the one named, or, with no name, the calling scene as long
@@ -295,9 +300,14 @@ export const useScene = (): TSceneHandle => {
             return true;
         },
         change: (scene: string | TSceneFn<never>, options?: TSceneChangeOptions<object>) => {
-            if (leaving) {
+            // Leaving holds while the change is being made, while the scene is gone, and while it is
+            // still being covered on its way out. A change can also be called off behind the cover,
+            // when the scene it was bringing in is stopped from elsewhere: the cover goes with it,
+            // this scene is left on screen, and it has to be able to move on again.
+            if (leaving && (changing || isSceneStopped(owner) || store.get('transition').active?.outgoing === owner)) {
                 return;
             }
+            leaving = false;
             // A handle kept by a copy someone else stopped, called later from a promise: there is
             // nothing of it left to replace.
             if (isSceneStopped(owner)) {
@@ -323,6 +333,7 @@ export const useScene = (): TSceneHandle => {
             const restarting = name === startedAs(owner) && store.get('world').names.has(name);
 
             leaving = true;
+            changing = true;
 
             try {
                 if (transition !== undefined && restarting) {
@@ -348,6 +359,8 @@ export const useScene = (): TSceneHandle => {
             } catch (error) {
                 leaving = false;
                 throw error;
+            } finally {
+                changing = false;
             }
         },
         pause: (name) => {

@@ -110,7 +110,7 @@ describe('what the engine hands a shader, as llms.txt writes it down', () => {
             expect(meshes.webgl2.fragment).toMatch(new RegExp(`\\b(vec2|vec4) ${name}\\(`));
         }
         const helpers = column('Helper').map((name) => name.slice(0, name.indexOf('(')));
-        expect(helpers.length).toBe(9);
+        expect(helpers.length).toBe(10);
         for (const name of helpers) {
             expect(posts.webgpu).toContain(`fn ${name}(`);
             expect(posts.webgl2).toMatch(new RegExp(`\\b(int|vec3|vec4) ${name}\\(`));

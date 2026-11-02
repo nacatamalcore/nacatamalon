@@ -1,4 +1,4 @@
-import { rebuildBehindCover, stepTransition } from '../../../transition';
+import { endTransition, rebuildBehindCover, stepTransition } from '../../../transition';
 import { stopScene } from '../../../scene';
 import type { TRuntimeStore } from '../../../store';
 
@@ -32,7 +32,12 @@ export const stepGameTransition = (store: TRuntimeStore, delta: number): void =>
     // reached the end still had the effect in it, so the last thing anybody saw was the cover
     // fully gone rather than a few percent of it left behind.
     if (state.done) {
-        store.setState('transition', { active: null });
+        endTransition(store, state);
+        return;
+    }
+    // Not started until its mask has landed: a cover that began with half a shape would show the
+    // shape arriving rather than the screen being covered. The scene going out goes on meanwhile.
+    if (state.effect.mask?.status === 'loading') {
         return;
     }
 

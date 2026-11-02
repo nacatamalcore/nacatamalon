@@ -3,6 +3,7 @@ import type { TBox } from '../box';
 import type { TRuntimeStore } from '../store';
 import { runningScene } from './find_scene';
 import { markSceneStopped } from './stopped_scenes';
+import { endTransition } from '../transition/end_transition';
 
 /**
  * Takes a running scene out of the game: off `world.scenes`, then through its cleanups.
@@ -40,7 +41,7 @@ export const stopScene = (store: TRuntimeStore, scene: string | TBox): boolean =
         if (transition.incoming !== null) {
             transition.incoming.held = false;
         }
-        store.setState('transition', { active: null });
+        endTransition(store, transition);
     }
 
     store.setState('world', { scenes: store.get('world').scenes.filter((scene) => scene !== root) });

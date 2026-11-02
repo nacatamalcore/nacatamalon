@@ -9,6 +9,7 @@ import { replaceMotionDoc } from '../src/loaders/motion';
 import { serializeMotionDoc } from '../src/motion/serialize_motion_doc';
 import { useMotion } from '../src/hooks/motion';
 import { createScene } from '../src/scene/create_scene';
+import { registerScene } from '../src/scene/register_scene';
 import { getActiveBox } from '../src/store';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { newPostEffect } from '../src/post/new_post_effect';
@@ -129,6 +130,34 @@ describe('reading a .motion file', () => {
         ]);
         // Written back in seconds: the old field does not come back.
         expect(serializeMotionDoc(read)).not.toContain('"ms"');
+    });
+
+    it('reads what each transition takes, and writes it back the same', () => {
+        const red = { r: 1, g: 0, b: 0, a: 1 };
+        const given = [
+            { type: 'fade', duration: 0.3, color: red },
+            { type: 'wipe', duration: 0.4, direction: 'down' },
+            { type: 'iris', duration: 0.5, center: { x: 0.2, y: 0.8 } },
+            { type: 'pixelate', duration: 0.4, blocks: 4 },
+            { type: 'dissolve', duration: 0.8, mask: 'masks/star.png', softness: 0.1, color: red },
+        ];
+        const read = motion({ events: given.map((transition, i) => ({ t: i, kind: 'scene', scene: 'A', transition })) });
+        expect(read.events.map((e) => (e as { transition?: unknown }).transition)).toEqual(given);
+        expect(parseMotionDoc(JSON.parse(serializeMotionDoc(read)), 'again')).toEqual(read);
+    });
+
+    it('refuses what a transition does not take, and a dissolve with no mask', () => {
+        const scene = (transition: Record<string, unknown>) => motion({ events: [{ t: 0, kind: 'scene', scene: 'A', transition }] });
+        expect(() => scene({ type: 'fade', direction: 'down' })).toThrow('"direction" is not something a fade takes');
+        expect(() => scene({ type: 'iris', mask: 'a.png' })).toThrow('"mask" is not something an iris takes');
+        expect(() => scene({ type: 'dissolve', duration: 0.6 })).toThrow('a dissolve needs its "mask"');
+        expect(() => scene({ type: 'wipe', direction: 'sideways' })).toThrow('"direction" has to be');
+        expect(() => scene({ type: 'iris', center: { x: 0.5 } })).toThrow('"center" has to be');
+        expect(() => scene({ type: 'pixelate', blocks: 1 })).toThrow('"blocks" has to be');
+        expect(() => scene({ type: 'dissolve', mask: 'a.png', softness: 2 })).toThrow('"softness" has to be');
+        expect(() => scene({ type: 'fade', color: '#ff0000' })).toThrow('"color" has to be');
+        expect(() => scene({ type: 'fade', color: { r: 2, g: 0, b: 0 } })).toThrow('"color" has to be');
+        expect(() => scene({ type: 'fade', color: { r: 1, g: 0, b: 0, a: null } })).toThrow('"color" has to be');
     });
 
     it('refuses an event of a kind it does not know', () => {
@@ -294,6 +323,63 @@ describe('useMotion', () => {
         expect(played).toBe(0);
         runHookUpdates(root, 0.2);
         expect(played).toBe(1);
+    });
+});
+
+describe('a scene changed by a motion', () => {
+    /**
+     * The field with a room to go to, playing a motion whose only event changes to it at half a
+     * second under `transition`.
+     */
+    const changing = (transition: Record<string, unknown>) => {
+        const doc = motion({ duration: 1, events: [{ t: 0.5, kind: 'scene', scene: 'Room', transition }] });
+        const played = playing(doc);
+        registerScene(played.store, 'Room', () => createScene());
+        played.handle.play();
+        played.tick(0);
+        played.tick(0.6);
+        return { ...played, active: played.store.get('transition').active };
+    };
+
+    it('is covered by the transition the file asks for, made with what it gives', () => {
+        const { active } = changing({ type: 'wipe', duration: 0.4, direction: 'down', color: { r: 1, g: 1, b: 1, a: 1 } });
+        expect(active).not.toBeNull();
+        expect(active!.effect.name).toBe('wipe');
+        expect(active!.half).toBeCloseTo(0.2, 6);
+        expect(active!.effect.uniforms).toEqual({ color: [1, 1, 1, 1], direction: [0, 1] });
+    });
+
+    it('does a dissolve written in code with no mask as a fade, and says so', () => {
+        const said = quiet();
+        const doc = { ...motion({ duration: 1 }), events: [{ t: 0.5, kind: 'scene' as const, scene: 'Room', transition: { type: 'dissolve' as const } }] };
+        const { store, handle, tick } = playing(doc);
+        registerScene(store, 'Room', () => createScene());
+        handle.play();
+        tick(0);
+        tick(0.6);
+        expect(store.get('transition').active!.effect.name).toBe('fade');
+        expect(said.mock.calls.some((call: unknown[]) => String(call[0]).includes('has no "mask"'))).toBe(true);
+    });
+
+    it('fetches a dissolve\'s mask when the motion arrives, and hands it to the cover', async () => {
+        fetchSpy = spyOn(globalThis, 'fetch').mockImplementation((() => new Promise<Response>(() => {})) as unknown as typeof fetch);
+        const doc = motion({ duration: 1, events: [{ t: 0.5, kind: 'scene', scene: 'Room', transition: { type: 'dissolve', mask: '/assets/masks/star.png', softness: 0.1 } }] });
+        const { store, handle, tick } = playing(doc);
+        registerScene(store, 'Room', () => createScene());
+        await Promise.resolve();
+        await Promise.resolve();
+        const mask = store.get('assets').textures.get('/assets/masks/star.png');
+        expect(mask?.status).toBe('loading');
+
+        handle.play();
+        tick(0);
+        tick(0.6);
+        const active = store.get('transition').active!;
+        expect(active.effect.name).toBe('dissolve');
+        expect(active.effect.mask).toBe(mask);
+        expect(active.effect.uniforms.softness).toBeCloseTo(0.1, 6);
+        // Asked for once, by the motion's arrival, and found in the cache at the change.
+        expect(fetchSpy.mock.calls).toHaveLength(1);
     });
 });
 

@@ -46,6 +46,9 @@ fn vs(@builtin(vertex_index) index: u32) -> VertexOut {
  * which only differs from `sampleTexture` inside an effect with passes. `sampleHistory` is what the
  * effect showed last frame, black until it has shown one, and white for an effect that did not ask.
  *
+ * `sampleMask` is a transition's mask, read blended between its pixels so that a small one still has
+ * smooth edges once it is cut at a level, and white for an effect that has none.
+ *
  * `paletteSize` and `lutSize` read the shape of the picture rather than a number they were told,
  * which is what stops a palette ever disagreeing with how many colours the shader thinks it has.
  *
@@ -70,6 +73,10 @@ fn sampleInput(uv: vec2<f32>) -> vec4<f32> {
 
 fn sampleHistory(uv: vec2<f32>) -> vec4<f32> {
     return textureSampleLevel(historyTexture, sceneSampler, uv, 0.0);
+}
+
+fn sampleMask(uv: vec2<f32>) -> vec4<f32> {
+    return textureSampleLevel(dataTexture, smoothSampler, uv, 0.0);
 }
 
 fn paletteSize() -> u32 {

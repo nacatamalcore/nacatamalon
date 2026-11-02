@@ -385,7 +385,7 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
                 }
                 device.queue.writeBuffer(parameters!, slot * SLOT, values, 0, SLOT_FLOATS);
 
-                const data = effect.palette?.gpu ?? effect.lut?.gpu ?? blankTexture();
+                const data = effect.palette?.gpu ?? effect.lut?.gpu ?? effect.mask?.gpu ?? blankTexture();
 
                 const pass = encoder.beginRenderPass({
                     label: `post ${effect.name ?? effect.id}`,

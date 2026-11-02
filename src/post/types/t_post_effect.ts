@@ -1,6 +1,7 @@
 import type { TLut } from '../../loaders/lut/types/t_lut';
 import type { TPalette } from '../../loaders/palette/types/t_palette';
 import type { TShader } from '../../loaders/shader/types/t_shader';
+import type { TTexture } from '../../loaders/texture/types/t_texture';
 import type { TUniformSignature, TUniformValues } from '../../materials/types/t_uniforms';
 
 /**
@@ -118,6 +119,11 @@ export type TPostEffect<U extends TUniformValues = TUniformValues> = {
      * The grading table this effect looks colours up in.
      */
     lut: TLut | null;
+    /**
+     * The picture a transition reads through `sampleMask`. Only a transition carries one, and it
+     * has neither a palette nor a table, so the three never meet.
+     */
+    mask?: TTexture;
     source: TPostSource;
     /**
      * Whether it runs. A switched-off effect stays in the chain **where it is**, so turning it back
