@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, spyOn } from 'bun:test';
 import { DEFAULT_PROJECT_SETTINGS, gameOptionsFromProject, parseProject } from '../src/project';
+import { cleanGameOptions } from '../src/game/bootstrap/clean_gameoptions';
 
 afterEach(() => {
     (console.warn as { mockRestore?: () => void }).mockRestore?.();
@@ -44,6 +45,15 @@ describe('parseProject', () => {
         expect(settings.mainScene).toBe('Level');
         expect(settings.actions).toEqual([{ name: 'jump', bindings: [{ type: 'key', key: ' ' }] }]);
         expect(settings.actionsPersist).toBe('localStorage');
+    });
+
+    it('leaves out nothing createGame would not: a file saying nothing reads as code saying nothing', () => {
+        const fromFile = cleanGameOptions(gameOptionsFromProject(parseProject({})));
+        const fromCode = cleanGameOptions({ width: 0, height: 0 });
+
+        for (const key of ['width', 'height', 'background', 'renderer', 'smooth', 'pixelSnap', 'msaa', 'scaling', 'keep', 'pixelRatio', 'fullscreenScaling', 'pauseOnBlur', 'contextMenu', 'banner', 'splash', 'step'] as const) {
+            expect({ key, value: fromFile[key] }).toEqual({ key, value: fromCode[key] });
+        }
     });
 
     it('fills in what is missing', () => {

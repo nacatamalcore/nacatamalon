@@ -71,10 +71,12 @@ export type TGameOptions = {
      */
     renderer?: TRendererType;
     /**
-     * Initial seed for this game's random generator (`useRandom`). Absent means a different
-     * run every time; set it to make a run reproducible: same seed, same sequence.
+     * MSAA (multisample anti-aliasing) sample count. `1` (default) disables it: the
+     * raw, aliased look that suits a PS1/N64 aesthetic. `4` enables 4× MSAA, smoothing
+     * jagged geometry silhouettes (e.g. a 3D model's edges). Only `1` and `4` are
+     * guaranteed across devices. It smooths edges only, not texture shimmer.
      */
-    seed?: number;
+    msaa?: 1 | 4;
     /**
      * Default texture filtering for sprites. `false` (default) renders them pixelated
      * (nearest) for crisp pixel art; `true` renders them smooth (linear).
@@ -106,27 +108,6 @@ export type TGameOptions = {
      */
     pixelSnap?: TPixelSnap;
     /**
-     * MSAA (multisample anti-aliasing) sample count. `1` (default) disables it: the
-     * raw, aliased look that suits a PS1/N64 aesthetic. `4` enables 4× MSAA, smoothing
-     * jagged geometry silhouettes (e.g. a 3D model's edges). Only `1` and `4` are
-     * guaranteed across devices. It smooths edges only, not texture shimmer.
-     */
-    msaa?: 1 | 4;
-    /**
-     * How big the game's image is painted. **Writes CSS only**: the game keeps drawing
-     * `width × height` pixels and only their size on screen changes.
-     *
-     * - `'none'` (default): 1×, exactly `width × height` CSS pixels.
-     * - `'integer'`: the largest whole multiple that fits, in the screen's own pixels (on a screen at
-     *   125%, 7 of them a game pixel rather than a CSS 3× that is 3.75). The pixel-art one, because
-     *   nothing is resampled, at the cost of bars when the fit is not exact.
-     * - `'contain'`: the largest fit with fractions allowed. Fills more, resamples.
-     * - `'fill'`: stretched to the container, aspect ratio broken. Ignores `keep`.
-     *
-     * See {@link TCanvasScaling}.
-     */
-    scaling?: TCanvasScaling;
-    /**
      * How wide a game pixel is painted against how tall: `1` (default), square; `8 / 7` for the NES
      * and the SNES, which drew 256 across a 4:3 television, so each pixel was a little wider than
      * tall and their games look squashed with square ones; `32 / 35` for the Genesis at 320.
@@ -140,23 +121,6 @@ export type TGameOptions = {
      * `useGame().setPixelAspect` to change it while the game runs.
      */
     pixelAspect?: number;
-    /**
-     * Which sides of the resolution stay fixed. **This one writes the buffer**: anything
-     * but `'both'` makes the game see more or less world instead of leaving bars.
-     *
-     * - `'both'` (default): always `width × height`. What makes a game look the same on
-     *   every screen; the leftover space becomes letterbox or pillarbox bars.
-     * - `'height'`: height pinned and width follows the container, so a wide screen sees more to
-     *   the sides.
-     * - `'width'`: width pinned and height follows, so a tall screen sees more above and below.
-     * - `'none'`: nothing pinned, so there is no reference to scale from. Stays at 1× and
-     *   the buffer becomes the container's size. On a screen at 125% or 150% that stretches each
-     *   game pixel to 1.25 or 1.5 of the screen's, unevenly: `pixelRatio: 'device'` keeps pixel
-     *   art crisp there.
-     *
-     * See {@link TCanvasKeep}.
-     */
-    keep?: TCanvasKeep;
     /**
      * How many real pixels each game pixel is drawn with. `1` (default) draws exactly
      * `width × height`; `2` draws four times as many pixels in the same space; `'device'`
@@ -179,6 +143,37 @@ export type TGameOptions = {
      * getting finer.
      */
     pixelRatio?: number | 'device';
+    /**
+     * How big the game's image is painted. **Writes CSS only**: the game keeps drawing
+     * `width × height` pixels and only their size on screen changes.
+     *
+     * - `'none'` (default): 1×, exactly `width × height` CSS pixels.
+     * - `'integer'`: the largest whole multiple that fits, in the screen's own pixels (on a screen at
+     *   125%, 7 of them a game pixel rather than a CSS 3× that is 3.75). The pixel-art one, because
+     *   nothing is resampled, at the cost of bars when the fit is not exact.
+     * - `'contain'`: the largest fit with fractions allowed. Fills more, resamples.
+     * - `'fill'`: stretched to the container, aspect ratio broken. Ignores `keep`.
+     *
+     * See {@link TCanvasScaling}.
+     */
+    scaling?: TCanvasScaling;
+    /**
+     * Which sides of the resolution stay fixed. **This one writes the buffer**: anything
+     * but `'both'` makes the game see more or less world instead of leaving bars.
+     *
+     * - `'both'` (default): always `width × height`. What makes a game look the same on
+     *   every screen; the leftover space becomes letterbox or pillarbox bars.
+     * - `'height'`: height pinned and width follows the container, so a wide screen sees more to
+     *   the sides.
+     * - `'width'`: width pinned and height follows, so a tall screen sees more above and below.
+     * - `'none'`: nothing pinned, so there is no reference to scale from. Stays at 1× and
+     *   the buffer becomes the container's size. On a screen at 125% or 150% that stretches each
+     *   game pixel to 1.25 or 1.5 of the screen's, unevenly: `pixelRatio: 'device'` keeps pixel
+     *   art crisp there.
+     *
+     * See {@link TCanvasKeep}.
+     */
+    keep?: TCanvasKeep;
     /**
      * How the game's image is painted while it is full screen (`enterFullscreen` on the game
      * handle). Same values as `scaling`, and only used while full screen lasts: leaving puts
@@ -217,23 +212,6 @@ export type TGameOptions = {
      */
     align?: TCanvasAlign;
     /**
-     * Freeze the loop while nobody can see the page, and unfreeze on the way back. `true` by
-     * default.
-     *
-     * It exists because `requestAnimationFrame` stops in a hidden tab anyway: without this,
-     * the first frame back gets a delta of however long the player was away, and everything
-     * moving teleports. Pausing makes that gap explicit instead of letting it reach the game.
-     *
-     * The page being hidden pauses the game the way a pause menu does, with the reason
-     * `'browser'`, so `useGame().onPaused` and `onResumed` are told it. Coming back releases only
-     * that hold, so a game paused from a menu stays paused; it resumes one frame after the page is
-     * seen again, so the frame that measured the time away is not run. Its sound is held with it:
-     * every sound and song stops where it is and carries on from there when the page is back, as a
-     * console's did when it was paused. `false` leaves the game to the browser, which stops sending
-     * frames to a hidden tab anyway.
-     */
-    pauseOnBlur?: boolean;
-    /**
      * How the game's time moves forward. Default `'display'`.
      *
      * - `'display'`: one update per picture the screen shows, by however long it really took. A
@@ -252,6 +230,63 @@ export type TGameOptions = {
      * it waits for the next step, so a press is never lost nor seen twice.
      */
     step?: TGameStep;
+    /**
+     * Freeze the loop while nobody can see the page, and unfreeze on the way back. `true` by
+     * default.
+     *
+     * It exists because `requestAnimationFrame` stops in a hidden tab anyway: without this,
+     * the first frame back gets a delta of however long the player was away, and everything
+     * moving teleports. Pausing makes that gap explicit instead of letting it reach the game.
+     *
+     * The page being hidden pauses the game the way a pause menu does, with the reason
+     * `'browser'`, so `useGame().onPaused` and `onResumed` are told it. Coming back releases only
+     * that hold, so a game paused from a menu stays paused; it resumes one frame after the page is
+     * seen again, so the frame that measured the time away is not run. Its sound is held with it:
+     * every sound and song stops where it is and carries on from there when the page is back, as a
+     * console's did when it was paused. `false` leaves the game to the browser, which stops sending
+     * frames to a hidden tab anyway.
+     */
+    pauseOnBlur?: boolean;
+    /**
+     * Initial seed for this game's random generator (`useRandom`). Absent means a different
+     * run every time; set it to make a run reproducible: same seed, same sequence.
+     */
+    seed?: number;
+    /**
+     * The game's **input map**: named actions (`'jump'`, `'move_left'`) and the keys, gamepad
+     * buttons and stick directions each one listens to, read with `useActions`.
+     *
+     * The same list a `project.json` carries, which is where it comes from once there is an editor.
+     */
+    actions?: TActionMap;
+    /**
+     * Where the player's own rebindings are kept, so they are still there next time. Left out, the
+     * controls are whatever the game says every run.
+     */
+    actionsPersist?: TActionPersist;
+    /**
+     * Whether a right click over the game opens the browser's menu. `false` (default): the game
+     * keeps the right button for itself, as it does in a window of its own. Only over the game:
+     * the rest of the page keeps its menu. `true` for a game in a page that wants "save image".
+     * Changed while it runs with `useGame().setContextMenu()`.
+     */
+    contextMenu?: boolean;
+    /**
+     * Names for the physics layers, in order: the first is layer 0. With them a body says
+     * `layer: 'enemy'` and `collidesWith: ['world', 'player']` rather than numbers. Sixteen at most.
+     */
+    physicsLayers?: string[];
+    /**
+     * The full-screen effects this game is shown through, in order.
+     *
+     * A game setting rather than a scene's, because "this looks like a Mega Drive" is a fact about
+     * the game and not about whichever room happens to be open: a scene that had to declare the
+     * palette again would be a scene that can forget to.
+     *
+     * Nothing is waited for. The effects go in at once and each starts working the moment its own
+     * file lands, so a slow palette costs you the palette and never the first seconds of the game.
+     */
+    post?: TPostChain;
     /**
      * Print the startup line in the console: the engine, its version and which backend started.
      * `true` by default.
@@ -276,39 +311,4 @@ export type TGameOptions = {
      * never shows when a tool drives the game (`editorHandleOf`).
      */
     splash?: boolean | 'always';
-    /**
-     * The game's **input map**: named actions (`'jump'`, `'move_left'`) and the keys, gamepad
-     * buttons and stick directions each one listens to, read with `useActions`.
-     *
-     * The same list a `project.json` carries, which is where it comes from once there is an editor.
-     */
-    actions?: TActionMap;
-    /**
-     * Names for the physics layers, in order: the first is layer 0. With them a body says
-     * `layer: 'enemy'` and `collidesWith: ['world', 'player']` rather than numbers. Sixteen at most.
-     */
-    physicsLayers?: string[];
-    /**
-     * Whether a right click over the game opens the browser's menu. `false` (default): the game
-     * keeps the right button for itself, as it does in a window of its own. Only over the game:
-     * the rest of the page keeps its menu. `true` for a game in a page that wants "save image".
-     * Changed while it runs with `useGame().setContextMenu()`.
-     */
-    contextMenu?: boolean;
-    /**
-     * Where the player's own rebindings are kept, so they are still there next time. Left out, the
-     * controls are whatever the game says every run.
-     */
-    actionsPersist?: TActionPersist;
-    /**
-     * The full-screen effects this game is shown through, in order.
-     *
-     * A game setting rather than a scene's, because "this looks like a Mega Drive" is a fact about
-     * the game and not about whichever room happens to be open: a scene that had to declare the
-     * palette again would be a scene that can forget to.
-     *
-     * Nothing is waited for. The effects go in at once and each starts working the moment its own
-     * file lands, so a slow palette costs you the palette and never the first seconds of the game.
-     */
-    post?: TPostChain;
 };

@@ -1,12 +1,13 @@
 import { getColor } from '../color';
+import { DEFAULT_GAME_OPTIONS } from '../DEFAULTS';
 import type { TProjectSettings } from './types/t_project_settings';
 
 /**
- * What a project says before anyone has changed anything: a Mega Drive frame (320 by 224), crisp
- * pixels, no anti-aliasing.
+ * What a project says about what its file leaves out: what `createGame` does when it is not told, so
+ * a game reads the same from a file as from code.
  *
- * A retro default rather than a neutral one, on purpose: a blank 640 by 480 would quietly push every
- * new project out of the era this engine is for.
+ * Not what a new project looks like. An editor starts one from a template, whose `project.json` says
+ * its own frame: that is where a retro size belongs, written where it can be seen and changed.
  *
  * **For editors and other tools.** A game written only in code does not need it: it passes its
  * options straight to `createGame`. This exists so a tool can save those options as a file and a
@@ -20,21 +21,21 @@ export const DEFAULT_PROJECT_SETTINGS: TProjectSettings = {
     format: 'nacatamalon-project',
     version: 1,
     name: 'Untitled',
-    width: 320,
-    height: 224,
-    background: getColor('#0f1119'),
-    smooth: false,
-    msaa: 1,
-    renderer: 'AUTO',
-    scaling: 'contain',
-    keep: 'both',
+    width: DEFAULT_GAME_OPTIONS.width,
+    height: DEFAULT_GAME_OPTIONS.height,
+    background: getColor(DEFAULT_GAME_OPTIONS.background!),
+    smooth: DEFAULT_GAME_OPTIONS.smooth!,
+    msaa: DEFAULT_GAME_OPTIONS.msaa!,
+    renderer: DEFAULT_GAME_OPTIONS.renderer!,
+    scaling: DEFAULT_GAME_OPTIONS.scaling!,
+    keep: DEFAULT_GAME_OPTIONS.keep!,
     fullscreenScaling: 'integer',
     pixelRatio: 1,
-    pauseOnBlur: true,
+    pauseOnBlur: DEFAULT_GAME_OPTIONS.pauseOnBlur!,
     contextMenu: false,
     banner: true,
     splash: false,
-    step: 'display',
+    step: DEFAULT_GAME_OPTIONS.step!,
     mainScene: '',
     actions: [],
     physicsLayers: [],

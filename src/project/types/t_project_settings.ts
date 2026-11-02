@@ -43,6 +43,14 @@ export type TProjectSettings = {
      */
     background: TColor;
     /**
+     * Which backend draws: `'AUTO'`, or one named on purpose.
+     */
+    renderer: TRendererType;
+    /**
+     * Anti-aliasing: `1` is off, which is the aliased look of the era.
+     */
+    msaa: 1 | 4;
+    /**
      * Default filtering: `false` is crisp pixel art, `true` blends. A sprite can still choose.
      */
     smooth: boolean;
@@ -58,13 +66,11 @@ export type TProjectSettings = {
      */
     pixelAspect?: number;
     /**
-     * Anti-aliasing: `1` is off, which is the aliased look of the era.
+     * How many real pixels each game pixel is drawn with: `1` (the default, and the one for pixel
+     * art), a number, or `'device'` to follow the screen. Sharper edges for 3D and HD games, at the
+     * square of the cost. See `TGameOptions.pixelRatio`.
      */
-    msaa: 1 | 4;
-    /**
-     * Which backend draws: `'AUTO'`, or one named on purpose.
-     */
-    renderer: TRendererType;
+    pixelRatio: number | 'device';
     /**
      * How the canvas is fitted into the page.
      */
@@ -84,20 +90,51 @@ export type TProjectSettings = {
      */
     align?: TCanvasAlign;
     /**
-     * How many real pixels each game pixel is drawn with: `1` (the default, and the one for pixel
-     * art), a number, or `'device'` to follow the screen. Sharper edges for 3D and HD games, at the
-     * square of the cost. See `TGameOptions.pixelRatio`.
+     * How the game's time moves forward: `'display'`, one update per picture the screen shows, or
+     * that many fixed steps a second (`60`, `50` for PAL). See `TGameOptions.step`.
      */
-    pixelRatio: number | 'device';
+    step: TGameStep;
     /**
      * Whether the game pauses itself when the page loses focus.
      */
     pauseOnBlur: boolean;
     /**
+     * The seed of the game's random numbers, or absent for a different run every time.
+     */
+    seed?: number;
+    /**
+     * The **input map**: the named actions and what each one listens to. In the same file as
+     * everything else about the game.
+     */
+    actions: TActionMap;
+    /**
+     * Whether the player's own controls survive a reload, and where they are kept. `'none'` by
+     * default: writing to somebody's browser storage unasked is not something a game should start
+     * doing because the engine gained a feature.
+     */
+    actionsPersist: 'none' | 'localStorage' | 'indexedDb';
+    /**
      * Whether a right click over the game opens the browser's menu. `false` by default: the right
      * button is the game's. See `TGameOptions.contextMenu`.
      */
     contextMenu: boolean;
+    /**
+     * Names for the physics layers, in order: the first is layer 0. Empty when the game says its
+     * layers by number.
+     */
+    physicsLayers: string[];
+    /**
+     * The **full-screen effect chain**: the effects applied to the finished frame, in order (a
+     * dither, a palette reduction, a CRT). "This game looks like a Mega Drive" is a fact about the
+     * project, not about whichever room is open, so it lives here and reaches the game as
+     * `TGameOptions.post`.
+     */
+    post: TPostChain;
+    /**
+     * Which scene the game starts on, by name. Empty means nobody has decided yet: better than
+     * quietly starting whichever sorts first, which is impossible to debug later.
+     */
+    mainScene: string;
     /**
      * Whether the startup line is printed in the console. `true` by default.
      */
@@ -107,41 +144,4 @@ export type TProjectSettings = {
      * `'always'` while developing too. `false` by default. See `TGameOptions.splash`.
      */
     splash: boolean | 'always';
-    /**
-     * How the game's time moves forward: `'display'`, one update per picture the screen shows, or
-     * that many fixed steps a second (`60`, `50` for PAL). See `TGameOptions.step`.
-     */
-    step: TGameStep;
-    /**
-     * The seed of the game's random numbers, or absent for a different run every time.
-     */
-    seed?: number;
-    /**
-     * Which scene the game starts on, by name. Empty means nobody has decided yet: better than
-     * quietly starting whichever sorts first, which is impossible to debug later.
-     */
-    mainScene: string;
-    /**
-     * The **input map**: the named actions and what each one listens to. In the same file as
-     * everything else about the game.
-     */
-    actions: TActionMap;
-    /**
-     * Names for the physics layers, in order: the first is layer 0. Empty when the game says its
-     * layers by number.
-     */
-    physicsLayers: string[];
-    /**
-     * Whether the player's own controls survive a reload, and where they are kept. `'none'` by
-     * default: writing to somebody's browser storage unasked is not something a game should start
-     * doing because the engine gained a feature.
-     */
-    actionsPersist: 'none' | 'localStorage' | 'indexedDb';
-    /**
-     * The **full-screen effect chain**: the effects applied to the finished frame, in order (a
-     * dither, a palette reduction, a CRT). "This game looks like a Mega Drive" is a fact about the
-     * project, not about whichever room is open, so it lives here and reaches the game as
-     * `TGameOptions.post`.
-     */
-    post: TPostChain;
 };

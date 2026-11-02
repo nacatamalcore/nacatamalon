@@ -63,6 +63,10 @@ releases are in [changelog/](./changelog/), one file each.
   `SCREEN.ALIGN`, beside the new `SCREEN.SCALING` and `SCREEN.KEEP`, the names `scaling` (and
   `fullscreenScaling`) and `keep` take. Change `RENDER.CONSOLE_SCREENS.snes` to
   `SCREEN.CONSOLES.snes`, and `RENDER.ALIGN.TOP` to `SCREEN.ALIGN.TOP`.
+- **What a `project.json` leaves out reads as what `createGame` does when it is not told.** A file
+  with no `width` was 320 by 224 on a dark background with `scaling: 'contain'`, and the same game in
+  code 800 by 600, `darkviolet`, `scaling: 'none'`. `DEFAULT_PROJECT_SETTINGS` now reads the engine's
+  defaults. A project that says these is not touched, and the editor's templates say them.
 - **The post effects' constants are one group, `POST_EFFECTS`.** `POST` read like sending data, and
   the names of the effects the engine carries were apart from it, in `BUILTIN.POST`. Change
   `POST.CRT_PRESETS` to `POST_EFFECTS.CRT_PRESETS`, `POST.COLOR_LEVELS` to
