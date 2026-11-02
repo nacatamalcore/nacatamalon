@@ -11,6 +11,7 @@ import type { TPalette } from '../../loaders/palette/types/t_palette';
 import type { TLut } from '../../loaders/lut/types/t_lut';
 import type { TLoadedPixels } from '../../loaders/pixels/types/t_loaded_pixels';
 import type { TLoadedPack } from '../../loaders/pack/types/t_loaded_pack';
+import type { TLoadedScene } from '../../loaders/scene/types/t_loaded_scene';
 import type { TPostEffect } from '../../post/types/t_post_effect';
 import type { TTransitionState } from '../../transition/types/t_transition_state';
 import type { TCamera2d } from '../../camera/types/t_camera_2d';
@@ -332,6 +333,10 @@ export type TRuntimeState = {
          * Packs, so two scenes placing the same one read its manifest and documents once.
          */
         packs: Map<string, TLoadedPack>;
+        /**
+         * Scene documents, so two scenes asking for the same one fetch it and add it to the game once.
+         */
+        scenes: Map<string, TLoadedScene>;
         /**
          * Picture files loaded as pixels, so two scenes processing the same one fetch and decode it once.
          */

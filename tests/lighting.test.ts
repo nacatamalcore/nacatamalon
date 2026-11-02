@@ -246,7 +246,7 @@ describe('several lights on one object, written down', () => {
         const doc = serializeScene(root);
         const lights = doc.root.components.filter((component) => component.type === 'light');
         expect(lights.map((light) => (light as { kind: string }).kind)).toEqual(['ambient', 'point', 'point']);
-        expect(parseSceneDoc(doc, '/scenes/street.scene.json')).toEqual(doc);
+        expect(parseSceneDoc(doc, '/scenes/street.scene')).toEqual(doc);
 
         const { store: again } = createTestGame();
         registerScene(again, doc.name, sceneFromDoc(doc));

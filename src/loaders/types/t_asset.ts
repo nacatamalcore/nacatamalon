@@ -13,6 +13,7 @@ import type { TMotionFile } from '../motion/types/t_motion_file';
 import type { TPalette } from '../palette/types/t_palette';
 import type { TLut } from '../lut/types/t_lut';
 import type { TLoadedPack } from '../pack/types/t_loaded_pack';
+import type { TLoadedScene } from '../scene/types/t_loaded_scene';
 import type { TLoadedPixels } from '../pixels/types/t_loaded_pixels';
 
 /**
@@ -39,4 +40,5 @@ export type TAsset =
     | TPalette
     | TLut
     | TLoadedPack
+    | TLoadedScene
     | TLoadedPixels;

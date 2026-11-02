@@ -490,7 +490,7 @@ describe('a mask written down', () => {
         const [, map, window] = doc.root.children;
         expect(map!.components.find((c) => c.type === 'mask')).toEqual({ type: 'mask', id: expect.any(String), by: doc.root.children[0]!.id, channel: 'luminance', soft: true });
         expect(window!.components.find((c) => c.type === 'mask')).toEqual({ type: 'mask', id: expect.any(String), rect: { x: 0, y: 0, width: 50, height: 20 }, invert: true });
-        expect(parseSceneDoc(doc, '/scenes/cave.scene.json')).toEqual(doc);
+        expect(parseSceneDoc(doc, '/scenes/cave.scene')).toEqual(doc);
 
         const { store: again } = createTestGame();
         registerScene(again, doc.name, sceneFromDoc(doc));
@@ -532,7 +532,7 @@ describe('a mask written down', () => {
             root: { id: 'r', name: 'Bad', transform: null, children: [], components: [
                 { type: 'mask', id: 'm', rect: { x: 0, y: 0, width: 'wide' }, by: '', channel: 'red', soft: 'yes' },
             ] },
-        }, '/scenes/bad.scene.json');
+        }, '/scenes/bad.scene');
         expect(doc.root.components).toEqual([{ type: 'mask', id: 'm' }]);
     });
 });

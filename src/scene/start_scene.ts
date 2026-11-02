@@ -24,7 +24,11 @@ export const startScene = (store: TRuntimeStore, name: string, props: object = {
 
     const body = names.get(name);
     if (body === undefined) {
-        throw new Error(`[NacatamalOn] startScene: '${name}' is not registered. Add it to the object passed to createGame.`);
+        // A scene file is only known by its name once it lands, so any still on its way may be it.
+        const arriving = [...store.get('assets').scenes.values()].filter((scene) => scene.status === 'loading' && scene.name === '').map((scene) => scene.src);
+        throw new Error(arriving.length > 0
+            ? `[NacatamalOn] startScene: '${name}' is not registered yet, and ${arriving.join(', ')} ${arriving.length === 1 ? 'is' : 'are'} still loading. Wait for useLoadScene with useLoader before changing to it.`
+            : `[NacatamalOn] startScene: '${name}' is not registered. Add it to the object passed to createGame, or load its .scene file with useLoadScene.`);
     }
     if (scenes.some((scene) => scene.name === name)) {
         throw new Error(`[NacatamalOn] startScene: '${name}' is already running.`);

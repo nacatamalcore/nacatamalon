@@ -160,7 +160,7 @@ describe('a panel in a scene document', () => {
         const light = doc.root.components.find((component) => component.type === 'light') as Record<string, unknown>;
 
         expect(light).toMatchObject({ kind: 'rect', width: 3, height: 0.5, range: 7, intensity: 2 });
-        expect(parseSceneDoc(doc, '/scenes/room.scene.json')).toEqual(doc);
+        expect(parseSceneDoc(doc, '/scenes/room.scene')).toEqual(doc);
     });
 
     it('takes a metre square when a document does not say, and has no angle of its own', () => {
@@ -168,7 +168,7 @@ describe('a panel in a scene document', () => {
             format: SCENE_FORMAT,
             name: 'Room',
             root: { id: 'root', name: 'Room', components: [{ type: 'light', id: 'l', kind: 'rect' }], children: [] },
-        }, '/scenes/room.scene.json');
+        }, '/scenes/room.scene');
         const light = doc.root.components[0] as Record<string, unknown>;
 
         expect(light).toMatchObject({ kind: 'rect', width: 1, height: 1, range: 10 });

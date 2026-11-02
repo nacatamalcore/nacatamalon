@@ -39,6 +39,12 @@ releases are in [changelog/](./changelog/), one file each.
 - **Pictures are drawn after the pictures they show**, a monitor showing a handheld's screen or a
   minimap showing a monitor, whatever kind each one is; two that show each other are drawn in the
   order they were made, and the first shows the other a frame late.
+- **`useLoadScene`: a scene laid out in the editor, loaded like a picture.**
+  `useLoadScene({ src: 'scenes/cave.scene' })` fetches the file, adds the scene under the name
+  written in it so `change('cave')` starts it, and asks at once for what it uses; `useLoader` counts
+  it until all of that has arrived. A game no longer has to fetch and read every document before it
+  starts, and a level can be loaded when the player gets near it. Changing to a scene whose file is
+  still on its way says so, rather than that there is no such scene.
 
 ### Changed
 
@@ -54,6 +60,10 @@ releases are in [changelog/](./changelog/), one file each.
   one wins, and the second is ignored rather than queued, since it is nearly always late (the timer
   running out after the goal was reached) and played afterwards would undo the first. A scene that
   moves on as soon as it arrives asks from `useSceneTransitionEnd`, which the warning now names.
+- **A scene document is a `.scene` file**, as a box is a `.box` and a store a `.store`. It was
+  `.scene.json`. What is inside does not change; a pack's scenes are looked for as `.scene` too, so
+  a pack made before carries its scenes under the old name and has them left out until they are
+  renamed.
 
 ### Fixed
 

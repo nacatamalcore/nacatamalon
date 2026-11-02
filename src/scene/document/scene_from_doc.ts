@@ -58,8 +58,14 @@ import type { TScene } from '../types/t_scene';
  * loader in this engine registers its slot the moment it is asked and fills it in later, so once
  * this has run, a sprite saying "my texture is `hero`" finds `hero` waiting, possibly still
  * arriving. Without it, the first frame of a scene would be the frame that discovers what it needs.
+ *
+ * `useLoadScene` walks it too, as soon as the document lands, so a loading scene counts them.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
  */
-const loadAssets = (assets: readonly TAssetEntry[], src: string): void => {
+export const loadAssets = (assets: readonly TAssetEntry[], src: string): void => {
     for (const asset of assets) {
         switch (asset.type) {
             case 'texture': useLoadTexture({ src: asset.src, key: asset.key }); break;
@@ -892,6 +898,28 @@ export type TSceneFromDocOptions = {
 };
 
 /**
+ * The file each scene function `sceneFromDoc` made was read from, as it was given.
+ */
+const sources = new WeakMap<object, string>();
+
+/** `body`, remembered as read from `src`. */
+const madeFrom = <T extends object>(src: string, body: T): T => {
+    sources.set(body, src);
+    return body;
+};
+
+/**
+ * Where the scene function `body` was read from, when `sceneFromDoc` made it: what `useLoadScene`
+ * reads to know a scene the game already has is the file it was asked for, added by the game's own
+ * start or by an earlier load.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const sourceOfScene = (body: object): string | undefined => sources.get(body);
+
+/**
  * Turns a scene document into an ordinary scene function.
  *
  * **That is the whole design, and it is what keeps this to one code path.** A scene from a file is
@@ -906,8 +934,8 @@ export type TSceneFromDocOptions = {
  *
  * @example
  * ```ts
- * const response = await fetch('/scenes/level1.scene.json');
- * const doc = parseSceneDoc(await response.json(), '/scenes/level1.scene.json');
+ * const response = await fetch('/scenes/level1.scene');
+ * const doc = parseSceneDoc(await response.json(), '/scenes/level1.scene');
  *
  * createGame('#app', { width: 320, height: 240 })({ Level1: sceneFromDoc(doc) });
  * ```
@@ -921,7 +949,7 @@ export type TSceneFromDocOptions = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const sceneFromDoc = (doc: TSceneDoc, src = doc.name, options: TSceneFromDocOptions = {}): (() => TScene) => () => {
+export const sceneFromDoc = (doc: TSceneDoc, src = doc.name, options: TSceneFromDocOptions = {}): (() => TScene) => madeFrom(src, () => {
     const store = getActiveGame();
     if (store === null) {
         throw new Error('[NacatamalOn] sceneFromDoc: the body it returns is a scene body, and only the engine may run it.');
@@ -945,7 +973,7 @@ export const sceneFromDoc = (doc: TSceneDoc, src = doc.name, options: TSceneFrom
     }
 
     return createScene();
-};
+});
 
 /** A node put somewhere other than its document says, on the axes given. */
 const placeNode = (node: TBoxNode, place: { x?: number; y?: number; z?: number }): void => {

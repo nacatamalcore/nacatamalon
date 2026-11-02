@@ -79,7 +79,7 @@ describe('copyBox', () => {
         const level = coin();
         let spawn!: (box: TGameObject, place?: { x?: number; y?: number }) => TGameObject;
         const scene = startTestScene(store, 'Level', () => {
-            sceneFromDoc(level, 'scenes/level.scene.json')();
+            sceneFromDoc(level, 'scenes/level.scene')();
             spawn = useSpawn(copyBox, { parent: 'scene' });
             return createScene();
         });

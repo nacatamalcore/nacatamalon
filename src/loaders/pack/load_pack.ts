@@ -147,7 +147,7 @@ export const loadPack = async (store: TRuntimeStore, pack: TLoadedPack): Promise
             if (doc !== null) pack.boxes[name] = doc;
         }
         for (const name of names(exports.scenes)) {
-            const doc = await read(name, '.scene.json', 'scene');
+            const doc = await read(name, '.scene', 'scene');
             if (doc !== null) pack.scenes[name] = doc;
         }
         pack.exports = { boxes: Object.keys(pack.boxes), scenes: Object.keys(pack.scenes) };

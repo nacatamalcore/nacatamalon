@@ -234,6 +234,10 @@ const releaseOne = (store: TRuntimeStore, asset: TAsset): void => {
         case 'motion-file':
         case 'pack':
             break;
+        // The scene stays one the game can start: a scene is code once it is added, and loading its
+        // file again finds it there.
+        case 'scene':
+            break;
     }
     stopWearing(asset);
     end(store, asset);

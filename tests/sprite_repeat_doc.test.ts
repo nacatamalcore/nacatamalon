@@ -24,12 +24,12 @@ const level = (...sprites: Record<string, unknown>[]) => parseSceneDoc({
             children: [],
         }],
     },
-}, 'scenes/level.scene.json');
+}, 'scenes/level.scene');
 
 const built = (doc: ReturnType<typeof level>) => {
     const { store } = createTestGame();
     const scene = startTestScene(store, 'Level', () => {
-        sceneFromDoc(doc, 'scenes/level.scene.json')();
+        sceneFromDoc(doc, 'scenes/level.scene')();
         return createScene();
     });
     const wall = scene.children.find((b) => b.name === 'Wall')!;

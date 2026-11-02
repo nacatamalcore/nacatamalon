@@ -148,11 +148,11 @@ describe('a scene whose 3D camera follows its 2D one', () => {
                 id: 'root', name: 'Level', transform: null, children: [],
                 components: [{ type: 'camera-3d', id: 'eye', projection: 'orthographic', transform: { x: 0, y: 0, z: 800 }, fov: 60, near: 0.1, far: 2000, zoom: 1, ...(follow ? { follow2d: true } : {}) }],
             },
-        }, 'scenes/level.scene.json');
+        }, 'scenes/level.scene');
         for (const follow of [true, false]) {
             const { store } = createTestGame();
             const scene = startTestScene(store, 'Level', () => {
-                sceneFromDoc(doc(follow), 'scenes/level.scene.json')();
+                sceneFromDoc(doc(follow), 'scenes/level.scene')();
                 return createScene();
             });
             expect(scene.camera3d?.follow2d === true).toBe(follow);

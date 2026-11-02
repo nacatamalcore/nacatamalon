@@ -13,6 +13,8 @@ export { useLoadTrackerSong } from './use_load_tracker_song';
 export { useLoadMotion } from './use_load_motion';
 export { useLoadPack } from './use_load_pack';
 export type { TUseLoadPackOptions } from './use_load_pack';
+export { useLoadScene } from './use_load_scene';
+export type { TUseLoadSceneOptions } from './use_load_scene';
 export { useLoader } from './use_loader';
 
 export type { TUseLoadTextureOptions } from './use_load_texture';
