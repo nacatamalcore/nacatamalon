@@ -20,6 +20,8 @@
  *
  * Pairs with {@link TCanvasKeep}, which is the other axis and decides how much world is drawn.
  *
+ * The names are in `SCREEN.SCALING` too: `SCREEN.SCALING.INTEGER` is `'integer'`.
+ *
  * @category Game
  * @since 1.0.0
  * @author Francisco Pereira Alvarado

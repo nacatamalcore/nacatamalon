@@ -837,7 +837,7 @@ export type TReadSong = {
  * @example
  * ```ts
  * const song = renderSong({
- *     format: SONG_FORMAT,
+ *     format: DOCUMENTS.SONG.FORMAT,
  *     tempo: 120,
  *     meter: [3, 4],
  *     voices: { pulse1: { notes: "d'4 g8 a b c' | d'4 g g |" } },

@@ -18,6 +18,8 @@
  *
  * Pairs with {@link TCanvasScaling}, which is the other axis and decides how big it is drawn.
  *
+ * The names are in `SCREEN.KEEP` too: `SCREEN.KEEP.HEIGHT` is `'height'`.
+ *
  * @category Game
  * @since 1.0.0
  * @author Francisco Pereira Alvarado

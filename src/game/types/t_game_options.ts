@@ -136,7 +136,7 @@ export type TGameOptions = {
      * With `scaling: 'integer'` the rows stay a whole multiple and the columns take that times
      * `pixelAspect`, with fractions: the television's shape exactly, at the cost of columns a screen
      * pixel apart in width, which a `crt()` on top hides. `'fill'` ignores it. See
-     * `RENDER.CONSOLE_SCREENS` for each console's size and shape together, and
+     * `SCREEN.CONSOLES` for each console's size and shape together, and
      * `useGame().setPixelAspect` to change it while the game runs.
      */
     pixelAspect?: number;
@@ -194,7 +194,7 @@ export type TGameOptions = {
     /**
      * Where the game sits in its container when the container is bigger than the game: `'center'`,
      * `'top'`, `'bottom'`, `'left'`, `'right'` or a corner (`'top-left'`…), also as
-     * `RENDER.ALIGN.TOP`… It never changes the game's size, which `scaling` decides first: it only
+     * `SCREEN.ALIGN.TOP`… It never changes the game's size, which `scaling` decides first: it only
      * says which side the space left over goes to.
      *
      * **Said here, it wins over the page.** A container whose CSS asks for another place, a flexbox
@@ -212,7 +212,7 @@ export type TGameOptions = {
      * @example
      * ```ts
      * // On a phone, at the top, with the controls of the page below it.
-     * createGame('#app', { width: 320, height: 180, scaling: 'integer', align: RENDER.ALIGN.TOP });
+     * createGame('#app', { width: 320, height: 180, scaling: 'integer', align: SCREEN.ALIGN.TOP });
      * ```
      */
     align?: TCanvasAlign;

@@ -1,7 +1,7 @@
 import { deadzoneRadial, deadzoneScalar, GAMEPAD_AXES, GAMEPAD_BUTTONS, gamepadAxisIndex } from '../gamepad';
 import { noteFoundByName } from '../../box/named_by_function';
 import { momentOf } from '../moment';
-import { DEFAULT_ACTION_PRESS, DEFAULT_DEADZONE } from '../../CONFIG';
+import { DEFAULT_ACTION_PRESS, DEFAULT_DEADZONE } from '../../DEFAULTS';
 import { bindingKey } from './normalize_action_map';
 import { POINTER_BUTTONS } from '../pointer_buttons';
 import type { TBox } from '../../box';

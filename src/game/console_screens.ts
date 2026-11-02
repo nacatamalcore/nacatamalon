@@ -1,7 +1,7 @@
 import type { TGameOptions } from './types/t_game_options';
 
 /**
- * Which consoles `RENDER.CONSOLE_SCREENS` has the screen of.
+ * Which consoles `SCREEN.CONSOLES` has the screen of.
  *
  * @category Game
  * @since 1.0.0
@@ -12,7 +12,7 @@ export type TConsoleScreenName = 'nes' | 'snes' | 'genesis' | 'gameBoy' | 'gba' 
 /**
  * A console's screen as `createGame` takes it: how many pixels it drew, their shape and how many
  * pictures a second. Spread into the options, and whatever comes after wins:
- * `createGame('#app', { ...RENDER.CONSOLE_SCREENS.snes, scaling: 'integer' })`.
+ * `createGame('#app', { ...SCREEN.CONSOLES.snes, scaling: 'integer' })`.
  *
  * @category Game
  * @since 1.0.0

@@ -8,7 +8,7 @@
  * - `'left'`, `'right'`: against that edge, in the middle up and down.
  * - `'top-left'`, `'top-right'`, `'bottom-left'`, `'bottom-right'`: in that corner.
  *
- * The names are in `RENDER.ALIGN` too: `RENDER.ALIGN.TOP_LEFT` is `'top-left'`.
+ * The names are in `SCREEN.ALIGN` too: `SCREEN.ALIGN.TOP_LEFT` is `'top-left'`.
  *
  * @category Game
  * @since 1.0.0

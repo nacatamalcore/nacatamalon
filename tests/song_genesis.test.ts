@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { renderSong, parseSongDoc, SONG_FORMAT, BUILTIN } from '../src';
+import { renderSong, parseSongDoc, DOCUMENTS, BUILTIN } from '../src';
 import { serializeSongDoc } from '../src/authoring';
 import { psgFrequencyOf, psgGainOf } from '../src/audio/synth/genesis';
 import type { TFmPatch, TSongDoc } from '../src';
@@ -12,7 +12,7 @@ import type { TFmPatch, TSongDoc } from '../src';
 const RATE = 44100;
 
 const song = (voices: TSongDoc['voices'], extra: Partial<TSongDoc> = {}): TSongDoc => ({
-    format: SONG_FORMAT,
+    format: DOCUMENTS.SONG.FORMAT,
     chip: 'genesis',
     tempo: 60,
     meter: [4, 4],

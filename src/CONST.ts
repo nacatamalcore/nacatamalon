@@ -1,4 +1,4 @@
-import { DEFAULT_ACTION_PRESS, DEFAULT_DEADZONE, MAX_LIGHTS, MAX_PALETTE_COLORS, MAX_SCENE_LIGHTS, PHYSICS_LAYERS } from './CONFIG';
+import { DEFAULT_ACTION_PRESS, DEFAULT_DEADZONE, MAX_LIGHTS, MAX_PALETTE_COLORS, MAX_SCENE_LIGHTS, PHYSICS_LAYERS } from './DEFAULTS';
 import { GAMEPAD_AXES, GAMEPAD_AXIS_LABELS, GAMEPAD_BUTTONS, GAMEPAD_BUTTON_LABELS } from './input/gamepad/gamepad_standard';
 import { POINTER_BUTTONS } from './input/pointer_buttons';
 import { ACTION_PRESETS } from './input/actions/action_presets';
@@ -14,6 +14,15 @@ import { SFX_PRESETS } from './audio/synth/sfx_presets';
 import { SONG_BUILTINS } from './audio/synth/builtin/song_library';
 import { SONG_INSTRUMENTS } from './audio/synth/builtin/song_instruments';
 import { SONG_SAMPLES } from './audio/synth/builtin/song_samples';
+import { SCENE_FORMAT, SCENE_VERSION } from './scene/document/types/t_scene_doc';
+import { TILEMAP_FORMAT } from './loaders/tilemap/types/t_tilemap_doc';
+import { PALETTE_FORMAT } from './loaders/palette/palette_document';
+import { ATLAS_FORMAT } from './atlas/document/atlas_format';
+import { PARTICLES_FORMAT } from './loaders/particles/types/t_particles_doc';
+import { SONG_FORMAT } from './audio/synth/parse_song_doc';
+import { MOTION_FORMAT, MOTION_VERSION } from './motion/types/t_motion_doc';
+import { SHADER_GRAPH_FORMAT } from './shader_composer/document';
+import { STORE_FORMAT, STORE_VERSION } from './game_store/document/t_store_doc';
 import type { TRendererType } from './render';
 import type { TPixelSnap } from './game/types/t_game_options';
 import type { TGamepadAxisName, TGamepadButtonName } from './input/gamepad/gamepad_standard';
@@ -23,6 +32,8 @@ import type { TSongBuiltinInfo } from './audio/synth/builtin/song_library';
 import type { TSongInstrumentInfo } from './audio/synth/builtin/song_instruments';
 import type { TSongSampleInfo } from './audio/synth/builtin/song_samples';
 import type { TCanvasAlign } from './DOM/types/t_canvas_align';
+import type { TCanvasScaling } from './DOM/types/t_canvas_scaling';
+import type { TCanvasKeep } from './DOM/types/t_canvas_keep';
 
 /**
  * The engine's constants: what a game reads and never changes. They live on the root, in groups,
@@ -45,23 +56,16 @@ const frozen = <T>(value: T): T => {
 };
 
 /**
- * How the engine draws: the renderers `createGame` can be asked for, which pixels it draws on, the
- * screens of the consoles, and how many numbers one corner of a line takes.
+ * How the engine draws: the renderers `createGame` can be asked for, which pixels it draws on, and
+ * how many numbers one corner of a line takes.
  *
  * `TYPE.WEBGL2` is the same as writing `'WEBGL2'` in `createGame({ renderer })`. `PIXEL_SNAP.SCREEN`,
- * `GAME` and `OFF` are what `createGame({ pixelSnap })` and `useGame().setPixelSnap` take. `ALIGN` is
- * where `createGame({ align })` puts the game in its container: `CENTER`, a side (`TOP`, `BOTTOM`,
- * `LEFT`, `RIGHT`) or a corner (`TOP_LEFT`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_RIGHT`).
- * `CONSOLE_SCREENS` is each console's screen, its size, the shape of its pixels (`pixelAspect`) and
- * its pictures a second, to spread into `createGame`: `nes`, `snes`, `genesis`, `gameBoy`, `gba`,
- * `ps1` and `n64`.
+ * `GAME` and `OFF` are what `createGame({ pixelSnap })` and `useGame().setPixelSnap` take.
  * `LINE_VERTEX_FLOATS` is seven, where a corner is (`x`, `y`, `z`) and its colour (`r`, `g`, `b`,
  * `a`), for a game that writes the corners of its lines itself.
  *
  * @example
  * createGame({ renderer: RENDER.TYPE.WEBGL2, pixelSnap: RENDER.PIXEL_SNAP.GAME });
- * createGame('#app', { ...RENDER.CONSOLE_SCREENS.snes, scaling: 'integer' });
- * createGame('#app', { width: 320, height: 180, scaling: 'integer', align: RENDER.ALIGN.TOP });
  *
  * @category Constants
  * @since 1.0.0
@@ -78,6 +82,44 @@ export const RENDER = /* @__PURE__ */ frozen({
         GAME: 'game',
         OFF: 'off',
     } as const satisfies Record<string, TPixelSnap>,
+    LINE_VERTEX_FLOATS,
+});
+
+/**
+ * The game's screen: what shape it is, and how it sits in its page.
+ *
+ * - `CONSOLES`: each console's screen, its size, the shape of its pixels (`pixelAspect`) and its
+ *   pictures a second, to spread into `createGame`: `nes`, `snes`, `genesis`, `gameBoy`, `gba`,
+ *   `ps1` and `n64`.
+ * - `SCALING`: how big it is painted in its page, what `createGame({ scaling })`,
+ *   `fullscreenScaling` and `useGame().setScaling` take: `NONE`, `INTEGER`, `CONTAIN` or `FILL`.
+ * - `KEEP`: which sides keep the game's size when the page is another shape,
+ *   `createGame({ keep })`: `BOTH`, `WIDTH`, `HEIGHT` or `NONE`.
+ * - `ALIGN`: where `createGame({ align })` puts it in its container: `CENTER`, a side (`TOP`,
+ *   `BOTTOM`, `LEFT`, `RIGHT`) or a corner (`TOP_LEFT`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_RIGHT`).
+ *
+ * @example
+ * createGame('#app', { ...SCREEN.CONSOLES.snes, scaling: SCREEN.SCALING.INTEGER });
+ * createGame('#app', { width: 320, height: 180, align: SCREEN.ALIGN.TOP });
+ *
+ * @category Constants
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const SCREEN = /* @__PURE__ */ frozen({
+    CONSOLES: CONSOLE_SCREENS,
+    SCALING: {
+        NONE: 'none',
+        INTEGER: 'integer',
+        CONTAIN: 'contain',
+        FILL: 'fill',
+    } as const satisfies Record<string, TCanvasScaling>,
+    KEEP: {
+        BOTH: 'both',
+        WIDTH: 'width',
+        HEIGHT: 'height',
+        NONE: 'none',
+    } as const satisfies Record<string, TCanvasKeep>,
     ALIGN: {
         CENTER: 'center',
         TOP: 'top',
@@ -89,8 +131,6 @@ export const RENDER = /* @__PURE__ */ frozen({
         BOTTOM_LEFT: 'bottom-left',
         BOTTOM_RIGHT: 'bottom-right',
     } as const satisfies Record<string, TCanvasAlign>,
-    CONSOLE_SCREENS,
-    LINE_VERTEX_FLOATS,
 });
 
 /**
@@ -169,22 +209,24 @@ export const PHYSICS = /* @__PURE__ */ frozen({
 });
 
 /**
- * Starting points for the post effects.
+ * The post effects: the ones the engine carries, and starting points for them.
  *
+ * - `NAMES`: the post effects a project names in its `post` list.
  * - `CRT_PRESETS`: four tubes for `crt()`. `consumer` is the television in the living room, `pvm` a
  *   studio monitor, `arcade` a cabinet, `composite` a cheap cable.
  * - `COLOR_LEVELS`: how many steps a channel had on each machine, for `dither()` and `posterize()`.
  *
  * @example
- * usePostProcess(crt(POST.CRT_PRESETS.pvm));
- * usePostProcess(crt({ ...POST.CRT_PRESETS.consumer, noise: 0 }));
- * usePostProcess(posterize({ levels: POST.COLOR_LEVELS.genesis }));
+ * usePostProcess(crt(POST_EFFECTS.CRT_PRESETS.pvm));
+ * usePostProcess(crt({ ...POST_EFFECTS.CRT_PRESETS.consumer, noise: 0 }));
+ * usePostProcess(posterize({ levels: POST_EFFECTS.COLOR_LEVELS.genesis }));
  *
  * @category Constants
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const POST = /* @__PURE__ */ frozen({
+export const POST_EFFECTS = /* @__PURE__ */ frozen({
+    NAMES: POST_KEYS,
     CRT_PRESETS,
     COLOR_LEVELS,
 });
@@ -197,7 +239,6 @@ export const POST = /* @__PURE__ */ frozen({
  * - `MUSIC.SONGS`: the songs, `useLoadSong({ src: 'nacatamalon:' + key })`. `MUSIC.INSTRUMENTS`
  *   and `MUSIC.SAMPLES`: what a song's notes play with `@name`, and what its sample voices play.
  * - `SOUNDS`: the kinds of sound effect `renderSfx` makes.
- * - `POST`: the post effects a project names in its `post` list.
  * - `LOOKS`: the looks a material can take.
  *
  * @example
@@ -216,6 +257,35 @@ export const BUILTIN = /* @__PURE__ */ frozen({
         SAMPLES: SONG_SAMPLES as readonly TSongSampleInfo[],
     },
     SOUNDS: SFX_PRESETS as readonly TSfxPreset[],
-    POST: POST_KEYS,
     LOOKS: LOOK_KEYS,
 });
+
+/**
+ * What the engine's documents say they are, field by field: `FORMAT` is what a file's `format`
+ * holds and `VERSION` its `version`, for a tool or a game that writes one by hand. The engine's own
+ * `serialize…` and the editor write them already.
+ *
+ * Some documents name themselves and count their versions apart (a scene is
+ * `format: 'nacatamalon-scene'`, `version: 1`); the rest have only `format`, and it is the version.
+ * A version goes up when a document written today would be misread by an older engine. A scene
+ * claiming a higher one than this engine's is loaded anyway and warned about once.
+ *
+ * @example
+ * const palette = { format: DOCUMENTS.PALETTE.FORMAT, kind: 'palette', name: 'Dusk', colors: ['#102030'] };
+ * const isScene = (file: { format?: unknown }) => file.format === DOCUMENTS.SCENE.FORMAT;
+ *
+ * @category Constants
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const DOCUMENTS = /* @__PURE__ */ frozen({
+    SCENE: { FORMAT: SCENE_FORMAT, VERSION: SCENE_VERSION },
+    MOTION: { FORMAT: MOTION_FORMAT, VERSION: MOTION_VERSION },
+    STORE: { FORMAT: STORE_FORMAT, VERSION: STORE_VERSION },
+    TILEMAP: { FORMAT: TILEMAP_FORMAT },
+    PALETTE: { FORMAT: PALETTE_FORMAT },
+    ATLAS: { FORMAT: ATLAS_FORMAT },
+    PARTICLES: { FORMAT: PARTICLES_FORMAT },
+    SONG: { FORMAT: SONG_FORMAT },
+    SHADER_GRAPH: { FORMAT: SHADER_GRAPH_FORMAT },
+} as const);

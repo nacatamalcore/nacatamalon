@@ -3,7 +3,7 @@ import { fitCanvas } from '../src/DOM/fit_canvas';
 import { cleanGameOptions } from '../src/game/bootstrap/clean_gameoptions';
 import { parseProject } from '../src/project/parse_project';
 import { gameOptionsFromProject } from '../src/project/game_options_from_project';
-import { RENDER } from '../src/CONST';
+import { SCREEN } from '../src/CONST';
 import type { TCanvasAlign } from '../src/DOM/types/t_canvas_align';
 
 /**
@@ -78,17 +78,17 @@ describe('where the canvas sits', () => {
     it('goes where the game says with align, over what the page asks', () => {
         const corner = { display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-start' };
         expect(fit(corner, undefined, 'center').margin).toBe('18px auto auto 46px');
-        expect(fit(corner, undefined, RENDER.ALIGN.BOTTOM_RIGHT).margin).toBe('37px auto auto 93px');
+        expect(fit(corner, undefined, SCREEN.ALIGN.BOTTOM_RIGHT).margin).toBe('37px auto auto 93px');
         // A side: that edge, and the middle of the other.
-        expect(fit(corner, undefined, RENDER.ALIGN.TOP).margin).toBe('0px auto auto 46px');
-        expect(fit(corner, undefined, RENDER.ALIGN.RIGHT).margin).toBe('18px auto auto 93px');
+        expect(fit(corner, undefined, SCREEN.ALIGN.TOP).margin).toBe('0px auto auto 46px');
+        expect(fit(corner, undefined, SCREEN.ALIGN.RIGHT).margin).toBe('18px auto auto 93px');
         // In a plain container too, the way down still a `top`.
-        expect(fit({}, undefined, RENDER.ALIGN.BOTTOM)).toMatchObject({ margin: '0px auto 0px 46px', top: '37px' });
-        expect(fit({}, undefined, RENDER.ALIGN.TOP_LEFT)).toMatchObject({ margin: '0px auto 0px 0px', top: '' });
+        expect(fit({}, undefined, SCREEN.ALIGN.BOTTOM)).toMatchObject({ margin: '0px auto 0px 46px', top: '37px' });
+        expect(fit({}, undefined, SCREEN.ALIGN.TOP_LEFT)).toMatchObject({ margin: '0px auto 0px 0px', top: '' });
     });
 
     it('never changes the game\'s size, only where what is left over goes', () => {
-        for (const align of Object.values(RENDER.ALIGN)) {
+        for (const align of Object.values(SCREEN.ALIGN)) {
             expect(fit({}, undefined, align).size).toEqual(['640px', '480px']);
         }
     });

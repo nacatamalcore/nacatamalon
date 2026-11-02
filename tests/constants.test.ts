@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { BUILTIN, INPUT, LIMITS, PHYSICS, POST, RENDER, renderSfx } from '../src';
+import { BUILTIN, DOCUMENTS, INPUT, LIMITS, PHYSICS, POST_EFFECTS, RENDER, SCREEN, parseSceneDoc, parseSongDoc, renderSfx } from '../src';
+import { CANVAS_ALIGNS } from '../src/DOM/types/t_canvas_align';
 import { POST_BUILTINS, MATERIAL_LOOKS } from '../src/authoring';
 import { ARCADE_FONT } from '../src/gameobjects/text/fonts/arcade_font';
 import { SQUARE_FONT } from '../src/gameobjects/text/fonts/square_font';
@@ -15,7 +16,7 @@ import { MAX_LIGHTS } from '../src/light';
 
 describe('the lists written out by hand', () => {
     it('name every post effect the engine has, in its order', () => {
-        expect(BUILTIN.POST).toEqual(POST_BUILTINS.map((effect) => effect.key));
+        expect(POST_EFFECTS.NAMES).toEqual(POST_BUILTINS.map((effect) => effect.key));
     });
 
     it('name every look a material can take', () => {
@@ -46,16 +47,34 @@ describe('what the groups say', () => {
         expect(PHYSICS.ALL_LAYERS).toBe((1 << LIMITS.PHYSICS_LAYERS) - 1);
         expect(RENDER.TYPE).toEqual({ AUTO: 'AUTO', WEBGPU: 'WEBGPU', WEBGL2: 'WEBGL2' });
         expect(RENDER.PIXEL_SNAP).toEqual({ SCREEN: 'screen', GAME: 'game', OFF: 'off' });
-        expect(RENDER.ALIGN).toEqual({
+        expect(SCREEN.ALIGN).toEqual({
             CENTER: 'center', TOP: 'top', BOTTOM: 'bottom', LEFT: 'left', RIGHT: 'right',
             TOP_LEFT: 'top-left', TOP_RIGHT: 'top-right', BOTTOM_LEFT: 'bottom-left', BOTTOM_RIGHT: 'bottom-right',
         });
+        expect(Object.values(SCREEN.ALIGN).sort()).toEqual([...CANVAS_ALIGNS].sort());
+        expect(SCREEN.SCALING).toEqual({ NONE: 'none', INTEGER: 'integer', CONTAIN: 'contain', FILL: 'fill' });
+        expect(SCREEN.KEEP).toEqual({ BOTH: 'both', WIDTH: 'width', HEIGHT: 'height', NONE: 'none' });
         expect(INPUT.DEADZONE).toBe(0.2);
     });
 });
 
+describe('DOCUMENTS', () => {
+    it('says what each document\'s fields hold, as the engine writes them', () => {
+        expect(DOCUMENTS.SCENE).toEqual({ FORMAT: 'nacatamalon-scene', VERSION: 1 });
+        expect(DOCUMENTS.MOTION.FORMAT).toBe('nacatamalon-motion');
+        expect(DOCUMENTS.STORE.FORMAT).toBe('nacatamalon-store');
+        expect(Object.keys(DOCUMENTS)).toEqual(['SCENE', 'MOTION', 'STORE', 'TILEMAP', 'PALETTE', 'ATLAS', 'PARTICLES', 'SONG', 'SHADER_GRAPH']);
+    });
+
+    it('is what a document written by hand with it is read as', () => {
+        const scene = parseSceneDoc({ format: DOCUMENTS.SCENE.FORMAT, version: DOCUMENTS.SCENE.VERSION, name: 'Cave', root: { name: 'root', components: [], children: [] } }, 'cave.scene');
+        expect(scene.name).toBe('Cave');
+        expect(parseSongDoc({ format: DOCUMENTS.SONG.FORMAT, tempo: 120, voices: {} }).format).toBe(DOCUMENTS.SONG.FORMAT);
+    });
+});
+
 describe('a game writing into them', () => {
-    const groups = { RENDER, INPUT, LIMITS, PHYSICS, POST, BUILTIN };
+    const groups = { RENDER, SCREEN, INPUT, LIMITS, PHYSICS, POST_EFFECTS, BUILTIN, DOCUMENTS };
 
     it('changes nothing, all the way down', () => {
         const walk = (value: unknown, path: string) => {
@@ -69,7 +88,7 @@ describe('a game writing into them', () => {
     it('is told so, rather than breaking the engine for every game on the page', () => {
         'use strict';
         expect(() => { (INPUT.GAMEPAD_BUTTONS as string[]).push('turbo'); }).toThrow();
-        expect(() => { (POST.CRT_PRESETS.pvm as { noise: number }).noise = 9; }).toThrow();
+        expect(() => { (POST_EFFECTS.CRT_PRESETS.pvm as { noise: number }).noise = 9; }).toThrow();
         expect(() => { (BUILTIN.MUSIC.SONGS[0] as { key: string }).key = 'mine'; }).toThrow();
         expect(INPUT.GAMEPAD_BUTTONS).not.toContain('turbo');
     });

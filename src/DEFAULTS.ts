@@ -1,5 +1,5 @@
-import { getColor } from "./color";
-import type { TGameOptions } from "./game/types/t_game_options";
+import { getColor } from './color';
+import type { TGameOptions } from './game/types/t_game_options';
 
 /**
  * Default configuration for the game engine.

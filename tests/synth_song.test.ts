@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { renderSong, parseSongDoc, SONG_FORMAT } from '../src';
+import { renderSong, parseSongDoc, DOCUMENTS } from '../src';
 import { analyzeAudio, encodeWav, mixSong, serializeSongDoc } from '../src/authoring';
 import { parseSongNotes } from '../src/audio/synth/parse_song_notes';
 import type { TSongDoc } from '../src';
@@ -15,7 +15,7 @@ import type { TSongDoc } from '../src';
 const RATE = 44100;
 
 const song = (voices: TSongDoc['voices'], extra: Partial<TSongDoc> = {}): TSongDoc => ({
-    format: SONG_FORMAT,
+    format: DOCUMENTS.SONG.FORMAT,
     tempo: 120,
     meter: [4, 4],
     voices,

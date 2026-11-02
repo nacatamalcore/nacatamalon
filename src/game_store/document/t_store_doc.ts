@@ -113,8 +113,8 @@ export type TStorePersistDoc = {
  * @author Francisco Pereira Alvarado
  */
 export type TStoreDoc = {
-    format: typeof STORE_FORMAT;
-    version: typeof STORE_VERSION;
+    format: 'nacatamalon-store';
+    version: 2;
     /**
      * The store's name: the key `createGameStore` was given, and the key its saved game is written
      * under. By habit it is the file's own name (`stores/pet.store` gives `pet`), so a project's

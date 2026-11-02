@@ -370,7 +370,7 @@ const MASK_TYPES = { aperture: 0, slot: 1, shadow: 2 } as const;
 /**
  * Makes the frame look as if it were on a CRT television: lines, a phosphor mask, the bulge and the
  * glow of the glass, and the small faults of a real tube. Each part is a number, and a part at `0` is
- * not there at all. `POST.CRT_PRESETS` has four tubes to start from.
+ * not there at all. `POST_EFFECTS.CRT_PRESETS` has four tubes to start from.
  *
  * **One line per row of the game, not of the screen.** The lines follow the game's own pixels, the
  * way a console's picture sat on the tube, so a game at 320 × 224 has 224 of them however large the
@@ -397,8 +397,8 @@ const MASK_TYPES = { aperture: 0, slot: 1, shadow: 2 } as const;
  * @example
  * ```ts
  * usePostProcess(crt());
- * usePostProcess(crt(POST.CRT_PRESETS.pvm));
- * usePostProcess(crt({ ...POST.CRT_PRESETS.consumer, noise: 0, curvature: 0 }));
+ * usePostProcess(crt(POST_EFFECTS.CRT_PRESETS.pvm));
+ * usePostProcess(crt({ ...POST_EFFECTS.CRT_PRESETS.consumer, noise: 0, curvature: 0 }));
  * // The corners the bulge leaves in the page's own colour instead of black
  * usePostProcess(crt({ curvature: 0.08, bezel: '#0b0710' }));
  * ```

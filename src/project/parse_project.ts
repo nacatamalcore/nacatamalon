@@ -3,7 +3,7 @@ import { normalizeActionMap } from '../input';
 import { normalizePostChain } from '../post/post_chain';
 import { asBoolean, asColor, asInt, asOneOf } from '../utils';
 import { DEFAULT_PROJECT_SETTINGS } from './default_project';
-import { MAX_STEP_RATE, MIN_STEP_RATE } from '../CONFIG';
+import { MAX_STEP_RATE, MIN_STEP_RATE } from '../DEFAULTS';
 import type { TProjectSettings } from './types/t_project_settings';
 import type { TPixelSnap } from '../game/types/t_game_options';
 import { CANVAS_ALIGNS } from '../DOM/types/t_canvas_align';

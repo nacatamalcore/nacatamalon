@@ -2,7 +2,7 @@ import { type TRuntimeStore, withSceneUpdates } from "../../store";
 import type { TFrameContext } from "../../render";
 import type { TBox } from "../../box";
 import { fillFrameContext } from "./fill_frame_context";
-import { MAX_FRAME_DELTA, MAX_STEPS_PER_FRAME } from "../../CONFIG";
+import { MAX_FRAME_DELTA, MAX_STEPS_PER_FRAME } from "../../DEFAULTS";
 import { runHookUpdates as runUpdates, runLateUpdates, runMoves } from "./runHookUpdates";
 import { stepGameTransition } from "./helper/step_game_transition";
 import { flushTransitionEnd } from "../../scene/flush_transition_end";

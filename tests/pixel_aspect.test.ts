@@ -7,7 +7,7 @@ import { createScene } from '../src/scene/create_scene';
 import { usePointer } from '../src/hooks/input/use_pointer';
 import { gameOptionsFromProject } from '../src/project/game_options_from_project';
 import { parseProject } from '../src/project/parse_project';
-import { RENDER } from '../src/CONST';
+import { SCREEN } from '../src/CONST';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import type { TPointerInfo } from '../src/input';
 
@@ -141,22 +141,22 @@ describe('a game with wider pixels', () => {
     });
 });
 
-describe('RENDER.CONSOLE_SCREENS', () => {
+describe('SCREEN.CONSOLES', () => {
     it('has each console\'s screen, spread into createGame as it is', () => {
-        expect(Object.keys(RENDER.CONSOLE_SCREENS)).toEqual(['nes', 'snes', 'genesis', 'gameBoy', 'gba', 'ps1', 'n64']);
-        const options = cleanGameOptions({ ...RENDER.CONSOLE_SCREENS.snes });
+        expect(Object.keys(SCREEN.CONSOLES)).toEqual(['nes', 'snes', 'genesis', 'gameBoy', 'gba', 'ps1', 'n64']);
+        const options = cleanGameOptions({ ...SCREEN.CONSOLES.snes });
         expect([options.width, options.height, options.pixelAspect, options.step]).toEqual([256, 224, SNES, 60]);
-        expect(RENDER.CONSOLE_SCREENS.genesis.pixelAspect).toBe(32 / 35);
-        expect(RENDER.CONSOLE_SCREENS.gameBoy).toEqual({ width: 160, height: 144, pixelAspect: 1, step: 60 });
+        expect(SCREEN.CONSOLES.genesis.pixelAspect).toBe(32 / 35);
+        expect(SCREEN.CONSOLES.gameBoy).toEqual({ width: 160, height: 144, pixelAspect: 1, step: 60 });
     });
 
     it('lets what comes after it win', () => {
-        const options = cleanGameOptions({ ...RENDER.CONSOLE_SCREENS.nes, pixelAspect: 1 });
+        const options = cleanGameOptions({ ...SCREEN.CONSOLES.nes, pixelAspect: 1 });
         expect(options.pixelAspect).toBe(1);
     });
 
     it('cannot be changed by a game that took one', () => {
-        expect(Object.isFrozen(RENDER.CONSOLE_SCREENS.snes)).toBe(true);
+        expect(Object.isFrozen(SCREEN.CONSOLES.snes)).toBe(true);
     });
 });
 

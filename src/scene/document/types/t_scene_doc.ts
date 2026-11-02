@@ -161,7 +161,7 @@ export type TBoxNode = {
  * @author Francisco Pereira Alvarado
  */
 export type TSceneDoc = {
-    format: typeof SCENE_FORMAT;
+    format: 'nacatamalon-scene';
     version: number;
     /**
      * What the scene is called, and what it is started by.

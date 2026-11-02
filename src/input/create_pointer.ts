@@ -17,7 +17,7 @@ import type { TText } from '../gameobjects/text/types/t_text';
 import type { TNineSlice } from '../gameobjects/nine_slice/types/t_nine_slice';
 import type { TRuntimeStore } from '../store';
 import type { TListeningSprite, TPointerTarget } from './topmost_listening';
-import { DRAG_SLOP } from '../CONFIG';
+import { DRAG_SLOP } from '../DEFAULTS';
 import type { TDropZoneSpec, TPointerDragInfo, TPointerInfo, TPointerKind, TPointerListener, TPointerLockOptions, TPointerSource, TPointerType, TPointerWheelListener } from './types/t_pointer';
 import type { TSpriteEvents } from './types/t_sprite_events';
 

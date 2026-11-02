@@ -143,7 +143,7 @@ export type TLight = TDirectionalLight | TPointLight | TSpotLight | TRectLight |
  */
 export type TPunctualLight = TDirectionalLight | TPointLight | TSpotLight | TRectLight;
 
-export { MAX_LIGHTS, MAX_SCENE_LIGHTS } from '../../CONFIG';
+export { MAX_LIGHTS, MAX_SCENE_LIGHTS } from '../../DEFAULTS';
 
 /**
  * Whether this light takes part in the shading, which is everything but ambient.

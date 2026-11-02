@@ -7,7 +7,7 @@ import type { TRuntimeStore } from '../../store';
 import { captureScreen } from '../capture';
 import { replaceProjectPostChain, tuneProjectPostEffect } from '../../post/install_post_chain';
 import { setCameraPreview } from '../preview';
-import { MAX_FRAME_DELTA } from '../../CONFIG';
+import { MAX_FRAME_DELTA } from '../../DEFAULTS';
 import { replaceSongDoc } from '../../loaders/song';
 import { replaceMotionDoc } from '../../loaders/motion';
 import { endMotionPreview, previewMotion } from '../../motion/preview_motion';

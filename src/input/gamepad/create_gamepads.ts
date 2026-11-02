@@ -1,4 +1,4 @@
-import { DEFAULT_DEADZONE } from '../../CONFIG';
+import { DEFAULT_DEADZONE } from '../../DEFAULTS';
 import { windowOf } from '../../DOM/window_of';
 import { momentOf } from '../moment';
 import { deadzoneRadial, deadzoneScalar } from './deadzone';

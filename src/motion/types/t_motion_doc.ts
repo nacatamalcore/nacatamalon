@@ -119,7 +119,7 @@ export type TMotionTransition = {
  * @author Francisco Pereira Alvarado
  */
 export type TMotionDoc = {
-    format: typeof MOTION_FORMAT;
+    format: 'nacatamalon-motion';
     version: number;
     /**
      * How long it lasts, in seconds. A key after it is never reached.

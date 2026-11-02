@@ -1,7 +1,7 @@
 import type { TCrtOptions } from './crt';
 
 /**
- * Four tubes to start from, for `crt(POST.CRT_PRESETS.pvm)` or `crt({ ...POST.CRT_PRESETS.consumer, noise: 0 })`.
+ * Four tubes to start from, for `crt(POST_EFFECTS.CRT_PRESETS.pvm)` or `crt({ ...POST_EFFECTS.CRT_PRESETS.consumer, noise: 0 })`.
  *
  * `consumer` is the television in the living room: slot mask, some glow, some noise. `pvm` is a
  * studio monitor: flat, sharp, deep lines. `arcade` is a cabinet: a strong bulge and a dot mask.

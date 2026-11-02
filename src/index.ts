@@ -71,7 +71,7 @@ export type { TUseHelperLinesOptions, THelperLines, TUseHelperAxisOptions, THelp
 export type { TLines } from './gameobjects/lines';
 export type { TNewLinesOptions } from './gameobjects/lines';
 export { createParticles, createParticles3d, playParticles, stopParticles, pauseParticles, clearParticles, particleCount, emitParticles } from './gameobjects/particles';
-export { parseParticlesDoc, PARTICLES_FORMAT } from './loaders/particles';
+export { parseParticlesDoc } from './loaders/particles';
 export type { TParticles, TParticlesOptions, TParticleOverrides, TParticles3d, TParticles3dOptions } from './gameobjects/particles';
 export type { TParticleCollider2d, TParticleCollider3d, TParticleColliderShape2d, TParticleColliderShape3d } from './gameobjects/particles/colliders/t_particle_collider';
 export type { TParticlesEffect, TParticlesEffect2d, TParticlesEffect3d, TParticleColorStopInput } from './loaders/particles';
@@ -85,7 +85,7 @@ export type { TPostEffect, TPostPass, TPostChain, TPostChainEntry, TPostProcessO
 export { fade, wipe, iris, pixelate } from './transition';
 export type { TTransition, TSceneChangeOptions, TSceneLaunchOptions, TSceneStopOptions, TWipeDirection } from './transition';
 export type { TPalette, TPaletteDoc } from './loaders/palette';
-export { parsePaletteDoc, PALETTE_FORMAT } from './loaders/palette';
+export { parsePaletteDoc } from './loaders/palette';
 export type { TLut } from './loaders/lut';
 export { createSprite } from './gameobjects/sprite/create_sprite';
 // The far layers of a level: a picture repeated endlessly across, moving with the camera only so much.
@@ -100,7 +100,7 @@ export { createTilemap, getTilemap, blocksBulletsAt, cellAt, cellCorner, markLay
 export { createSpriteAtlas, setSpriteFrame } from './atlas';
 // The `.atlas` format: reading one is how a game loads its sheets, so it stays here. Writing one,
 // starting one and cutting one to draw over the image are a tool's, in `nacatamalon/authoring`.
-export { parseAtlasDoc, ATLAS_FORMAT } from './atlas/document';
+export { parseAtlasDoc } from './atlas/document';
 export type { TAtlasDoc, TAtlasDocFrame, TAtlasGridSpec, TAtlasPixelRect, TAtlasSequenceDoc } from './atlas/document';
 export { destroy } from './destroy';
 export { listen, onReport } from './events';
@@ -155,7 +155,7 @@ export { createGameStore, localStorageAdapter, indexedDbAdapter } from './game_s
 // store an object was given, and it installs what its `.store` files author over what the code
 // declared, which is what booting an exported project is. Listing them and writing them are a
 // tool's, and go out of `nacatamalon/authoring`.
-export { getGameStore, storeOf, applyStoreDocs, parseStoreDoc, STORE_FORMAT, STORE_VERSION } from './game_store';
+export { getGameStore, storeOf, applyStoreDocs, parseStoreDoc } from './game_store';
 export { getColor, lerpColor, fromHsl, consoleColor } from './color';
 export { useColor } from './hooks';
 export type { TColor, TColorInput, TColorOption } from './color';
@@ -190,7 +190,7 @@ export {
     composerCross, composerPow, composerMin, composerMax, composerClamp, composerMix, composerStep,
     composerSmoothstep, composerReflect, composerMod, composerAtan2, composerOneMinus, composerSaturate,
     composerPipe, composerSimplexNoise, composerFbm, composerCellularNoise, composerFresnel, composerCelShade,
-    parseShaderGraph, compileShaderGraph, SHADER_GRAPH_FORMAT,
+    parseShaderGraph, compileShaderGraph,
     toonLighting, unlitLighting, mangaDots, rim,
 } from './shader_composer';
 export type {
@@ -206,7 +206,7 @@ export type { TText, TTextStyle, TTextOptions } from './gameobjects/text';
 export type { TNineSlice, TNineSliceBorders, TNineSliceMode, TNineSliceOptions } from './gameobjects/nine_slice/types';
 export type { TTilemap, TTilemapLayer, TTilemapOptions } from './gameobjects/tilemap';
 export type { TTerrainDoc, TTileDoc, TTilemapDoc, TTilemapLayerDoc, TTileLayerOrder } from './loaders';
-export { TILEMAP_FORMAT, parseTilemapDoc } from './loaders';
+export { parseTilemapDoc } from './loaders';
 export type { TSpriteAtlas, TSpriteAtlasOptions } from './atlas';
 export type { TCamera2d, TCamera2dOptions, TCamera3d, TCamera3dOptions } from './camera';
 export type { TFog, TFogOptions } from './fog';
@@ -218,9 +218,9 @@ export { gamepadAxisDirectionLabel, normalizeActionMap, bindingKey, describeBind
 export { parseProject, gameOptionsFromProject } from './project';
 export type { TProjectSettings } from './project';
 
-// The scene document: the format, reading one, writing one down, and turning one into a scene.
+// The scene document: reading one and turning one into a scene. Its format is `DOCUMENTS.SCENE`.
 // Writing one down is `serializeScene`, in `nacatamalon/authoring`: reading is not authoring.
-export { boxFromDoc, copyBox, parseSceneDoc, sceneFromDoc, SCENE_FORMAT, SCENE_VERSION } from './scene';
+export { boxFromDoc, copyBox, parseSceneDoc, sceneFromDoc } from './scene';
 export type {
     TSceneDoc, TBoxNode, TDataEntry, TAssetEntry, TGeometrySource, TComponentDoc, TMaterialDoc, TMeshMaterialDoc, TMaterialMapDoc,
     TSpriteComponent, TNineSliceComponent, TTextComponent, TMeshComponent, TTilemapComponent, TTilemapLayerOverride, TParticlesComponent, TParticles3dComponent, TParticleCollider2dComponent, TParticleCollider3dComponent, TSpriteTextureComponent, TMusicComponent, TSongComponent, TMotionComponent, TAudioListenerComponent, TMaskComponent, TCamera2dComponent,
@@ -229,12 +229,12 @@ export type {
 export type { TRandomHandle } from './math/random';
 // Sound made from text rather than recorded: a song's tracks and an effect's samples, the same in a
 // game, in an editor and on the desktop runtime.
-export { renderSong, renderSfx, songVoicesOf, parseSongDoc, SONG_FORMAT } from './audio/synth';
+export { renderSong, renderSfx, songVoicesOf, parseSongDoc } from './audio/synth';
 export type {
     TRenderedSong, TSfxOptions, TSfxPreset, TSongDoc, TSongError, TSongInstrument, TSongInstrumentError, TSongInstrumentInfo, TSongInstrumentList, TSongNote, TSongNoteEffects, TSongSample, TSongSampleInfo, TSongBuiltinInfo, TSongChip, TFmPatch, TFmOperator, TSongVoice, TSongVoiceName, TAudioMeasure,
 } from './audio/synth';
 // Values moved over time by keys, the `.motion` an editor's motion panel writes.
-export { parseMotionDoc, MOTION_FORMAT, MOTION_VERSION } from './motion';
+export { parseMotionDoc } from './motion';
 export type { TMotionDoc, TMotionTrack, TMotionKey, TMotionEvent, TMotionEase, TMotionTransition, TMotionOptions, TMotionHandle, TMotionAttachment } from './motion';
 export type { TGameSignal, TSignalHandler } from './signal';
 // A sound laid out in the scene, played by a behaviour.

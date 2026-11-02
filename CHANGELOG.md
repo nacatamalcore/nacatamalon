@@ -57,6 +57,23 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- **The game's screen has a group of its own, `SCREEN`.** `RENDER` keeps how the engine draws
+  (`TYPE`, `PIXEL_SNAP`, `LINE_VERTEX_FLOATS`), and what shape the screen is and how it sits in its
+  page moves out: `RENDER.CONSOLE_SCREENS` is now `SCREEN.CONSOLES` and `RENDER.ALIGN` is
+  `SCREEN.ALIGN`, beside the new `SCREEN.SCALING` and `SCREEN.KEEP`, the names `scaling` (and
+  `fullscreenScaling`) and `keep` take. Change `RENDER.CONSOLE_SCREENS.snes` to
+  `SCREEN.CONSOLES.snes`, and `RENDER.ALIGN.TOP` to `SCREEN.ALIGN.TOP`.
+- **The post effects' constants are one group, `POST_EFFECTS`.** `POST` read like sending data, and
+  the names of the effects the engine carries were apart from it, in `BUILTIN.POST`. Change
+  `POST.CRT_PRESETS` to `POST_EFFECTS.CRT_PRESETS`, `POST.COLOR_LEVELS` to
+  `POST_EFFECTS.COLOR_LEVELS`, and `BUILTIN.POST` to `POST_EFFECTS.NAMES`.
+- **What the documents say they are is one group, `DOCUMENTS`.** The twelve numbers and names a
+  document's `format` and `version` hold were loose on the root, beside everything a game reads. Now
+  each is under its document, named as the field it fills: `SCENE_FORMAT` is
+  `DOCUMENTS.SCENE.FORMAT` and `SCENE_VERSION` is `DOCUMENTS.SCENE.VERSION`, and the same for
+  `MOTION` and `STORE`; `TILEMAP_FORMAT`, `PALETTE_FORMAT`, `ATLAS_FORMAT`, `PARTICLES_FORMAT`,
+  `SONG_FORMAT` and `SHADER_GRAPH_FORMAT` are `DOCUMENTS.TILEMAP.FORMAT` and so on. The files
+  themselves do not change.
 - **A `.particles` file with an `atlas` is drawn with it.** It used to say the sheet was not drawn
   and show its particles as squares of their colour.
 - **A `wrap` the engine has no word for is refused** on a model's material, its maps and its

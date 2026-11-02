@@ -9,7 +9,7 @@ import type { TPaletteDoc } from './types/t_palette';
  */
 export const PALETTE_FORMAT = 1;
 
-import { MAX_PALETTE_COLORS } from '../../CONFIG';
+import { MAX_PALETTE_COLORS } from '../../DEFAULTS';
 
 export { MAX_PALETTE_COLORS };
 

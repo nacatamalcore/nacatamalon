@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { renderSong, parseSongDoc, SONG_FORMAT } from '../src';
+import { renderSong, parseSongDoc, DOCUMENTS } from '../src';
 import { serializeSongDoc, songInstrumentErrors, writeSongNotes } from '../src/authoring';
 import { parseSongNotes } from '../src/audio/synth/parse_song_notes';
 import type { TSongDoc, TSongInstrument } from '../src';
@@ -13,7 +13,7 @@ const RATE = 44100;
 const FRAME = RATE / 60;
 
 const song = (voices: TSongDoc['voices'], instruments: Record<string, TSongInstrument>, extra: Partial<TSongDoc> = {}): TSongDoc => ({
-    format: SONG_FORMAT,
+    format: DOCUMENTS.SONG.FORMAT,
     tempo: 60,
     meter: [4, 4],
     voices,
@@ -140,8 +140,8 @@ describe('@ in the notes', () => {
 
     it('leaves a song with no instruments sounding as it did', () => {
         const voices = { pulse1: { notes: "c'8 e g c'' | r2 a4 b |" }, triangle: { notes: 'c,2 g, |' }, noise: { notes: 'x8 x x4 r2 |' } };
-        const plain = renderSong({ format: SONG_FORMAT, tempo: 120, meter: [4, 4], voices });
-        const unused = renderSong({ format: SONG_FORMAT, tempo: 120, meter: [4, 4], voices, instruments: { lead: { volume: '3' } } });
+        const plain = renderSong({ format: DOCUMENTS.SONG.FORMAT, tempo: 120, meter: [4, 4], voices });
+        const unused = renderSong({ format: DOCUMENTS.SONG.FORMAT, tempo: 120, meter: [4, 4], voices, instruments: { lead: { volume: '3' } } });
 
         expect(unused.voices).toEqual(plain.voices);
     });
@@ -179,7 +179,7 @@ describe('a mistake in an instrument', () => {
 
 describe('a .song file with instruments', () => {
     const file: TSongDoc = {
-        format: SONG_FORMAT,
+        format: DOCUMENTS.SONG.FORMAT,
         tempo: 140,
         meter: [4, 4],
         loop: { bar: 2 },

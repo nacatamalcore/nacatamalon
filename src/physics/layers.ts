@@ -1,4 +1,4 @@
-import { PHYSICS_LAYERS } from '../CONFIG';
+import { PHYSICS_LAYERS } from '../DEFAULTS';
 
 export { PHYSICS_LAYERS };
 

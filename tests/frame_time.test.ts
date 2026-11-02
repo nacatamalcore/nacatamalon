@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { MAX_FRAME_DELTA } from '../src/CONFIG';
+import { MAX_FRAME_DELTA } from '../src/DEFAULTS';
 import { createFrameContext } from '../src/game/loop/create_frame_context';
 import { createScene } from '../src/scene/create_scene';
 import { tick } from '../src/game/loop/tick';

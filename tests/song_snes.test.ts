@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { renderSong, parseSongDoc, SONG_FORMAT, BUILTIN } from '../src';
+import { renderSong, parseSongDoc, DOCUMENTS, BUILTIN } from '../src';
 import { mixSong, serializeSongDoc } from '../src/authoring';
 import { toSnes, SNES_RATE } from '../src/audio/synth/snes';
 import type { TSongDoc } from '../src';
@@ -12,7 +12,7 @@ import type { TSongDoc } from '../src';
 const RATE = 44100;
 
 const song = (voices: TSongDoc['voices'], extra: Partial<TSongDoc> = {}): TSongDoc => ({
-    format: SONG_FORMAT,
+    format: DOCUMENTS.SONG.FORMAT,
     chip: 'snes',
     tempo: 60,
     meter: [4, 4],
