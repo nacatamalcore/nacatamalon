@@ -4,6 +4,15 @@ import type { TJointPose } from '../../animation';
 // @ai internal skinning math, not exported from src/index.ts.
 
 /**
+ * Blends one bone, weight `t` in `[0, 1]` mixing from `a` toward `b`. `out` may alias either.
+ */
+export const blendJoint = (a: TJointPose, b: TJointPose, t: number, out: TJointPose): void => {
+    lerp3(a.t, b.t, t, out.t);
+    lerp3(a.s, b.s, t, out.s);
+    slerp(a.r, b.r, t, out.r);
+};
+
+/**
  * Blends two local poses joint-by-joint into `out`, weight `t` in `[0, 1]` mixing
  * from `a` (t=0) toward `b` (t=1). Translation and scale lerp; rotation slerps along
  * the shortest arc: the correct way to cross-fade skeletal animation, because the
@@ -14,11 +23,6 @@ import type { TJointPose } from '../../animation';
  */
 export const blendPoses = (a: TJointPose[], b: TJointPose[], t: number, out: TJointPose[]): void => {
     for (let j = 0; j < out.length; j++) {
-        const pa = a[j];
-        const pb = b[j];
-        const po = out[j];
-        lerp3(pa.t, pb.t, t, po.t);
-        lerp3(pa.s, pb.s, t, po.s);
-        slerp(pa.r, pb.r, t, po.r);
+        blendJoint(a[j], b[j], t, out[j]);
     }
 };

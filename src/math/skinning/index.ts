@@ -7,5 +7,5 @@ export { trsToMat4 } from './trs';
 export { slerp, lerp3 } from './quat';
 export type { TQuat, Vec3Tuple } from './quat';
 export { sampleClip } from './pose';
-export { blendPoses } from './blend';
+export { blendJoint, blendPoses } from './blend';
 export { computeJointMatrices } from './palette';

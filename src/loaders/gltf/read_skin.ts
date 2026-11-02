@@ -199,6 +199,7 @@ export const readSkin = (
 
     const parentIndex = new Int32Array(count);
     const bindPose: TJointPose[] = new Array(count);
+    const jointNames: string[] = new Array(count);
     let roots: Float32Array | null = null;
 
     for (let position = 0; position < count; position++) {
@@ -206,6 +207,7 @@ export const readSkin = (
         const parent = parentOf[was];
         parentIndex[position] = parent < 0 ? -1 : renumber[parent];
         bindPose[position] = restOf(nodes[jointNodes[was]] ?? {});
+        jointNames[position] = nodes[jointNodes[was]]?.name ?? '';
 
         if (parent < 0) {
             // Its own place, taken back out of where it ended up: what is left is everything above
@@ -237,7 +239,7 @@ export const readSkin = (
         }
     }
 
-    return { skeleton: newSkeleton(key, parentIndex, bindPose, inverseBindMatrices, roots), renumber };
+    return { skeleton: newSkeleton(key, parentIndex, bindPose, inverseBindMatrices, roots, jointNames), renumber };
 };
 
 /**

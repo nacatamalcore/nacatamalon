@@ -65,7 +65,8 @@ export const computeJointMatrices = (skeleton: TSkeleton, frame: number): void =
     }
     skeleton.posedOn = frame;
 
-    const { parentIndex, pose, inverseBindMatrices, jointMatrices, rootMatrices } = skeleton;
+    const { parentIndex, inverseBindMatrices, jointMatrices, rootMatrices } = skeleton;
+    const pose = skeleton.laid === null ? skeleton.pose : skeleton.laid();
     const count = pose.length;
     const worlds = roomFor(skeleton, count);
 

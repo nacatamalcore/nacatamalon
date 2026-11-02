@@ -7,6 +7,11 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **A movement on part of the body.** `useSkeletalAnimation(model, { only: ['spine'] })` is a second
+  animator on top of the first, on those bones and all that hangs from them: the legs run while the
+  arms wave. With nothing playing it leaves them to the one below, and a movement that ends or is
+  stopped hands them back, eased by its `fade`. A skeleton says what its bones are called, in
+  `jointNames`.
 - **`createView`: a view of the world in a rectangle of the screen.**
   `createView({ x, y, width, height }, View, ...args)` makes the view
   (`createSpriteTexture({ sees: 'world' })`) and the sprite pinned to the screen that shows it, in
@@ -97,6 +102,15 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **`stop` on a model's movement stops it from anywhere.** Called before the file arrived, the movement
+  played anyway when it did; a `play` with no name after it starts it. Called from a listener, what
+  was still to be told that frame and the movement's `next` went ahead regardless.
+- **A model's movement asked for by a name the file does not have says so**, when it was asked for
+  before the file arrived. It waited for ever without a word.
+- **A movement's listener that starts another leaves the rest of that frame's marks unsaid**, even when
+  several fall in the same stretch.
+- **Easing between two movements no longer takes a bone neither of them turns to nothing.** It went
+  to where the model's origin is and stayed there after the easing ended; it now stays where it was.
 - **A song, a palette or a store written by a newer engine says so.** They were read as though
   nothing had changed, so an older game would play a newer `.song` wrong with no word why. Now each
   warns and reads what it can, as a scene and a motion already did.

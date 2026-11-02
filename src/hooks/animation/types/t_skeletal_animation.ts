@@ -80,6 +80,23 @@ export type TSkeletalAnimationOptions = {
      */
     fade?: number;
     /**
+     * Plays only on these bones, each with all that hangs from it, by the names the file gives them,
+     * over another animator of the same model: the legs run while the arms wave. The last one made
+     * goes on top. A bone its movement does not turn keeps showing the one below.
+     *
+     * With `only` it starts on nothing rather than on the file's first movement, and when a movement
+     * ends or is stopped its bones go back to what is below, eased by `fade`. To keep a pose for as
+     * long as you need it, play a movement that goes round, or `pause` one, and `stop` when done.
+     *
+     * @example
+     * ```ts
+     * useSkeletalAnimation(hero, { play: 'run' });
+     * const top = useSkeletalAnimation(hero, { only: ['spine'], fade: 0.2, clips: { greet: { loop: false } } });
+     * top.play('greet');
+     * ```
+     */
+    only?: readonly string[];
+    /**
      * How each movement plays, by its name in the file: whether it goes round, how many times, what
      * comes after it and the moments worth being told about. A movement not named here plays as the
      * options above say. See `TSkeletalClipOptions`.
@@ -109,7 +126,8 @@ export type TSkeletalAnimationOptions = {
 export type TSkeletalAnimation = {
     /**
      * Starts a movement, easing into it over `fade` seconds. Called with nothing, it carries on
-     * with whatever was paused.
+     * with whatever was paused. With `only`, one that was stopped or has ended goes again from its
+     * start.
      */
     play(clip?: string, options?: { fade?: number }): void;
     /**
@@ -117,7 +135,8 @@ export type TSkeletalAnimation = {
      */
     pause(): void;
     /**
-     * Stops, and puts the bones back the way the model was made.
+     * Stops, and puts the bones back the way the model was made. With `only`, hands them back to
+     * what is below, eased by `fade`.
      */
     stop(): void;
     setSpeed(speed: number): void;

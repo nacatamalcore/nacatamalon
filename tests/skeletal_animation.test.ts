@@ -248,6 +248,39 @@ describe('easing from one movement to another', () => {
         restore();
     });
 
+    it('leaves where it is a bone neither movement turns', async () => {
+        const fake = serveGltf((() => {
+            const { json, bin } = asGltf({
+                ...RIGGED,
+                nodes: [...RIGGED.nodes, { name: 'Tail', translation: [5, 6, 7] }],
+                skins: [{ joints: [1, 2] }],
+            });
+            return { 'model.gltf': json, 'model.bin': bin };
+        })());
+        const { store } = createTestGame();
+        let file!: TGltfModel;
+        let model!: TModel;
+        let moves!: TSkeletalAnimation;
+        const scene = startTestScene(store, 'Level', () => {
+            file = useLoadGltf({ src: 'model.gltf' });
+            model = createModel({ model: file });
+            moves = useSkeletalAnimation(model, { play: 'Walk' });
+            return createScene();
+        });
+        await whenLoaded(file);
+        step(scene, 0);
+        step(scene, 0.5);
+
+        moves.play('Jump', { fade: 1 });
+        step(scene, 0.5);
+        expect(model.skeletons[0].pose[1].t).toEqual([5, 6, 7]);
+
+        step(scene, 1);
+        step(scene, 0.1);
+        expect(model.skeletons[0].pose[1].t).toEqual([5, 6, 7]);
+        fake.restore();
+    });
+
     it('arrives at the new movement and stays there', async () => {
         const { scene, model, moves, restore } = await withRig({ play: 'Walk' });
         step(scene, 0);
@@ -306,6 +339,21 @@ describe('easing from one movement to another', () => {
 });
 
 describe('when something is asked for that is not there', () => {
+    it('says so when the name it was waiting with turns out not to be in the file, once', async () => {
+        const warnings: string[] = [];
+        const original = console.warn;
+        console.warn = (...args: unknown[]) => { warnings.push(args.map(String).join(' ')); };
+        const { scene, moves, restore } = await withRig({ play: 'Dance' });
+        step(scene, 0);
+        step(scene, 0.25);
+        console.warn = original;
+
+        expect(warnings.length).toBe(1);
+        expect(warnings[0]).toContain("no movement called 'Dance'");
+        expect(moves.clip).toBe('Walk');
+        restore();
+    });
+
     it('says so once the file has arrived and lists what it does know', async () => {
         const warnings: string[] = [];
         const original = console.warn;

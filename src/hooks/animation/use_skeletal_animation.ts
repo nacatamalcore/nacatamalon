@@ -1,8 +1,11 @@
 import { blendPoses, sampleClip } from '../../math/skinning';
-import { copyPose, restingJoint } from '../../animation';
+import { copyJointInto, restingJoint } from '../../animation';
+import { addBoneLayer, holdBelowIn, readyBoneLayer } from './bone_layer';
 import { useUpdate } from '../loop/use_update';
+import { useCleanup } from '../scene/use_cleanup';
+import type { TBoneLayer } from './bone_layer';
 import type { TModel } from '../../gameobjects/model';
-import type { TJointPose } from '../../animation';
+import type { TSkeletalClip, TJointPose } from '../../animation';
 import type { TSkeletalAnimation, TSkeletalAnimationOptions } from './types/t_skeletal_animation';
 
 /**
@@ -10,6 +13,18 @@ import type { TSkeletalAnimation, TSkeletalAnimationOptions } from './types/t_sk
  */
 const roomFor = (model: TModel): TJointPose[][] =>
     model.skeletons.map((skeleton) => skeleton.pose.map(() => restingJoint()));
+
+/**
+ * Writes how the bones stand now into a room. A movement only writes the bones it turns, so the rest
+ * of them have to start somewhere: where they are, or easing would take them all to nothing.
+ */
+const holdPoseIn = (model: TModel, room: TJointPose[][]): void => {
+    model.skeletons.forEach((skeleton, s) => {
+        skeleton.pose.forEach((joint, j) => {
+            copyJointInto(joint, room[s][j]);
+        });
+    });
+};
 
 /**
  * Makes a placed model move: plays the movements its file came with, and eases between them.
@@ -28,6 +43,11 @@ const roomFor = (model: TModel): TJointPose[][] =>
  * half a second, it turns the bones from where one has them to where the other does; cutting
  * straight across snaps a leg from behind to in front in a single frame.
  *
+ * **`only` plays a movement on part of the body**, the rest carrying on with what it was doing: a
+ * second animator on the same model, its bones named, shows over the first. The last one made goes
+ * on top. With nothing playing it leaves those bones to the one below, and a movement that ends
+ * hands them back, eased by its `fade`.
+ *
  * @param model The placed model, from `createModel`.
  * @param options Which movement to start on, and how it plays.
  * @returns The handle: what it is doing, and how to change it.
@@ -45,6 +65,25 @@ const roomFor = (model: TModel): TJointPose[][] =>
  *     const keys = useKeyboard();
  *     useUpdate(() => {
  *         if (keys.justPressed('Space')) moves.play('Run');
+ *     });
+ *
+ *     return createScene();
+ * };
+ * ```
+ *
+ * @example
+ * ```ts
+ * export const Level: TSceneFn = () => {
+ *     useCamera3d({ projection: 'perspective', transform: { z: 20 } });
+ *     useDirectionalLight({ intensity: 1 });
+ *
+ *     const hero = createModel({ model: useLoadGltf({ src: '/models/hero.glb' }) });
+ *     useSkeletalAnimation(hero, { play: 'run' });
+ *     const top = useSkeletalAnimation(hero, { only: ['spine'], fade: 0.2, clips: { greet: { loop: false } } });
+ *
+ *     const keys = useKeyboard();
+ *     useUpdate(() => {
+ *         if (keys.justPressed('Space')) top.play('greet');
  *     });
  *
  *     return createScene();
@@ -80,10 +119,33 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
      */
     let direction = 1;
     const defaultFade = options.fade ?? 0;
+    const only = options.only;
+    /**
+     * Whether it is handing its bones back to what is below, or has. Only with `only`.
+     */
+    let letGo = true;
+    /**
+     * How long `reach` takes to go all the way, in seconds.
+     */
+    let reachFade = defaultFade;
 
     // A movement asked for before the file arrived. Kept and honoured the frame it shows up, the
     // same way the sprite animator waits for its sheet.
     let pending: string | null = options.play ?? null;
+    /**
+     * How long the movement that was kept was asked to take easing in.
+     */
+    let pendingFade = defaultFade;
+    /**
+     * Whether it was stopped before anything had played. It stays stopped when the file lands, rather
+     * than taking the first movement the file has.
+     */
+    let stoppedBefore = false;
+    /**
+     * The movement that was waiting when it was stopped before anything had played, for a `play` with
+     * no name to go back to.
+     */
+    let stoppedPending: string | null = null;
     // Told when a movement that does not go round reaches its end.
     const listeners: Array<(clip: string) => void> = [];
     // Told each time a movement starts again.
@@ -97,9 +159,9 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
      */
     let reached = false;
     /**
-     * How many movements have been started. What a frame passed is told about the movement that
-     * passed it: a listener that starts another, the same one again included, leaves the rest of
-     * that frame's news unsaid rather than handed to the movement it just started.
+     * How many movements have been started or stopped. What a frame passed is told about the movement
+     * that passed it: a listener that starts another, the same one again included, or stops it, leaves
+     * the rest of that frame's news unsaid rather than handed to the movement it just started.
      */
     let run = 0;
 
@@ -118,11 +180,17 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
         // Copied first: a listener is allowed to start another movement, and that must not change
         // the list being walked.
         const told = [...eventListeners];
+        const moved = run;
         for (const mark of marks) {
             const passed = fromStart ? mark.at >= from && mark.at <= to : mark.at > from && mark.at <= to;
             if (passed) {
+                // Everyone listening hears the mark that was passed; it is the next ones that belong
+                // to a movement no longer playing.
                 for (const listener of told) {
                     listener(mark.name, name);
+                }
+                if (run !== moved) {
+                    return;
                 }
             }
         }
@@ -142,7 +210,7 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
      * would otherwise go round again and ease in from its first frame.
      */
     let fade: {
-        name: string; time: number; elapsed: number; duration: number;
+        name: string; time: number; elapsed: number; weight: number; duration: number;
         loop: boolean; speed: number; ended: boolean;
     } | null = null;
 
@@ -154,9 +222,8 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
      */
     const rest = (): void => {
         for (const skeleton of model.skeletons) {
-            skeleton.pose = copyPose(skeleton.bindPose);
-            // The gathered list points at the poses that were just replaced.
-            live = null;
+            // Written over rather than replaced: another animator on this model may hold these.
+            skeleton.pose.forEach((joint, j) => { copyJointInto(skeleton.bindPose[j], joint); });
             // The pose changed outside a frame, so whatever was worked out is stale.
             skeleton.posedOn = -1;
         }
@@ -172,21 +239,32 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
                 return;
             }
             pending = name;
+            pendingFade = fadeSeconds;
+            stoppedBefore = false;
             return;
         }
 
         pending = null;
 
-        // Easing only means something when there is something to ease from.
-        if (fadeSeconds > 0 && clipName !== null && clipName !== name && file.clips[clipName] !== undefined) {
+        // Easing only means something when there is something to ease from. A part of the body
+        // showing nothing eases in from what is below instead, by its `reach`; one on its way out
+        // that is asked for the same movement again eases from where that was.
+        const showing = layer !== null && layer.reach > 0;
+        const eases = layer === null ? clipName !== name : showing && (clipName !== name || letGo);
+        if (fadeSeconds > 0 && clipName !== null && eases && file.clips[clipName] !== undefined) {
             // Made again if the bones arrived after the room was made for none.
             from = from !== null && from.length === model.skeletons.length ? from : roomFor(model);
             to = to !== null && to.length === model.skeletons.length ? to : roomFor(model);
-            fade = { name: clipName, time, elapsed: 0, duration: fadeSeconds, loop: repeatsLeft > 0, speed: speed * direction, ended: !playing };
+            holdPoseIn(model, from);
+            holdPoseIn(model, to);
+            fade = { name: clipName, time, elapsed: 0, weight: 0, duration: fadeSeconds, loop: repeatsLeft > 0, speed: speed * direction, ended: !playing };
         } else {
             fade = null;
         }
 
+        letGo = false;
+        stoppedBefore = false;
+        reachFade = fadeSeconds;
         run += 1;
         clipName = name;
         time = 0;
@@ -310,56 +388,138 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
         return { time: next, ended: false };
     };
 
+    /**
+     * Moves on the movement being eased away from, and how far the easing has gone.
+     */
+    const moveFade = (delta: number): void => {
+        if (fade === null) {
+            return;
+        }
+        fade.elapsed += delta;
+        fade.weight = fade.duration > 0 ? Math.min(fade.elapsed / fade.duration, 1) : 1;
+        const outgoing = file.clips[fade.name];
+        // One that had finished stays on its last frame: it is only being eased away from.
+        if (outgoing !== undefined && !fade.ended) {
+            const next = advance(fade.time, delta, outgoing.duration, fade.loop, fade.speed);
+            fade.time = next.time;
+            fade.ended = next.ended;
+        }
+    };
+
+    /**
+     * Writes how the movement playing has the bones into `poses`, mixed with the one before it if it
+     * is still being eased away from.
+     */
+    const samplePlaying = (clip: TSkeletalClip, poses: TJointPose[][]): void => {
+        if (fade !== null && from !== null && to !== null) {
+            const outgoing = file.clips[fade.name];
+            if (outgoing !== undefined) {
+                sampleClip(outgoing, fade.time, from);
+                sampleClip(clip, time, to);
+                // Mixed as bones, before anything is worked out for the card: a change of movement
+                // has to look like joints turning, not like a body melting from one shape to another.
+                for (let s = 0; s < model.skeletons.length; s++) {
+                    blendPoses(from[s], to[s], fade.weight, poses[s]);
+                }
+            }
+            if (fade.weight >= 1) {
+                fade = null;
+            }
+        } else {
+            sampleClip(clip, time, poses);
+        }
+    };
+
+    /**
+     * What an animator with `only` shows over the rest of the body. Only then is its movement read,
+     * when what is below is known, however the boxes that hold the animators are arranged.
+     */
+    const layer = only === undefined ? null : {
+        only,
+        reach: 0,
+        bones: null,
+        shown: [],
+        sample: (s: number, below: TJointPose[]): void => {
+            const clip = clipName === null ? undefined : file.clips[clipName];
+            if (clip === undefined || layer === null) {
+                return;
+            }
+            holdBelowIn(layer, s, below, layer.shown);
+            if (fade !== null && from !== null && to !== null) {
+                holdBelowIn(layer, s, below, from);
+                holdBelowIn(layer, s, below, to);
+            }
+            samplePlaying(clip, layer.shown);
+        },
+    } as TBoneLayer;
+    if (layer !== null) {
+        useCleanup(addBoneLayer(model, layer));
+    }
+
+    /**
+     * Moves how far a part of the body shows, towards all of it or towards handing its bones back.
+     */
+    const moveReach = (delta: number): void => {
+        if (layer === null) {
+            return;
+        }
+        const pace = reachFade > 0 ? delta / reachFade : 1;
+        layer.reach = letGo ? Math.max(layer.reach - pace, 0) : Math.min(layer.reach + pace, 1);
+        // All handed back: it starts over the next time it is played.
+        if (letGo && layer.reach === 0) {
+            fade = null;
+            time = 0;
+            reached = false;
+        }
+    };
+
     useUpdate((delta) => {
         if (pending !== null) {
             // Cheap while it lasts, and it lasts until the file lands.
             if (file.clips[pending] !== undefined) {
-                start(pending, 0);
+                start(pending, pendingFade);
+            } else if (known().length > 0) {
+                // The file is here and that name is not in it, which `start` says out loud. Waiting
+                // any longer would be waiting for ever.
+                const missing = pending;
+                pending = null;
+                start(missing, pendingFade);
             }
             return;
         }
 
         // The file may have arrived with movements nobody named. The first one is a better guess
         // than standing still, and it is what a model with a single movement always wants.
-        if (clipName === null && known().length > 0) {
+        if (clipName === null && only === undefined && !stoppedBefore && known().length > 0) {
             start(known()[0], 0);
         }
 
         const clip = clipName === null ? undefined : file.clips[clipName];
-        if (!playing || clip === undefined || model.skeletons.length === 0) {
+        if (clip === undefined || model.skeletons.length === 0) {
+            return;
+        }
+        if (layer !== null) {
+            readyBoneLayer(model, layer);
+            moveReach(delta);
+        }
+        if (!playing) {
+            // A part of the body on its way out is still moving, though its movement is not.
+            if (layer !== null) {
+                for (const skeleton of model.skeletons) {
+                    skeleton.posedOn = -1;
+                }
+            }
             return;
         }
 
         const stepped = step(delta, clip.duration);
 
-        if (fade !== null && from !== null && to !== null) {
-            const outgoing = file.clips[fade.name];
-            fade.elapsed += delta;
-            const weight = fade.duration > 0 ? Math.min(fade.elapsed / fade.duration, 1) : 1;
-
-            if (outgoing !== undefined) {
-                // One that had finished stays on its last frame: it is only being eased away from.
-                if (!fade.ended) {
-                    const next = advance(fade.time, delta, outgoing.duration, fade.loop, fade.speed);
-                    fade.time = next.time;
-                    fade.ended = next.ended;
-                }
-                sampleClip(outgoing, fade.time, from);
-                sampleClip(clip, time, to);
-                // Mixed as bones, before anything is worked out for the card: a change of movement
-                // has to look like joints turning, not like a body melting from one shape to another.
-                for (let s = 0; s < model.skeletons.length; s++) {
-                    blendPoses(from[s], to[s], weight, model.skeletons[s].pose);
-                }
-            }
-            if (weight >= 1) {
-                fade = null;
-            }
-        } else {
+        moveFade(delta);
+        if (layer === null) {
             if (live === null || live.length !== model.skeletons.length) {
                 live = model.skeletons.map((skeleton) => skeleton.pose);
             }
-            sampleClip(clip, time, live);
+            samplePlaying(clip, live);
         }
 
         for (const skeleton of model.skeletons) {
@@ -387,6 +547,12 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
         // here would stop the one that has only just begun.
         if (stepped.ended && run === moved) {
             playing = false;
+            // A part of the body with nothing left to play hands its bones back, unless a listener
+            // or what comes next starts something.
+            if (layer !== null) {
+                letGo = true;
+                reachFade = defaultFade;
+            }
             const ended = clipName as string;
             // Copied first: a listener is allowed to start the next movement, and that must not
             // change the list being walked.
@@ -411,6 +577,22 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
     return {
         play: (clip?: string, withFade?: { fade?: number }) => {
             if (clip === undefined) {
+                // Stopped before anything played: back to waiting for what it was waiting for.
+                if (stoppedBefore) {
+                    stoppedBefore = false;
+                    pending = stoppedPending;
+                    stoppedPending = null;
+                    playing = layer === null;
+                    return;
+                }
+                // A part of the body that was stopped or has ended has nothing to carry on with, and
+                // goes again as it would when named.
+                if (layer !== null && letGo) {
+                    if (clipName !== null) {
+                        start(clipName, defaultFade);
+                    }
+                    return;
+                }
                 playing = true;
                 return;
             }
@@ -419,8 +601,21 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
         pause: () => { playing = false; },
         stop: () => {
             playing = false;
-            time = 0;
             reached = false;
+            stoppedBefore = clipName === null;
+            if (stoppedBefore) {
+                stoppedPending = pending ?? stoppedPending;
+            }
+            pending = null;
+            // What a frame was going to say next is not said: not even what comes after this one.
+            run += 1;
+            // A part of the body hands its bones back, eased, and has no rest of its own to go to.
+            if (layer !== null) {
+                letGo = true;
+                reachFade = defaultFade;
+                return;
+            }
+            time = 0;
             fade = null;
             rest();
         },

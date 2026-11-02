@@ -43,13 +43,22 @@ export type TSkeleton = {
      */
     parentIndex: Int32Array;
     /**
+     * What the file calls each bone, `''` for one it does not name.
+     */
+    jointNames: readonly string[];
+    /**
      * How it stands when nothing is playing.
      */
     bindPose: TJointPose[];
     /**
-     * How it stands now. The only thing an animation writes.
+     * How it stands now. The only thing an animation of the whole body writes.
      */
     pose: TJointPose[];
+    /**
+     * How it stands with what animators of part of the body lay over `pose`, or `null` for a skeleton
+     * with none, which is drawn as `pose` says.
+     */
+    laid: (() => TJointPose[]) | null;
     /**
      * What undoes the rest position, 16 numbers a bone.
      */
