@@ -49,6 +49,10 @@ export const fileFromEffect = (store: TRuntimeStore, effect: TParticlesEffect): 
             known.texture = particlesTexture(store, IN_CODE, effect.texture);
             wearPicture(known.texture, known, true);
         }
+        // And what it sets off.
+        if (known.children.some((child) => child !== null && child.status === 'released')) {
+            known.children = (known.doc?.children ?? []).map((child) => childFileFor(store, known, child.src, true));
+        }
         return known;
     }
 
@@ -91,7 +95,7 @@ export const fileFromEffect = (store: TRuntimeStore, effect: TParticlesEffect): 
     } else if (picture !== null && picture !== undefined && typeof picture === 'object') {
         file.texture = picture;
     }
-    file.children = doc.children.map((child) => childFileFor(store, file, child.src, []));
+    file.children = doc.children.map((child) => childFileFor(store, file, child.src, true));
 
     files.set(effect, file);
     fromCode.set(file, effect);

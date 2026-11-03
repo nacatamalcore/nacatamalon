@@ -1,8 +1,9 @@
 import type { TAsset } from './types/t_asset';
 
 /**
- * What the game itself asked for by name (`useLoadTexture`, `useLoadAtlas`), as opposed to what
- * only came in because a file it loaded names it: a particle file's picture, a model's.
+ * What the game itself asked for (`useLoadTexture`, `useLoadAtlas`, `useLoadParticles`, or an effect it
+ * draws), as opposed to what only came in because a file it loaded names it: a particle file's picture
+ * or the effects it sets off, a model's picture.
  *
  * The cache is shared, so the two can be the very same record, and letting go of the file must not
  * take what the game also asked for itself: a sprite showing the spark the game loaded would go

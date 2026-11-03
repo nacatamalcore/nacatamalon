@@ -1,4 +1,5 @@
 import { createParticleState } from './particle_pool';
+import { dropIdleEffectUser, noteEffectUser } from '../../loaders/particles/effect_users';
 import type { TParticles } from './types/t_particles';
 import type { TParticles3d } from './types/t_particles_3d';
 import type { TChildParticles, TParticleState } from './types/t_particle_pool';
@@ -71,7 +72,7 @@ export const openParticleState = (emitter: TParticles | TParticles3d): TParticle
 
 /**
  * The effects a file's particles set off, each waiting for its own particles until its file is here.
- * One whose file was refused (see `MAX_CHILD_DEPTH`) is left out.
+ * One with no file (refused by the loader, or newly named by an edit) is left out.
  *
  * @internal
  * @since 1.0.0
@@ -124,20 +125,26 @@ export const unbindParticles = (emitter: TParticles | TParticles3d): void => {
     if (at >= 0) {
         file.bound.splice(at, 1);
     }
-    // An effect written in code holds its sheet and its picture only while it is drawn: with its last
-    // emitter gone, it lets go of its place on them, and is taken on again if it is used again.
+    // An effect written in code holds its sheet, its picture and what it sets off only while it is
+    // drawn: with its last emitter gone, it lets go of its place on them, and is taken on again if it
+    // is used again.
     if (file.atlas !== null && 'type' in file.atlas) {
         dropIdleSheetUser(file.atlas, file);
     }
     if (file.texture !== null) {
         dropIdleWearer(file.texture, file);
     }
+    for (const child of file.children) {
+        if (child !== null) {
+            dropIdleEffectUser(child, file);
+        }
+    }
 };
 
 /**
  * Puts an emitter on its file's list, where the loader finds it when the file lands, and notes the
- * file again as using its sheet and its picture: an effect written in code used again after its last
- * emitter went.
+ * file again as using its sheet, its picture and what it sets off: an effect written in code used
+ * again after its last emitter went.
  *
  * @internal
  * @since 1.0.0
@@ -151,5 +158,10 @@ export const bindParticles = (emitter: TParticles | TParticles3d): void => {
     }
     if (file.texture !== null) {
         wearAgainWhileDrawn(file.texture, file);
+    }
+    for (const child of file.children) {
+        if (child !== null) {
+            noteEffectUser(child, file);
+        }
     }
 };

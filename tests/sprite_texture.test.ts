@@ -4,7 +4,8 @@ import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { createMesh } from '../src/gameobjects/mesh';
 import { createMaterial } from '../src/gameobjects/material/create_material';
 import { createParticles3d } from '../src/gameobjects/particles';
-import { closeParticleState } from '../src/gameobjects/particles/particle_state';
+import { childrenOf, closeParticleState, particleStateOf } from '../src/gameobjects/particles/particle_state';
+import { applyParticlesDoc } from '../src/gameobjects/particles/tools/apply_particles_doc';
 import { newParticlesFile } from '../src/loaders/particles/new_particles_file';
 import { MAX_CHILD_DEPTH } from '../src/loaders/particles/load_particles';
 import { showsPicture } from '../src/game/loop/helper/view_walk';
@@ -342,6 +343,58 @@ describe('the passes of a frame with pictures', () => {
             expect(showsPicture(wornAt(levels), picture), `${levels} down`).toBe(true);
         }
         expect(showsPicture(wornAt(MAX_CHILD_DEPTH + 1), picture)).toBe(false);
+    });
+
+    it('draws an effect again once it is edited not to set off the one wearing the picture', () => {
+        const { store } = createTestGame();
+        let picture!: TTexture;
+        let effect!: ReturnType<typeof createParticles3d>;
+        startTestScene(store, 'S', () => {
+            picture = createSpriteTexture({ width: 16, height: 16 }, () => {
+                useCamera3d({ projection: 'perspective', transform: { z: 5 } });
+                effect = createParticles3d({ effect: { kind: 'particles-3d', direction: { x: 0, y: 1, z: 0 }, max: 5, life: 5, emission: { rate: 1, burst: 2, duration: 0, loop: true } } as never });
+            });
+            const child = newParticlesFile('/c.particles', 'c');
+            child.texture = picture;
+            effect.file.children = [child];
+            effect.file.doc = { ...effect.file.doc!, children: [{ on: 'birth', src: 'c.particles', count: 3 }] } as never;
+            return createScene();
+        });
+        expect(passFor(frameOf(store), picture)!.drawables ?? []).toHaveLength(0);
+
+        // What an effect's preview does: the same file, with a document that names no child.
+        applyParticlesDoc(effect, { ...effect.file.doc!, children: [] });
+
+        expect(passFor(frameOf(store), picture)!.drawables ?? []).toHaveLength(1);
+    });
+
+    it('stops setting off and drawing a child wearing the picture, once a running effect is edited not to', () => {
+        const { store } = createTestGame();
+        let picture!: TTexture;
+        let effect!: ReturnType<typeof createParticles3d>;
+        startTestScene(store, 'S', () => {
+            picture = createSpriteTexture({ width: 16, height: 16 }, () => {
+                useCamera3d({ projection: 'perspective', transform: { z: 5 } });
+                effect = createParticles3d({ effect: { kind: 'particles-3d', direction: { x: 0, y: 1, z: 0 }, max: 5, life: 5, emission: { rate: 1, burst: 2, duration: 0, loop: true } } as never });
+            });
+            const child = newParticlesFile('/c.particles', 'c');
+            child.doc = { ...effect.file.doc!, children: [] } as never;
+            child.status = 'ready';
+            child.texture = picture;
+            effect.file.children = [child];
+            effect.file.doc = { ...effect.file.doc!, children: [{ on: 'birth', src: 'c.particles', count: 3 }] } as never;
+            // Running already, as one that has been drawn: its state knows the child.
+            particleStateOf(effect)!.children = childrenOf(effect.file);
+            return createScene();
+        });
+
+        applyParticlesDoc(effect, { ...effect.file.doc!, children: [] });
+        const ctx = frameOf(store);
+        const drawn = passFor(ctx, picture)!.drawables as ReadonlyArray<{ children?: ReadonlyArray<{ texture?: unknown }> }>;
+
+        expect(effect.file.children).toEqual([]);
+        expect(particleStateOf(effect)!.children).toEqual([]);
+        expect(drawn.flatMap((item) => item.children ?? []).filter((child) => child.texture === picture)).toHaveLength(0);
     });
 
     it('does not walk for ever looking through effects that lead back to one another', () => {

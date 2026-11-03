@@ -14,6 +14,13 @@ import { loadPalette, newPalette } from '../src/loaders/palette';
 import { loadShader, newShader } from '../src/loaders/shader';
 import { DOCUMENTS } from '../src/CONST';
 import { newParticlesFile } from '../src/loaders/particles/new_particles_file';
+import { createParticles } from '../src/gameobjects/particles';
+import { destroy } from '../src/destroy/destroy';
+import { applyParticlesDoc } from '../src/gameobjects/particles/tools/apply_particles_doc';
+import { childFileFor } from '../src/loaders/particles/load_particles';
+import { markAskedByGame } from '../src/loaders/asked_by_game';
+import { dropIdleEffectUser, noteEffectUser } from '../src/loaders/particles/effect_users';
+import type { TParticlesFile } from '../src/loaders/particles/types/t_particles_file';
 import { createGameHandle } from '../src/game/handle';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import type { TLoadStatus, TTexture } from '../src/loaders';
@@ -277,6 +284,147 @@ describe('releaseAsset', () => {
         expect(store.get('assets').textures.has('floor')).toBe(true);
         expect(sound.status).toBe('ready');
         expect(() => game.releaseAsset(shape)).toThrow('was made with createGeometry');
+    });
+
+    /**
+     * Three effect files in the game's cache, already landed, the first two named as setting off the
+     * third by the loader's own door.
+     */
+    const twoSettingOffOne = () => {
+        const { store } = createTestGame();
+        const [a, b, shared] = ['a', 'b', 'shared'].map((name) => {
+            const file = newParticlesFile(`/fx/${name}.particles`, `/fx/${name}.particles`);
+            file.status = 'ready';
+            store.get('assets').particles.set(file.key, file);
+            return file;
+        }) as [TParticlesFile, TParticlesFile, TParticlesFile];
+        a.children = [childFileFor(store, a, 'shared.particles')];
+        b.children = [childFileFor(store, b, 'shared.particles')];
+        return { store, a, b, shared };
+    };
+
+    it('leaves an effect another effect still sets off, and the last of them to go takes it', () => {
+        const { store, a, b, shared } = twoSettingOffOne();
+        const game = createGameHandle(store);
+
+        game.releaseAsset(a);
+        expect([a.status, shared.status]).toEqual(['released', 'ready']);
+        expect(b.children[0]).toBe(shared);
+
+        game.releaseAsset(b);
+        expect([b.status, shared.status]).toEqual(['released', 'released']);
+    });
+
+    /**
+     * An effect written in code that sets off the same file as `a` and `b`, as `fileFromEffect` has it.
+     */
+    const writtenSettingOff = (store: ReturnType<typeof createTestGame>['store']): TParticlesFile => {
+        const written = newParticlesFile('inline', 'inline');
+        written.children = [childFileFor(store, written, '/fx/shared.particles', true)];
+        written.status = 'ready';
+        return written;
+    };
+
+    it('leaves an effect one written in code sets off while it is drawn, and it goes when that one stops', () => {
+        const { store, a, b, shared } = twoSettingOffOne();
+        const written = writtenSettingOff(store);
+        written.bound = [{}] as never[];
+        const game = createGameHandle(store);
+
+        game.releaseAsset(a);
+        game.releaseAsset(b);
+        expect(shared.status).toBe('ready');
+
+        // Its last emitter goes, as `unbindParticles` has it: nothing else would finish letting go.
+        written.bound = [];
+        dropIdleEffectUser(shared, written);
+        expect(shared.status).toBe('released');
+    });
+
+    it('does not count one written in code that nothing draws, and counts it again once something does', () => {
+        const { store, a, b, shared } = twoSettingOffOne();
+        const written = writtenSettingOff(store);
+        dropIdleEffectUser(shared, written);
+        const game = createGameHandle(store);
+
+        game.releaseAsset(a);
+        expect(shared.status).toBe('ready');
+
+        // Drawn again, as `bindParticles` has it: it wants what it sets off once more.
+        written.bound = [{}] as never[];
+        noteEffectUser(shared, written);
+        game.releaseAsset(b);
+        expect(shared.status).toBe('ready');
+    });
+
+    it('leaves an effect the game drew by its key, even with that emitter gone, until it lets go of it', () => {
+        const { store, a, b, shared } = twoSettingOffOne();
+        let emitter!: ReturnType<typeof createParticles>;
+        startTestScene(store, 'S', () => {
+            emitter = createParticles({ effect: '/fx/shared.particles' });
+            return createScene();
+        });
+        destroy(emitter);
+        const game = createGameHandle(store);
+
+        game.releaseAsset(a);
+        game.releaseAsset(b);
+        expect(shared.status).toBe('ready');
+        expect(game.releaseAsset(shared)).toBe(true);
+        expect(shared.status).toBe('released');
+    });
+
+    it('finishes letting a child go when the effect it waited on is edited not to set it off', () => {
+        const { store, a, b, shared } = twoSettingOffOne();
+        let emitter!: ReturnType<typeof createParticles>;
+        startTestScene(store, 'S', () => {
+            emitter = createParticles({ effect: { kind: 'particles-2d', children: [{ on: 'death', src: '/fx/shared.particles' }] } as never });
+            return createScene();
+        });
+        const game = createGameHandle(store);
+        game.releaseAsset(a);
+        game.releaseAsset(b);
+        expect(shared.status).toBe('ready');
+
+        applyParticlesDoc(emitter, { ...emitter.file.doc!, children: [] });
+        expect(shared.status).toBe('released');
+    });
+
+    it('can let an effect go again after a release that threw halfway', () => {
+        const { store, a, shared } = twoSettingOffOne();
+        const picture = loaded(store, 'spark');
+        shared.texture = picture;
+        const game = createGameHandle(store);
+        game.releaseAsset(store.get('assets').particles.get('/fx/b.particles')!);
+        const destroy = spyOn(store.get('screen').renderer, 'destroyTexture').mockImplementationOnce(() => { throw new Error('the card'); });
+
+        expect(() => game.releaseAsset(a)).toThrow('the card');
+        destroy.mockRestore();
+
+        expect(game.releaseAsset(a)).toBe(true);
+        expect(a.status).toBe('released');
+    });
+
+    it('leaves an effect the game asked for itself, when one that sets it off goes', () => {
+        const { store, a, b, shared } = twoSettingOffOne();
+        markAskedByGame(shared);
+        const game = createGameHandle(store);
+
+        game.releaseAsset(a);
+        game.releaseAsset(b);
+        expect(shared.status).toBe('ready');
+        expect(game.releaseAsset(shared)).toBe(true);
+        expect(shared.status).toBe('released');
+    });
+
+    it('ends, should effects ever lead back to one another', () => {
+        const { store, a, b } = twoSettingOffOne();
+        // By hand: the loader refuses a ring.
+        a.children = [b];
+        b.children = [a];
+
+        createGameHandle(store).releaseAsset(a);
+        expect([a.status, b.status]).toEqual(['released', 'released']);
     });
 
     it('takes a picture a particle file and its child both wear, when the file goes', () => {

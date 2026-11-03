@@ -298,6 +298,9 @@ export type TGameHandle = {
      * many; a load still on its way is thrown away when it arrives. Asked for again with the same key,
      * it loads afresh, like the first time.
      *
+     * An effect takes the effects it sets off with it, unless another effect still sets them off or the
+     * game loaded or drew them too.
+     *
      * @example
      * ```ts
      * const game = useGame();

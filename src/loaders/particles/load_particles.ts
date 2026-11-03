@@ -1,4 +1,5 @@
 import { bumpVersion } from '../../store/record_version';
+import { noteEffectUser } from './effect_users';
 import { loadTexture } from '../texture/load_texture';
 import { newTexture } from '../texture/new_texture';
 import { openParticleState } from '../../gameobjects/particles/particle_state';
@@ -29,8 +30,9 @@ const warnUnsupported = (src: string, fields: string[]): void => {
 };
 
 /**
- * How deep effects may set off effects. Three is a firework whose sparks leave embers that leave
- * smoke, which is more than any effect of the era did; deeper is a mistake more often than a wish.
+ * How many times over effects may set off effects, below the first. Three is a firework whose sparks
+ * leave embers that leave smoke, which is more than any effect of the era did; deeper is a mistake
+ * more often than a wish.
  *
  * @internal
  * @since 1.0.0
@@ -85,6 +87,21 @@ export const particlesAtlas = (store: TRuntimeStore, fromSrc: string, src: strin
 };
 
 /**
+ * How many different files one first file may have fetched below it, however they branch. Far past
+ * anything an effect is made of, so none ever meets it: it is there for a file naming `sub/a.particles`
+ * on a server that answers any path, which is a new file each time and would be fetched for ever.
+ *
+ * Different paths and not fetches: a game that lets a child go and asks for it again each level, for
+ * as long as it runs, is asking for the same file.
+ */
+const MOST_FILES_BELOW = 256;
+
+/**
+ * The paths a first file and everything fetched below it have fetched, shared among them.
+ */
+const fetchedBelow = new WeakMap<TParticlesFile, { paths: Set<string>; said: boolean }>();
+
+/**
  * Whether `file`, or an effect it sets off, or one those set off in turn, is `target`.
  *
  * Asked of the files and not of how they were written: one file can be named two ways, and two files
@@ -105,30 +122,46 @@ const leadsTo = (file: TParticlesFile, target: TParticlesFile, seen: Set<TPartic
 /**
  * The file of one effect another one sets off, from the game's cache like any other, found next to
  * the file that names it. `null`, said once, for one that would lead back to the file that names it,
- * or one past `MAX_CHILD_DEPTH`: either would be a frame that never ends rather than an error anybody
- * could see.
+ * or past `MOST_FILES_BELOW`.
+ *
+ * How deep an effect may reach is not asked here: how far a file is from the first effect depends on
+ * which file was asked for first, and a file refused its children for that would keep the refusal when
+ * asked for on its own. Particles stop at `MAX_CHILD_DEPTH` when they run, and say so there.
+ *
+ * @param store The runtime store of the game it belongs to.
+ * @param parent The effect that names it.
+ * @param src The path, as the effect wrote it.
+ * @param drawn Whether `parent` is written in code, and so wants it only while it is drawn.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const childFileFor = (store: TRuntimeStore, parent: TParticlesFile, src: string, ancestors: readonly string[]): TParticlesFile | null => {
+export const childFileFor = (store: TRuntimeStore, parent: TParticlesFile, src: string, drawn = false): TParticlesFile | null => {
     const path = resolveAssetPath(parent.src, src);
     const { particles } = store.get('assets');
     let file = findAssetFile(particles, path);
-    if (path === parent.src || ancestors.includes(path) || (file !== undefined && leadsTo(file, parent))) {
-        console.warn(`[NacatamalOn] particles "${parent.src}" sets off "${path}", which leads back to itself. That child is left out.`);
-        return null;
-    }
-    if (ancestors.length + 1 >= MAX_CHILD_DEPTH) {
-        console.warn(`[NacatamalOn] particles "${parent.src}" sets off "${path}" more than ${MAX_CHILD_DEPTH} effects deep. That child is left out.`);
+    if (path === parent.src || (file !== undefined && leadsTo(file, parent))) {
+        console.warn(`[NacatamalOn] particles "${parent.src}" sets off "${path}", which leads back to itself. That child is left out: take it out of the file.`);
         return null;
     }
     if (file === undefined) {
+        const spent = fetchedBelow.get(parent) ?? { paths: new Set(), said: false };
+        fetchedBelow.set(parent, spent);
+        if (!spent.paths.has(path) && spent.paths.size >= MOST_FILES_BELOW) {
+            if (!spent.said) {
+                spent.said = true;
+                console.warn(`[NacatamalOn] particles "${parent.src}" sets off "${path}", past ${MOST_FILES_BELOW} files fetched below the first file. The rest are left out: a path that keeps growing never ends, so check how it names its children.`);
+            }
+            return null;
+        }
+        spent.paths.add(path);
         file = newParticlesFile(path, path);
+        fetchedBelow.set(file, spent);
         particles.set(path, file);
-        void loadParticles(store, file, [...ancestors, parent.src]);
+        void loadParticles(store, file);
     }
+    noteEffectUser(file, parent, drawn);
     return file;
 };
 
@@ -147,7 +180,7 @@ export const childFileFor = (store: TRuntimeStore, parent: TParticlesFile, src: 
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const loadParticles = async (store: TRuntimeStore, file: TParticlesFile, ancestors: readonly string[] = []): Promise<void> => {
+export const loadParticles = async (store: TRuntimeStore, file: TParticlesFile): Promise<void> => {
     try {
         const response = await fetch(file.src);
         if (!response.ok) {
@@ -181,7 +214,7 @@ export const loadParticles = async (store: TRuntimeStore, file: TParticlesFile, 
 
         // Asked for now and not waited on: the effect can start before the ones it sets off have
         // arrived, and those join in when they do.
-        file.children = doc.children.map((child) => childFileFor(store, file, child.src, ancestors));
+        file.children = doc.children.map((child) => childFileFor(store, file, child.src));
         file.doc = doc;
         file.status = 'ready';
         bumpVersion(file);

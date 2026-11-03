@@ -1,10 +1,15 @@
 import { afterEach, describe, expect, it, spyOn } from 'bun:test';
-import { loadParticles } from '../src/loaders/particles/load_particles';
+import { loadParticles, MAX_CHILD_DEPTH } from '../src/loaders/particles/load_particles';
 import { newParticlesFile } from '../src/loaders/particles/new_particles_file';
+import { fileFromEffect } from '../src/loaders/particles/file_from_effect';
+import { createParticles } from '../src/gameobjects/particles';
+import { applyParticlesDoc } from '../src/gameobjects/particles/tools/apply_particles_doc';
+import { createScene } from '../src/scene/create_scene';
+import { createGameHandle } from '../src/game/handle';
 import { simulateParticles } from '../src/gameobjects/particles/simulate_particles';
-import { childrenOf } from '../src/gameobjects/particles/particle_state';
+import { childrenOf, particleStateOf } from '../src/gameobjects/particles/particle_state';
 import { countDrawn } from '../src/render/shared/count_drawn';
-import { createTestGame } from './helpers/test_game';
+import { createTestGame, startTestScene } from './helpers/test_game';
 import { effectDoc, effectState, noTint, somewhere } from './helpers/particles';
 import type { TParticlesFile } from '../src/loaders/particles/types/t_particles_file';
 import type { TDrawParticles } from '../src/render/interface';
@@ -130,6 +135,54 @@ describe('loading an effect that sets off others', () => {
         }
     });
 
+    it('loads a chain longer than particles reach, the same whichever of its files is asked for first', async () => {
+        const warn = quiet();
+        const name = (level: number) => `/${level}.particles`;
+        serve(Object.fromEntries([0, 1, 2, 3, 4, 5].map((level) => [name(level), {
+            kind: 'particles-2d',
+            ...(level < 5 ? { children: [{ on: 'death', src: name(level + 1) }] } : {}),
+        }])));
+        const { store } = createTestGame();
+        const first = newParticlesFile(name(0), name(0));
+        store.get('assets').particles.set(name(0), first);
+        await loadParticles(store, first);
+        await settle();
+
+        // What is deep from this one may be the first effect of another: particles stop when they run.
+        let last = first;
+        for (let level = 1; level <= 5; level++) {
+            last = last.children[0]!;
+            expect(last.src).toBe(name(level));
+            expect(last.status).toBe('ready');
+        }
+        expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('stops fetching what keeps growing on a server that answers any path, however it branches', async () => {
+        for (const children of [
+            [{ on: 'death', src: 'sub/a.particles' }],
+            [{ on: 'death', src: 'a/x.particles' }, { on: 'death', src: 'b/x.particles' }],
+        ]) {
+            const warn = quiet();
+            let asked = 0;
+            const spy = spyOn(globalThis, 'fetch').mockImplementation((async () => {
+                asked += 1;
+                return { ok: true, json: async () => ({ kind: 'particles-2d', children }) };
+            }) as unknown as typeof fetch);
+            restore.push(() => spy.mockRestore());
+            const { store } = createTestGame();
+            const first = newParticlesFile('/fx/a.particles', '/fx/a.particles');
+            store.get('assets').particles.set(first.key, first);
+            await loadParticles(store, first);
+            await new Promise((done) => setTimeout(done, 120));
+
+            // The first, and what it may have fetched below it.
+            expect(asked).toBe(257);
+            expect(warn.mock.calls.filter((call: unknown[]) => String(call[0]).includes('files fetched below'))).toHaveLength(1);
+            warn.mockClear();
+        }
+    });
+
     it('refuses a file that names itself, however the page wrote its path', async () => {
         const warn = quiet();
         serve({ './fx/a.particles': { kind: 'particles-2d', children: [{ on: 'death', src: 'a.particles' }] } });
@@ -183,7 +236,180 @@ const rocketWithSparks = (on: 'birth' | 'death') => {
     return { state, step, sparks: () => state.children[0]!.state };
 };
 
+/**
+ * A document whose one particle sets off its child as it is born, at every step it is given.
+ */
+const rocketDoc = () => effectDoc({
+    max: 8, life: 5, speed: 0,
+    emission: { rate: 0, burst: 2, duration: 0, loop: false },
+    children: [{ on: 'birth', src: 'sparks.particles', count: 1 }],
+});
+
+describe('editing a running effect', () => {
+    /**
+     * Two emitters on one file that names the same child twice, both already running.
+     */
+    const running = () => {
+        const { store } = createTestGame();
+        const named = newParticlesFile('/fx/c.particles', 'c');
+        named.doc = effectDoc({ max: 4 });
+        named.status = 'ready';
+        const effect = { kind: 'particles-2d', max: 4 } as never;
+        const emitters: Array<ReturnType<typeof createParticles>> = [];
+        startTestScene(store, 'S', () => {
+            emitters.push(createParticles({ effect }), createParticles({ effect }));
+            return createScene();
+        });
+        const { file } = emitters[0]!;
+        file.children = [named, named];
+        file.doc = { ...file.doc!, children: [{ on: 'birth', src: '/fx/c.particles', count: 1 }, { on: 'death', src: '/fx/c.particles', count: 1 }] } as never;
+        for (const emitter of emitters) {
+            const state = particleStateOf(emitter)!;
+            state.children = childrenOf(file).map((child) => ({ ...child, state: effectState(named.doc!) }));
+        }
+        return { emitters, file, named };
+    };
+
+    it('keeps each run of a file named twice to itself', () => {
+        const { emitters, file } = running();
+        const [first, second] = particleStateOf(emitters[0]!)!.children.map((child) => child.state);
+
+        applyParticlesDoc(emitters[0]!, { ...file.doc!, speed: 3 } as never);
+
+        const after = particleStateOf(emitters[0]!)!.children.map((child) => child.state);
+        expect(after[0]).toBe(first!);
+        expect(after[1]).toBe(second!);
+        expect(after[0]).not.toBe(after[1]!);
+    });
+
+    it('changes every emitter following it, not only the one it was given', () => {
+        const { emitters, file } = running();
+
+        applyParticlesDoc(emitters[0]!, { ...file.doc!, children: [] } as never);
+
+        expect(file.children).toEqual([]);
+        expect(particleStateOf(emitters[1]!)!.children).toEqual([]);
+    });
+
+    it('keeps a child however the new version writes its path', () => {
+        const { emitters, file, named } = running();
+        // Next to the child, so the two ways of writing it are the same file.
+        file.src = '/fx/parent.particles';
+        const written = file.doc!.children.map((child) => ({ ...child, src: './c.particles' }));
+
+        applyParticlesDoc(emitters[0]!, { ...file.doc!, children: written } as never);
+
+        expect(file.children).toEqual([named, named]);
+    });
+});
+
+describe('an effect written in code that sets off a file', () => {
+    it('asks for it afresh when used again after it was let go of', async () => {
+        serve({ '/c.particles': { kind: 'particles-2d' } });
+        const { store } = createTestGame();
+        const effect = { kind: 'particles-2d', children: [{ on: 'death', src: '/c.particles' }] } as never;
+        const file = fileFromEffect(store, effect);
+        await settle();
+        const first = file.children[0]!;
+        createGameHandle(store).releaseAsset(first);
+        expect(first.status).toBe('released');
+
+        expect(fileFromEffect(store, effect)).toBe(file);
+        await settle();
+
+        expect(file.children[0]).not.toBe(first);
+        expect(file.children[0]!.status).toBe('ready');
+    });
+});
+
+describe('a game that lets an effect go and asks for it again, level after level', () => {
+    it('never runs out of asking', async () => {
+        const warn = quiet();
+        serve({ '/c.particles': { kind: 'particles-2d' } });
+        const { store } = createTestGame();
+        const effect = { kind: 'particles-2d', children: [{ on: 'death', src: '/c.particles' }] } as never;
+        const game = createGameHandle(store);
+
+        for (let level = 0; level < 300; level++) {
+            const child = fileFromEffect(store, effect).children[0];
+            expect(child, `level ${level}`).not.toBeNull();
+            game.releaseAsset(child!);
+        }
+
+        expect(warn).not.toHaveBeenCalled();
+    });
+});
+
+describe('a chain of effects set off at birth', () => {
+    /**
+     * Files of `levels` effects, each setting off the next as its particles are born.
+     */
+    const chain = (levels: number) => {
+        const files = Array.from({ length: levels }, (_, level) => {
+            const file = newParticlesFile(`/${level}.particles`, String(level));
+            file.doc = effectDoc({
+                max: 8, life: 5, speed: 0,
+                emission: { rate: 0, burst: level === 0 ? 1 : 0, duration: 0, loop: false },
+                children: level < levels - 1 ? [{ on: 'birth', src: `/${level + 1}.particles`, count: 2 }] : [],
+            });
+            file.status = 'ready';
+            return file;
+        });
+        files.forEach((file, level) => { file.children = level < levels - 1 ? [files[level + 1]!] : []; });
+        const state = effectState(files[0]!.doc!);
+        state.children = childrenOf(files[0]!);
+        return { state, doc: files[0]!.doc! };
+    };
+
+    /**
+     * How many live particles each level down has, through the first child at each.
+     */
+    const liveDown = (state: ReturnType<typeof effectState>): number[] => {
+        const live: number[] = [state.pool.live];
+        let at = state.children[0]?.state ?? null;
+        while (at !== null) {
+            live.push(at.pool.live);
+            at = at.children[0]?.state ?? null;
+        }
+        return live;
+    };
+
+    it('goes off all the way down: a particle born of a set-off sets off its own', () => {
+        const warn = quiet();
+        const { state, doc } = chain(4);
+        simulateParticles(state, doc as never, 1 / 60, somewhere(), true, noTint, 0);
+
+        expect(liveDown(state)).toEqual([1, 2, 4, 8]);
+        // All of them drawn this frame, the deepest too, and not the next.
+        const packed: number[] = [];
+        for (let at: typeof state | null = state; at !== null; at = at.children[0]?.state ?? null) {
+            packed.push(at.instanceCount);
+        }
+        expect(packed).toEqual([1, 2, 4, 8]);
+        expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('stops where particles stop, and says so once', () => {
+        const warn = quiet();
+        const { state, doc } = chain(6);
+        for (let i = 0; i < 3; i++) simulateParticles(state, doc as never, 1 / 60, somewhere(), true, noTint, 0);
+
+        expect(liveDown(state)).toHaveLength(MAX_CHILD_DEPTH + 1);
+        expect(warn.mock.calls.filter((call: unknown[]) => String(call[0]).includes('set-offs down'))).toHaveLength(1);
+    });
+});
+
 describe('an effect set off by another', () => {
+    it('says once of a child past the limit', () => {
+        const warn = quiet();
+        const { state } = rocketWithSparks('birth');
+        const doc = rocketDoc();
+        for (let i = 0; i < 3; i++) simulateParticles(state, doc, 1 / 60, somewhere(), true, noTint, 0, undefined, [], MAX_CHILD_DEPTH);
+
+        expect(state.children[0]!.state).toBeNull();
+        expect(warn.mock.calls.filter((call: unknown[]) => String(call[0]).includes('set-offs down'))).toHaveLength(1);
+    });
+
     it('goes off when a particle dies, where it died, and outlives it', () => {
         const { state, step, sparks } = rocketWithSparks('death');
         step();

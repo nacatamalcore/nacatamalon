@@ -58,7 +58,8 @@ export type TParticlesFile = {
     bound: Array<TParticles | TParticles3d>;
     /**
      * The files of the effects its particles set off, one per entry of `doc.children`, in the same
-     * order. `null` for one that was refused (a file that leads back to itself, or one too deep).
+     * order. `null` for one with no file: refused by the loader (it leads back to itself, or too many
+     * files were fetched below the first), or newly named by an edit, until the effect is loaded anew.
      */
     children: Array<TParticlesFile | null>;
 };

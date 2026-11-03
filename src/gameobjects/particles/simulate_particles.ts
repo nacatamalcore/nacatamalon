@@ -257,6 +257,10 @@ const setOffAt3d = new Float32Array(16);
  * Children whose file is for the other dimension, so it is said once and not every frame.
  */
 const wrongKind = new WeakSet<TParticlesFile>();
+/**
+ * The files already said to be set off past `MAX_CHILD_DEPTH`, so each is said once and not each frame.
+ */
+const tooDeep = new WeakSet<TParticlesFile>();
 
 /**
  * A child's particles, made the first time it is needed once its file is here. `null` while it is
@@ -268,7 +272,14 @@ const particlesOf = (child: TChildParticles, kind: 'particles-2d' | 'particles-3
         return child.state;
     }
     const doc = child.file.doc;
-    if (doc === null || depth >= MAX_CHILD_DEPTH) {
+    if (depth >= MAX_CHILD_DEPTH) {
+        if (!tooDeep.has(child.file)) {
+            tooDeep.add(child.file);
+            console.warn(`[NacatamalOn] particles "${child.file.src}" is set off more than ${MAX_CHILD_DEPTH} set-offs down from the first effect, so it is left out. Set off fewer.`);
+        }
+        return null;
+    }
+    if (doc === null) {
         return null;
     }
     if (doc.kind !== kind) {
@@ -299,16 +310,23 @@ const setOff2d = (state: TParticleState, doc: TParticlesDoc2d, placement: TTrans
         x = placement.x + sx * cos - sy * sin;
         y = placement.y + sx * sin + sy * cos;
     }
-    setOffAt2d.x = x;
-    setOffAt2d.y = y;
-    setOffAt2d.rotation = placement.rotation;
+    const { rotation } = placement;
     for (const child of state.children) {
         const own = child.on === when ? particlesOf(child, 'particles-2d', state, depth) : null;
         if (own === null) {
             continue;
         }
+        const childDoc = child.file.doc as TParticlesDoc2d;
+        const atBirth = setsOff(own, 'birth');
         for (let k = 0; k < child.count; k++) {
-            emitOne(own, child.file.doc as TParticlesDoc2d, setOffAt2d, undefined);
+            // Set again each time: what this one sets off in turn moves it.
+            setOffAt2d.x = x;
+            setOffAt2d.y = y;
+            setOffAt2d.rotation = rotation;
+            const slot = emitOne(own, childDoc, setOffAt2d, undefined);
+            if (atBirth && slot >= 0) {
+                setOff2d(own, childDoc, setOffAt2d, 'birth', slot, depth + 1);
+            }
         }
     }
 };
@@ -348,8 +366,41 @@ const setOff3d = (state: TParticleState, doc: TParticlesDoc3d, matrix: Float32Ar
         if (own === null) {
             continue;
         }
+        const childDoc = child.file.doc as TParticlesDoc3d;
+        const atBirth = setsOff(own, 'birth');
         for (let k = 0; k < child.count; k++) {
-            emitOne3d(own, child.file.doc as TParticlesDoc3d, setOffAt3d, undefined);
+            const slot = emitOne3d(own, childDoc, setOffAt3d, undefined);
+            if (atBirth && slot >= 0) {
+                // Its own copy: what this one sets off in turn writes over the shared one.
+                const here = setOffAt3d.slice();
+                setOff3d(own, childDoc, here, 'birth', slot, depth + 1);
+                setOffAt3d.set(here);
+            }
+        }
+    }
+};
+
+/**
+ * Packs again what an effect set off, all the way down: a birth this frame may have set off a particle
+ * several effects below this one, and each of those has packed itself already, before it was born.
+ */
+const packChildren2d = (state: TParticleState, tint: { r: number; g: number; b: number; a: number }, view: number): void => {
+    for (const child of state.children) {
+        if (child.state !== null) {
+            packInstances(child.state, (child.file.doc as TParticlesDoc2d).trail, tint.r, tint.g, tint.b, tint.a, view, null);
+            packChildren2d(child.state, tint, view);
+        }
+    }
+};
+
+/**
+ * The same in space.
+ */
+const packChildren3d = (state: TParticleState, tint: { r: number; g: number; b: number; a: number }): void => {
+    for (const child of state.children) {
+        if (child.state !== null) {
+            packInstances3d(child.state, (child.file.doc as TParticlesDoc3d).trail, tint.r, tint.g, tint.b, tint.a, null);
+            packChildren3d(child.state, tint);
         }
     }
 };
@@ -501,10 +552,9 @@ export const simulateParticles = (
     // 4. Pack, and pack again what it set off this frame, so a spark born by a death this frame is
     // drawn this frame.
     packInstances(state, doc.trail, tint.r, tint.g, tint.b, tint.a, view, doc.worldSpace ? null : placement);
-    for (const child of state.children) {
-        if (child.state !== null) {
-            packInstances(child.state, (child.file.doc as TParticlesDoc2d).trail, tint.r, tint.g, tint.b, tint.a, view, null);
-        }
+    // Only the first effect packs what is below it: it runs last, so it sees all they set off.
+    if (depth === 0) {
+        packChildren2d(state, tint, view);
     }
 };
 
@@ -577,9 +627,7 @@ export const simulateParticles3d = (
     });
 
     packInstances3d(state, doc.trail, tint.r, tint.g, tint.b, tint.a, doc.worldSpace ? null : matrix);
-    for (const child of state.children) {
-        if (child.state !== null) {
-            packInstances3d(child.state, (child.file.doc as TParticlesDoc3d).trail, tint.r, tint.g, tint.b, tint.a, null);
-        }
+    if (depth === 0) {
+        packChildren3d(state, tint);
     }
 };

@@ -13,6 +13,8 @@ import { askedByGame } from './asked_by_game';
 import { leaveSheet, releaseWhenUnused } from './sheet_users';
 import { freeTexture } from './texture/free_texture';
 import type { TLoadedAtlas } from './atlas/types/t_loaded_atlas';
+import type { TParticlesFile } from './particles/types/t_particles_file';
+import { leaveEffect, releaseWhenUnset } from './particles/effect_users';
 
 /**
  * Whether a drawing shows `thing`: as its picture (a sprite, a panel, particles), as a model's
@@ -180,10 +182,35 @@ const refuseOwned = (asset: TAsset): void => {
 };
 
 /**
+ * The effects whose children are being let go of right now: what ends the walk should files ever lead
+ * back to one another, since an effect only ends as released once its children have gone.
+ */
+const releasing = new WeakSet<TAsset>();
+
+/**
+ * Lets go of an effect another one set off, with that one, unless something else still wants it: the
+ * game, which asked for it itself (loaded it, or drew it), and which lets go of it when it chooses, or
+ * another effect that sets it off, the last of which takes it.
+ */
+const releaseChild = (store: TRuntimeStore, child: TParticlesFile, leaving: TParticlesFile): void => {
+    const othersLeft = leaveEffect(child, leaving);
+    if (askedByGame(child)) {
+        return;
+    }
+    if (othersLeft) {
+        // Another file goes the same way when it is let go of; an effect written in code is let go of
+        // by nobody, so it finishes this when it stops being drawn.
+        releaseWhenUnset(child, () => { releaseChild(store, child, leaving); });
+        return;
+    }
+    releaseOne(store, child);
+};
+
+/**
  * Lets one asset go, with what is its own.
  */
 const releaseOne = (store: TRuntimeStore, asset: TAsset): void => {
-    if (asset.status === 'released') {
+    if (asset.status === 'released' || releasing.has(asset)) {
         return;
     }
     switch (asset.type) {
@@ -213,10 +240,15 @@ const releaseOne = (store: TRuntimeStore, asset: TAsset): void => {
         case 'particles-file':
             // Its children first: one that wears the same picture has let go of it by the time this
             // one asks whether anything else still wears it.
-            for (const child of asset.children) {
-                if (child !== null) {
-                    releaseOne(store, child);
+            releasing.add(asset);
+            try {
+                for (const child of asset.children) {
+                    if (child !== null) {
+                        releaseChild(store, child, asset);
+                    }
                 }
+            } finally {
+                releasing.delete(asset);
             }
             releaseWorn(store, asset.texture, asset);
             releaseSheet(store, asset.atlas, asset);

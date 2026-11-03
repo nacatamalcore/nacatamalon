@@ -136,6 +136,24 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **Letting go of an effect leaves the effects something else still sets off.** When two effect files
+  set off the same one and one of them was let go of, the shared one went with it and the other was
+  left setting off nothing. Now it goes with the last of them, whether that is a file let go of or an
+  effect written in code that stops being drawn, and an effect the game loaded or drew itself goes only
+  when the game lets go of it. An effect written in code used again asks afresh for one that has gone.
+- **An effect's chain reaches as far as its particles do.** A firework whose sparks leave embers that
+  leave smoke lost its smoke when followed from one file: the loader stopped one step short of the
+  simulation, and a file refused its children that way kept the refusal even when asked for on its
+  own. Now the particles are what stops, at the same depth wherever the chain was first asked for, and
+  it is said once, also for a chain of files loaded apart, which used to stop with nothing said. (The
+  loader only stops fetching past 256 different files below one first file, which no effect comes near.)
+- **A particle born of a set-off sets off its own.** Effects set off at birth stopped after the first
+  step: `on: 'birth'` only went off for particles the emitter made itself.
+- **Editing a running effect changes what it sets off, on every emitter following it.**
+  `applyParticlesDoc` kept the old children running, paired a new document's children with the old
+  files by position, and resized only the emitter it was given. A child still named keeps its file and,
+  unless the edit resizes the effect, its particles; the particles of one no longer named go at once;
+  and one newly named stays out until the effect is loaded anew.
 - **Particle files that set each other off are refused however they arrive.** Only a chain followed
   from one file, written with the full path, was caught. Two files loaded apart that named each other,
   or one naming itself on a page that wrote its path another way, got by with nothing said. Now the
