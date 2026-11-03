@@ -76,6 +76,24 @@ export const dropIdleSheetUser = (sheet: TLoadedAtlas, by: TSheetUser): void => 
 };
 
 /**
+ * Takes `by` off `sheet` for good: a map let go of, or one that could not be loaded. A sheet the game
+ * let go of while that map used it goes now, if nothing else uses it, since a map never takes its
+ * sheet with it.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const stopUsingSheet = (sheet: TLoadedAtlas, by: TSheetUser): void => {
+    users.get(sheet)?.delete(by);
+    const finish = waiting.get(sheet);
+    if (finish !== undefined) {
+        waiting.delete(sheet);
+        finish();
+    }
+};
+
+/**
  * Notes that letting go of `sheet` waits on something still using it, and what to do to try again
  * once an effect written in code on it stops being drawn.
  *

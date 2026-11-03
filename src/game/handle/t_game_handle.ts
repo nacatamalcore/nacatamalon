@@ -294,14 +294,18 @@ export type TGameHandle = {
      * Given the asset (what its `useLoad…` handed back), that one goes. Given a key, everything kept
      * under it goes, whatever it is: the picture called `'hero'` and the sound called `'hero'`.
      *
-     * It ends `'released'`. Whatever still shows it is not drawn from then on, and the call says how
-     * many; a load still on its way is thrown away when it arrives. Asked for again with the same key,
-     * it loads afresh, like the first time.
+     * It ends `'released'`, unless something else still uses it (below). Whatever still shows it is
+     * not drawn from then on, and the call that ends it says how many; a load still on its way is
+     * thrown away when it arrives. Asked for again with the same key, it loads afresh, like the first
+     * time.
      *
      * An effect takes the effects it sets off with it, unless another effect still sets them off or the
-     * game loaded or drew them too. An effect that others still set off is the one thing that does not
-     * end at once: it stays as it is, and goes with the last of them. Asked for again meanwhile, it is
-     * the same one, and stays.
+     * game loaded or drew them too.
+     *
+     * What something else still uses does not end at once: a picture a model, a sheet, a font or an
+     * effect wears, a sheet an effect or a map takes its frames from, an effect others set off. It
+     * stays as it is, and goes with the last of them. Asked for again meanwhile, it is the same one,
+     * and stays.
      *
      * @example
      * ```ts
@@ -313,8 +317,8 @@ export type TGameHandle = {
      * ```
      *
      * @param asset The asset, or the key it was loaded under (its `src` when no key was given).
-     * @returns Whether there was anything to let go of, also when it waits on the effects setting it
-     * off. Releasing it twice is not a mistake.
+     * @returns Whether there was anything to let go of, also when it waits on what still uses it.
+     * Releasing it twice is not a mistake.
      * @throws When it belongs to something in the game rather than to the game: a picture made with
      * `createSpriteTexture` or `createPixelTexture`, a shape made with `createGeometry`. Those go with
      * whatever made them. Nothing is let go then, not even the other assets under the same key.

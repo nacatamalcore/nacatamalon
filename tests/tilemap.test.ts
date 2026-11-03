@@ -14,7 +14,10 @@ import { TILE_LAYER_BANDS } from '../src/loaders/tilemap/types/t_tilemap_doc';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { useSpawn } from '../src/hooks/spawn';
 import { useTransform } from '../src/hooks/transform';
-import { serveTilemap, TEST_MAP } from './helpers/test_tilemap';
+import { serveTilemap, TEST_ATLAS, TEST_MAP } from './helpers/test_tilemap';
+import { createGameHandle } from '../src/game/handle';
+import { sheetUsersOf } from '../src/loaders/sheet_users';
+import type { TLoadedAtlas } from '../src/loaders/atlas/types/t_loaded_atlas';
 import type { TFrameContext } from '../src/render';
 import type { TRuntimeStore } from '../src/store';
 import type { TTilemap } from '../src/gameobjects/tilemap';
@@ -468,5 +471,78 @@ describe('a map over a sheet that is not a plain grid', () => {
 
         map.tiles[1] = { ...map.tiles[1], frame: 'missing' };
         expect(buildLayerMesh(map, map.layers[0]).still.length).toBeLessThan(named.length);
+    });
+});
+
+describe('a map let go of while it loads', () => {
+    /**
+     * The map and its sheet, asked for by the scene, with the sheet held back until `open` or `fail`.
+     */
+    const halfway = async () => {
+        let open!: () => void;
+        let fail!: () => void;
+        const gate = new Promise<boolean>((done) => { open = () => done(true); fail = () => done(false); });
+        Object.assign(globalThis, {
+            createImageBitmap: async () => ({ width: 32, height: 8, close: () => {} }),
+            location: { href: 'http://nacatamalon.local/' },
+        });
+        const fetching = spyOn(globalThis, 'fetch').mockImplementation((async (input: string) => {
+            const url = String(input);
+            if (url.endsWith('.tilemap')) {
+                return { ok: true, json: async () => TEST_MAP };
+            }
+            if (url.endsWith('.atlas')) {
+                return (await gate) ? { ok: true, json: async () => TEST_ATLAS } : { ok: false, status: 404 };
+            }
+            return { ok: true, blob: async () => new Blob(['png']) };
+        }) as never);
+        served = { asked: [], restore: () => fetching.mockRestore() };
+        spyOn(console, 'warn').mockImplementation(() => {});
+        const { store } = createTestGame();
+        let atlas!: TLoadedAtlas;
+        let map!: TTilemap;
+        startTestScene(store, 'Level', () => {
+            atlas = useLoadAtlas({ src: '/maps/tiles.atlas' });
+            map = createTilemap({ src: '/maps/level.tilemap' });
+            return createScene();
+        });
+        // Until the map has read its file and is waiting for the sheet.
+        while (!sheetUsersOf(atlas).includes(map)) {
+            await new Promise((done) => setTimeout(done, 0));
+        }
+        return { store, atlas, map, open, fail };
+    };
+
+    it('lets the sheet the game let go of meanwhile go, once it lands', async () => {
+        const { store, atlas, map, open } = await halfway();
+        const game = createGameHandle(store);
+        game.releaseAsset(atlas);
+        expect(atlas.status).not.toBe('released');
+        game.releaseAsset(map);
+
+        open();
+        await whenLoaded(map);
+        await whenLoaded(atlas);
+        expect([map.status, atlas.status]).toEqual(['released', 'released']);
+        expect(sheetUsersOf(atlas)).toHaveLength(0);
+    });
+
+    it('stays let go of, rather than coming back ready when its sheet lands', async () => {
+        const { store, map, open } = await halfway();
+        createGameHandle(store).releaseAsset(map);
+
+        open();
+        await whenLoaded(map);
+        expect(map.status).toBe('released');
+        expect(map.layers).toHaveLength(0);
+    });
+
+    it('holds no sheet once it could not be loaded', async () => {
+        const { atlas, map, fail } = await halfway();
+
+        fail();
+        await whenLoaded(map);
+        expect(map.status).toBe('error');
+        expect(sheetUsersOf(atlas)).not.toContain(map);
     });
 });

@@ -20,6 +20,7 @@ import { flushDestroyed } from '../src/destroy/flush_destroyed';
 import { applyParticlesDoc } from '../src/gameobjects/particles/tools/apply_particles_doc';
 import { childFileFor } from '../src/loaders/particles/load_particles';
 import { markAskedByGame } from '../src/loaders/asked_by_game';
+import { wearPicture } from '../src/loaders/worn_pictures';
 import { dropIdleEffectUser, noteEffectUser } from '../src/loaders/particles/effect_users';
 import type { TParticlesFile } from '../src/loaders/particles/types/t_particles_file';
 import { createGameHandle } from '../src/game/handle';
@@ -534,6 +535,69 @@ describe('releaseAsset', () => {
         game.releaseAsset(a);
         expect([a.status, b.status, c.status]).toEqual(['released', 'released', 'released']);
         expect(store.get('assets').particles.size).toBe(0);
+    });
+
+    it('waits, a picture the game lets go of while an effect file wears it, for that file', () => {
+        const { store } = createTestGame();
+        const spark = loaded(store, 'spark');
+        const file = newParticlesFile('/fx/sparks.particles', '/fx/sparks.particles');
+        file.texture = spark;
+        file.status = 'ready';
+        store.get('assets').particles.set(file.key, file);
+        const game = createGameHandle(store);
+
+        expect(game.releaseAsset(spark)).toBe(true);
+        expect(spark.status).toBe('ready');
+        expect(spark.gpu).not.toBeNull();
+
+        game.releaseAsset(file);
+        expect(spark.status).toBe('released');
+    });
+
+    it('waits, a picture the game lets go of while a model wears it, for that model', () => {
+        const { store } = createTestGame();
+        const skin = loaded(store, 'skin');
+        const model = { type: 'gltf', key: '/robot.glb', src: '/robot.glb', status: 'ready', parts: [] } as never;
+        store.get('assets').gltf.set('/robot.glb', model);
+        wearPicture(skin, model);
+        const game = createGameHandle(store);
+
+        game.releaseAsset(skin);
+        expect(skin.status).toBe('ready');
+
+        game.releaseAsset(model);
+        expect(skin.status).toBe('released');
+    });
+
+    it('waits, an effect and its picture let go of under one key, for what sets the effect off', () => {
+        const { store, a, b, shared } = twoSettingOffOne();
+        const spark = loaded(store, 'spark');
+        shared.texture = spark;
+        store.get('assets').particles.set('spark', shared);
+        const game = createGameHandle(store);
+
+        game.releaseAsset('spark');
+        expect([shared.status, spark.status]).toEqual(['ready', 'ready']);
+
+        game.releaseAsset(a);
+        game.releaseAsset(b);
+        expect([shared.status, spark.status]).toEqual(['released', 'released']);
+    });
+
+    it('waits, a picture the game lets go of while an effect written in code is drawn with it, until it stops', () => {
+        const { store } = createTestGame();
+        const spark = loaded(store, 'spark');
+        let emitter!: ReturnType<typeof createParticles>;
+        startTestScene(store, 'S', () => {
+            emitter = createParticles({ effect: { kind: 'particles-2d', texture: spark } as never });
+            return createScene();
+        });
+        createGameHandle(store).releaseAsset(spark);
+        expect(spark.status).toBe('ready');
+
+        destroy(emitter);
+        flushDestroyed(store);
+        expect(spark.status).toBe('released');
     });
 
     it('ends, should effects ever lead back to one another', () => {

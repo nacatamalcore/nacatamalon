@@ -94,6 +94,9 @@ export const fileFromEffect = (store: TRuntimeStore, effect: TParticlesEffect): 
         wearPicture(file.texture, file, true);
     } else if (picture !== null && picture !== undefined && typeof picture === 'object') {
         file.texture = picture;
+        // The game's own picture, which letting go of must leave while this effect is drawn, as it
+        // does one named by its path.
+        wearPicture(picture, file, true);
     }
     file.children = doc.children.map((child) => childFileFor(store, file, child.src, true));
 

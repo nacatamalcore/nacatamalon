@@ -10,7 +10,7 @@ import type { TAsset } from './types/t_asset';
 import { findAsset } from './asset_key';
 import { picturesWornBy, releaseWhenUnworn, stopWearing, wornByAnother } from './worn_pictures';
 import { askedByGame, forgetAskedByGame } from './asked_by_game';
-import { leaveSheet, releaseWhenUnused } from './sheet_users';
+import { leaveSheet, releaseWhenUnused, stopUsingSheet } from './sheet_users';
 import { freeTexture } from './texture/free_texture';
 import type { TLoadedAtlas } from './atlas/types/t_loaded_atlas';
 import type { TParticlesFile } from './particles/types/t_particles_file';
@@ -104,6 +104,9 @@ const picturesOf = (asset: TAsset): Array<TTexture | null> => {
  * Lets go of a picture `leaving` wore, unless another asset still loaded wears it too: two model
  * files carrying the same picture share one, and so do two that point at the same sheet. Letting go
  * of one of them must not take it from the other. The last one to go takes it.
+ *
+ * Also how the game lets go of a picture itself, with `leaving` the picture: then it waits for
+ * whatever still wears it.
  */
 const releaseWorn = (store: TRuntimeStore, texture: TTexture | null, leaving: TAsset): void => {
     // One the game asked for itself goes when the game lets go of it, not with a file that names it.
@@ -131,6 +134,9 @@ const releaseWorn = (store: TRuntimeStore, texture: TTexture | null, leaving: TA
  * the game, which asked for it itself (`useLoadAtlas`, for its sprites), another effect (from a file
  * or written in code), or a map, loaded or still waiting for it. A sheet cut in code is not the
  * cache's and is left alone.
+ *
+ * Also how the game lets go of a sheet itself, with `leaving` the sheet: then it waits for whatever
+ * still uses it.
  */
 const releaseSheet = (store: TRuntimeStore, sheet: unknown, leaving: TAsset): void => {
     if (sheet === null || (sheet as { type?: unknown }).type !== 'atlas') {
@@ -142,8 +148,9 @@ const releaseSheet = (store: TRuntimeStore, sheet: unknown, leaving: TAsset): vo
         return;
     }
     if (othersLeft) {
-        // Another effect goes the same way when it is let go of, and a map never lets its sheet go; an
-        // effect written in code is let go of by nobody, so it finishes this when it stops being drawn.
+        // Another effect goes the same way when it is let go of, and a map finishes this when it goes;
+        // an effect written in code is let go of by nobody, so it finishes this when it stops being
+        // drawn.
         releaseWhenUnused(atlas, () => { releaseSheet(store, atlas, leaving); });
         return;
     }
@@ -277,9 +284,10 @@ const releaseOne = (store: TRuntimeStore, asset: TAsset): void => {
             asset.pixels = null;
             break;
         case 'tilemap-asset':
-            // Its sheet stays (a map never lets its sheet go), but no longer on this map's account.
+            // Its sheet stays, as a map never takes its sheet with it, but no longer on this map's
+            // account: one the game let go of while this map used it goes now.
             if (asset.atlas !== null) {
-                leaveSheet(asset.atlas, asset);
+                stopUsingSheet(asset.atlas, asset);
             }
             break;
         // Plain data, and nothing of the card's or the sound's: out of the cache is all there is.
@@ -297,16 +305,26 @@ const releaseOne = (store: TRuntimeStore, asset: TAsset): void => {
 };
 
 /**
- * Lets go of what the game itself let go of. An effect that others still set off waits for the last
- * of them: let go of at once, they would go on setting it off with its picture already off the card.
+ * Lets go of what the game itself let go of. What something else still uses waits for the last
+ * of them: a picture a model, a sheet, a font or an effect wears, a sheet an effect or a map takes its
+ * frames from, an effect others set off. Let go of at once, they would go on drawing it with its
+ * picture already off the card.
  */
 const letGo = (store: TRuntimeStore, asset: TAsset): void => {
-    if (asset.type === 'particles-file') {
-        forgetAskedByGame(asset);
-        releaseWhenNotSetOff(store, asset);
-        return;
+    forgetAskedByGame(asset);
+    switch (asset.type) {
+        case 'particles-file':
+            releaseWhenNotSetOff(store, asset);
+            return;
+        case 'texture':
+            releaseWorn(store, asset, asset);
+            return;
+        case 'atlas':
+            releaseSheet(store, asset, asset);
+            return;
+        default:
+            releaseOne(store, asset);
     }
-    releaseOne(store, asset);
 };
 
 /**

@@ -33,8 +33,9 @@ export const markAskedByGame = (asset: TAsset): void => {
 export const askedByGame = (asset: TAsset): boolean => asked.has(asset);
 
 /**
- * Notes that the game has let go of `asset`, so whatever else still holds it takes it when it goes: an
- * effect another one still sets off goes with that one.
+ * Notes that the game has let go of `asset`, so whatever else still uses it takes it when it goes: a
+ * picture with the last model or effect wearing it, a sheet with the last effect or map on it, an
+ * effect with the last one setting it off.
  *
  * @internal
  * @since 1.0.0

@@ -462,6 +462,54 @@ describe('letting go of an effect on a sheet', () => {
         expect(atlas.status).not.toBe('released');
     });
 
+    it('waits, a sheet the game lets go of while an effect takes its frames from it, for that effect', () => {
+        const { store } = createTestGame();
+        quiet();
+        const file = effectOn(store, '/fx/burst.particles');
+        const atlas = sheetOf(file);
+        const game = createGameHandle(store);
+
+        expect(game.releaseAsset(atlas)).toBe(true);
+        expect(atlas.status).not.toBe('released');
+        expect(store.get('assets').atlases.get(atlas.key)).toBe(atlas);
+
+        game.releaseAsset(file);
+        expect(atlas.status).toBe('released');
+    });
+
+    it('waits, a sheet the game lets go of while a map uses it, for that map', () => {
+        const { store } = createTestGame();
+        quiet();
+        const atlas = sheetOf(effectOn(store, '/fx/burst.particles'));
+        const map = { type: 'tilemap-asset', key: '/map.tilemap', src: '/map.tilemap', status: 'ready', atlas } as never;
+        store.get('assets').tilemaps.set('/map.tilemap', map);
+        noteSheetUser(atlas, map);
+        const game = createGameHandle(store);
+        game.releaseAsset('/fx/burst.particles');
+
+        game.releaseAsset(atlas);
+        expect(atlas.status).not.toBe('released');
+
+        game.releaseAsset(map);
+        expect(atlas.status).toBe('released');
+    });
+
+    it('waits, a sheet the game lets go of while an effect written in code is drawn on it, until it stops', () => {
+        quiet();
+        const effect: TParticlesEffect2d = { ...BURST, atlas: '/fx/sheet.atlas' };
+        let emitter!: TParticles;
+        const { store } = running(() => {
+            emitter = createParticles({ effect });
+        });
+        const atlas = fileFromEffect(store, effect).atlas as TLoadedAtlas;
+
+        createGameHandle(store).releaseAsset(atlas);
+        expect(atlas.status).not.toBe('released');
+
+        destroy(emitter, { immediate: true });
+        expect(atlas.status).toBe('released');
+    });
+
     it('keeps a sheet an effect written in code uses while it is drawn', () => {
         quiet();
         const effect: TParticlesEffect2d = { ...BURST, atlas: '/fx/sheet.atlas' };

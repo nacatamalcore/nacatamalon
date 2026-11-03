@@ -9,7 +9,8 @@ import { resolveLayerOrder } from './types/t_tilemap_doc';
 import type { TRuntimeStore } from '../../store';
 import type { TTilemap, TTilemapLayer } from '../../gameobjects/tilemap/types/t_tilemap';
 import { findAssetFile } from '../asset_key';
-import { noteSheetUser } from '../sheet_users';
+import { noteSheetUser, stopUsingSheet } from '../sheet_users';
+import type { TLoadedAtlas } from '../atlas/types/t_loaded_atlas';
 
 /**
  * An empty batch: what a layer has before its corners have been built.
@@ -30,6 +31,9 @@ import { noteSheetUser } from '../sheet_users';
  * @author Francisco Pereira Alvarado
  */
 export const loadTilemap = async (store: TRuntimeStore, map: TTilemap): Promise<void> => {
+    // Asked after each wait: the map may have been let go of meanwhile.
+    const letGo = (): boolean => map.status === 'released';
+    let noted: TLoadedAtlas | null = null;
     try {
         const response = await fetch(map.src);
         if (!response.ok) {
@@ -37,6 +41,9 @@ export const loadTilemap = async (store: TRuntimeStore, map: TTilemap): Promise<
         }
 
         const doc = parseTilemapDoc(await response.json(), map.src);
+        if (letGo()) {
+            return;
+        }
 
         // The sheet's path as the file writes it: relative to the map, not to the page. The same
         // rule, and now the same code, the atlas loader follows for its image.
@@ -49,6 +56,7 @@ export const loadTilemap = async (store: TRuntimeStore, map: TTilemap): Promise<
         // Noted before waiting, not once the sheet is here: an effect on the same sheet let go of
         // meanwhile must leave it for this map.
         noteSheetUser(atlas, map);
+        noted = atlas;
         if (found === undefined) {
             atlases.set(atlasSrc, atlas);
             // Tracked, so a second map on the same sheet that asks while this one is still on its
@@ -63,6 +71,12 @@ export const loadTilemap = async (store: TRuntimeStore, map: TTilemap): Promise<
             // Reading its status without waiting called a sheet mid-flight a broken sheet, and the
             // map drew nothing.
             await whenLoaded(atlas);
+        }
+        if (letGo()) {
+            // Let go of while it waited: it holds the sheet no more, and one the game let go of
+            // meanwhile, which waited for this map, goes now.
+            stopUsingSheet(atlas, map);
+            return;
         }
         if (atlas.status !== 'ready') {
             throw new Error(`its atlas '${atlasSrc}' could not be loaded`);
@@ -95,6 +109,14 @@ export const loadTilemap = async (store: TRuntimeStore, map: TTilemap): Promise<
         map.status = 'ready';
         bumpVersion(map);
     } catch (error: unknown) {
+        // A map that draws nothing uses no sheet.
+        if (noted !== null) {
+            stopUsingSheet(noted, map);
+        }
+        // One let go of on the way has nothing to say: it was not wanted any more.
+        if (letGo()) {
+            return;
+        }
         map.status = 'error';
         bumpVersion(map);
         console.warn(`[NacatamalOn] createTilemap: '${map.src}' could not be loaded. It draws nothing.`, error);
