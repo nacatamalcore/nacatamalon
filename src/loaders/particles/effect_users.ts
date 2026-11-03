@@ -98,19 +98,29 @@ export const releaseWhenUnset = (child: TParticlesFile, finish: () => void): voi
 };
 
 /**
- * Takes `by` off `child`, and says whether anything still wanting it, other than what was let go of,
- * is left.
+ * Takes `by` off `child`: an effect let go of, which no longer sets it off.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const leaveEffect = (child: TParticlesFile, by: TParticlesFile): boolean => {
+export const leaveEffect = (child: TParticlesFile, by: TParticlesFile): void => {
+    users.get(child)?.delete(by);
+};
+
+/**
+ * Whether anything still wanting `child` sets it off. Those that no longer want it are taken off on
+ * the way.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const stillSetOff = (child: TParticlesFile): boolean => {
     const held = users.get(child);
     if (held === undefined) {
         return false;
     }
-    held.delete(by);
     for (const user of held) {
         if (!wants(user)) {
             held.delete(user);

@@ -299,7 +299,9 @@ export type TGameHandle = {
      * it loads afresh, like the first time.
      *
      * An effect takes the effects it sets off with it, unless another effect still sets them off or the
-     * game loaded or drew them too.
+     * game loaded or drew them too. An effect that others still set off is the one thing that does not
+     * end at once: it stays as it is, and goes with the last of them. Asked for again meanwhile, it is
+     * the same one, and stays.
      *
      * @example
      * ```ts
@@ -311,7 +313,8 @@ export type TGameHandle = {
      * ```
      *
      * @param asset The asset, or the key it was loaded under (its `src` when no key was given).
-     * @returns Whether there was anything to let go of. Releasing it twice is not a mistake.
+     * @returns Whether there was anything to let go of, also when it waits on the effects setting it
+     * off. Releasing it twice is not a mistake.
      * @throws When it belongs to something in the game rather than to the game: a picture made with
      * `createSpriteTexture` or `createPixelTexture`, a shape made with `createGeometry`. Those go with
      * whatever made them. Nothing is let go then, not even the other assets under the same key.

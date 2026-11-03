@@ -31,3 +31,15 @@ export const markAskedByGame = (asset: TAsset): void => {
  * @author Francisco Pereira Alvarado
  */
 export const askedByGame = (asset: TAsset): boolean => asked.has(asset);
+
+/**
+ * Notes that the game has let go of `asset`, so whatever else still holds it takes it when it goes: an
+ * effect another one still sets off goes with that one.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const forgetAskedByGame = (asset: TAsset): void => {
+    asked.delete(asset);
+};

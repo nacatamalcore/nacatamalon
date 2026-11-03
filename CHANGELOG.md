@@ -141,6 +141,9 @@ releases are in [changelog/](./changelog/), one file each.
   left setting off nothing. Now it goes with the last of them, whether that is a file let go of or an
   effect written in code that stops being drawn, and an effect the game loaded or drew itself goes only
   when the game lets go of it. An effect written in code used again asks afresh for one that has gone.
+- **Letting go of an effect another one still sets off waits for that one.** The one setting it off
+  went on setting it off, with its picture already off the card and nothing said. Now it stays until
+  the last effect setting it off goes too, and goes with it.
 - **An effect's chain reaches as far as its particles do.** A firework whose sparks leave embers that
   leave smoke lost its smoke when followed from one file: the loader stopped one step short of the
   simulation, and a file refused its children that way kept the refusal even when asked for on its

@@ -16,6 +16,7 @@ import { DOCUMENTS } from '../src/CONST';
 import { newParticlesFile } from '../src/loaders/particles/new_particles_file';
 import { createParticles } from '../src/gameobjects/particles';
 import { destroy } from '../src/destroy/destroy';
+import { flushDestroyed } from '../src/destroy/flush_destroyed';
 import { applyParticlesDoc } from '../src/gameobjects/particles/tools/apply_particles_doc';
 import { childFileFor } from '../src/loaders/particles/load_particles';
 import { markAskedByGame } from '../src/loaders/asked_by_game';
@@ -415,6 +416,124 @@ describe('releaseAsset', () => {
         expect(shared.status).toBe('ready');
         expect(game.releaseAsset(shared)).toBe(true);
         expect(shared.status).toBe('released');
+    });
+
+    it('leaves an effect let go of while others set it off, and the last of them takes it', () => {
+        const { store, a, b, shared } = twoSettingOffOne();
+        const game = createGameHandle(store);
+
+        expect(game.releaseAsset(shared)).toBe(true);
+        expect(shared.status).toBe('ready');
+        expect(a.children[0]).toBe(shared);
+
+        game.releaseAsset(a);
+        expect(shared.status).toBe('ready');
+        game.releaseAsset(b);
+        expect(shared.status).toBe('released');
+    });
+
+    it('waits the same when the effect is let go of by its key', () => {
+        const { store, a, b, shared } = twoSettingOffOne();
+        const game = createGameHandle(store);
+
+        game.releaseAsset('/fx/shared.particles');
+        expect(shared.status).toBe('ready');
+        game.releaseAsset(a);
+        game.releaseAsset(b);
+        expect(shared.status).toBe('released');
+    });
+
+    it('takes an effect the game asked for and let go of with the last one setting it off', () => {
+        const { store, a, b, shared } = twoSettingOffOne();
+        markAskedByGame(shared);
+        const game = createGameHandle(store);
+
+        game.releaseAsset(shared);
+        game.releaseAsset(a);
+        game.releaseAsset(b);
+        expect(shared.status).toBe('released');
+    });
+
+    it('keeps an effect the game asks for again while it waited on the ones setting it off', () => {
+        const { store, a, b, shared } = twoSettingOffOne();
+        const game = createGameHandle(store);
+
+        game.releaseAsset(shared);
+        markAskedByGame(shared);
+        game.releaseAsset(a);
+        game.releaseAsset(b);
+        expect(shared.status).toBe('ready');
+    });
+
+    it('takes an effect let go of while one written in code sets it off, when that one stops being drawn', () => {
+        const { store, a, b, shared } = twoSettingOffOne();
+        const written = writtenSettingOff(store);
+        written.bound = [{}] as never[];
+        const game = createGameHandle(store);
+
+        game.releaseAsset(a);
+        game.releaseAsset(b);
+        game.releaseAsset(shared);
+        expect(shared.status).toBe('ready');
+
+        written.bound = [];
+        dropIdleEffectUser(shared, written);
+        expect(shared.status).toBe('released');
+    });
+
+    it('takes an effect let go of while a real emitter sets it off, once that emitter is destroyed', () => {
+        const { store, a, b, shared } = twoSettingOffOne();
+        let emitter!: ReturnType<typeof createParticles>;
+        startTestScene(store, 'S', () => {
+            emitter = createParticles({ effect: { kind: 'particles-2d', children: [{ on: 'death', src: '/fx/shared.particles' }] } as never });
+            return createScene();
+        });
+        const game = createGameHandle(store);
+        game.releaseAsset(a);
+        game.releaseAsset(b);
+        game.releaseAsset(shared);
+        expect(shared.status).toBe('ready');
+
+        destroy(emitter);
+        flushDestroyed(store);
+        expect(shared.status).toBe('released');
+    });
+
+    it('takes an effect let go of while set off, once an edit stops setting it off', () => {
+        const { store, a, b, shared } = twoSettingOffOne();
+        let emitter!: ReturnType<typeof createParticles>;
+        startTestScene(store, 'S', () => {
+            emitter = createParticles({ effect: { kind: 'particles-2d', children: [{ on: 'death', src: '/fx/shared.particles' }] } as never });
+            return createScene();
+        });
+        const game = createGameHandle(store);
+        game.releaseAsset(a);
+        game.releaseAsset(b);
+        game.releaseAsset(shared);
+        expect(shared.status).toBe('ready');
+
+        applyParticlesDoc(emitter, { ...emitter.file.doc!, children: [] });
+        expect(shared.status).toBe('released');
+    });
+
+    it('lets a chain go from its end, each link waiting on the one above', () => {
+        const { store } = createTestGame();
+        const [a, b, c] = ['a', 'b', 'c'].map((name) => {
+            const file = newParticlesFile(`/fx/${name}.particles`, `/fx/${name}.particles`);
+            file.status = 'ready';
+            store.get('assets').particles.set(file.key, file);
+            return file;
+        }) as [TParticlesFile, TParticlesFile, TParticlesFile];
+        a.children = [childFileFor(store, a, 'b.particles'), childFileFor(store, a, 'c.particles')];
+        b.children = [childFileFor(store, b, 'c.particles')];
+        const game = createGameHandle(store);
+
+        game.releaseAsset(c);
+        game.releaseAsset(b);
+        expect([b.status, c.status]).toEqual(['ready', 'ready']);
+        game.releaseAsset(a);
+        expect([a.status, b.status, c.status]).toEqual(['released', 'released', 'released']);
+        expect(store.get('assets').particles.size).toBe(0);
     });
 
     it('ends, should effects ever lead back to one another', () => {

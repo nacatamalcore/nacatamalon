@@ -9,12 +9,12 @@ import type { TGeometry } from '../geometry/types/t_geometry';
 import type { TAsset } from './types/t_asset';
 import { findAsset } from './asset_key';
 import { picturesWornBy, releaseWhenUnworn, stopWearing, wornByAnother } from './worn_pictures';
-import { askedByGame } from './asked_by_game';
+import { askedByGame, forgetAskedByGame } from './asked_by_game';
 import { leaveSheet, releaseWhenUnused } from './sheet_users';
 import { freeTexture } from './texture/free_texture';
 import type { TLoadedAtlas } from './atlas/types/t_loaded_atlas';
 import type { TParticlesFile } from './particles/types/t_particles_file';
-import { leaveEffect, releaseWhenUnset } from './particles/effect_users';
+import { leaveEffect, releaseWhenUnset, stillSetOff } from './particles/effect_users';
 
 /**
  * Whether a drawing shows `thing`: as its picture (a sprite, a panel, particles), as a model's
@@ -188,22 +188,29 @@ const refuseOwned = (asset: TAsset): void => {
 const releasing = new WeakSet<TAsset>();
 
 /**
- * Lets go of an effect another one set off, with that one, unless something else still wants it: the
- * game, which asked for it itself (loaded it, or drew it), and which lets go of it when it chooses, or
- * another effect that sets it off, the last of which takes it.
+ * Lets go of an effect once nothing wants it any more: neither the game, which asked for it itself
+ * (loaded it, or drew it) and lets go of it when it chooses, nor another effect that sets it off, the
+ * last of which takes it.
  */
-const releaseChild = (store: TRuntimeStore, child: TParticlesFile, leaving: TParticlesFile): void => {
-    const othersLeft = leaveEffect(child, leaving);
+const releaseWhenNotSetOff = (store: TRuntimeStore, child: TParticlesFile): void => {
     if (askedByGame(child)) {
         return;
     }
-    if (othersLeft) {
+    if (stillSetOff(child)) {
         // Another file goes the same way when it is let go of; an effect written in code is let go of
         // by nobody, so it finishes this when it stops being drawn.
-        releaseWhenUnset(child, () => { releaseChild(store, child, leaving); });
+        releaseWhenUnset(child, () => { releaseWhenNotSetOff(store, child); });
         return;
     }
     releaseOne(store, child);
+};
+
+/**
+ * Lets go of an effect another one set off, with that one, unless something else still wants it.
+ */
+const releaseChild = (store: TRuntimeStore, child: TParticlesFile, leaving: TParticlesFile): void => {
+    leaveEffect(child, leaving);
+    releaseWhenNotSetOff(store, child);
 };
 
 /**
@@ -290,6 +297,19 @@ const releaseOne = (store: TRuntimeStore, asset: TAsset): void => {
 };
 
 /**
+ * Lets go of what the game itself let go of. An effect that others still set off waits for the last
+ * of them: let go of at once, they would go on setting it off with its picture already off the card.
+ */
+const letGo = (store: TRuntimeStore, asset: TAsset): void => {
+    if (asset.type === 'particles-file') {
+        forgetAskedByGame(asset);
+        releaseWhenNotSetOff(store, asset);
+        return;
+    }
+    releaseOne(store, asset);
+};
+
+/**
  * Lets go of something the game loaded: off the graphics card and out of the game, with what is its
  * own (a model's pictures and shapes, an atlas's or a font's picture). Nothing is let go on its own,
  * so this is the only way out.
@@ -311,7 +331,7 @@ export const releaseAsset = (store: TRuntimeStore, asset: TAsset | string): bool
             return false;
         }
         refuseOwned(asset);
-        releaseOne(store, asset);
+        letGo(store, asset);
         return true;
     }
 
@@ -328,7 +348,7 @@ export const releaseAsset = (store: TRuntimeStore, asset: TAsset | string): bool
         refuseOwned(held);
     }
     for (const held of found) {
-        releaseOne(store, held);
+        letGo(store, held);
     }
     return found.size > 0;
 };
