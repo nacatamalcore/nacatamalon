@@ -8,13 +8,13 @@ import type { TTexture } from './texture/types/t_texture';
 import type { TGeometry } from '../geometry/types/t_geometry';
 import type { TAsset } from './types/t_asset';
 import { findAsset } from './asset_key';
-import { askAgainUnworn, picturesWornBy, releaseWhenUnworn, stopWearing, stopWearingForOthers, wornByAnother } from './worn_pictures';
+import { askAgainUnworn, picturesWornBy, releaseWhenUnworn, stopWearing, stopWearingForOthers, wearersOf, wearPicture, wearsOnlyWhileDrawn, wornByAnother } from './worn_pictures';
 import { askedByGame, forgetAskedByGame } from './asked_by_game';
-import { leaveSheet, releaseWhenUnused, stopUsingSheet } from './sheet_users';
+import { leaveSheet, releaseWhenUnused, sheetUsersOf, stopUsingSheet, usesSheetOnlyWhileDrawn } from './sheet_users';
 import { freeTexture } from './texture/free_texture';
 import type { TLoadedAtlas } from './atlas/types/t_loaded_atlas';
 import type { TParticlesFile } from './particles/types/t_particles_file';
-import { forgetWhenUnset, leaveEffect, releaseWhenUnset, stillSetOff, stopSettingOff } from './particles/effect_users';
+import { effectsSettingOff, forgetWhenUnset, leaveEffect, releaseWhenUnset, setsOffOnlyWhileDrawn, stillSetOff, stopSettingOff } from './particles/effect_users';
 
 /**
  * Whether a drawing shows `thing`: as its picture (a sprite, a panel, particles), as a model's
@@ -366,6 +366,48 @@ const letGo = (store: TRuntimeStore, asset: TAsset): void => {
 };
 
 /**
+ * What in the game's caches uses `asset` as its own part: an effect setting it off, or taking its
+ * frames or its picture from it, a map on it as its sheet, a model wearing it, loaded or still on its
+ * way. Each holds that very
+ * record, so it is taken out with it, or it would go on with the old version once loaded afresh.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const usersOf = (store: TRuntimeStore, asset: TAsset): TAsset[] => {
+    const found = new Set<TAsset>();
+    const cached = new Set<TAsset>();
+    for (const cache of Object.values(store.get('assets')) as Map<string, TAsset>[]) {
+        for (const other of cache.values()) {
+            cached.add(other);
+        }
+    }
+    // Those still on their way have not filled in what they use yet, but have said so already.
+    const noted: readonly unknown[] = asset.type === 'texture' ? wearersOf(asset)
+        : asset.type === 'atlas' ? sheetUsersOf(asset)
+            : asset.type === 'particles-file' ? effectsSettingOff(asset)
+                : [];
+    for (const user of noted) {
+        if (cached.has(user as TAsset) && user !== asset) {
+            found.add(user as TAsset);
+        }
+    }
+    for (const cache of Object.values(store.get('assets')) as Map<string, TAsset>[]) {
+        for (const other of cache.values()) {
+            const uses = (other.type === 'particles-file' && (other.children.includes(asset as TParticlesFile) || other.atlas === asset))
+                || (other.type === 'tilemap-asset' && other.atlas === asset)
+                || (other.type === 'gltf' && asset.type === 'texture' && picturesOf(other).includes(asset))
+                || (other.type === 'particles-file' && other.texture === asset);
+            if (uses && other !== asset) {
+                found.add(other);
+            }
+        }
+    }
+    return [...found];
+};
+
+/**
  * Takes `asset` off what it uses, as it is taken out of the game to be loaded afresh: the effects it
  * sets off, the sheet it takes its frames from, the pictures it wears. Each stays for whatever else
  * uses it, and one let go of while this one held it goes now. Nothing of its own is let go: what
@@ -381,8 +423,27 @@ export const stopHolding = (asset: TAsset): void => {
     // An effect another one still sets off is still in the game through that one, which goes on
     // setting off this very record: it holds what it holds, and goes with the last of them.
     if (asset.type === 'particles-file' && stillSetOff(asset)) {
+        // Its picture was kept only by its being in the cache, which it no longer is.
+        if (asset.texture !== null) {
+            wearPicture(asset.texture, asset);
+        }
         forgetWhenUnset(asset, () => { stopHolding(asset); });
         return;
+    }
+    if (asset.type === 'particles-file') {
+        // Nothing lets go of it any more, so from now on it holds what it uses only while something
+        // draws it, as an effect written in code does.
+        setsOffOnlyWhileDrawn(asset);
+        usesSheetOnlyWhileDrawn(asset);
+        wearsOnlyWhileDrawn(asset);
+        // An emitter still drawing it keeps what it shows: it is let go of when the last one goes. Its
+        // picture was kept only by its being in the cache, which it no longer is.
+        if (asset.bound.length > 0) {
+            if (asset.texture !== null) {
+                wearPicture(asset.texture, asset);
+            }
+            return;
+        }
     }
     // One still on its way would take them again when it lands. Ended, its loader hears it and stops;
     // nothing of it is drawn yet, so nothing goes blank.
@@ -405,6 +466,69 @@ export const stopHolding = (asset: TAsset): void => {
         if (texture !== null) {
             askAgainUnworn(texture);
         }
+    }
+};
+
+/**
+ * Whether a screen effect, the project's or a transition's, holds `asset`: those outlive the scene
+ * built again.
+ */
+const heldOnScreen = (store: TRuntimeStore, asset: TAsset): boolean => {
+    const holds = (effect: { palette?: unknown; lut?: unknown; mask?: unknown }): boolean =>
+        effect.palette === asset || effect.lut === asset || effect.mask === asset;
+    const transition = store.get('transition').active;
+    return store.get('post').effects.some(holds) || (transition !== null && holds(transition.effect));
+};
+
+/**
+ * Lets go of what the editor took out of the game, once the scene has been built again and nothing
+ * there shows it: what it had on the graphics card, which nothing else would ever free.
+ *
+ * Only what has something of its own there goes: a picture, a sheet, a font of pictures, a model and
+ * its shapes. An effect or a map has nothing of its own on the card, and only ends, so what it used
+ * stays for the copy loaded afresh rather than being fetched again. An effect still drawn, or still
+ * set off by one, is not let go of yet; nor is anything a screen effect holds, which outlives the
+ * scene. Says whether it is done with it.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const releaseLeftBehind = (store: TRuntimeStore, asset: TAsset): boolean => {
+    if (asset.status === 'released') {
+        return true;
+    }
+    switch (asset.type) {
+        case 'particles-file':
+            if (asset.bound.length > 0 || stillSetOff(asset)) {
+                return false;
+            }
+            end(store, asset);
+            return true;
+        case 'tilemap-asset':
+            end(store, asset);
+            return true;
+        case 'texture':
+        case 'atlas':
+        case 'bitmap-font':
+        case 'gltf':
+        case 'geometry':
+            if (heldOnScreen(store, asset) || (asset.type === 'texture' && isMadeTexture(asset))) {
+                return true;
+            }
+            // A picture or a sheet goes the way the game lets go of one: after the last thing still
+            // drawn with it, an emitter kept from before or an effect written in code.
+            forgetAskedByGame(asset);
+            if (asset.type === 'texture') {
+                releaseWorn(store, asset, asset);
+            } else if (asset.type === 'atlas') {
+                releaseSheet(store, asset, asset);
+            } else {
+                releaseOne(store, asset);
+            }
+            return true;
+        default:
+            return true;
     }
 };
 

@@ -76,6 +76,18 @@ export const dropIdleSheetUser = (sheet: TLoadedAtlas, by: TSheetUser): void => 
 };
 
 /**
+ * Makes `by` count, from now on, only while something draws it, as an effect written in code does:
+ * one taken out of the game, which nothing lets go of any more.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const usesSheetOnlyWhileDrawn = (by: TSheetUser): void => {
+    whileDrawn.add(by);
+};
+
+/**
  * Takes `by` off `sheet` for good: a map let go of, or one that could not be loaded. A sheet the game
  * let go of while that map used it goes now, if nothing else uses it, since a map never takes its
  * sheet with it.

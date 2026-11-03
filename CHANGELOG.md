@@ -167,6 +167,13 @@ releases are in [changelog/](./changelog/), one file each.
   pictures, so those stayed for good; and one the game had let go of meanwhile never went. It is also
   forgotten under every name it was kept under, and one still on its way stops there rather than
   taking them again when it lands.
+- **What the editor forgets takes with it what holds it.** An effect setting it off, an effect or a
+  map on its sheet, an effect or a model wearing its picture, loaded or still on its way: kept, each
+  went on with the old version once the scene was built again, so a saved spark or sheet changed
+  nothing until the game started again. A sheet or a font of pictures whose picture changed goes too. An effect written in
+  code asks again for what was forgotten, and an emitter still showing a forgotten file keeps what it
+  uses while it is drawn, and only then. Once the scene is built again, the editor lets go of what it
+  forgot (`releaseForgotten`), which stayed on the graphics card for good.
 - **An effect's chain reaches as far as its particles do.** A firework whose sparks leave embers that
   leave smoke lost its smoke when followed from one file: the loader stopped one step short of the
   simulation, and a file refused its children that way kept the refusal even when asked for on its

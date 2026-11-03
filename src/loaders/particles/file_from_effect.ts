@@ -1,11 +1,14 @@
 import { markWatchable } from '../../store/record_version';
 import { childFileFor, particlesAtlas, particlesTexture } from './load_particles';
-import { noteSheetUser } from '../sheet_users';
-import { wearPicture } from '../worn_pictures';
+import { noteSheetUser, stopUsingSheet } from '../sheet_users';
+import { askAgainUnworn, stopWearing, wearPicture } from '../worn_pictures';
+import { stopSettingOff } from './effect_users';
+import { isForgotten } from '../forgotten_assets';
 import { parseParticlesDoc } from './parse_particles_doc';
 import type { TParticlesEffect } from './types/t_particles_effect';
 import type { TParticlesFile } from './types/t_particles_file';
 import type { TRuntimeStore } from '../../store';
+import type { TAsset } from '../types/t_asset';
 
 /**
  * What an effect written in code is called, in warnings and wherever a file would give its path.
@@ -38,20 +41,34 @@ const fromCode = new WeakMap<TParticlesFile, TParticlesEffect>();
 export const fileFromEffect = (store: TRuntimeStore, effect: TParticlesEffect): TParticlesFile => {
     const known = files.get(effect);
     if (known !== undefined) {
-        // Used again after its sheet was let go of, while nothing drew it: asked for afresh, as the
-        // first time, when it names it by path. One the game handed over is the game's to load again.
+        // Used again after its sheet was let go of, while nothing drew it, or taken out of the game to
+        // be loaded afresh: asked for again, as the first time, when it names it by path. One the game
+        // handed over is the game's to load again.
+        const gone = (asset: TAsset): boolean => asset.status === 'released' || isForgotten(asset);
         const sheet = known.atlas;
-        if (typeof effect.atlas === 'string' && sheet !== null && 'type' in sheet && sheet.status === 'released') {
+        if (typeof effect.atlas === 'string' && sheet !== null && 'type' in sheet && gone(sheet)) {
+            // Off the old one first: drawn again, this effect would go on counting as using it.
+            stopUsingSheet(sheet, known);
             known.atlas = particlesAtlas(store, IN_CODE, effect.atlas, known, true);
         }
         // Its picture the same.
-        if (typeof effect.texture === 'string' && known.texture !== null && known.texture.status === 'released') {
+        if (typeof effect.texture === 'string' && known.texture !== null && gone(known.texture)) {
+            const old = known.texture;
+            stopWearing(known);
+            // One the game let go of while this wore it goes now, if nothing else does.
+            askAgainUnworn(old);
             known.texture = particlesTexture(store, IN_CODE, effect.texture);
             wearPicture(known.texture, known, true);
         }
         // And what it sets off.
-        if (known.children.some((child) => child !== null && child.status === 'released')) {
+        if (known.children.some((child) => child !== null && gone(child))) {
+            const before = known.children;
             known.children = (known.doc?.children ?? []).map((child) => childFileFor(store, known, child.src, true));
+            for (const child of before) {
+                if (child !== null && !known.children.includes(child)) {
+                    stopSettingOff(child, known);
+                }
+            }
         }
         return known;
     }

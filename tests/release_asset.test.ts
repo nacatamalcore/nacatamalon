@@ -19,10 +19,14 @@ import { createParticles } from '../src/gameobjects/particles';
 import { destroy } from '../src/destroy/destroy';
 import { flushDestroyed } from '../src/destroy/flush_destroyed';
 import { applyParticlesDoc } from '../src/gameobjects/particles/tools/apply_particles_doc';
-import { childFileFor, loadParticles } from '../src/loaders/particles/load_particles';
+import { childFileFor, loadParticles, particlesAtlas } from '../src/loaders/particles/load_particles';
 import { markAskedByGame } from '../src/loaders/asked_by_game';
 import { wearPicture } from '../src/loaders/worn_pictures';
-import { dropIdleEffectUser, noteEffectUser } from '../src/loaders/particles/effect_users';
+import { newAtlas } from '../src/loaders/atlas/new_atlas';
+import { uploadGeometry } from '../src/geometry/upload_geometry';
+import { installPostChain } from '../src/post/install_post_chain';
+import { newGltfModel } from '../src/loaders/gltf/new_gltf_model';
+import { dropIdleEffectUser, effectsSettingOff, noteEffectUser } from '../src/loaders/particles/effect_users';
 import type { TParticlesFile } from '../src/loaders/particles/types/t_particles_file';
 import { createGameHandle } from '../src/game/handle';
 import { editorHandleOf, openHost } from '../src/game/handle/editor_handle_of';
@@ -804,7 +808,7 @@ describe('evictAsset', () => {
         }
     });
 
-    it('leaves one still on its way that another effect sets off, so that one is not left without it', async () => {
+    it('takes out the effects setting off one still on its way too, so both are loaded afresh', async () => {
         let open!: () => void;
         const held = new Promise<void>((done) => { open = done; });
         const fetching = spyOn(globalThis, 'fetch').mockImplementation((async (input: string) => {
@@ -825,50 +829,347 @@ describe('evictAsset', () => {
             editor.evictAsset('/fx/sparks.particles');
             open();
             await new Promise((done) => setTimeout(done, 10));
-            expect(rocket.children[0]).toBe(sparks);
-            expect(sparks.status).toBe('ready');
-            expect(sparks.doc).not.toBeNull();
+            // Neither is found any more: the rocket would have gone on setting off the old sparks.
+            expect([...store.get('assets').particles.values()]).toEqual([]);
+            expect(effectsSettingOff(sparks)).toEqual([]);
         } finally {
             fetching.mockRestore();
         }
     });
 
-    it('takes one kept for an effect still setting it off off what it uses, once that one stops', async () => {
+    it('keeps one an effect written in code still sets off, and takes it off what it uses once that one stops', async () => {
         const { store } = createTestGame();
-        const [r, s, g] = ['r', 's', 'g'].map((name) => {
+        const [s, g] = ['s', 'g'].map((name) => {
             const file = newParticlesFile(`/fx/${name}.particles`, `/fx/${name}.particles`);
             file.status = 'ready';
             store.get('assets').particles.set(file.key, file);
             return file;
-        }) as [TParticlesFile, TParticlesFile, TParticlesFile];
-        r.children = [childFileFor(store, r, 's.particles')];
+        }) as [TParticlesFile, TParticlesFile];
         s.children = [childFileFor(store, s, 'g.particles')];
+        let emitter!: ReturnType<typeof createParticles>;
+        startTestScene(store, 'S', () => {
+            emitter = createParticles({ effect: { kind: 'particles-2d', children: [{ on: 'death', src: '/fx/s.particles' }] } as never });
+            return createScene();
+        });
         const editor = await editorOn(store);
 
         editor.evictAsset('/fx/s.particles');
-        editor.evictAsset('/fx/r.particles');
         editor.releaseAsset(g);
+        // The effect in code still sets s off, and s sets off g.
+        expect(g.status).toBe('ready');
+        destroy(emitter, { immediate: true });
         expect(g.status).toBe('released');
     });
 
-    it('does the same when the game lets go of the one setting it off, and the game had drawn it too', async () => {
-        const { store } = createTestGame();
-        const [r, s, g] = ['r', 's', 'g'].map((name) => {
+    /**
+     * Effect files in the game's cache, already landed, each setting off the next.
+     */
+    const chainOf = (store: TRuntimeStore, names: string[]): TParticlesFile[] => {
+        const files = names.map((name) => {
             const file = newParticlesFile(`/fx/${name}.particles`, `/fx/${name}.particles`);
             file.status = 'ready';
             store.get('assets').particles.set(file.key, file);
             return file;
-        }) as [TParticlesFile, TParticlesFile, TParticlesFile];
-        r.children = [childFileFor(store, r, 's.particles')];
-        s.children = [childFileFor(store, s, 'g.particles')];
-        markAskedByGame(s);
+        });
+        files.forEach((file, i) => {
+            const next = files[i + 1];
+            if (next !== undefined) {
+                file.doc = effectDoc({ children: [{ on: 'death', src: `${names[i + 1]}.particles` }] });
+                file.children = [childFileFor(store, file, `${names[i + 1]}.particles`)];
+            } else {
+                file.doc = effectDoc({});
+            }
+        });
+        return files;
+    };
+
+    it('takes out with it the effects that set it off, all the way up, so none goes on with the old one', async () => {
+        const { store } = createTestGame();
+        chainOf(store, ['rocket', 'sparks', 'embers']);
         const editor = await editorOn(store);
 
-        editor.evictAsset('/fx/s.particles');
-        editor.releaseAsset(r);
-        expect(s.status).toBe('ready');
-        editor.releaseAsset(g);
-        expect(g.status).toBe('released');
+        editor.evictAsset('/fx/embers.particles');
+        expect([...store.get('assets').particles.keys()]).toEqual([]);
+    });
+
+    it('takes out with a sheet the effects that take their frames from it', async () => {
+        const fetching = spyOn(globalThis, 'fetch').mockImplementation((async () => new Promise(() => {})) as never);
+        try {
+            const { store } = createTestGame();
+            const [rocket] = chainOf(store, ['rocket']);
+            rocket!.atlas = particlesAtlas(store, rocket!.src, 'sheet.atlas', rocket!);
+            const editor = await editorOn(store);
+
+            editor.evictAsset('/fx/sheet.atlas');
+            expect(store.get('assets').particles.size).toBe(0);
+        } finally {
+            fetching.mockRestore();
+        }
+    });
+
+    it('takes out a sheet whose own picture changed, with what is on it', async () => {
+        const { store } = createTestGame();
+        const atlas = newAtlas('/tiles.atlas', '/tiles.atlas');
+        atlas.texture.src = '/tiles.png';
+        atlas.status = 'ready';
+        store.get('assets').atlases.set(atlas.key, atlas);
+        const editor = await editorOn(store);
+
+        expect(editor.evictAsset('/tiles.png')).toBe(true);
+        expect(store.get('assets').atlases.size).toBe(0);
+    });
+
+    it('takes out with a picture a model still on its way that already took it', async () => {
+        const { store } = createTestGame();
+        const wood = loaded(store, 'wood');
+        const model = newGltfModel('/ship.glb', '/ship.glb');
+        store.get('assets').gltf.set(model.key, model);
+        // As its loader does, before its pieces are out.
+        wearPicture(wood, model);
+        const editor = await editorOn(store);
+
+        editor.evictAsset('wood');
+        expect(store.get('assets').gltf.size).toBe(0);
+    });
+
+    it('lets go of what it took out once the scene is built again, shapes and pictures and all', async () => {
+        const { store } = createTestGame();
+        const wood = loaded(store, 'wood');
+        const model = newGltfModel('/ship.glb', '/ship.glb');
+        const shape = uploadGeometry(store, '/ship.glb#0', { vertices: new Float32Array(24), indices: new Uint16Array([0, 1, 2]) });
+        store.get('assets').geometries.set(shape.key, shape);
+        model.parts = [{ geometry: shape, texture: wood, emissiveTexture: null, occlusion: null } as never];
+        model.status = 'ready';
+        store.get('assets').gltf.set(model.key, model);
+        wearPicture(wood, model);
+        const editor = await editorOn(store);
+        editor.evictAsset('wood');
+
+        expect(editor.releaseForgotten()).toBe(2);
+        expect([model.status, shape.status, wood.status]).toEqual(['released', 'released', 'released']);
+        expect(store.get('assets').geometries.size).toBe(0);
+    });
+
+    it('keeps what an emitter still draws when its file is taken out, until that emitter goes', async () => {
+        const { store } = createTestGame();
+        const [rocket, sparks] = chainOf(store, ['rocket', 'sparks']);
+        let emitter!: ReturnType<typeof createParticles>;
+        startTestScene(store, 'S', () => {
+            emitter = createParticles({ effect: rocket! });
+            return createScene();
+        });
+        const editor = await editorOn(store);
+        editor.evictAsset('/fx/rocket.particles');
+
+        editor.releaseAsset(sparks!);
+        expect(sparks!.status).toBe('ready');
+        expect(editor.releaseForgotten()).toBe(0);
+        destroy(emitter, { immediate: true });
+        expect(sparks!.status).toBe('released');
+        expect(editor.releaseForgotten()).toBe(1);
+    });
+
+    it('lets go of a picture the game let go of, when an effect written in code asks again while still drawn', async () => {
+        const fetching = spyOn(globalThis, 'fetch').mockImplementation((async () => ({ ok: false, status: 404 })) as never);
+        const quiet = spyOn(console, 'warn').mockImplementation(() => {});
+        try {
+            const { store } = createTestGame();
+            const spark = loaded(store, 'spark');
+            const effect = { kind: 'particles-2d', texture: '/spark.png' } as never;
+            let first!: ReturnType<typeof createParticles>;
+            startTestScene(store, 'S', () => {
+                first = createParticles({ effect });
+                return createScene();
+            });
+            const editor = await editorOn(store);
+            editor.releaseAsset(spark);
+            editor.evictAsset('spark');
+            let again!: ReturnType<typeof createParticles>;
+            startTestScene(store, 'T', () => {
+                again = createParticles({ effect });
+                return createScene();
+            });
+            expect(again.file.texture).not.toBe(spark);
+
+            destroy(first, { immediate: true });
+            destroy(again, { immediate: true });
+            expect(spark.status).toBe('released');
+        } finally {
+            fetching.mockRestore();
+            quiet.mockRestore();
+        }
+    });
+
+    it('has an effect written in code ask again for what was taken out, and let go of the old one', async () => {
+        const fetching = spyOn(globalThis, 'fetch').mockImplementation((async () => ({ ok: true, json: async () => ({ kind: 'particles-2d' }) })) as never);
+        try {
+            const { store } = createTestGame();
+            const [old] = chainOf(store, ['sparks']);
+            const effect = { kind: 'particles-2d', children: [{ on: 'death', src: '/fx/sparks.particles' }] } as never;
+            let first!: ReturnType<typeof createParticles>;
+            startTestScene(store, 'S', () => {
+                first = createParticles({ effect });
+                return createScene();
+            });
+            expect(first.file.children[0]).toBe(old!);
+            const editor = await editorOn(store);
+
+            editor.evictAsset('/fx/sparks.particles');
+            // Used again while the first emitter still draws it.
+            let again!: ReturnType<typeof createParticles>;
+            startTestScene(store, 'T', () => {
+                again = createParticles({ effect });
+                return createScene();
+            });
+            expect(again.file.children[0]).not.toBe(old!);
+            expect(effectsSettingOff(old!)).toEqual([]);
+            destroy(first, { immediate: true });
+        } finally {
+            fetching.mockRestore();
+        }
+    });
+
+    it('holds what a file taken out sets off only while an emitter still draws it', async () => {
+        const { store } = createTestGame();
+        const [rocket, sparks] = chainOf(store, ['rocket', 'sparks']);
+        const editor = await editorOn(store);
+        editor.evictAsset('/fx/rocket.particles');
+        // An emitter given the old record by hand, as a script that kept it would.
+        let emitter!: ReturnType<typeof createParticles>;
+        startTestScene(store, 'S', () => {
+            emitter = createParticles({ effect: rocket! });
+            return createScene();
+        });
+
+        editor.releaseAsset(sparks!);
+        expect(sparks!.status).toBe('ready');
+        destroy(emitter, { immediate: true });
+        expect(sparks!.status).toBe('released');
+    });
+
+    it('leaves a table of colours the project\'s screen effects still use, which outlive the scene', async () => {
+        const fetching = spyOn(globalThis, 'fetch').mockImplementation((() => new Promise(() => {})) as never);
+        try {
+            const { store } = createTestGame();
+            installPostChain(store, [{ builtin: 'lutGrade', lut: 'luts/warm.png' } as never]);
+            const effect = store.get('post').effects[0]!;
+            const lut = effect.lut!;
+            lut.status = 'ready';
+            lut.gpu = { resourceType: 'texture' } as never;
+            const editor = await editorOn(store);
+
+            expect(editor.evictAsset('luts/warm.png')).toBe(true);
+            editor.releaseForgotten();
+            expect(effect.lut).toBe(lut);
+            expect(lut.gpu).not.toBeNull();
+        } finally {
+            fetching.mockRestore();
+        }
+    });
+
+    it('leaves a picture a screen effect reads as its mask, which outlives the scene', async () => {
+        const { store } = createTestGame();
+        const shape = loaded(store, 'shape');
+        store.get('post').effects.push({ mask: shape, palette: null, lut: null } as never);
+        const editor = await editorOn(store);
+
+        editor.evictAsset('shape');
+        editor.releaseForgotten();
+        expect(shape.status).toBe('ready');
+        expect(shape.gpu).not.toBeNull();
+    });
+
+    it('leaves what an effect taken out sets off for the copy loaded afresh, rather than letting it go', async () => {
+        const { store } = createTestGame();
+        const [, sparks] = chainOf(store, ['rocket', 'sparks']);
+        const editor = await editorOn(store);
+
+        editor.evictAsset('/fx/rocket.particles');
+        editor.releaseForgotten();
+        expect(sparks!.status).toBe('ready');
+        expect(store.get('assets').particles.get('/fx/sparks.particles')).toBe(sparks!);
+    });
+
+    it('keeps the picture of a file taken out while an emitter still draws it, until it goes', async () => {
+        const { store } = createTestGame();
+        const spark = loaded(store, 'spark');
+        const [file] = chainOf(store, ['glow']);
+        file!.texture = spark;
+        let emitter!: ReturnType<typeof createParticles>;
+        startTestScene(store, 'S', () => {
+            emitter = createParticles({ effect: file! });
+            return createScene();
+        });
+        const editor = await editorOn(store);
+        editor.evictAsset('/fx/glow.particles');
+
+        editor.releaseAsset(spark);
+        expect(spark.status).toBe('ready');
+        destroy(emitter, { immediate: true });
+        expect(spark.status).toBe('released');
+    });
+
+    it('lets go of a picture it took out only after the emitters still drawn with it', async () => {
+        const { store } = createTestGame();
+        const spark = loaded(store, 'spark');
+        const [file] = chainOf(store, ['glow']);
+        file!.texture = spark;
+        let emitter!: ReturnType<typeof createParticles>;
+        startTestScene(store, 'S', () => {
+            emitter = createParticles({ effect: file! });
+            return createScene();
+        });
+        const editor = await editorOn(store);
+        editor.evictAsset('spark');
+
+        editor.releaseForgotten();
+        expect(spark.status).toBe('ready');
+        destroy(emitter, { immediate: true });
+        expect(spark.status).toBe('released');
+    });
+
+    it('lets go of a sheet it took out only after the emitters still drawn on it', async () => {
+        const fetching = spyOn(globalThis, 'fetch').mockImplementation((() => new Promise(() => {})) as never);
+        try {
+            const { store } = createTestGame();
+            const [file] = chainOf(store, ['glow']);
+            const sheet = particlesAtlas(store, file!.src, 'sheet.atlas', file!);
+            file!.atlas = sheet;
+            sheet.status = 'ready';
+            let emitter!: ReturnType<typeof createParticles>;
+            startTestScene(store, 'S', () => {
+                emitter = createParticles({ effect: file! });
+                return createScene();
+            });
+            const editor = await editorOn(store);
+            editor.evictAsset('/fx/sheet.atlas');
+
+            editor.releaseForgotten();
+            expect(sheet.status).toBe('ready');
+            destroy(emitter, { immediate: true });
+            expect(sheet.status as string).toBe('released');
+        } finally {
+            fetching.mockRestore();
+        }
+    });
+
+    it('keeps the picture of one an effect written in code still sets off, until it stops', async () => {
+        const { store } = createTestGame();
+        const spark = loaded(store, 'spark');
+        const [sparks] = chainOf(store, ['sparks']);
+        sparks!.texture = spark;
+        let emitter!: ReturnType<typeof createParticles>;
+        startTestScene(store, 'S', () => {
+            emitter = createParticles({ effect: { kind: 'particles-2d', children: [{ on: 'death', src: '/fx/sparks.particles' }] } as never });
+            return createScene();
+        });
+        const editor = await editorOn(store);
+        editor.evictAsset('spark');
+
+        editor.releaseForgotten();
+        expect(spark.status).toBe('ready');
+        destroy(emitter, { immediate: true });
+        expect(spark.status as string).toBe('released');
     });
 
     it('forgets it under every name it was kept under', async () => {

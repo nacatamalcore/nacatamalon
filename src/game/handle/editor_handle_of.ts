@@ -12,7 +12,8 @@ import { replaceSongDoc } from '../../loaders/song';
 import { replaceMotionDoc } from '../../loaders/motion';
 import { endMotionPreview, previewMotion } from '../../motion/preview_motion';
 import { assetKey } from '../../loaders/asset_key';
-import { stopHolding } from '../../loaders/release_asset';
+import { releaseLeftBehind, stopHolding, usersOf } from '../../loaders/release_asset';
+import { forgetAsset } from '../../loaders/forgotten_assets';
 import type { TAsset } from '../../loaders/types/t_asset';
 
 /**
@@ -118,6 +119,8 @@ export const editorHandleOf = async (instance: TGameInstance): Promise<TEditorHa
     }
     claimed.add(instance);
     const store = await pending;
+    // What was taken out of the game and still has something on the graphics card.
+    const leftBehind = new Set<TAsset>();
     return {
         ...createGameHandle(store),
         loadScene: (name, scene) => loadHostScene(store, name, scene),
@@ -146,6 +149,22 @@ export const editorHandleOf = async (instance: TGameInstance): Promise<TEditorHa
                     }
                 }
             }
+            // A sheet's or a font's own picture is kept with it and not on its own: it is the sheet
+            // or the font that is read again.
+            const { atlases, bitmapFonts } = store.get('assets');
+            for (const held of [...atlases.values(), ...bitmapFonts.values()] as TAsset[]) {
+                const picture = (held as { texture?: { src?: string } | null }).texture?.src;
+                if (picture !== undefined && (picture === key || assetKey(picture) === resolved)) {
+                    dropped.add(held);
+                }
+            }
+            // And what holds one of these as its own part, all the way up: kept, it would go on with the
+            // old version once the scene is built again.
+            for (const held of dropped) {
+                for (const user of usersOf(store, held)) {
+                    dropped.add(user);
+                }
+            }
             // Under every other name too: still found under one, it would be used again holding
             // nothing.
             for (const cache of Object.values(store.get('assets')) as Map<string, TAsset>[]) {
@@ -158,9 +177,23 @@ export const editorHandleOf = async (instance: TGameInstance): Promise<TEditorHa
             // Out of the game, it holds nothing for anyone: what it used is left to what else uses
             // it, and the copy loaded afresh asks for it again.
             for (const held of dropped) {
+                forgetAsset(held);
+                leftBehind.add(held);
+            }
+            for (const held of dropped) {
                 stopHolding(held);
             }
             return dropped.size > 0;
+        },
+        releaseForgotten: () => {
+            let freed = 0;
+            for (const held of [...leftBehind]) {
+                if (releaseLeftBehind(store, held)) {
+                    leftBehind.delete(held);
+                    freed++;
+                }
+            }
+            return freed;
         },
         updateSong: (src, doc) => replaceSongDoc(store, src, doc),
         updateMotion: (src, doc) => replaceMotionDoc(store, src, doc),

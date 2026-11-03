@@ -137,9 +137,21 @@ export type TEditorHandle = TGameHandle & {
      * never needs it. What is already on screen keeps what it had until its scene is built again.
      *
      * What it forgets no longer holds what it used (the effects it set off, its sheet, its pictures):
-     * each stays for whatever else uses it, and one let go of while it held it goes now.
+     * each stays for whatever else uses it, and one let go of while it held it goes now. What holds
+     * it as its own part goes with it, all the way up (the effect setting it off, the effect or the map
+     * on its sheet, the effect or the model wearing its picture, and the sheet whose own picture it
+     * is), so the scene built again loads all of it afresh. An emitter still drawing a forgotten
+     * effect keeps what it shows until it goes.
      */
     evictAsset(key: string): boolean;
+    /**
+     * Lets go of what `evictAsset` took out, once the scene is built again and nothing shows it: what
+     * it had on the graphics card (a picture, a sheet, a font of pictures, a model and its shapes),
+     * which nothing else would ever free. An effect still drawn, or still set off by another, is kept
+     * for later; what a screen effect holds is left, since it outlives the scene. Says how many it is
+     * done with.
+     */
+    releaseForgotten(): number;
     /**
      * Puts a song's new notes into the game as it plays: every loaded `.song` from this `src` (or kept
      * under this key) takes the new document, and every `useSong` playing it makes its tracks again and

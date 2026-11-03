@@ -127,6 +127,18 @@ export const releaseWhenUnset = (child: TParticlesFile, finish: () => void): voi
 export const effectsSettingOff = (child: TParticlesFile): TParticlesFile[] => [...(users.get(child) ?? [])];
 
 /**
+ * Makes `by` count, from now on, only while something draws it, as an effect written in code does:
+ * one taken out of the game, which nothing lets go of any more.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const setsOffOnlyWhileDrawn = (by: TParticlesFile): void => {
+    whileDrawn.add(by);
+};
+
+/**
  * Notes that `child` was taken out of the game while another effect still set it off, and what
  * finishes that once nothing does.
  *

@@ -159,6 +159,18 @@ export const releaseWhenUnworn = (texture: TTexture, finish: () => void): void =
 };
 
 /**
+ * Makes `by` count, from now on, only while something draws it, as an effect written in code does:
+ * one taken out of the game, which nothing lets go of any more.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const wearsOnlyWhileDrawn = (by: TAsset): void => {
+    whileDrawn.add(by);
+};
+
+/**
  * Asks again whether `texture`, let go of while something held it, can go now: that something has
  * stopped holding it in a way nothing else would hear of.
  *
