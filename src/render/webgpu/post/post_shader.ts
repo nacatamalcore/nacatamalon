@@ -49,6 +49,10 @@ fn vs(@builtin(vertex_index) index: u32) -> VertexOut {
  * `sampleMask` is a transition's mask, read blended between its pixels so that a small one still has
  * smooth edges once it is cut at a level, and white for an effect that has none.
  *
+ * `sampleOutgoing` is the last picture of the scene going out, for a transition that crosses: it
+ * reads the same slot as the history, which a transition never keeps. A transition that does not
+ * cross reads the frame it was handed there, so it shows what it would have shown anyway.
+ *
  * `paletteSize` and `lutSize` read the shape of the picture rather than a number they were told,
  * which is what stops a palette ever disagreeing with how many colours the shader thinks it has.
  *
@@ -77,6 +81,10 @@ fn sampleHistory(uv: vec2<f32>) -> vec4<f32> {
 
 fn sampleMask(uv: vec2<f32>) -> vec4<f32> {
     return textureSampleLevel(dataTexture, smoothSampler, uv, 0.0);
+}
+
+fn sampleOutgoing(uv: vec2<f32>) -> vec4<f32> {
+    return textureSampleLevel(historyTexture, sceneSampler, uv, 0.0);
 }
 
 fn paletteSize() -> u32 {

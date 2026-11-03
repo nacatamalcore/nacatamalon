@@ -54,6 +54,11 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
      * Last frame and this frame, for each effect that asked to read what it showed.
      */
     const histories = new Map<TPostEffect, { pair: [ITexture, ITexture]; read: 0 | 1 }>();
+    /**
+     * The last picture of the scene going out, for a transition that crosses. Kept through a change
+     * of size, as on the other card.
+     */
+    const photos = new Map<TPostEffect, { texture: ITexture; width: number; height: number }>();
     let width = 0;
     let height = 0;
     let blank: ITexture | null = null;
@@ -169,6 +174,38 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
                 histories.delete(effect);
             }
         }
+        for (const [effect, photo] of photos) {
+            if (!chain.includes(effect)) {
+                release(photo.texture);
+                photos.delete(effect);
+            }
+        }
+    };
+
+    /**
+     * The picture a transition that crosses takes of the scene going out, at the size of this frame.
+     */
+    const photoOf = (effect: TPostEffect): ITexture => {
+        let photo = photos.get(effect);
+        if (photo !== undefined && (photo.width !== width || photo.height !== height)) {
+            release(photo.texture);
+            photo = undefined;
+        }
+        if (photo === undefined) {
+            photo = { texture: createWebGL2RenderTexture(gl, width, height), width, height };
+            photos.set(effect, photo);
+        }
+        return photo.texture;
+    };
+
+    /**
+     * What `sampleOutgoing` reads, in the history's unit. See its twin on the other card.
+     */
+    const outgoingOf = (effect: TPostEffect, input: ITexture): ITexture => {
+        if (effect.source !== 'transition') {
+            return blankTexture();
+        }
+        return photos.get(effect)?.texture ?? input;
     };
 
     const build = (effect: Pick<TPostEffect, 'name' | 'id' | 'fragmentGlsl' | 'uniformSig'>): TCompiled => {
@@ -358,7 +395,11 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
                 const lastEffect = i === chain.length - 1;
                 const input = source;
                 const history = effect.history === true ? historyOf(effect) : null;
-                const historyRead = history === null ? blankTexture() : history.pair[history.read];
+                // Taken again each frame while the scene going out is on screen: see the other card.
+                if (effect.outgoing === 'take' || effect.outgoing === 'taken') {
+                    draw(effect, identityFor(), framebufferFor(photoOf(effect)), width, height, source, source, source, gameWidth, gameHeight);
+                }
+                const historyRead = history !== null ? history.pair[history.read] : outgoingOf(effect, input);
                 const steps = postStepsOf(effect);
                 // An effect with any step this card cannot compile is shown through as a whole: half
                 // a blur is a stranger picture than none.
@@ -377,6 +418,10 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
                         continue;
                     }
                     const own = j === planned.length - 1;
+                    // Compiled at once on this card, so drawing it is drawing it with its own hook.
+                    if (own && effect.outgoing === 'take') {
+                        effect.outgoing = 'taken';
+                    }
 
                     if (!own) {
                         const [w, h] = passSize(step.scale!, gameWidth, gameHeight);
@@ -444,6 +489,10 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
             }
             dropPool();
             dropHistories();
+            for (const photo of photos.values()) {
+                release(photo.texture);
+            }
+            photos.clear();
             if (parameters !== null) {
                 gl.deleteBuffer(parameters);
                 parameters = null;

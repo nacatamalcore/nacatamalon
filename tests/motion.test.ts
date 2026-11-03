@@ -141,6 +141,11 @@ describe('reading a .motion file', () => {
             { type: 'iris', duration: 0.5, center: { x: 0.2, y: 0.8 }, ease: 'easeInOutSine' },
             { type: 'pixelate', duration: 0.4, blocks: 4 },
             { type: 'dissolve', duration: 0.8, mask: 'masks/star.png', softness: 0.1, color: red },
+            { type: 'crossfade', duration: 0.6, ease: 'easeInOutSine' },
+            { type: 'push', duration: 0.5, direction: 'left' },
+            { type: 'crossWipe', duration: 0.6, direction: 'up' },
+            { type: 'crossIris', duration: 0.6, center: { x: 0.8, y: 0.7 } },
+            { type: 'crossDissolve', duration: 1.2, mask: '../assets/masks/clock.png', softness: 0.05 },
         ];
         const read = motion({ events: given.map((transition, i) => ({ t: i, kind: 'scene', scene: 'A', transition })) });
         expect(read.events.map((e) => (e as { transition?: unknown }).transition)).toEqual(given);
@@ -166,6 +171,11 @@ describe('reading a .motion file', () => {
         expect(() => scene({ type: 'fade', color: '#ff0000' })).toThrow('"color" has to be');
         expect(() => scene({ type: 'fade', color: { r: 2, g: 0, b: 0 } })).toThrow('"color" has to be');
         expect(() => scene({ type: 'fade', color: { r: 1, g: 0, b: 0, a: null } })).toThrow('"color" has to be');
+        // A crossing has no cover to paint.
+        expect(() => scene({ type: 'crossfade', color: { r: 1, g: 0, b: 0 } })).toThrow('"color" is not something a crossfade takes');
+        expect(() => scene({ type: 'push', center: { x: 0.5, y: 0.5 } })).toThrow('"center" is not something a push takes');
+        expect(() => scene({ type: 'crossDissolve', duration: 1 })).toThrow('a crossDissolve needs its "mask"');
+        expect(() => scene({ type: 'crossWipe', direction: 'sideways' })).toThrow('a crossWipe\'s "direction" has to be');
     });
 
     it('refuses an event of a kind it does not know', () => {
@@ -356,6 +366,27 @@ describe('a scene changed by a motion', () => {
         expect(active!.effect.name).toBe('wipe');
         expect(active!.half).toBeCloseTo(0.2, 6);
         expect(active!.effect.uniforms).toEqual({ color: [1, 1, 1, 1], direction: [0, 1] });
+    });
+
+    it('crosses with the transition the file names, over the whole of its duration', () => {
+        const { active } = changing({ type: 'push', duration: 0.5, direction: 'left', ease: 'easeOutBounce' });
+        expect(active!.effect.name).toBe('push');
+        expect(active!.cross).toBe(true);
+        expect(active!.half).toBeCloseTo(0.5, 6);
+        expect(active!.ease).toBe(easeOutBounce);
+        expect(active!.effect.uniforms).toEqual({ direction: [-1, 0] });
+    });
+
+    it('does a cross dissolve written in code with no mask as a crossfade, and says so', () => {
+        const said = quiet();
+        const doc = { ...motion({ duration: 1 }), events: [{ t: 0.5, kind: 'scene' as const, scene: 'Room', transition: { type: 'crossDissolve' as const } }] };
+        const { store, handle, tick } = playing(doc);
+        registerScene(store, 'Room', () => createScene());
+        handle.play();
+        tick(0);
+        tick(0.6);
+        expect(store.get('transition').active!.effect.name).toBe('crossfade');
+        expect(said.mock.calls.some((call: unknown[]) => String(call[0]).includes('has no "mask"'))).toBe(true);
     });
 
     it('does a dissolve written in code with no mask as a fade, and says so', () => {

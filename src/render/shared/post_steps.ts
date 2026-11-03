@@ -50,7 +50,9 @@ export const postStepsOf = (effect: TPostEffect): TPostStep[] => {
 export const countPostSteps = (chain: readonly TPostEffect[]): number => {
     let count = 0;
     for (const effect of chain) {
-        count += 1 + (effect.passes?.length ?? 0) + (effect.history === true ? 1 : 0);
+        // A history kept by the last effect is copied out, and the picture a transition that
+        // crosses takes of the scene going out is one more draw too.
+        count += 1 + (effect.passes?.length ?? 0) + (effect.history === true ? 1 : 0) + (effect.outgoing === 'take' || effect.outgoing === 'taken' ? 1 : 0);
     }
     return count;
 };

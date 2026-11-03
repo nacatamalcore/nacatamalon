@@ -54,6 +54,9 @@ uniform sampler2D smoothTexture;
  * triangle over instead would work for the frame and then turn the *data* texture over with it,
  * which would read the palette backwards. That would be the bug, not the fix.
  *
+ * `sampleOutgoing` is turned over like the history whose unit it reads: the picture of the scene
+ * going out was drawn into a framebuffer, as the history is.
+ *
  * Like the palette, `sampleMask` is not turned over. A transition's mask is a picture loaded or
  * painted, stored top row first as the palette is, so it is already the way up the hook's `uv` is.
  */
@@ -76,6 +79,10 @@ vec4 sampleHistory(vec2 uv) {
 
 vec4 sampleMask(vec2 uv) {
     return textureLod(dataTexture, uv, 0.0);
+}
+
+vec4 sampleOutgoing(vec2 uv) {
+    return textureLod(historyTexture, vec2(uv.x, 1.0 - uv.y), 0.0);
 }
 
 int paletteSize() {

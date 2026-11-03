@@ -60,7 +60,13 @@ export const createFakeRenderer = (): TFakeRenderer => {
         destroyedTextures,
         dataUpdates,
         capabilities: { backend: 'WEBGPU', msaa: 1 },
-        frame: (ctx) => { frames.push(ctx); },
+        frame: (ctx) => {
+            frames.push(ctx);
+            // What a card does once it has drawn a crossing with its picture of the scene going out.
+            for (const effect of ctx.post ?? []) {
+                if (effect.outgoing === 'take') effect.outgoing = 'taken';
+            }
+        },
         createTexture: (): ITexture => ({ resourceType: 'texture' }),
         createBuffer: (data, usage) => {
             const handle: IBuffer = { resourceType: 'buffer' };

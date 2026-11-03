@@ -211,6 +211,17 @@ export const rebuildBehindCover = (store: TRuntimeStore, state: TTransitionState
     // Back to fully covered, to wait: the next step swaps again once it has landed, and that swap
     // lets it go as any other.
     state.phase = 'cover';
+    if (state.cross) {
+        // Covered, for one that crosses, is the old copy's last picture, which is what the run
+        // starting from nothing shows. It has stopped, so the picture is kept and not taken again.
+        // A swap that was a cut left the clock at its end, and it stays there, so the next one is a
+        // cut too. Told by the clock and not by `progress`, which a curve can put at 1 from the start.
+        if (state.elapsed < state.half) {
+            state.elapsed = 0;
+            state.progress = 0;
+        }
+        return;
+    }
     state.elapsed = state.half;
     state.progress = 1;
 };
@@ -235,14 +246,21 @@ const cover = (store: TRuntimeStore, transition: TTransition, outgoing: TBox | n
     if (transition.mask !== undefined) {
         effect.mask = transition.mask;
     }
+    const cross = transition.cross === true;
+    // Taken from the next frame drawn, which still shows the scene going out.
+    if (cross) {
+        effect.outgoing = 'take';
+    }
 
     const state: TTransitionState = {
         effect,
-        // Half of what the author wrote: they count the whole thing, covering and uncovering.
-        half: Math.max(0, transition.duration) / 2,
+        // Half of what the author wrote: they count the whole thing, covering and uncovering. One
+        // that crosses has a single run, and it is the whole thing.
+        half: Math.max(0, transition.duration) / (cross ? 1 : 2),
         elapsed: 0,
         progress: 0,
         ease: transition.ease ?? null,
+        cross,
         phase: 'cover',
         incoming: null,
         outgoing,

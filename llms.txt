@@ -371,6 +371,15 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   `mask` the same way and reads it with `sampleMask(uv)`. Any transition takes `ease`, a tween
   curve, for how each half moves along: `{ ...iris(0.6), ease: easeInOutSine }`; its length stays
   the same.
+- Five cross from one scene to the other with no cover between: `crossfade(0.6)` (half of each in
+  the middle), `push(0.5, 'left')` (the new one slides in and pushes the old one off),
+  `crossWipe(0.6, 'right')` (an edge with the new scene behind it, the films' wipe),
+  `crossIris(0.6, center)` (a circle opening on the new scene) and `crossDissolve(1, mask, { softness })`
+  (the new scene shows through in the order of the mask's greys: a clock face sweeps like a hand).
+  They wait for the new scene to load with the old one still playing, then swap at once and run
+  `progress` 0 to 1 over the whole duration; the old one is shown as its last picture, still. A
+  transition of your own crosses with `cross: true`, and reads that picture with `sampleOutgoing(uv)`
+  while `color` is the new scene: `mix(sampleOutgoing(uv), color, mu.progress)` is a crossfade.
 - `launch` and `stop` take a transition too: `launch('PauseMenu', { transition: iris(0.4) })` opens a
   menu on top behind an iris, `stop({ transition: iris(0.4) })` closes the menu that calls it. What is
   underneath keeps running: `scene.pause()` it first to freeze the game behind the menu.
@@ -578,6 +587,7 @@ surroundings (`sampleMap_env(envUv(ctx))`).
 | `paletteSize()`, `paletteColor(i)` | The palette given to the effect: how many colours, and colour `i`. |
 | `lutSize()`, `lutTexel(x, y, slice, size)`, `lutColor(rgb)` | The colour table given to it: `lutColor` grades a colour. |
 | `sampleMask(uv)` | A transition's `mask`, stretched over the screen and blended between its pixels (white if it has none). |
+| `sampleOutgoing(uv)` | For a transition with `cross: true`, the last picture of the scene going out (the frame itself in a transition that does not cross). |
 
 An effect reads one data picture: a palette or a colour table, never both. A transition reads its mask instead.
 

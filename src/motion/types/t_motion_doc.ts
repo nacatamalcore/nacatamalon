@@ -98,7 +98,8 @@ export type TMotionEvent =
 /**
  * The cover a `scene` event changes under: one of the engine's transitions, by name, how long it
  * takes in seconds, and what that one is given in code. A file that says `ms`, as they did before, is
- * read in milliseconds.
+ * read in milliseconds. The five whose names say cross or push go from one scene to the other with
+ * no cover between, so they take no colour.
  *
  * Each field past `duration` belongs to the transitions named beside it, and a file that gives one to
  * another is refused: a `direction` on a fade would be a choice somebody made that does nothing.
@@ -108,6 +109,9 @@ export type TMotionEvent =
  * { "type": "wipe", "duration": 0.4, "direction": "down" }
  * { "type": "iris", "duration": 0.5, "center": { "x": 0.2, "y": 0.8 } }
  * { "type": "dissolve", "duration": 0.8, "mask": "/assets/masks/star.png", "softness": 0.1 }
+ * { "type": "crossfade", "duration": 0.6 }
+ * { "type": "push", "duration": 0.5, "direction": "left" }
+ * { "type": "crossDissolve", "duration": 1.2, "mask": "../assets/masks/clock.png" }
  * ```
  *
  * @category Animation
@@ -115,27 +119,28 @@ export type TMotionEvent =
  * @author Francisco Pereira Alvarado
  */
 export type TMotionTransition = {
-    type: 'fade' | 'wipe' | 'iris' | 'pixelate' | 'dissolve';
+    type: 'fade' | 'wipe' | 'iris' | 'pixelate' | 'dissolve' | 'crossfade' | 'push' | 'crossWipe' | 'crossIris' | 'crossDissolve';
     /**
-     * Seconds, covering and uncovering together. Left out, what the transition takes in code when
-     * it is not told, and 0.6 for a dissolve.
+     * Seconds, covering and uncovering together, or crossing. Left out, what the transition takes in
+     * code when it is not told, and 0.6 for a dissolve and a cross dissolve.
      */
     duration?: number;
     /**
-     * Every one: what the screen is covered with. Black unless the file says.
+     * Every one that covers: what the screen is covered with. Black unless the file says.
      */
     color?: TColor;
     /**
-     * Every one: the curve each half moves along, by the name a key's `ease` uses. In a straight line
-     * unless the file says.
+     * Every one: the curve each half moves along, or the one run of one that crosses, by the name a
+     * key's `ease` uses. In a straight line unless the file says.
      */
     ease?: TMotionEase;
     /**
-     * A wipe: which way the edge travels.
+     * A wipe and a cross wipe: which way the edge travels. A push: which way both scenes travel.
      */
     direction?: TWipeDirection;
     /**
-     * An iris: where it closes on, in screen fractions, `{ x: 0, y: 0 }` the top left corner.
+     * An iris: where it closes on, in screen fractions, `{ x: 0, y: 0 }` the top left corner. A
+     * cross iris: where it opens from.
      */
     center?: { x: number; y: number };
     /**
@@ -143,14 +148,15 @@ export type TMotionTransition = {
      */
     blocks?: number;
     /**
-     * A dissolve, which needs it: the picture whose greys say the order the screen is covered in.
+     * A dissolve and a cross dissolve, which need it: the picture whose greys say the order the
+     * screen is covered in, or the new scene shows through in.
      * Found next to the motion file, or from the root of the game with a leading `/`; for a motion
      * written in code, which has no file, from the page. It is fetched when the motion arrives, so it
      * is usually there by the time it is needed, and the transition waits for it when it is not.
      */
     mask?: string;
     /**
-     * A dissolve: how soft the edge of the shape is, from `0`, hard, to `1`.
+     * A dissolve and a cross dissolve: how soft the edge of the shape is, from `0`, hard, to `1`.
      */
     softness?: number;
 };

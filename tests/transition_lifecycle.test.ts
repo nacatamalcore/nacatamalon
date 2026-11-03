@@ -2,7 +2,7 @@ import { describe, expect, it, spyOn } from 'bun:test';
 import { createFrameContext } from '../src/game/loop/create_frame_context';
 import { createScene } from '../src/scene/create_scene';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
-import { fade } from '../src/transition';
+import { crossfade, fade } from '../src/transition';
 import { findScene } from '../src/scene/find_scene';
 import { registerScene } from '../src/scene/register_scene';
 import { startScene } from '../src/scene/start_scene';
@@ -412,6 +412,43 @@ describe('a scene restarting itself with a transition', () => {
         frames(0.2);
         expect(store.get('transition').active).toBeNull();
         expect(fresh!.ended).toBe(1);
+    });
+
+    it('crossing, runs the whole of it once the new copy has loaded, and stays a cut after a swap that was one', async () => {
+        for (const cardDraws of [true, false]) {
+            const { store, frames, copies, level } = restartingLevel();
+            const asset: { status: TLoadStatus } = { status: 'loading' };
+            let arrive!: () => void;
+            level.ask = () => {
+                store.get('world').boxStack[0].loads.push(asset);
+                trackLoad(asset, new Promise<void>((resolve) => {
+                    arrive = () => { asset.status = 'ready'; resolve(); };
+                }));
+            };
+            // A card that never draws: the picture is never taken, and past a second the swap is a cut.
+            if (!cardDraws) {
+                store.get('screen').renderer.frame = () => {};
+            }
+            // A curve already at its end at the start must not pass for a cut.
+            copies[0]!.handle.change('Level', { transition: { ...crossfade(0.5), ease: (t: number) => 1 - t } });
+
+            frames(cardDraws ? 0.1 : 1.1);
+            const state = store.get('transition').active!;
+            const [, fresh] = copies;
+            expect(fresh!.root.held).toBe(true);
+            expect(state.phase).toBe('cover');
+            // Waiting on the old copy's picture, or at the end after a cut.
+            expect(state.progress).toBe(cardDraws ? 0 : 1);
+
+            arrive();
+            await Promise.resolve();
+            frames(0.05);
+            expect(fresh!.root.held).toBe(false);
+            expect(state.phase).toBe('reveal');
+            frames(0.1);
+            // The run spends its half second only when the first swap was not a cut.
+            expect(store.get('transition').active === null).toBe(!cardDraws);
+        }
     });
 
     it('reports a new copy that throws, takes the cover away, and leaves the game as a cut would', () => {

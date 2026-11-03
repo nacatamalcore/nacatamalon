@@ -6,19 +6,29 @@ import type { TPostBuiltinInfo } from '../post/builtin/types/t_builtin';
 import { MATERIAL_LOOKS } from '../shader_composer/surface/looks';
 import type { TMotionDoc, TMotionEvent, TMotionKey, TMotionTrack, TMotionTransition } from './types/t_motion_doc';
 
-const TRANSITIONS = new Set(['fade', 'wipe', 'iris', 'pixelate', 'dissolve']);
+const TRANSITIONS = new Set(['fade', 'wipe', 'iris', 'pixelate', 'dissolve', 'crossfade', 'push', 'crossWipe', 'crossIris', 'crossDissolve']);
 
 /**
- * What each transition takes past its duration and its colour, which every one takes.
+ * What each transition takes past its duration and its curve, which every one takes. The colour is
+ * what a cover is painted, so the ones that cover take it and the ones that cross do not.
  */
 const OWN_FIELDS: Record<string, string[]> = {
-    fade: [],
-    wipe: ['direction'],
-    iris: ['center'],
-    pixelate: ['blocks'],
-    dissolve: ['mask', 'softness'],
+    fade: ['color'],
+    wipe: ['color', 'direction'],
+    iris: ['color', 'center'],
+    pixelate: ['color', 'blocks'],
+    dissolve: ['color', 'mask', 'softness'],
+    crossfade: [],
+    push: ['direction'],
+    crossWipe: ['direction'],
+    crossIris: ['center'],
+    crossDissolve: ['mask', 'softness'],
 };
-const ALL_OWN = ['direction', 'center', 'blocks', 'mask', 'softness'];
+const ALL_OWN = ['color', 'direction', 'center', 'blocks', 'mask', 'softness'];
+/**
+ * The ones that need a mask, which is the shape they are.
+ */
+const MASKED = new Set(['dissolve', 'crossDissolve']);
 const DIRECTIONS = new Set(['left', 'right', 'up', 'down']);
 
 /**
@@ -133,7 +143,7 @@ const readTransition = (raw: unknown, src: string, where: string): TMotionTransi
     }
     const transition = asRecord(raw);
     if (transition === null || !TRANSITIONS.has(transition.type as string)) {
-        fail(src, `${where}: "transition" has to be { "type": "fade" | "wipe" | "iris" | "pixelate" | "dissolve", "duration": 0.4 }.`);
+        fail(src, `${where}: "transition" has to be { "type": "fade" | "wipe" | "iris" | "pixelate" | "dissolve" | "crossfade" | "push" | "crossWipe" | "crossIris" | "crossDissolve", "duration": 0.4 }.`);
     }
     const type = (transition as Record<string, unknown>).type as TMotionTransition['type'];
     const read: TMotionTransition = { type };
@@ -160,14 +170,14 @@ const readTransition = (raw: unknown, src: string, where: string): TMotionTransi
     }
     if (given.direction !== undefined) {
         if (!DIRECTIONS.has(given.direction as string)) {
-            fail(src, `${where}: a wipe's "direction" has to be "left", "right", "up" or "down".`);
+            fail(src, `${where}: ${named(type)}'s "direction" has to be "left", "right", "up" or "down".`);
         }
         read.direction = given.direction as NonNullable<TMotionTransition['direction']>;
     }
     if (given.center !== undefined) {
         const center = asRecord(given.center);
         if (center === null || !Number.isFinite(center.x) || !Number.isFinite(center.y)) {
-            fail(src, `${where}: an iris's "center" has to be { "x", "y" }, in screen fractions: { "x": 0.5, "y": 0.5 } is the middle.`);
+            fail(src, `${where}: ${named(type)}'s "center" has to be { "x", "y" }, in screen fractions: { "x": 0.5, "y": 0.5 } is the middle.`);
         }
         read.center = { x: center!.x as number, y: center!.y as number };
     }
@@ -177,15 +187,15 @@ const readTransition = (raw: unknown, src: string, where: string): TMotionTransi
         }
         read.blocks = given.blocks as number;
     }
-    if (type === 'dissolve') {
+    if (MASKED.has(type)) {
         if (typeof given.mask !== 'string' || given.mask === '') {
-            fail(src, `${where}: a dissolve needs its "mask", the path of the picture whose greys say the order the screen is covered in.`);
+            fail(src, `${where}: ${named(type)} needs its "mask", the path of the picture whose greys say the order the screen changes in.`);
         }
         read.mask = given.mask as string;
     }
     if (given.softness !== undefined) {
         if (typeof given.softness !== 'number' || !Number.isFinite(given.softness) || given.softness < 0 || given.softness > 1) {
-            fail(src, `${where}: a dissolve's "softness" has to be from 0, a hard edge, to 1.`);
+            fail(src, `${where}: ${named(type)}'s "softness" has to be from 0, a hard edge, to 1.`);
         }
         read.softness = given.softness as number;
     }

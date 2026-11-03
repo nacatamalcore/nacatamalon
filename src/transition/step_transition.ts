@@ -33,6 +33,9 @@ export type TTransitionStep = 'running' | 'swap';
  * @author Francisco Pereira Alvarado
  */
 export const stepTransition = (state: TTransitionState, delta: number): TTransitionStep => {
+    if (state.cross && state.phase === 'cover') {
+        return crossOver(state, delta);
+    }
     state.elapsed += delta;
     const through = moveOn(state);
 
@@ -60,6 +63,50 @@ export const stepTransition = (state: TTransitionState, delta: number): TTransit
         state.done = true;
     }
     return 'running';
+};
+
+/**
+ * How long a transition that crosses waits for its picture of the scene going out, in seconds, once
+ * everything else has arrived. Long past what any card takes to draw a frame and compile a hook: it
+ * is only there so a card that never draws does not hold the change for ever. Past it, the change
+ * is a cut.
+ */
+const PICTURE_WAIT = 1;
+
+/**
+ * The wait of a transition that crosses: nothing to cover, so it swaps as soon as what is coming in
+ * has arrived and a picture of what is going out has been drawn, and its one run starts there.
+ *
+ * Its run does not start while it waits. The scene going out is still playing, and still being
+ * shown as it is, so there is nothing yet for the time to be spent on. The clock only counts the
+ * wait for the picture, against `PICTURE_WAIT`.
+ */
+const crossOver = (state: TTransitionState, delta: number): TTransitionStep => {
+    if (!state.loaded) {
+        return 'running';
+    }
+    // With no duration the swap frame is already the end, so the picture would never be seen. With
+    // the picture kept and the clock at its end, it is a restart waiting for its new copy after a
+    // swap that was a cut.
+    let cut = state.half === 0 || (state.effect.outgoing === 'keep' && state.elapsed >= state.half);
+    if (state.effect.outgoing === 'take' && !cut) {
+        state.elapsed += delta;
+        if (state.elapsed < PICTURE_WAIT) {
+            return 'running';
+        }
+        cut = true;
+    }
+    state.phase = 'reveal';
+    // From nothing on the swap frame: the scene coming in is drawn there for the first time, and
+    // showing none of it yet is what makes the last picture of the old one and the first of the run
+    // the same. A cut goes straight to the end instead: with no picture of the old scene, or a hook
+    // still compiling, anything in between would show the new scene, then the old, then the new.
+    state.elapsed = cut ? state.half : 0;
+    if (state.effect.outgoing !== undefined) {
+        state.effect.outgoing = 'keep';
+    }
+    moveOn(state);
+    return 'swap';
 };
 
 /**

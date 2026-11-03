@@ -124,6 +124,19 @@ export type TPostEffect<U extends TUniformValues = TUniformValues> = {
      * has neither a palette nor a table, so the three never meet.
      */
     mask?: TTexture;
+    /**
+     * For a transition that crosses, what to do with the picture of the scene going out, which its
+     * hook reads through `sampleOutgoing`. Absent for every other effect.
+     *
+     * - `'take'` while that scene is still on screen and the picture has not been drawn yet, so it
+     *   is taken each frame and is its last one when the swap comes.
+     * - `'taken'` once a frame has been drawn with it **and with the hook itself**. A card that is
+     *   still compiling the hook draws the frame unchanged meanwhile. Set by the card, and the swap
+     *   waits for it: one called between two frames, or two steps of the clock in one picture, would
+     *   otherwise swap before any picture was taken, and the crossing would be a cut.
+     * - `'keep'` from the swap on.
+     */
+    outgoing?: 'take' | 'taken' | 'keep';
     source: TPostSource;
     /**
      * Whether it runs. A switched-off effect stays in the chain **where it is**, so turning it back

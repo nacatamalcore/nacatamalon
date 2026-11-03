@@ -35,6 +35,7 @@ const inFlight = (duration: number, loaded = true): TTransitionState => ({
     elapsed: 0,
     progress: 0,
     ease: null,
+    cross: false,
     phase: 'cover',
     incoming: { name: 'in' } as TBox,
     outgoing: { name: 'out' } as TBox,

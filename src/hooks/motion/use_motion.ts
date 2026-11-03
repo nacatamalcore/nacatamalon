@@ -6,7 +6,7 @@ import { loadTexture, newTexture, resolveAssetPath, trackLoad, whenLoaded } from
 import { findAssetFile } from '../../loaders/asset_key';
 import { motionFileOf } from '../../loaders/motion';
 import { playAttachment } from '../../audio/attachment_players';
-import { dissolve, fade, iris, pixelate, wipe } from '../../transition';
+import { crossDissolve, crossfade, crossIris, crossWipe, dissolve, fade, iris, pixelate, push, wipe } from '../../transition';
 import { applyMotionTracks, bindMotionTracks } from '../../motion/motion_tracks';
 import { findMotionBox } from '../../motion/motion_targets';
 import { MOTION_EASES } from '../../motion/motion_eases';
@@ -46,7 +46,7 @@ const maskOf = (store: TRuntimeStore, file: TMotionFile, src: string): TTexture 
 /**
  * The transition a scene event asks for, made as a game would make it in code. A file has been read
  * by the parser; a motion written in code has not, and a dissolve there with no mask is said and
- * done as a fade, which is the nearest thing to what was asked.
+ * done as a fade, which is the nearest thing to what was asked, and a cross dissolve as a crossfade.
  */
 const transitionOf = (
     transition: TMotionTransition | undefined,
@@ -70,9 +70,14 @@ const madeFrom = (
 ): TTransition | undefined => {
     if (transition === undefined) return undefined;
     const { duration, color } = transition;
-    if (transition.type === 'dissolve' && (transition.mask === undefined || transition.mask === '')) {
+    const unmasked = transition.mask === undefined || transition.mask === '';
+    if (transition.type === 'dissolve' && unmasked) {
         warnOnce('a dissolve has no "mask", the picture it covers in the shape of, so it was done as a fade');
         return fade(duration, color);
+    }
+    if (transition.type === 'crossDissolve' && unmasked) {
+        warnOnce('a cross dissolve has no "mask", the picture it changes in the shape of, so it was done as a crossfade');
+        return crossfade(duration);
     }
     switch (transition.type) {
         case 'fade': return fade(duration, color);
@@ -80,6 +85,11 @@ const madeFrom = (
         case 'iris': return iris(duration, color, transition.center);
         case 'pixelate': return pixelate(duration, color, transition.blocks);
         case 'dissolve': return dissolve(duration ?? 0.6, mask(transition.mask!), { color, softness: transition.softness });
+        case 'crossfade': return crossfade(duration);
+        case 'push': return push(duration, transition.direction);
+        case 'crossWipe': return crossWipe(duration, transition.direction);
+        case 'crossIris': return crossIris(duration, transition.center);
+        case 'crossDissolve': return crossDissolve(duration ?? 0.6, mask(transition.mask!), { softness: transition.softness });
     }
 };
 
@@ -186,7 +196,7 @@ export const useMotion = (motion: TMotionFile | TMotionDoc, options: TMotionOpti
                 const transition = transitionOf(event.transition, (src) => {
                     const picture = maskOf(store, file, src);
                     if (picture.status === 'error') {
-                        warnOnce(`the mask '${src}' of the change at ${event.t} s could not be loaded, so the dissolve covers all at once`);
+                        warnOnce(`the mask '${src}' of the change at ${event.t} s could not be loaded, so it changes all at once`);
                     }
                     return picture;
                 }, warnOnce);
@@ -317,7 +327,7 @@ export const useMotion = (motion: TMotionFile | TMotionDoc, options: TMotionOpti
         if (!box.destroyed && file.doc !== null && !showingOnly) {
             for (const event of file.doc.events) {
                 const transition = event.kind === 'scene' ? event.transition : undefined;
-                if (transition?.type === 'dissolve' && typeof transition.mask === 'string' && transition.mask !== '') maskOf(store, file, transition.mask);
+                if ((transition?.type === 'dissolve' || transition?.type === 'crossDissolve') && typeof transition.mask === 'string' && transition.mask !== '') maskOf(store, file, transition.mask);
             }
         }
         if (!box.destroyed && file.status === 'ready' && attachment.autoplay && !showingOnly) {

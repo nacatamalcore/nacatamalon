@@ -12,7 +12,13 @@ export const createNullRenderer = (): IRenderer => {
     const texture = (): ITexture => ({ resourceType: 'texture' });
     return {
         capabilities: { backend: 'WEBGPU', msaa: 1 },
-        frame: () => {},
+        // Nothing to draw, so a crossing's picture of the scene going out counts as taken: the
+        // change must not wait for a card that is not there.
+        frame: (ctx) => {
+            for (const effect of ctx.post ?? []) {
+                if (effect.outgoing === 'take') effect.outgoing = 'taken';
+            }
+        },
         createTexture: texture,
         setSmooth: () => {},
         createBuffer: () => ({ resourceType: 'buffer' }),

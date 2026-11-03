@@ -99,6 +99,13 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
      * Last frame and this frame, for each effect that asked to read what it showed.
      */
     const histories = new Map<TPostEffect, { pair: [ITexture, ITexture]; read: 0 | 1 }>();
+    /**
+     * The last picture of the scene going out, for a transition that crosses.
+     *
+     * Kept through a change of size: it is read stretched over the screen, so a picture of the old
+     * size still shows the old scene where it was, and dropping it would cut the crossing short.
+     */
+    const photos = new Map<TPostEffect, { texture: ITexture; width: number; height: number }>();
     let width = 0;
     let height = 0;
     /**
@@ -177,7 +184,8 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
     };
 
     /**
-     * Lets go of the history of every effect that has left the chain.
+     * Lets go of the history of every effect that has left the chain, and the picture of every
+     * transition that has.
      */
     const pruneHistories = (chain: readonly TPostEffect[]): void => {
         for (const [effect, history] of histories) {
@@ -187,6 +195,31 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
                 groups.clear();
             }
         }
+        for (const [effect, photo] of photos) {
+            if (!chain.includes(effect)) {
+                toGpuTexture(photo.texture).destroy();
+                photos.delete(effect);
+                groups.clear();
+            }
+        }
+    };
+
+    /**
+     * The picture a transition that crosses takes of the scene going out, at the size of this frame.
+     * One of another size, from before the canvas changed shape, is made again.
+     */
+    const photoOf = (effect: TPostEffect): ITexture => {
+        let photo = photos.get(effect);
+        if (photo !== undefined && (photo.width !== width || photo.height !== height)) {
+            toGpuTexture(photo.texture).destroy();
+            groups.clear();
+            photo = undefined;
+        }
+        if (photo === undefined) {
+            photo = { texture: createWebGPURenderTexture(device, format, width, height), width, height };
+            photos.set(effect, photo);
+        }
+        return photo.texture;
     };
 
     /**
@@ -270,6 +303,25 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
             compiled.set(key, entry);
         }
         return entry.failed || entry.pending ? identityFor() : entry;
+    };
+
+    /**
+     * Whether a step's own hook is still being compiled, and so drawn as the identity meanwhile.
+     */
+    const stillCompiling = (effect: TPostEffect, fragment: string | null): boolean =>
+        fragment !== null && compiled.get(`${JSON.stringify(effect.uniformSig)} ${fragment}`)?.pending === true;
+
+    /**
+     * What `sampleOutgoing` reads, in the slot a history has: the picture of the scene going out for
+     * a transition that crosses, and the frame it was handed for any other transition, so one that
+     * asks without crossing, or that never had a frame to take it from, shows a cut rather than white.
+     * Every other effect gets white, as it does for a history it did not ask for.
+     */
+    const outgoingOf = (effect: TPostEffect, input: ITexture): ITexture => {
+        if (effect.source !== 'transition') {
+            return blankTexture();
+        }
+        return photos.get(effect)?.texture ?? input;
     };
 
     const bindGroupFor = (source: GPUTexture, data: GPUTexture, input: GPUTexture, history: GPUTexture): GPUBindGroup => {
@@ -414,7 +466,13 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
                 const lastEffect = i === chain.length - 1;
                 const input = source;
                 const history = effect.history === true ? historyOf(effect) : null;
-                const historyRead = history === null ? blankTexture() : history.pair[history.read];
+                // While the scene going out is still on screen, what this effect is handed is its
+                // picture, taken again each frame so it is the last one when the swap comes.
+                if (effect.outgoing === 'take' || effect.outgoing === 'taken') {
+                    const photo = photoOf(effect);
+                    draw(effect, identityFor(), toGpuTexture(photo).createView(), source, source, source, gameWidth, gameHeight);
+                }
+                const historyRead = history !== null ? history.pair[history.read] : outgoingOf(effect, input);
                 const steps = postStepsOf(effect);
 
                 for (let j = 0; j < steps.length; j++) {
@@ -424,6 +482,11 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
                         continue;
                     }
                     const own = j === steps.length - 1;
+                    // Drawn with its picture and its own hook: the swap may come. One whose hook will
+                    // not compile counts too, or the change would wait for a hook that never comes.
+                    if (own && effect.outgoing === 'take' && !stillCompiling(effect, step.fragment)) {
+                        effect.outgoing = 'taken';
+                    }
 
                     if (!own) {
                         const [w, h] = passSize(step.scale!, gameWidth, gameHeight);
@@ -457,11 +520,12 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
         },
 
         destroy: (): void => {
-            for (const texture of [scene, blank]) {
+            for (const texture of [scene, blank, ...[...photos.values()].map((photo) => photo.texture)]) {
                 if (texture !== null) {
                     toGpuTexture(texture).destroy();
                 }
             }
+            photos.clear();
             dropPool();
             for (const history of histories.values()) {
                 history.pair.forEach((texture) => toGpuTexture(texture).destroy());

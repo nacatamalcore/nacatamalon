@@ -25,6 +25,14 @@ releases are in [changelog/](./changelog/), one file each.
   is spread along it, while the clock still decides how long it lasts and when the swap comes, and
   what the shader is handed stays between 0 and 1. In a `.motion`, `"ease": "easeInOutSine"` by
   name, as a key's. Left out, it is a straight line, as before.
+- **Transitions that cross from one scene to the other, with no cover between.** `crossfade`, where
+  halfway through you see half of each; `push`, where the new scene slides in and pushes the old one
+  off; and `crossWipe`, `crossIris` and `crossDissolve`, the edge, the circle and the mask of the ones
+  that cover, with the new scene behind them instead of a colour: a clock mask sweeps from one scene
+  to the other like a hand. They wait for the new scene to load with the old one still playing, then
+  swap at once and spend the whole duration mixing the new scene with the old one's last picture.
+  A transition of your own does it with `cross: true` and reads that picture with
+  `sampleOutgoing(uv)`, on both cards. A `.motion` names them as it names the rest.
 - **A movement on part of the body.** `useSkeletalAnimation(model, { only: ['spine'] })` is a second
   animator on top of the first, on those bones and all that hangs from them: the legs run while the
   arms wave. With nothing playing it leaves them to the one below, and a movement that ends or is

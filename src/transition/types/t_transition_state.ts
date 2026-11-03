@@ -36,7 +36,8 @@ export type TTransitionState = {
      */
     effect: TPostEffect;
     /**
-     * How long **one half** lasts, in seconds. Half of what the author wrote, in the other unit.
+     * How long **one half** lasts, in seconds. Half of what the author wrote, in the other unit. For
+     * a transition that crosses, which has one run and not two halves, all of it.
      */
     half: number;
     /**
@@ -52,6 +53,11 @@ export type TTransitionState = {
      * The curve `progress` is put through, or `null` for a straight line.
      */
     ease: TEaseFn | null;
+    /**
+     * Whether it crosses: swaps as soon as the scene coming in has loaded, and runs `progress` once,
+     * over the whole duration, after that.
+     */
+    cross: boolean;
     phase: TTransitionPhase;
     /**
      * The scene coming in. It is running from the moment `change` or `launch` was called, so its

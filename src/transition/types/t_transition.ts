@@ -91,6 +91,36 @@ export type TTransition = {
      * ```
      */
     ease?: TEaseFn;
+    /**
+     * Whether it crosses from one scene to the other instead of covering the screen between them: a
+     * crossfade, a push, a wipe that leaves the new scene behind its edge rather than a colour.
+     *
+     * A transition that crosses has **one** run instead of two halves. It waits for the scene coming
+     * in to load (and for its mask), with the one going out still playing, then swaps at once, and
+     * `progress` runs from 0 to 1 over the whole `duration`, with `phase` at 1. The hook is handed the
+     * scene coming in as `color`, and reads the last picture of the one going out with
+     * `sampleOutgoing(uv)`: that one has stopped, so it is shown as it was when it went.
+     *
+     * With `launch` and `stop`, what keeps running underneath is in the picture too, so it is still
+     * for a moment under the crossing, and a push slides it along with the scene that comes or goes.
+     * A crossfade or a cross iris over a menu reads well; a push is for one scene giving way to another.
+     *
+     * The flag changes the clock and not the shader. A hook written to cover, `fade`'s for one, run
+     * with it, cuts to the new scene and uncovers it from black: harmless, and maybe what you meant.
+     *
+     * @example
+     * ```ts
+     * // Half of each, mixed by how far through it is.
+     * const blend: TTransition = {
+     *     duration: 0.8,
+     *     cross: true,
+     *     fragment: `fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {
+     *         return mix(sampleOutgoing(uv), color, mu.progress);
+     *     }`,
+     * };
+     * ```
+     */
+    cross?: boolean;
 };
 
 /**

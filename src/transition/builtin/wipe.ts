@@ -13,7 +13,14 @@ const BLACK: TColor = { r: 0, g: 0, b: 0, a: 1 };
  */
 export type TWipeDirection = 'left' | 'right' | 'up' | 'down';
 
-const AXIS: Record<TWipeDirection, [number, number]> = {
+/**
+ * Each direction as the vector a shader is handed. The cross wipe and the push read it too.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const AXIS: Record<TWipeDirection, [number, number]> = {
     right: [1, 0],
     left: [-1, 0],
     down: [0, 1],
