@@ -39,7 +39,7 @@ them by topic, each with an id, and `https://nacatamalon.com/llms/examples/<id>.
   effects it sets off with it, unless another effect still sets them off or the game loaded or drew
   them too. What something else still uses waits for the last of them and goes with it: a
   picture a model, sheet, font or effect wears, a sheet an effect or a map uses, an effect others set
-  off.
+  off, a shape a model is made of.
 - The page around the game is heard through `useGame()`: `onHidden` (save here, it is the last word a
   phone gives), `onShown`, `onBlurred`, `onFocused`, `onLeaving` (only what is done at once); and
   asked, like `isPaused()`, with `isHidden()` and `hasFocus()`.

@@ -305,10 +305,22 @@ const releaseOne = (store: TRuntimeStore, asset: TAsset): void => {
 };
 
 /**
- * Lets go of what the game itself let go of. What something else still uses waits for the last
- * of them: a picture a model, a sheet, a font or an effect wears, a sheet an effect or a map takes its
- * frames from, an effect others set off. Let go of at once, they would go on drawing it with its
- * picture already off the card.
+ * Whether a model still loaded is made of `shape`, as one of its pieces.
+ */
+const madeOfIt = (store: TRuntimeStore, shape: TGeometry): boolean => {
+    for (const model of store.get('assets').gltf.values()) {
+        if (model.status !== 'released' && model.parts.some((part) => part.geometry === shape)) {
+            return true;
+        }
+    }
+    return false;
+};
+
+/**
+ * Lets go of what the game itself let go of. What something else still uses waits for the last of
+ * them: a picture a model, a sheet, a font or an effect wears, a sheet an effect or a map takes its
+ * frames from, an effect others set off, a shape a model is made of. Let go of at once, they would go
+ * on drawing it with its picture already off the card, or with no shape at all.
  */
 const letGo = (store: TRuntimeStore, asset: TAsset): void => {
     forgetAskedByGame(asset);
@@ -321,6 +333,12 @@ const letGo = (store: TRuntimeStore, asset: TAsset): void => {
             return;
         case 'atlas':
             releaseSheet(store, asset, asset);
+            return;
+        case 'geometry':
+            // A shape a model is made of goes with the model, whatever else happens to it.
+            if (!madeOfIt(store, asset)) {
+                releaseOne(store, asset);
+            }
             return;
         default:
             releaseOne(store, asset);

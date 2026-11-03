@@ -16,13 +16,17 @@ import { atlasDocFrames, parseAtlasDoc } from '../../atlas/document';
  * sprite asking for 5 gets.
  *
  * Never rejects. A missing file, a broken image or a grid that does not divide the image ends as
- * `'error'` with a warning: one bad sheet must not take the scene down.
+ * `'error'` with a warning: one bad sheet must not take the scene down. One let go of on the way ends
+ * as it is, with nothing said.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
 export const loadAtlas = async (store: TRuntimeStore, atlas: TLoadedAtlas): Promise<void> => {
+    // Let go, or the game gone, while it was on its way: nobody is waiting for it any more. Asked
+    // after each wait.
+    const gone = (): boolean => store.get('loop').destroyed || atlas.status === 'released';
     try {
         const response = await fetch(atlas.src);
         if (!response.ok) {
@@ -30,11 +34,17 @@ export const loadAtlas = async (store: TRuntimeStore, atlas: TLoadedAtlas): Prom
         }
 
         const doc = parseAtlasDoc(await response.json(), atlas.src);
+        if (gone()) {
+            return;
+        }
 
         // Relative to the file that named it, which is what `resolveAssetPath` is for: a sheet and
         // its image live next to each other.
         atlas.texture.src = resolveAssetPath(atlas.src, doc.texture);
         await loadTexture(store, atlas.texture);
+        if (gone()) {
+            return;
+        }
 
         if (atlas.texture.status !== 'ready') {
             throw new Error(`its image '${atlas.texture.src}' could not be loaded`);
@@ -78,6 +88,10 @@ export const loadAtlas = async (store: TRuntimeStore, atlas: TLoadedAtlas): Prom
 
         bumpVersion(atlas);
     } catch (error: unknown) {
+        // Nobody is waiting for a sheet that was let go of, to hear that it did not arrive either.
+        if (atlas.status === 'released') {
+            return;
+        }
         atlas.status = 'error';
         bumpVersion(atlas);
         console.warn(`[NacatamalOn] useLoadAtlas: '${atlas.src}' could not be loaded. Sprites using it draw nothing.`, error);

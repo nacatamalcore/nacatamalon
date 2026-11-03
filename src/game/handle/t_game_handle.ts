@@ -303,9 +303,9 @@ export type TGameHandle = {
      * game loaded or drew them too.
      *
      * What something else still uses does not end at once: a picture a model, a sheet, a font or an
-     * effect wears, a sheet an effect or a map takes its frames from, an effect others set off. It
-     * stays as it is, and goes with the last of them. Asked for again meanwhile, it is the same one,
-     * and stays.
+     * effect wears, a sheet an effect or a map takes its frames from, an effect others set off, a shape
+     * a model is made of. It stays as it is, and goes with the last of them. Asked for again meanwhile,
+     * it is the same one, and stays.
      *
      * @example
      * ```ts

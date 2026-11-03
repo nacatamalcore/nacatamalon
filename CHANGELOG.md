@@ -144,9 +144,15 @@ releases are in [changelog/](./changelog/), one file each.
 - **Letting go of what something else still uses waits for it.** An effect another one still set off,
   a sheet an effect or a map took its frames from, a picture a model, a sheet, a font or an effect
   wore: let go of by the game, it went at once, and what used it went on drawing it white, with
-  nothing said. Now it stays until the last thing using it goes, and goes with it.
+  nothing said. Now it stays until the last thing using it goes, and goes with it. A shape a model is
+  made of goes with the model too: let go of alone, the model drew nothing.
 - **A map let go of while it loads stays let go of.** It came back ready when its sheet landed, and
   held that sheet for good; one whose sheet would not load held it too.
+- **A sheet let go of while it loads stays let go of**, rather than ending as broken with a warning
+  that it could not be loaded.
+- **A model that fails to load no longer keeps the pictures others use.** A picture the game or
+  another model also wore stayed until the failed model was let go of too. The ones it sent for
+  itself still go with it.
 - **An effect's chain reaches as far as its particles do.** A firework whose sparks leave embers that
   leave smoke lost its smoke when followed from one file: the loader stopped one step short of the
   simulation, and a file refused its children that way kept the refusal even when asked for on its

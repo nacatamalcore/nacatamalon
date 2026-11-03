@@ -21,7 +21,7 @@ import type { TShading } from './shading';
 import type { TTexture } from '../texture/types/t_texture';
 import { findAssetFile } from '../asset_key';
 import { crc32 } from '../../pixels/crc32';
-import { wearPicture } from '../worn_pictures';
+import { stopWearingForOthers, wearPicture } from '../worn_pictures';
 
 /** No light of its own. */
 const NO_GLOW = { r: 0, g: 0, b: 0, a: 1 };
@@ -326,6 +326,7 @@ export const loadGltf = async (store: TRuntimeStore, model: TGltfModel, options:
         }
         model.status = 'error';
         bumpVersion(model);
+        stopWearingForOthers(model);
         console.warn(`[NacatamalOn] useLoadGltf: '${model.src}' could not be loaded. Nothing is drawn for it.`, error);
     }
 };

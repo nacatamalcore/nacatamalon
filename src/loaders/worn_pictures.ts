@@ -78,6 +78,28 @@ export const stopWearing = (asset: TAsset): void => {
 };
 
 /**
+ * Takes `asset` off every picture it wore for anyone else's sake, as it fails to load: a model that
+ * draws nothing holds no picture from another, nor from the game. What it wore is still named as its
+ * own, so letting go of it later still takes the pictures only it had sent for. A picture let go of
+ * while this model still wore it, by the game or with another model, goes now, if nothing else
+ * wears it.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const stopWearingForOthers = (asset: TAsset): void => {
+    for (const texture of wornBy.get(asset) ?? []) {
+        wearers.get(texture)?.delete(asset);
+        const finish = waiting.get(texture);
+        if (finish !== undefined) {
+            waiting.delete(texture);
+            finish();
+        }
+    }
+};
+
+/**
  * The pictures `asset` has taken: its pieces' if it has them, and what it had found so far if it was
  * let go of or failed before they came out.
  *

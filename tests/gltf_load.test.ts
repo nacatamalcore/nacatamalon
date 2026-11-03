@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it, mock } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
 import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
+import { useLoadTexture } from '../src/hooks/loaders/use_load_texture';
 import { releaseAsset, whenLoaded } from '../src/loaders';
 import { wearersOf } from '../src/loaders/worn_pictures';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { asGlb, asGltf, serveGltf, TEST_QUAD } from './helpers/test_gltf';
-import type { TGltfModel } from '../src/loaders';
+import type { TGltfModel, TTexture } from '../src/loaders';
 import type { TTestModel } from './helpers/test_gltf';
 
 /**
@@ -594,6 +595,125 @@ describe('a picture kept inside a model file, the same in more than one', () => 
             expect(bad.status).toBe('released');
         } finally {
             console.warn = warn;
+            served.restore();
+        }
+    });
+
+    /**
+     * A tower whose first piece wears `atlas.png` and whose second points at a picture inside the file
+     * that is not there, so the file fails once the first picture has been found.
+     */
+    const failsAfterAPicture = () => {
+        const { json, bin } = asGltf({
+            nodes: [
+                { name: 'A', primitives: [{ ...TEST_QUAD, material: 0 }] },
+                { name: 'B', primitives: [{ ...TEST_QUAD, material: 1 }] },
+            ],
+            materials: [{ image: 'atlas.png' }, { embeddedImage: 'sheet' }],
+        });
+        (json as { images: Array<{ bufferView?: number }> }).images[1]!.bufferView = 99;
+        return serveGltf({ 'tower.gltf': json, 'model.bin': bin, 'atlas.png': 'png' });
+    };
+
+    it('holds no picture of the game\'s once it has failed', async () => {
+        const served = failsAfterAPicture();
+        const warn = console.warn;
+        console.warn = () => {};
+        try {
+            const { store } = createTestGame();
+            let atlas!: TTexture;
+            let tower!: TGltfModel;
+            startTestScene(store, 'Shop', () => {
+                atlas = useLoadTexture({ src: 'atlas.png' });
+                tower = useLoadGltf({ src: 'tower.gltf' });
+                return createScene();
+            });
+            await whenLoaded(tower);
+            expect(tower.status).toBe('error');
+
+            releaseAsset(store, atlas);
+            expect(atlas.status).toBe('released');
+        } finally {
+            console.warn = warn;
+            served.restore();
+        }
+    });
+
+    it('lets a picture the game let go of on the way go, once it has failed', async () => {
+        const served = failsAfterAPicture();
+        // The picture held back, so the game lets go of it while the model still wears it.
+        let open!: () => void;
+        const held = new Promise<void>((done) => { open = done; });
+        Object.assign(globalThis, { createImageBitmap: async () => { await held; return { width: 4, height: 4, close: () => {} }; } });
+        const warn = console.warn;
+        console.warn = () => {};
+        try {
+            const { store } = createTestGame();
+            let atlas!: TTexture;
+            let tower!: TGltfModel;
+            startTestScene(store, 'Shop', () => {
+                atlas = useLoadTexture({ src: 'atlas.png' });
+                tower = useLoadGltf({ src: 'tower.gltf' });
+                return createScene();
+            });
+            while (!wearersOf(atlas).includes(tower)) {
+                await new Promise((done) => setTimeout(done, 0));
+            }
+            releaseAsset(store, atlas);
+            expect(atlas.status).not.toBe('released');
+
+            open();
+            await whenLoaded(tower);
+            expect(tower.status).toBe('error');
+            expect(atlas.status).toBe('released');
+            expect(atlas.gpu).toBeNull();
+        } finally {
+            console.warn = warn;
+            served.restore();
+        }
+    });
+
+    it('still takes the pictures it sent for itself when let go of after failing', async () => {
+        const served = failsAfterAPicture();
+        const warn = console.warn;
+        console.warn = () => {};
+        try {
+            const { store } = createTestGame();
+            let tower!: TGltfModel;
+            startTestScene(store, 'Shop', () => {
+                tower = useLoadGltf({ src: 'tower.gltf' });
+                return createScene();
+            });
+            await whenLoaded(tower);
+            const atlas = [...store.get('assets').textures.values()].find((texture) => texture.src.endsWith('atlas.png'))!;
+            expect(atlas.status).toBe('ready');
+
+            releaseAsset(store, tower);
+            expect(atlas.status).toBe('released');
+        } finally {
+            console.warn = warn;
+            served.restore();
+        }
+    });
+
+    it('keeps a shape it is made of, let go of by the game, until the model goes', async () => {
+        const served = serveGltf({ 'crate.glb': asGlb({ nodes: [{ name: 'Crate', primitives: [{ ...TEST_QUAD }] }] }) });
+        try {
+            const { store } = createTestGame();
+            let crate!: TGltfModel;
+            startTestScene(store, 'Shop', () => {
+                crate = useLoadGltf({ src: 'crate.glb' });
+                return createScene();
+            });
+            await whenLoaded(crate);
+            const shape = crate.parts[0]!.geometry;
+
+            expect(releaseAsset(store, shape)).toBe(true);
+            expect(shape.status).toBe('ready');
+
+            releaseAsset(store, crate);
+            expect(shape.status).toBe('released');
+        } finally {
             served.restore();
         }
     });

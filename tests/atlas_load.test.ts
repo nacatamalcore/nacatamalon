@@ -6,6 +6,7 @@ import { runHookUpdates } from '../src/game/loop/runHookUpdates';
 import { parseSceneDoc, sceneFromDoc, serializeScene, SCENE_FORMAT } from '../src/scene/document';
 import { whenLoaded } from '../src/loaders';
 import { createTestGame, startTestScene } from './helpers/test_game';
+import { createGameHandle } from '../src/game/handle';
 import type { TLoadedAtlas } from '../src/loaders';
 import type { TSprite } from '../src/gameobjects/sprite/types/t_sprite';
 import type { TBox } from '../src/box';
@@ -158,5 +159,60 @@ describe('a sprite in a scene document with an animation', () => {
 
     it('treats the old engine\'s `animation: null` as a still sprite', () => {
         expect(heroScene(null).root.components[0]).not.toHaveProperty('animation');
+    });
+});
+
+describe('a sheet let go of while it loads', () => {
+    /**
+     * A sheet asked for by a scene, with the file named by `held` kept back until `open` is called.
+     */
+    const halfway = (held: '.atlas' | '.png') => {
+        let open!: () => void;
+        const gate = new Promise<void>((done) => { open = done; });
+        Object.assign(globalThis, {
+            createImageBitmap: async () => ({ width: 32, height: 8, close: () => {} }),
+            location: { href: 'http://nacatamalon.local/' },
+        });
+        const asked: string[] = [];
+        const spy = spyOn(globalThis, 'fetch').mockImplementation((async (input: string) => {
+            const url = String(input);
+            asked.push(url);
+            if (url.endsWith(held)) await gate;
+            if (url.endsWith('.atlas')) return { ok: true, json: async () => ({ format: 1, kind: 'atlas', texture: 'hero.png', grid: { columns: 4, rows: 1 } }) };
+            if (url.endsWith('.png')) return { ok: true, blob: async () => new Blob(['png']) };
+            return { ok: false, status: 404 };
+        }) as unknown as typeof fetch);
+        served = { restore: () => spy.mockRestore() };
+        warn = spyOn(console, 'warn').mockImplementation(() => {});
+        const { store } = createTestGame();
+        let sheet!: TLoadedAtlas;
+        startTestScene(store, 'S', () => {
+            sheet = useLoadAtlas({ src: '/sheets/hero.atlas' });
+            return createScene();
+        });
+        return { store, sheet, open, asked };
+    };
+
+    it('stays let go of, with nothing said, when let go of before its file arrives', async () => {
+        const { store, sheet, open } = halfway('.atlas');
+        createGameHandle(store).releaseAsset(sheet);
+
+        open();
+        await whenLoaded(sheet);
+        expect(sheet.status).toBe('released');
+        expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('stays let go of, with nothing said, when let go of while its picture is on the way', async () => {
+        const { store, sheet, open, asked } = halfway('.png');
+        while (!asked.some((url) => url.endsWith('.png'))) {
+            await new Promise((done) => setTimeout(done, 0));
+        }
+        createGameHandle(store).releaseAsset(sheet);
+
+        open();
+        await whenLoaded(sheet);
+        expect(sheet.status).toBe('released');
+        expect(warn).not.toHaveBeenCalled();
     });
 });
