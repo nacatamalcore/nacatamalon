@@ -9,6 +9,7 @@ import { useLoadTexture } from '../src/hooks/loaders/use_load_texture';
 import { useCubeGeometry } from '../src/hooks/geometry/use_cube_geometry';
 import { newTexture, uploadTexture } from '../src/loaders';
 import { newAudio } from '../src/loaders/audio/new_audio';
+import { newFont } from '../src/loaders/font/new_font';
 import { loadLut, newLut } from '../src/loaders/lut';
 import { loadPalette, newPalette } from '../src/loaders/palette';
 import { loadShader, newShader } from '../src/loaders/shader';
@@ -18,13 +19,16 @@ import { createParticles } from '../src/gameobjects/particles';
 import { destroy } from '../src/destroy/destroy';
 import { flushDestroyed } from '../src/destroy/flush_destroyed';
 import { applyParticlesDoc } from '../src/gameobjects/particles/tools/apply_particles_doc';
-import { childFileFor } from '../src/loaders/particles/load_particles';
+import { childFileFor, loadParticles } from '../src/loaders/particles/load_particles';
 import { markAskedByGame } from '../src/loaders/asked_by_game';
 import { wearPicture } from '../src/loaders/worn_pictures';
 import { dropIdleEffectUser, noteEffectUser } from '../src/loaders/particles/effect_users';
 import type { TParticlesFile } from '../src/loaders/particles/types/t_particles_file';
 import { createGameHandle } from '../src/game/handle';
+import { editorHandleOf, openHost } from '../src/game/handle/editor_handle_of';
+import type { TGameInstance } from '../src/game/types/t_game_instance';
 import { createTestGame, startTestScene } from './helpers/test_game';
+import { effectDoc } from './helpers/particles';
 import type { TLoadStatus, TTexture } from '../src/loaders';
 import type { TGeometry } from '../src/geometry';
 import type { TRuntimeStore } from '../src/store';
@@ -392,6 +396,95 @@ describe('releaseAsset', () => {
         expect(shared.status).toBe('released');
     });
 
+    /**
+     * An effect written in code drawn by one emitter, setting off `shared` alone.
+     */
+    const drawnSettingOff = (store: ReturnType<typeof createTestGame>['store']) => {
+        let emitter!: ReturnType<typeof createParticles>;
+        startTestScene(store, 'S', () => {
+            emitter = createParticles({ effect: { kind: 'particles-2d', children: [{ on: 'death', src: '/fx/shared.particles' }] } as never });
+            return createScene();
+        });
+        return emitter;
+    };
+
+    it('lets go of an effect an edit no longer sets off, when nothing else wants it', () => {
+        const { store } = createTestGame();
+        const [rocket, sparks] = ['rocket', 'sparks'].map((name) => {
+            const file = newParticlesFile(`/fx/${name}.particles`, `/fx/${name}.particles`);
+            file.doc = effectDoc(name === 'rocket' ? { children: [{ on: 'death', src: 'sparks.particles' }] } : {});
+            file.status = 'ready';
+            store.get('assets').particles.set(file.key, file);
+            return file;
+        }) as [TParticlesFile, TParticlesFile];
+        rocket.children = [childFileFor(store, rocket, 'sparks.particles')];
+        let emitter!: ReturnType<typeof createParticles>;
+        startTestScene(store, 'S', () => {
+            emitter = createParticles({ effect: rocket });
+            return createScene();
+        });
+
+        applyParticlesDoc(emitter, { ...rocket.doc!, children: [] });
+        expect(sparks.status).toBe('released');
+        expect(rocket.status).toBe('ready');
+    });
+
+    it('keeps an effect an edit no longer sets off, while another still sets it off, and that one takes it', () => {
+        const { store, a, b, shared } = twoSettingOffOne();
+        const emitter = drawnSettingOff(store);
+        const game = createGameHandle(store);
+        game.releaseAsset(a);
+
+        applyParticlesDoc(emitter, { ...emitter.file.doc!, children: [] });
+        expect(shared.status).toBe('ready');
+        game.releaseAsset(b);
+        expect(shared.status).toBe('released');
+    });
+
+    it('keeps an effect an edit no longer sets off, when the game asked for it itself', () => {
+        const { store, a, b, shared } = twoSettingOffOne();
+        markAskedByGame(shared);
+        const emitter = drawnSettingOff(store);
+        const game = createGameHandle(store);
+        game.releaseAsset(a);
+        game.releaseAsset(b);
+
+        applyParticlesDoc(emitter, { ...emitter.file.doc!, children: [] });
+        expect(shared.status).toBe('ready');
+    });
+
+    it('leaves a picture made in the game that an effect it lets go of wore', () => {
+        const { store } = createTestGame();
+        let made!: TTexture;
+        startTestScene(store, 'S', () => {
+            made = createPixelTexture(createPixels(4, 4));
+            return createScene();
+        });
+        const file = newParticlesFile('/fx/glow.particles', '/fx/glow.particles');
+        file.texture = made;
+        file.status = 'ready';
+        store.get('assets').particles.set(file.key, file);
+
+        createGameHandle(store).releaseAsset(file);
+        expect(file.status as string).toBe('released');
+        expect(made.status).not.toBe('released');
+        expect(made.gpu).not.toBeNull();
+    });
+
+    it('takes the picture a font draws its letters into, with the font', () => {
+        const { store, renderer } = createTestGame();
+        const font = newFont('/fonts/a.ttf', '/fonts/a.ttf', 48);
+        font.status = 'ready';
+        font.texture.gpu = renderer.createTexture({ width: 16, height: 16, close: () => {} } as ImageBitmap);
+        font.texture.status = 'ready';
+        store.get('assets').fonts.set(font.key, font);
+        const gpu = font.texture.gpu;
+
+        createGameHandle(store).releaseAsset(font);
+        expect(renderer.destroyedTextures).toContain(gpu!);
+        expect(font.texture.status as string).toBe('released');
+    });
+
     it('can let an effect go again after a release that threw halfway', () => {
         const { store, a, shared } = twoSettingOffOne();
         const picture = loaded(store, 'spark');
@@ -627,5 +720,163 @@ describe('releaseAsset', () => {
         expect([parent.status, child.status]).toEqual(['released', 'released']);
         expect(spark.status).toBe('released');
         expect(spark.gpu).toBeNull();
+    });
+});
+
+describe('evictAsset', () => {
+    /**
+     * The editor's handle on a game, which forgets what changed on disk.
+     */
+    const editorOn = async (store: TRuntimeStore) => {
+        const instance: TGameInstance = { destroy: () => {}, on: () => () => {} };
+        openHost(instance).resolve(store);
+        return editorHandleOf(instance);
+    };
+
+    /**
+     * Two effect files in the game's cache, the first two setting off the third.
+     */
+    const twoSettingOffOne = () => {
+        const { store } = createTestGame();
+        const [a, b, shared] = ['a', 'b', 'shared'].map((name) => {
+            const file = newParticlesFile(`/fx/${name}.particles`, `/fx/${name}.particles`);
+            file.status = 'ready';
+            store.get('assets').particles.set(file.key, file);
+            return file;
+        }) as [TParticlesFile, TParticlesFile, TParticlesFile];
+        a.children = [childFileFor(store, a, 'shared.particles')];
+        b.children = [childFileFor(store, b, 'shared.particles')];
+        return { store, a, b, shared };
+    };
+
+    it('no longer counts what it forgot as setting off what it did', async () => {
+        const { store, a, b, shared } = twoSettingOffOne();
+        const editor = await editorOn(store);
+
+        expect(editor.evictAsset('/fx/a.particles')).toBe(true);
+        editor.releaseAsset(b);
+        expect([a.status, shared.status]).toEqual(['ready', 'released']);
+    });
+
+    it('lets go now of what the game let go of while what it forgot held it', async () => {
+        const { store, b, shared } = twoSettingOffOne();
+        const editor = await editorOn(store);
+        editor.releaseAsset(shared);
+        editor.releaseAsset(b);
+        expect(shared.status).toBe('ready');
+
+        editor.evictAsset('/fx/a.particles');
+        expect(shared.status).toBe('released');
+    });
+
+    it('lets go now of a picture the game let go of while an effect it forgot wore it', async () => {
+        const { store, a } = twoSettingOffOne();
+        const spark = loaded(store, 'spark');
+        a.texture = spark;
+        const editor = await editorOn(store);
+        editor.releaseAsset(spark);
+        expect(spark.status).toBe('ready');
+
+        editor.evictAsset('/fx/a.particles');
+        expect(spark.status).toBe('released');
+    });
+
+    it('stops one still on its way, so it takes nothing once it lands', async () => {
+        const asked: string[] = [];
+        const fetching = spyOn(globalThis, 'fetch').mockImplementation((async (input: string) => {
+            asked.push(String(input));
+            return { ok: true, json: async () => ({ kind: 'particles-2d', children: [{ on: 'death', src: 'sparks.particles' }] }) };
+        }) as never);
+        try {
+            const { store } = createTestGame();
+            const editor = await editorOn(store);
+            const rocket = newParticlesFile('/fx/rocket.particles', '/fx/rocket.particles');
+            store.get('assets').particles.set(rocket.key, rocket);
+            const loading = loadParticles(store, rocket);
+
+            editor.evictAsset('/fx/rocket.particles');
+            await loading;
+            expect(rocket.status).toBe('released');
+            expect(rocket.children).toEqual([]);
+            expect(asked).toEqual(['/fx/rocket.particles']);
+        } finally {
+            fetching.mockRestore();
+        }
+    });
+
+    it('leaves one still on its way that another effect sets off, so that one is not left without it', async () => {
+        let open!: () => void;
+        const held = new Promise<void>((done) => { open = done; });
+        const fetching = spyOn(globalThis, 'fetch').mockImplementation((async (input: string) => {
+            const url = String(input);
+            if (url === '/fx/sparks.particles') await held;
+            const body = url === '/fx/rocket.particles' ? { kind: 'particles-2d', children: [{ on: 'death', src: 'sparks.particles' }] } : { kind: 'particles-2d' };
+            return { ok: true, json: async () => body };
+        }) as never);
+        try {
+            const { store } = createTestGame();
+            const editor = await editorOn(store);
+            const rocket = newParticlesFile('/fx/rocket.particles', '/fx/rocket.particles');
+            store.get('assets').particles.set(rocket.key, rocket);
+            await loadParticles(store, rocket);
+            const sparks = rocket.children[0]!;
+            expect(sparks.status).toBe('loading');
+
+            editor.evictAsset('/fx/sparks.particles');
+            open();
+            await new Promise((done) => setTimeout(done, 10));
+            expect(rocket.children[0]).toBe(sparks);
+            expect(sparks.status).toBe('ready');
+            expect(sparks.doc).not.toBeNull();
+        } finally {
+            fetching.mockRestore();
+        }
+    });
+
+    it('takes one kept for an effect still setting it off off what it uses, once that one stops', async () => {
+        const { store } = createTestGame();
+        const [r, s, g] = ['r', 's', 'g'].map((name) => {
+            const file = newParticlesFile(`/fx/${name}.particles`, `/fx/${name}.particles`);
+            file.status = 'ready';
+            store.get('assets').particles.set(file.key, file);
+            return file;
+        }) as [TParticlesFile, TParticlesFile, TParticlesFile];
+        r.children = [childFileFor(store, r, 's.particles')];
+        s.children = [childFileFor(store, s, 'g.particles')];
+        const editor = await editorOn(store);
+
+        editor.evictAsset('/fx/s.particles');
+        editor.evictAsset('/fx/r.particles');
+        editor.releaseAsset(g);
+        expect(g.status).toBe('released');
+    });
+
+    it('does the same when the game lets go of the one setting it off, and the game had drawn it too', async () => {
+        const { store } = createTestGame();
+        const [r, s, g] = ['r', 's', 'g'].map((name) => {
+            const file = newParticlesFile(`/fx/${name}.particles`, `/fx/${name}.particles`);
+            file.status = 'ready';
+            store.get('assets').particles.set(file.key, file);
+            return file;
+        }) as [TParticlesFile, TParticlesFile, TParticlesFile];
+        r.children = [childFileFor(store, r, 's.particles')];
+        s.children = [childFileFor(store, s, 'g.particles')];
+        markAskedByGame(s);
+        const editor = await editorOn(store);
+
+        editor.evictAsset('/fx/s.particles');
+        editor.releaseAsset(r);
+        expect(s.status).toBe('ready');
+        editor.releaseAsset(g);
+        expect(g.status).toBe('released');
+    });
+
+    it('forgets it under every name it was kept under', async () => {
+        const { store, a } = twoSettingOffOne();
+        store.get('assets').particles.set('rocket', a);
+        const editor = await editorOn(store);
+
+        editor.evictAsset('/fx/a.particles');
+        expect([...store.get('assets').particles.values()]).not.toContain(a);
     });
 });

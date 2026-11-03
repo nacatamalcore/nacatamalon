@@ -159,6 +159,22 @@ export const releaseWhenUnworn = (texture: TTexture, finish: () => void): void =
 };
 
 /**
+ * Asks again whether `texture`, let go of while something held it, can go now: that something has
+ * stopped holding it in a way nothing else would hear of.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const askAgainUnworn = (texture: TTexture): void => {
+    const finish = waiting.get(texture);
+    if (finish !== undefined) {
+        waiting.delete(texture);
+        finish();
+    }
+};
+
+/**
  * Notes `by` on `texture` again if it is one that counts only while drawn, now it is drawn again.
  *
  * @internal

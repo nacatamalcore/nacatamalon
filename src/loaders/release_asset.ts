@@ -8,13 +8,13 @@ import type { TTexture } from './texture/types/t_texture';
 import type { TGeometry } from '../geometry/types/t_geometry';
 import type { TAsset } from './types/t_asset';
 import { findAsset } from './asset_key';
-import { picturesWornBy, releaseWhenUnworn, stopWearing, wornByAnother } from './worn_pictures';
+import { askAgainUnworn, picturesWornBy, releaseWhenUnworn, stopWearing, stopWearingForOthers, wornByAnother } from './worn_pictures';
 import { askedByGame, forgetAskedByGame } from './asked_by_game';
 import { leaveSheet, releaseWhenUnused, stopUsingSheet } from './sheet_users';
 import { freeTexture } from './texture/free_texture';
 import type { TLoadedAtlas } from './atlas/types/t_loaded_atlas';
 import type { TParticlesFile } from './particles/types/t_particles_file';
-import { leaveEffect, releaseWhenUnset, stillSetOff } from './particles/effect_users';
+import { forgetWhenUnset, leaveEffect, releaseWhenUnset, stillSetOff, stopSettingOff } from './particles/effect_users';
 
 /**
  * Whether a drawing shows `thing`: as its picture (a sprite, a panel, particles), as a model's
@@ -71,8 +71,8 @@ const end = (store: TRuntimeStore, asset: TAsset): void => {
 };
 
 /**
- * Lets a texture go, off the card. Made ones too: this is also how a font's or an atlas's own
- * picture goes with it.
+ * Lets a texture go, off the card. Made ones too: this is also how a font's own picture goes with
+ * it.
  */
 const releaseTexture = (store: TRuntimeStore, texture: TTexture | null): void => {
     if (texture === null || texture.status === 'released') {
@@ -107,21 +107,26 @@ const picturesOf = (asset: TAsset): Array<TTexture | null> => {
  *
  * Also how the game lets go of a picture itself, with `leaving` the picture: then it waits for
  * whatever still wears it.
+ *
+ * `made` for a picture `leaving` made itself, as a font draws its letters: one made in the game
+ * otherwise goes only with whatever made it, never with a file that wore it.
  */
-const releaseWorn = (store: TRuntimeStore, texture: TTexture | null, leaving: TAsset): void => {
+const releaseWorn = (store: TRuntimeStore, texture: TTexture | null, leaving: TAsset, made = false): void => {
     // One the game asked for itself goes when the game lets go of it, not with a file that names it.
-    if (texture === null || askedByGame(texture)) {
+    if (texture === null || askedByGame(texture) || (!made && isMadeTexture(texture))) {
         return;
     }
     if (wornByAnother(texture, leaving)) {
         // Another model goes the same way when it is let go of; an effect written in code is let go
         // of by nobody, so it finishes this when it stops being drawn.
-        releaseWhenUnworn(texture, () => { releaseWorn(store, texture, leaving); });
+        releaseWhenUnworn(texture, () => { releaseWorn(store, texture, leaving, made); });
         return;
     }
     for (const cache of Object.values(store.get('assets')) as Map<string, TAsset>[]) {
         for (const other of cache.values()) {
             if (other !== leaving && other.status !== 'released' && picturesOf(other).includes(texture)) {
+                // That one finishes this when it is let go of, and so does taking it out of the game.
+                releaseWhenUnworn(texture, () => { releaseWorn(store, texture, leaving, made); });
                 return;
             }
         }
@@ -213,6 +218,18 @@ const releaseWhenNotSetOff = (store: TRuntimeStore, child: TParticlesFile): void
 };
 
 /**
+ * Lets go of an effect another one no longer sets off, now it has been edited not to, unless
+ * something else still wants it: it came in only for that one, and would have gone with it.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const releaseUnnamed = (store: TRuntimeStore, child: TParticlesFile): void => {
+    releaseWhenNotSetOff(store, child);
+};
+
+/**
  * Lets go of an effect another one set off, with that one, unless something else still wants it.
  */
 const releaseChild = (store: TRuntimeStore, child: TParticlesFile, leaving: TParticlesFile): void => {
@@ -236,8 +253,11 @@ const releaseOne = (store: TRuntimeStore, asset: TAsset): void => {
             return;
         case 'atlas':
         case 'bitmap-font':
-        case 'font':
             releaseWorn(store, asset.texture, asset);
+            break;
+        case 'font':
+            // Its letters are drawn into a picture of its own.
+            releaseWorn(store, asset.texture, asset, true);
             break;
         case 'gltf':
             for (const part of asset.parts) {
@@ -342,6 +362,49 @@ const letGo = (store: TRuntimeStore, asset: TAsset): void => {
             return;
         default:
             releaseOne(store, asset);
+    }
+};
+
+/**
+ * Takes `asset` off what it uses, as it is taken out of the game to be loaded afresh: the effects it
+ * sets off, the sheet it takes its frames from, the pictures it wears. Each stays for whatever else
+ * uses it, and one let go of while this one held it goes now. Nothing of its own is let go: what
+ * still shows it keeps what it had until its scene is built again. An effect another one still sets
+ * off is left as it is, since that one still sets it off, and is taken off what it uses once nothing
+ * does.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const stopHolding = (asset: TAsset): void => {
+    // An effect another one still sets off is still in the game through that one, which goes on
+    // setting off this very record: it holds what it holds, and goes with the last of them.
+    if (asset.type === 'particles-file' && stillSetOff(asset)) {
+        forgetWhenUnset(asset, () => { stopHolding(asset); });
+        return;
+    }
+    // One still on its way would take them again when it lands. Ended, its loader hears it and stops;
+    // nothing of it is drawn yet, so nothing goes blank.
+    if (asset.status === 'loading' && (asset.type === 'particles-file' || asset.type === 'tilemap-asset' || asset.type === 'gltf')) {
+        asset.status = 'released';
+        bumpVersion(asset);
+    }
+    if (asset.type === 'particles-file') {
+        for (const child of asset.children) {
+            if (child !== null) {
+                stopSettingOff(child, asset);
+            }
+        }
+    }
+    if ((asset.type === 'particles-file' || asset.type === 'tilemap-asset') && (asset.atlas as { type?: unknown } | null)?.type === 'atlas') {
+        stopUsingSheet(asset.atlas as TLoadedAtlas, asset);
+    }
+    stopWearingForOthers(asset);
+    for (const texture of picturesOf(asset)) {
+        if (texture !== null) {
+            askAgainUnworn(texture);
+        }
     }
 };
 

@@ -296,13 +296,15 @@ const particlesOf = (child: TChildParticles, kind: 'particles-2d' | 'particles-3
 
 /**
  * Sets off every child that goes off `when`, from where particle `i` is in the world. Its
- * particles stay in the world once born: they are sparks left behind, not a cloud that follows.
+ * particles stay in the world once born: they are sparks left behind, not a cloud that follows,
+ * even when the child's own file says it rides its emitter, since what set it off is no emitter.
  */
 const setOff2d = (state: TParticleState, doc: TParticlesDoc2d, placement: TTransform2d, when: 'birth' | 'death', i: number, depth: number): void => {
     const { pool } = state;
     let x = pool.x[i]!;
     let y = pool.y[i]!;
-    if (!doc.worldSpace) {
+    // Only the first effect may ride its emitter: below it, every particle is in the world already.
+    if (!doc.worldSpace && depth === 0) {
         const cos = Math.cos(placement.rotation);
         const sin = Math.sin(placement.rotation);
         const sx = x * placement.scaleX;
@@ -323,7 +325,7 @@ const setOff2d = (state: TParticleState, doc: TParticlesDoc2d, placement: TTrans
             setOffAt2d.x = x;
             setOffAt2d.y = y;
             setOffAt2d.rotation = rotation;
-            const slot = emitOne(own, childDoc, setOffAt2d, undefined);
+            const slot = emitOne(own, childDoc, setOffAt2d, undefined, true);
             if (atBirth && slot >= 0) {
                 setOff2d(own, childDoc, setOffAt2d, 'birth', slot, depth + 1);
             }
@@ -341,7 +343,7 @@ const setOff3d = (state: TParticleState, doc: TParticlesDoc3d, matrix: Float32Ar
     const y = pool.y[i]!;
     const z = pool.z[i]!;
     const m = matrix;
-    const world = doc.worldSpace
+    const world = doc.worldSpace || depth > 0
         ? { x, y, z }
         : {
             x: m[0]! * x + m[4]! * y + m[8]! * z + m[12]!,
@@ -369,7 +371,7 @@ const setOff3d = (state: TParticleState, doc: TParticlesDoc3d, matrix: Float32Ar
         const childDoc = child.file.doc as TParticlesDoc3d;
         const atBirth = setsOff(own, 'birth');
         for (let k = 0; k < child.count; k++) {
-            const slot = emitOne3d(own, childDoc, setOffAt3d, undefined);
+            const slot = emitOne3d(own, childDoc, setOffAt3d, undefined, true);
             if (atBirth && slot >= 0) {
                 // Its own copy: what this one sets off in turn writes over the shared one.
                 const here = setOffAt3d.slice();
@@ -533,8 +535,8 @@ export const simulateParticles = (
         pool.rotation[i]! += pool.spin[i]! * delta;
     }
     // Only for particles that have a place in the world. A cloud riding its emitter has none of its
-    // own, and the loader has said so.
-    if (doc.collision !== null && doc.worldSpace && colliders.length > 0) {
+    // own, and the loader has said so; one set off by another effect is born in the world, and has.
+    if (doc.collision !== null && (doc.worldSpace || depth > 0) && colliders.length > 0) {
         collide2d(pool, doc.collision, colliders);
     }
     // Where each one is now, for its tail.
@@ -613,7 +615,7 @@ export const simulateParticles3d = (
         pool.z[i]! += pool.vz[i]! * delta;
         pool.rotation[i]! += pool.spin[i]! * delta;
     }
-    if (doc.collision !== null && doc.worldSpace && colliders.length > 0) {
+    if (doc.collision !== null && (doc.worldSpace || depth > 0) && colliders.length > 0) {
         collide3d(pool, doc.collision, colliders);
     }
     keepTails(state, delta);

@@ -135,6 +135,9 @@ export type TEditorHandle = TGameHandle & {
      * Forgets whatever was loaded under this key, so the next load reads the file again, and says
      * whether anything was. For a file that changed on disk: a game's files never change, so a game
      * never needs it. What is already on screen keeps what it had until its scene is built again.
+     *
+     * What it forgets no longer holds what it used (the effects it set off, its sheet, its pictures):
+     * each stays for whatever else uses it, and one let go of while it held it goes now.
      */
     evictAsset(key: string): boolean;
     /**

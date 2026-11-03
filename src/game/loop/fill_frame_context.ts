@@ -39,7 +39,6 @@ import type { TSceneColliders } from '../../gameobjects/particles/collide';
 import type { TSceneLighting } from './helper/collect_lights';
 import type { TCamera3d } from '../../camera/types/t_camera_3d';
 import type { TRenderPass } from '../../render/interface';
-import type { TTexture } from '../../loaders';
 import { rootOf } from '../../box';
 import type { TBox } from '../../box';
 import { ownerOfDrawable } from '../../box/drawable_owner';

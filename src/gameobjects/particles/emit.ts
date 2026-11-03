@@ -58,6 +58,9 @@ const bornAt = (rand: () => number, shape: TEmitShape2d): { x: number; y: number
  * was born with, so resizing an emitter mid-flight reaches the cloud over one lifetime instead of
  * snapping it.
  *
+ * `inWorld` is whether it is born in the world or in the emitter's own space: what its file says,
+ * except for one set off by another effect, which is always born in the world, where it was set off.
+ *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -67,6 +70,7 @@ export const emitOne = (
     doc: TParticlesDoc2d,
     placement: TTransform2d,
     overrides: TParticleOverrides | undefined,
+    inWorld = doc.worldSpace,
 ): number => {
     const slot = takeSlot(state.pool);
     if (slot === -1) {
@@ -83,8 +87,8 @@ export const emitOne = (
     // Kept in the emitter's own space when the effect asks for that: born unplaced, unturned and
     // unscaled, because the emitter's placement is laid over it every frame when it is drawn. That
     // is what makes the cloud travel with the emitter, and placing it here too would place it twice.
-    const where = doc.worldSpace ? placement : HERE;
-    const travel = doc.worldSpace ? magnitude : 1;
+    const where = inWorld ? placement : HERE;
+    const travel = inWorld ? magnitude : 1;
 
     const local = bornAt(rand, doc.shape);
     const turned = where.rotation;

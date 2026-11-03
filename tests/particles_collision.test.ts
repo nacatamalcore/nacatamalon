@@ -113,6 +113,23 @@ describe('a flat particle meeting a shape', () => {
         expect(pool.vx[0]).toBeCloseTo(32, 5);
     });
 
+    it('collides when set off by another effect, even from a file that rides its emitter', () => {
+        const doc = effectDoc({ worldSpace: false, collision: { mode: 'die' }, life: 5, max: 4 });
+        const ground = [placeCollider2d(flat({ kind: 'rect', width: 100, height: 20 }), place2())];
+        const inside = (depth: number): number => {
+            const state = createParticleState(doc, 3);
+            state.pool.live = 1;
+            state.pool.life[0] = 5;
+            state.pool.y[0] = 2;
+            simulateParticles(state, doc as Parameters<typeof simulateParticles>[1], FRAME, place2(), false, noTint, 0, undefined, ground, depth);
+            return state.pool.live;
+        };
+
+        // Drawn by an emitter, it has no place of its own; set off, it was born in the world.
+        expect(inside(0)).toBe(1);
+        expect(inside(1)).toBe(0);
+    });
+
     it('ends there instead, for an effect that dies', () => {
         const pool = one([10, 2, 0], [0, 100, 0]);
         collide2d(pool, DIE, [placeCollider2d(flat({ kind: 'rect', width: 100, height: 20 }), place2())]);

@@ -303,6 +303,51 @@ describe('editing a running effect', () => {
     });
 });
 
+describe('editing an effect another one sets off', () => {
+    /**
+     * Sparks, drawn on their own by one emitter and set off by a rocket drawn by another, both running.
+     */
+    const both = () => {
+        const { store } = createTestGame();
+        const sparks = newParticlesFile('/fx/sparks.particles', '/fx/sparks.particles');
+        sparks.doc = effectDoc({ max: 8, life: 5, speed: 0, emission: { rate: 0, burst: 0 } });
+        sparks.status = 'ready';
+        store.get('assets').particles.set(sparks.key, sparks);
+        let rocket!: ReturnType<typeof createParticles>;
+        let alone!: ReturnType<typeof createParticles>;
+        startTestScene(store, 'S', () => {
+            rocket = createParticles({ effect: { kind: 'particles-2d', max: 2, life: 5, emission: { rate: 0, burst: 1, loop: false }, children: [{ on: 'birth', src: '/fx/sparks.particles', count: 2 }] } as never });
+            alone = createParticles({ effect: '/fx/sparks.particles' });
+            return createScene();
+        });
+        const state = particleStateOf(rocket)!;
+        simulateParticles(state, rocket.file.doc as never, 1 / 60, somewhere(), true, noTint, 0);
+        return { state, rocket, alone, sparks, setOff: () => state.children[0]!.state };
+    };
+
+    it('changes the sparks the rocket already set off, keeping them in the air', () => {
+        const { alone, sparks, setOff } = both();
+        const before = setOff()!;
+        expect(before.pool.live).toBe(2);
+
+        applyParticlesDoc(alone, { ...sparks.doc!, sizeOverLife: [{ t: 0, scale: 3 }, { t: 1, scale: 3 }] } as never);
+
+        expect(setOff()).toBe(before);
+        expect(before.pool.live).toBe(2);
+        expect([before.scaleTable[0], before.scaleTable[before.scaleTable.length - 1]]).toEqual([3, 3]);
+    });
+
+    it('makes the rocket\'s sparks again when they cannot be changed in place', () => {
+        const { state, rocket, alone, sparks, setOff } = both();
+
+        applyParticlesDoc(alone, { ...sparks.doc!, max: 30 } as never);
+        expect(setOff()).toBeNull();
+
+        simulateParticles(state, rocket.file.doc as never, 1 / 60, somewhere(), true, noTint, 0);
+        expect(setOff()!.pool.capacity).toBe(30);
+    });
+});
+
 describe('an effect written in code that sets off a file', () => {
     it('asks for it afresh when used again after it was let go of', async () => {
         serve({ '/c.particles': { kind: 'particles-2d' } });
@@ -437,6 +482,42 @@ describe('an effect set off by another', () => {
 
         expect(sparks()!.pool.x[0]!).toBeCloseTo(100, 4);
         expect(sparks()!.pool.y[0]!).toBeCloseTo(50, 4);
+    });
+
+    it('goes off where it was set off, for a child whose own file rides its emitter', () => {
+        const { state, step, sparks } = rocketWithSparks('death');
+        const child = state.children[0]!.file;
+        child.doc = { ...child.doc!, worldSpace: false } as never;
+        step();
+        for (let i = 0; i < 10 && state.pool.live > 0; i++) step();
+
+        // Where the rocket burnt out, as for any other child, not at the corner of the world.
+        expect(sparks()!.pool.live).toBe(4);
+        expect(sparks()!.pool.x[0]!).toBeGreaterThan(10);
+    });
+
+    it('sets off its own where it was born, for a child whose own file rides its emitter', () => {
+        const warn = quiet();
+        const files = ['a', 'b', 'c'].map((name) => {
+            const file = newParticlesFile(`/${name}.particles`, name);
+            file.status = 'ready';
+            return file;
+        });
+        const [a, b, c] = files as [TParticlesFile, TParticlesFile, TParticlesFile];
+        a.doc = effectDoc({ max: 1, life: 5, speed: 0, emission: { rate: 0, burst: 1, duration: 0, loop: false }, children: [{ on: 'birth', src: '/b.particles', count: 1 }] });
+        b.doc = effectDoc({ max: 1, life: 5, speed: 0, worldSpace: false, emission: { rate: 0, burst: 0 }, children: [{ on: 'birth', src: '/c.particles', count: 1 }] });
+        c.doc = effectDoc({ max: 1, life: 5, speed: 0, emission: { rate: 0, burst: 0 } });
+        a.children = [b];
+        b.children = [c];
+        const state = effectState(a.doc);
+        state.children = childrenOf(a);
+        simulateParticles(state, a.doc as never, 1 / 60, somewhere({ x: 100, y: 50 }), true, noTint, 0);
+
+        const middle = state.children[0]!.state!;
+        const last = middle.children[0]!.state!;
+        expect([middle.pool.x[0]!, middle.pool.y[0]!]).toEqual([100, 50]);
+        expect([last.pool.x[0]!, last.pool.y[0]!]).toEqual([100, 50]);
+        expect(warn).not.toHaveBeenCalled();
     });
 
     it('goes off when a particle is born, from where it was born', () => {

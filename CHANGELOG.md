@@ -153,6 +153,20 @@ releases are in [changelog/](./changelog/), one file each.
 - **A model that fails to load no longer keeps the pictures others use.** A picture the game or
   another model also wore stayed until the failed model was let go of too. The ones it sent for
   itself still go with it.
+- **An effect set off by another is born where it was set off, whatever its own file says.** One
+  whose file rides its emitter (`worldSpace: false`) came out at the corner of the world, and what it
+  set off in turn was placed twice. In the plane and in space. Being in the world, it collides too.
+- **Editing an effect reaches the particles other effects set off from it.** Edited through an emitter
+  of its own, the sparks a rocket was already setting off kept the old curves and the old children;
+  now they change too, and are made again when they cannot be changed in place.
+- **An effect an edit no longer sets off goes**, unless the game asked for it or something else still
+  sets it off. It stayed in the game for good, since it would only have gone with the one that named
+  it.
+- **What the editor forgets no longer holds what it used.** An effect, a map or a model taken out to
+  be loaded afresh still counted as setting off its children, using its sheet and wearing its
+  pictures, so those stayed for good; and one the game had let go of meanwhile never went. It is also
+  forgotten under every name it was kept under, and one still on its way stops there rather than
+  taking them again when it lands.
 - **An effect's chain reaches as far as its particles do.** A firework whose sparks leave embers that
   leave smoke lost its smoke when followed from one file: the loader stopped one step short of the
   simulation, and a file refused its children that way kept the refusal even when asked for on its

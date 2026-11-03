@@ -322,7 +322,9 @@ export type TParticlesDoc2d = {
      * Whether a particle keeps living where it was born when the emitter moves on.
      *
      * `true`, the default, is what a trail of smoke behind a moving thing needs. `false` drags the
-     * whole cloud along with the emitter, which is what a magical aura wants.
+     * whole cloud along with the emitter, which is what a magical aura wants. An effect set off by
+     * another is always born in the world, where it was set off, whatever this says: what set it off
+     * is no emitter to follow.
      */
     worldSpace: boolean;
     emission: TEmissionDoc;

@@ -12,6 +12,8 @@ import { replaceSongDoc } from '../../loaders/song';
 import { replaceMotionDoc } from '../../loaders/motion';
 import { endMotionPreview, previewMotion } from '../../motion/preview_motion';
 import { assetKey } from '../../loaders/asset_key';
+import { stopHolding } from '../../loaders/release_asset';
+import type { TAsset } from '../../loaders/types/t_asset';
 
 /**
  * Each game's running state, reachable from the instance `createGame` handed back.
@@ -132,14 +134,33 @@ export const editorHandleOf = async (instance: TGameInstance): Promise<TEditorHa
         setPostUniforms: (index, values) => tuneProjectPostEffect(store, index, values),
         getPostEffects: () => store.get('post').effects,
         evictAsset: (key) => {
-            let dropped = false;
             // Under its key, or under the path it resolves to when it was loaded with none.
             const resolved = assetKey(key);
-            for (const cache of Object.values(store.get('assets'))) {
-                dropped = cache.delete(key) || dropped;
-                dropped = cache.delete(resolved) || dropped;
+            const dropped = new Set<TAsset>();
+            for (const cache of Object.values(store.get('assets')) as Map<string, TAsset>[]) {
+                for (const name of [key, resolved]) {
+                    const held = cache.get(name);
+                    if (held !== undefined) {
+                        dropped.add(held);
+                        cache.delete(name);
+                    }
+                }
             }
-            return dropped;
+            // Under every other name too: still found under one, it would be used again holding
+            // nothing.
+            for (const cache of Object.values(store.get('assets')) as Map<string, TAsset>[]) {
+                for (const [name, held] of cache) {
+                    if (dropped.has(held)) {
+                        cache.delete(name);
+                    }
+                }
+            }
+            // Out of the game, it holds nothing for anyone: what it used is left to what else uses
+            // it, and the copy loaded afresh asks for it again.
+            for (const held of dropped) {
+                stopHolding(held);
+            }
+            return dropped.size > 0;
         },
         updateSong: (src, doc) => replaceSongDoc(store, src, doc),
         updateMotion: (src, doc) => replaceMotionDoc(store, src, doc),

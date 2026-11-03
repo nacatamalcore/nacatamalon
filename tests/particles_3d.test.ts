@@ -5,7 +5,7 @@ import { createScene } from '../src/scene/create_scene';
 import { createMesh } from '../src/gameobjects/mesh';
 import { createParticles, createParticles3d, emitParticles } from '../src/gameobjects/particles';
 import { createParticleState } from '../src/gameobjects/particles/particle_pool';
-import { openParticleState, particleStateOf } from '../src/gameobjects/particles/particle_state';
+import { childrenOf, openParticleState, particleStateOf } from '../src/gameobjects/particles/particle_state';
 import { simulateParticles, simulateParticles3d } from '../src/gameobjects/particles/simulate_particles';
 import { newParticlesFile } from '../src/loaders/particles/new_particles_file';
 import { parseParticlesDoc } from '../src/loaders/particles/parse_particles_doc';
@@ -247,6 +247,28 @@ describe('particles that travel with their emitter', () => {
 
         expect(drawnX(false)).toEqual([0, 10]);
         expect(drawnX(true)).toEqual([0, 0]);
+    });
+
+    it('but one set off by another effect is born where it was set off, and sets off its own there', () => {
+        const files = ['a', 'b', 'c'].map((name) => {
+            const file = newParticlesFile(`/${name}.particles`, name);
+            file.status = 'ready';
+            return file;
+        }) as [TParticlesFile, TParticlesFile, TParticlesFile];
+        const [a, b, c] = files;
+        a.doc = deep({ max: 1, life: 5, speed: 0, emission: { rate: 0, burst: 1, duration: 0, loop: false }, children: [{ on: 'birth', src: '/b.particles', count: 1 }] });
+        b.doc = deep({ max: 1, life: 5, speed: 0, worldSpace: false, emission: { rate: 0, burst: 0 }, children: [{ on: 'birth', src: '/c.particles', count: 1 }] });
+        c.doc = deep({ max: 1, life: 5, speed: 0, emission: { rate: 0, burst: 0 } });
+        a.children = [b];
+        b.children = [c];
+        const state = createParticleState(a.doc, 7);
+        state.children = childrenOf(a);
+        simulateParticles3d(state, a.doc as TParticlesDoc3d, FRAME, placed({ x: 10, y: 5, z: -3 }), true, noTint);
+
+        const middle = state.children[0]!.state!;
+        const last = middle.children[0]!.state!;
+        expect(living(middle).map(({ x, y, z }) => [x, y, z])).toEqual([[10, 5, -3]]);
+        expect(living(last).map(({ x, y, z }) => [x, y, z])).toEqual([[10, 5, -3]]);
     });
 
     it('in the plane: the same, turn included', () => {

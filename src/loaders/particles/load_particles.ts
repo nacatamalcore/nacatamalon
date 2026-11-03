@@ -200,7 +200,8 @@ export const loadParticles = async (store: TRuntimeStore, file: TParticlesFile):
             console.warn(
                 `[NacatamalOn] particles "${file.src}" says how it collides but travels with its ` +
                 'emitter ("worldSpace": false), so its particles have no place of their own in the ' +
-                'world to collide at. It is drawn without colliding.',
+                'world to collide at. Drawn by an emitter, it does not collide; set off by another ' +
+                'effect, it is born in the world and does.',
             );
         }
 
@@ -228,6 +229,10 @@ export const loadParticles = async (store: TRuntimeStore, file: TParticlesFile):
             }
         }
     } catch (error: unknown) {
+        // Nobody is waiting for a file that was let go of, to hear that it did not arrive either.
+        if (file.status === 'released') {
+            return;
+        }
         file.status = 'error';
         bumpVersion(file);
         console.warn(

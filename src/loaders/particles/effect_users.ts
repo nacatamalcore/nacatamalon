@@ -22,6 +22,23 @@ const whileDrawn = new WeakSet<TParticlesFile>();
 const waiting = new WeakMap<TParticlesFile, () => void>();
 
 /**
+ * Effects taken out of the game while another still set them off, with what takes them off what they
+ * hold once nothing sets them off any more: until then they are still in the game through that one.
+ */
+const forgotten = new WeakMap<TParticlesFile, () => void>();
+
+/**
+ * Finishes forgetting `child` if nothing wanting it sets it off any more.
+ */
+const settleForgotten = (child: TParticlesFile): void => {
+    const finish = forgotten.get(child);
+    if (finish !== undefined && !stillSetOff(child)) {
+        forgotten.delete(child);
+        finish();
+    }
+};
+
+/**
  * Notes that the particles of `by` set off `child`. `drawn` for one that counts only while it has
  * emitters.
  *
@@ -65,6 +82,7 @@ export const dropIdleEffectUser = (child: TParticlesFile, by: TParticlesFile): v
             // Asked again from the start: what else may want it is decided there, not here.
             finish();
         }
+        settleForgotten(child);
     }
 };
 
@@ -83,6 +101,7 @@ export const stopSettingOff = (child: TParticlesFile, by: TParticlesFile): void 
         waiting.delete(child);
         finish();
     }
+    settleForgotten(child);
 };
 
 /**
@@ -98,6 +117,28 @@ export const releaseWhenUnset = (child: TParticlesFile, finish: () => void): voi
 };
 
 /**
+ * The effects noted as setting off `child`, for an edit of it to reach the particles each of them
+ * set off.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const effectsSettingOff = (child: TParticlesFile): TParticlesFile[] => [...(users.get(child) ?? [])];
+
+/**
+ * Notes that `child` was taken out of the game while another effect still set it off, and what
+ * finishes that once nothing does.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const forgetWhenUnset = (child: TParticlesFile, finish: () => void): void => {
+    forgotten.set(child, finish);
+};
+
+/**
  * Takes `by` off `child`: an effect let go of, which no longer sets it off.
  *
  * @internal
@@ -106,6 +147,7 @@ export const releaseWhenUnset = (child: TParticlesFile, finish: () => void): voi
  */
 export const leaveEffect = (child: TParticlesFile, by: TParticlesFile): void => {
     users.get(child)?.delete(by);
+    settleForgotten(child);
 };
 
 /**

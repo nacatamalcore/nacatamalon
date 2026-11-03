@@ -16,6 +16,8 @@ import { useSpawn } from '../src/hooks/spawn';
 import { useTransform } from '../src/hooks/transform';
 import { serveTilemap, TEST_ATLAS, TEST_MAP } from './helpers/test_tilemap';
 import { createGameHandle } from '../src/game/handle';
+import { editorHandleOf, openHost } from '../src/game/handle/editor_handle_of';
+import type { TGameInstance } from '../src/game/types/t_game_instance';
 import { sheetUsersOf } from '../src/loaders/sheet_users';
 import type { TLoadedAtlas } from '../src/loaders/atlas/types/t_loaded_atlas';
 import type { TFrameContext } from '../src/render';
@@ -535,6 +537,21 @@ describe('a map let go of while it loads', () => {
         await whenLoaded(map);
         expect(map.status).toBe('released');
         expect(map.layers).toHaveLength(0);
+    });
+
+    it('holds no sheet once the editor forgets it while it waits, and the sheet the game let go of goes', async () => {
+        const { store, atlas, map, open } = await halfway();
+        const instance: TGameInstance = { destroy: () => {}, on: () => () => {} };
+        openHost(instance).resolve(store);
+        const editor = await editorHandleOf(instance);
+
+        editor.evictAsset('/maps/level.tilemap');
+        editor.releaseAsset(atlas);
+        open();
+        await whenLoaded(map);
+        await whenLoaded(atlas);
+        expect(sheetUsersOf(atlas)).not.toContain(map);
+        expect(atlas.status).toBe('released');
     });
 
     it('holds no sheet once it could not be loaded', async () => {

@@ -112,9 +112,10 @@ const aimedWithin = (rand: () => number, direction: TParticlesDoc3d['direction']
  * one axis at a time would bend it, and a square facing the camera stretched that way would lean as
  * the camera moved.
  *
- * With `local` set the particle is kept in the emitter's own space instead, unplaced and unscaled,
+ * With `inWorld` false the particle is kept in the emitter's own space instead, unplaced and unscaled,
  * and the emitter's placement is laid over it every frame when it is drawn. That is what makes the
- * cloud travel with the emitter.
+ * cloud travel with the emitter. It is what its file says, except for one set off by another effect,
+ * which is always born in the world, where it was set off.
  *
  * @internal
  * @since 1.0.0
@@ -125,6 +126,7 @@ export const emitOne3d = (
     doc: TParticlesDoc3d,
     matrix: Float32Array,
     overrides: TParticleOverrides | undefined,
+    inWorld = doc.worldSpace,
 ): number => {
     const slot = takeSlot(state.pool);
     if (slot === -1) {
@@ -133,7 +135,7 @@ export const emitOne3d = (
 
     const { pool } = state;
     const rand = (): number => state.random.rand();
-    const local = !doc.worldSpace;
+    const local = !inWorld;
 
     // The three columns of the matrix are the emitter's own axes, each as long as its stretch.
     const stretchX = Math.hypot(matrix[0]!, matrix[1]!, matrix[2]!);
