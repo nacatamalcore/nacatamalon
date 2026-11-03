@@ -3,6 +3,8 @@ import { buildUniformLayout, MAX_MATERIAL_FLOATS, writeUniformValues } from '../
 import { compileProgram } from '../utils/compile_program';
 import { MATERIAL_UNIFORMS_BINDING } from './uniform_block';
 import { FRAME_UNIFORMS_BINDING } from '../bindings';
+import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
+import { createFlatMapBinder, placeFlatMaps } from './flat_maps';
 import type { TDrawShader } from '../../interface/draw/t_draw_material';
 import type { TUniformLayout } from '../../shared/material_uniforms';
 import type { TUniformSignature, TUniformValues } from '../../../materials';
@@ -17,6 +19,10 @@ type TCompiled = {
      * Once true, this material is drawn with the built-in shader and nothing is tried again.
      */
     failed: boolean;
+    /**
+     * The maps the shader reads, in the order of the units they are bound on.
+     */
+    mapNames: string[];
 };
 
 /**
@@ -35,8 +41,9 @@ type TCompiled = {
  */
 export const createSpriteMaterials = (
     gl: WebGL2RenderingContext,
-    buildShader: (fragment: string, sig: TUniformSignature) => { vertex: string; fragment: string } = buildSpriteMaterialShaderGlsl,
+    buildShader: (fragment: string, sig: TUniformSignature, mapNames: readonly string[]) => { vertex: string; fragment: string } = buildSpriteMaterialShaderGlsl,
 ) => {
+    const maps = createFlatMapBinder(gl);
     const compiled = new Map<string, TCompiled>();
     const values = new Float32Array(MAX_MATERIAL_FLOATS);
     /**
@@ -59,11 +66,19 @@ export const createSpriteMaterials = (
 
     const build = (material: TDrawShader): TCompiled => {
         const layout = buildUniformLayout(material.uniformSig ?? {});
+        const mapNames = mapNamesOf(material.fragmentGlsl);
         // Too many numbers for its slot. Said once where it was made (`checkParameterRoom`).
         if (layout.floatCount > MAX_MATERIAL_FLOATS) {
-            return { program: null, layout, failed: true };
+            return { program: null, layout, failed: true, mapNames };
         }
-        const sources = buildShader(material.fragmentGlsl as string, material.uniformSig ?? {});
+        if (mapNames.length > MAX_MATERIAL_MAPS) {
+            console.warn(
+                `[NacatamalOn] the material "${material.name ?? 'sprite material'}" reads ${mapNames.length} maps ` +
+                `(${mapNames.join(', ')}) and a material has ${MAX_MATERIAL_MAPS}. It is drawing with the built-in shader instead.`,
+            );
+            return { program: null, layout, failed: true, mapNames };
+        }
+        const sources = buildShader(material.fragmentGlsl as string, material.uniformSig ?? {}, mapNames);
 
         try {
             const program = compileProgram(
@@ -80,15 +95,16 @@ export const createSpriteMaterials = (
             // answer arrived at by luck.
             gl.useProgram(program);
             gl.uniform1i(gl.getUniformLocation(program, 'spriteTexture'), 0);
+            placeFlatMaps(gl, program);
             gl.useProgram(null);
-            return { program, layout, failed: false };
+            return { program, layout, failed: false, mapNames };
         } catch (error) {
             console.warn(
                 `[NacatamalOn] the material "${material.name ?? 'sprite material'}" did not compile on WebGL2. ` +
                 'It is drawing with the built-in shader instead.',
                 error,
             );
-            return { program: null, layout, failed: true };
+            return { program: null, layout, failed: true, mapNames };
         }
     };
 
@@ -129,17 +145,20 @@ export const createSpriteMaterials = (
             return entry;
         },
         /**
-         * Writes this batch's numbers and binds them: the material's, with the one sprite's own laid
-         * over them when it brought any.
+         * Writes this batch's numbers and binds them, the material's with the one sprite's own laid
+         * over them when it brought any, and binds the material's maps.
          */
         bind: (
             entry: TCompiled,
-            uniforms: TUniformValues,
+            material: TDrawShader,
             overrides: TUniformValues | null,
             time: number,
             width: number,
             height: number,
+            smooth: boolean,
         ): void => {
+            const uniforms = material.uniforms ?? {};
+            maps.bind(material, entry.mapNames, smooth);
             if (parameters === null) {
                 parameters = gl.createBuffer();
                 gl.bindBuffer(gl.UNIFORM_BUFFER, parameters);
@@ -165,6 +184,7 @@ export const createSpriteMaterials = (
                 gl.deleteBuffer(parameters);
                 parameters = null;
             }
+            maps.destroy();
         },
     };
 };

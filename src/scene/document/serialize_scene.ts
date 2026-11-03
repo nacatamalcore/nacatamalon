@@ -133,6 +133,8 @@ const writeMaterial = (material: TMaterial, writing: TWriting): TMaterialDoc => 
         vertex: file === null ? material.vertex : null,
         vertexGlsl: file === null ? material.vertexGlsl : null,
         uniforms: material.uniforms === null || Object.keys(material.uniforms).length === 0 ? null : { ...material.uniforms },
+        // A model's are written with its surface, further down its own document.
+        ...(material.shader === 'sprite2d' ? writeMaps(material.maps, writing) : {}),
     };
 };
 
@@ -161,11 +163,11 @@ const writtenWrap = (wrap: TMeshMaterial['wrap']): Pick<TMeshMaterialDoc, 'wrap'
  * A material's extra maps, each by the key of its picture, with the pictures listed among what the
  * scene loads (except those the game paints itself, which have no file).
  */
-const writeMaps = (maps: TMeshMaterial['maps'], writing: TWriting): Pick<TMeshMaterialDoc, 'maps'> => {
+const writeMaps = (maps: TMeshMaterial['maps'], writing: TWriting): Pick<TMaterialDoc, 'maps'> => {
     if (maps === undefined || Object.keys(maps).length === 0) {
         return {};
     }
-    const written: NonNullable<TMeshMaterialDoc['maps']> = {};
+    const written: NonNullable<TMaterialDoc['maps']> = {};
     for (const [name, map] of Object.entries(maps)) {
         listTexture(map.texture, writing);
         written[name] = {

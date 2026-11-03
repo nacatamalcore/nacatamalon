@@ -64,5 +64,9 @@ export const stepSceneTilemaps = (drawables: TDrawable[], start: number): void =
         drawn.smooth = source.smooth;
         drawn.material = source.material;
         drawn.uniforms = source.uniforms;
+        const { map } = source;
+        if (drawn.size === undefined || drawn.size.width !== map.width * map.cell || drawn.size.height !== map.height * map.cell) {
+            drawn.size = { width: map.width * map.cell, height: map.height * map.cell };
+        }
     }
 };

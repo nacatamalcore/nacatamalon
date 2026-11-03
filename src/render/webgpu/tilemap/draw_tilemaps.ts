@@ -81,7 +81,9 @@ const layerBindGroup = (device: GPUDevice, tilemaps: TTilemapPipeline, slot: num
     floats[at + 3] = transform.scaleY;
     floats[at + 4] = transform.rotation;
     floats[at + 5] = view;
-    // 6 and 7 are padding: the colour has to start on a round number of bytes.
+    // What layerUv() runs across. It also keeps the colour starting on a round number of bytes.
+    floats[at + 6] = layer.size?.width ?? 0;
+    floats[at + 7] = layer.size?.height ?? 0;
     floats[at + 8] = layer.tint.r;
     floats[at + 9] = layer.tint.g;
     floats[at + 10] = layer.tint.b;
@@ -153,7 +155,7 @@ export const drawTilemapLayer = (
 
     if (effect !== null) {
         gpuPass.setBindGroup(tilemaps.materials.group, tilemaps.materials.bind(
-            effect, material!.uniforms ?? {}, layer.uniforms ?? null, time, width, height,
+            effect, material!, layer.uniforms ?? null, time, width, height, layer.smooth ?? tilemaps.defaultSmooth,
         ));
     }
 

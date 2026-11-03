@@ -227,6 +227,28 @@ export type TSpriteMaterialOptions = TMaterialShaderOptions & {
      * code: that is `effect` (or `fragment`).
      */
     shader?: 'sprite2d';
+    /**
+     * Extra pictures for the shader to read by name, up to four, each a texture or a texture with its
+     * own `wrap` and `smooth`. In the shader, `sampleMap_<name>(uv)` reads the one under that name,
+     * and `localUv()` is where this pixel is across what is drawn, 0 to 1: the whole sprite, one tile
+     * of a map (`layerUv()` is across the whole layer), one letter of a text, one piece of a
+     * nine-slice. A mask that stays put while the sprite animates is read there, and not at the `uv`
+     * of the sheet.
+     *
+     * @example
+     * ```ts
+     * // The enemy crumbles into grain as `gone` goes from 0 to 1.
+     * const crumble = createMaterial({
+     *     maps: { grain: createPixelTexture(fillNoise(createPixels(32, 32), { scale: 4 })) },
+     *     fragment: `fn effect(color: vec4f, uv: vec2f) -> vec4f {
+     *         if (sampleMap_grain(localUv()).r < mu.gone) { return vec4f(0.0); }
+     *         return color;
+     *     }`,
+     *     uniforms: { gone: 0 },
+     * });
+     * ```
+     */
+    maps?: Record<string, TTexture | TMaterialMap>;
 };
 
 /**

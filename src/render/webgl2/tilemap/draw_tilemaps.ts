@@ -75,7 +75,8 @@ export const drawTilemapLayer = (
     gl.uniform4f(places.tint, layer.tint.r, layer.tint.g, layer.tint.b, layer.tint.a);
 
     if (effect !== null) {
-        tilemaps.materials.bind(effect, material!.uniforms ?? {}, layer.uniforms ?? null, time, width, height);
+        tilemaps.materials.bind(effect, material!, layer.uniforms ?? null, time, width, height, layer.smooth ?? tilemaps.defaultSmooth);
+        gl.uniform2f(effect.locations.size ?? null, layer.size?.width ?? 0, layer.size?.height ?? 0);
     }
 
     gl.activeTexture(gl.TEXTURE0);

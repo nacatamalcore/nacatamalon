@@ -53,6 +53,8 @@ out vec2 vUv;
 flat out vec4 vWindow;
 // 1 for a sprite whose read wraps round inside its window, laying its picture again and again.
 flat out float vRepeat;
+// Where this pixel is across the sprite as it is drawn, 0 to 1: what a material's localUv() reads.
+out vec2 vAcross;
 
 void main() {
     // corner goes from -0.5 to 0.5, and the anchor says which point of the quad sits on the position.
@@ -81,6 +83,8 @@ void main() {
     // Lowest and highest rather than start and width, because a mirrored sprite has a negative one.
     vWindow = vec4(min(uvOffset, far), max(uvOffset, far));
     vRepeat = (tiles != vec2(1.0) || shift != vec2(0.0)) ? 1.0 : 0.0;
+    // The whole sprite, turned over with the picture when its frame is read the other way round.
+    vAcross = mix(corner + 0.5, 0.5 - corner, vec2(lessThan(uvScale, vec2(0.0))));
 }
 `;
 

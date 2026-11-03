@@ -37,7 +37,7 @@ import { useTransform } from '../../hooks/transform/use_transform';
 import { whenLoaded } from '../../loaders';
 import { createRecord } from '../../gameobjects/create_record';
 import { nanoId } from '../../utils/nano_id';
-import type { TGltfModel } from '../../loaders';
+import type { TGltfModel, TTexture } from '../../loaders';
 import type { TGeometry } from '../../geometry';
 import type { TAssetEntry } from './types/t_asset_entry';
 import type { TBox } from '../../box';
@@ -168,17 +168,40 @@ const loadGeometry = (asset: Extract<TAssetEntry, { type: 'geometry' }>, src: st
 };
 
 /**
+ * A material's maps from the keys of their pictures. One whose picture is not there is left out, and
+ * reads as white.
+ */
+const mapsFrom = (written: TMaterialDoc['maps'], assets: { textures: Map<string, TTexture> }, src: string): Record<string, TMaterialMap> => {
+    const maps: Record<string, TMaterialMap> = {};
+    for (const [name, map] of Object.entries(written ?? {})) {
+        const picture = found(assets.textures, map.texture, 'material', src);
+        if (picture !== undefined) {
+            maps[name] = {
+                texture: picture,
+                ...(map.wrap !== undefined ? { wrap: map.wrap } : {}),
+                ...(map.smooth !== undefined ? { smooth: map.smooth } : {}),
+            };
+        }
+    }
+    return maps;
+};
+
+/**
  * A material as the engine holds one, from a material as the file wrote one.
  */
-const buildMaterial = (doc: TMaterialDoc): TSpriteMaterial => createMaterial({
-    ...(doc.name !== null ? { name: doc.name } : {}),
-    ...(doc.effect !== null ? { effect: doc.effect } : {}),
-    ...(doc.fragment !== null ? { fragment: doc.fragment } : {}),
-    ...(doc.fragmentGlsl !== null ? { fragmentGlsl: doc.fragmentGlsl } : {}),
-    ...(doc.vertex !== null ? { vertex: doc.vertex } : {}),
-    ...(doc.vertexGlsl !== null ? { vertexGlsl: doc.vertexGlsl } : {}),
-    ...(doc.uniforms !== null ? { uniforms: doc.uniforms } : {}),
-}) as TSpriteMaterial;
+const buildMaterial = (doc: TMaterialDoc, assets: { textures: Map<string, TTexture> }, src: string): TSpriteMaterial => {
+    const maps = mapsFrom(doc.maps, assets, src);
+    return createMaterial({
+        ...(doc.name !== null ? { name: doc.name } : {}),
+        ...(doc.effect !== null ? { effect: doc.effect } : {}),
+        ...(doc.fragment !== null ? { fragment: doc.fragment } : {}),
+        ...(doc.fragmentGlsl !== null ? { fragmentGlsl: doc.fragmentGlsl } : {}),
+        ...(doc.vertex !== null ? { vertex: doc.vertex } : {}),
+        ...(doc.vertexGlsl !== null ? { vertexGlsl: doc.vertexGlsl } : {}),
+        ...(doc.uniforms !== null ? { uniforms: doc.uniforms } : {}),
+        ...(Object.keys(maps).length > 0 ? { maps } : {}),
+    }) as TSpriteMaterial;
+};
 
 /**
  * Anything a scene asked to load, found again by the key the document used.
@@ -198,7 +221,7 @@ const found = <T>(cache: Map<string, T>, key: string, what: string, src: string)
  * individual layers. They are applied when the file lands, not now: a map comes back empty and fills
  * itself in, so writing into its layers at this moment would be writing into an empty list.
  */
-const buildTilemap = (doc: TTilemapComponent): void => {
+const buildTilemap = (doc: TTilemapComponent, assets: { textures: Map<string, TTexture> }, src: string): void => {
     const map = createTilemap({
         src: doc.map,
         key: doc.map,
@@ -223,7 +246,7 @@ const buildTilemap = (doc: TTilemapComponent): void => {
             if (change.tint !== undefined) layer.tint = change.tint;
             if (change.visible !== undefined) layer.visible = change.visible;
             if (change.zIndex !== undefined) layer.zIndex = change.zIndex;
-            if (change.material !== undefined) layer.material = buildMaterial(change.material);
+            if (change.material !== undefined) layer.material = buildMaterial(change.material, assets, src);
             if (change.uniforms !== undefined) layer.uniforms = change.uniforms;
         }
     });
@@ -403,7 +426,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                 ...(component.parallax !== undefined ? { parallax: { ...component.parallax } } : {}),
                 ...(component.visible !== undefined ? { visible: component.visible } : {}),
                 ...(component.zIndex !== undefined ? { zIndex: component.zIndex } : {}),
-                ...(component.material !== undefined ? { material: buildMaterial(component.material) } : {}),
+                ...(component.material !== undefined ? { material: buildMaterial(component.material, assets, src) } : {}),
                 ...(component.uniforms !== undefined ? { uniforms: component.uniforms } : {}),
             });
             sprite.id = component.id;
@@ -446,7 +469,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                 ...(component.parallax !== undefined ? { parallax: { ...component.parallax } } : {}),
                 ...(component.visible !== undefined ? { visible: component.visible } : {}),
                 ...(component.zIndex !== undefined ? { zIndex: component.zIndex } : {}),
-                ...(component.material !== undefined ? { material: buildMaterial(component.material) } : {}),
+                ...(component.material !== undefined ? { material: buildMaterial(component.material, assets, src) } : {}),
                 ...(component.uniforms !== undefined ? { uniforms: component.uniforms } : {}),
             });
             panel.id = component.id;
@@ -475,7 +498,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                 ...(component.parallax !== undefined ? { parallax: { ...component.parallax } } : {}),
                 ...(component.visible !== undefined ? { visible: component.visible } : {}),
                 ...(component.zIndex !== undefined ? { zIndex: component.zIndex } : {}),
-                ...(component.material !== undefined ? { material: buildMaterial(component.material) } : {}),
+                ...(component.material !== undefined ? { material: buildMaterial(component.material, assets, src) } : {}),
                 ...(component.uniforms !== undefined ? { uniforms: component.uniforms } : {}),
             });
             label.id = component.id;
@@ -497,17 +520,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
             // One whose picture is not there is left out, and the model is drawn wide open.
             const occlusionTexture = surface.occlusion === undefined ? undefined : found(assets.textures, surface.occlusion.texture, 'model', src);
             // Each map by its picture's key; one whose picture is not there is left out and reads white.
-            const maps: Record<string, TMaterialMap> = {};
-            for (const [name, map] of Object.entries(surface.maps ?? {})) {
-                const picture = found(assets.textures, map.texture, 'model', src);
-                if (picture !== undefined) {
-                    maps[name] = {
-                        texture: picture,
-                        ...(map.wrap !== undefined ? { wrap: map.wrap } : {}),
-                        ...(map.smooth !== undefined ? { smooth: map.smooth } : {}),
-                    };
-                }
-            }
+            const maps = mapsFrom(surface.maps, assets, src);
             const model = createMesh({
                 ...(component.transform !== undefined ? { transform: component.transform } : {}),
                 geometry,
@@ -559,7 +572,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
             break;
         }
         case 'tilemap':
-            buildTilemap(component);
+            buildTilemap(component, assets, src);
             break;
         case 'particles':
         case 'particles-3d': {

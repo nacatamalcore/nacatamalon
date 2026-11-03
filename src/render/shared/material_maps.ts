@@ -1,8 +1,10 @@
 /**
- * How many extra maps a model's material may carry besides its picture.
+ * How many extra maps a material may carry besides its picture.
  *
- * Fixed, and small, on purpose: every material shader declares this many slots whether it uses them
- * or not, so there is one layout on each backend and nothing to rebuild when a material gains a map.
+ * Fixed, and small, on purpose: a model's shader on both cards, and every material shader on WebGPU,
+ * declares this many slots whether it uses them or not, so there is one layout and nothing to rebuild
+ * when a material gains a map. A sprite's or a map layer's on WebGL2 declares only what it reads,
+ * because a material that reads none is drawn without binding its units (see `flatMapsGlsl`).
  * Four covers what the consoles of the era combined in practice (a picture, a reflection, a detail
  * and a mask) with room to spare.
  *

@@ -21,7 +21,7 @@ import { shapeRolesOf } from '../../../mask/create_mask';
 import { maskLevelFor, masksNow, noteShape } from '../../../mask/mask_walk';
 import type { TMask } from '../../../mask/types/t_mask';
 import type { TMaskLevel, TMaskWalk } from '../../../mask/mask_walk';
-import { showsPicture, standInFor, viewKeeps, viewWalk } from './view_walk';
+import { pictureBeingDrawn, showsPicture, standInFor, viewKeeps, viewWalk } from './view_walk';
 
 /**
  * A placement to put children inside, or `null` for "nothing above has moved anything".
@@ -450,12 +450,14 @@ export const collectDrawables = (
     const parallax = pinned ? null : box.parallax ?? inherited;
     // What is pinned to the screen is drawn at zoom 1, where a pixel of the screen is one of the game.
     const perUnit = pixelsPerUnit(snap, pinned ? null : camera);
+    const into = pictureBeingDrawn();
     for (const record of box.drawables) {
         // A view leaves out what shows its own picture, and does not draw what its filter does not
         // take in; what it keeps whose place hangs on the camera, it draws as a copy of its own (see
         // `standInFor`). What the filter leaves out may still be a mask's shape, which cuts what the
-        // view does draw.
-        if (walk !== null && showsPicture(record, walk.own)) {
+        // view does draw. What a picture's own component makes that shows that picture is left out
+        // the same way.
+        if ((walk !== null && showsPicture(record, walk.own)) || (into !== null && showsPicture(record, into))) {
             continue;
         }
         const filtered = walk !== null && !viewKeeps(walk, record, box);

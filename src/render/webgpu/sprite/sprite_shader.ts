@@ -73,6 +73,9 @@ struct VertexOut {
     @location(2) @interpolate(flat) window: vec4f,
     // 1 for a sprite whose read wraps round inside its window, laying its picture again and again.
     @location(3) @interpolate(flat) repeat: f32,
+    // Where this pixel is across the sprite as it is drawn, 0 to 1, whatever part of the sheet it
+    // shows: what a material's localUv() reads.
+    @location(4) across: vec2f,
 };
 
 // The read, kept inside the window so a pixel that landed on the boundary between two columns of
@@ -136,6 +139,10 @@ fn vs(@location(0) corner: vec2f, inst: Instance) -> VertexOut {
     let far = inst.uvOffset + inst.uvScale;
     out.window = vec4f(min(inst.uvOffset, far), max(inst.uvOffset, far));
     out.repeat = select(0.0, 1.0, any(inst.tiles != vec2f(1.0)) || any(inst.shift != vec2f(0.0)));
+    // The whole sprite, laid once however many times its picture repeats, and turned over with the
+    // picture when its frame is read the other way round, so a mask follows the drawing.
+    let mirrored = inst.uvScale < vec2f(0.0);
+    out.across = select(corner + 0.5, 0.5 - corner, mirrored);
     return out;
 }
 

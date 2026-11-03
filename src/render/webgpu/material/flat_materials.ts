@@ -1,11 +1,14 @@
 
 import { failWithLines } from './fail_with_lines';
 import { buildUniformLayout, MAX_MATERIAL_FLOATS, writeUniformValues } from '../../shared/material_uniforms';
+import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
+import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
+import { toGpuTexture } from '../texture';
 import { FLAT_DEPTH } from '../frame/depth';
 import { ADDITIVE_BLEND, ALPHA_BLEND } from '../frame/blend';
 import type { TDrawShader } from '../../interface/draw/t_draw_material';
 import type { TUniformLayout } from '../../shared/material_uniforms';
-import type { TUniformSignature, TUniformValues } from '../../../materials';
+import type { TTextureWrap, TUniformSignature, TUniformValues } from '../../../materials';
 
 /**
  * What tells one flat pipeline from another: the groups it already binds, the corners it reads, how
@@ -31,7 +34,16 @@ export type TFlatMaterialKind = {
     shared: GPUBindGroupLayout[];
     vertexBuffers: GPUVertexBufferLayout[];
     topology: GPUPrimitiveTopology;
-    build: (fragment: string, sig: TUniformSignature) => string;
+    build: (fragment: string, sig: TUniformSignature, mapNames: readonly string[]) => string;
+};
+
+/**
+ * The card's name for each thing a picture can do past its edge.
+ */
+const ADDRESS_MODE: Record<TTextureWrap, GPUAddressMode> = {
+    repeat: 'repeat',
+    clamp: 'clamp-to-edge',
+    mirror: 'mirror-repeat',
 };
 
 /**
@@ -58,6 +70,10 @@ type TCompiled = {
      * drawn, as a sprite is not drawn until its sheet is there.
      */
     pending: boolean;
+    /**
+     * The maps the shader reads, in the order of their slots.
+     */
+    mapNames: string[];
 };
 
 /**
@@ -73,9 +89,18 @@ type TCompiled = {
  * @author Francisco Pereira Alvarado
  */
 export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) => {
+    // The knobs, then a sampler and a picture for each of the four maps, used or not, so every flat
+    // material has one layout.
+    const mapEntries: GPUBindGroupLayoutEntry[] = [];
+    for (let i = 0; i < MAX_MATERIAL_MAPS; i++) {
+        mapEntries.push(
+            { binding: 1 + i * 2, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+            { binding: 2 + i * 2, visibility: GPUShaderStage.FRAGMENT, texture: {} },
+        );
+    }
     const materialLayout = device.createBindGroupLayout({
         label: `${kind.label} material layout`,
-        entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }],
+        entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }, ...mapEntries],
     });
     const pipelineLayout = device.createPipelineLayout({
         label: `${kind.label} material pipeline layout`,
@@ -87,7 +112,65 @@ export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) 
     const values = new Float32Array(MAX_MATERIAL_FLOATS);
 
     let slots: GPUBuffer | null = null;
-    let slotBindGroups: Array<GPUBindGroup | undefined> = [];
+    /**
+     * Each slot's group, with the pictures and samplers it was made for: made again only when those
+     * change, which for a sprite that keeps its maps is never.
+     */
+    let slotBindGroups: Array<{ key: string; group: GPUBindGroup } | undefined> = [];
+
+    /**
+     * A white pixel, read by a map the material does not carry or one still loading: a map is a
+     * second picture, and what wears it should not vanish while one is on its way.
+     */
+    let white: GPUTexture | null = null;
+    const whiteTexture = (): GPUTexture => {
+        if (white === null) {
+            white = device.createTexture({
+                label: `${kind.label} material white`,
+                size: [1, 1],
+                format: 'rgba8unorm',
+                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+            });
+            device.queue.writeTexture({ texture: white }, new Uint8Array([255, 255, 255, 255]), { bytesPerRow: 4 }, [1, 1]);
+        }
+        return white;
+    };
+    /**
+     * Every way a map can be read, made the first time it is asked for.
+     */
+    const samplers = new Map<string, GPUSampler>();
+    const samplerOf = (filter: 'nearest' | 'linear', u: TTextureWrap, v: TTextureWrap): GPUSampler => {
+        const key = wrapKey(filter, u, v);
+        let sampler = samplers.get(key);
+        if (sampler === undefined) {
+            sampler = device.createSampler({
+                label: `${kind.label} map ${key}`,
+                magFilter: filter,
+                minFilter: filter,
+                addressModeU: ADDRESS_MODE[u],
+                addressModeV: ADDRESS_MODE[v],
+            });
+            samplers.set(key, sampler);
+        }
+        return sampler;
+    };
+    /**
+     * A number for each picture, so a slot's group can tell whether it still binds the same ones.
+     */
+    const ids = new WeakMap<GPUTexture, number>();
+    let nextId = 0;
+    const idOf = (texture: GPUTexture): number => {
+        let id = ids.get(texture);
+        if (id === undefined) {
+            id = nextId++;
+            ids.set(texture, id);
+        }
+        return id;
+    };
+    /**
+     * Which materials have been said to read a map they do not carry, by material and name.
+     */
+    const warned = new Set<string>();
     let capacity = 0;
     let used = 0;
 
@@ -110,13 +193,21 @@ export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) 
     const build = (material: TDrawShader, additive: boolean): TCompiled => {
         const layout = buildUniformLayout(material.uniformSig ?? {});
         const source = material.fragment as string;
+        const mapNames = mapNamesOf(source);
 
         // Too many numbers for its slot. Said once where it was made (`checkParameterRoom`).
         if (layout.floatCount > MAX_MATERIAL_FLOATS) {
-            return { pipeline: null, layout, failed: true, pending: false };
+            return { pipeline: null, layout, failed: true, pending: false, mapNames };
+        }
+        if (mapNames.length > MAX_MATERIAL_MAPS) {
+            console.warn(
+                `[NacatamalOn] the material "${material.name ?? 'flat material'}" reads ${mapNames.length} maps ` +
+                `(${mapNames.join(', ')}) and a material has ${MAX_MATERIAL_MAPS}. It is drawing with the built-in shader instead.`,
+            );
+            return { pipeline: null, layout, failed: true, pending: false, mapNames };
         }
 
-        const entry: TCompiled = { pipeline: null, layout, failed: false, pending: true };
+        const entry: TCompiled = { pipeline: null, layout, failed: false, pending: true, mapNames };
         const fail = (reason: unknown): void => {
             if (entry.failed) {
                 return;
@@ -135,7 +226,7 @@ export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) 
         device.pushErrorScope('validation');
         const module = device.createShaderModule({
             label: `flat material ${material.name ?? material.id}`,
-            code: kind.build(source, material.uniformSig ?? {}),
+            code: kind.build(source, material.uniformSig ?? {}, mapNames),
         });
         void device.popErrorScope();
 
@@ -201,19 +292,23 @@ export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) 
             return entry;
         },
         /**
-         * Takes a slot, fills it with this batch's numbers, and hands back the group that reads it.
+         * Takes a slot, fills it with this batch's numbers, and hands back the group that reads them
+         * and the material's maps.
          *
          * The numbers are the material's, with the one sprite's own laid over them when it brought
-         * any, which is what a property block is.
+         * any, which is what a property block is. A map is read as smoothly as it says, or as the
+         * sheet it is drawn over (`smooth`) when it says nothing.
          */
         bind: (
             entry: TCompiled,
-            uniforms: TUniformValues,
+            material: TDrawShader,
             overrides: TUniformValues | null,
             time: number,
             width: number,
             height: number,
+            smooth: boolean,
         ): GPUBindGroup => {
+            const uniforms = material.uniforms ?? {};
             // `beginFrame` made room for every batch this frame has, so this cannot run out. If it
             // ever did, the last slot is reused rather than the buffer replaced mid-frame.
             const slot = Math.min(used, capacity - 1);
@@ -229,23 +324,59 @@ export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) 
                 entry.layout.floatCount * 4,
             );
 
-            let group = slotBindGroups[slot];
-            if (group === undefined) {
-                group = device.createBindGroup({
-                    label: `flat material slot ${slot}`,
-                    layout: materialLayout,
-                    entries: [{
-                        binding: 0,
-                        resource: {
-                            buffer: slots as GPUBuffer,
-                            offset: slot * FLAT_MATERIAL_STRIDE,
-                            size: FLAT_MATERIAL_STRIDE,
-                        },
-                    }],
-                });
-                slotBindGroups[slot] = group;
+            const views: GPUTexture[] = [];
+            const readers: GPUSampler[] = [];
+            const keys: string[] = [];
+            // A shader that reads none still has the four slots to fill, with the same white each
+            // frame, so there is nothing to look up for it.
+            const reads = entry.mapNames.length > 0;
+            const kept = slotBindGroups[slot];
+            if (!reads && kept !== undefined && kept.key === 'none') {
+                return kept.group;
             }
-            return group;
+            for (let i = 0; i < MAX_MATERIAL_MAPS; i++) {
+                const name = entry.mapNames[i];
+                const map = name === undefined ? undefined : material.maps?.[name];
+                if (name !== undefined && map === undefined) {
+                    const said = `${material.name ?? material.id} ${name}`;
+                    if (!warned.has(said)) {
+                        warned.add(said);
+                        console.warn(`[NacatamalOn] the material "${material.name ?? 'flat material'}" reads the map '${name}' and has none by that name, so it reads as white. Add it to the material's maps.`);
+                    }
+                }
+                const ready = map !== undefined && map.texture.status === 'ready' && map.texture.gpu !== null;
+                const view = ready ? toGpuTexture(map.texture.gpu!) : whiteTexture();
+                const filter = (map?.smooth ?? smooth) ? 'linear' : 'nearest';
+                const { u, v } = textureWrapOf(map ?? {});
+                views.push(view);
+                readers.push(samplerOf(filter, u, v));
+                keys.push(`${idOf(view)} ${wrapKey(filter, u, v)}`);
+            }
+            const key = reads ? keys.join('|') : 'none';
+
+            let held = slotBindGroups[slot];
+            if (held === undefined || held.key !== key) {
+                const entries: GPUBindGroupEntry[] = [{
+                    binding: 0,
+                    resource: {
+                        buffer: slots as GPUBuffer,
+                        offset: slot * FLAT_MATERIAL_STRIDE,
+                        size: FLAT_MATERIAL_STRIDE,
+                    },
+                }];
+                for (let i = 0; i < MAX_MATERIAL_MAPS; i++) {
+                    entries.push(
+                        { binding: 1 + i * 2, resource: readers[i]! },
+                        { binding: 2 + i * 2, resource: views[i]!.createView() },
+                    );
+                }
+                held = {
+                    key,
+                    group: device.createBindGroup({ label: `flat material slot ${slot}`, layout: materialLayout, entries }),
+                };
+                slotBindGroups[slot] = held;
+            }
+            return held.group;
         },
         /**
          * Which group number the parameters are bound at, so the draw and the shader agree.
@@ -256,6 +387,9 @@ export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) 
             slots = null;
             slotBindGroups = [];
             capacity = 0;
+            white?.destroy();
+            white = null;
+            samplers.clear();
         },
     };
 };

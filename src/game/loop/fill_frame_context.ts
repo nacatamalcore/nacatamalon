@@ -2,7 +2,7 @@ import type { TFog } from '../../fog/types/t_fog';
 import type { TDrawable } from '../../gameobjects/types';
 import { screenSizeOf } from '../../DOM/screen_size';
 import { collectDrawables, notePinnedInto } from './helper/collect_drawables';
-import { viewWalk, walkingView } from './helper/view_walk';
+import { drawingPicture, showsPicture, viewWalk, walkingView } from './helper/view_walk';
 import type { TViewWalk } from './helper/view_walk';
 import { pictureMadeAt } from '../../gameobjects/sprite_texture/create_sprite_texture';
 import type { TSpriteTexture } from '../../gameobjects/sprite_texture/types';
@@ -777,29 +777,6 @@ const gatherTree = (
 };
 
 /**
- * Whether a model shows `texture`, as its picture, its glow's, its occlusion's or one of its maps,
- * which it must not while that texture is being drawn into.
- */
-const shows = (item: TDrawable | TDrawSprite, texture: TTexture): boolean => {
-    if (item.type !== 'mesh') {
-        return false;
-    }
-    if (item.material.texture === texture || item.material.emissiveTexture === texture || item.material.occlusion?.texture === texture) {
-        return true;
-    }
-    const maps = item.material.maps;
-    if (maps === undefined) {
-        return false;
-    }
-    for (const name in maps) {
-        if (maps[name]!.texture === texture) {
-            return true;
-        }
-    }
-    return false;
-};
-
-/**
  * The pass each picture is drawn in, kept between frames like the screen's.
  */
 const picturePasses = new WeakMap<TBox, TRenderPass>();
@@ -829,14 +806,16 @@ const notePicturesShown = (items: ReadonlyArray<unknown>, into: Set<unknown>): v
         if (drawn.texture !== undefined) {
             into.add(drawn.texture);
         }
+        // A model's maps, and those of the material over a sprite, a letter or a map's layer.
+        const maps = (item as { material?: { maps?: Readonly<Record<string, { texture: unknown }>> } }).material?.maps;
+        for (const name in maps ?? {}) {
+            into.add(maps![name]!.texture);
+        }
         if (drawn.type === 'mesh') {
             const material = (item as TDrawable & { type: 'mesh' }).material;
             into.add(material.texture);
             into.add(material.emissiveTexture);
             into.add(material.occlusion?.texture);
-            for (const name in material.maps ?? {}) {
-                into.add(material.maps![name]!.texture);
-            }
         } else if ((drawn.type === 'particles' || drawn.type === 'particles-3d') && 'file' in drawn) {
             const file = (item as TDrawable & { type: 'particles' }).file;
             into.add(file.atlas?.texture ?? file.texture);
@@ -967,7 +946,8 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
         lists.views3d.push({ camera: drawnThrough(seenThrough, flat), cullingCamera: skippedBy(seenThrough, flat), lights: lighting.lights, ambient: ownAmbientOf(box) ?? lighting.ambient, fog: box.fog ?? seen.fog });
         const first = lists.drawables.length;
         for (const model of seen.models) {
-            if (shows(model, picture.texture)) {
+            // Whatever wears the picture this pass draws into: a model, or an effect's particles.
+            if (showsPicture(model as TDrawable, picture.texture)) {
                 continue;
             }
             lists.drawables.push(model);
@@ -986,7 +966,7 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
         pictureColliders.set(box, colliders);
     }
     const found: TBox[] = [];
-    const own = gatherTree(box, lists, delta, colliders, found, lookedThrough, false, { width: picture.texture.width, height: picture.texture.height });
+    const own = drawingPicture(picture.texture, () => gatherTree(box, lists, delta, colliders, found, lookedThrough, false, { width: picture.texture.width, height: picture.texture.height }));
 
     let pass = picturePasses.get(box);
     if (pass === undefined) {

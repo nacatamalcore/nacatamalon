@@ -67,6 +67,12 @@ export type TShaderHalf = {
  */
 export type TSpriteMaterial = TShaderHalf & {
     shader: 'sprite2d';
+    /**
+     * Extra pictures for its shader to read, by name, up to four: `sampleMap_<name>(uv)` reads the
+     * one under that name, usually at `localUv()`, across what is drawn. Read every frame, so
+     * swapping one shows at once.
+     */
+    maps?: Record<string, TMaterialMap>;
 };
 
 /**
@@ -104,8 +110,8 @@ export type TTextureWrap = 'repeat' | 'clamp' | 'mirror';
 export type TCullMode = 'back' | 'front' | 'none';
 
 /**
- * One extra picture a model's material carries for its shader to read, besides the picture it is
- * covered with: a reflection, a mask, a fine detail, a ripple.
+ * One extra picture a material carries for its shader to read, besides the picture it is drawn
+ * with: a reflection, a mask, a fine detail, a ripple.
  *
  * The shader reads it by name, `sampleMap_<name>(uv)`, with the same wrap and filtering choices the
  * main picture has.
@@ -116,7 +122,7 @@ export type TCullMode = 'back' | 'front' | 'none';
  */
 export type TMaterialMap = {
     /**
-     * The picture. One still loading reads as white until it lands; the model is drawn meanwhile.
+     * The picture. One still loading reads as white until it lands; what wears it is drawn meanwhile.
      */
     texture: TTexture;
     /**

@@ -2,6 +2,12 @@ import { describe, expect, it, spyOn } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { createMesh } from '../src/gameobjects/mesh';
+import { createMaterial } from '../src/gameobjects/material/create_material';
+import { createParticles3d } from '../src/gameobjects/particles';
+import { closeParticleState } from '../src/gameobjects/particles/particle_state';
+import { newParticlesFile } from '../src/loaders/particles/new_particles_file';
+import { MAX_CHILD_DEPTH } from '../src/loaders/particles/load_particles';
+import { showsPicture } from '../src/game/loop/helper/view_walk';
 import { createSpriteTexture } from '../src/gameobjects/sprite_texture';
 import { useCubeGeometry } from '../src/hooks';
 import { useCamera2d } from '../src/hooks/camera/use_camera_2d';
@@ -19,6 +25,7 @@ import { startScene } from '../src/scene/start_scene';
 import { stopScene } from '../src/scene/stop_scene';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import type { TBox } from '../src/box';
+import type { TDrawable } from '../src/gameobjects/types';
 import type { TFrameContext, TRenderPass } from '../src/render';
 import type { TTexture } from '../src/loaders';
 import type { TRuntimeStore } from '../src/store';
@@ -218,6 +225,140 @@ describe('the passes of a frame with pictures', () => {
 
         holds(passFor(ctx, picture)!.drawables, inside);
         holds(screenOf(ctx).drawables, outside);
+    });
+
+    it('leaves out of its own pass what it draws that shows the picture itself, as its sheet or a map', () => {
+        const { store } = createTestGame();
+        let plain!: ReturnType<typeof createSprite>;
+        let mirror!: ReturnType<typeof createSprite>;
+        let mapped!: ReturnType<typeof createSprite>;
+        let picture!: TTexture;
+        startTestScene(store, 'S', () => {
+            picture = createSpriteTexture({ width: 32, height: 32 }, () => {
+                plain = block();
+                mirror = block();
+                mapped = block();
+            });
+            // Given the picture once it exists: a sprite cannot be drawn into what it reads.
+            mirror.texture = picture;
+            mapped.material = createMaterial({ maps: { feed: picture } });
+            return createScene();
+        });
+
+        const ctx = frameOf(store);
+
+        holds(passFor(ctx, picture)!.drawables, plain);
+    });
+
+    it('keeps in its own pass what shows another picture, and leaves out of each only what shows itself', () => {
+        const { store } = createTestGame();
+        let outer!: TTexture;
+        let inner!: TTexture;
+        let showsInner!: ReturnType<typeof createSprite>;
+        let showsOuter!: ReturnType<typeof createSprite>;
+        let innerShowsOuter!: ReturnType<typeof createSprite>;
+        let innerShowsInner!: ReturnType<typeof createSprite>;
+        startTestScene(store, 'S', () => {
+            outer = createSpriteTexture({ width: 16, height: 16 }, () => {
+                inner = createSpriteTexture({ width: 8, height: 8 }, () => {
+                    innerShowsOuter = block();
+                    innerShowsInner = block();
+                });
+                showsInner = block();
+                showsOuter = block();
+            });
+            showsInner.material = createMaterial({ maps: { feed: inner } });
+            showsOuter.material = createMaterial({ maps: { feed: outer } });
+            innerShowsOuter.material = createMaterial({ maps: { feed: outer } });
+            innerShowsInner.material = createMaterial({ maps: { feed: inner } });
+            return createScene();
+        });
+
+        const ctx = frameOf(store);
+
+        expect(passFor(ctx, outer)!.drawables).toContain(showsInner);
+        expect(passFor(ctx, outer)!.drawables).not.toContain(showsOuter);
+        holds(passFor(ctx, inner)!.drawables, innerShowsOuter);
+    });
+
+    it('leaves out of a picture that looks at the 3D world the effects in it that wear the picture', () => {
+        const { store } = createTestGame();
+        let picture!: TTexture;
+        startTestScene(store, 'S', () => {
+            useCamera3d({ projection: 'perspective', transform: { z: 5 } });
+            picture = createSpriteTexture({ width: 32, height: 32, sees: '3d' });
+            createParticles3d({ effect: { kind: 'particles-3d', texture: picture, direction: { x: 0, y: 1, z: 0 } } as never });
+            return createScene();
+        });
+
+        const ctx = frameOf(store);
+        // What the frame hands the picture is the effect as laid out to be drawn, carrying its picture.
+        const worn = (passFor(ctx, picture)!.drawables ?? []).filter((drawn) => (drawn as { texture?: unknown }).texture === picture);
+
+        expect(worn).toHaveLength(0);
+    });
+
+    it('leaves out an effect whose file sets off one wearing the picture, from its very first frame', () => {
+        const { store } = createTestGame();
+        let picture!: TTexture;
+        startTestScene(store, 'S', () => {
+            let effect!: ReturnType<typeof createParticles3d>;
+            picture = createSpriteTexture({ width: 16, height: 16 }, () => {
+                useCamera3d({ projection: 'perspective', transform: { z: 5 } });
+                effect = createParticles3d({ effect: { kind: 'particles-3d', direction: { x: 0, y: 1, z: 0 }, max: 5, life: 5, emission: { rate: 0, burst: 2, duration: 0, loop: false } } as never });
+            });
+            const child = newParticlesFile('/c.particles', 'c');
+            child.doc = { ...effect.file.doc!, children: [], emission: { rate: 0, burst: 0 } } as never;
+            child.status = 'ready';
+            child.texture = picture;
+            effect.file.doc!.children = [{ on: 'birth', src: 'c.particles', count: 3 }] as never;
+            effect.file.children = [child];
+            // As a file that has only just landed: the emitter has not run, so it has no children yet.
+            closeParticleState(effect);
+            return createScene();
+        });
+
+        for (let frame = 0; frame < 3; frame++) {
+            expect(passFor(frameOf(store), picture)!.drawables ?? []).toHaveLength(0);
+        }
+    });
+
+    it('looks through the effects an emitter sets off as deep as particles can reach, and no deeper', () => {
+        const picture = { type: 'texture' } as TTexture;
+        // Worn by the effect `levels` down from the emitter's own.
+        const wornAt = (levels: number): TDrawable => {
+            const root = newParticlesFile('/0.particles', '0');
+            let last = root;
+            for (let level = 1; level <= levels; level++) {
+                const next = newParticlesFile(`/${level}.particles`, String(level));
+                last.children = [next];
+                last = next;
+            }
+            last.texture = picture;
+            return { type: 'particles', file: root } as unknown as TDrawable;
+        };
+
+        for (let levels = 0; levels <= MAX_CHILD_DEPTH; levels++) {
+            expect(showsPicture(wornAt(levels), picture), `${levels} down`).toBe(true);
+        }
+        expect(showsPicture(wornAt(MAX_CHILD_DEPTH + 1), picture)).toBe(false);
+    });
+
+    it('does not walk for ever looking through effects that lead back to one another', () => {
+        const { store } = createTestGame();
+        let picture!: TTexture;
+        startTestScene(store, 'S', () => {
+            picture = createSpriteTexture({ width: 16, height: 16 }, () => {
+                useCamera3d({ projection: 'perspective', transform: { z: 5 } });
+                const effect = createParticles3d({ effect: { kind: 'particles-3d', direction: { x: 0, y: 1, z: 0 }, max: 5, life: 5, emission: { rate: 0, burst: 2, duration: 0, loop: false } } as never });
+                // By hand: the loader refuses a ring. Should one ever get by it, a frame still ends.
+                effect.file.children = [effect.file];
+            });
+            return createScene();
+        });
+
+        expect(() => frameOf(store)).not.toThrow();
+        expect(passFor(frameOf(store), picture)).toBeDefined();
     });
 
     it('draws a picture found inside another, and shown by it, before the one it is in', () => {

@@ -190,10 +190,9 @@ describe('the shader composer', () => {
         expect(() => compileShader({ shader: 'sprite2d', color: composerSwizzle(composerEnvUv(), 'xyx') })).toThrow(/envUv is not available/);
     });
 
-    it('refuses one in a vertex graph or a sprite\'s, and a bad name', () => {
+    it('refuses one in a vertex graph, and a bad name', () => {
         expect(() => compileShader({ shader: 'mesh3d', position: composerSwizzle(composerMapSample('noise', composerUv()), 'xyz') }))
             .toThrow(/not available in a vertex graph/);
-        expect(() => compileShader({ shader: 'sprite2d', color: composerMapSample('noise', composerUv()) })).toThrow(/model's colour graph/);
         expect(() => composerMapSample('Bad Name', composerUv())).toThrow(/cannot name a map/);
     });
 });

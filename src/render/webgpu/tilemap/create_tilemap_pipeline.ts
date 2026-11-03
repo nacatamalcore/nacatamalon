@@ -6,7 +6,7 @@ import type { TTilemapPipeline } from './types/t_tilemap_pipeline';
 import { FLAT_DEPTH } from '../frame/depth';
 
 /**
- * Floats a layer hands over: position, scale, rotation, view, two of padding, and the colour.
+ * Floats a layer hands over: position, scale, rotation, view, its size, and the colour.
  *
  * Sixteen and not twelve because the graphics card wants the next slot of a uniform buffer to start
  * on a round number of bytes, and 256 is the number it asks for. The stride below is that.

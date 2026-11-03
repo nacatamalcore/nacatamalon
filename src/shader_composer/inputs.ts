@@ -173,6 +173,36 @@ export const composerShine = (): TComposerNode => newNode('input', 'vec3<f32>', 
 export const composerEnvUv = (): TComposerNode => newNode('input', 'vec2<f32>', [], { input: 'envUv' });
 
 /**
+ * Where this pixel is across what is drawn, from `0` to `1` (`vec2`): the whole sprite however its
+ * frames change, one tile of a map, one letter of a text or one piece of a nine-slice. Where a mask
+ * is read so a sprite crumbles in its own shape and not the sheet's. It turns over with the picture
+ * when the sprite or the tile is flipped. Sprites and map layers only.
+ * @returns The node, to use as the input of another.
+ *
+ * @example
+ * ```ts
+ * const grain = composerMapSample('grain', composerLocalUv());
+ * ```
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const composerLocalUv = (): TComposerNode => newNode('input', 'vec2<f32>', [], { input: 'localUv' });
+
+/**
+ * Where this pixel is across the whole of a map's layer, from `0` to `1` (`vec2`): a shine that
+ * crosses the map rather than each tile on its own. On a sprite, the same as `composerLocalUv()`, so
+ * one material does for both. Sprites and map layers only.
+ * @returns The node, to use as the input of another.
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const composerLayerUv = (): TComposerNode => newNode('input', 'vec2<f32>', [], { input: 'layerUv' });
+
+/**
  * Reads the material's own picture, tinted, at any coordinate (`vec4`). What waves, pixelation, a
  * colour split or a blur are made of: `composerSurface()` is this read at the fragment's own
  * coordinate. Colour stage only.
@@ -188,7 +218,8 @@ export const composerTextureSample = (coord: TComposerNode): TComposerNode => ne
 /**
  * Reads one of the material's extra maps by name, at any coordinate (`vec4`): a reflection, a mask, a
  * detail, a ripple. The material carries the picture under the same name in its `maps`; one it does
- * not carry reads white. Colour stage of a model only.
+ * not carry reads white. Colour stage only. On a sprite or a map's layer, read it at
+ * `composerLocalUv()` for a mask that stays put while the frames change.
  * @param name - The map's name, as the material's `maps` gives it: lowercase first, letters and digits.
  * @param coord - Where to read it, in `0`-`1`.
  * @returns The node, to use as the input of another.

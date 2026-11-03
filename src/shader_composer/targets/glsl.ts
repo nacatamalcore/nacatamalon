@@ -42,6 +42,8 @@ const INPUT_SOURCE: Record<TInputKind, Partial<Record<TStageCtx, string>>> = {
     frontFacing:    { 'mesh3d.frag': '(ctx.frontFacing ? 1.0 : 0.0)', 'preview.frag': '1.0' },
     carry:          { 'mesh3d.frag': 'ctx.carry', 'preview.frag': 'vec4(0.0)' },
     occlusion:      { 'mesh3d.frag': 'ctx.occlusion', 'preview.frag': '1.0' },
+    localUv:        { 'sprite2d.frag': 'localUv()', 'preview.frag': 'uv' },
+    layerUv:        { 'sprite2d.frag': 'layerUv()', 'preview.frag': 'uv' },
 };
 
 /**

@@ -132,6 +132,7 @@ const parseMaterial = (value: unknown): TMaterialDoc | undefined => {
         vertex: text(raw.vertex),
         vertexGlsl: text(raw.vertexGlsl),
         uniforms: parseUniforms(raw.uniforms) ?? null,
+        ...parseMaps(raw.maps),
     };
 };
 
@@ -158,7 +159,8 @@ const parseOcclusion = (value: unknown): Pick<TMeshMaterialDoc, 'occlusion'> => 
 
 const parseMeshMaterial = (value: unknown): TMeshMaterialDoc => {
     const raw = asRecord(value) ?? {};
-    const base = parseMaterial(raw) ?? {
+    // Its maps are read further down, with the rest of its surface, where a model's document has them.
+    const { maps: _maps, ...base } = parseMaterial(raw) ?? {
         name: null, effect: null, fragment: null, fragmentGlsl: null, vertex: null, vertexGlsl: null, uniforms: null,
     };
     return {
@@ -302,12 +304,12 @@ const parseWrap = (value: unknown): Pick<TMeshMaterialDoc, 'wrap'> => {
  * A material's extra maps. A map with no picture key, or a name a shader could not read it by, is
  * left out, and so is any past the fourth: the scene loads with what it can use.
  */
-const parseMaps = (value: unknown): Pick<TMeshMaterialDoc, 'maps'> => {
+const parseMaps = (value: unknown): Pick<TMaterialDoc, 'maps'> => {
     const raw = asRecord(value);
     if (raw === null) {
         return {};
     }
-    const maps: NonNullable<TMeshMaterialDoc['maps']> = {};
+    const maps: NonNullable<TMaterialDoc['maps']> = {};
     for (const [name, entry] of Object.entries(raw)) {
         const map = asRecord(entry);
         if (!MAP_NAME.test(name) || map === null || typeof map.texture !== 'string' || Object.keys(maps).length >= MAX_MATERIAL_MAPS) {

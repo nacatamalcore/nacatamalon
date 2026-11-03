@@ -17,6 +17,11 @@ export type TSpriteRun = {
      */
     material: TDrawShader | null;
     /**
+     * Whether their sheet is read blended between its pixels, which is how the effect's maps are read
+     * too when they say nothing. The same for the whole run, which is broken where it changes.
+     */
+    smooth: boolean;
+    /**
      * Whether its sheet is a distance field (a vector font's letters), which is drawn with its own
      * ending.
      */

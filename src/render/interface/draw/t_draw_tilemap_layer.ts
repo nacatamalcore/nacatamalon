@@ -63,4 +63,9 @@ export type TDrawTilemapLayer = {
      * This layer's own values for that material's knobs.
      */
     readonly uniforms?: TUniformValues;
+    /**
+     * How big the whole map is, in its own pixels, before it is scaled: what a material's
+     * `layerUv()` runs across. Omitted, `layerUv()` counts in pixels.
+     */
+    readonly size?: { readonly width: number; readonly height: number };
 };

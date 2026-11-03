@@ -74,6 +74,7 @@ const growInstances = (device: GPUDevice, sprites: TSpritePipeline, count: numbe
 const addToRun = (
     sprites: TSpritePipeline,
     bindGroup: GPUBindGroup,
+    smooth: boolean,
     material: TDrawShader | null,
     uniforms: TUniformValues | null,
     distanceField: boolean,
@@ -87,6 +88,8 @@ const addToRun = (
     const joins = !broken
         && last !== undefined
         && last.bindGroup === bindGroup
+        // Every sprite with no picture shares one group whatever it says, so this is asked too.
+        && last.smooth === smooth
         && last.material === material
         && last.distanceField === distanceField
         && last.additive === additive
@@ -100,9 +103,10 @@ const addToRun = (
 
     const run = sprites.runs[sprites.runCount];
     if (run === undefined) {
-        sprites.runs.push({ bindGroup, material, uniforms, distanceField, additive, stencil, start: index, count: 1, firstDrawable: drawable });
+        sprites.runs.push({ bindGroup, smooth, material, uniforms, distanceField, additive, stencil, start: index, count: 1, firstDrawable: drawable });
     } else {
         run.bindGroup = bindGroup;
+        run.smooth = smooth;
         run.material = material;
         run.distanceField = distanceField;
         run.additive = additive;
@@ -211,7 +215,7 @@ export const writeSpriteInstances = (
                 data[o + 20] = repeat.shiftX;
                 data[o + 21] = repeat.shiftY;
 
-                addToRun(sprites, bindGroup, item.material ?? null, item.uniforms ?? null, item.distanceField === true, item.blend === 'additive', count, i, broken, stencil?.[i] ?? null);
+                addToRun(sprites, bindGroup, item.smooth ?? sprites.defaultSmooth, item.material ?? null, item.uniforms ?? null, item.distanceField === true, item.blend === 'additive', count, i, broken, stencil?.[i] ?? null);
                 broken = false;
                 count++;
                 break;

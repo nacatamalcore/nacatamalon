@@ -3,6 +3,8 @@ import { buildUniformLayout, MAX_MATERIAL_FLOATS, writeUniformValues } from '../
 import { compileProgram } from '../utils/compile_program';
 import { MATERIAL_UNIFORMS_BINDING } from './uniform_block';
 import { FRAME_UNIFORMS_BINDING } from '../bindings';
+import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
+import { createFlatMapBinder, placeFlatMaps } from './flat_maps';
 import type { TDrawShader } from '../../interface/draw/t_draw_material';
 import type { TUniformLayout } from '../../shared/material_uniforms';
 import type { TUniformValues } from '../../../materials';
@@ -16,6 +18,10 @@ export type TLayerLocations = {
     rotation: WebGLUniformLocation | null;
     view: WebGLUniformLocation | null;
     tint: WebGLUniformLocation | null;
+    /**
+     * Only a material's program has one: what its `layerUv()` runs across.
+     */
+    size?: WebGLUniformLocation | null;
 };
 
 type TCompiled = {
@@ -31,6 +37,10 @@ type TCompiled = {
     locations: TLayerLocations;
     layout: TUniformLayout;
     failed: boolean;
+    /**
+     * The maps the shader reads, in the order of the units they are bound on.
+     */
+    mapNames: string[];
 };
 
 /**
@@ -44,17 +54,26 @@ export const createTilemapMaterials = (gl: WebGL2RenderingContext) => {
     const compiled = new Map<string, TCompiled>();
     const values = new Float32Array(MAX_MATERIAL_FLOATS);
     const warned = new Set<string>();
+    const maps = createFlatMapBinder(gl);
 
     let parameters: WebGLBuffer | null = null;
 
     const build = (material: TDrawShader): TCompiled => {
         const layout = buildUniformLayout(material.uniformSig ?? {});
         const empty: TLayerLocations = { position: null, scale: null, rotation: null, view: null, tint: null };
+        const mapNames = mapNamesOf(material.fragmentGlsl);
         // Too many numbers for its slot. Said once where it was made (`checkParameterRoom`).
         if (layout.floatCount > MAX_MATERIAL_FLOATS) {
-            return { program: null, locations: empty, layout, failed: true };
+            return { program: null, locations: empty, layout, failed: true, mapNames };
         }
-        const sources = buildTilemapMaterialShaderGlsl(material.fragmentGlsl as string, material.uniformSig ?? {});
+        if (mapNames.length > MAX_MATERIAL_MAPS) {
+            console.warn(
+                `[NacatamalOn] the material "${material.name ?? 'tilemap material'}" reads ${mapNames.length} maps ` +
+                `(${mapNames.join(', ')}) and a material has ${MAX_MATERIAL_MAPS}. It is drawing with the built-in shader instead.`,
+            );
+            return { program: null, locations: empty, layout, failed: true, mapNames };
+        }
+        const sources = buildTilemapMaterialShaderGlsl(material.fragmentGlsl as string, material.uniformSig ?? {}, mapNames);
 
         try {
             const program = compileProgram(
@@ -67,6 +86,7 @@ export const createTilemapMaterials = (gl: WebGL2RenderingContext) => {
             gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, 'MaterialUniforms'), MATERIAL_UNIFORMS_BINDING);
             gl.useProgram(program);
             gl.uniform1i(gl.getUniformLocation(program, 'tilesTexture'), 0);
+            placeFlatMaps(gl, program);
             gl.useProgram(null);
 
             return {
@@ -77,9 +97,11 @@ export const createTilemapMaterials = (gl: WebGL2RenderingContext) => {
                     rotation: gl.getUniformLocation(program, 'layerRotation'),
                     view: gl.getUniformLocation(program, 'layerView'),
                     tint: gl.getUniformLocation(program, 'layerTint'),
+                    size: gl.getUniformLocation(program, 'layerSize'),
                 },
                 layout,
                 failed: false,
+                mapNames,
             };
         } catch (error) {
             console.warn(
@@ -87,7 +109,7 @@ export const createTilemapMaterials = (gl: WebGL2RenderingContext) => {
                 'It is drawing with the built-in shader instead.',
                 error,
             );
-            return { program: null, locations: empty, layout, failed: true };
+            return { program: null, locations: empty, layout, failed: true, mapNames };
         }
     };
 
@@ -117,14 +139,20 @@ export const createTilemapMaterials = (gl: WebGL2RenderingContext) => {
             }
             return entry;
         },
+        /**
+         * Writes this layer's numbers for its material and binds them, and binds the material's maps.
+         */
         bind: (
             entry: TCompiled,
-            uniforms: TUniformValues,
+            material: TDrawShader,
             overrides: TUniformValues | null,
             time: number,
             width: number,
             height: number,
+            smooth: boolean,
         ): void => {
+            const uniforms = material.uniforms ?? {};
+            maps.bind(material, entry.mapNames, smooth);
             if (parameters === null) {
                 parameters = gl.createBuffer();
                 gl.bindBuffer(gl.UNIFORM_BUFFER, parameters);
@@ -150,6 +178,7 @@ export const createTilemapMaterials = (gl: WebGL2RenderingContext) => {
                 gl.deleteBuffer(parameters);
                 parameters = null;
             }
+            maps.destroy();
         },
     };
 };

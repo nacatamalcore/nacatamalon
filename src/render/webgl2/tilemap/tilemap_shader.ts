@@ -22,6 +22,8 @@ uniform vec2 layerPosition;
 uniform vec2 layerScale;
 uniform float layerRotation;
 uniform float layerView;
+// How big the whole map is, in its own pixels: what a material's layerUv() runs across.
+uniform vec2 layerSize;
 
 layout(location = 0) in vec2 corner;
 layout(location = 1) in vec2 uv;
@@ -31,6 +33,7 @@ out vec2 vUv;
 // The cell's own piece of the sheet, half a texel in from each edge. The same at every corner of a
 // cell, so it is not blended across it.
 flat out vec4 vWindow;
+out vec2 vAcrossLayer;
 
 void main() {
     vec2 scaled = corner * layerScale;
@@ -50,6 +53,7 @@ void main() {
     gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
     vUv = uv;
     vWindow = window;
+    vAcrossLayer = corner / max(layerSize, vec2(1.0));
 }
 `;
 

@@ -34,6 +34,10 @@ export type TDrawShader = {
      * Fixed when the material was made, because the compiled shader was laid out against it.
      */
     readonly uniformSig: TUniformSignature | null;
+    /**
+     * Extra pictures its shader reads by name with `sampleMap_<name>`.
+     */
+    readonly maps?: Readonly<Record<string, TDrawMaterialMap>>;
 };
 
 /**
@@ -90,10 +94,6 @@ export type TDrawMaterial = TDrawShader & {
      * What the picture does past its edge. Omitted, it repeats.
      */
     readonly wrap?: TTextureWrap | { readonly u: TTextureWrap; readonly v: TTextureWrap };
-    /**
-     * Extra pictures its shader reads by name with `sampleMap_<name>`.
-     */
-    readonly maps?: Readonly<Record<string, TDrawMaterialMap>>;
     readonly vertexSnap?: boolean | number;
     /**
      * Its picture stretched across the screen without correcting for depth. Omitted, it is held true.

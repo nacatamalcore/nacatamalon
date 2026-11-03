@@ -22,13 +22,14 @@ struct Uniforms { resolution: vec2f, padding: vec2f, views: array<View, MAX_VIEW
 @group(1) @binding(0) var tilesSampler: sampler;
 @group(1) @binding(1) var tilesTexture: texture_2d<f32>;
 
-// group 2 is what changes per layer: where the map is, its colour, and which view it looks through
+// group 2 is what changes per layer: where the map is, its size in its own pixels, its colour, and
+// which view it looks through
 struct Layer {
     position: vec2f,
     scale: vec2f,
     rotation: f32,
     view: f32,
-    padding: vec2f,
+    size: vec2f,
     tint: vec4f,
 };
 @group(2) @binding(0) var<uniform> layer: Layer;
@@ -39,6 +40,8 @@ struct VertexOut {
     // The cell's own piece of the sheet, half a texel in from each edge: left, top, right, bottom.
     // The same at every corner of a cell, so it is not blended across it.
     @location(1) @interpolate(flat) window: vec4f,
+    // Where this pixel is across the whole layer, 0 to 1: what a material's layerUv() reads.
+    @location(2) acrossLayer: vec2f,
 };
 
 // Where a fragment reads the sheet: where the cell says, kept inside the cell's window. The corners
@@ -73,6 +76,7 @@ fn vs(@location(0) corner: vec2f, @location(1) uv: vec2f, @location(2) window: v
     out.clip = vec4f(clip.x, -clip.y, 0.0, 1.0);
     out.uv = uv;
     out.window = window;
+    out.acrossLayer = corner / max(layer.size, vec2f(1.0));
     return out;
 }
 

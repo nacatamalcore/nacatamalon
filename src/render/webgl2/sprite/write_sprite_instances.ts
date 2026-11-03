@@ -170,7 +170,9 @@ export const writeSpriteInstances = (
                 }
 
                 let glTexture = sprites.whiteTexture;
-                let smooth = sprites.defaultSmooth;
+                // Asked for even with no picture: the white texel reads the same either way, but the
+                // maps of a material over it are read as the sprite says.
+                const smooth = item.smooth ?? sprites.defaultSmooth;
                 if (texture !== null && texture.status === 'ready' && texture.gpu !== null) {
                     const uploaded = toGlTexture(texture.gpu);
                     // Only missing between a restore and its re-upload. Skipped like a texture
@@ -180,7 +182,6 @@ export const writeSpriteInstances = (
                         break;
                     }
                     glTexture = uploaded;
-                    smooth = item.smooth ?? sprites.defaultSmooth;
                 }
                 const sampler = smooth ? sprites.samplers.linear : sprites.samplers.nearest;
 

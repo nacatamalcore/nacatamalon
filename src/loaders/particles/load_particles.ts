@@ -85,10 +85,28 @@ export const particlesAtlas = (store: TRuntimeStore, fromSrc: string, src: strin
 };
 
 /**
+ * Whether `file`, or an effect it sets off, or one those set off in turn, is `target`.
+ *
+ * Asked of the files and not of how they were written: one file can be named two ways, and two files
+ * loaded apart know nothing of each other's way down. Whichever of them arrives second is the one
+ * that closes the ring, and by then the first has its children to look through.
+ */
+const leadsTo = (file: TParticlesFile, target: TParticlesFile, seen: Set<TParticlesFile> = new Set()): boolean => {
+    if (file === target) {
+        return true;
+    }
+    if (seen.has(file)) {
+        return false;
+    }
+    seen.add(file);
+    return file.children.some((child) => child !== null && leadsTo(child, target, seen));
+};
+
+/**
  * The file of one effect another one sets off, from the game's cache like any other, found next to
- * the file that names it. `null`, said once, for one that would lead back to a file already on the
- * way down, or one past `MAX_CHILD_DEPTH`: either would be a frame that never ends rather than an
- * error anybody could see.
+ * the file that names it. `null`, said once, for one that would lead back to the file that names it,
+ * or one past `MAX_CHILD_DEPTH`: either would be a frame that never ends rather than an error anybody
+ * could see.
  *
  * @internal
  * @since 1.0.0
@@ -96,7 +114,9 @@ export const particlesAtlas = (store: TRuntimeStore, fromSrc: string, src: strin
  */
 export const childFileFor = (store: TRuntimeStore, parent: TParticlesFile, src: string, ancestors: readonly string[]): TParticlesFile | null => {
     const path = resolveAssetPath(parent.src, src);
-    if (path === parent.src || ancestors.includes(path)) {
+    const { particles } = store.get('assets');
+    let file = findAssetFile(particles, path);
+    if (path === parent.src || ancestors.includes(path) || (file !== undefined && leadsTo(file, parent))) {
         console.warn(`[NacatamalOn] particles "${parent.src}" sets off "${path}", which leads back to itself. That child is left out.`);
         return null;
     }
@@ -104,8 +124,6 @@ export const childFileFor = (store: TRuntimeStore, parent: TParticlesFile, src: 
         console.warn(`[NacatamalOn] particles "${parent.src}" sets off "${path}" more than ${MAX_CHILD_DEPTH} effects deep. That child is left out.`);
         return null;
     }
-    const { particles } = store.get('assets');
-    let file = findAssetFile(particles, path);
     if (file === undefined) {
         file = newParticlesFile(path, path);
         particles.set(path, file);

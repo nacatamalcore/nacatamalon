@@ -81,6 +81,85 @@ describe('loading an effect that sets off others', () => {
         expect(b.children).toEqual([null]);
         expect(String(warn.mock.calls[0]?.[0])).toContain('leads back to itself');
     });
+
+    it('refuses the ring when the two files are loaded apart, whichever arrives second closing it', async () => {
+        const warn = quiet();
+        serve({
+            '/a.particles': { kind: 'particles-2d', children: [{ on: 'death', src: '/b.particles' }] },
+            '/b.particles': { kind: 'particles-2d', children: [{ on: 'death', src: '/a.particles' }] },
+        });
+        const { store } = createTestGame();
+        const { particles } = store.get('assets');
+        const a = newParticlesFile('/a.particles', '/a.particles');
+        const b = newParticlesFile('/b.particles', '/b.particles');
+        particles.set('/a.particles', a);
+        particles.set('/b.particles', b);
+        await Promise.all([loadParticles(store, a), loadParticles(store, b)]);
+        await settle();
+
+        // One link stands and the other, the one that would close the ring, is left out.
+        expect([a.children[0], b.children[0]].filter((child) => child === null)).toHaveLength(1);
+        expect(warn.mock.calls.some((call: unknown[]) => String(call[0]).includes('leads back to itself'))).toBe(true);
+    });
+
+    it('cuts a ring of three exactly once, in whatever order its files land', async () => {
+        const paths = ['/a.particles', '/b.particles', '/c.particles'];
+        const orders = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
+        for (const order of orders) {
+            const warn = quiet();
+            serve({
+                '/a.particles': { kind: 'particles-2d', children: [{ on: 'death', src: '/b.particles' }] },
+                '/b.particles': { kind: 'particles-2d', children: [{ on: 'death', src: '/c.particles' }] },
+                '/c.particles': { kind: 'particles-2d', children: [{ on: 'death', src: '/a.particles' }] },
+            });
+            const { store } = createTestGame();
+            const { particles } = store.get('assets');
+            const files = paths.map((path) => {
+                const file = newParticlesFile(path, path);
+                particles.set(path, file);
+                return file;
+            });
+            for (const at of order) {
+                await loadParticles(store, files[at]!);
+            }
+            await settle();
+
+            expect(files.flatMap((file) => file.children).filter((child) => child === null), order.join()).toHaveLength(1);
+            expect(warn.mock.calls.filter((call: unknown[]) => String(call[0]).includes('leads back to itself')), order.join()).toHaveLength(1);
+            warn.mockClear();
+        }
+    });
+
+    it('refuses a file that names itself, however the page wrote its path', async () => {
+        const warn = quiet();
+        serve({ './fx/a.particles': { kind: 'particles-2d', children: [{ on: 'death', src: 'a.particles' }] } });
+        const { store } = createTestGame();
+        const a = newParticlesFile('./fx/a.particles', './fx/a.particles');
+        store.get('assets').particles.set('./fx/a.particles', a);
+        await loadParticles(store, a);
+        await settle();
+
+        expect(a.children).toEqual([null]);
+        expect(String(warn.mock.calls[0]?.[0])).toContain('leads back to itself');
+    });
+
+    it('lets two effects set off the same one: that is no ring', async () => {
+        const warn = quiet();
+        serve({
+            '/a.particles': { kind: 'particles-2d', children: [{ on: 'death', src: '/b.particles' }, { on: 'death', src: '/c.particles' }] },
+            '/b.particles': { kind: 'particles-2d', children: [{ on: 'death', src: '/c.particles' }] },
+            '/c.particles': { kind: 'particles-2d' },
+        });
+        const { store } = createTestGame();
+        const a = newParticlesFile('/a.particles', '/a.particles');
+        store.get('assets').particles.set('/a.particles', a);
+        await loadParticles(store, a);
+        await settle();
+
+        const [b, c] = a.children;
+        expect(b!.children).toEqual([c]);
+        expect(warn).not.toHaveBeenCalled();
+    });
 });
 
 /**

@@ -6,7 +6,7 @@ import { checkParameterRoom } from './check_parameter_room';
 import { compileShader } from '../shader_composer/compile_shader';
 import { MAP_NAME, MAX_MATERIAL_MAPS } from '../render/shared/material_maps';
 import type { TMaterial, TMaterialMap, TMaterialOcclusion, TMeshMaterial, TSpriteMaterial } from './types/t_material';
-import type { TMaterialOptions, TMeshMaterialOptions } from './types/t_material_options';
+import type { TMaterialOptions, TMeshMaterialOptions, TSpriteMaterialOptions } from './types/t_material_options';
 import type { TShader } from '../loaders/shader/types/t_shader';
 import type { TTexture } from '../loaders';
 
@@ -217,7 +217,12 @@ export const newMaterial = (
                 ? { steps: [...(options as TMeshMaterialOptions).steps!] }
                 : {}),
         }) as TMeshMaterial
-        : createRecord('material', { ...half, shader: 'sprite2d' }) as TSpriteMaterial;
+        : createRecord('material', {
+            ...half,
+            shader: 'sprite2d',
+            // Left out when there are none, so a material that never had maps saves as before.
+            ...((options as TSpriteMaterialOptions).maps !== undefined ? { maps: mapsOf((options as TSpriteMaterialOptions).maps) } : {}),
+        }) as TSpriteMaterial;
 
     if (effect !== null) {
         rememberOverrides(material, asked);

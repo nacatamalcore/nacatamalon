@@ -1,5 +1,6 @@
 import { DISTANCE_FIELD_COVERAGE, SPRITE_SHADER_HEAD } from '../sprite/sprite_shader';
 import { buildUniformLayout } from '../../shared/material_uniforms';
+import { flatMapsWgsl } from './flat_maps';
 import type { TUniformSignature } from '../../../materials';
 
 /**
@@ -25,6 +26,28 @@ fn sampleTexture(uv: vec2f) -> vec4f {
 `;
 
 /**
+ * Where this pixel is across the sprite, 0 to 1, for the hook to read a map at: a mask laid over the
+ * sprite stays put while its frames change, which one read at the sheet's `uv` would not.
+ *
+ * Handed over through a value the ending sets before it calls the hook, because the hook is given
+ * only the colour and the `uv`, and changing what it is given would break every hook written.
+ *
+ * `layerUv()` is the same here: a sprite is its own layer. It is there so one material can go on a
+ * sprite and on a map's layer alike, which is what the two sharing a hook promises.
+ */
+const ACROSS = /* wgsl */ `
+var<private> spriteAcross: vec2f;
+
+fn localUv() -> vec2f {
+    return spriteAcross;
+}
+
+fn layerUv() -> vec2f {
+    return spriteAcross;
+}
+`;
+
+/**
  * The ending that calls the author's hook.
  *
  * What the hook is handed is the sheet **already read and already tinted**, which is exactly what
@@ -40,6 +63,7 @@ fn sampleTexture(uv: vec2f) -> vec4f {
 const TAIL = /* wgsl */ `
 @fragment
 fn fs(in: VertexOut) -> @location(0) vec4f {
+    spriteAcross = in.across;
     return effect(sampleTexture(insideWindow(in.uv, in.window, in.repeat)) * in.tint, in.uv);
 }
 `;
@@ -53,20 +77,23 @@ fn fs(in: VertexOut) -> @location(0) vec4f {
 const DISTANCE_FIELD_TAIL = /* wgsl */ `
 @fragment
 fn fs(in: VertexOut) -> @location(0) vec4f {
+    spriteAcross = in.across;
     let sample = sampleTexture(insideWindow(in.uv, in.window, in.repeat));
     let coverage = distanceFieldCoverage(sample, in.uv);
     return effect(vec4f(in.tint.rgb, in.tint.a * coverage), in.uv);
 }
 `;
 
-const buildWith = (tail: string, fragment: string, sig: TUniformSignature): string => {
+const buildWith = (tail: string, fragment: string, sig: TUniformSignature, mapNames: readonly string[]): string => {
     const { structText } = buildUniformLayout(sig);
 
     return [
         SPRITE_SHADER_HEAD,
         SAMPLE,
+        ACROSS,
         structText,
         `@group(${SPRITE_MATERIAL_GROUP}) @binding(0) var<uniform> mu: MaterialUniforms;`,
+        flatMapsWgsl(SPRITE_MATERIAL_GROUP, mapNames),
         fragment,
         tail,
     ].join('\n');
@@ -85,8 +112,8 @@ const buildWith = (tail: string, fragment: string, sig: TUniformSignature): stri
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const buildSpriteMaterialShader = (fragment: string, sig: TUniformSignature): string =>
-    buildWith(TAIL, fragment, sig);
+export const buildSpriteMaterialShader = (fragment: string, sig: TUniformSignature, mapNames: readonly string[] = []): string =>
+    buildWith(TAIL, fragment, sig, mapNames);
 
 /**
  * The same for sprites cut from a distance field: the characters of a text in a vector font.
@@ -95,5 +122,5 @@ export const buildSpriteMaterialShader = (fragment: string, sig: TUniformSignatu
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const buildSpriteDistanceFieldMaterialShader = (fragment: string, sig: TUniformSignature): string =>
-    buildWith(DISTANCE_FIELD_COVERAGE + DISTANCE_FIELD_TAIL, fragment, sig);
+export const buildSpriteDistanceFieldMaterialShader = (fragment: string, sig: TUniformSignature, mapNames: readonly string[] = []): string =>
+    buildWith(DISTANCE_FIELD_COVERAGE + DISTANCE_FIELD_TAIL, fragment, sig, mapNames);

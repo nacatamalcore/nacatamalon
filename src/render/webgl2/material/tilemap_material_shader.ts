@@ -1,5 +1,6 @@
 import { TILEMAP_FRAGMENT_HEAD_GLSL, TILEMAP_VERTEX_SHADER } from '../tilemap/tilemap_shader';
 import { glslUniformBlock } from './uniform_block';
+import { flatMapsGlsl } from './flat_maps';
 import type { TUniformSignature } from '../../../materials';
 
 /**
@@ -8,6 +9,20 @@ import type { TUniformSignature } from '../../../materials';
 const SAMPLE = /* glsl */ `
 vec4 sampleTexture(vec2 uv) {
     return textureLod(tilesTexture, uv, 0.0);
+}
+
+in vec2 vAcrossLayer;
+
+// Across its tile, from its window put back out by the half texel it sits in: see its twin.
+vec2 localUv() {
+    vec2 texel = 0.5 / vec2(textureSize(tilesTexture, 0));
+    vec2 low = vWindow.xy - texel;
+    vec2 high = vWindow.zw + texel;
+    return (vUv - low) / max(high - low, vec2(1e-6));
+}
+
+vec2 layerUv() {
+    return vAcrossLayer;
 }
 `;
 
@@ -33,7 +48,8 @@ void main() {
 export const buildTilemapMaterialShaderGlsl = (
     fragment: string,
     sig: TUniformSignature,
+    mapNames: readonly string[] = [],
 ): { vertex: string; fragment: string } => ({
     vertex: TILEMAP_VERTEX_SHADER,
-    fragment: [TILEMAP_FRAGMENT_HEAD_GLSL, glslUniformBlock(sig), SAMPLE, fragment, TAIL].join('\n'),
+    fragment: [TILEMAP_FRAGMENT_HEAD_GLSL, glslUniformBlock(sig), SAMPLE, flatMapsGlsl(mapNames), fragment, TAIL].join('\n'),
 });

@@ -2,7 +2,7 @@ import { composerFloat, composerSwizzle, composerVec2, composerVec3, composerVec
 import {
     composerEmissive, composerEnvUv, composerLight, composerMapSample, composerShine, composerResolution, composerSurface, composerTextureSample, composerTime,
     composerUniform, composerUv, composerVertexColor, composerVertexNormal, composerVertexPosition, composerViewDir, composerWorldNormal,
-    composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent, composerFrontFacing, composerCarry, composerOcclusion,
+    composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent, composerFrontFacing, composerCarry, composerOcclusion, composerLocalUv, composerLayerUv,
     composerWorldPos,
 } from './inputs';
 import {
@@ -203,6 +203,8 @@ const DEFS: TNodeDef[] = [
     inputNode('vertexBitangent', 'Vertex Bitangent', V3, 'The vertex\'s bitangent in the model\'s own space. Vertex stage only.', ['mesh3d']),
     inputNode('carry', 'Carry', V4, 'What the Carry Output worked out at each corner, smeared across the triangle: a wave\'s height, a light of your own, the local position. Zeros when nothing is carried.', ['mesh3d']),
     inputNode('occlusion', 'Occlusion', F32, 'How open this place is to the light from all around, from the material\'s occlusion: 1 wide open, 0 shut in a crease. Already part of Light.', ['mesh3d']),
+    inputNode('localUv', 'Local UV', V2, 'Where the pixel is across the sprite, 0 to 1, however its frames change: one tile of a map, one letter of a text, one piece of a nine-slice. Read a mask there so it stays put.', ['sprite2d']),
+    inputNode('layerUv', 'Layer UV', V2, 'Where the pixel is across the whole map layer, 0 to 1: for a shine that crosses the map. On a sprite, the same as Local UV.', ['sprite2d']),
     inputNode('frontFacing', 'Front Facing', F32, '1 on the side of the triangle facing the camera, 0 on the other: only ever 0 when the material keeps the other side (cull front or none).', ['mesh3d']),
 
     {
@@ -225,7 +227,6 @@ const DEFS: TNodeDef[] = [
         outputs: OUT,
         params: [{ name: 'name', label: 'Map', kind: 'text', default: 'noise' }],
         outputType: V4,
-        targets: ['mesh3d'],
         build: (i, p) => composerMapSample(text(p, 'name', 'noise'), i.uv),
     },
     {
@@ -599,6 +600,8 @@ export const INPUT_BUILDERS: Record<string, () => TComposerNode> = {
     frontFacing: composerFrontFacing,
     carry: composerCarry,
     occlusion: composerOcclusion,
+    localUv: composerLocalUv,
+    layerUv: composerLayerUv,
 };
 
 /**

@@ -1,5 +1,6 @@
 import { DISTANCE_FIELD_COVERAGE_GLSL, SPRITE_FRAGMENT_HEAD_GLSL, SPRITE_VERTEX_SHADER } from '../sprite/sprite_shader';
 import { glslUniformBlock } from './uniform_block';
+import { flatMapsGlsl } from './flat_maps';
 import type { TUniformSignature } from '../../../materials';
 
 /**
@@ -11,6 +12,17 @@ import type { TUniformSignature } from '../../../materials';
 const SAMPLE = /* glsl */ `
 vec4 sampleTexture(vec2 uv) {
     return textureLod(spriteTexture, uv, 0.0);
+}
+
+in vec2 vAcross;
+
+vec2 localUv() {
+    return vAcross;
+}
+
+// The same on a sprite, which is its own layer: see its twin.
+vec2 layerUv() {
+    return vAcross;
 }
 `;
 
@@ -53,9 +65,10 @@ void main() {
 export const buildSpriteMaterialShaderGlsl = (
     fragment: string,
     sig: TUniformSignature,
+    mapNames: readonly string[] = [],
 ): { vertex: string; fragment: string } => ({
     vertex: SPRITE_VERTEX_SHADER,
-    fragment: [SPRITE_FRAGMENT_HEAD_GLSL, glslUniformBlock(sig), SAMPLE, fragment, TAIL].join('\n'),
+    fragment: [SPRITE_FRAGMENT_HEAD_GLSL, glslUniformBlock(sig), SAMPLE, flatMapsGlsl(mapNames), fragment, TAIL].join('\n'),
 });
 
 /**
@@ -68,7 +81,8 @@ export const buildSpriteMaterialShaderGlsl = (
 export const buildSpriteDistanceFieldMaterialShaderGlsl = (
     fragment: string,
     sig: TUniformSignature,
+    mapNames: readonly string[] = [],
 ): { vertex: string; fragment: string } => ({
     vertex: SPRITE_VERTEX_SHADER,
-    fragment: [SPRITE_FRAGMENT_HEAD_GLSL, DISTANCE_FIELD_COVERAGE_GLSL, glslUniformBlock(sig), SAMPLE, fragment, DISTANCE_FIELD_TAIL].join('\n'),
+    fragment: [SPRITE_FRAGMENT_HEAD_GLSL, DISTANCE_FIELD_COVERAGE_GLSL, glslUniformBlock(sig), SAMPLE, flatMapsGlsl(mapNames), fragment, DISTANCE_FIELD_TAIL].join('\n'),
 });

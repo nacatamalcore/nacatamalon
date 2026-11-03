@@ -1,11 +1,10 @@
 import { noteStandIn, standingInFor } from '../../../box/drawable_owner';
-import { particleStateOf } from '../../../gameobjects/particles/particle_state';
+import { MAX_CHILD_DEPTH } from '../../../loaders/particles/load_particles';
 import type { TBox } from '../../../box';
 import type { TDrawable } from '../../../gameobjects/types';
 import type { TViewFilter } from '../../../gameobjects/sprite_texture/types';
 import type { TTexture } from '../../../loaders';
 import type { TParticlesFile } from '../../../loaders/particles/types/t_particles_file';
-import type { TChildParticles } from '../../../gameobjects/particles/types/t_particle_pool';
 
 /**
  * What a walk of the world for a view (`createSpriteTexture({ sees: 'world' })`) carries: whose stand-ins
@@ -57,6 +56,43 @@ export const walkingView = <T>(view: TViewWalk, walk: () => T): T => {
         return walk();
     } finally {
         walking = null;
+    }
+};
+
+/**
+ * The picture whose own part is being gathered, or `null`: what is made inside a picture's component
+ * is drawn into it, and what of that shows the picture itself (as its sheet, or as a map of its
+ * material) is left out, as a view leaves it out of the world it walks. A card cannot read a picture
+ * in the pass that draws into it: WebGPU throws the whole pass away, and WebGL2 reads what it is
+ * halfway through writing.
+ */
+let drawingInto: TTexture | null = null;
+
+/**
+ * The picture whose own part is being gathered, or `null`.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const pictureBeingDrawn = (): TTexture | null => drawingInto;
+
+/**
+ * Runs `gather` as the gathering of what is drawn into `picture`, and puts things back after,
+ * whatever happens in it. A picture inside another is gathered on its own, so the one before is
+ * what comes back.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const drawingPicture = <T>(picture: TTexture, gather: () => T): T => {
+    const before = drawingInto;
+    drawingInto = picture;
+    try {
+        return gather();
+    } finally {
+        drawingInto = before;
     }
 };
 
@@ -154,19 +190,44 @@ export const viewKeeps = (view: TViewWalk, record: TDrawable, box: TBox): boolea
 };
 
 /**
- * Whether an effect's particles wear `texture`: its sheet's picture, or its own.
+ * Whether an effect's particles wear `texture`: its sheet's picture, or its own, or that of an effect
+ * its file says they set off. Asked of the file and not of the children a running emitter has: one
+ * that has not run yet has none, and would set them off on the very frame it is drawn.
+ *
+ * No deeper than particles can reach (`MAX_CHILD_DEPTH`), the same limit the simulation has, so this
+ * ends even if files ever lead back to one another.
  */
-const wears = (file: TParticlesFile, texture: TTexture): boolean => (file.atlas?.texture ?? file.texture) === texture;
+const wears = (file: TParticlesFile, texture: TTexture, depth = 0): boolean =>
+    (file.atlas?.texture ?? file.texture) === texture
+    || (depth < MAX_CHILD_DEPTH && file.children.some((child) => child !== null && wears(child, texture, depth + 1)));
 
 /**
- * Whether any effect an emitter's particles set off, or one those set off in turn, wears `texture`.
+ * An effect's particles as the frame lays them out: their picture, and the effects they set off.
  */
-const childrenShow = (children: readonly TChildParticles[], texture: TTexture): boolean =>
-    children.some((child) => wears(child.file, texture) || childrenShow(child.state?.children ?? [], texture));
+type TDrawnParticles = { texture: unknown; children?: readonly TDrawnParticles[] };
 
 /**
- * Whether a drawing shows `texture`: as its picture, a model's glow, occlusion or map, or what an
- * effect's particles, or the ones they set off, wear.
+ * Whether particles laid out to be drawn, or the ones they set off, wear `texture`.
+ */
+const drawnParticlesShow = (drawn: TDrawnParticles, texture: TTexture): boolean =>
+    drawn.texture === texture || (drawn.children ?? []).some((child) => drawnParticlesShow(child, texture));
+
+/**
+ * Whether one of a material's maps is `texture`.
+ */
+const mapsShow = (maps: Readonly<Record<string, { texture: unknown }>> | undefined, texture: TTexture): boolean => {
+    for (const name in maps ?? {}) {
+        if (maps![name]!.texture === texture) {
+            return true;
+        }
+    }
+    return false;
+};
+
+/**
+ * Whether a drawing shows `texture`: as its picture, a model's glow, occlusion or map, a map of the
+ * material over a sprite, a text, a panel or a map's layer, or what an effect's particles, or the
+ * ones they set off, wear.
  *
  * @internal
  * @since 1.0.0
@@ -177,23 +238,27 @@ export const showsPicture = (drawable: TDrawable, texture: TTexture): boolean =>
         case 'sprite':
         case 'nine-slice':
         case 'tilemap':
+            return drawable.texture === texture || mapsShow(drawable.material?.maps, texture);
         case 'polygon':
             return drawable.texture === texture;
+        // Its letters' sheet is a font's, never a picture drawn into; its material's maps may be.
+        case 'text':
+            return mapsShow(drawable.material?.maps, texture);
         case 'mesh': {
             const material = drawable.material;
             if (material.texture === texture || material.emissiveTexture === texture || material.occlusion?.texture === texture) {
                 return true;
             }
-            for (const name in material.maps ?? {}) {
-                if (material.maps![name]!.texture === texture) {
-                    return true;
-                }
-            }
-            return false;
+            return mapsShow(material.maps, texture);
         }
         case 'particles':
         case 'particles-3d':
-            return wears(drawable.file, texture) || childrenShow(particleStateOf(drawable)?.children ?? [], texture);
+            // An emitter, or what it is drawn as once the frame has laid it out: a picture of a world
+            // in 3D is handed the world's models that way, and those carry their picture themselves.
+            if (!('file' in drawable)) {
+                return drawnParticlesShow(drawable as unknown as TDrawnParticles, texture);
+            }
+            return wears(drawable.file, texture);
         default:
             return false;
     }

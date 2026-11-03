@@ -63,7 +63,8 @@ export const drawSpriteRun = (
             const compiled = materials.get(material);
             if (!compiled.failed && compiled.program !== null) {
                 gl.useProgram(compiled.program);
-                materials.bind(compiled, material.uniforms ?? {}, run.uniforms, time, width, height);
+                // Its maps are read as its sheet is, when they say nothing.
+                materials.bind(compiled, material, run.uniforms, time, width, height, run.sampler === sprites.samplers.linear);
                 // `vertexAttribPointer` below reads whatever is bound now, and binding the parameters
                 // left something else there.
                 gl.bindBuffer(gl.ARRAY_BUFFER, sprites.instances);

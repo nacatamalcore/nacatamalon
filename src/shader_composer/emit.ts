@@ -47,13 +47,13 @@ const emitExpr = (n: TComposerNode, refs: string[], stage: TStageCtx, target: TS
             if (typeof map !== 'string') {
                 return `sampleTexture(${refs[0]})`;
             }
-            // A map belongs to a model's material. A node's own thumbnail has none, so it shows white,
+            // A map belongs to the material. A node's own thumbnail has none, so it shows white,
             // which is what a map the material does not carry reads as anyway.
             if (stage === 'preview.frag') {
                 return `${target.type('vec4<f32>')}(1.0)`;
             }
-            if (stage !== 'mesh3d.frag') {
-                throw new Error(`[NacatamalOn] shader composer: the map '${map}' can only be read in a model's colour graph.`);
+            if (stage !== 'mesh3d.frag' && stage !== 'sprite2d.frag') {
+                throw new Error(`[NacatamalOn] shader composer: the map '${map}' can only be read in a colour graph. Read it in the graph given as "color".`);
             }
             return `sampleMap_${map}(${refs[0]})`;
         }

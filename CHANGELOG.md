@@ -25,6 +25,14 @@ releases are in [changelog/](./changelog/), one file each.
   is spread along it, while the clock still decides how long it lasts and when the swap comes, and
   what the shader is handed stays between 0 and 1. In a `.motion`, `"ease": "easeInOutSine"` by
   name, as a key's. Left out, it is a straight line, as before.
+- **Maps on the material of a sprite, a text or a map layer.** `createMaterial({ maps: { grain }, fragment })`
+  takes up to four pictures by name, as a model's does, and the shader reads them with
+  `sampleMap_<name>(uv)`. It reads them at `localUv()`, where the pixel is across the sprite from 0 to
+  1 (one tile of a map, one letter of a text, one piece of a nine-slice), so a mask stays put while the
+  frames change and turns over with a flipped sprite, or at `layerUv()`, across the whole layer. An
+  enemy crumbles into grain, a text letter by letter, a shine runs over the tiles, water ripples
+  through noise. On both cards, in scene documents, and in the shader
+  composer with `composerLocalUv()` and `composerLayerUv()`; Map Sample works in a sprite's graph too.
 - **Transitions that cross from one scene to the other, with no cover between.** `crossfade`, where
   halfway through you see half of each; `push`, where the new scene slides in and pushes the old one
   off; and `crossWipe`, `crossIris` and `crossDissolve`, the edge, the circle and the mask of the ones
@@ -128,6 +136,17 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **Particle files that set each other off are refused however they arrive.** Only a chain followed
+  from one file, written with the full path, was caught. Two files loaded apart that named each other,
+  or one naming itself on a page that wrote its path another way, got by with nothing said. Now the
+  link that would close the ring is left out and said, whichever arrives second. Two effects setting
+  off the same one are still fine.
+- **A picture drawn into (`createSpriteTexture`) is not lost when something it draws shows it.**
+  Anything made by the picture's own component that showed that picture (as its picture, or as a map
+  of its material) was drawn into the picture it read, and so was a 3D effect wearing a picture that
+  looks at the 3D world: on WebGPU the whole picture's pass was thrown away, and on WebGL2 it read what
+  it was halfway through writing. They are now left out of that pass, as a view already left them out
+  of the world it walks.
 - **A scene whose change was called off can change again.** When the scene it was bringing in was
   stopped behind the cover by something other than the game (a host loading another scene, as the
   editor does), the cover went with it and the scene that asked stayed on screen, but every

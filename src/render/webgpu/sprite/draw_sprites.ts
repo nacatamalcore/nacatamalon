@@ -58,11 +58,12 @@ export const drawSpriteRun = (
         if (!compiled.failed && compiled.pipeline !== null) {
             const parameters = materials.bind(
                 compiled,
-                material.uniforms ?? {},
+                material,
                 run.uniforms,
                 time,
                 width,
                 height,
+                run.smooth,
             );
 
             gpuPass.setPipeline(compiled.pipeline);
