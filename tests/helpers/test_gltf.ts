@@ -39,6 +39,11 @@ export type TTestPrimitive = {
      */
     weights?: number[];
     /**
+     * A second four bone numbers a corner, written as `JOINTS_1`, and their weights as `WEIGHTS_1`.
+     */
+    moreJoints?: number[];
+    moreWeights?: number[];
+    /**
      * How wide the bone numbers are written. Default 16.
      */
     jointBits?: 8 | 16;
@@ -265,6 +270,8 @@ const assemble = (model: TTestModel) => {
                     if (primitive.uvs2 !== undefined) attributes.TEXCOORD_1 = floats(primitive.uvs2, 'VEC2');
                     if (primitive.joints !== undefined) attributes.JOINTS_0 = wholes(primitive.joints, primitive.jointBits ?? 16);
                     if (primitive.weights !== undefined) attributes.WEIGHTS_0 = floats(primitive.weights, 'VEC4');
+                    if (primitive.moreJoints !== undefined) attributes.JOINTS_1 = wholes(primitive.moreJoints, primitive.jointBits ?? 16);
+                    if (primitive.moreWeights !== undefined) attributes.WEIGHTS_1 = floats(primitive.moreWeights, 'VEC4');
                     if (primitive.colors !== undefined) attributes.COLOR_0 = colors(primitive);
                     const out2: Record<string, unknown> = { attributes };
                     if (primitive.indices !== undefined) out2.indices = indices(primitive.indices);

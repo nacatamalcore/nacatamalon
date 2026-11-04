@@ -113,6 +113,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- **A model whose corners are moved by more than four bones bends by the four that weigh the most.**
+  A glTF can give a corner a second four (`JOINTS_1`, `WEIGHTS_1`), as a face rigged in detail does;
+  they were left out, and the corner followed its first four, whichever they were. The eight are now
+  read together and the four heaviest kept, brought back to adding up to one.
 - **`createPolygon` draws an outline hollowed in past its middle.** It was drawn from its middle out,
   which folded over itself for a C or an arrow; such an outline is now cut into triangles that cover
   it once. One that can be seen whole from its middle (a blob, a star) is drawn as before.

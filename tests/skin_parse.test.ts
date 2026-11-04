@@ -184,6 +184,57 @@ describe('the corners of a deformed piece', () => {
         expect(weightsOf(2)).toEqual([0, 0, 0, 0]);
     });
 
+    describe('moved by more than four bones', () => {
+        // Eight bones hanging from nothing, so the file's order is the engine's.
+        const EIGHT = {
+            nodes: [{ name: 'Mesh', skin: 0 }, ...Array.from({ length: 8 }, (_, i) => ({ name: `Bone${i}` }))],
+            skins: [{ joints: [1, 2, 3, 4, 5, 6, 7, 8] }],
+        };
+        const one = (corner: { joints: number[]; weights: number[]; moreJoints?: number[]; moreWeights?: number[] }) => {
+            const { parts, renumbers } = parse({
+                ...EIGHT,
+                nodes: [{ name: 'Mesh', skin: 0, primitives: [{ positions: [0, 0, 0, 1, 0, 0, 0, 1, 0], indices: [0, 1, 2], ...corner,
+                    joints: [...corner.joints, ...corner.joints, ...corner.joints],
+                    weights: [...corner.weights, ...corner.weights, ...corner.weights],
+                    ...(corner.moreJoints ? { moreJoints: [...corner.moreJoints, ...corner.moreJoints, ...corner.moreJoints] } : {}),
+                    ...(corner.moreWeights ? { moreWeights: [...corner.moreWeights, ...corner.moreWeights, ...corner.moreWeights] } : {}),
+                }] }, ...EIGHT.nodes.slice(1)],
+            });
+            const skin = parts[0].skin!;
+            return { bones: Array.from(skin.subarray(0, 4)), weights: Array.from(skin.subarray(4, 8)), renumber: renumbers[0] };
+        };
+
+        it('keeps the four that weigh the most, heaviest first, and brings them back to one', () => {
+            const { bones, weights, renumber } = one({
+                joints: [0, 1, 2, 3], weights: [0.05, 0.3, 0.05, 0.1],
+                moreJoints: [4, 5, 6, 7], moreWeights: [0.2, 0.02, 0.25, 0.03],
+            });
+            expect(bones).toEqual([1, 6, 4, 3].map((bone) => renumber?.[bone] ?? bone));
+            [0.3, 0.25, 0.2, 0.1].forEach((weight, c) => expect(weights[c]).toBeCloseTo(weight / 0.85, 5));
+        });
+
+        it('counts a bone named in both sets once, with both its weights', () => {
+            const { bones, weights, renumber } = one({
+                joints: [2, 0, 0, 0], weights: [0.4, 0, 0, 0],
+                moreJoints: [2, 5, 0, 0], moreWeights: [0.4, 0.2, 0, 0],
+            });
+            expect(bones).toEqual([2, 5, 0, 0].map((bone) => renumber?.[bone] ?? bone));
+            [0.8, 0.2, 0, 0].forEach((weight, c) => expect(weights[c]).toBeCloseTo(weight, 5));
+        });
+
+        it('reads a second set of bones only with its weights', () => {
+            const alone = one({ joints: [1, 2, 0, 0], weights: [0.25, 0.75, 0, 0], moreJoints: [5, 6, 7, 0] });
+            const none = one({ joints: [1, 2, 0, 0], weights: [0.25, 0.75, 0, 0] });
+            expect(alone).toEqual(none);
+            expect(none.weights).toEqual([0.25, 0.75, 0, 0]);
+        });
+
+        it('leaves a corner moved by none of the eight moved by none', () => {
+            const { weights } = one({ joints: [1, 2, 3, 4], weights: [0, 0, 0, 0], moreJoints: [5, 6, 7, 0], moreWeights: [0, 0, 0, 0] });
+            expect(weights).toEqual([0, 0, 0, 0]);
+        });
+    });
+
     it('reads bone numbers written a byte wide as well as two', () => {
         const narrow = parse({
             nodes: [{ name: 'Mesh', skin: 0, primitives: [{ ...LIMB, jointBits: 8 }] }, { name: 'Hip' }, { name: 'Knee' }],

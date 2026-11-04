@@ -112,6 +112,67 @@ const sequentialIndices = (count: number): Uint16Array | Uint32Array => {
 };
 
 /**
+ * Room for one corner's bones while the heaviest are picked out, reused: corners are read one after
+ * another.
+ */
+const candidateBones = new Float32Array(8);
+const candidateWeights = new Float32Array(8);
+
+/**
+ * The bones a corner is moved by, out of the eight two sets give it: a bone named in both counts
+ * once with both its weights, and of what is left only the four that weigh the most are kept,
+ * heaviest first. Bones and weights go into `skin` at `at`, bones then weights, as the card reads
+ * them; the weights are brought back to one by whoever calls this, with the rest.
+ *
+ * Four because that is what the card is given a corner. What falls off is the fifth bone onwards,
+ * which moves a corner least, so a face rigged with eight bends almost as it was rigged.
+ */
+const heaviestFour = (
+    joints: Float32Array,
+    weights: Float32Array,
+    moreJoints: Float32Array,
+    moreWeights: Float32Array,
+    corner: number,
+    skin: Float32Array,
+    at: number,
+): void => {
+    let found = 0;
+    for (let c = 0; c < 8; c++) {
+        const bone = (c < 4 ? joints[corner * 4 + c] : moreJoints[corner * 4 + c - 4]) ?? 0;
+        const weight = (c < 4 ? weights[corner * 4 + c] : moreWeights[corner * 4 + c - 4]) ?? 0;
+        if (!(weight > 0)) {
+            continue;
+        }
+        let k = 0;
+        while (k < found && candidateBones[k] !== bone) k++;
+        if (k < found) {
+            candidateWeights[k] += weight;
+        } else {
+            candidateBones[found] = bone;
+            candidateWeights[found] = weight;
+            found++;
+        }
+    }
+    // Heaviest first, keeping the order they came in between equals.
+    for (let a = 1; a < found; a++) {
+        const bone = candidateBones[a];
+        const weight = candidateWeights[a];
+        let b = a - 1;
+        while (b >= 0 && candidateWeights[b] < weight) {
+            candidateBones[b + 1] = candidateBones[b];
+            candidateWeights[b + 1] = candidateWeights[b];
+            b--;
+        }
+        candidateBones[b + 1] = bone;
+        candidateWeights[b + 1] = weight;
+    }
+    for (let c = 0; c < 4; c++) {
+        skin[at + c] = c < found ? candidateBones[c] : 0;
+        skin[at + 4 + c] = c < found ? candidateWeights[c] : 0;
+    }
+};
+
+/**
  * Builds every drawable piece of a model out of the file.
  *
  * **Where each piece sits is worked into its corners here**, which is the one place it happens.
@@ -220,19 +281,31 @@ export const buildParts = (
             if (deformed) {
                 const joints = readJoints(doc, buffers, primitive.attributes.JOINTS_0 as number);
                 const weights = readFloats(doc, buffers, primitive.attributes.WEIGHTS_0 as number);
+                // A second four, for a corner moved by more bones than four: a face drawn in detail.
+                // Only read as a pair, since bones with no weights (or weights with no bones) say nothing.
+                const more = primitive.attributes.JOINTS_1 !== undefined && primitive.attributes.WEIGHTS_1 !== undefined
+                    ? { joints: readJoints(doc, buffers, primitive.attributes.JOINTS_1), weights: readFloats(doc, buffers, primitive.attributes.WEIGHTS_1) }
+                    : null;
                 const renumber = renumbers[node.skinIndex as number];
                 skin = new Float32Array(count * SKIN_STRIDE);
                 for (let i = 0; i < count; i++) {
                     const at = i * SKIN_STRIDE;
+                    if (more !== null) {
+                        heaviestFour(joints, weights, more.joints, more.weights, i, skin, at);
+                    } else {
+                        for (let c = 0; c < 4; c++) {
+                            skin[at + c] = joints[i * 4 + c] ?? 0;
+                            skin[at + 4 + c] = weights[i * 4 + c] ?? 0;
+                        }
+                    }
                     let total = 0;
                     for (let c = 0; c < 4; c++) {
-                        const bone = joints[i * 4 + c] ?? 0;
+                        const bone = skin[at + c];
                         skin[at + c] = renumber === undefined ? bone : renumber[bone] ?? bone;
-                        skin[at + 4 + c] = weights[i * 4 + c] ?? 0;
                         total += skin[at + 4 + c];
                     }
                     // The four are meant to add up to one, and a file rounded on the way out often
-                    // misses by a little: brought back to one, a corner is always somewhere between
+                    // misses by a little, as four kept out of eight always do: brought back to one, a corner is always somewhere between
                     // where its bones would each put it, which is what a model is measured by to be
                     // left out of a view. A corner moved by nothing is left as it is.
                     if (total > 0 && Math.abs(total - 1) > 1e-6) {
