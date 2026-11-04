@@ -20,7 +20,7 @@ import { cameraSpacesFor, fillCameraSpace, newCameraSpace } from '../../shared/c
 import { cullingMatricesFor, meshInView } from '../../shared/mesh_in_view';
 import { drawMesh, reserveMeshSlots, writeMeshLights } from '../mesh/draw_meshes';
 import { createMaskPipelines } from '../mask/mask_pipelines';
-import { applyStencil, drawMaskLayer, drawMaskRun } from '../mask/draw_masks';
+import { applyStencil, drawFilterLayer, drawMaskLayer, drawMaskRun } from '../mask/draw_masks';
 import type { TDrawStencil } from '../../interface/draw/t_draw_stencil';
 import type { TFrameContext, TRenderPass } from '../../interface';
 import type { TDrawnShadow } from '../../shared/fill_light_uniforms';
@@ -105,9 +105,17 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
     // Nothing below this line happens for a frame with no effects, which is the promise
     // `TFrameContext.post` makes. Every pass draws where it always did.
     const chain = ctx.post ?? null;
-    if (chain !== null) {
+    // A filter's chain runs through the same pipelines, in a pass of its own, so the slots it needs
+    // are the most any one chain of the frame needs. A frame with neither makes nothing.
+    let steps = chain === null ? 0 : countPostSteps(chain);
+    for (const pass of ctx.passes) {
+        if (pass.filter !== undefined) {
+            steps = Math.max(steps, countPostSteps(pass.filter.chain));
+        }
+    }
+    if (steps > 0) {
         gpu.post ??= createPostPipelines(gpu.device, gpu.format);
-        gpu.post.beginFrame(countPostSteps(chain));
+        gpu.post.beginFrame(steps);
     }
 
     // Drawn before anything that reads them, once for the whole frame, a map for each view that
@@ -251,6 +259,20 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         }
         let state: TDrawStencil | null = null;
         const spriteCount = writeSpriteInstances(gpu.device, gpu.sprites, drawables, cameraIndex, stencil);
+        // Each filter's picture says where it goes in a slot of its own, so the room for all of them
+        // is made before the first is drawn.
+        let filterLayers = 0;
+        if (stencil !== null) {
+            for (const item of drawables) {
+                if (item.type === 'filter-layer') {
+                    filterLayers++;
+                }
+            }
+            if (filterLayers > 0) {
+                gpu.masks!.beginFilterLayers(filterLayers);
+            }
+        }
+        let filterSlot = 0;
 
         // All of these before anything is drawn: growing any of these buffers throws away the slots
         // already written, so the room has to be there first.
@@ -301,6 +323,11 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
             }
             if (item.type === 'mask-layer') {
                 drawMaskLayer(gpuPass, gpu.masks!, item);
+                spritesReady = false;
+                continue;
+            }
+            if (item.type === 'filter-layer') {
+                drawFilterLayer(gpuPass, gpu.masks!, item, filterSlot++, target.width, target.height);
                 spritesReady = false;
                 continue;
             }
@@ -381,6 +408,10 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         if (destination !== null) {
             gpu.post!.run(encoder, chain!, destination.view, ctx.time, ctx.progress, ctx.phase, ratio);
         }
+        // What a filter filters, drawn: its part run through its effects, into its own picture.
+        if (drawn.filter !== undefined && drawn.renderTarget !== undefined) {
+            gpu.post!.runFilter(encoder, drawn.filter.chain, drawn.renderTarget, drawn.filter.region, drawn.filter.into, ctx.time, ratio);
+        }
 
         // Every buffer this pass read (the frame's numbers, the sprites, the models' slots, the
         // particles) is written again by the next one from the start. The queue runs writes and
@@ -394,5 +425,6 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
     }
 
     gpu.device.queue.submit([encoder.finish()]);
+    gpu.post?.endFrame();
     releaseUnusedDepths(gpu);
 };

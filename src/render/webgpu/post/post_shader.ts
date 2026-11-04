@@ -139,19 +139,34 @@ fn fs(in: VertexOut) -> @location(0) vec4<f32> {
 `;
 
 /**
+ * The same ending for a step of a filter's chain (`useFilter`), whose picture is see-through around
+ * what it filters: what the hook gives back is kept to its own alpha, so an effect that changes
+ * colours (a dither, a grain, a palette) cannot light up what is not there. The screen's steps are
+ * whole and never need it, so they are built without it.
+ */
+const FILTER_TAIL = /* wgsl */ `
+@fragment
+fn fs(in: VertexOut) -> @location(0) vec4<f32> {
+    let shown = effect(sampleTexture(in.uv), in.uv);
+    let alpha = clamp(shown.a, 0.0, 1.0);
+    return vec4<f32>(min(shown.rgb, vec3<f32>(alpha)), alpha);
+}
+`;
+
+/**
  * Where a screen-wide effect's parameters are bound. Everything it reads is in one group, because
  * an effect draws alone and shares nothing with the passes that drew the frame it is given.
  */
 export const POST_UNIFORMS_BINDING = 4;
 
 /**
- * Builds the whole shader for one screen-wide effect.
+ * Builds the whole shader for one screen-wide effect, or one step of a filter's (`filtered`).
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const buildPostShader = (fragment: string, sig: TUniformSignature): string => {
+export const buildPostShader = (fragment: string, sig: TUniformSignature, filtered = false): string => {
     const { structText } = buildUniformLayout(sig, POST_ENGINE_FIELDS);
 
     return [
@@ -160,6 +175,6 @@ export const buildPostShader = (fragment: string, sig: TUniformSignature): strin
         `@group(0) @binding(${POST_UNIFORMS_BINDING}) var<uniform> mu: MaterialUniforms;`,
         HELPERS,
         fragment,
-        TAIL,
+        filtered ? FILTER_TAIL : TAIL,
     ].join('\n');
 };

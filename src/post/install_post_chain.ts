@@ -4,8 +4,8 @@ import { loadLut, newLut } from '../loaders/lut';
 import { loadPalette, newPalette } from '../loaders/palette';
 import { loadShader, newShader } from '../loaders/shader';
 import { newPostEffect } from './new_post_effect';
-import type { TPostChain } from './types/t_post_chain';
-import type { TPostEffect } from './types/t_post_effect';
+import type { TPostChain, TPostChainEntry } from './types/t_post_chain';
+import type { TPostEffect, TPostSource } from './types/t_post_effect';
 import type { TRuntimeStore } from '../store';
 import { assetKey, findAssetFile } from '../loaders/asset_key';
 
@@ -49,6 +49,129 @@ const lutFor = (store: TRuntimeStore, src: string) => {
 };
 
 /**
+ * The built-in each effect made from an entry was made from, by its key: what a scene's document
+ * writes back for it, whatever the entry called it.
+ */
+const builtinKeys = new WeakMap<TPostEffect, string>();
+
+/**
+ * What an entry said of its effect beyond its knobs, the name it gave it and the options it was made
+ * with, so a document written back from the effect says them again.
+ */
+const entryExtras = new WeakMap<TPostEffect, Pick<TPostChainEntry, 'name' | 'options'>>();
+
+/**
+ * The name and the options the entry an effect was made from gave it, or nothing for one made in
+ * code.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const entryExtrasOf = (effect: TPostEffect): Pick<TPostChainEntry, 'name' | 'options'> => entryExtras.get(effect) ?? {};
+
+/**
+ * The key of the built-in an effect is, or `null` for one written in code or read from a file:
+ * one made from an entry naming it, or one of the engine's own spread in as it is.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const builtinKeyOf = (effect: TPostEffect): string | null => {
+    const known = builtinKeys.get(effect);
+    if (known !== undefined) {
+        return known;
+    }
+    if (effect.effect !== null || effect.name === null) {
+        return null;
+    }
+    const builtin = findPostBuiltin(effect.name);
+    // Its name alone could be anybody's: it is the engine's when it says what the engine's says.
+    return builtin !== null && builtin.build().fragment === effect.fragment ? builtin.key : null;
+};
+
+/**
+ * Makes the effect one written-down entry names: a built-in, laid over with the entry's values, or a
+ * file, fetched now if nobody has yet. `null`, said, for a built-in this version does not have.
+ *
+ * @returns The effect, and what lets go of its file again when it leaves.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const effectFromEntry = (
+    store: TRuntimeStore,
+    entry: TPostChainEntry,
+    source: TPostSource,
+): { effect: TPostEffect; unbind: () => void } | null => {
+    const asked = entry.uniforms ?? {};
+    let effect: TPostEffect;
+    let unbind = (): void => undefined;
+
+    if (entry.builtin !== undefined) {
+        const builtin = findPostBuiltin(entry.builtin);
+        if (builtin === null) {
+            console.warn(
+                `[NacatamalOn] post: this version has no built-in effect called '${entry.builtin}', ` +
+                'so that entry is skipped.',
+            );
+            return null;
+        }
+        const built = builtin.build(entry.options);
+        effect = newPostEffect({
+            name: entry.name ?? built.name,
+            fragment: built.fragment,
+            fragmentGlsl: built.fragmentGlsl,
+            // The entry's values laid over what the built-in starts them at.
+            uniforms: { ...built.uniforms, ...asked },
+            uniformSig: built.uniformSig,
+            passes: built.passes,
+            history: built.history,
+            ...(built.reach !== undefined ? { reach: built.reach } : {}),
+            enabled: entry.enabled ?? true,
+        }, null, source);
+        builtinKeys.set(effect, builtin.key);
+    } else if (entry.effect !== undefined) {
+        const shader = shaderFor(store, entry.effect);
+        const made = newPostEffect({
+            name: entry.name ?? entry.effect,
+            uniforms: asked,
+            enabled: entry.enabled ?? true,
+        }, shader, source);
+        effect = made;
+        rememberPostOverrides(made, asked);
+        shader.bound.push(made);
+        if (shader.status === 'ready') {
+            applyShaderToEffect(made, shader);
+        }
+        unbind = () => {
+            const at = shader.bound.indexOf(made);
+            if (at !== -1) {
+                shader.bound.splice(at, 1);
+            }
+        };
+    } else {
+        // Neither a built-in nor a file: `normalizePostChain` never lets one through.
+        return null;
+    }
+
+    if (entry.palette !== undefined) {
+        effect.palette = paletteFor(store, entry.palette);
+    } else if (entry.lut !== undefined) {
+        effect.lut = lutFor(store, entry.lut);
+    }
+    if (entry.name !== undefined || entry.options !== undefined) {
+        entryExtras.set(effect, {
+            ...(entry.name !== undefined ? { name: entry.name } : {}),
+            ...(entry.options !== undefined ? { options: { ...entry.options } } : {}),
+        });
+    }
+    return { effect, unbind };
+};
+
+/**
  * Turns a project's written-down chain into running effects.
  *
  * **Nothing is waited for.** Every effect goes in at once with no source, and the chain skips the
@@ -67,55 +190,12 @@ export const installPostChain = (store: TRuntimeStore, chain: TPostChain): void 
     const { effects } = store.get('post');
 
     for (const [index, entry] of chain.entries()) {
-        const asked = entry.uniforms ?? {};
-        let effect: TPostEffect;
-
-        if (entry.builtin !== undefined) {
-            const builtin = findPostBuiltin(entry.builtin);
-            if (builtin === null) {
-                console.warn(
-                    `[NacatamalOn] post: this version has no built-in effect called '${entry.builtin}', ` +
-                    'so that entry is skipped.',
-                );
-                continue;
-            }
-            const built = builtin.build(entry.options);
-            effect = newPostEffect({
-                name: entry.name ?? built.name,
-                fragment: built.fragment,
-                fragmentGlsl: built.fragmentGlsl,
-                // The entry's values laid over what the built-in starts them at.
-                uniforms: { ...built.uniforms, ...asked },
-                uniformSig: built.uniformSig,
-                passes: built.passes,
-                history: built.history,
-                enabled: entry.enabled ?? true,
-            }, null, 'project');
-        } else if (entry.effect !== undefined) {
-            const shader = shaderFor(store, entry.effect);
-            effect = newPostEffect({
-                name: entry.name ?? entry.effect,
-                uniforms: asked,
-                enabled: entry.enabled ?? true,
-            }, shader, 'project');
-            rememberPostOverrides(effect, asked);
-            shader.bound.push(effect);
-            if (shader.status === 'ready') {
-                applyShaderToEffect(effect, shader);
-            }
-        } else {
-            // Neither a built-in nor a file: `normalizePostChain` never lets one through.
+        const made = effectFromEntry(store, entry, 'project');
+        if (made === null) {
             continue;
         }
-
-        if (entry.palette !== undefined) {
-            effect.palette = paletteFor(store, entry.palette);
-        } else if (entry.lut !== undefined) {
-            effect.lut = lutFor(store, entry.lut);
-        }
-
-        entryOf.set(effect, index);
-        effects.push(effect);
+        entryOf.set(made.effect, index);
+        effects.push(made.effect);
     }
 };
 

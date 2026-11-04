@@ -79,6 +79,7 @@ export type { TParticlesFile, TParticlesDoc, TParticlesDoc2d, TParticlesDoc3d, T
 export {
     dither, posterize, paletteMatch, lutGrade,
     crt, colorAdjust, mosaic, rgbSplit, wave, shockwave, distort, glitch, grain, oldFilm, halftone, ascii, ntsc, lcd, zoomBlur, motionBlur, blur, bloom, godrays, tiltShift, phosphor,
+    outline, dropShadow, glow,
 } from './post';
 export type { TPostEffect, TPostPass, TPostChain, TPostChainEntry, TPostProcessOptions, TBuiltinPostEffect, TEffectField, TCrtOptions, TCrtUniforms } from './post';
 
@@ -132,6 +133,8 @@ export { useHitbox, useCollisionBetween, useCollisionWith, useTag } from './hook
 export type { TTag, TTaggable } from './tags';
 export { useMask } from './hooks';
 export type { TMask, TMaskOptions, TMaskRect, TMaskChannel } from './mask';
+export { useFilter } from './hooks';
+export type { TFilter, TFilterOptions, TFilterRect } from './filter';
 export type { TCollisionWithOptions } from './hooks';
 // Photos of the game taken by the game: a photography game, an album, a sticker.
 export { useCapture } from './hooks';
@@ -223,7 +226,7 @@ export type { TProjectSettings } from './project';
 export { boxFromDoc, copyBox, parseSceneDoc, sceneFromDoc } from './scene';
 export type {
     TSceneDoc, TBoxNode, TDataEntry, TAssetEntry, TGeometrySource, TComponentDoc, TMaterialDoc, TMeshMaterialDoc, TMaterialMapDoc,
-    TSpriteComponent, TNineSliceComponent, TTextComponent, TMeshComponent, TTilemapComponent, TTilemapLayerOverride, TParticlesComponent, TParticles3dComponent, TParticleCollider2dComponent, TParticleCollider3dComponent, TSpriteTextureComponent, TMusicComponent, TSongComponent, TMotionComponent, TAudioListenerComponent, TMaskComponent, TCamera2dComponent,
+    TSpriteComponent, TNineSliceComponent, TTextComponent, TMeshComponent, TTilemapComponent, TTilemapLayerOverride, TParticlesComponent, TParticles3dComponent, TParticleCollider2dComponent, TParticleCollider3dComponent, TSpriteTextureComponent, TMusicComponent, TSongComponent, TMotionComponent, TAudioListenerComponent, TMaskComponent, TFilterComponent, TCamera2dComponent,
     TCamera3dComponent, TFogComponent, TLightComponent, TSpriteAnimationDoc,
 } from './scene';
 export type { TRandomHandle } from './math/random';

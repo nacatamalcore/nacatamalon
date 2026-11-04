@@ -27,6 +27,18 @@ export type TMaskPipelines = {
     tilemap(reading: Exclude<TReading, 'field'>, write: 'add' | 'sub'): GPURenderPipeline;
     /** A soft mask's picture laid over the pass, read in a channel and turned round or not. */
     layer(channel: 'alpha' | 'luminance', invert: boolean): GPURenderPipeline;
+    /** A filter's picture laid over its rectangle of the pass. */
+    filterLayer(): GPURenderPipeline;
+    /**
+     * Makes room for this pass's filter layers, one slot each, before any of them is drawn: a
+     * buffer that grew in the middle would leave the ones already drawn pointing at nothing.
+     */
+    beginFilterLayers(count: number): void;
+    /**
+     * Writes where a filter's picture goes, in its slot, and gives back what binds it with that
+     * slot's offset.
+     */
+    filterLayerBindGroup(picture: ITexture, slot: number, rect: readonly [number, number, number, number], targetWidth: number, targetHeight: number): { group: GPUBindGroup; offset: number };
     /** The two pictures of a soft mask, bound together. */
     layerBindGroup(content: ITexture, shape: ITexture): GPUBindGroup;
 };
@@ -107,6 +119,38 @@ fn fs(@builtin(position) at: vec4f) -> @location(0) vec4f {
 }
 `;
 
+/**
+ * A filter's picture over its rectangle of the pass: drawn as that rectangle, and read pixel for
+ * pixel from its corner, its colour already multiplied by its alpha.
+ */
+const FILTER_LAYER_SHADER = /* wgsl */ `
+struct Place {
+    rect: vec4f,
+    size: vec2f,
+};
+
+@group(0) @binding(0) var picture: texture_2d<f32>;
+@group(0) @binding(1) var<uniform> place: Place;
+
+@vertex
+fn vs(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
+    let corner = vec2f(f32(index & 1u), f32((index >> 1u) & 1u));
+    let pixel = place.rect.xy + corner * place.rect.zw;
+    let clip = pixel / place.size * 2.0 - 1.0;
+    return vec4f(clip.x, -clip.y, 0.0, 1.0);
+}
+
+@fragment
+fn fs(@builtin(position) at: vec4f) -> @location(0) vec4f {
+    let size = vec2i(textureDimensions(picture));
+    let pixel = clamp(vec2i(at.xy) - vec2i(place.rect.xy), vec2i(0), size - 1);
+    return textureLoad(picture, pixel, 0);
+}
+`;
+
+/** One slot of the filter layers' buffer: the smallest offset a card takes. */
+const FILTER_SLOT = 256;
+
 const READINGS: Record<TReading, number> = { alpha: 0, luminance: 1, field: 2 };
 
 const WRITES: Record<Exclude<TDrawStencil['write'], 'none'>, GPUStencilFaceState> = {
@@ -146,6 +190,19 @@ export const createMaskPipelines = (
         ],
     });
     const layerLayout = device.createPipelineLayout({ label: 'mask layer layout', bindGroupLayouts: [pictures] });
+    const filterModule = device.createShaderModule({ label: 'filter layer shader', code: FILTER_LAYER_SHADER });
+    const filterPicture = device.createBindGroupLayout({
+        label: 'filter layer picture',
+        entries: [
+            { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'unfilterable-float' } },
+            { binding: 1, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform', hasDynamicOffset: true, minBindingSize: 32 } },
+        ],
+    });
+    const filterLayout = device.createPipelineLayout({ label: 'filter layer layout', bindGroupLayouts: [filterPicture] });
+    let filterPlaces: GPUBuffer | null = null;
+    let filterCapacity = 0;
+    let filterGroups = new WeakMap<ITexture, GPUBindGroup>();
+    const filterValues = new Float32Array(8);
 
     // Writes the stencil and nothing of the colour.
     const writing = (write: Exclude<TDrawStencil['write'], 'none'>): GPUDepthStencilState => ({
@@ -224,6 +281,63 @@ export const createMaskPipelines = (
             depthStencil: FLAT_DEPTH,
             multisample: { count: samples },
         })),
+        filterLayer: () => once('filter layer', () => device.createRenderPipeline({
+            label: 'filter layer',
+            layout: filterLayout,
+            vertex: { module: filterModule, entryPoint: 'vs' },
+            fragment: {
+                module: filterModule,
+                entryPoint: 'fs',
+                // Its colour is already multiplied by its alpha, which is what laying it over asks for.
+                targets: [{
+                    format,
+                    blend: {
+                        color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+                        alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+                    },
+                }],
+            },
+            primitive: { topology: 'triangle-strip' },
+            // Kept inside the masks around it, like anything else in the pass.
+            depthStencil: FLAT_DEPTH,
+            multisample: { count: samples },
+        })),
+        beginFilterLayers: (count) => {
+            if (filterPlaces !== null && count <= filterCapacity) {
+                return;
+            }
+            filterPlaces?.destroy();
+            filterCapacity = Math.max(4, count);
+            filterPlaces = device.createBuffer({
+                label: 'filter layer places',
+                size: filterCapacity * FILTER_SLOT,
+                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+            });
+            // The old groups pointed at the buffer that just went.
+            filterGroups = new WeakMap();
+        },
+        filterLayerBindGroup: (picture, slot, rect, targetWidth, targetHeight) => {
+            filterValues[0] = rect[0];
+            filterValues[1] = rect[1];
+            filterValues[2] = rect[2];
+            filterValues[3] = rect[3];
+            filterValues[4] = targetWidth;
+            filterValues[5] = targetHeight;
+            device.queue.writeBuffer(filterPlaces!, slot * FILTER_SLOT, filterValues);
+            let group = filterGroups.get(picture);
+            if (group === undefined) {
+                group = device.createBindGroup({
+                    label: 'filter layer picture',
+                    layout: filterPicture,
+                    entries: [
+                        { binding: 0, resource: toGpuTexture(picture).createView() },
+                        { binding: 1, resource: { buffer: filterPlaces!, offset: 0, size: 32 } },
+                    ],
+                });
+                filterGroups.set(picture, group);
+            }
+            return { group, offset: slot * FILTER_SLOT };
+        },
         layerBindGroup: (content, shape) => {
             let byShape = groups.get(content);
             if (byShape === undefined) {

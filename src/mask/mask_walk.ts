@@ -2,18 +2,26 @@ import type { TBox } from '../box/types/t_box';
 import type { TDrawable } from '../gameobjects/types';
 import type { TTransform2d } from '../gameobjects/types/t_transform_2d';
 import type { TMask } from './types/t_mask';
+import type { TFilter } from '../filter/types/t_filter';
 
 /**
- * One masked object, as the frame found it: its mask, the masks around it, which camera it is seen
- * through and where it is. What a drawable under it is kept to is this and its `parent`s.
+ * One masked or filtered object, as the frame found it: its mask or its filter, the ones around it,
+ * which camera it is seen through and where it is. What a drawable under it is kept to, and run
+ * through, is this and its `parent`s.
  *
- * One per masked object and walk, made fresh for each walk: a few per frame, for the objects that
- * are masked.
+ * One per masked or filtered object and walk, made fresh for each walk: a few per frame, for the
+ * objects that have one. Each level is one of the two: an object with both has two levels, its
+ * filter's inside its mask's, so what the filter draws around it is kept to the mask too.
  *
  * @internal
  */
 export type TMaskLevel = {
-    mask: TMask;
+    /** The mask, or `null` on a filter's level. */
+    mask: TMask | null;
+    /** The filter, or `null` on a mask's level. */
+    filter: TFilter | null;
+    /** The object it is on: what a filter's `rect` is measured in, and whose layer it is. */
+    box: TBox | null;
     parent: TMaskLevel | null;
     /** The camera the masked object is seen through, as an index into the pass's, `-1` for none. */
     camera: number;
@@ -44,6 +52,8 @@ export type TMaskWalk = {
      * the screen's masks while doing so.
      */
     found: Map<TBox, TMaskLevel>;
+    /** Each filtered object's level in this walk, apart from its mask's, which `found` holds. */
+    filtered: Map<TBox, TMaskLevel>;
 };
 
 /**
@@ -51,13 +61,35 @@ export type TMaskWalk = {
  *
  * @internal
  */
-export const maskLevelFor = (walk: TMaskWalk, box: TBox, mask: TMask, parent: TMaskLevel | null, camera: number, place: TTransform2d): TMaskLevel => {
-    let level = walk.found.get(box);
+export const maskLevelFor = (walk: TMaskWalk, box: TBox, mask: TMask, parent: TMaskLevel | null, camera: number, place: TTransform2d): TMaskLevel =>
+    levelFor(walk.found, box, mask, null, parent, camera, place);
+
+/**
+ * The level for a filtered object in this walk, inside its mask's when it has one: one per object,
+ * however many times the walk asks.
+ *
+ * @internal
+ */
+export const filterLevelFor = (walk: TMaskWalk, box: TBox, filter: TFilter, parent: TMaskLevel | null, camera: number, place: TTransform2d): TMaskLevel =>
+    levelFor(walk.filtered, box, null, filter, parent, camera, place);
+
+const levelFor = (
+    found: Map<TBox, TMaskLevel>,
+    box: TBox,
+    mask: TMask | null,
+    filter: TFilter | null,
+    parent: TMaskLevel | null,
+    camera: number,
+    place: TTransform2d,
+): TMaskLevel => {
+    let level = found.get(box);
     if (level === undefined) {
-        level = { mask, parent, camera, place: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 } };
-        walk.found.set(box, level);
+        level = { mask, filter, box, parent, camera, place: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 } };
+        found.set(box, level);
     }
     level.mask = mask;
+    level.filter = filter;
+    level.box = box;
     level.parent = parent;
     level.camera = camera;
     // Copied, because what the walk hands over is written over by the next object at this depth.

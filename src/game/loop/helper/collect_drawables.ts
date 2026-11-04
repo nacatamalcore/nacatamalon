@@ -18,7 +18,8 @@ import type { TText } from '../../../gameobjects/text/types/t_text';
 import type { TNineSlice } from '../../../gameobjects/nine_slice/types/t_nine_slice';
 import type { TPixelSnap } from '../../types/t_game_options';
 import { shapeRolesOf } from '../../../mask/create_mask';
-import { maskLevelFor, masksNow, noteShape } from '../../../mask/mask_walk';
+import { filterLevelFor, maskLevelFor, masksNow, noteShape } from '../../../mask/mask_walk';
+import { filtersNow } from '../../../filter/create_filter';
 import type { TMask } from '../../../mask/types/t_mask';
 import type { TMaskLevel, TMaskWalk } from '../../../mask/mask_walk';
 import { pictureBeingDrawn, showsPicture, standInFor, viewKeeps, viewWalk } from './view_walk';
@@ -438,6 +439,10 @@ export const collectDrawables = (
     if (masks !== null) {
         if (masksNow(box.mask)) {
             here = maskLevelFor(masks, box, box.mask, level, view, world?.flat ?? NOWHERE_FLAT);
+        }
+        // A filter runs inside its own box's mask, so what it draws around the box is kept to it.
+        if (filtersNow(box.filter)) {
+            here = filterLevelFor(masks, box, box.filter, here, view, world?.flat ?? NOWHERE_FLAT);
         }
         const roles = shapeRolesOf(box);
         if (roles !== undefined) {

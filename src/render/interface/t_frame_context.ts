@@ -79,6 +79,17 @@ export type TRenderPass = {
      * screen's pass and 1 for everything else.
      */
     pixelRatio?: number;
+    /**
+     * For a pass that draws what a filter filters: once it is drawn, its `region` (real pixels of
+     * `renderTarget`) is run through `chain` and the result written into `into`, a picture the
+     * region's size, which a `'filter-layer'` in a later pass lays on the screen. Left out by every
+     * other pass.
+     */
+    filter?: {
+        readonly region: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
+        readonly chain: readonly TPostEffect[];
+        readonly into: ITexture;
+    };
 };
 
 /**

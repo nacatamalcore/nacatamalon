@@ -28,6 +28,11 @@ export type TBuiltinPostEffect<U extends TUniformValues = TUniformValues> = {
      * Whether it reads what it showed last frame.
      */
     history?: boolean;
+    /**
+     * How many pixels beyond what it is handed it draws, for these knobs: what a filter leaves room
+     * for around its object.
+     */
+    reach?(uniforms: U): number;
 };
 
 /**
@@ -112,6 +117,11 @@ export type TPostBuiltinInfo = {
     label: string;
     description: string;
     binds: 'palette' | 'lut' | null;
+    /**
+     * Made for a filter (`useFilter`): it draws around what an object draws, so on the whole screen
+     * it has nothing to do. Left out by every one that is for the screen as well.
+     */
+    forObjects?: true;
     fields: readonly TEffectField[];
     /**
      * Old knob name → the name it has now, so a project written before a rename keeps its value.

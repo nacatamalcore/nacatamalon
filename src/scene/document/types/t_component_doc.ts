@@ -12,6 +12,7 @@ import type { TParticleOverrides } from '../../../gameobjects/particles/types/t_
 import type { TParticleColliderShape2d, TParticleColliderShape3d } from '../../../gameobjects/particles/colliders/t_particle_collider';
 import type { TSoundCone, TSoundDuck, TSoundZone } from '../../../audio';
 import type { TSongVoiceName } from '../../../audio/synth';
+import type { TPostChainEntry } from '../../../post/types/t_post_chain';
 
 /**
  * What a material is, written down.
@@ -191,6 +192,7 @@ export type TComponentDoc =
     | TMotionComponent
     | TAudioListenerComponent
     | TMaskComponent
+    | TFilterComponent
     | TStoreComponent
     | TPhysicsBody2dComponent
     | TPhysicsBody3dComponent
@@ -964,6 +966,31 @@ export type TMaskComponent = {
     soft?: boolean;
     invert?: boolean;
     showShape?: boolean;
+    /** Left out when on. */
+    enabled?: boolean;
+};
+
+/**
+ * A filter on this object: effects run over what it, and everything under it, draws.
+ *
+ * Written on the object it filters. A filter the game adds to several objects is written on each of
+ * them, with the same `id`. Its `effects` are written as a project's `post` list is: an engine
+ * effect by its key (`builtin`) or a file by its path (`effect`), with its knobs. One written in code
+ * has nothing to be written as and is left out. What is left out is the default: `rect` and `padding`
+ * only when given, `enabled` only when off.
+ *
+ * @category Scenes
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TFilterComponent = {
+    type: 'filter';
+    id: string;
+    effects: TPostChainEntry[];
+    /** The part of the screen its effects work on, in this object's space. */
+    rect?: { x: number; y: number; width: number; height: number };
+    /** Pixels of room around what the object draws, when not what its effects ask. */
+    padding?: number;
     /** Left out when on. */
     enabled?: boolean;
 };

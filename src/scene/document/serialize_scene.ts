@@ -1,4 +1,7 @@
 import { SCENE_FORMAT, SCENE_VERSION } from './types/t_scene_doc';
+import { builtinKeyOf, entryExtrasOf } from '../../post/install_post_chain';
+import type { TPostEffect } from '../../post/types/t_post_effect';
+import type { TPostChainEntry } from '../../post/types/t_post_chain';
 import { isEffectFromCode } from '../../loaders/particles/file_from_effect';
 import { isBuiltinFont } from '../../gameobjects/text/default_font';
 import { UNSUPPORTED_COMPONENTS } from './parse_scene_doc';
@@ -6,6 +9,7 @@ import { DEFAULT_FONT_ATLAS_SIZE, isMadeTexture } from '../../loaders';
 import type { TFog } from '../../fog/types/t_fog';
 import type { TTexture } from '../../loaders';
 import type { TColor } from '../../color';
+import type { TUniformValues } from '../../materials/types/t_uniforms';
 import { DEFAULT_CHANNEL } from '../../audio';
 import { lookKnobs } from '../../shader_composer/surface/compose_surface';
 import type { TAssetEntry } from './types/t_asset_entry';
@@ -264,6 +268,34 @@ const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting, fromFile:
         ...(material.transparent !== undefined ? { transparent: material.transparent } : {}),
         ...(lighting !== undefined ? { lighting: lighting as TMeshMaterialDoc['lighting'] } : {}),
         ...(steps !== undefined ? { steps: steps as TMeshMaterialDoc['steps'] } : {}),
+    };
+};
+
+/**
+ * One of a filter's effects as a document writes it, the way a project's chain does: the engine's by
+ * its key, a file's by its path, each with its knobs as they are now. `null` for one written in code,
+ * which has nothing to be written as.
+ */
+const entryOfEffect = (effect: TPostEffect): TPostChainEntry | null => {
+    const extras = entryExtrasOf(effect);
+    const key = builtinKeyOf(effect);
+    const src = effect.effect?.src ?? '';
+    if (key === null && src === '') {
+        return null;
+    }
+    const uniforms: TUniformValues = {};
+    for (const [name, value] of Object.entries(effect.uniforms)) {
+        uniforms[name] = Array.isArray(value) ? [...value] : value;
+    }
+    const palette = effect.palette?.src ?? '';
+    const lut = effect.lut?.src ?? '';
+    return {
+        ...(key !== null ? { builtin: key } : { effect: src }),
+        ...(Object.keys(uniforms).length > 0 ? { uniforms } : {}),
+        ...(palette !== '' ? { palette } : lut !== '' ? { lut } : {}),
+        ...(effect.enabled ? {} : { enabled: false }),
+        ...(extras.name !== undefined ? { name: extras.name } : {}),
+        ...(key !== null && extras.options !== undefined ? { options: { ...extras.options } } : {}),
     };
 };
 
@@ -798,6 +830,26 @@ const writeBox = (box: TBox, writing: TWriting): TBoxNode => {
             ...unless('showShape', mask.showShape, false),
             ...unless('enabled', mask.enabled, true),
         });
+    }
+
+    // After its mask, which is how they nest. Its effects as a project's chain writes them: the
+    // engine's by their key, a file's by its path; one written in code has nothing to be written as.
+    const filter = box.filter;
+    if (filter !== null) {
+        const effects = filter.effects.map(entryOfEffect).filter((entry) => entry !== null);
+        if (effects.length < filter.effects.length) {
+            console.warn(`[NacatamalOn] serializeScene: the filter on '${box.name}' has an effect written in code, which a document has no way to say, so it is left out of it.`);
+        }
+        if (effects.length > 0) {
+            components.push({
+                type: 'filter',
+                id: filter.id,
+                effects,
+                ...(filter.rect !== null ? { rect: { ...filter.rect } } : {}),
+                ...(filter.padding !== null ? { padding: filter.padding } : {}),
+                ...unless('enabled', filter.enabled, true),
+            });
+        }
     }
 
     // Before the behaviours, because that is the order they have to be read back in: a behaviour

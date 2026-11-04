@@ -74,6 +74,12 @@ export type TPostProcessOptions<U extends TUniformValues = TUniformValues> = {
      */
     lut?: TLut | null;
     /**
+     * How many pixels beyond what it is handed it draws, for its knobs as they are: a glow its radius,
+     * a shadow how far it falls. Only a filter reads it (`useFilter`), to leave that much room around
+     * the object; the engine's own effects say it themselves.
+     */
+    reach?(uniforms: U): number;
+    /**
      * Whether it runs at all. Default `true`.
      */
     enabled?: boolean;

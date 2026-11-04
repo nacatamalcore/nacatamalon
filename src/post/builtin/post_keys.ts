@@ -10,7 +10,7 @@
  * @author Francisco Pereira Alvarado
  */
 export const POST_KEYS: readonly string[] = [
-    'lutGrade', 'colorAdjust', 'wave', 'shockwave', 'distort', 'mosaic', 'blur', 'zoomBlur', 'motionBlur',
+    'lutGrade', 'colorAdjust', 'wave', 'shockwave', 'distort', 'mosaic', 'outline', 'dropShadow', 'glow', 'blur', 'zoomBlur', 'motionBlur',
     'tiltShift', 'bloom', 'godrays', 'halftone', 'ascii', 'glitch', 'rgbSplit', 'grain', 'oldFilm',
     'paletteMatch', 'dither', 'posterize', 'phosphor', 'ntsc', 'lcd', 'crt',
 ];

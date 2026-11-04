@@ -1,4 +1,6 @@
 import { createMaterial } from '../../gameobjects/material';
+import { createFilter, releaseFilter } from '../../filter/create_filter';
+import { effectFromEntry } from '../../post/install_post_chain';
 import { createMesh } from '../../gameobjects/mesh/create_mesh';
 import { createParticles } from '../../gameobjects/particles/create_particles';
 import { createParticles3d } from '../../gameobjects/particles/create_particles_3d';
@@ -788,6 +790,30 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
             if (component.by !== undefined) {
                 shapesToFind.push({ mask, id: component.by, box });
             }
+            break;
+        }
+        case 'filter': {
+            // Owned by the object it filters, so it goes when that object goes, letting go of the
+            // files its effects were read from.
+            const box = getActiveBox()!;
+            const made = component.effects
+                .map((entry) => effectFromEntry(getActiveGame()!, entry, 'filter'))
+                .filter((one) => one !== null);
+            if (made.length === 0) {
+                break;
+            }
+            const filter = createFilter(made.map(({ effect }) => effect), {
+                ...(component.rect !== undefined ? { rect: component.rect } : {}),
+                ...(component.padding !== undefined ? { padding: component.padding } : {}),
+                ...(component.enabled !== undefined ? { enabled: component.enabled } : {}),
+            }, component.id);
+            box.cleanups.push(() => {
+                releaseFilter(filter);
+                for (const { unbind } of made) {
+                    unbind();
+                }
+            });
+            filter.add(box);
             break;
         }
         default: {

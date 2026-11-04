@@ -7,6 +7,7 @@ import { SPRITE_STRIDE } from '../sprite/write_sprite_instances';
 import { TILEMAP_FRAGMENT_HEAD_GLSL, TILEMAP_VERTEX_SHADER } from '../tilemap/tilemap_shader';
 import { toGlTexture } from '../texture';
 import type { TDrawMaskLayer } from '../../interface/draw/t_draw_mask_layer';
+import type { TDrawFilterLayer } from '../../interface/draw/t_draw_filter_layer';
 import type { TDrawStencil } from '../../interface/draw/t_draw_stencil';
 import type { TSpritePipeline } from '../sprite/types/t_sprite_pipeline';
 import type { TSpriteRun } from '../sprite/types/t_sprite_run';
@@ -23,6 +24,7 @@ export type TMaskPrograms = {
     sprite: { program: WebGLProgram; reading: WebGLUniformLocation | null };
     tilemap: { program: WebGLProgram; reading: WebGLUniformLocation | null; uniforms: TTilemapPipeline['uniforms'] };
     layer: { program: WebGLProgram; channel: WebGLUniformLocation | null; invert: WebGLUniformLocation | null; vao: WebGLVertexArrayObject };
+    filter: { program: WebGLProgram; rect: WebGLUniformLocation | null; target: WebGLUniformLocation | null };
 };
 
 const SPRITE_MASK_MAIN = /* glsl */ `
@@ -93,6 +95,37 @@ void main() {
 }
 `;
 
+// A filter's picture over its rectangle of the pass. `rect` is where it goes in the pass, its top
+// counted from the top; the picture was written by the chain, which keeps its first row at the
+// bottom, as the pixel being drawn counts it. So the pixel is read by how far it is from the
+// rectangle's bottom-left corner, with nothing turned round.
+const FILTER_VERTEX = /* glsl */ `#version 300 es
+uniform vec4 rect;
+uniform vec2 target;
+void main() {
+    vec2 corner = vec2(float(gl_VertexID & 1), float((gl_VertexID >> 1) & 1));
+    vec2 pixel = rect.xy + corner * rect.zw;
+    vec2 clip = pixel / target * 2.0 - 1.0;
+    gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
+}
+`;
+
+const FILTER_FRAGMENT = /* glsl */ `#version 300 es
+precision highp float;
+
+uniform sampler2D picture;
+uniform vec4 rect;
+uniform vec2 target;
+out vec4 fragColor;
+
+void main() {
+    ivec2 size = textureSize(picture, 0);
+    ivec2 corner = ivec2(int(rect.x), int(target.y) - int(rect.y) - size.y);
+    ivec2 pixel = clamp(ivec2(gl_FragCoord.xy) - corner, ivec2(0), size - 1);
+    fragColor = texelFetch(picture, pixel, 0);
+}
+`;
+
 const READINGS = { alpha: 0, luminance: 1, field: 2 } as const;
 
 /**
@@ -118,6 +151,10 @@ export const createMaskPrograms = (gl: WebGL2RenderingContext): TMaskPrograms =>
     gl.uniform1i(gl.getUniformLocation(layer, 'content'), 0);
     gl.uniform1i(gl.getUniformLocation(layer, 'shape'), 1);
 
+    const filter = compileProgram(gl, FILTER_VERTEX, FILTER_FRAGMENT, 'filter layer');
+    gl.useProgram(filter);
+    gl.uniform1i(gl.getUniformLocation(filter, 'picture'), 0);
+
     return {
         sprite: { program: sprite, reading: gl.getUniformLocation(sprite, 'reading') },
         tilemap: {
@@ -133,6 +170,7 @@ export const createMaskPrograms = (gl: WebGL2RenderingContext): TMaskPrograms =>
         },
         // Nothing to read: the corners come from the vertex's number.
         layer: { program: layer, channel: gl.getUniformLocation(layer, 'channel'), invert: gl.getUniformLocation(layer, 'invert'), vao: gl.createVertexArray()! },
+        filter: { program: filter, rect: gl.getUniformLocation(filter, 'rect'), target: gl.getUniformLocation(filter, 'target') },
     };
 };
 
@@ -257,5 +295,40 @@ export const drawMaskLayer = (gl: WebGL2RenderingContext, sprites: TSpritePipeli
     gl.bindTexture(gl.TEXTURE_2D, content);
     gl.bindSampler(0, sprites.samplers.nearest);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.bindVertexArray(null);
+};
+
+/**
+ * Lays a filter's picture over its rectangle of the pass, which is `targetWidth` by `targetHeight`.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const drawFilterLayer = (
+    gl: WebGL2RenderingContext,
+    sprites: TSpritePipeline,
+    masks: TMaskPrograms,
+    layer: TDrawFilterLayer,
+    targetWidth: number,
+    targetHeight: number,
+): void => {
+    const picture = toGlTexture(layer.picture);
+    if (picture === null) {
+        return;
+    }
+    gl.useProgram(masks.filter.program);
+    gl.uniform4f(masks.filter.rect, layer.x, layer.y, layer.width, layer.height);
+    gl.uniform2f(masks.filter.target, targetWidth, targetHeight);
+    // The layer's array object reads nothing either: the corners come from the vertex's number.
+    gl.bindVertexArray(masks.layer.vao);
+    gl.disable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    // Its colour is already multiplied by its alpha, which is what laying it over asks for.
+    gl.blendFuncSeparate(gl.ONE, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, picture);
+    gl.bindSampler(0, sprites.samplers.nearest);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     gl.bindVertexArray(null);
 };

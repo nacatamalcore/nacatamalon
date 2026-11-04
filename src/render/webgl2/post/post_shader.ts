@@ -139,7 +139,20 @@ void main() {
 `;
 
 /**
- * Builds one screen-wide effect's two halves for this backend.
+ * The ending for a step of a filter's chain, keeping what the hook gives back to its own alpha: see
+ * its twin.
+ */
+const FILTER_TAIL = /* glsl */ `
+void main() {
+    vec4 shown = effect(sampleTexture(vUv), vUv);
+    float alpha = clamp(shown.a, 0.0, 1.0);
+    fragColor = vec4(min(shown.rgb, vec3(alpha)), alpha);
+}
+`;
+
+/**
+ * Builds one screen-wide effect's two halves for this backend, or one step of a filter's
+ * (`filtered`).
  *
  * @internal
  * @since 1.0.0
@@ -148,7 +161,8 @@ void main() {
 export const buildPostShaderGlsl = (
     fragment: string,
     sig: TUniformSignature,
+    filtered = false,
 ): { vertex: string; fragment: string } => ({
     vertex: VERTEX,
-    fragment: [HEAD, glslUniformBlock(sig, POST_ENGINE_FIELDS), HELPERS, fragment, TAIL].join('\n'),
+    fragment: [HEAD, glslUniformBlock(sig, POST_ENGINE_FIELDS), HELPERS, fragment, filtered ? FILTER_TAIL : TAIL].join('\n'),
 });

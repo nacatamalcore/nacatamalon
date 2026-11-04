@@ -1,19 +1,21 @@
 import { applyView2d } from '../render/shared/apply_view_2d';
 import { composeTransform2d } from '../render/shared/compose_transform_2d';
-import { takeSoftTarget } from './soft_targets';
+import { markSoftTargets, rewindSoftTargets, takeSoftTarget } from './soft_targets';
 import type { IRenderer, TDrawCamera2d, TDrawItem, TDrawSprite, TDrawTexture, TDrawView3d, TRenderPass } from '../render/interface';
 import type { TDrawStencil } from '../render/interface/draw/t_draw_stencil';
 import type { TDrawMaskLayer } from '../render/interface/draw/t_draw_mask_layer';
 import type { TDrawable } from '../gameobjects/types';
 import type { TMask } from './types/t_mask';
 import type { TMaskLevel, TShapeList } from './mask_walk';
+import type { TDrawFilterLayer } from '../render/interface/draw/t_draw_filter_layer';
+import { emptySpan, paddingOf, regionOf, spanEverything, spanLayer, spanRect, spanSprite } from '../filter/filter_region';
 
 /**
  * Anything a pass's list can hold on its way to a backend.
  *
  * @internal
  */
-export type TMaskedItem = TDrawable | TDrawSprite | TDrawMaskLayer;
+export type TMaskedItem = TDrawable | TDrawSprite | TDrawMaskLayer | TDrawFilterLayer;
 
 /**
  * One pass's lists, as the frame has collected and sorted them, with the innermost mask of each
@@ -163,7 +165,7 @@ const everywhere = (white: TDrawTexture): TDrawSprite => ({
  * where the masked object is.
  */
 const shapeOf = (context: TContext, level: TMaskLevel): TShapeList => {
-    const { mask } = level;
+    const mask = level.mask!;
     if (mask.by !== null) {
         return context.lists.shapes.get(mask) ?? { drawables: [], cameraIndex: [] };
     }
@@ -190,7 +192,7 @@ const scissorOf = (context: TContext, level: TMaskLevel): TDrawStencil['scissor'
         return context.scissors.get(level) ?? null;
     }
     let scissor: TDrawStencil['scissor'] = null;
-    const { mask } = level;
+    const mask = level.mask!;
     if (mask.by === null && mask.rect !== null && !mask.invert) {
         const camera = level.camera >= 0 ? context.lists.cameras[level.camera] ?? null : null;
         const { x, y, width, height } = mask.rect;
@@ -265,20 +267,88 @@ const softLayer = (context: TContext, level: TMaskLevel, group: TEntry[], depth:
         views3d: lists.views3d,
         viewIndex: drawn.drawables.map(() => -1),
     });
-    const layer: TDrawMaskLayer = { type: 'mask-layer', content, shape, channel: level.mask.channel, invert: level.mask.invert };
+    const layer: TDrawMaskLayer = { type: 'mask-layer', content, shape, channel: level.mask!.channel, invert: level.mask!.invert };
+    return { item: layer, camera: -1, view: -1, chain: group[0]!.chain.slice(0, depth) };
+};
+
+/**
+ * Draws a filter's entries into a picture in a pass of its own, which runs the filter's effects over
+ * their part of it, and gives back the one entry that lays what they made over the pass. `null`
+ * when that part is off what is drawn on: nothing of it would be seen.
+ */
+const filterLayer = (context: TContext, level: TMaskLevel, group: TEntry[], depth: number): TEntry | null => {
+    const { target, renderer, lists } = context;
+    const filter = level.filter!;
+    const effects = filter.effects.filter((effect) => effect.enabled && effect.fragment !== null);
+    const span = emptySpan();
+    // A rectangle is known before anything is drawn: one off the screen draws nothing inside it.
+    if (filter.rect !== null) {
+        spanRect(span, filter.rect, level.place, level.camera >= 0 ? lists.cameras[level.camera] ?? null : null);
+        if (regionOf(span, 0, true, target) === null) {
+            return null;
+        }
+    }
+    // What is drawn inside is measured once it is drawn, the layers inside it with it. Found off the
+    // screen, the passes it set out are taken back, and the pictures they took handed out again.
+    const passes = context.before.length;
+    const taken = markSoftTargets(renderer);
+    const inner = resolve(group.map((entry) => ({ ...entry, chain: entry.chain.slice(depth + 1) })), context);
+
+    if (filter.rect === null) {
+        for (let k = 0; k < inner.drawables.length; k++) {
+            // What writes the stencil only keeps things in: it is not seen.
+            const writes = inner.stencil[k]?.write;
+            if (writes !== undefined && writes !== 'none') {
+                continue;
+            }
+            const item = inner.drawables[k]!;
+            if (item.type === 'sprite') {
+                const camera = inner.cameraIndex[k] ?? -1;
+                spanSprite(span, item as TDrawSprite, camera >= 0 ? lists.cameras[camera] ?? null : null);
+            } else if (item.type === 'filter-layer') {
+                spanLayer(span, item, target.pixelRatio);
+            } else {
+                spanEverything(span);
+            }
+        }
+    }
+    const region = regionOf(span, filter.rect !== null ? 0 : paddingOf(filter, effects), filter.rect !== null, target);
+    if (region === null) {
+        context.before.length = passes;
+        rewindSoftTargets(renderer, taken);
+        return null;
+    }
+
+    const content = takeSoftTarget(renderer, target.width, target.height);
+    const into = takeSoftTarget(renderer, region.width, region.height);
+    context.before.push({
+        clearColor: CLEAR,
+        renderTarget: content,
+        postProcess: false,
+        pixelRatio: target.pixelRatio,
+        drawables: inner.drawables as unknown as TDrawItem[],
+        cameras: lists.cameras,
+        cameraIndex: inner.cameraIndex,
+        views3d: lists.views3d,
+        viewIndex: inner.viewIndex,
+        stencil: inner.stencil,
+        filter: { region, chain: effects, into },
+    });
+    const layer: TDrawFilterLayer = { type: 'filter-layer', picture: into, ...region };
     return { item: layer, camera: -1, view: -1, chain: group[0]!.chain.slice(0, depth) };
 };
 
 /**
  * Turns entries, each with the masks it is inside, into a list a backend draws as it is: soft masks
- * taken out into passes of their own first, then the stencil written wherever the hard masks change.
+ * and filters taken out into passes of their own first, then the stencil written wherever the hard
+ * masks change.
  */
 const resolve = (entries: readonly TEntry[], context: TContext): Omit<TMaskedPass, 'before'> => {
-    // Soft masks first: each run of entries inside the same soft one becomes one layer.
+    // Soft masks and filters first: each run of entries inside the same one becomes one layer.
     const flat: TEntry[] = [];
     for (let i = 0; i < entries.length;) {
         const entry = entries[i]!;
-        const depth = entry.chain.findIndex((level) => level.mask.soft);
+        const depth = entry.chain.findIndex((level) => level.filter !== null || level.mask!.soft);
         if (depth < 0) {
             flat.push(entry);
             i++;
@@ -289,6 +359,13 @@ const resolve = (entries: readonly TEntry[], context: TContext): Omit<TMaskedPas
         while (i < entries.length && entries[i]!.chain[depth] === level) {
             group.push(entries[i]!);
             i++;
+        }
+        if (level.filter !== null) {
+            const layer = filterLayer(context, level, group, depth);
+            if (layer !== null) {
+                flat.push(layer);
+            }
+            continue;
         }
         flat.push(softLayer(context, level, group, depth));
     }
@@ -335,8 +412,8 @@ const resolve = (entries: readonly TEntry[], context: TContext): Omit<TMaskedPas
         for (let j = same; j < needed.length; j++) {
             const level = needed[j]!;
             const shape = shapeOf(context, level);
-            const channel = level.mask.by !== null ? level.mask.channel : 'alpha';
-            if (level.mask.invert) {
+            const channel = level.mask!.by !== null ? level.mask!.channel : 'alpha';
+            if (level.mask!.invert) {
                 emit(everywhere(context.white), -1, -1, stateOf(context, j, 'add', 'alpha', null));
                 writeShape(shape, j + 1, 'sub', channel);
             } else {

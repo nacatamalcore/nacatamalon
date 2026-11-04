@@ -50,6 +50,7 @@ export const newBox = (name: string): TBox => ({
     screenSpace: false,
     worldOffScreen: false,
     mask: null,
+    filter: null,
     parallax: null,
     visible: true,
 });

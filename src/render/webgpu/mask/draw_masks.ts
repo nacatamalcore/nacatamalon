@@ -1,5 +1,6 @@
 // everyframe
 import type { TDrawMaskLayer } from '../../interface/draw/t_draw_mask_layer';
+import type { TDrawFilterLayer } from '../../interface/draw/t_draw_filter_layer';
 import type { TDrawStencil } from '../../interface/draw/t_draw_stencil';
 import type { TSpritePipeline } from '../sprite/types/t_sprite_pipeline';
 import type { TSpriteRun } from '../sprite/types/t_sprite_run';
@@ -79,4 +80,26 @@ export const drawMaskLayer = (gpuPass: GPURenderPassEncoder, masks: TMaskPipelin
     gpuPass.setPipeline(masks.layer(layer.channel, layer.invert));
     gpuPass.setBindGroup(0, masks.layerBindGroup(layer.content, layer.shape));
     gpuPass.draw(3);
+};
+
+/**
+ * Lays a filter's picture over its rectangle of the pass, in the slot it was given among the pass's
+ * filter layers.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const drawFilterLayer = (
+    gpuPass: GPURenderPassEncoder,
+    masks: TMaskPipelines,
+    layer: TDrawFilterLayer,
+    slot: number,
+    targetWidth: number,
+    targetHeight: number,
+): void => {
+    const { group, offset } = masks.filterLayerBindGroup(layer.picture, slot, [layer.x, layer.y, layer.width, layer.height], targetWidth, targetHeight);
+    gpuPass.setPipeline(masks.filterLayer());
+    gpuPass.setBindGroup(0, group, [offset]);
+    gpuPass.draw(4);
 };

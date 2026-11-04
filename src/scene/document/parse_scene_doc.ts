@@ -5,6 +5,7 @@ import { SCENE_FORMAT, SCENE_VERSION } from './types/t_scene_doc';
 import { VIEW_KINDS } from '../../gameobjects/sprite_texture/view_kinds';
 import { asArray, asBoolean, asColor, asNumber, asOneOf, asRecord, asString } from '../../utils';
 import { nanoId } from '../../utils';
+import { normalizePostChain } from '../../post/post_chain';
 import type { TColor } from '../../color';
 import type { TAssetEntry, TGeometrySource } from './types/t_asset_entry';
 import type { TBoxNode, TDataEntry, TSceneDoc } from './types/t_scene_doc';
@@ -1044,6 +1045,29 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 ...optionalBoolean(raw, 'soft'),
                 ...optionalBoolean(raw, 'invert'),
                 ...optionalBoolean(raw, 'showShape'),
+                ...optionalBoolean(raw, 'enabled'),
+            };
+        }
+        case 'filter': {
+            // Its effects are read as a project's chain is, keeping only what can run. A filter left
+            // with none is no filter, and falls through to be kept as it was written.
+            // A built-in is written by its key alone: the empty path the chain keeps for it is noise
+            // in a scene.
+            const effects = normalizePostChain(raw.effects).map(({ effect, ...rest }) => (rest.builtin !== undefined ? rest : { effect, ...rest }));
+            if (effects.length === 0) {
+                return null;
+            }
+            const area = asRecord(raw.rect);
+            const sides = area === null ? [] : [area.x, area.y, area.width, area.height];
+            const rect = sides.length === 4 && sides.every((side) => typeof side === 'number' && Number.isFinite(side))
+                ? { x: sides[0] as number, y: sides[1] as number, width: sides[2] as number, height: sides[3] as number }
+                : undefined;
+            return {
+                type: 'filter',
+                id,
+                effects,
+                ...(rect !== undefined ? { rect } : {}),
+                ...optionalNumber(raw, 'padding'),
                 ...optionalBoolean(raw, 'enabled'),
             };
         }

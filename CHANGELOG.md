@@ -7,6 +7,15 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **Filters: effects on one object.** `useFilter({ effects })` runs effects over what an object, and
+  everything under it, draws, before it is laid on the screen, and `add` says which objects, like a
+  mask. A character made of pieces gets one contour around all of them, a coin a glow, a panel a
+  shadow. Three effects are made for it: `outline` (a hard line of one colour, `thickness` in game
+  pixels), `dropShadow` (`offset`, a soft or a hard edge, `amount`) and `glow` (`radius`,
+  `intensity`); every screen effect runs on an object too, and `rect` gives them a part of the object
+  to work on, so a `crt()` curves a television's screen. What is see-through around the object stays
+  see-through. A mask on the same object keeps the filtered picture to it. On both cards, in scene
+  documents as a `filter` component, and natively.
 - **`dissolve`: a scene change in the shape of a picture.** `dissolve(0.6, mask, { color, softness })`
   covers the screen in the order the picture's greys say, darkest first, and uncovers it the same way
   back: noise eats the screen grain by grain, a star closes as a star, stripes are blinds. The mask is

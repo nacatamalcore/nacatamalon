@@ -9,6 +9,9 @@ import type { TUniformSignature, TUniformValues } from '../../materials/types/t_
  *
  * The project's are the look of the game and go first. A scene's are its own and leave with it.
  *
+ * `'filter'` is never in the chain at all: it runs over what one object draws (`useFilter`), and
+ * goes with that filter.
+ *
  * `'transition'` is the odd one and is here so that a warning can say where the effect came from.
  * Nobody put it in the chain: a scene change is never installed, it is added in front of the chain
  * for as long as it runs and drops out on its own, so there is nothing to take out and nobody to
@@ -18,7 +21,7 @@ import type { TUniformSignature, TUniformValues } from '../../materials/types/t_
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TPostSource = 'project' | 'scene' | 'transition';
+export type TPostSource = 'project' | 'scene' | 'transition' | 'filter';
 
 /**
  * One step an effect takes before its own hook, for an effect that cannot be done in one read of
@@ -138,6 +141,12 @@ export type TPostEffect<U extends TUniformValues = TUniformValues> = {
      */
     outgoing?: 'take' | 'taken' | 'keep';
     source: TPostSource;
+    /**
+     * How many pixels beyond what it is handed it draws, for its knobs as they are now. Read by a
+     * filter to leave room around its object; a screen-wide effect has the whole screen and no use for
+     * it. Absent says nothing beyond.
+     */
+    reach?(uniforms: U): number;
     /**
      * Whether it runs. A switched-off effect stays in the chain **where it is**, so turning it back
      * on does not move it out from between the two it sat between.

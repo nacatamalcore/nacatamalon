@@ -39,6 +39,7 @@ export const newPostEffect = (
         // A file holds one hook, so a file never brings passes of its own.
         ...(shader === null && options.passes !== undefined ? { passes: options.passes } : {}),
         ...(options.history === true ? { history: true } : {}),
+        ...(options.reach !== undefined ? { reach: options.reach } : {}),
         palette: options.palette ?? null,
         lut: options.lut ?? null,
         source,

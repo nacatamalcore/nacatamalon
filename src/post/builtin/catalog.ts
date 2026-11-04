@@ -4,8 +4,10 @@ import { blur } from './blur';
 import { colorAdjust } from './color_adjust';
 import { crt } from './crt';
 import { distort } from './distort';
+import { dropShadow } from './drop_shadow';
 import { dither } from './dither';
 import { glitch } from './glitch';
+import { glow } from './glow';
 import { godrays } from './godrays';
 import { grain } from './grain';
 import { halftone } from './halftone';
@@ -16,6 +18,7 @@ import { mosaic } from './mosaic';
 import { motionBlur } from './motion_blur';
 import { ntsc } from './ntsc';
 import { oldFilm } from './old_film';
+import { outline } from './outline';
 import { paletteMatch } from './palette_match';
 import { phosphor } from './phosphor';
 import { posterize } from './posterize';
@@ -55,6 +58,10 @@ import type { TPostBuiltinInfo } from './types/t_builtin';
  * grain, vignette and flicker; `glitch` a colour split; `paletteMatch` its own `dither`; `lcd`'s
  * `ghosting` and `phosphor` both leave a trail; `posterize` is `dither` with `amount: 0`. The
  * composite ones are meant to be used alone, as the whole machine.
+ *
+ * **Three are made for a filter** (`useFilter`), and say so in `forObjects`: `outline`,
+ * `dropShadow` and `glow` draw around what an object draws, and the whole screen has nothing around
+ * it. Every other one runs on a filter as well as on the screen.
  *
  * **The ones laid on a grid of game pixels** (mosaic, halftone, ascii, dither's four by four,
  * grain, lcd, and the material step `mangaDots`) look cleanest with sizes that are multiples of one
@@ -115,6 +122,33 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
         binds: null,
         fields: BUILTIN_FIELDS.mosaic!,
         build: () => mosaic(),
+    },
+    {
+        key: 'outline',
+        label: 'Outline',
+        description: 'A line of one colour around everything an object draws. For a filter: the whole screen has nothing around it.',
+        binds: null,
+        forObjects: true,
+        fields: BUILTIN_FIELDS.outline!,
+        build: () => outline(),
+    },
+    {
+        key: 'dropShadow',
+        label: 'Drop shadow',
+        description: 'A shadow of what an object draws, fallen a little way off behind it. For a filter.',
+        binds: null,
+        forObjects: true,
+        fields: BUILTIN_FIELDS.dropShadow!,
+        build: () => dropShadow(),
+    },
+    {
+        key: 'glow',
+        label: 'Glow',
+        description: 'A soft light of one colour around what an object draws. For a filter; for the screen, bloom.',
+        binds: null,
+        forObjects: true,
+        fields: BUILTIN_FIELDS.glow!,
+        build: () => glow(),
     },
     {
         key: 'blur',

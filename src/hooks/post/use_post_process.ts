@@ -1,34 +1,9 @@
 import { getActiveBox, getActiveGame } from '../../store';
-import { newPostEffect } from '../../post/new_post_effect';
-import { rememberPostOverrides } from '../../post/apply_shader_to_effect';
-import { applyShaderToEffect } from '../../post/apply_shader_to_effect';
+import { makePostEffect } from '../../post/make_post_effect';
 import type { TPostEffect } from '../../post/types/t_post_effect';
 import type { TPostProcessOptions } from '../../post/types/t_post_options';
-import type { TShader } from '../../loaders/shader/types/t_shader';
 import type { TUniformValues } from '../../materials/types/t_uniforms';
-import { findAsset } from '../../loaders/asset_key';
 import { outsideSceneBody } from '../../utils/outside_scene_body';
-
-/**
- * The file the options ask for. A name nothing was loaded under is a typo, never "no effect".
- */
-const resolveEffect = (options: TPostProcessOptions): TShader | null => {
-    if (options.effect === undefined) {
-        return null;
-    }
-    if (typeof options.effect !== 'string') {
-        return options.effect;
-    }
-
-    const found = findAsset(getActiveGame()?.get('assets').shaders, options.effect);
-    if (found === undefined) {
-        throw new Error(
-            `[NacatamalOn] usePostProcess: no shader loaded under key '${options.effect}'. ` +
-            `Did you forget useLoadShader({ src, key: '${options.effect}' })?`,
-        );
-    }
-    return found;
-};
 
 /**
  * Adds a full-screen effect: a shader that reads the finished frame and gives back what to show.
@@ -74,50 +49,17 @@ export const usePostProcess = <U extends TUniformValues = TUniformValues>(option
         throw outsideSceneBody('usePostProcess');
     }
 
-    const shader = resolveEffect(options);
-    if (shader === null && options.fragment === undefined) {
-        throw new Error(
-            '[NacatamalOn] usePostProcess: it needs something to run. Give it a `fragment`, an ' +
-            '`effect` from useLoadShader, or spread one of the engine\'s own such as dither().',
-        );
-    }
-    if (options.palette != null && options.lut != null) {
-        throw new Error(
-            '[NacatamalOn] usePostProcess: an effect reads one data texture, so it takes a palette ' +
-            'or a table and not both. Use two effects if you want both.',
-        );
-    }
-
-    const effect = newPostEffect(options, shader, 'scene');
-
-    if (shader !== null) {
-        rememberPostOverrides(effect, options.uniforms ?? {});
-        effect.effect = shader;
-        shader.bound.push(effect);
-        // A file that is already here is poured in now; one still on its way arrives later, and
-        // either order ends in the same place.
-        if (shader.status === 'ready') {
-            applyShaderToEffect(effect, shader);
-        }
-    }
-
+    const { effect, unbind } = makePostEffect(store, options, 'scene', 'usePostProcess');
     const { effects } = store.get('post');
     effects.push(effect);
-
     // The scene owns its entry even though the game owns the chain.
     box.cleanups.push(() => {
         const at = effects.indexOf(effect);
         if (at !== -1) {
             effects.splice(at, 1);
         }
-        if (shader !== null) {
-            const bound = shader.bound.indexOf(effect);
-            if (bound !== -1) {
-                shader.bound.splice(bound, 1);
-            }
-        }
+        unbind();
     });
-
     // The knobs are the ones it was given, laid over a file's or a built-in's; their type is the one
     // the caller wrote, which is all the generic says.
     return effect as TPostEffect<U>;

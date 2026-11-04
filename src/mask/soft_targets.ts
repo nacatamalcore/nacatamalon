@@ -76,3 +76,20 @@ export const endSoftTargets = (renderer: IRenderer): void => {
         renderer.destroyTexture(pool.pictures.pop()!.texture);
     }
 };
+
+/**
+ * Where the handing out has got to this frame, to come back to with `rewindSoftTargets`.
+ *
+ * @internal
+ */
+export const markSoftTargets = (renderer: IRenderer): number => poolOf(renderer).next;
+
+/**
+ * Hands out from `mark` again, as if nothing after it had been asked for: for what a filter set out
+ * to draw and then found was off the screen. The pictures stay in the pool for the next to ask.
+ *
+ * @internal
+ */
+export const rewindSoftTargets = (renderer: IRenderer, mark: number): void => {
+    poolOf(renderer).next = mark;
+};

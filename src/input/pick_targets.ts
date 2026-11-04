@@ -271,6 +271,10 @@ const seenThrough = (
 ): boolean => {
     for (let at = level; at !== null; at = at.parent) {
         const { mask } = at;
+        // A filter changes how things look, not where they are: it is touched as it is.
+        if (mask === null) {
+            continue;
+        }
         let inside = false;
         if (mask.by === null) {
             const rect = mask.rect!;

@@ -231,7 +231,8 @@ export const writeSpriteInstances = (
             case 'particles':
             case 'particles-3d':
             case 'lines':
-            case 'mask-layer': {
+            case 'mask-layer':
+            case 'filter-layer': {
                 // Drawn by its own pipeline, in `renderFrame`. Here it only cuts the batch.
                 broken = true;
                 break;

@@ -12,7 +12,7 @@ import { canvasTargetFor, presentToCanvas, releaseUnusedCanvasTargets } from './
 import { bindMultisampled, releaseUnusedMultisampled, resolveMultisampled } from './multisample';
 import { writeFrameUniforms } from './write_frame_uniforms';
 import { drawMesh, writeMeshLights } from '../mesh/draw_meshes';
-import { applyStencil, beginStencil, createMaskPrograms, drawMaskLayer, drawMaskRun, endStencil } from '../mask/mask_programs';
+import { applyStencil, beginStencil, createMaskPrograms, drawFilterLayer, drawMaskLayer, drawMaskRun, endStencil } from '../mask/mask_programs';
 import type { TDrawStencil } from '../../interface/draw/t_draw_stencil';
 import { createShadowMap } from '../shadow/shadow_map';
 import { createShadowPipeline } from '../shadow/shadow_pipeline';
@@ -194,7 +194,8 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
 
     // None of this happens for a frame with no effects: see `TFrameContext.post`.
     const chain = ctx.post ?? null;
-    if (chain !== null) {
+    // A filter's chain runs through the same programs.
+    if (chain !== null || ctx.passes.some((pass) => pass.filter !== undefined)) {
         state.post ??= createPostPipelines(gl);
     }
 
@@ -353,6 +354,14 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
                 spritesReady = false;
                 continue;
             }
+            if (item.type === 'filter-layer') {
+                if (spritesReady) {
+                    gl.bindVertexArray(null);
+                }
+                drawFilterLayer(gl, state.sprites, state.masks!, item, target.width, target.height);
+                spritesReady = false;
+                continue;
+            }
             if (item.type === 'mesh') {
                 const index = viewIndex[i] ?? -1;
                 // Nothing of it on this view's screen: skipped before it costs a thing. Per view,
@@ -440,6 +449,17 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
             copyUpright(state, drawn, target.width, target.height);
         }
 
+        // What a filter filters, drawn and the right way up: its part run through its effects, into
+        // its own picture.
+        if (drawn.filter !== undefined && drawn.renderTarget !== undefined) {
+            const content = state.framebuffers.get(drawn.renderTarget as TWebGL2Texture) ?? null;
+            bindTarget(state, { renderTarget: drawn.filter.into });
+            const result = state.framebuffers.get(drawn.filter.into as TWebGL2Texture) ?? null;
+            if (content !== null && result !== null) {
+                state.post!.runFilter(drawn.filter.chain, content, target.width, target.height, drawn.filter.region, result, ctx.time, ratio);
+            }
+        }
+
         // The chain, straight after the pass it reads. To the canvas for the screen; for a capture,
         // into the place a picture is drawn in first, and turned over from there like any other.
         if (redirected && pass.renderTarget === undefined) {
@@ -455,6 +475,7 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
         }
     }
 
+    state.post?.endFrame();
     releaseUnusedUpright(state);
     releaseUnusedCanvasTargets(state);
     releaseUnusedMultisampled(state);

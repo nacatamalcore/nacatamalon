@@ -26,6 +26,11 @@ const INPUT_UNIT = 2;
 const HISTORY_UNIT = 3;
 const SMOOTH_UNIT = 4;
 
+/**
+ * How many frames a size of picture nobody asked for is kept before it is let go.
+ */
+const KEPT_IDLE = 30;
+
 type TCompiled = {
     program: WebGLProgram | null;
     layout: TUniformLayout;
@@ -50,6 +55,11 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
      * The pictures the chain passes between, by size, made the first time a size is asked for.
      */
     const pool = new Map<string, ITexture[]>();
+    /**
+     * How many frames each size in the pool has gone unasked: a filter's sizes follow what its object
+     * draws, so the ones it has grown out of are let go. See the other card.
+     */
+    const idle = new Map<string, number>();
     /**
      * Last frame and this frame, for each effect that asked to read what it showed.
      */
@@ -113,6 +123,7 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
             list.forEach(release);
         }
         pool.clear();
+        idle.clear();
     };
 
     const dropHistories = (): void => {
@@ -146,6 +157,7 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
             list = [];
             pool.set(key, list);
         }
+        idle.set(key, 0);
         const free = list.find((texture) => !avoid.includes(texture));
         if (free !== undefined) {
             return free;
@@ -208,13 +220,13 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
         return photos.get(effect)?.texture ?? input;
     };
 
-    const build = (effect: Pick<TPostEffect, 'name' | 'id' | 'fragmentGlsl' | 'uniformSig'>): TCompiled => {
+    const build = (effect: Pick<TPostEffect, 'name' | 'id' | 'fragmentGlsl' | 'uniformSig'>, filtered = false): TCompiled => {
         const layout = buildUniformLayout(effect.uniformSig, POST_ENGINE_FIELDS);
         // Too many numbers for its slot. Said once where it was made (`checkParameterRoom`).
         if (layout.floatCount > MAX_MATERIAL_FLOATS) {
             return { program: null, layout, failed: true };
         }
-        const sources = buildPostShaderGlsl(effect.fragmentGlsl as string, effect.uniformSig);
+        const sources = buildPostShaderGlsl(effect.fragmentGlsl as string, effect.uniformSig, filtered);
 
         try {
             const program = compileProgram(gl, sources.vertex, sources.fragment, `post ${effect.name ?? effect.id}`);
@@ -263,14 +275,15 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
     /**
      * One step of an effect, compiled. A pass is compiled exactly like a hook, with the same knobs.
      */
-    const compiledFor = (effect: TPostEffect, fragmentGlsl: string | null): TCompiled => {
+    const compiledFor = (effect: TPostEffect, fragmentGlsl: string | null, filtered = false): TCompiled => {
         if (fragmentGlsl === null) {
             return identityFor();
         }
-        const key = `${JSON.stringify(effect.uniformSig)} ${fragmentGlsl}`;
+        // A filter's step is built apart, with its own ending.
+        const key = `${JSON.stringify(effect.uniformSig)} ${fragmentGlsl}${filtered ? ' filtered' : ''}`;
         let entry = compiled.get(key);
         if (entry === undefined) {
-            entry = build({ name: effect.name, id: effect.id, fragmentGlsl, uniformSig: effect.uniformSig });
+            entry = build({ name: effect.name, id: effect.id, fragmentGlsl, uniformSig: effect.uniformSig }, filtered);
             compiled.set(key, entry);
         }
         // One that would not compile is shown through as it is, for the same reason.
@@ -295,6 +308,186 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
         );
     };
 
+    /**
+     * Runs a chain from a picture to a framebuffer: the screen's, or a filter's. `w` and `h` are the
+     * picture's real pixels; the routing is its twin's, see the WebGPU `runChain`.
+     */
+    const runChain = (
+        chain: readonly TPostEffect[],
+        first: ITexture,
+        w: number,
+        h: number,
+        destination: WebGLFramebuffer | null,
+        time: number,
+        progress: number,
+        phase: number,
+        pixelRatio: number,
+        screen: boolean,
+    ): void => {
+        if (parameters === null) {
+            parameters = gl.createBuffer();
+            gl.bindBuffer(gl.UNIFORM_BUFFER, parameters);
+            gl.bufferData(gl.UNIFORM_BUFFER, values.byteLength, gl.DYNAMIC_DRAW);
+            gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+        }
+        emptyVao ??= gl.createVertexArray();
+        const makeSampler = (filter: number): WebGLSampler => {
+            const made = gl.createSampler();
+            gl.samplerParameteri(made, gl.TEXTURE_MIN_FILTER, filter);
+            gl.samplerParameteri(made, gl.TEXTURE_MAG_FILTER, filter);
+            gl.samplerParameteri(made, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.samplerParameteri(made, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            return made;
+        };
+        sampler ??= makeSampler(gl.NEAREST);
+        smoothSampler ??= makeSampler(gl.LINEAR);
+
+        // A triangle over the whole screen, blended with nothing and tested against nothing.
+        gl.disable(gl.BLEND);
+        gl.disable(gl.DEPTH_TEST);
+        gl.depthMask(false);
+        gl.bindVertexArray(emptyVao);
+        gl.bindSampler(SCENE_UNIT, sampler);
+        gl.bindSampler(DATA_UNIT, sampler);
+        gl.bindSampler(INPUT_UNIT, sampler);
+        gl.bindSampler(HISTORY_UNIT, sampler);
+        gl.bindSampler(SMOOTH_UNIT, smoothSampler);
+
+        const gameWidth = w / pixelRatio;
+        const gameHeight = h / pixelRatio;
+        let source = first;
+
+        const bindUnit = (unit: number, texture: ITexture): void => {
+            gl.activeTexture(gl.TEXTURE0 + unit);
+            gl.bindTexture(gl.TEXTURE_2D, toGlTexture(texture));
+        };
+
+        const draw = (
+            effect: TPostEffect,
+            entry: TCompiled,
+            target: WebGLFramebuffer | null,
+            targetWidth: number,
+            targetHeight: number,
+            read: ITexture,
+            input: ITexture,
+            history: ITexture,
+            resolutionWidth: number,
+            resolutionHeight: number,
+        ): void => {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, target);
+            gl.viewport(0, 0, targetWidth, targetHeight);
+            gl.useProgram(entry.program);
+
+            values.fill(0, 0, entry.layout.floatCount);
+            writeUniformValues(values, entry.layout, effect.uniforms, time, resolutionWidth, resolutionHeight);
+
+            // The two the engine owns for a full-screen effect, poked in after the rest rather
+            // than merged into the effect's own values: they change every frame and every frame
+            // would otherwise allocate an object to carry them. The layout only has them for a
+            // screen-wide effect, which is why the offset is checked rather than assumed.
+            if (entry.layout.offsets.progress !== undefined) {
+                values[entry.layout.offsets.progress] = progress;
+                values[entry.layout.offsets.phase] = phase;
+            }
+            gl.bindBuffer(gl.UNIFORM_BUFFER, parameters);
+            gl.bufferSubData(gl.UNIFORM_BUFFER, 0, values, 0, entry.layout.floatCount);
+            gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+            gl.bindBufferBase(gl.UNIFORM_BUFFER, POST_UNIFORMS_BINDING, parameters);
+
+            bindUnit(SCENE_UNIT, read);
+            bindUnit(DATA_UNIT, effect.palette?.gpu ?? effect.lut?.gpu ?? effect.mask?.gpu ?? blankTexture());
+            // A mask is read blended between its pixels, and in GL that belongs to the unit. A
+            // palette and a table are fetched by the texel, which no sampler changes.
+            gl.bindSampler(DATA_UNIT, (effect.mask?.gpu ?? null) !== null ? smoothSampler : sampler);
+            bindUnit(INPUT_UNIT, input);
+            bindUnit(HISTORY_UNIT, history);
+            bindUnit(SMOOTH_UNIT, read);
+
+            gl.drawArrays(gl.TRIANGLES, 0, 3);
+        };
+
+        for (let i = 0; i < chain.length; i++) {
+            const effect = chain[i]!;
+            const lastEffect = i === chain.length - 1;
+            const input = source;
+            // A filter's effect has no last frame of its own: see the other card.
+            const history = effect.history === true && screen ? historyOf(effect) : null;
+            // Taken again each frame while the scene going out is on screen: see the other card.
+            if (effect.outgoing === 'take' || effect.outgoing === 'taken') {
+                draw(effect, identityFor(), framebufferFor(photoOf(effect)), w, h, source, source, source, gameWidth, gameHeight);
+            }
+            const historyRead = history !== null ? history.pair[history.read] : effect.history === true ? input : outgoingOf(effect, input);
+            const steps = postStepsOf(effect);
+            // An effect with any step this card cannot compile is shown through as a whole: half
+            // a blur is a stranger picture than none.
+            const runnable = steps.every((step) => step.fragmentGlsl !== null);
+            // Said once per source, here rather than inside the registry, so it is not said
+            // again on every frame for the whole life of the game.
+            if (!runnable) {
+                warnOnce(effect);
+            }
+            const planned = runnable ? steps : [steps[steps.length - 1]!];
+
+            for (let j = 0; j < planned.length; j++) {
+                const step = planned[j]!;
+                const entry = compiledFor(effect, runnable ? step.fragmentGlsl : null, !screen);
+                if (entry.program === null) {
+                    continue;
+                }
+                const own = j === planned.length - 1;
+                // Compiled at once on this card, so drawing it is drawing it with its own hook.
+                if (own && effect.outgoing === 'take') {
+                    effect.outgoing = 'taken';
+                }
+
+                if (!own) {
+                    const [passWidth, passHeight] = passSize(step.scale!, gameWidth, gameHeight);
+                    const out = scratchOf(passWidth, passHeight, [source, input, historyRead]);
+                    draw(effect, entry, framebufferFor(out), passWidth, passHeight, source, input, historyRead, passWidth, passHeight);
+                    source = out;
+                    continue;
+                }
+
+                if (history !== null) {
+                    const written = history.pair[1 - history.read]!;
+                    draw(effect, entry, framebufferFor(written), w, h, source, input, historyRead, gameWidth, gameHeight);
+                    history.read = history.read === 0 ? 1 : 0;
+                    source = written;
+                    if (lastEffect) {
+                        draw(effect, identityFor(), destination, w, h, written, written, written, gameWidth, gameHeight);
+                    }
+                    continue;
+                }
+
+                // The last one always writes the real destination (the screen, or where a
+                // capture is put the right way up), so there is no copy at the end.
+                if (lastEffect) {
+                    draw(effect, entry, destination, w, h, source, input, historyRead, gameWidth, gameHeight);
+                    continue;
+                }
+
+                const out = scratchOf(w, h, [source, input]);
+                draw(effect, entry, framebufferFor(out), w, h, source, input, historyRead, gameWidth, gameHeight);
+                source = out;
+            }
+        }
+
+        // Everything put back, because the next frame's sprites assume the state they left.
+        // **Depth testing stays off**: that is the state every draw in this backend leaves behind
+        // and the one sprites assume, since they never switch it off themselves. Switched back on
+        // here, the next frame drew its sprites against each other's depth, and of two at the
+        // same depth the later one lost: a sprite over a background vanished whenever an effect
+        // was on, on this card only.
+        for (const unit of [SCENE_UNIT, DATA_UNIT, INPUT_UNIT, HISTORY_UNIT, SMOOTH_UNIT]) {
+            gl.bindSampler(unit, null);
+        }
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindVertexArray(null);
+        gl.useProgram(null);
+        gl.depthMask(true);
+        gl.enable(gl.BLEND);
+    };
+
     return {
         sceneTarget: (targetWidth: number, targetHeight: number): ITexture => {
             resize(targetWidth, targetHeight);
@@ -306,169 +499,65 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
         // game's `resolution`, so a dither pattern keeps the size of a game pixel. A pass reads its
         // own size. The routing is its twin's: see the WebGPU `run`.
         run: (chain: readonly TPostEffect[], destination: WebGLFramebuffer | null, time: number, progress: number, phase: number, pixelRatio = 1): void => {
-            if (parameters === null) {
-                parameters = gl.createBuffer();
-                gl.bindBuffer(gl.UNIFORM_BUFFER, parameters);
-                gl.bufferData(gl.UNIFORM_BUFFER, values.byteLength, gl.DYNAMIC_DRAW);
-                gl.bindBuffer(gl.UNIFORM_BUFFER, null);
-            }
-            emptyVao ??= gl.createVertexArray();
-            const makeSampler = (filter: number): WebGLSampler => {
-                const made = gl.createSampler();
-                gl.samplerParameteri(made, gl.TEXTURE_MIN_FILTER, filter);
-                gl.samplerParameteri(made, gl.TEXTURE_MAG_FILTER, filter);
-                gl.samplerParameteri(made, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-                gl.samplerParameteri(made, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-                return made;
-            };
-            sampler ??= makeSampler(gl.NEAREST);
-            smoothSampler ??= makeSampler(gl.LINEAR);
-
             pruneHistories(chain);
+            runChain(chain, scene!, width, height, destination, time, progress, phase, pixelRatio, true);
+        },
 
-            // A triangle over the whole screen, blended with nothing and tested against nothing.
-            gl.disable(gl.BLEND);
-            gl.disable(gl.DEPTH_TEST);
-            gl.depthMask(false);
-            gl.bindVertexArray(emptyVao);
-            gl.bindSampler(SCENE_UNIT, sampler);
-            gl.bindSampler(DATA_UNIT, sampler);
-            gl.bindSampler(INPUT_UNIT, sampler);
-            gl.bindSampler(HISTORY_UNIT, sampler);
-            gl.bindSampler(SMOOTH_UNIT, smoothSampler);
-
-            const gameWidth = width / pixelRatio;
-            const gameHeight = height / pixelRatio;
-            let source = scene!;
-
-            const bindUnit = (unit: number, texture: ITexture): void => {
-                gl.activeTexture(gl.TEXTURE0 + unit);
-                gl.bindTexture(gl.TEXTURE_2D, toGlTexture(texture));
-            };
-
-            const draw = (
-                effect: TPostEffect,
-                entry: TCompiled,
-                target: WebGLFramebuffer | null,
-                targetWidth: number,
-                targetHeight: number,
-                read: ITexture,
-                input: ITexture,
-                history: ITexture,
-                resolutionWidth: number,
-                resolutionHeight: number,
-            ): void => {
-                gl.bindFramebuffer(gl.FRAMEBUFFER, target);
-                gl.viewport(0, 0, targetWidth, targetHeight);
-                gl.useProgram(entry.program);
-
-                values.fill(0, 0, entry.layout.floatCount);
-                writeUniformValues(values, entry.layout, effect.uniforms, time, resolutionWidth, resolutionHeight);
-
-                // The two the engine owns for a full-screen effect, poked in after the rest rather
-                // than merged into the effect's own values: they change every frame and every frame
-                // would otherwise allocate an object to carry them. The layout only has them for a
-                // screen-wide effect, which is why the offset is checked rather than assumed.
-                if (entry.layout.offsets.progress !== undefined) {
-                    values[entry.layout.offsets.progress] = progress;
-                    values[entry.layout.offsets.phase] = phase;
-                }
-                gl.bindBuffer(gl.UNIFORM_BUFFER, parameters);
-                gl.bufferSubData(gl.UNIFORM_BUFFER, 0, values, 0, entry.layout.floatCount);
-                gl.bindBuffer(gl.UNIFORM_BUFFER, null);
-                gl.bindBufferBase(gl.UNIFORM_BUFFER, POST_UNIFORMS_BINDING, parameters);
-
-                bindUnit(SCENE_UNIT, read);
-                bindUnit(DATA_UNIT, effect.palette?.gpu ?? effect.lut?.gpu ?? effect.mask?.gpu ?? blankTexture());
-                // A mask is read blended between its pixels, and in GL that belongs to the unit. A
-                // palette and a table are fetched by the texel, which no sampler changes.
-                gl.bindSampler(DATA_UNIT, (effect.mask?.gpu ?? null) !== null ? smoothSampler : sampler);
-                bindUnit(INPUT_UNIT, input);
-                bindUnit(HISTORY_UNIT, history);
-                bindUnit(SMOOTH_UNIT, read);
-
-                gl.drawArrays(gl.TRIANGLES, 0, 3);
-            };
-
-            for (let i = 0; i < chain.length; i++) {
-                const effect = chain[i]!;
-                const lastEffect = i === chain.length - 1;
-                const input = source;
-                const history = effect.history === true ? historyOf(effect) : null;
-                // Taken again each frame while the scene going out is on screen: see the other card.
-                if (effect.outgoing === 'take' || effect.outgoing === 'taken') {
-                    draw(effect, identityFor(), framebufferFor(photoOf(effect)), width, height, source, source, source, gameWidth, gameHeight);
-                }
-                const historyRead = history !== null ? history.pair[history.read] : outgoingOf(effect, input);
-                const steps = postStepsOf(effect);
-                // An effect with any step this card cannot compile is shown through as a whole: half
-                // a blur is a stranger picture than none.
-                const runnable = steps.every((step) => step.fragmentGlsl !== null);
-                // Said once per source, here rather than inside the registry, so it is not said
-                // again on every frame for the whole life of the game.
-                if (!runnable) {
-                    warnOnce(effect);
-                }
-                const planned = runnable ? steps : [steps[steps.length - 1]!];
-
-                for (let j = 0; j < planned.length; j++) {
-                    const step = planned[j]!;
-                    const entry = compiledFor(effect, runnable ? step.fragmentGlsl : null);
-                    if (entry.program === null) {
-                        continue;
-                    }
-                    const own = j === planned.length - 1;
-                    // Compiled at once on this card, so drawing it is drawing it with its own hook.
-                    if (own && effect.outgoing === 'take') {
-                        effect.outgoing = 'taken';
-                    }
-
-                    if (!own) {
-                        const [w, h] = passSize(step.scale!, gameWidth, gameHeight);
-                        const out = scratchOf(w, h, [source, input, historyRead]);
-                        draw(effect, entry, framebufferFor(out), w, h, source, input, historyRead, w, h);
-                        source = out;
-                        continue;
-                    }
-
-                    if (history !== null) {
-                        const written = history.pair[1 - history.read]!;
-                        draw(effect, entry, framebufferFor(written), width, height, source, input, historyRead, gameWidth, gameHeight);
-                        history.read = history.read === 0 ? 1 : 0;
-                        source = written;
-                        if (lastEffect) {
-                            draw(effect, identityFor(), destination, width, height, written, written, written, gameWidth, gameHeight);
-                        }
-                        continue;
-                    }
-
-                    // The last one always writes the real destination (the screen, or where a
-                    // capture is put the right way up), so there is no copy at the end.
-                    if (lastEffect) {
-                        draw(effect, entry, destination, width, height, source, input, historyRead, gameWidth, gameHeight);
-                        continue;
-                    }
-
-                    const out = scratchOf(width, height, [source, input]);
-                    draw(effect, entry, framebufferFor(out), width, height, source, input, historyRead, gameWidth, gameHeight);
-                    source = out;
-                }
+        /**
+         * Runs a filter's chain over its part of a picture drawn the right way up (`content`, as
+         * every picture of this card is kept), into `destination`, a framebuffer of the part's size.
+         * The part is copied out turned over, which is the way up the chain reads a picture, and
+         * what it writes is kept that way: the filter's layer reads it knowing so.
+         */
+        runFilter: (
+            chain: readonly TPostEffect[],
+            content: WebGLFramebuffer,
+            contentWidth: number,
+            contentHeight: number,
+            region: { x: number; y: number; width: number; height: number },
+            destination: WebGLFramebuffer,
+            time: number,
+            pixelRatio = 1,
+        ): void => {
+            const part = scratchOf(region.width, region.height, []);
+            // Made, and so bound, before the copy is set up: making one binds it for reading too.
+            const into = framebufferFor(part);
+            // The part may hang off the picture's edge, and a copy from off it reads nothing anyone
+            // can count on: it starts see-through, and only what is on the picture is copied in.
+            gl.bindFramebuffer(gl.FRAMEBUFFER, into);
+            gl.clearColor(0, 0, 0, 0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            const left = Math.max(0, region.x);
+            const top = Math.max(0, region.y);
+            const right = Math.min(contentWidth, region.x + region.width);
+            const bottom = Math.min(contentHeight, region.y + region.height);
+            if (right > left && bottom > top) {
+                gl.bindFramebuffer(gl.READ_FRAMEBUFFER, content);
+                gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, into);
+                // Turned over on the way: the part's first row is its bottom one, as the chain reads.
+                gl.blitFramebuffer(
+                    left, top, right, bottom,
+                    left - region.x, region.height - (top - region.y), right - region.x, region.height - (bottom - region.y),
+                    gl.COLOR_BUFFER_BIT, gl.NEAREST,
+                );
             }
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            runChain(chain, part, region.width, region.height, destination, time, 0, 0, pixelRatio, false);
+        },
 
-            // Everything put back, because the next frame's sprites assume the state they left.
-            // **Depth testing stays off**: that is the state every draw in this backend leaves behind
-            // and the one sprites assume, since they never switch it off themselves. Switched back on
-            // here, the next frame drew its sprites against each other's depth, and of two at the
-            // same depth the later one lost: a sprite over a background vanished whenever an effect
-            // was on, on this card only.
-            for (const unit of [SCENE_UNIT, DATA_UNIT, INPUT_UNIT, HISTORY_UNIT, SMOOTH_UNIT]) {
-                gl.bindSampler(unit, null);
+        /**
+         * Lets go of every size of picture nobody has asked for in a while: called once a frame.
+         */
+        endFrame: (): void => {
+            for (const [key, frames] of idle) {
+                if (frames < KEPT_IDLE) {
+                    idle.set(key, frames + 1);
+                    continue;
+                }
+                pool.get(key)?.forEach(release);
+                pool.delete(key);
+                idle.delete(key);
             }
-            gl.activeTexture(gl.TEXTURE0);
-            gl.bindVertexArray(null);
-            gl.useProgram(null);
-            gl.depthMask(true);
-            gl.enable(gl.BLEND);
         },
 
         destroy: (): void => {

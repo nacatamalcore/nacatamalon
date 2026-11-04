@@ -13,6 +13,7 @@ import { stepSceneTilemaps } from './helper/step_scene_tilemaps';
 import type { IRenderer } from '../../render';
 import { stepScenePolygons, whiteFor } from './helper/step_scene_polygons';
 import { anyMasks } from '../../mask/create_mask';
+import { anyFilters } from '../../filter/create_filter';
 import { applyMasks } from '../../mask/apply_masks';
 import { beginSoftTargets, endSoftTargets } from '../../mask/soft_targets';
 import { rememberMaskedPass } from '../../mask/masked_pick';
@@ -340,7 +341,7 @@ type TPassLists = {
     masks: TMaskWalk | null;
 };
 
-const newLists = (): TPassLists => ({ drawables: [], cameraIndex: [], cameras: [], views3d: [], viewIndex: [], masks: anyMasks() ? { levels: [], shapes: new Map(), found: new Map() } : null });
+const newLists = (): TPassLists => ({ drawables: [], cameraIndex: [], cameras: [], views3d: [], viewIndex: [], masks: anyMasks() || anyFilters() ? { levels: [], shapes: new Map(), found: new Map(), filtered: new Map() } : null });
 
 /**
  * The passes each pass needs drawn before it: what its soft masks draw into. Kept per pass and
