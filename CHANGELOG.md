@@ -7,6 +7,13 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **Pixel art written as rows of characters.** `pixelsFromRows(rows, palette)` draws a picture one
+  character a pixel, top row first, with a palette saying what colour each one is (anything
+  `getColor` reads; `'.'` and `' '` are nothing), and `scale` to draw each as a bigger square.
+  `sheetFromRows({ stand, walkA, walkB }, palette)` lays several frames side by side for
+  `createSpriteAtlas`, and says which number each name is for a sprite's animations. A character
+  missing from the palette, a row of another width or a frame of another size throws, saying where.
+  No game needed, so a test or a build script can draw one too.
 - **Shapes drawn by the card each frame.** `createShapes({ shapes })` draws a list of shapes as plain
   data: rectangles (with rounded corners, turned), circles and ellipses and slices of them (a pie
   filled, an arc outlined), outlines of any number of corners, hollowed in too, and lines as wide as

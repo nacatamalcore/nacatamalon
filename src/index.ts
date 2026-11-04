@@ -14,9 +14,9 @@ export type { TSpriteTexture, TSpriteTextureSees, TSpriteTextureOptions, TViewFi
 // with no image files and no page, the same in the browser, on the native runtime and in a test.
 export {
     createPixels, setPixel, getPixel, fillRect, drawLine, fillCircle, drawCircle, fillEllipse, drawEllipse, fillPolygon, blitPixels, mapPixels,
-    fillGradient, fillNoise, fillChecker, clonePixels, swapColors, drawText,
+    fillGradient, fillNoise, fillChecker, clonePixels, swapColors, drawText, pixelsFromRows, sheetFromRows,
 } from './pixels';
-export type { TPixels, TPixelRegion, TFillGradientOptions, TFillNoiseOptions, TDrawTextOptions } from './pixels';
+export type { TPixels, TPixelRegion, TFillGradientOptions, TFillNoiseOptions, TDrawTextOptions, TPixelPalette, TPixelRowsOptions, TPixelSheet } from './pixels';
 export { createPixelTexture, updatePixelTexture } from './gameobjects/pixel_texture';
 export type { TPixelTextureOptions, TPixelPaint } from './gameobjects/pixel_texture';
 export type { TLoadedPixels } from './loaders/pixels';
