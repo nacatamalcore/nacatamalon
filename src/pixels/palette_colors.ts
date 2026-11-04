@@ -12,12 +12,16 @@ const packed = (r: number, g: number, b: number): number => (r << 16) | (g << 8)
 /**
  * The list of colours, each read once, with what is wrong with it said before anything is painted.
  */
-const readColors = (colors: readonly TColorOption[], who: string): [number, number, number][] => {
+const readColors = (colors: readonly TColorOption[], who: string, what: 'palette' | 'ramp' = 'palette'): [number, number, number][] => {
     if (!Array.isArray(colors)) {
-        throw new Error(`[NacatamalOn] ${who}: the palette is not a list of colours. Give one, like BUILTIN.PALETTES.nes or the colors of a palette you loaded.`);
+        throw new Error(what === 'ramp'
+            ? `[NacatamalOn] ${who}: a ramp is not a list of colours. Give each as a list, from darkest to lightest.`
+            : `[NacatamalOn] ${who}: the palette is not a list of colours. Give one, like BUILTIN.PALETTES.nes or the colors of a palette you loaded.`);
     }
     if (colors.length === 0) {
-        throw new Error(`[NacatamalOn] ${who}: the palette has no colours. A palette you loaded has none until it arrives, so wait for its status to be 'ready'.`);
+        throw new Error(what === 'ramp'
+            ? `[NacatamalOn] ${who}: a ramp has no colours. Give it two or more, from darkest to lightest.`
+            : `[NacatamalOn] ${who}: the palette has no colours. A palette you loaded has none until it arrives, so wait for its status to be 'ready'.`);
     }
     return colors.map((color, at) => {
         let bytes: number[] = [Number.NaN];
@@ -30,7 +34,7 @@ const readColors = (colors: readonly TColorOption[], who: string): [number, numb
             // Said below, with the rest.
         }
         if (bytes.some((byte) => !Number.isFinite(byte))) {
-            throw new Error(`[NacatamalOn] ${who}: colour ${at} of the palette is ${typeof color === 'string' ? `'${color}'` : String(color)}, which is not a colour. Write it as '#rrggbb' or a CSS name.`);
+            throw new Error(`[NacatamalOn] ${who}: colour ${at} of the ${what} is ${typeof color === 'string' ? `'${color}'` : String(color)}, which is not a colour. Write it as '#rrggbb' or a CSS name.`);
         }
         return [bytes[0]!, bytes[1]!, bytes[2]!];
     });
@@ -221,3 +225,119 @@ export const checkColorLimit = (pixels: TPixels, options: TColorLimitOptions): T
     }
     return over;
 };
+
+/**
+ * What `shadeWithRamp` can be told.
+ *
+ * @category Pixels
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TShadeWithRampOptions = {
+    /**
+     * Where the light comes from, as a direction on the picture: `{ x: -1, y: -1 }` is the top left,
+     * the default and the usual one for pixel art, and `{ x: 1, y: 0 }` the right.
+     */
+    light?: { x: number; y: number };
+    /**
+     * Only this part of the picture, which is looked at as if it were the whole picture: one frame of
+     * a sheet.
+     */
+    region?: TPixelRegion;
+};
+
+/**
+ * Gives flat colours a side lit and a side in shadow: each pixel on the edge of a shape that faces
+ * the light moves one step up its ramp, and each one on the edge facing away moves one step down.
+ * What is in between stays, and so does a pixel with an edge on both sides.
+ *
+ * A ramp is a list of colours from darkest to lightest, and a colour in none of them is left alone,
+ * so skin and cloth each shade along their own. The shape is everything that is not fully transparent.
+ * Alpha stays as it was.
+ *
+ * @param pixels - The picture, changed in place.
+ * @param ramps - One ramp, or a list of them, each colour as anything `getColor` reads. Colours are
+ * matched exactly. A colour at the end of its ramp has nowhere further to go, and stays.
+ * @param options - Where the light comes from, and the part of the picture: see
+ * {@link TShadeWithRampOptions}.
+ * @returns The same picture, to go on painting.
+ *
+ * @example
+ * ```ts
+ * const ball = pixelsFromRows(['.mmm.', 'mmmmm', 'mmmmm', 'mmmmm', '.mmm.'], { m: '#c8553d' });
+ * shadeWithRamp(ball, ['#7a2e22', '#c8553d', '#f0a37a']);
+ * ```
+ *
+ * @category Pixels
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const shadeWithRamp = (pixels: TPixels, ramps: readonly TColorOption[] | readonly (readonly TColorOption[])[], options?: TShadeWithRampOptions): TPixels => {
+    if (!Array.isArray(ramps) || ramps.length === 0) {
+        throw new Error('[NacatamalOn] shadeWithRamp: there is no ramp. Give a list of colours from darkest to lightest, or a list of such lists.');
+    }
+    const list = (Array.isArray(ramps[0]) ? ramps : [ramps]) as readonly (readonly TColorOption[])[];
+    // Each colour, to where it goes up and down its ramp. The first ramp to name a colour keeps it.
+    const steps = new Map<number, { up: [number, number, number]; down: [number, number, number] }>();
+    for (const ramp of list) {
+        const colors = readColors(ramp, 'shadeWithRamp', 'ramp');
+        if (colors.length < 2) {
+            throw new Error('[NacatamalOn] shadeWithRamp: a ramp has one colour, so there is nowhere to go. Give it two or more, from darkest to lightest.');
+        }
+        colors.forEach((color, at) => {
+            const key = packed(color[0], color[1], color[2]);
+            if (!steps.has(key)) {
+                steps.set(key, { up: colors[Math.min(colors.length - 1, at + 1)]!, down: colors[Math.max(0, at - 1)]! });
+            }
+        });
+    }
+
+    const light = options?.light ?? { x: -1, y: -1 };
+    const longest = Math.max(Math.abs(light.x), Math.abs(light.y));
+    if (!Number.isFinite(light.x) || !Number.isFinite(light.y) || longest === 0) {
+        throw new Error(`[NacatamalOn] shadeWithRamp: the light comes from { x: ${String(light.x)}, y: ${String(light.y)} }, which is no direction. Give one like { x: -1, y: -1 }, the top left.`);
+    }
+    // To a neighbour on the grid: a side counts when the light comes at least half as much from it.
+    const towardX = Math.abs(light.x) * 2 >= longest ? Math.sign(light.x) : 0;
+    const towardY = Math.abs(light.y) * 2 >= longest ? Math.sign(light.y) : 0;
+
+    const { left, top, right, bottom } = partOf(pixels, options?.region);
+    const wide = right - left;
+    const high = bottom - top;
+    if (!(wide > 0) || !(high > 0)) {
+        return pixels;
+    }
+    const d = pixels.data;
+    const solid = new Uint8Array(wide * high);
+    for (let y = 0; y < high; y++) {
+        for (let x = 0; x < wide; x++) {
+            solid[y * wide + x] = d[((y + top) * pixels.width + x + left) * 4 + 3]! > 0 ? 1 : 0;
+        }
+    }
+    const empty = (x: number, y: number): boolean => x < 0 || y < 0 || x >= wide || y >= high || solid[y * wide + x] === 0;
+    const open = (x: number, y: number, sign: number): boolean =>
+        (towardX !== 0 && empty(x + towardX * sign, y)) || (towardY !== 0 && empty(x, y + towardY * sign));
+
+    for (let y = 0; y < high; y++) {
+        for (let x = 0; x < wide; x++) {
+            if (solid[y * wide + x] === 0) {
+                continue;
+            }
+            const lit = open(x, y, 1);
+            const shaded = open(x, y, -1);
+            if (lit === shaded) {
+                continue;
+            }
+            const at = ((y + top) * pixels.width + x + left) * 4;
+            const step = steps.get(packed(d[at]!, d[at + 1]!, d[at + 2]!));
+            if (step !== undefined) {
+                const color = lit ? step.up : step.down;
+                d[at] = color[0];
+                d[at + 1] = color[1];
+                d[at + 2] = color[2];
+            }
+        }
+    }
+    return pixels;
+};
+

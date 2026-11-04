@@ -264,3 +264,48 @@ export const fillChecker = (pixels: TPixels, size: number, a: TColor, b: TColor)
     return pixels;
 };
 
+/**
+ * Fills a rectangle with two colours in the ordered pattern of the era: a shadow or a slope of light
+ * on a picture with few colours, or a see-through patch when one of them is transparent.
+ *
+ * The dots are laid out by where they are on the picture, so two patches side by side meet without a
+ * seam, and in the same places the `dither()` effect and `fillGradient` put theirs.
+ *
+ * @param pixels - The picture.
+ * @param x - The rectangle's left edge.
+ * @param y - Its top edge.
+ * @param width - How wide, in pixels.
+ * @param height - How tall, in pixels.
+ * @param a - The colour it is made of when `amount` is `0`.
+ * @param b - The colour it is made of when `amount` is `1`.
+ * @param amount - How much of `b`, from `0` to `1`, in sixteen steps. Default `0.5`, one and one.
+ * @returns The same picture, to go on painting.
+ *
+ * @example
+ * ```ts
+ * const wall = createPixels(32, 32, getColor('#6d4c8f'));
+ * // A shadow that thickens to the bottom.
+ * fillDither(wall, 0, 16, 32, 8, getColor('#6d4c8f'), getColor('#3a2a55'), 0.25);
+ * fillDither(wall, 0, 24, 32, 8, getColor('#6d4c8f'), getColor('#3a2a55'), 0.75);
+ * ```
+ *
+ * @category Pixels
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const fillDither = (pixels: TPixels, x: number, y: number, width: number, height: number, a: TColor, b: TColor, amount = 0.5): TPixels => {
+    if (typeof amount !== 'number' || Number.isNaN(amount)) {
+        throw new Error(`[NacatamalOn] fillDither: amount is ${String(amount)}. Give how much of the second colour there is, from 0 to 1.`);
+    }
+    const { left, top, right, bottom } = areaOf(pixels, { x, y, width, height });
+    const first = bytesOf(a);
+    const second = bytesOf(b);
+    for (let py = top; py < bottom; py++) {
+        for (let px = left; px < right; px++) {
+            // The same way round as a gradient's: the highest of the pattern changes first.
+            const [r, g, bl, al] = bayerAt(px, py) + 0.5 >= 1 - amount ? second : first;
+            put(pixels, px, py, r, g, bl, al);
+        }
+    }
+    return pixels;
+};

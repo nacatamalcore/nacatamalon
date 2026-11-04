@@ -7,6 +7,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **Shading for generated pictures.** `shadeWithRamp(pixels, ramps, { light })` moves each pixel on the
+  edge of a shape one step along its ramp, up on the side facing the light and down on the other.
+  `fillDither(pixels, x, y, width, height, a, b, amount)` fills a rectangle with two colours in the
+  ordered pattern of the `dither()` effect.
 - **Named points on a sheet's frames.** A frame can say where its hand, feet or muzzle are, in an
   `.atlas` file (`points`) or in `createSpriteAtlas({ points })`, and `pointOf(sprite, 'hand')` gives
   that place in the world for the frame showing now, with its anchor, pivot, flip, size, scale, turn
