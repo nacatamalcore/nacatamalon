@@ -941,11 +941,14 @@ export const rememberBoxExtra = (box: TBox, extra: Record<string, unknown>): voi
  * shape has not arrived, a map still fetching. A scene is written while somebody is working, and a
  * writer that threw would pick the worst moment to do it.
  *
- * Three rules decide what comes out:
+ * Four rules decide what comes out:
  *
  * - **What is derived is not written.** Where a thing ended up after the tree moved it, the matrices
  *   the card reads, whether a file has arrived: all of it is worked out again on the way back in, so
  *   writing it down would only be a chance for the two to disagree.
+ * - **What it is doing at the moment is not written.** Whether its scene is paused, under a menu
+ *   `launch`ed on top of it or held still behind a transition, or an emitter is mid-burst: that is
+ *   how the game got there, not what the scene is, so the document comes back as the scene was made.
  * - **An asset is collapsed to its key**, and the keys gather into one manifest as the walk goes, so
  *   two sprites sharing a sheet name it once.
  * - **A box born after its scene was built is not written.** Saving a level three seconds into
