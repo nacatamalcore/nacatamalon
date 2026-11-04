@@ -1,4 +1,5 @@
 import { bumpVersion } from '../../store/record_version';
+import type { TAtlasFramePoints } from '../../atlas/types/t_sprite_atlas';
 import type { TRuntimeStore } from '../../store';
 import { loadTexture } from '../texture/load_texture';
 import { resolveAssetPath } from '../resolve_asset_path';
@@ -82,6 +83,20 @@ export const loadAtlas = async (store: TRuntimeStore, atlas: TLoadedAtlas): Prom
                 ...(sequence.yoyo !== undefined ? { yoyo: sequence.yoyo } : {}),
                 ...(sequence.next !== undefined ? { next: sequence.next } : {}),
             };
+        }
+
+        if (doc.points !== undefined) {
+            const points: Record<number, TAtlasFramePoints> = {};
+            for (const [frame, named] of Object.entries(doc.points)) {
+                // A name first: a packed sheet may well have a frame called "3".
+                const index = byName.get(frame) ?? (/^(0|[1-9]\d*)$/.test(frame) ? Number(frame) : -1);
+                if (index < 0 || index >= cut.length) {
+                    console.warn(`[NacatamalOn] useLoadAtlas: '${atlas.src}' gives points to a frame '${frame}', and it has ${cut.length}. They are left out.`);
+                    continue;
+                }
+                points[index] = named;
+            }
+            atlas.points = points;
         }
 
         atlas.status = 'ready';

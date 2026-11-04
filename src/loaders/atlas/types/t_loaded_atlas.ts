@@ -1,7 +1,7 @@
 import type { TAnimationClip } from '../../../hooks';
 import type { TLoadStatus } from '../../types/t_load_status';
 import type { TTexture } from '../../texture/types/t_texture';
-import type { TAtlasFrame } from '../../../atlas/types/t_sprite_atlas';
+import type { TAtlasFrame, TAtlasFramePoints } from '../../../atlas/types/t_sprite_atlas';
 
 /**
  * A sheet described by a file: the image, how it is cut, and the runs of frames over it.
@@ -57,4 +57,8 @@ export type TLoadedAtlas = {
      * The runs the file declares, by name, ready for `useSpriteAnimation`.
      */
     sequences: Record<string, TAnimationClip>;
+    /**
+     * The named points of its frames, by frame number, for `pointOf`. Filled in with the grid.
+     */
+    points?: Readonly<Record<number, TAtlasFramePoints>>;
 };

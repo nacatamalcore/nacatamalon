@@ -1,5 +1,6 @@
 import type { TTexture } from '../loaders';
-import type { TSpriteAtlas } from './types/t_sprite_atlas';
+import { copyPoints, problemWithPoints } from './frame_points';
+import type { TAtlasFramePoints, TSpriteAtlas } from './types/t_sprite_atlas';
 
 /**
  * What `createSpriteAtlas` is asked for.
@@ -21,6 +22,33 @@ export type TSpriteAtlasOptions = {
      * How many frames down. One for a single strip.
      */
     rows?: number;
+    /**
+     * Named points of its frames, by frame number, for `pointOf`: where the hand is in each one.
+     * `{ 4: { hand: { x: 14, y: 10 } } }`, in the frame's pixels from its top-left corner.
+     */
+    points?: Readonly<Record<number, TAtlasFramePoints>>;
+};
+
+/**
+ * Each frame's points, checked and copied.
+ */
+const readPoints = (points: Readonly<Record<number, TAtlasFramePoints>>, frames: number): Record<number, TAtlasFramePoints> => {
+    if (typeof points !== 'object' || points === null) {
+        throw new Error('[NacatamalOn] createSpriteAtlas: points has to be an object, by frame number: { 4: { hand: { x: 14, y: 10 } } }.');
+    }
+    const read: Record<number, TAtlasFramePoints> = {};
+    for (const [key, named] of Object.entries(points)) {
+        const frame = /^(0|[1-9]\d*)$/.test(key) ? Number(key) : -1;
+        if (frame < 0 || frame >= frames) {
+            throw new Error(`[NacatamalOn] createSpriteAtlas: points names frame '${key}', and this sheet has frames 0 to ${frames - 1}. Give the number of one of them.`);
+        }
+        const problem = problemWithPoints(named);
+        if (problem !== null) {
+            throw new Error(`[NacatamalOn] createSpriteAtlas: frame ${frame} ${problem}`);
+        }
+        read[frame] = copyPoints(named);
+    }
+    return read;
 };
 
 /**
@@ -48,10 +76,11 @@ export type TSpriteAtlasOptions = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const createSpriteAtlas = ({ texture, columns, rows = 1 }: TSpriteAtlasOptions): TSpriteAtlas => {
+export const createSpriteAtlas = ({ texture, columns, rows = 1, points }: TSpriteAtlasOptions): TSpriteAtlas => {
     if (!Number.isInteger(columns) || columns < 1 || !Number.isInteger(rows) || rows < 1) {
         throw new Error(`[NacatamalOn] createSpriteAtlas: a grid needs whole columns and rows, got ${columns} x ${rows}.`);
     }
 
-    return { texture, columns, rows, frames: columns * rows };
+    const frames = columns * rows;
+    return { texture, columns, rows, frames, ...(points !== undefined ? { points: readPoints(points, frames) } : {}) };
 };

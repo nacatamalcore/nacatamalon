@@ -115,6 +115,12 @@ export type TAtlasDoc = {
      */
     packed?: Record<string, TAtlasPixelRect>;
     sequences?: Record<string, TAtlasSequenceDoc>;
+    /**
+     * Named points of its frames, for `pointOf`, by the frame's number, or its name in a packed
+     * sheet: `{ "4": { "hand": { "x": 14, "y": 10 } } }`, in the frame's pixels from its top-left
+     * corner. A new optional field: an older reader goes on as if it were not there.
+     */
+    points?: Record<string, Record<string, { x: number; y: number }>>;
 };
 
 /**

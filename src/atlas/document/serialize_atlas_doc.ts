@@ -30,6 +30,9 @@ export const serializeAtlasDoc = (doc: TAtlasDoc): string => {
     if (doc.sequences && Object.keys(doc.sequences).length > 0) {
         out.sequences = doc.sequences;
     }
+    if (doc.points && Object.keys(doc.points).length > 0) {
+        out.points = doc.points;
+    }
 
     return `${JSON.stringify(out, null, 4)}\n`;
 };

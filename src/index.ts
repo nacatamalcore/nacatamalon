@@ -126,7 +126,7 @@ export { findObject, findObjects, ownerOf, sceneOf } from './box';
 // How big something is and where: what is drawn flat, how a text is set and where its lines break,
 // and a point of the world measured on an object (where a hit landed on it), or a point of an
 // object found in the world (where a shot leaves it from).
-export { boundsOf, sizeOf, measureText, letterAt, worldToLocal, localToWorld, worldToLocal3d, localToWorld3d } from './layout';
+export { boundsOf, sizeOf, measureText, letterAt, pointOf, worldToLocal, localToWorld, worldToLocal3d, localToWorld3d } from './layout';
 export type { TMeasurable, TMeasureTextOptions, TTextLetter, TTextMeasure } from './layout';
 // Whether two things touch, with no physics: a bullet and a brick, the player and the coins.
 export { collisionBetween } from './hitbox';
@@ -213,7 +213,7 @@ export type { TNineSlice, TNineSliceBorders, TNineSliceMode, TNineSliceOptions }
 export type { TTilemap, TTilemapLayer, TTilemapOptions, TTilemapDrawOptions, TTilemapFileOptions, TTilemapDocOptions, TTilemapCodeDoc } from './gameobjects/tilemap';
 export type { TTerrainDoc, TTileDoc, TTilemapDoc, TTilemapLayerDoc, TTileLayerOrder } from './loaders';
 export { parseTilemapDoc } from './loaders';
-export type { TSpriteAtlas, TSpriteAtlasOptions } from './atlas';
+export type { TSpriteAtlas, TSpriteAtlasOptions, TAtlasPoint, TAtlasFramePoints } from './atlas';
 export type { TCamera2d, TCamera2dOptions, TCamera3d, TCamera3dOptions } from './camera';
 export type { TFog, TFogOptions } from './fog';
 export type { TKeyboard, TKeyName, TPointerInfo, TPointerDragInfo, TPointerDragListener, TDropZoneListener, TPointerHandle, TPointerType, TPointerTouch, TPointerListener, TPointerWheelInfo, TPointerWheelListener, TPointerLockOptions, TSpriteEvents } from './input';

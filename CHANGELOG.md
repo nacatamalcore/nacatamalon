@@ -7,6 +7,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **Named points on a sheet's frames.** A frame can say where its hand, feet or muzzle are, in an
+  `.atlas` file (`points`) or in `createSpriteAtlas({ points })`, and `pointOf(sprite, 'hand')` gives
+  that place in the world for the frame showing now, with its anchor, pivot, flip, size, scale, turn
+  and the objects above it applied. What hangs from it follows the art, with no table of offsets.
 - **The colours of the old machines.** `BUILTIN.PALETTES` has those of the NES, the Game Boy and the
   C64, and `useLoadPalette({ src: 'nacatamalon:nes' })` gives them to `paletteMatch` with no file.
   `snapToPalette(pixels, palette)` moves a picture to the nearest of a palette's

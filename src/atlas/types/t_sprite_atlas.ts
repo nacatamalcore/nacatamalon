@@ -36,7 +36,30 @@ export type TSpriteAtlas = {
      * its own. Left out, the grid above is the whole answer.
      */
     rects?: readonly TAtlasFrame[];
+    /**
+     * The named points of its frames, by frame number, for `pointOf`.
+     */
+    points?: Readonly<Record<number, TAtlasFramePoints>>;
 };
+
+/**
+ * A place on a frame: its pixels from the frame's top-left corner, measured as `anchor` is, so
+ * `{ x: 14, y: 10 }` is the top-left corner of that pixel. It may be outside the frame.
+ *
+ * @category Sprites
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TAtlasPoint = { x: number; y: number };
+
+/**
+ * The named points of one frame: `{ hand: { x: 14, y: 10 }, feet: { x: 8, y: 16 } }`.
+ *
+ * @category Sprites
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TAtlasFramePoints = Record<string, TAtlasPoint>;
 
 /**
  * The window into the image one frame occupies, in 0-1: what `atlasFrame` works out and what a

@@ -1,4 +1,5 @@
 import { ATLAS_FORMAT } from './atlas_format';
+import { copyPoints, problemWithPoints } from '../frame_points';
 import type { TAtlasDoc, TAtlasGridSpec, TAtlasPixelRect, TAtlasSequenceDoc } from './types/t_atlas_doc';
 
 /**
@@ -99,6 +100,20 @@ export const parseAtlasDoc = (value: unknown, src: string): TAtlasDoc => {
         }
     }
 
+    const points: [string, Record<string, { x: number; y: number }>][] = [];
+    if (doc.points !== undefined) {
+        if (typeof doc.points !== 'object' || doc.points === null || Array.isArray(doc.points)) {
+            return fail(src, '"points" must be an object, by frame.');
+        }
+        for (const [frame, raw] of Object.entries(doc.points)) {
+            const problem = problemWithPoints(raw);
+            if (problem !== null) {
+                return fail(src, `frame "${frame}" ${problem}`);
+            }
+            points.push([frame, copyPoints(raw as Record<string, { x: number; y: number }>)]);
+        }
+    }
+
     return {
         format: doc.format,
         kind: 'atlas',
@@ -106,5 +121,8 @@ export const parseAtlasDoc = (value: unknown, src: string): TAtlasDoc => {
         ...(hasGrid ? { grid: doc.grid as TAtlasGridSpec } : {}),
         ...(hasPacked ? { packed: doc.packed as Record<string, TAtlasPixelRect> } : {}),
         sequences,
+        // Built whole, so a frame called `__proto__` is a frame like any other: the loader says it has
+        // no such frame, rather than losing it here.
+        ...(points.length > 0 ? { points: Object.fromEntries(points) } : {}),
     };
 };
