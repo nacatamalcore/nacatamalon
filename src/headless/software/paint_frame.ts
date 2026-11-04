@@ -8,6 +8,7 @@ import { PARTICLE_FLOATS, PARTICLE_OFFSET } from '../../render/shared/particle_i
 import { DISTANCE_FIELD_RANGE } from '../../render/shared/distance_field';
 import { isAway } from '../../loaders/texture/is_away';
 import { blend, coverTriangle, offTheSeam, sample } from './raster';
+import { paintEffects } from './paint_effects';
 import type { TBlend, TBounds, TCorner, TPicture, TRgba } from './raster';
 import type { TColor } from '../../color';
 import type { IBuffer } from '../../render/interface/i_buffer';
@@ -503,8 +504,8 @@ const paintPass = (pass: TRenderPass, picture: TPicture, clearColor: TColor, sto
  * back the screen's: every pass into a picture of its own first (a view, a filter's part), so what
  * shows them reads them as they were just drawn.
  *
- * What only a card can do is left out and said: 3D, a material's own shader, the screen's effects
- * and a filter's (its part is laid back as it was drawn, without them).
+ * What only a card can do is left out and said: 3D, a material's own shader, and the effects there
+ * is no copy of here (`paintEffects`).
  *
  * @internal
  * @since 1.0.0
@@ -530,8 +531,8 @@ export const paintFrame = (ctx: TFrameContext, width: number, height: number, st
         // as the cards do.
         paintPass(pass, picture, store.background, store, notDrawn);
         if (pass.filter !== undefined) {
-            // The effects a filter runs are a card's; what it filters is laid back without them.
-            notDrawn.add("a filter's effects (what it filters is drawn without them)");
+            // Its part of the pass drawn out into a picture of its own, its effects run over that as
+            // over a whole screen, and the result is what the pass's filter layer lays back.
             const into = store.pictures.get(pass.filter.into);
             if (into !== undefined) {
                 if (into.data.length !== into.width * into.height * 4) {
@@ -552,12 +553,12 @@ export const paintFrame = (ctx: TFrameContext, width: number, height: number, st
                         into.data.set(picture.data.subarray((sy * picture.width + sx) * 4, (sy * picture.width + sx) * 4 + 4), to);
                     }
                 }
+                paintEffects(pass.filter.chain, into, store.pictures, true, notDrawn);
             }
         }
         // On whichever pass asks for them: the screen's, or a picture the game takes of itself.
         if (pass.postProcess === true && (ctx.post?.length ?? 0) > 0) {
-            const names = ctx.post!.map((effect) => effect.name).filter((name): name is string => name !== null);
-            notDrawn.add(`the screen's post effects${names.length > 0 ? ` (${names.join(', ')})` : ''}`);
+            paintEffects(ctx.post!, picture, store.pictures, false, notDrawn);
         }
     }
     return { screen, notDrawn };

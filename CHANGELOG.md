@@ -12,8 +12,10 @@ releases are in [changelog/](./changelog/), one file each.
   `encodePng` to write to a file: a test, a script or an assistant writing a game can look at what
   it draws, change it and look again. It draws the 2D as the card does (sprites and sheets, texts,
   panels, maps, shapes, particles, cameras, masks, views of the world), and pixel art at whole
-  pixels comes out the same as on the screen. 3D, a material's own shader, the screen's post effects
-  and a filter's effects are left out, and said once. Nothing is drawn until it is asked for.
+  pixels comes out the same as on the screen. The effects that make pixel art's look are drawn as
+  well, on the screen and in filters (`paletteMatch`, `lutGrade`, `dither`, `posterize`, `mosaic`,
+  `colorAdjust`, `outline`, `dropShadow`, `glow`). 3D, a material's own shader and every other
+  effect are left out, and said once. Nothing is drawn until it is asked for.
 - **Pixel art written as rows of characters.** `pixelsFromRows(rows, palette)` draws a picture one
   character a pixel, top row first, with a palette saying what colour each one is (anything
   `getColor` reads; `'.'` and `' '` are nothing), and `scale` to draw each as a bigger square.

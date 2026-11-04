@@ -112,9 +112,11 @@ export type THeadlessGame = {
      * Drawn as the card draws the 2D of a game: sprites and sheets, texts, panels, maps, shapes,
      * particles, cameras, masks, and views of the world drawn into a picture. Pixel art drawn at
      * whole pixels comes out as on the screen; something turned or read smooth may differ by a
-     * pixel at its edges. **What only a card can do is left out**, and said once in a warning: 3D,
-     * a material's own shader (the sprite is drawn as if it had none), the screen's post effects,
-     * and a filter's effects (what it filters is drawn without them).
+     * pixel at its edges. The engine's effects that make the look of pixel art are drawn too, on
+     * the screen and in a filter: `paletteMatch`, `lutGrade`, `dither`, `posterize`, `mosaic`,
+     * `colorAdjust`, `outline`, `dropShadow` and `glow`. **What only a card can do is left out**,
+     * and said once in a warning: 3D, a material's own shader (the sprite is drawn as if it had
+     * none), and every other effect, `crt` among them and any with a shader of its own.
      *
      * Nothing is drawn until it is asked for, so `run` takes the time it did; what the game hands the
      * card (each picture's pixels, each shape's corners) is kept in memory for it. It takes the
