@@ -35,7 +35,7 @@ export type TViewFilter = {
     tags?: readonly string[];
     /**
      * Drawings of these kinds: `'sprite'`, `'text'`, `'nine-slice'`, `'tilemap'`, `'particles'`,
-     * `'particles-3d'`, `'mesh'`, `'lines'`, `'polygon'`.
+     * `'particles-3d'`, `'mesh'`, `'lines'`, `'polygon'`, `'shapes'`.
      */
     kinds?: readonly TDrawable['type'][];
     /**

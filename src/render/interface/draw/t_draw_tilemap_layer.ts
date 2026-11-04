@@ -38,7 +38,8 @@ export type TDrawTilemapLayer = {
      */
     readonly worldTransform?: { x: number; y: number; rotation: number; scaleX: number; scaleY: number };
     /**
-     * The corners: `x, y, u, v` each, three per triangle and two triangles per cell. Written by the
+     * The corners: `TILE_CORNER_FLOATS` numbers each (where, which point of the sheet, and the
+     * window it reads from), three per triangle and two triangles per cell. Written by the
      * engine, read by the backend, and rewritten in place when a cell changes. A batch with a `grid`
      * is drawn only where a camera shows it (`tileRuns`); one without is drawn whole.
      */
@@ -68,4 +69,9 @@ export type TDrawTilemapLayer = {
      * `layerUv()` runs across. Omitted, `layerUv()` counts in pixels.
      */
     readonly size?: { readonly width: number; readonly height: number };
+    /**
+     * The rectangle its corners cover, in its own pixels before it is placed, when it is known: a
+     * shape's. What a filter measures it by; left out, a filter takes all of the screen for it.
+     */
+    readonly bounds?: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
 };

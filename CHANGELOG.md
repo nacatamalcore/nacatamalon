@@ -7,6 +7,14 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **Shapes drawn by the card each frame.** `createShapes({ shapes })` draws a list of shapes as plain
+  data: rectangles (with rounded corners, turned), circles and ellipses and slices of them (a pie
+  filled, an arc outlined), outlines of any number of corners, hollowed in too, and lines as wide as
+  asked for. Each is filled, outlined or both, in any colour; an outline turns as its `join` says
+  (`miter`, `round`, `bevel`), ends as its `cap` says (`butt`, `round`, `square`), and `align` puts it
+  inside or outside what it goes round. Change a number, push a shape or take one out, and the next
+  frame draws it; all of one object are drawn in one go. They take a filter and make the shape of a
+  mask. On both cards, in scene documents as a `shapes` component, and natively.
 - **Filters: effects on one object.** `useFilter({ effects })` runs effects over what an object, and
   everything under it, draws, before it is laid on the screen, and `add` says which objects, like a
   mask. A character made of pieces gets one contour around all of them, a coin a glow, a panel a
@@ -105,6 +113,9 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- **`createPolygon` draws an outline hollowed in past its middle.** It was drawn from its middle out,
+  which folded over itself for a C or an arrow; such an outline is now cut into triangles that cover
+  it once. One that can be seen whole from its middle (a blob, a star) is drawn as before.
 - **The game's screen has a group of its own, `SCREEN`.** `RENDER` keeps how the engine draws
   (`TYPE`, `PIXEL_SNAP`, `LINE_VERTEX_FLOATS`), and what shape the screen is and how it sits in its
   page moves out: `RENDER.CONSOLE_SCREENS` is now `SCREEN.CONSOLES` and `RENDER.ALIGN` is
@@ -145,6 +156,9 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **`createPolygon` shows again.** Since a map's cells read a window of their sheet, its corners were
+  read shifted and it was not drawn at all, on either card (the soft bodies of Jelly Piggies among
+  them).
 - **Letting go of an effect leaves the effects something else still sets off.** When two effect files
   set off the same one and one of them was let go of, the shared one went with it and the other was
   left setting off nothing. Now it goes with the last of them, whether that is a file let go of or an

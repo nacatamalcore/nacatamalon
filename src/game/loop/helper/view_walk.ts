@@ -101,7 +101,7 @@ export const drawingPicture = <T>(picture: TTexture, gather: () => T): T => {
  * moved by parallax, and, for a text or a panel, laid out into pieces that hold that place. What is
  * in depth and what emits is placed the same through any camera.
  */
-const PLACED_BY_CAMERA: ReadonlySet<string> = new Set(['sprite', 'text', 'nine-slice', 'tilemap', 'polygon']);
+const PLACED_BY_CAMERA: ReadonlySet<string> = new Set(['sprite', 'text', 'nine-slice', 'tilemap', 'polygon', 'shapes']);
 
 /**
  * The drawing a stand-in stands in for, or the drawing itself.

@@ -29,7 +29,7 @@ export type TFakeRenderer = IRenderer & {
     /**
      * Every buffer it was asked for, with what was written into it and whether it is still alive.
      */
-    buffers: Array<{ handle: IBuffer; data: Float32Array | Uint16Array | Uint32Array; usage: string; writes: number; alive: boolean }>;
+    buffers: Array<{ handle: IBuffer; data: Float32Array | Uint16Array | Uint32Array; size: number; usage: string; writes: number; alive: boolean }>;
     /**
      * Every texture it was told to let go, oldest first.
      */
@@ -70,7 +70,7 @@ export const createFakeRenderer = (): TFakeRenderer => {
         createTexture: (): ITexture => ({ resourceType: 'texture' }),
         createBuffer: (data, usage) => {
             const handle: IBuffer = { resourceType: 'buffer' };
-            buffers.push({ handle, data: data.slice(), usage, writes: 0, alive: true });
+            buffers.push({ handle, data: data.slice(), size: data.byteLength, usage, writes: 0, alive: true });
             return handle;
         },
         updateBuffer: (handle, data) => {
@@ -78,7 +78,9 @@ export const createFakeRenderer = (): TFakeRenderer => {
             if (entry === undefined) {
                 throw new Error('updateBuffer: that buffer was never made here.');
             }
-            if (data.byteLength > entry.data.byteLength) {
+            // Against what it was made with, as a card's buffer is: a short write before does not
+            // make it smaller.
+            if (data.byteLength > entry.size) {
                 throw new Error('updateBuffer: what was written does not fit.');
             }
             entry.data = data.slice();

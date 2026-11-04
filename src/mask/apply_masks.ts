@@ -1,14 +1,14 @@
 import { applyView2d } from '../render/shared/apply_view_2d';
 import { composeTransform2d } from '../render/shared/compose_transform_2d';
 import { markSoftTargets, rewindSoftTargets, takeSoftTarget } from './soft_targets';
-import type { IRenderer, TDrawCamera2d, TDrawItem, TDrawSprite, TDrawTexture, TDrawView3d, TRenderPass } from '../render/interface';
+import type { IRenderer, TDrawCamera2d, TDrawItem, TDrawSprite, TDrawTexture, TDrawTilemapLayer, TDrawView3d, TRenderPass } from '../render/interface';
 import type { TDrawStencil } from '../render/interface/draw/t_draw_stencil';
 import type { TDrawMaskLayer } from '../render/interface/draw/t_draw_mask_layer';
 import type { TDrawable } from '../gameobjects/types';
 import type { TMask } from './types/t_mask';
 import type { TMaskLevel, TShapeList } from './mask_walk';
 import type { TDrawFilterLayer } from '../render/interface/draw/t_draw_filter_layer';
-import { emptySpan, paddingOf, regionOf, spanEverything, spanLayer, spanRect, spanSprite } from '../filter/filter_region';
+import { emptySpan, paddingOf, regionOf, spanEverything, spanLayer, spanRect, spanSprite, spanTiles } from '../filter/filter_region';
 
 /**
  * Anything a pass's list can hold on its way to a backend.
@@ -307,6 +307,10 @@ const filterLayer = (context: TContext, level: TMaskLevel, group: TEntry[], dept
                 spanSprite(span, item as TDrawSprite, camera >= 0 ? lists.cameras[camera] ?? null : null);
             } else if (item.type === 'filter-layer') {
                 spanLayer(span, item, target.pixelRatio);
+            } else if (item.type === 'tilemap') {
+                const camera = inner.cameraIndex[k] ?? -1;
+                // Swapped for its layer on the card by now, as the polygons and shapes are.
+                spanTiles(span, item as unknown as TDrawTilemapLayer, camera >= 0 ? lists.cameras[camera] ?? null : null);
             } else {
                 spanEverything(span);
             }

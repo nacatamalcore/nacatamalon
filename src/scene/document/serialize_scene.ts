@@ -28,6 +28,8 @@ import type { TParticles3d } from '../../gameobjects/particles/types/t_particles
 import type { TSprite } from '../../gameobjects/sprite/types/t_sprite';
 import type { TLoadedAtlas } from '../../loaders';
 import type { TNineSlice } from '../../gameobjects/nine_slice/types/t_nine_slice';
+import type { TShape, TShapes } from '../../gameobjects/shapes/types/t_shapes';
+import { writeShape } from '../../gameobjects/shapes/shape_doc';
 import { windowOf } from '../../gameobjects/nine_slice/expand_nine_slice';
 import type { TText } from '../../gameobjects/text/types/t_text';
 import type { TTilemapLayer } from '../../gameobjects/tilemap';
@@ -394,6 +396,20 @@ const writeNineSlice = (panel: TNineSlice, writing: TWriting): TComponentDoc => 
     };
 };
 
+const writeShapes = (shapes: TShapes): TComponentDoc => {
+    const place = writeFlatPlace(shapes.transform);
+    return {
+        type: 'shapes',
+        id: shapes.id,
+        ...(place !== undefined ? { transform: place } : {}),
+        shapes: (Array.isArray(shapes.shapes) ? shapes.shapes : []).map(writeShape).filter((shape): shape is TShape => shape !== null),
+        tint: { ...shapes.tint },
+        ...(shapes.parallax !== undefined && (shapes.parallax.x !== 1 || shapes.parallax.y !== 1) ? { parallax: point(shapes.parallax) } : {}),
+        ...unless('visible', shapes.visible, true),
+        ...unless('zIndex', shapes.zIndex, undefined),
+    };
+};
+
 const writeText = (text: TText, writing: TWriting): TComponentDoc => {
     // One entry and not two: a font is its metrics **and** its sheet, so its sheet is not also
     // registered as a texture of its own. Whoever loads the font loads both.
@@ -698,6 +714,7 @@ const writeDrawable = (drawable: TDrawable, writing: TWriting): TComponentDoc | 
         // Its corners are wherever the game's code moved them this frame, and that code makes it again
         // when the scene is opened.
         case 'polygon': return null;
+        case 'shapes': return writeShapes(drawable);
         default: {
             const never: never = drawable;
             return never;

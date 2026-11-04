@@ -7,9 +7,10 @@ import type { TParticles3d } from '../particles/types/t_particles_3d';
 import type { TLines } from '../lines/types/t_lines';
 import type { TNineSlice } from '../nine_slice/types/t_nine_slice';
 import type { TPolygon } from '../polygon/types/t_polygon';
+import type { TShapes } from '../shapes/types/t_shapes';
 
 /**
- * Anything drawn in a scene: a sprite, a text, a nine-slice, a map layer, a shape, a model, particles or lines. It grows by adding members (`TSprite | TText | TTilemap`), and every
+ * Anything drawn in a scene: a sprite, a text, a nine-slice, a map layer, a shape, shapes, a model, particles or lines. It grows by adding members (`TSprite | TText | TTilemap`), and every
  * member carries a `type`, so a `switch` on it knows which one it holds.
  *
  * A union and not a shared base type: a base would need a cast to reach any field of its own,
@@ -19,4 +20,4 @@ import type { TPolygon } from '../polygon/types/t_polygon';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TDrawable = TSprite | TText | TNineSlice | TTilemapLayer | TMesh | TParticles | TParticles3d | TLines | TPolygon;
+export type TDrawable = TSprite | TText | TNineSlice | TTilemapLayer | TMesh | TParticles | TParticles3d | TLines | TPolygon | TShapes;

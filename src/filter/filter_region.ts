@@ -2,7 +2,7 @@ import { applyView2d } from '../render/shared/apply_view_2d';
 import { pivotPlace } from '../render/shared/pivot_place';
 import { spriteSize } from '../render/shared/sprite_size';
 import { worldOf } from '../render/shared/world_of';
-import type { TDrawCamera2d, TDrawSprite } from '../render/interface';
+import type { TDrawCamera2d, TDrawSprite, TDrawTilemapLayer } from '../render/interface';
 import type { TDrawFilterLayer } from '../render/interface/draw/t_draw_filter_layer';
 import type { TTransform2d } from '../gameobjects/types/t_transform_2d';
 import type { TFilter, TFilterRect } from './types/t_filter';
@@ -89,6 +89,27 @@ export const spanSprite = (span: TSpan, sprite: TDrawSprite, camera: TDrawCamera
 export const spanLayer = (span: TSpan, layer: TDrawFilterLayer, pixelRatio: number): void => {
     take(span, layer.x / pixelRatio, layer.y / pixelRatio);
     take(span, (layer.x + layer.width) / pixelRatio, (layer.y + layer.height) / pixelRatio);
+};
+
+/**
+ * Adds what a map layer covers when it says so (`bounds`, a shape's): the four corners of that
+ * rectangle placed as the layer is, through its camera. One that does not say is all of the screen,
+ * and one with nothing drawn adds nothing.
+ *
+ * @internal
+ */
+export const spanTiles = (span: TSpan, layer: TDrawTilemapLayer, camera: TDrawCamera2d | null): void => {
+    // Nothing drawn this frame (shapes with none in their list yet): nothing to measure, rather than
+    // the whole screen.
+    if (layer.meshes.every((mesh) => mesh.vertexCount === 0)) {
+        return;
+    }
+    const bounds = layer.bounds;
+    if (bounds === undefined) {
+        spanEverything(span);
+        return;
+    }
+    spanRect(span, bounds, layer.worldTransform ?? layer.transform, camera);
 };
 
 /**

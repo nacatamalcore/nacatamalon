@@ -1,8 +1,10 @@
 import { uploadPolygon } from '../../../gameobjects/polygon/polygon_state';
+import { uploadShapes } from '../../../gameobjects/shapes/shapes_state';
 import type { IRenderer } from '../../../render';
 import type { TDrawTexture } from '../../../render/interface';
 import type { TDrawable } from '../../../gameobjects/types';
 import type { TPolygon } from '../../../gameobjects/polygon';
+import type { TShapes } from '../../../gameobjects/shapes';
 import { recordOf } from './view_walk';
 
 /**
@@ -39,7 +41,8 @@ export const whiteFor = (renderer: IRenderer): TDrawTexture => {
 
 /**
  * Sends each shape's corners up as they are this frame, and puts the map layer that draws them in its
- * place in the list.
+ * place in the list: a polygon's, and the set of shapes a `createShapes` made, whose picture is the
+ * palette of its colours.
  *
  * A shape is drawn as a map layer of its own triangles, which both backends already draw in the
  * game's pixels through the scene's camera: the swap happens here, after the tree has been walked and
@@ -52,6 +55,17 @@ export const whiteFor = (renderer: IRenderer): TDrawTexture => {
 export const stepScenePolygons = (drawables: TDrawable[], start: number, renderer: IRenderer): void => {
     for (let i = start; i < drawables.length; i++) {
         const item = drawables[i];
+        if (item.type === 'shapes') {
+            const shapes = item as TShapes;
+            const record = recordOf(shapes);
+            const shared = uploadShapes(renderer, record).drawn;
+            const drawn = record === shapes ? shared : copyFor(shapes, shared);
+            drawn.transform = shapes.transform;
+            drawn.worldTransform = shapes.worldTransform;
+            drawn.tint = shapes.tint;
+            drawables[i] = drawn as unknown as TDrawable;
+            continue;
+        }
         if (item.type !== 'polygon') {
             continue;
         }

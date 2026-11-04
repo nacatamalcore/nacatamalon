@@ -17,6 +17,8 @@ import type { TDrawCamera2d } from '../render/interface';
 import type { TMask } from '../mask/types/t_mask';
 import type { TMaskLevel, TShapeList } from '../mask/mask_walk';
 import type { TPolygon } from '../gameobjects/polygon/types/t_polygon';
+import type { TShapes } from '../gameobjects/shapes/types/t_shapes';
+import { traceShapes } from '../gameobjects/shapes/shapes_state';
 
 type TQuadTransform = { x: number; y: number; rotation: number; scaleX: number; scaleY: number };
 
@@ -230,6 +232,36 @@ const polygonCovers = (polygon: TPolygon, x: number, y: number): boolean => {
     return inside;
 };
 
+/** Whether a world point is on one of a set of shapes, filled or outlined, as they are drawn. */
+const shapesCover = (shapes: TShapes, x: number, y: number): boolean => {
+    const place = worldOf(shapes);
+    const dx = x - place.x;
+    const dy = y - place.y;
+    const c = Math.cos(-place.rotation);
+    const s = Math.sin(-place.rotation);
+    const lx = (dx * c - dy * s) / (place.scaleX || 1);
+    const ly = (dx * s + dy * c) / (place.scaleY || 1);
+    let on = false;
+    traceShapes(shapes, () => {}, (ax, ay, bx, by, cx, cy) => {
+        if (on) {
+            return;
+        }
+        // One with no area covers nothing, and one with a corner nowhere is not drawn: neither is
+        // touched. Written so a NaN fails every test.
+        const area = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
+        // Against its own size, so a shape drawn small and scaled up is still touched.
+        const size = (bx - ax) * (bx - ax) + (by - ay) * (by - ay) + (cx - ax) * (cx - ax) + (cy - ay) * (cy - ay);
+        if (!(Math.abs(area) > size * 1e-10)) {
+            return;
+        }
+        const d1 = (bx - ax) * (ly - ay) - (by - ay) * (lx - ax);
+        const d2 = (cx - bx) * (ly - by) - (cy - by) * (lx - bx);
+        const d3 = (ax - cx) * (ly - cy) - (ay - cy) * (lx - cx);
+        on = (d1 >= 0 && d2 >= 0 && d3 >= 0) || (d1 <= 0 && d2 <= 0 && d3 <= 0);
+    });
+    return on;
+};
+
 /**
  * Whether one of a shape's drawables is at a screen point. A map counts wherever it is, since it
  * covers the level it is the map of.
@@ -252,6 +284,8 @@ const shapeCovers = (drawable: TShapeList['drawables'][number], camera: TDrawCam
             return isOnPicture(drawable, drawable.width, drawable.height, CENTRE, world.x, world.y);
         case 'polygon':
             return polygonCovers(drawable, world.x, world.y);
+        case 'shapes':
+            return shapesCover(drawable, world.x, world.y);
         case 'tilemap':
             return true;
         default:

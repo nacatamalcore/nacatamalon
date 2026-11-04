@@ -4,6 +4,8 @@ import { MAP_NAME, MAX_MATERIAL_MAPS } from '../../render/shared/material_maps';
 import { SCENE_FORMAT, SCENE_VERSION } from './types/t_scene_doc';
 import { VIEW_KINDS } from '../../gameobjects/sprite_texture/view_kinds';
 import { asArray, asBoolean, asColor, asNumber, asOneOf, asRecord, asString } from '../../utils';
+import { readShape } from '../../gameobjects/shapes/shape_doc';
+import type { TShape } from '../../gameobjects/shapes/types/t_shapes';
 import { nanoId } from '../../utils';
 import { normalizePostChain } from '../../post/post_chain';
 import type { TColor } from '../../color';
@@ -1069,6 +1071,31 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 ...(rect !== undefined ? { rect } : {}),
                 ...optionalNumber(raw, 'padding'),
                 ...optionalBoolean(raw, 'enabled'),
+            };
+        }
+        case 'shapes': {
+            // Each shape read on its own: one that cannot be drawn is said and left out, and the rest
+            // still are.
+            const list = Array.isArray(raw.shapes) ? raw.shapes : [];
+            const shapes: TShape[] = [];
+            list.forEach((entry, at) => {
+                const shape = readShape(entry);
+                if (shape === null) {
+                    console.warn(`[NacatamalOn] scene: shape ${at} of '${id}' is not one that can be drawn, so it is left out. Give it a type (rect, circle, ellipse, polygon, line), what that needs, and colours that are ones.`);
+                    return;
+                }
+                shapes.push(shape);
+            });
+            const place = parseTransform2d(raw.transform);
+            return {
+                type: 'shapes',
+                id,
+                ...(place !== undefined ? { transform: place } : {}),
+                shapes,
+                tint: asColor(raw.tint, WHITE),
+                ...(parsePoint(raw.parallax) !== undefined ? { parallax: parsePoint(raw.parallax) } : {}),
+                ...optionalBoolean(raw, 'visible'),
+                ...optionalNumber(raw, 'zIndex'),
             };
         }
         case 'script': {

@@ -1,6 +1,7 @@
 import { closeParticleState, unbindParticles } from '../gameobjects/particles/particle_state';
 import { releaseLayer } from '../gameobjects/tilemap/release_layer';
 import { releasePolygon } from '../gameobjects/polygon/polygon_state';
+import { releaseShapes } from '../gameobjects/shapes/shapes_state';
 import type { TDrawable } from '../gameobjects/types';
 import type { TRuntimeStore } from '../store';
 
@@ -61,6 +62,11 @@ export const disposeDrawable = (store: TRuntimeStore, drawable: TDrawable): void
         case 'polygon': {
             // Its corners on the card are its own, rewritten every frame. The picture is the cache's.
             releasePolygon(store.get('screen').renderer, drawable);
+            return;
+        }
+        case 'shapes': {
+            // Its corners and its palette on the card are its own, both rewritten as it changes.
+            releaseShapes(store.get('screen').renderer, drawable);
             return;
         }
         case 'lines': {

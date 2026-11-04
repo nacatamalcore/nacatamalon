@@ -1,4 +1,6 @@
 import { atlasFrame } from '../../atlas';
+import { TILE_CORNER_FLOATS } from '../../render/shared/tile_corner';
+import { triangulateKept } from '../shapes/triangulate';
 import type { IRenderer } from '../../render';
 import type { TDrawnLayer, TTileMesh } from '../tilemap/layer_state';
 import type { TPolygon } from './types/t_polygon';
@@ -65,9 +67,34 @@ export const uvsFitting = (points: ReadonlyArray<{ x: number; y: number }>): Arr
 };
 
 /**
- * The shape's triangles, `x, y, u, v` a corner: from the middle (the average of the corners, holding
- * the average of their points of the picture) to each side. Written into `into`, grown when it is
- * too small, and the number of numbers written given back.
+ * Whether the triangles from `(cx, cy)` to each side all turn the same way: the outline can be seen
+ * whole from its middle, and a fan from there covers it once.
+ */
+const fanHolds = (points: ReadonlyArray<{ x: number; y: number }>, cx: number, cy: number): boolean => {
+    let way = 0;
+    for (let i = 0; i < points.length; i++) {
+        const a = points[i]!;
+        const b = points[(i + 1) % points.length]!;
+        const turn = (a.x - cx) * (b.y - cy) - (a.y - cy) * (b.x - cx);
+        if (turn === 0) {
+            continue;
+        }
+        const sign = turn > 0 ? 1 : -1;
+        if (way === 0) {
+            way = sign;
+        } else if (sign !== way) {
+            return false;
+        }
+    }
+    return true;
+};
+
+/**
+ * The shape's triangles, a corner as a map's cell has it (`TILE_CORNER_FLOATS`): where it is, its
+ * point of the picture, and the window of the picture it reads from. From the middle (the average of
+ * the corners, holding the average of their points of the picture) to each side, while that covers
+ * the outline once; cut into ears when it would fold, which an outline hollowed in past its middle
+ * does. Written into `into`, grown when it is too small, and the number of numbers written given back.
  *
  * @internal
  */
@@ -90,6 +117,15 @@ export const writePolygonCorners = (polygon: TPolygon, into: { corners: Float32A
         offset = frame.uvOffset;
         scale = frame.uvScale;
     }
+    // Read no nearer its edge than half a texel in, as a map's cell is, so the frame next door in the
+    // sheet does not show along the outline. A shape of a plain colour reads the one white texel.
+    const texture = polygon.texture;
+    const wide = texture !== null && texture.width > 0 ? texture.width : 1;
+    const high = texture !== null && texture.height > 0 ? texture.height : 1;
+    const wl = offset.x + 0.5 / wide;
+    const wt = offset.y + 0.5 / high;
+    const wr = Math.max(wl, offset.x + scale.x - 0.5 / wide);
+    const wb = Math.max(wt, offset.y + scale.y - 0.5 / high);
 
     let cx = 0;
     let cy = 0;
@@ -106,7 +142,9 @@ export const writePolygonCorners = (polygon: TPolygon, into: { corners: Float32A
     cu /= count;
     cv /= count;
 
-    const needed = count * 3 * 4;
+    const ears = fanHolds(points, cx, cy) ? null : triangulateKept(points);
+    const corners = ears === null ? count * 3 : ears.length;
+    const needed = corners * TILE_CORNER_FLOATS;
     if (into.corners.length < needed) {
         into.corners = new Float32Array(needed * 2);
     }
@@ -117,7 +155,18 @@ export const writePolygonCorners = (polygon: TPolygon, into: { corners: Float32A
         out[o++] = y;
         out[o++] = offset.x + u * scale.x;
         out[o++] = offset.y + v * scale.y;
+        out[o++] = wl;
+        out[o++] = wt;
+        out[o++] = wr;
+        out[o++] = wb;
     };
+    if (ears !== null) {
+        for (const i of ears) {
+            put(points[i].x, points[i].y, uvs[i].x, uvs[i].y);
+        }
+        return needed;
+    }
+    // Seen whole from its middle, or crossing itself (which has no ears): a fan, folds showing.
     for (let i = 0; i < count; i++) {
         const next = (i + 1) % count;
         put(cx, cy, cu, cv);
@@ -125,6 +174,24 @@ export const writePolygonCorners = (polygon: TPolygon, into: { corners: Float32A
         put(points[next].x, points[next].y, uvs[next].x, uvs[next].y);
     }
     return needed;
+};
+
+/** The rectangle the corners fit in, for a filter to measure the shape by. */
+const boundsOf = (points: ReadonlyArray<{ x: number; y: number }>): { x: number; y: number; width: number; height: number } | undefined => {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const p of points) {
+        if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) {
+            continue;
+        }
+        minX = Math.min(minX, p.x);
+        minY = Math.min(minY, p.y);
+        maxX = Math.max(maxX, p.x);
+        maxY = Math.max(maxY, p.y);
+    }
+    return minX <= maxX ? { x: minX, y: minY, width: maxX - minX, height: maxY - minY } : undefined;
 };
 
 /**
@@ -138,8 +205,10 @@ export const uploadPolygon = (renderer: IRenderer, polygon: TPolygon): TPolygonS
     const mesh = state.mesh;
     if (length === 0) {
         mesh.vertexCount = 0;
+        state.drawn.bounds = undefined;
         return state;
     }
+    state.drawn.bounds = boundsOf(polygon.points);
     const data = state.corners.subarray(0, length);
     if (mesh.buffer === null || length > mesh.capacity) {
         if (mesh.buffer !== null) {
@@ -153,7 +222,7 @@ export const uploadPolygon = (renderer: IRenderer, polygon: TPolygon): TPolygonS
     } else {
         renderer.updateBuffer(mesh.buffer, data);
     }
-    mesh.vertexCount = length / 4;
+    mesh.vertexCount = length / TILE_CORNER_FLOATS;
     return state;
 };
 

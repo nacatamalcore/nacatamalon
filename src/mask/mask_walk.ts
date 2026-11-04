@@ -115,7 +115,7 @@ export const masksNow = (mask: TMask | null): mask is TMask => mask !== null && 
  * @internal
  */
 export const canShape = (drawable: TDrawable): boolean =>
-    drawable.type === 'sprite' || drawable.type === 'text' || drawable.type === 'nine-slice' || drawable.type === 'polygon' || drawable.type === 'tilemap';
+    drawable.type === 'sprite' || drawable.type === 'text' || drawable.type === 'nine-slice' || drawable.type === 'polygon' || drawable.type === 'shapes' || drawable.type === 'tilemap';
 
 /**
  * Notes a drawable as part of the shape of every mask in `roles`, seen through `camera`.

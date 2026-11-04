@@ -7,6 +7,7 @@ import { fillFrameContext } from '../src/game/loop/fill_frame_context';
 import { destroy, flushDestroyed } from '../src/destroy';
 import { serializeScene } from '../src/scene/document/serialize_scene';
 import { createTestGame, startTestScene } from './helpers/test_game';
+import { TILE_CORNER_FLOATS } from '../src/render/shared/tile_corner';
 import type { TFrameContext, TRenderPass } from '../src/render';
 import type { TDrawTilemapLayer } from '../src/render/interface';
 import type { TRuntimeStore } from '../src/store';
@@ -14,8 +15,9 @@ import type { TPolygon } from '../src/gameobjects/polygon';
 import type { TTexture } from '../src/loaders';
 
 /**
- * A shape whose corners the game moves: drawn as triangles from its middle, each corner holding its
- * point of the picture, rebuilt every frame, in the scene's order.
+ * A shape whose corners the game moves: drawn as triangles from its middle (or cut into ears when
+ * that would fold), each corner holding its point of the picture, rebuilt every frame, in the
+ * scene's order.
  */
 
 const frame = (store: TRuntimeStore): TRenderPass => {
@@ -37,7 +39,8 @@ const cornersOf = (store: TRuntimeStore, renderer: ReturnType<typeof createTestG
     const data = renderer.buffers.find((buffer) => buffer.handle === mesh.buffer)!.data;
     const out: number[][] = [];
     for (let i = 0; i < mesh.vertexCount; i++) {
-        out.push(Array.from(data.slice(i * 4, i * 4 + 4)).map((n) => Math.round(n * 1000) / 1000));
+        // Read as the card reads them: a whole corner at a time, its window after its point.
+        out.push(Array.from(data.slice(i * TILE_CORNER_FLOATS, i * TILE_CORNER_FLOATS + 4)).map((n) => Math.round(n * 1000) / 1000));
     }
     return out;
 };
@@ -112,6 +115,57 @@ describe('createPolygon', () => {
         // Frame 5 is the second of the bottom row: a quarter across, half down.
         expect(corners[1]).toEqual([-10, -10, 0.25, 0.5]);
         expect(corners[2]).toEqual([10, -10, 0.5, 0.5]);
+    });
+
+    it('writes each corner whole, as a map cell has it, with the window of its frame half a texel in', () => {
+        const { store, renderer } = createTestGame();
+        const sheet: TTexture = { type: 'texture', key: 'sheet', src: '', width: 64, height: 32, status: 'ready', gpu: { resourceType: 'texture' } };
+        startTestScene(store, 'Level', () => {
+            const atlas = createSpriteAtlas({ texture: sheet, columns: 4, rows: 2 });
+            createPolygon({ points: SQUARE, atlas, frame: 5 });
+            return createScene();
+        });
+        const pass = frame(store);
+        const layer = (pass.drawables ?? []).find((item) => item.type === 'tilemap') as TDrawTilemapLayer;
+        const mesh = layer.meshes[0]!;
+        const data = renderer.buffers.find((buffer) => buffer.handle === mesh.buffer)!.data;
+        // What the card reads: as many whole corners as it is told there are, none cut short.
+        expect(mesh.vertexCount * TILE_CORNER_FLOATS).toBeLessThanOrEqual(data.length);
+        expect(mesh.vertexCount).toBe(12);
+        for (let i = 0; i < mesh.vertexCount; i++) {
+            const at = i * TILE_CORNER_FLOATS;
+            expect(Array.from(data.slice(at + 4, at + 8))).toEqual([0.25 + 0.5 / 64, 0.5 + 0.5 / 32, 0.5 - 0.5 / 64, 1 - 0.5 / 32]);
+        }
+    });
+
+    it('keeps the fan for an outline seen whole from its middle, and cuts one hollowed in past it into ears', () => {
+        const { store, renderer } = createTestGame();
+        let shape!: TPolygon;
+        // A star: hollowed in, but every side seen from its middle. Drawn as before, from there.
+        const star = Array.from({ length: 10 }, (_, i) => {
+            const r = i % 2 === 0 ? 20 : 8;
+            const a = (i / 10) * Math.PI * 2;
+            return { x: Math.cos(a) * r, y: Math.sin(a) * r };
+        });
+        startTestScene(store, 'Level', () => {
+            shape = createPolygon({ points: star });
+            return createScene();
+        });
+        expect(cornersOf(store, renderer).length).toBe(30);
+        // A C: its middle is outside it, so a fan from there would fold. Eight corners, six ears.
+        shape.points = [
+            { x: 0, y: 0 }, { x: 30, y: 0 }, { x: 30, y: 8 }, { x: 8, y: 8 },
+            { x: 8, y: 22 }, { x: 30, y: 22 }, { x: 30, y: 30 }, { x: 0, y: 30 },
+        ];
+        const corners = cornersOf(store, renderer);
+        expect(corners.length).toBe(18);
+        let area = 0;
+        for (let i = 0; i < corners.length; i += 3) {
+            const [a, b, c] = [corners[i]!, corners[i + 1]!, corners[i + 2]!];
+            area += Math.abs((b[0]! - a[0]!) * (c[1]! - a[1]!) - (b[1]! - a[1]!) * (c[0]! - a[0]!)) / 2;
+        }
+        // Covered once: the C's own area, 30 by 30 less the 22 by 14 bite.
+        expect(area).toBeCloseTo(900 - 22 * 14);
     });
 
     it('is drawn in its place among the sprites, by zIndex, with its tint and its place', () => {

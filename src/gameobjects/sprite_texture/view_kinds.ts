@@ -8,4 +8,4 @@ import type { TDrawable } from '../types';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const VIEW_KINDS: ReadonlySet<string> = new Set<TDrawable['type']>(['sprite', 'text', 'nine-slice', 'tilemap', 'particles', 'particles-3d', 'mesh', 'lines', 'polygon']);
+export const VIEW_KINDS: ReadonlySet<string> = new Set<TDrawable['type']>(['sprite', 'text', 'nine-slice', 'tilemap', 'particles', 'particles-3d', 'mesh', 'lines', 'polygon', 'shapes']);

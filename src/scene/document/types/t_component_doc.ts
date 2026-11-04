@@ -13,6 +13,7 @@ import type { TParticleColliderShape2d, TParticleColliderShape3d } from '../../.
 import type { TSoundCone, TSoundDuck, TSoundZone } from '../../../audio';
 import type { TSongVoiceName } from '../../../audio/synth';
 import type { TPostChainEntry } from '../../../post/types/t_post_chain';
+import type { TShape } from '../../../gameobjects/shapes/types/t_shapes';
 
 /**
  * What a material is, written down.
@@ -193,6 +194,7 @@ export type TComponentDoc =
     | TAudioListenerComponent
     | TMaskComponent
     | TFilterComponent
+    | TShapesComponent
     | TStoreComponent
     | TPhysicsBody2dComponent
     | TPhysicsBody3dComponent
@@ -968,6 +970,29 @@ export type TMaskComponent = {
     showShape?: boolean;
     /** Left out when on. */
     enabled?: boolean;
+};
+
+/**
+ * Shapes on a box, what `createShapes` makes: rectangles, circles, ellipses and slices of them,
+ * outlines of any number of corners and wide lines, each filled, outlined or both, drawn in the order
+ * of the list. Each shape is written as the game has it, its colours as `{ r, g, b, a }`.
+ *
+ * @category Scenes
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TShapesComponent = {
+    type: 'shapes';
+    id: string;
+    /**
+     * Where they are measured from on their box, left out when that is the box's own corner.
+     */
+    transform?: TTransform2d;
+    shapes: TShape[];
+    tint: TColor;
+    parallax?: { x: number; y: number };
+    visible?: boolean;
+    zIndex?: number;
 };
 
 /**

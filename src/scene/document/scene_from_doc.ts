@@ -7,6 +7,7 @@ import { createParticles3d } from '../../gameobjects/particles/create_particles_
 import { createScene } from '../create_scene';
 import { createSprite } from '../../gameobjects/sprite/create_sprite';
 import { createText } from '../../gameobjects/text/create_text';
+import { createShapes } from '../../gameobjects/shapes/create_shapes';
 import { createNineSlice } from '../../gameobjects/nine_slice/create_nine_slice';
 import { isBuiltinFont } from '../../gameobjects/text/default_font';
 import { createTilemap } from '../../gameobjects/tilemap/create_tilemap';
@@ -475,6 +476,19 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                 ...(component.uniforms !== undefined ? { uniforms: component.uniforms } : {}),
             });
             panel.id = component.id;
+            break;
+        }
+        case 'shapes': {
+            const shapes = createShapes({
+                ...(component.transform !== undefined ? { transform: component.transform } : {}),
+                // Its own copies: what the game changes is not the document it was opened from.
+                shapes: component.shapes.map((shape) => JSON.parse(JSON.stringify(shape)) as typeof shape),
+                tint: component.tint,
+                ...(component.parallax !== undefined ? { parallax: { ...component.parallax } } : {}),
+                ...(component.visible !== undefined ? { visible: component.visible } : {}),
+                ...(component.zIndex !== undefined ? { zIndex: component.zIndex } : {}),
+            });
+            shapes.id = component.id;
             break;
         }
         case 'text': {

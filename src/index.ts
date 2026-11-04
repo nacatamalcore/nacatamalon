@@ -97,6 +97,8 @@ export { createText } from './gameobjects/text/create_text';
 export { createNineSlice } from './gameobjects/nine_slice/create_nine_slice';
 export { createPolygon } from './gameobjects/polygon';
 export type { TPolygon, TPolygonOptions } from './gameobjects/polygon';
+export { createShapes } from './gameobjects/shapes';
+export type { TShape, TShapeCircle, TShapeEllipse, TShapeLine, TShapePolygon, TShapeRect, TShapeStroke, TShapes, TShapesOptions } from './gameobjects/shapes';
 export { createTilemap, getTilemap, blocksBulletsAt, cellAt, cellCorner, markLayerChanged, setTile, solidAt, solidAtPoint, tileAt, tileInfoAt, tileInfoAtPoint } from './gameobjects/tilemap';
 export { createSpriteAtlas, setSpriteFrame } from './atlas';
 // The `.atlas` format: reading one is how a game loads its sheets, so it stays here. Writing one,
@@ -226,7 +228,7 @@ export type { TProjectSettings } from './project';
 export { boxFromDoc, copyBox, parseSceneDoc, sceneFromDoc } from './scene';
 export type {
     TSceneDoc, TBoxNode, TDataEntry, TAssetEntry, TGeometrySource, TComponentDoc, TMaterialDoc, TMeshMaterialDoc, TMaterialMapDoc,
-    TSpriteComponent, TNineSliceComponent, TTextComponent, TMeshComponent, TTilemapComponent, TTilemapLayerOverride, TParticlesComponent, TParticles3dComponent, TParticleCollider2dComponent, TParticleCollider3dComponent, TSpriteTextureComponent, TMusicComponent, TSongComponent, TMotionComponent, TAudioListenerComponent, TMaskComponent, TFilterComponent, TCamera2dComponent,
+    TSpriteComponent, TNineSliceComponent, TTextComponent, TMeshComponent, TTilemapComponent, TTilemapLayerOverride, TParticlesComponent, TParticles3dComponent, TParticleCollider2dComponent, TParticleCollider3dComponent, TSpriteTextureComponent, TMusicComponent, TSongComponent, TMotionComponent, TAudioListenerComponent, TMaskComponent, TFilterComponent, TShapesComponent, TCamera2dComponent,
     TCamera3dComponent, TFogComponent, TLightComponent, TSpriteAnimationDoc,
 } from './scene';
 export type { TRandomHandle } from './math/random';

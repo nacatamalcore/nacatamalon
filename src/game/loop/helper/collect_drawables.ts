@@ -299,7 +299,7 @@ export const inSight = (drawable: TDrawable, sight: TSight): boolean => {
  * Turned, its edges are on no grid, and only its place is rounded.
  */
 const snapToPixels = (drawable: TDrawable, perUnit: number): void => {
-    if (drawable.type !== 'sprite' && drawable.type !== 'text' && drawable.type !== 'nine-slice' && drawable.type !== 'tilemap' && drawable.type !== 'polygon') {
+    if (drawable.type !== 'sprite' && drawable.type !== 'text' && drawable.type !== 'nine-slice' && drawable.type !== 'tilemap' && drawable.type !== 'polygon' && drawable.type !== 'shapes') {
         return;
     }
     const base = drawable.worldTransform ?? drawable.transform;
