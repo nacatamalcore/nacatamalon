@@ -483,6 +483,12 @@ const writeTilemap = (layers: TTilemapLayer[], writing: TWriting): TComponentDoc
         return null;
     }
     const map = first.map;
+    if (map.src === '') {
+        // Written in code, so there is no file to name and the game makes it again when it runs.
+        // Left out, like an emitter following an effect written in code, rather than pointing at nothing.
+        console.warn(`[NacatamalOn] serializeScene: the map with the layer "${first.name}" was made in code, so it cannot be written down. It is left out of the document.`);
+        return null;
+    }
     writing.assets.set(map.src, { type: 'tilemap', key: map.src, src: map.src });
 
     const changed: TTilemapLayerOverride[] = [];

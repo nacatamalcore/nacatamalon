@@ -11,10 +11,43 @@ import type { TTilemap, TTilemapLayer } from '../../gameobjects/tilemap/types/t_
 import { findAssetFile } from '../asset_key';
 import { noteSheetUser, stopUsingSheet } from '../sheet_users';
 import type { TLoadedAtlas } from '../atlas/types/t_loaded_atlas';
+import type { TTilemapDoc } from './types/t_tilemap_doc';
 
 /**
- * An empty batch: what a layer has before its corners have been built.
+ * Fills a map in from what it says and the sheet it takes its pictures from, and calls it ready.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
  */
+export const fillTilemap = (map: TTilemap, doc: TTilemapDoc, atlas: TLoadedAtlas): void => {
+    map.atlas = atlas;
+    map.cell = doc.cell;
+    map.width = doc.width;
+    map.height = doc.height;
+    map.tiles = doc.tiles;
+    map.layers = doc.layers.map((layer): TTilemapLayer => {
+        return {
+            type: 'tilemap',
+            id: nanoId(),
+            name: layer.name,
+            map,
+            // All by reference: moving the map moves its layers, and tinting it tints them,
+            // with nothing to keep in step.
+            transform: map.transform,
+            texture: atlas.texture,
+            tint: map.tint,
+            smooth: map.smooth,
+            data: layer.data,
+            order: layer.order,
+            zIndex: resolveLayerOrder(layer.order),
+            ...(layer.parallax !== undefined ? { parallax: { ...layer.parallax } } : {}),
+            destroyed: false,
+        };
+    });
+    map.status = 'ready';
+    bumpVersion(map);
+};
 
 /**
  * Fetches a `.tilemap` and the sheet it names, filling the record in place as they arrive.
@@ -22,9 +55,8 @@ import type { TLoadedAtlas } from '../atlas/types/t_loaded_atlas';
  * Never rejects. A missing file, a broken one or a sheet that will not load ends as `'error'` with a
  * warning, and the map simply draws nothing: one bad level must not take the game down with it.
  *
- * The corners are **not** built here. They are built by the frame that finds the map ready, because
- * that is also where they are built again when a tile changes, and one path is easier to trust than
- * two.
+ * The corners are **not** built here. `createTilemap` builds them once the map is ready, in the same
+ * step that builds them again when a tile changes, and one path is easier to trust than two.
  *
  * @internal
  * @since 1.0.0
@@ -82,32 +114,7 @@ export const loadTilemap = async (store: TRuntimeStore, map: TTilemap): Promise<
             throw new Error(`its atlas '${atlasSrc}' could not be loaded`);
         }
 
-        map.atlas = atlas;
-        map.cell = doc.cell;
-        map.width = doc.width;
-        map.height = doc.height;
-        map.tiles = doc.tiles;
-        map.layers = doc.layers.map((layer): TTilemapLayer => {
-            return {
-                type: 'tilemap',
-                id: nanoId(),
-                name: layer.name,
-                map,
-                // All by reference: moving the map moves its layers, and tinting it tints them,
-                // with nothing to keep in step.
-                transform: map.transform,
-                texture: atlas.texture,
-                tint: map.tint,
-                smooth: map.smooth,
-                data: layer.data,
-                order: layer.order,
-                zIndex: resolveLayerOrder(layer.order),
-                ...(layer.parallax !== undefined ? { parallax: { ...layer.parallax } } : {}),
-                destroyed: false,
-            };
-        });
-        map.status = 'ready';
-        bumpVersion(map);
+        fillTilemap(map, doc, atlas);
     } catch (error: unknown) {
         // A map that draws nothing uses no sheet.
         if (noted !== null) {

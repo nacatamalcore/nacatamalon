@@ -269,7 +269,7 @@ export const createHeadlessGame = (options: THeadlessGameOptions): THeadlessGame
             const busy = () => loading().length > 0 || scenesNow().some((scene) => pendingWorkOf(scene).length > 0);
             while (!destroyed && busy()) {
                 if (Date.now() > until) {
-                    const what = loading().map((load) => (load as { src?: string }).src ?? 'a file');
+                    const what = loading().map((load) => (load as { src?: string }).src || 'a file');
                     throw new Error(`[NacatamalOn] headless game: still loading after ${timeout} seconds: ${what.join(', ') || 'a physics world'}.`);
                 }
                 await turn();

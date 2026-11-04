@@ -5,6 +5,9 @@ import { fillFrameContext } from '../src/game/loop/fill_frame_context';
 import { layerStateOf, openLayerState } from '../src/gameobjects/tilemap/layer_state';
 import { runHookUpdates } from '../src/game/loop/runHookUpdates';
 import { stopScene } from '../src/scene/stop_scene';
+import { destroy } from '../src/destroy';
+import { useSelf } from '../src/hooks';
+import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { whenLoaded } from '../src/loaders';
 import { createFrameContext } from '../src/game/loop/create_frame_context';
 import { createTestGame, startTestScene } from './helpers/test_game';
@@ -44,6 +47,89 @@ const withMap = async () => {
     runHookUpdates(scene, 1 / 60);
     return { store, renderer, map, scene };
 };
+
+describe('a map asked for by two objects', () => {
+    it('moves its clocks once a frame, and goes on when the one moving them leaves', async () => {
+        served = serveTilemap(TEST_MAP);
+        const { store } = createTestGame();
+        let map!: TTilemap;
+        let first!: Parameters<typeof destroy>[0];
+        const scene = startTestScene(store, 'Level', () => {
+            useSpawn(() => {
+                first = useSelf();
+                map = createTilemap({ src: '/maps/level.tilemap' });
+            })();
+            useSpawn(() => {
+                createTilemap({ src: '/maps/level.tilemap' });
+            })();
+            return createScene();
+        });
+        await whenLoaded(map);
+
+        // A quarter of a second at four pictures a second: one on, of the torch's two.
+        runHookUpdates(scene, 0.25);
+        expect(map.clocks.get('torch')?.frame).toBe(1);
+
+        destroy(first, { immediate: true });
+        runHookUpdates(scene, 0.25);
+        expect(map.clocks.get('torch')?.frame).toBe(0);
+    });
+});
+
+describe('a map asked for by two scenes', () => {
+    it('goes on moving while the scene moving its clocks is paused, and only once when it is back', async () => {
+        served = serveTilemap(TEST_MAP);
+        const { store } = createTestGame();
+        let map!: TTilemap;
+        const level = (): ReturnType<typeof createScene> => {
+            map = createTilemap({ src: '/maps/level.tilemap' });
+            return createScene();
+        };
+        const a = startTestScene(store, 'A', level);
+        const b = startTestScene(store, 'B', level);
+        await whenLoaded(map);
+        const both = (): void => {
+            runHookUpdates(a, 0.25);
+            runHookUpdates(b, 0.25);
+        };
+        const frame = (): number | undefined => map.clocks.get('torch')?.frame;
+
+        both();
+        expect(frame()).toBe(1);
+        both();
+        expect(frame()).toBe(0);
+
+        // A paused: no updates of its own, and the torch does not wait for it.
+        runHookUpdates(b, 0.25);
+        expect(frame()).toBe(1);
+        runHookUpdates(b, 0.25);
+        expect(frame()).toBe(0);
+
+        // Back, and still one step a frame between the two.
+        both();
+        expect(frame()).toBe(1);
+        both();
+        expect(frame()).toBe(0);
+    });
+});
+
+describe('a map that lands after what asked for it has gone', () => {
+    it('puts nothing on the card, since nothing would let go of it', async () => {
+        served = serveTilemap(TEST_MAP);
+        const { store } = createTestGame();
+        let map!: TTilemap;
+        const scene = startTestScene(store, 'Level', () => {
+            map = createTilemap({ src: '/maps/level.tilemap' });
+            return createScene();
+        });
+        stopScene(store, scene);
+        await whenLoaded(map);
+        await Promise.resolve();
+
+        expect(map.status).toBe('ready');
+        expect(layerStateOf(map.layers[0]!)?.still.buffer ?? null).toBeNull();
+    });
+});
 
 /**
  * Anything a backend made: they all carry a `resourceType`, and none of them is data.

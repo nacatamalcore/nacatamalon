@@ -21,6 +21,7 @@ import { rootOf } from '../../box/root_of';
 import { gameOfBox } from '../../box/box_game';
 import { firstTimeIn } from '../../utils/first_time_in';
 import type { TRuntimeStore } from '../../store/types/t_runtime_store';
+import { nameOfMap } from '../../gameobjects/tilemap/get_tilemap';
 import { sceneTilemaps } from '../../gameobjects/tilemap/scene_tilemaps';
 import { tilemapPlacement } from '../../gameobjects/tilemap/tile_queries';
 import { tileRevisionOf } from '../../gameobjects/tilemap/tile_revision';
@@ -296,7 +297,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
                 // A turned map has no floor to stand on in any sense a platformer means.
                 if (!warnedTurnedMap) {
                     warnedTurnedMap = true;
-                    console.warn(`[NacatamalOn] The map '${map.src}' is turned, so it has no colliders: a map in a 2D world can be moved and scaled, not turned.`);
+                    console.warn(`[NacatamalOn] ${nameOfMap(map)} is turned, so it has no colliders: a map in a 2D world can be moved and scaled, not turned.`);
                 }
                 continue;
             }

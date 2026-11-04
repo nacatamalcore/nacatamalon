@@ -14,9 +14,9 @@ export type { TSpriteTexture, TSpriteTextureSees, TSpriteTextureOptions, TViewFi
 // with no image files and no page, the same in the browser, on the native runtime and in a test.
 export {
     createPixels, setPixel, getPixel, fillRect, drawLine, fillCircle, drawCircle, fillEllipse, drawEllipse, fillPolygon, blitPixels, mapPixels,
-    fillGradient, fillNoise, fillChecker, clonePixels, swapColors, drawText, pixelsFromRows, sheetFromRows,
+    fillGradient, fillNoise, fillChecker, clonePixels, swapColors, outlinePixels, mirrorPixels, drawText, pixelsFromRows, sheetFromRows,
 } from './pixels';
-export type { TPixels, TPixelRegion, TFillGradientOptions, TFillNoiseOptions, TDrawTextOptions, TPixelPalette, TPixelRowsOptions, TPixelSheet } from './pixels';
+export type { TPixels, TPixelRegion, TFillGradientOptions, TFillNoiseOptions, TDrawTextOptions, TPixelPalette, TPixelRowsOptions, TPixelSheet, TOutlinePixelsOptions, TMirrorPixelsOptions } from './pixels';
 export { createPixelTexture, updatePixelTexture } from './gameobjects/pixel_texture';
 export type { TPixelTextureOptions, TPixelPaint } from './gameobjects/pixel_texture';
 export type { TLoadedPixels } from './loaders/pixels';
@@ -209,7 +209,7 @@ export type { T2dOptions } from './gameobjects/types/t_2d_options';
 export type { T3dOptions, TMeshSurfaceOptions } from './gameobjects/types/t_3d_options';
 export type { TText, TTextStyle, TTextOptions } from './gameobjects/text';
 export type { TNineSlice, TNineSliceBorders, TNineSliceMode, TNineSliceOptions } from './gameobjects/nine_slice/types';
-export type { TTilemap, TTilemapLayer, TTilemapOptions } from './gameobjects/tilemap';
+export type { TTilemap, TTilemapLayer, TTilemapOptions, TTilemapDrawOptions, TTilemapFileOptions, TTilemapDocOptions, TTilemapCodeDoc } from './gameobjects/tilemap';
 export type { TTerrainDoc, TTileDoc, TTilemapDoc, TTilemapLayerDoc, TTileLayerOrder } from './loaders';
 export { parseTilemapDoc } from './loaders';
 export type { TSpriteAtlas, TSpriteAtlasOptions } from './atlas';

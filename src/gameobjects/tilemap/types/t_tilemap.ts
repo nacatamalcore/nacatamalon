@@ -1,6 +1,8 @@
 import type { TColor, TColorOption } from '../../../color';
+import type { TSpriteAtlas } from '../../../atlas';
+import type { TAnimationClip } from '../../../hooks';
 import type { TLoadedAtlas, TLoadStatus, TTexture } from '../../../loaders';
-import type { TTileDoc, TTileLayerOrder } from '../../../loaders/tilemap/types/t_tilemap_doc';
+import type { TTileDoc, TTileLayerOrder, TTilemapDoc } from '../../../loaders/tilemap/types/t_tilemap_doc';
 import type { TTransform2d } from '../../types/t_transform_2d';
 
 /**
@@ -109,8 +111,9 @@ export type TTilemapLayer = {
  * A map: the sheet its numbers point into, how big its cells are, what the numbers mean, and its
  * layers.
  *
- * It comes back straight away, empty and `'loading'`, and fills itself in when the file and its sheet
- * arrive. Nothing has to be awaited, and `useLoader` counts it like any other asset.
+ * From a file it comes back straight away, empty and `'loading'`, and fills itself in when the file
+ * and its sheet arrive. Nothing has to be awaited, and `useLoader` counts it like any other asset.
+ * Made in code from a sheet that is there, it comes back `'ready'`.
  *
  * @category Tilemaps
  * @since 1.0.0
@@ -119,7 +122,7 @@ export type TTilemapLayer = {
 export type TTilemap = {
     readonly type: 'tilemap-asset';
     /**
-     * Where the file is.
+     * Where the file is. Empty for a map made in code, which has none.
      */
     src: string;
     status: TLoadStatus;
@@ -168,23 +171,35 @@ export type TTilemap = {
 };
 
 /**
- * What `createTilemap` is asked for.
+ * A map written in code: a `.tilemap` file's contents, without what only a file needs to say.
+ *
+ * `cell`, `width`, `height`, `tiles` and `layers` are the file's, and are checked the same way.
+ * `format` and `kind` may be left out, and `atlas` is not read: its sheet is given next to it.
  *
  * @category Tilemaps
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TTilemapOptions = {
-    /**
-     * Where the `.tilemap` file is.
-     */
-    src: string;
-    /**
-     * What to cache it under, so two scenes share one map. Defaults to `src` as the page resolves
-     * it, so one file written two ways (on a page at the root, `./assets/a.png` and
-     * `/assets/a.png`) is kept once and found by either.
-     */
-    key?: string;
+export type TTilemapCodeDoc = Omit<TTilemapDoc, 'format' | 'kind' | 'atlas'> & Partial<Pick<TTilemapDoc, 'format' | 'kind' | 'atlas'>>;
+
+/**
+ * What `createTilemap` is asked for: a `.tilemap` file by `src`, or a map written in code by `doc`
+ * and `atlas`.
+ *
+ * @category Tilemaps
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TTilemapOptions = TTilemapDrawOptions & (TTilemapFileOptions | TTilemapDocOptions);
+
+/**
+ * How a map is placed and drawn, wherever it comes from.
+ *
+ * @category Tilemaps
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TTilemapDrawOptions = {
     /**
      * Where the map's top-left corner sits. What is left out takes its default (scale 1, no turn).
      */
@@ -197,6 +212,56 @@ export type TTilemapOptions = {
      * Overrides the game's `smooth` for this map.
      */
     smooth?: boolean;
+};
+
+/**
+ * A map from a `.tilemap` file.
+ *
+ * @category Tilemaps
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TTilemapFileOptions = {
+    /**
+     * Where the `.tilemap` file is.
+     */
+    src: string;
+    /**
+     * What to cache it under, so two scenes share one map. Defaults to `src` as the page resolves
+     * it, so one file written two ways (on a page at the root, `./assets/a.png` and
+     * `/assets/a.png`) is kept once and found by either.
+     */
+    key?: string;
+    doc?: never;
+    atlas?: never;
+    sequences?: never;
+};
+
+/**
+ * A map written in code.
+ *
+ * @category Tilemaps
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TTilemapDocOptions = {
+    /**
+     * The map: its cell size, its grid, what each tile means and its layers. What is wrong with it
+     * throws, naming it, and it is copied, so changing it afterwards changes nothing: `setTile`
+     * changes a map that is running.
+     */
+    doc: TTilemapCodeDoc;
+    /**
+     * The sheet its tiles come from, as an object: from `createSpriteAtlas`, or from `useLoadAtlas`.
+     */
+    atlas: TSpriteAtlas | TLoadedAtlas;
+    /**
+     * The runs of frames its cycling tiles name, as a `.atlas` file's are. Only for a sheet from
+     * `createSpriteAtlas`, since one from a file has its own.
+     */
+    sequences?: Record<string, TAnimationClip>;
+    src?: never;
+    key?: never;
 };
 
 import type { TSpriteMaterial, TUniformValues } from '../../../materials';

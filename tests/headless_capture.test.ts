@@ -7,6 +7,7 @@ import { createScene } from '../src/scene/create_scene';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { createText } from '../src/gameobjects/text/create_text';
 import { createShapes } from '../src/gameobjects/shapes';
+import { createTilemap } from '../src/gameobjects/tilemap';
 import { createMesh } from '../src/gameobjects/mesh';
 import { createParticles } from '../src/gameobjects/particles/create_particles';
 import { createPixelTexture } from '../src/gameobjects/pixel_texture';
@@ -102,6 +103,28 @@ describe('capture', () => {
         await game.loaded();
 
         expect(at(game.capture(), 4, 4)).toEqual(RED);
+    });
+
+    it('draws a map from a file with no frame run after it arrived', async () => {
+        const folder = mkdtempSync(join(tmpdir(), 'nacatamalon-capture-'));
+        folders.push(folder);
+        mkdirSync(join(folder, 'maps'));
+        writeFileSync(join(folder, 'maps', 'tiles.png'), encodePng(pixelsFromRows(['r'], PALETTE)));
+        writeFileSync(join(folder, 'maps', 'tiles.atlas'), JSON.stringify({ format: 1, kind: 'atlas', texture: 'tiles.png', grid: { frameWidth: 1, frameHeight: 1 } }));
+        writeFileSync(join(folder, 'maps', 'level.tilemap'), JSON.stringify({ format: 1, kind: 'tilemap', atlas: 'tiles.atlas', cell: 1, width: 1, height: 1, tiles: { 1: { frame: 0 } }, layers: [{ name: 'ground', order: 'under', data: [1] }] }));
+        const game = createHeadlessGame({
+            width: 4, height: 4, background: BACKGROUND, assets: folder,
+            scenes: {
+                Room: () => {
+                    createTilemap({ src: '/maps/level.tilemap' });
+                    return createScene();
+                },
+            },
+        });
+        games.push(game);
+        await game.loaded();
+
+        expect(at(game.capture(), 0, 0)).toEqual(RED);
     });
 
     it('lays a see-through colour over what is under it as the card blends', () => {

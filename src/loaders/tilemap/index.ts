@@ -1,4 +1,5 @@
 export { loadTilemap } from './load_tilemap';
+export { tilemapFromDoc } from './tilemap_from_doc';
 export { newTilemap } from './new_tilemap';
 export { parseTilemapDoc } from './parse_tilemap_doc';
 export { serializeTilemapDoc } from './serialize_tilemap_doc';

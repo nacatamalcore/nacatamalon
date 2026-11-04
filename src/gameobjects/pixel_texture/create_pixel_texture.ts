@@ -1,6 +1,6 @@
 import { getActiveBox, getActiveGame } from '../../store';
 import { markMadeTexture } from '../../loaders';
-import { whenLoaded } from '../../loaders/track_load';
+import { trackLoad, whenLoaded } from '../../loaders/track_load';
 import { bumpVersion, markWatchable } from '../../store/record_version';
 import { clonePixels } from '../../pixels/edit';
 import { nanoId } from '../../utils';
@@ -233,7 +233,14 @@ export function createPixelTexture(
         bumpVersion(texture);
     };
     if (source.status === 'loading') {
-        void whenLoaded(source).then(fill);
+        // Tracked, so what is drawn with it (a map's sheet) can wait for it to be painted, and not only
+        // for the file to arrive.
+        trackLoad(texture, whenLoaded(source).then(fill).catch((error: unknown) => {
+            // Settled all the same: what waits for it must not wait for ever for a painting that failed.
+            texture.status = 'error';
+            bumpVersion(texture);
+            console.warn(`[NacatamalOn] createPixelTexture: painting '${source.src}' threw, so the texture stays empty. Check the function given to paint it.`, error);
+        }));
     } else {
         // Already here (another scene loaded it): shown from the first frame.
         fill();

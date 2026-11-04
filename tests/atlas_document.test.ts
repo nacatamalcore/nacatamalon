@@ -30,7 +30,9 @@ describe('parseAtlasDoc', () => {
             [{ format: 1, kind: 'atlas', texture: 'x.png' }, /exactly one of "grid" or "packed"/],
             [{ ...GRID, sequences: { walk: { frames: [] } } }, /non-empty "frames"/],
             [{ ...GRID, sequences: { walk: { frames: [true] } } }, /neither an index nor a name/],
-            [{ ...GRID, sequences: { walk: { frames: [0], fps: 0 } } }, /non-positive "fps"/],
+            [{ ...GRID, sequences: { walk: { frames: [0], fps: 0 } } }, /"fps" that is not a positive number/],
+            // What `1e999` in a file reads as.
+            [{ ...GRID, sequences: { walk: { frames: [0], fps: Infinity } } }, /"fps" that is not a positive number/],
             [{ ...GRID, sequences: { walk: { frames: [0], next: 3 } } }, /non-string "next"/],
         ];
         for (const [value, message] of cases) {

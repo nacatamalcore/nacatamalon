@@ -14,6 +14,6 @@ export {
     tileInfoAtPoint,
 } from './tile_queries';
 
-export type { TTilemap, TTilemapLayer, TTilemapOptions } from './types/t_tilemap';
+export type { TTilemap, TTilemapLayer, TTilemapOptions, TTilemapDrawOptions, TTilemapFileOptions, TTilemapDocOptions, TTilemapCodeDoc } from './types/t_tilemap';
 export type { TTileMesh, TTilemapLayerState } from './layer_state';
 export { openLayerState, layerStateOf } from './layer_state';

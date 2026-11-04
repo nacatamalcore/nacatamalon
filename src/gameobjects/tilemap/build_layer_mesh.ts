@@ -157,7 +157,7 @@ export const buildLayerMesh = (map: TTilemap, layer: TTilemapLayer): { still: Fl
         const index = tile.anim !== undefined
             ? animatedFrame(map, tile.anim)
             : typeof tile.frame === 'string' ? sheet.names?.[tile.frame] ?? null : tile.frame ?? null;
-        if (index === null || index < 0 || index >= atlas.frames) {
+        if (index === null || !Number.isInteger(index) || index < 0 || index >= atlas.frames) {
             continue;
         }
 

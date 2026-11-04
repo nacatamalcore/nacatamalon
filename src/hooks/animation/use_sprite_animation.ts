@@ -7,6 +7,12 @@ import type { TSpriteAnimation, TSpriteAnimationOptions } from './types/t_sprite
 import { DEFAULT_CLIP_FPS as DEFAULT_FPS } from './run_place';
 
 /**
+ * More pictures than this crossed in one frame is no animation anyone can be asking for: at 60 frames
+ * a second, a clip going 60000 pictures a second.
+ */
+const MOST_PICTURES_IN_A_FRAME = 1000;
+
+/**
  * Shared by every clip that marks no moments, so the ordinary case asks for no memory.
  */
 const NO_EVENTS: readonly TClipEvent[] = [];
@@ -74,6 +80,7 @@ export const useSpriteAnimation = (sprite: TSprite, options: TSpriteAnimationOpt
     let playing = false;
     let elapsed = 0;
     let speed = options.speed ?? 1;
+    let warnedPace = false;
     // A clip asked for before it exists. Clips can come from a file (`useLoadAtlas`), so the
     // table a scene hands over may still be empty when the scene is built: the request is kept
     // and honoured the moment the clip shows up.
@@ -207,10 +214,22 @@ export const useSpriteAnimation = (sprite: TSprite, options: TSpriteAnimationOpt
         let finished = false;
         // How many times it started again this frame: told once the picture is on screen.
         let wentRound = 0;
+        let crossed = 0;
 
         // A `while`, not an `if`: a long frame or a fast clip can cross several pictures at once,
         // and skipping them is better than falling behind for ever.
         while (elapsed >= step) {
+            // A pace below nothing, or so high that subtracting a step changes nothing, would never
+            // leave this loop, and the game would stop with no word about why.
+            crossed += 1;
+            if (crossed > MOST_PICTURES_IN_A_FRAME) {
+                elapsed = 0;
+                if (!warnedPace) {
+                    warnedPace = true;
+                    console.warn(`[NacatamalOn] useSpriteAnimation: the clip '${String(clipName)}' crossed more than ${MOST_PICTURES_IN_A_FRAME} pictures in one frame. Check its fps, which has to be above 0, and the speed.`);
+                }
+                break;
+            }
             elapsed -= step;
             index += forward ? 1 : -1;
 

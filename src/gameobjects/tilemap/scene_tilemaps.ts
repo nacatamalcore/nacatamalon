@@ -1,6 +1,6 @@
 import { rootOf } from '../../box/root_of';
 import { isGone } from '../../game/loop/runHookUpdates';
-import { holderOfTilemap } from './get_tilemap';
+import { holderOfTilemap, mapsInCode } from './get_tilemap';
 import type { TBox } from '../../box/types/t_box';
 import type { TRuntimeStore } from '../../store';
 import type { TTilemap } from './types/t_tilemap';
@@ -14,11 +14,13 @@ import type { TTilemap } from './types/t_tilemap';
  */
 export const sceneTilemaps = (store: TRuntimeStore, scene: TBox): TTilemap[] => {
     const found: TTilemap[] = [];
-    for (const map of store.get('assets').tilemaps.values()) {
+    const look = (map: TTilemap): void => {
         const holder = holderOfTilemap(map);
         if (map.status === 'ready' && !map.destroyed && holder !== null && !isGone(holder) && rootOf(holder) === scene) {
             found.push(map);
         }
-    }
+    };
+    store.get('assets').tilemaps.forEach(look);
+    mapsInCode(scene).forEach(look);
     return found;
 };

@@ -1,3 +1,4 @@
+import { nameOfMap } from '../../gameobjects/tilemap/get_tilemap';
 import { tileInfoAt, tilemapPlacement } from '../../gameobjects/tilemap/tile_queries';
 import { worldPose2d, writeWorldPose2d } from '../rapier2d/world_pose';
 import { readCharacterTiles, tilesUnder } from './character_tiles';
@@ -113,7 +114,7 @@ export const createTileBody2d = (deps: {
             if (place.rotation !== 0) {
                 if (!warnedTurned) {
                     warnedTurned = true;
-                    console.warn(`[NacatamalOn] useTileBody2d: the map '${map.src}' is turned, so it is walked through: a map can be moved and scaled, not turned.`);
+                    console.warn(`[NacatamalOn] useTileBody2d: ${nameOfMap(map)} is turned, so it is walked through: a map can be moved and scaled, not turned.`);
                 }
                 continue;
             }

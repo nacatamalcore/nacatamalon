@@ -63,3 +63,49 @@ export const getTilemap = (box: TBox): TTilemap | null => maps.get(box) ?? null;
  * @author Francisco Pereira Alvarado
  */
 export const holderOfTilemap = (map: TTilemap): TBox | null => holders.get(map) ?? null;
+
+/**
+ * The maps made in code in each scene. They are in no cache, since a map with no file is only ever
+ * this scene's, and what walks on a scene's maps has to find them all the same.
+ */
+const madeInCode = new WeakMap<TBox, Set<TTilemap>>();
+
+/**
+ * Notes a map made in code as one of `scene`'s, and gives back what takes it off again.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const noteMapInCode = (scene: TBox, map: TTilemap): (() => void) => {
+    let maps = madeInCode.get(scene);
+    if (maps === undefined) {
+        maps = new Set();
+        madeInCode.set(scene, maps);
+    }
+    const held = maps;
+    held.add(map);
+    return () => {
+        held.delete(map);
+    };
+};
+
+/**
+ * The maps made in code in `scene`.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const mapsInCode = (scene: TBox): ReadonlySet<TTilemap> => madeInCode.get(scene) ?? NONE;
+
+const NONE: ReadonlySet<TTilemap> = new Set();
+
+/**
+ * A map as a message names it: by its file, or as one made in code.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const nameOfMap = (map: TTilemap): string => (map.src === '' ? 'the map made in code' : `the map '${map.src}'`);

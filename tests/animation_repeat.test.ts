@@ -1,4 +1,7 @@
-import { afterEach, describe, expect, it, mock } from 'bun:test';
+import { afterEach, describe, expect, it, mock, spyOn } from 'bun:test';
+import { createHeadlessGame } from '../src/headless';
+import { createPixelTexture } from '../src/gameobjects/pixel_texture';
+import { pixelsFromRows } from '../src/pixels';
 import { createScene } from '../src/scene/create_scene';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { createSpriteAtlas } from '../src/atlas/create_sprite_atlas';
@@ -366,5 +369,46 @@ describe('each movement of a model played its own way', () => {
         step(0.021);
         expect(moves.playing).toBe(true);
         expect(ended).toEqual([]);
+    });
+});
+
+describe('a pace that could never end', () => {
+    const played = (clip: { fps?: number }, speed?: number): string[] => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        try {
+            const game = createHeadlessGame({
+                width: 8, height: 8,
+                scenes: {
+                    Level: () => {
+                        const texture = createPixelTexture(pixelsFromRows(['rg'], { r: '#ff0000', g: '#00ff00' }));
+                        const sprite = createSprite({ atlas: createSpriteAtlas({ texture, columns: 2 }) });
+                        useSpriteAnimation(sprite, { play: 'run', clips: { run: { frames: [0, 1], ...clip } }, ...(speed !== undefined ? { speed } : {}) });
+                        return createScene();
+                    },
+                },
+            });
+            game.run(3);
+            game.destroy();
+            return warn.mock.calls.map((call) => String(call[0])).filter((text) => text.includes('useSpriteAnimation'));
+        } finally {
+            warn.mockRestore();
+        }
+    };
+
+    it('stops the game for none of them, and says so once', () => {
+        for (const said of [played({ fps: -4 }), played({ fps: Infinity }), played({ fps: 1e20 }), played({ fps: 12 }, Infinity)]) {
+            expect(said).toHaveLength(1);
+            expect(said[0]).toContain("the clip 'run' crossed more than 1000 pictures in one frame");
+        }
+    });
+
+    it('says nothing of an ordinary one, however fast', () => {
+        expect(played({ fps: 60 })).toEqual([]);
+        expect(played({ fps: 6000 })).toEqual([]);
+        expect(played({ fps: 12 }, 50)).toEqual([]);
+    });
+
+    it('leaves a pace of nothing resting on its first picture', () => {
+        expect(played({ fps: 0 })).toEqual([]);
     });
 });

@@ -25,8 +25,8 @@ const parseSequence = (src: string, name: string, raw: unknown): TAtlasSequenceD
             return fail(src, `sequence "${name}" has a frame that is neither an index nor a name.`);
         }
     }
-    if (sequence.fps !== undefined && (typeof sequence.fps !== 'number' || sequence.fps <= 0)) {
-        return fail(src, `sequence "${name}" has a non-positive "fps".`);
+    if (sequence.fps !== undefined && (typeof sequence.fps !== 'number' || !Number.isFinite(sequence.fps) || sequence.fps <= 0)) {
+        return fail(src, `sequence "${name}" has an "fps" that is not a positive number.`);
     }
     // Only the type: whether a run by that name exists is a question about the whole file, and one
     // its author may be halfway through answering, so playing it is what reports a miss.

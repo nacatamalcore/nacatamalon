@@ -1,5 +1,5 @@
 import { openLayerState } from './layer_state';
-import { holderOfTilemap } from './get_tilemap';
+import { holderOfTilemap, nameOfMap } from './get_tilemap';
 import { bumpTileRevision } from './tile_revision';
 import { composeTransform2d } from '../../render/shared/compose_transform_2d';
 import type { TTileDoc } from '../../loaders/tilemap/types/t_tilemap_doc';
@@ -190,7 +190,7 @@ export const setTile = (map: TTilemap, layer: number, column: number, row: numbe
         return false;
     }
     if (id !== 0 && map.tiles[id] === undefined) {
-        console.warn(`[NacatamalOn] setTile: '${map.src}' does not describe a tile ${id}, so the cell was left alone.`);
+        console.warn(`[NacatamalOn] setTile: ${nameOfMap(map)} does not describe a tile ${id}, so the cell was left alone.`);
         return false;
     }
 

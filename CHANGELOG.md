@@ -7,6 +7,14 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **A level made in code.** `createTilemap({ doc, atlas })` takes what a `.tilemap` holds and its sheet
+  as objects, with no file. It is ready at once when the sheet is, and `useTileBody2d`, ladders, ledges,
+  slopes, `solidAt`, `setTile` and `useCameraFollow(hero, { bounds: map })` work on it as on a file's. What is
+  wrong with the document throws. `sequences` gives the runs its cycling tiles name when the sheet comes
+  from `createSpriteAtlas`.
+- **An outline and a mirror for pictures.** `outlinePixels(pixels, color, { corners, region })` draws a
+  one-pixel border around whatever is not transparent, and `mirrorPixels(pixels, 'x' | 'y', { region })`
+  copies one half of a picture onto the other, turned round.
 - **A picture of a game run with no browser.** `game.capture({ scale, region })` on a
   `createHeadlessGame` draws the screen without a graphics card and gives it back as pixels, for
   `encodePng` to write to a file: a test, a script or an assistant writing a game can look at what
@@ -176,6 +184,12 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **Cycling tiles keep their pace.** A run's clock moved once for each tile that named it and once for
+  each object that asked for the map, so water with a flipped twin flowed twice as fast.
+- **A clip whose pace could never end no longer stops the game.** `useSpriteAnimation` with an `fps`
+  below zero, of `Infinity` or absurdly high, or an endless `speed`, never left its frame: it now says
+  so once and goes on. A tile cycling at any pace costs the same, and an `.atlas` with an `fps` that
+  is not a number it can use (`1e999`) is refused when it is read.
 - **`createPolygon` shows again.** Since a map's cells read a window of their sheet, its corners were
   read shifted and it was not drawn at all, on either card (the soft bodies of Jelly Piggies among
   them).
