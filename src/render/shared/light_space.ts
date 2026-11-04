@@ -165,6 +165,13 @@ export const shadowCasterIndex = (lights: readonly TDrawLight[]): number =>
     lights.findIndex((light) => light.castShadow === true && (light.type === 'directional' || light.type === 'spot'));
 
 /**
+ * Where a light's view and its projection are worked out before they are multiplied into the
+ * answer, kept between calls: a light is worked out once per frame, one after another.
+ */
+const lightView = mat.create();
+const lightProjection = mat.create();
+
+/**
  * Where the shadow-casting light looks from, as one matrix taking the world into its picture.
  *
  * Written into `out` and handed back, so a frame that draws a thousand models still holds one of
@@ -218,9 +225,8 @@ export const lightSpaceMatrix = (light: TDrawLight, camera: TDrawCamera3d | null
         const opening = light.angle !== undefined ? Math.min(Math.max(light.angle * 2, 0.05), Math.PI - 0.01) : Math.PI / 3;
         const eye = light.transform;
         const target = { x: eye.x + forward.x, y: eye.y + forward.y, z: eye.z + forward.z };
-        const view = mat.lookAt(eye, target, up);
-        out.set(mat.multiply(mat.perspective(opening, 1, SPOT_NEAR, range), view));
-        return out;
+        mat.lookAt(eye, target, up, lightView);
+        return mat.multiply(mat.perspective(opening, 1, SPOT_NEAR, range, lightProjection), lightView, out);
     }
 
     const area = light.shadowArea !== undefined && light.shadowArea > 0 ? light.shadowArea : DEFAULT_SHADOW_AREA;
@@ -267,11 +273,10 @@ export const lightSpaceMatrix = (light: TDrawLight, camera: TDrawCamera3d | null
         z: centre.z - forward.z * distance,
     };
 
-    const view = mat.lookAt(eye, centre, up);
+    mat.lookAt(eye, centre, up, lightView);
     // Twice the standing distance, so a caster as far behind the middle as the light is in front of
     // it is still in the picture.
-    out.set(mat.multiply(mat.ortho(-half, half, -half, half, 0, distance * 2), view));
-    return out;
+    return mat.multiply(mat.ortho(-half, half, -half, half, 0, distance * 2, lightProjection), lightView, out);
 };
 
 /**
