@@ -1,3 +1,4 @@
+import type { TPixels } from '../pixels/types/t_pixels';
 import type { TSceneFn } from '../scene';
 import type { TGameOptions } from '../game/types/t_game_options';
 import type { TGameObject } from '../hooks';
@@ -103,6 +104,44 @@ export type THeadlessGame = {
      * measured in `drawn()`.
      */
     loaded(timeout?: number): Promise<void>;
+    /**
+     * A picture of the screen as it is now, drawn without a graphics card: to look at what the game
+     * shows from a test or a script, with no browser. Written to a file with `encodePng` from
+     * `nacatamalon/authoring`.
+     *
+     * Drawn as the card draws the 2D of a game: sprites and sheets, texts, panels, maps, shapes,
+     * particles, cameras, masks, and views of the world drawn into a picture. Pixel art drawn at
+     * whole pixels comes out as on the screen; something turned or read smooth may differ by a
+     * pixel at its edges. **What only a card can do is left out**, and said once in a warning: 3D,
+     * a material's own shader (the sprite is drawn as if it had none), the screen's post effects,
+     * and a filter's effects (what it filters is drawn without them).
+     *
+     * Nothing is drawn until it is asked for, so `run` takes the time it did; what the game hands the
+     * card (each picture's pixels, each shape's corners) is kept in memory for it. It takes the
+     * picture with no time in it, as `loaded()` ends: what has just arrived is laid out first.
+     * Capture after `await game.loaded()`, so pictures and fonts are there.
+     *
+     * @param options `scale` to make every pixel a square that many across (`4` makes a 160 by 90
+     * game 640 by 360, big enough to look at); `region` to keep part of the screen, in game pixels.
+     */
+    capture(options?: THeadlessCaptureOptions): TPixels;
     /** Ends the game: every scene's cleanups run, and `fetch` is the real one again once the last game goes. */
     destroy(): void;
+};
+
+/**
+ * What `capture` takes.
+ *
+ * @category Headless
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type THeadlessCaptureOptions = {
+    /**
+     * Part of the screen, in game pixels from its top-left corner, each edge taken to the whole pixel
+     * at or before it. Left out, all of it.
+     */
+    region?: { x: number; y: number; width: number; height: number };
+    /** Every pixel as a square this many across, a whole number. `1` by default. */
+    scale?: number;
 };

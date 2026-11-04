@@ -7,6 +7,13 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **A picture of a game run with no browser.** `game.capture({ scale, region })` on a
+  `createHeadlessGame` draws the screen without a graphics card and gives it back as pixels, for
+  `encodePng` to write to a file: a test, a script or an assistant writing a game can look at what
+  it draws, change it and look again. It draws the 2D as the card does (sprites and sheets, texts,
+  panels, maps, shapes, particles, cameras, masks, views of the world), and pixel art at whole
+  pixels comes out the same as on the screen. 3D, a material's own shader, the screen's post effects
+  and a filter's effects are left out, and said once. Nothing is drawn until it is asked for.
 - **Pixel art written as rows of characters.** `pixelsFromRows(rows, palette)` draws a picture one
   character a pixel, top row first, with a palette saying what colour each one is (anything
   `getColor` reads; `'.'` and `' '` are nothing), and `scale` to draw each as a bigger square.

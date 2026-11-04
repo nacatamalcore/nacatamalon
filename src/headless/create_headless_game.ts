@@ -8,7 +8,7 @@ import { registerScene, startScene } from '../scene';
 import { createRuntimeStore } from '../store';
 import { pendingWorkOf } from '../loaders/pending_work';
 import { enterHeadless, leaveHeadless } from './headless_environment';
-import { createNullRenderer } from './null_renderer';
+import { createCpuRenderer } from './software/cpu_renderer';
 import { saysMilliseconds } from '../utils/says_milliseconds';
 
 /** A test waiting longer than two minutes for its files is waiting for milliseconds. */
@@ -16,7 +16,8 @@ const LONGEST_LOADED_WAIT = 120;
 import type { TBox } from '../box';
 import type { TGameConfig } from '../game/types/t_game_config';
 import type { TGameObject } from '../hooks';
-import type { THeadlessGame, THeadlessGameOptions, THeadlessPicture } from './types';
+import type { THeadlessCaptureOptions, THeadlessGame, THeadlessGameOptions, THeadlessPicture } from './types';
+import type { TPixels } from '../pixels/types/t_pixels';
 
 /**
  * Steps a second when the game runs on the screen's time (`step: 'display'`): each frame is a
@@ -37,8 +38,9 @@ const turn = (): Promise<void> => new Promise((done) => setTimeout(done, 0));
 
 /**
  * Makes a game that runs with no browser and no screen, in Node or Bun: the same scenes, hooks and
- * updates as in a page, moved a frame at a time by whoever holds it. Nothing is drawn; everything
- * the game would show is still worked out, so a test can ask where things are and what is shown.
+ * updates as in a page, moved a frame at a time by whoever holds it. Everything the game would show
+ * is worked out, so a test can ask where things are and what is shown, and `capture()` draws the
+ * screen without a graphics card when a picture of it is wanted.
  *
  * It is the same every time it runs. Every frame is one step of the game (`step`, 60 a second
  * unless it says), the random numbers start from `seed` (`1` unless it says), and keys are pressed
@@ -47,13 +49,15 @@ const turn = (): Promise<void> => new Promise((done) => setTimeout(done, 0));
  * What a game loads is read from the assets folder (`assets`, default `'public'`): a picture's size
  * and pixels when it is a PNG, its other files as they are. Physics runs as in a page, once the game
  * installs it (`installPhysics2d()`, `installPhysics3d()`); `loaded()` waits for its world too. Sound
- * is silent and plays on, so a sound waited on still ends. Without a browser there is no pointer, no
- * gamepad and no picture: it answers for the game's logic, not for how it looks.
+ * is silent and plays on, so a sound waited on still ends. Without a browser there is no pointer and
+ * no gamepad.
  *
  * @example
  * ```ts
  * import { expect, test } from 'bun:test';
+ * import { writeFileSync } from 'node:fs';
  * import { createHeadlessGame } from 'nacatamalon/headless';
+ * import { encodePng } from 'nacatamalon/authoring';
  * import { Level } from '../src/scenes/level';
  *
  * test('the player walks right', async () => {
@@ -67,6 +71,7 @@ const turn = (): Promise<void> => new Promise((done) => setTimeout(done, 0));
  *
  *     expect(game.find('Player')!.transform!.x).toBeGreaterThan(start);
  *     expect(game.drawn().some((p) => p.text === 'SCORE 0')).toBe(true);
+ *     writeFileSync('level.png', encodePng(game.capture({ scale: 4 })));   // to look at it
  *     game.destroy();
  * });
  * ```
@@ -109,7 +114,7 @@ export const createHeadlessGame = (options: THeadlessGameOptions): THeadlessGame
         getBoundingClientRect: () => ({ left: 0, top: 0, width, height, x: 0, y: 0, right: width, bottom: height }),
     }) as unknown as HTMLCanvasElement;
 
-    const renderer = createNullRenderer();
+    const renderer = createCpuRenderer({ background: config.background, smooth: config.smooth });
     const store = createRuntimeStore({ canvas, renderer, config });
     if (config.post !== undefined && config.post.length > 0) {
         installPostChain(store, normalizePostChain(config.post));
@@ -143,6 +148,53 @@ export const createHeadlessGame = (options: THeadlessGameOptions): THeadlessGame
     const redraw = (): void => {
         fillFrameContext(store, ctx, 0);
         renderer.frame(ctx);
+    };
+
+    // What a picture of the game left out, said once each for the whole game rather than at every
+    // picture: a test taking one a frame would say the same thing sixty times a second.
+    const toldNotDrawn = new Set<string>();
+
+    const capture = (asked: THeadlessCaptureOptions | null | undefined): TPixels => {
+        const options = asked ?? {};
+        const scale = options.scale ?? 1;
+        if (!Number.isInteger(scale) || scale < 1) {
+            const said = typeof scale === 'string' ? `'${scale}'` : typeof scale === 'number' ? String(scale) : /^[aeiou]/.test(typeof scale) ? `an ${typeof scale}` : `a ${typeof scale}`;
+            throw new Error(`[NacatamalOn] headless game: capture's scale is ${said}, and it is how many pixels across each of the game's becomes. Give a whole number of 1 or more.`);
+        }
+        redraw();
+        const { screen, notDrawn } = renderer.paint(ctx, width, height);
+        const fresh = [...notDrawn].filter((what) => !toldNotDrawn.has(what));
+        if (fresh.length > 0) {
+            fresh.forEach((what) => toldNotDrawn.add(what));
+            console.warn(`[NacatamalOn] headless game: capture draws without a graphics card, and left out ${fresh.join('; ')}. The picture shows the rest.`);
+        }
+        const region = options.region ?? { x: 0, y: 0, width, height };
+        const left = Math.max(0, Math.floor(region.x));
+        const top = Math.max(0, Math.floor(region.y));
+        const right = Math.min(width, Math.floor(region.x + region.width));
+        const bottom = Math.min(height, Math.floor(region.y + region.height));
+        if (!(right > left && bottom > top)) {
+            throw new Error(`[NacatamalOn] headless game: capture's region (${region.x}, ${region.y}, ${region.width} by ${region.height}) has nothing of the ${width} by ${height} screen in it. Give one inside it.`);
+        }
+        const outWidth = (right - left) * scale;
+        const outHeight = (bottom - top) * scale;
+        const data = new Uint8Array(outWidth * outHeight * 4);
+        // One row of the screen grown across, then copied down for the rest of its square.
+        for (let row = top; row < bottom; row++) {
+            const first = (row - top) * scale * outWidth * 4;
+            for (let x = 0; x < outWidth; x++) {
+                const at = (row * width + left + Math.floor(x / scale)) * 4;
+                const to = first + x * 4;
+                data[to] = screen.data[at]!;
+                data[to + 1] = screen.data[at + 1]!;
+                data[to + 2] = screen.data[at + 2]!;
+                data[to + 3] = screen.data[at + 3]!;
+            }
+            for (let copy = 1; copy < scale; copy++) {
+                data.copyWithin(first + copy * outWidth * 4, first, first + outWidth * 4);
+            }
+        }
+        return { type: 'pixels', width: outWidth, height: outHeight, data };
     };
 
     const key = (type: 'keydown' | 'keyup', name: string): void => {
@@ -229,6 +281,10 @@ export const createHeadlessGame = (options: THeadlessGameOptions): THeadlessGame
             if (!destroyed) {
                 redraw();
             }
+        },
+        capture: (options) => {
+            alive('capture');
+            return capture(options);
         },
         destroy: () => {
             if (destroyed) {

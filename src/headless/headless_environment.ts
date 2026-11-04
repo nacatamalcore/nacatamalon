@@ -75,16 +75,29 @@ const OURS = Symbol('nacatamalon headless');
 type TMakeBitmap = ((source: unknown, options?: unknown) => Promise<unknown>) & { [OURS]?: true };
 
 /**
- * A `createImageBitmap` that reads a PNG itself, for its size, and hands anything else to the one
- * there was. The pixels go nowhere, there being nothing to draw them on.
+ * The pixels of each picture read here, kept beside it for a game that is asked for a picture of
+ * itself (`capture`): what it draws them with in place of a graphics card. Nothing else reads them,
+ * and they go with the picture.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const bitmapPixels = new WeakMap<object, { width: number; height: number; data: Uint8Array }>();
+
+/**
+ * A `createImageBitmap` that reads a PNG itself, for its size and its pixels, and hands anything
+ * else to the one there was.
  */
 const headlessBitmap = (before: TMakeBitmap | undefined): TMakeBitmap => {
     const make: TMakeBitmap = async (source, options) => {
         if (source instanceof Blob) {
             const bytes = new Uint8Array(await source.arrayBuffer());
             if (PNG_SIGNATURE.every((byte, i) => bytes[i] === byte)) {
-                const { width, height } = decodePng(bytes);
-                return { width, height, close: () => {} };
+                const decoded = decodePng(bytes);
+                const bitmap = { width: decoded.width, height: decoded.height, close: () => {} };
+                bitmapPixels.set(bitmap, { width: decoded.width, height: decoded.height, data: decoded.data });
+                return bitmap;
             }
         }
         if (before === undefined) {
