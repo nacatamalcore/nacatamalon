@@ -20,7 +20,7 @@ const HERE = { x: 0, y: 0, z: 0, rotation: 0, rotationX: 0, rotationY: 0, scaleX
  */
 export type TNewLinesOptions = {
     /**
-     * A name to find the lines by.
+     * What to call it when you look at it. The engine never looks it up: to find it, name its box.
      */
     name?: string;
     /**

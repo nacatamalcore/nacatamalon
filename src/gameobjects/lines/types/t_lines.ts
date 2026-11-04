@@ -21,7 +21,8 @@ export type TLines = {
     id: string;
     type: 'lines';
     /**
-     * A name to find it by, like any other drawable.
+     * What to call it when you look at it, in a debugger or a log of your own. The engine never
+     * looks it up: to find an object, name its box and `findObject` it.
      */
     name?: string;
     /**

@@ -24,7 +24,8 @@ export type TPolygon = {
     readonly type: 'polygon';
     id: string;
     /**
-     * A name to find it by.
+     * What to call it when you look at it, in a debugger or a log of your own. The engine never
+     * looks it up: to find an object, name its box and `findObject` it.
      */
     name?: string;
     /**

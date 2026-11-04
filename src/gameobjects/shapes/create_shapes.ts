@@ -29,6 +29,9 @@ export type TShapesOptions = {
     zIndex?: number;
     visible?: boolean;
     parallax?: { x: number; y: number };
+    /**
+     * What to call it when you look at it. The engine never looks it up: to find it, name its box.
+     */
     name?: string;
 };
 
