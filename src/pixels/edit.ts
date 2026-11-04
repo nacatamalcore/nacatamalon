@@ -63,8 +63,12 @@ export const swapColors = (pixels: TPixels, pairs: ReadonlyArray<readonly [TColo
 /**
  * The part of a picture a region asks for, cut to its edges, right and bottom left out. All of it
  * when none is asked for.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
  */
-const partOf = (pixels: TPixels, region: TPixelRegion | undefined): { left: number; top: number; right: number; bottom: number } => {
+export const partOf = (pixels: TPixels, region: TPixelRegion | undefined): { left: number; top: number; right: number; bottom: number } => {
     if (region === undefined) {
         return { left: 0, top: 0, right: pixels.width, bottom: pixels.height };
     }

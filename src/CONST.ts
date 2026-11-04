@@ -7,6 +7,7 @@ import { ALL_LAYERS } from './physics/layers';
 import { LINE_VERTEX_FLOATS } from './render/shared/line_vertex';
 import { CRT_PRESETS } from './post/builtin/crt_presets';
 import { COLOR_LEVELS } from './post/builtin/color_levels';
+import { CONSOLE_PALETTES } from './loaders/palette/console_palettes';
 import { POST_KEYS } from './post/builtin/post_keys';
 import { LOOK_KEYS } from './shader_composer/surface/look_keys';
 import { FONT_KEYS } from './gameobjects/text/fonts/font_keys';
@@ -240,10 +241,14 @@ export const POST_EFFECTS = /* @__PURE__ */ frozen({
  *   and `MUSIC.SAMPLES`: what a song's notes play with `@name`, and what its sample voices play.
  * - `SOUNDS`: the kinds of sound effect `renderSfx` makes.
  * - `LOOKS`: the looks a material can take.
+ * - `PALETTES`: the colours of the machines that had a fixed list of them, `nes`, `gameBoy` and `c64`,
+ *   as `#rrggbb`: for `getColor`, `snapToPalette` or a palette of rows. For `paletteMatch`,
+ *   `useLoadPalette({ src: 'nacatamalon:nes' })`.
  *
  * @example
  * const song = useLoadSong({ src: `nacatamalon:${BUILTIN.MUSIC.SONGS[0].key}` });
  * createText({ text: 'READY', font: BUILTIN.FONTS[2] });
+ * const dusk = getColor(BUILTIN.PALETTES.nes[19]);
  *
  * @category Constants
  * @since 1.0.0
@@ -258,6 +263,7 @@ export const BUILTIN = /* @__PURE__ */ frozen({
     },
     SOUNDS: SFX_PRESETS as readonly TSfxPreset[],
     LOOKS: LOOK_KEYS,
+    PALETTES: CONSOLE_PALETTES,
 });
 
 /**

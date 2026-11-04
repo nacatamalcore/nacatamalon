@@ -7,6 +7,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **The colours of the old machines.** `BUILTIN.PALETTES` has those of the NES, the Game Boy and the
+  C64, and `useLoadPalette({ src: 'nacatamalon:nes' })` gives them to `paletteMatch` with no file.
+  `snapToPalette(pixels, palette)` moves a picture to the nearest of a palette's
+  colours, and `checkColorLimit(pixels, { cell: 8, colors: 3 })` says which cells use more than they may.
 - **A level made in code.** `createTilemap({ doc, atlas })` takes what a `.tilemap` holds and its sheet
   as objects, with no file. It is ready at once when the sheet is, and `useTileBody2d`, ladders, ledges,
   slopes, `solidAt`, `setTile` and `useCameraFollow(hero, { bounds: map })` work on it as on a file's. What is

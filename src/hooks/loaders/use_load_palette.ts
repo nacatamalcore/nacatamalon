@@ -16,7 +16,8 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  */
 export type TUseLoadPaletteOptions = {
     /**
-     * Where the `.palette` file is.
+     * Where the `.palette` file is, or one of the engine's: `'nacatamalon:nes'`, `'nacatamalon:gameBoy'`
+     * or `'nacatamalon:c64'`.
      */
     src: string;
     /**
