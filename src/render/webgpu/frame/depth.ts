@@ -80,6 +80,33 @@ export const depthViewFor = (gpu: TWebGPUState, width: number, height: number): 
 };
 
 /**
+ * A depth picture for something of this size that can be read after it is drawn: what a pass drawing
+ * what a filter holds is given, when that has depth, so the filter's layer can be laid with it (see
+ * `filter_depth.ts`). Made once and kept, apart from the ordinary one, which nothing reads and which
+ * the card may keep in a way only it understands.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const readableDepthFor = (gpu: TWebGPUState, width: number, height: number): GPUTexture => {
+    const key = `${width}x${height} read`;
+    gpu.depthsUsed.add(key);
+    let texture = gpu.depths.get(key);
+    if (texture === undefined) {
+        texture = gpu.device.createTexture({
+            label: 'readable depth',
+            size: { width, height },
+            format: DEPTH_FORMAT,
+            sampleCount: gpu.samples,
+            usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+        });
+        gpu.depths.set(key, texture);
+    }
+    return texture;
+};
+
+/**
  * With more than one sample, the picture a pass of this size is drawn into before it is resolved
  * into its real target; `null` with one, when the pass draws straight into its target.
  *

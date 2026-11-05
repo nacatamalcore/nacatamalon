@@ -50,6 +50,7 @@ export const createWebGL2Renderer = async (
         particles: null,
         lines: null,
         masks: null,
+        filterDepth: null,
         framebuffers: new Map(),
         upright: new Map(),
         uprightUsed: new Set(),
@@ -131,6 +132,7 @@ export const createWebGL2Renderer = async (
             state.shadowPipeline?.destroy();
             state.particles?.destroy();
             state.lines?.destroy();
+            state.filterDepth?.destroy();
             for (const texture of state.textures) {
                 if (texture.source.kind === 'image') {
                     texture.source.image.close();

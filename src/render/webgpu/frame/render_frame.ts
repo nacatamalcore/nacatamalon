@@ -10,7 +10,10 @@ import { drawLines } from '../lines/draw_lines';
 import { createLinesPipeline } from '../lines/create_lines_pipeline';
 import { createPostPipelines } from '../post/post_pipeline';
 import { countPostSteps } from '../../shared/post_steps';
-import { depthViewFor, multisampledViewFor, releaseUnusedDepths } from './depth';
+import { depthViewFor, multisampledViewFor, readableDepthFor, releaseUnusedDepths } from './depth';
+import { createFilterDepth } from '../mask/filter_depth';
+import { LAYER_PARTS, LAYER_PARTS_IN_PLACE, LAYER_PARTS_LATER } from '../../shared/layer_parts';
+import { deepLayerOrder } from '../../shared/deep_layer_order';
 import { canvasContextFor } from './canvas_context';
 import { createShadowMap } from '../shadow/shadow_map';
 import { castsThroughHook, createShadowPipeline } from '../shadow/shadow_pipeline';
@@ -22,6 +25,7 @@ import { drawMesh, reserveMeshSlots, writeMeshLights } from '../mesh/draw_meshes
 import { createMaskPipelines } from '../mask/mask_pipelines';
 import { applyStencil, drawFilterLayer, drawMaskLayer, drawMaskRun } from '../mask/draw_masks';
 import type { TDrawStencil } from '../../interface/draw/t_draw_stencil';
+import type { TDrawFilterLayer } from '../../interface/draw/t_draw_filter_layer';
 import type { TFrameContext, TRenderPass } from '../../interface';
 import type { TDrawnShadow } from '../../shared/fill_light_uniforms';
 import type { TWebGPUState } from '../types/t_webgpu_state';
@@ -67,6 +71,13 @@ const targetOf = (gpu: TWebGPUState, pass: TRenderPass): { view: GPUTextureView;
  * shader.
  */
 const lightMatrices: Float32Array[] = [];
+
+/**
+ * The filter layers of a pass whose halo waits to be laid after a later entry, and the slot each was
+ * given among the pass's filter layers: kept from pass to pass.
+ */
+const waiting: number[] = [];
+const waitingSlots: number[] = [];
 
 /**
  * Lets go of the maps past the `used` ones once they have gone unused for `SPARE_SHADOW_FRAMES`
@@ -183,6 +194,20 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         }
     }
 
+    // The filters holding a model keep its depth, each in pictures of its own, made before the
+    // passes that need them so none moves under a draw already recorded.
+    let deepFilters = 0;
+    for (const pass of ctx.passes) {
+        if (pass.filter?.depth !== undefined) {
+            deepFilters++;
+        }
+    }
+    if (deepFilters > 0) {
+        gpu.masks ??= createMaskPipelines(gpu.device, gpu.format, gpu.samples, gpu.sprites, gpu.tilemaps);
+        gpu.filterDepth ??= createFilterDepth(gpu.device, gpu.format, gpu.samples, gpu.masks.filterPictureLayout);
+    }
+    gpu.filterDepth?.beginFrame(deepFilters);
+
     for (let p = 0; p < ctx.passes.length; p++) {
         const pass = ctx.passes[p];
         // The pass a person looks at is sent into a picture instead, and the chain takes it from
@@ -210,6 +235,10 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         // With `msaa`, drawn into a picture with several samples per pixel and resolved into the
         // target as the pass ends. The samples themselves are not kept: only the resolved pixel is.
         const multisampled = multisampledViewFor(gpu, target.width, target.height);
+        // What a filter holding a model draws is drawn with a depth that is read afterwards.
+        const keptDepth = drawn.filter?.depth !== undefined && drawn.renderTarget !== undefined
+            ? readableDepthFor(gpu, target.width, target.height)
+            : null;
         const gpuPass = encoder.beginRenderPass({
             colorAttachments: [multisampled === null ? {
                 view: target.view,
@@ -226,7 +255,7 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
             // Cleared to the far plane: everything is in front of nothing.
             // The stencil, which only masks write, starts at 0 and is not kept: nothing reads it after.
             depthStencilAttachment: {
-                view: depthViewFor(gpu, target.width, target.height),
+                view: keptDepth?.createView() ?? depthViewFor(gpu, target.width, target.height),
                 depthClearValue: 1,
                 depthLoadOp: 'clear',
                 depthStoreOp: 'store',
@@ -316,8 +345,29 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         let layerSlot = 0;
         let meshSlot = 0;
         let spritesReady = false;
+        // The halo of a filter laid with depth may wait until the solid models straight after it are
+        // drawn: see `deepLayerOrder`. The layers waiting, in the order they are laid, with the
+        // slot each was given, and how many are laid.
+        const order = filterLayers > 0 && deepFilters > 0 ? deepLayerOrder(drawables, stencil, (layer) => gpu.filterDepth!.layerGroup(layer.picture) !== null) : null;
+        waiting.length = 0;
+        waitingSlots.length = 0;
+        let laid = 0;
+        // Lays the halo of each one that waits for entry `last`, inside its own masks.
+        const layWaiting = order === null ? null : (last: number): void => {
+            while (laid < waiting.length && order[waiting[laid]!] === last) {
+                const j = waiting[laid]!;
+                const slot = waitingSlots[laid++]!;
+                const layer = drawables[j] as TDrawFilterLayer;
+                state = applyStencil(gpuPass, stencil![j]!, state, ratio, target.width, target.height);
+                drawFilterLayer(gpuPass, gpu.masks!, layer, slot, target.width, target.height, gpu.filterDepth, gpu.filterDepth!.layerGroup(layer.picture), LAYER_PARTS_LATER);
+                spritesReady = false;
+            }
+        };
         for (let i = 0; i < drawables.length; i++) {
             const item = drawables[i];
+            if (layWaiting !== null && i > 0) {
+                layWaiting(i - 1);
+            }
             if (stencil !== null) {
                 state = applyStencil(gpuPass, stencil[i]!, state, ratio, target.width, target.height);
             }
@@ -327,7 +377,15 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
                 continue;
             }
             if (item.type === 'filter-layer') {
-                drawFilterLayer(gpuPass, gpu.masks!, item, filterSlot++, target.width, target.height);
+                const kept = item.depth === true ? gpu.filterDepth?.layerGroup(item.picture) ?? null : null;
+                // Its halo waits only when its depth was kept: one laid flat is laid in its place.
+                const later = kept !== null && order !== null && order[i] !== i;
+                if (later) {
+                    waiting.push(i);
+                    waitingSlots.push(filterSlot);
+                }
+                drawFilterLayer(gpuPass, gpu.masks!, item, filterSlot++, target.width, target.height, gpu.filterDepth, kept,
+                    later ? LAYER_PARTS_IN_PLACE : LAYER_PARTS);
                 spritesReady = false;
                 continue;
             }
@@ -396,6 +454,9 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
             );
             run++;
         }
+        if (layWaiting !== null && drawables.length > 0) {
+            layWaiting(drawables.length - 1);
+        }
         // Nothing in the list and something written can only mean a bug upstream, but a frame that
         // draws nothing is better than one that draws rubbish.
         void spriteCount;
@@ -411,6 +472,9 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         // What a filter filters, drawn: its part run through its effects, into its own picture.
         if (drawn.filter !== undefined && drawn.renderTarget !== undefined) {
             gpu.post!.runFilter(encoder, drawn.filter.chain, drawn.renderTarget, drawn.filter.region, drawn.filter.into, ctx.time, ratio);
+            if (keptDepth !== null) {
+                gpu.filterDepth!.keep(encoder, keptDepth, drawn.filter.region, drawn.filter.depth!.reach, drawn.filter.into);
+            }
         }
 
         // Every buffer this pass read (the frame's numbers, the sprites, the models' slots, the
@@ -426,5 +490,6 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
 
     gpu.device.queue.submit([encoder.finish()]);
     gpu.post?.endFrame();
+    gpu.filterDepth?.endFrame();
     releaseUnusedDepths(gpu);
 };

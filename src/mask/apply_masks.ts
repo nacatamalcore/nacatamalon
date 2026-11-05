@@ -1,7 +1,8 @@
 import { applyView2d } from '../render/shared/apply_view_2d';
+import { isTransparentMesh } from '../render/shared/is_transparent_mesh';
 import { composeTransform2d } from '../render/shared/compose_transform_2d';
 import { markSoftTargets, rewindSoftTargets, takeSoftTarget } from './soft_targets';
-import type { IRenderer, TDrawCamera2d, TDrawItem, TDrawSprite, TDrawTexture, TDrawTilemapLayer, TDrawView3d, TRenderPass } from '../render/interface';
+import type { IRenderer, TDrawCamera2d, TDrawItem, TDrawMesh, TDrawSprite, TDrawTexture, TDrawTilemapLayer, TDrawView3d, TRenderPass } from '../render/interface';
 import type { TDrawStencil } from '../render/interface/draw/t_draw_stencil';
 import type { TDrawMaskLayer } from '../render/interface/draw/t_draw_mask_layer';
 import type { TDrawable } from '../gameobjects/types';
@@ -272,6 +273,16 @@ const softLayer = (context: TContext, level: TMaskLevel, group: TEntry[], depth:
 };
 
 /**
+ * Whether anything in a filter's list writes depth: a solid model, a line in 3D, or a filter inside it
+ * that holds one. Only then is its depth kept, and its layer laid with it; a filter over 2D things, a
+ * see-through model or an emitter alone is drawn exactly as it was, since none of them leaves a depth
+ * to keep.
+ */
+const hasDepth = (drawables: readonly TMaskedItem[]): boolean => drawables.some((item) =>
+    (item.type === 'mesh' && !isTransparentMesh(item as unknown as TDrawMesh)) || item.type === 'lines'
+    || (item.type === 'filter-layer' && item.depth === true));
+
+/**
  * Draws a filter's entries into a picture in a pass of its own, which runs the filter's effects over
  * their part of it, and gives back the one entry that lays what they made over the pass. `null`
  * when that part is off what is drawn on: nothing of it would be seen.
@@ -316,7 +327,8 @@ const filterLayer = (context: TContext, level: TMaskLevel, group: TEntry[], dept
             }
         }
     }
-    const region = regionOf(span, filter.rect !== null ? 0 : paddingOf(filter, effects), filter.rect !== null, target);
+    const padding = paddingOf(filter, effects);
+    const region = regionOf(span, filter.rect !== null ? 0 : padding, filter.rect !== null, target);
     if (region === null) {
         context.before.length = passes;
         rewindSoftTargets(renderer, taken);
@@ -325,6 +337,7 @@ const filterLayer = (context: TContext, level: TMaskLevel, group: TEntry[], dept
 
     const content = takeSoftTarget(renderer, target.width, target.height);
     const into = takeSoftTarget(renderer, region.width, region.height);
+    const deep = hasDepth(inner.drawables);
     context.before.push({
         clearColor: CLEAR,
         renderTarget: content,
@@ -336,9 +349,13 @@ const filterLayer = (context: TContext, level: TMaskLevel, group: TEntry[], dept
         views3d: lists.views3d,
         viewIndex: inner.viewIndex,
         stencil: inner.stencil,
-        filter: { region, chain: effects, into },
+        filter: deep
+            ? { region, chain: effects, into, depth: { reach: Math.ceil(padding * target.pixelRatio) } }
+            : { region, chain: effects, into },
     });
-    const layer: TDrawFilterLayer = { type: 'filter-layer', picture: into, ...region };
+    const layer: TDrawFilterLayer = deep
+        ? { type: 'filter-layer', picture: into, ...region, depth: true }
+        : { type: 'filter-layer', picture: into, ...region };
     return { item: layer, camera: -1, view: -1, chain: group[0]!.chain.slice(0, depth) };
 };
 

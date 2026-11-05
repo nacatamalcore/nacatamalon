@@ -44,6 +44,7 @@ const stateWithEverything = (): TWebGL2State => ({
     shadowsSpareFor: 0,
     shadowPipeline: nothing() as TWebGL2State['shadowPipeline'],
     masks: nothing() as TWebGL2State['masks'],
+    filterDepth: nothing() as TWebGL2State['filterDepth'],
 });
 
 /**
@@ -96,6 +97,7 @@ describe('coming back from a lost context', () => {
         expect(state.shadows).toEqual([]);
         expect(state.shadowPipeline).toBeNull();
         expect(state.masks).toBeNull();
+        expect(state.filterDepth).toBeNull();
         expect(state.lost).toBe(false);
     });
 

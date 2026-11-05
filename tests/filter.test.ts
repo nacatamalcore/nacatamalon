@@ -267,6 +267,69 @@ describe('a filter', () => {
         expect(layer).toMatchObject({ x: 0, y: 0 });
     });
 
+    it('keeps the depth of a model inside it, for its layer, with how far its effects reach', () => {
+        const { store } = createTestGame();
+        startTestScene(store, 'Level', () => {
+            useSpawn(() => {
+                useTransform(block(10, 10));
+                createMesh({ geometry: { vertices: new Float32Array(9), count: 3 } as never });
+                useFilter({ effects: [glow()], padding: 6.5 }).add(useSelf());
+            })();
+            return createScene();
+        });
+        const ctx = frame(store);
+        const [content, screen] = ctx.passes as [TRenderPass, TRenderPass];
+        expect(content.filter!.depth).toEqual({ reach: 7 });
+        expect(layersOf(screen)[0]!.depth).toBe(true);
+    });
+
+    it('keeps no depth for a see-through model, which leaves none to keep', () => {
+        const { store } = createTestGame();
+        startTestScene(store, 'Level', () => {
+            useSpawn(() => {
+                useTransform(block(10, 10));
+                createMesh({ geometry: { vertices: new Float32Array(9), count: 3 } as never, alpha: 0.5 });
+                useFilter({ effects: [glow()] }).add(useSelf());
+            })();
+            return createScene();
+        });
+        const [content, screen] = frame(store).passes as [TRenderPass, TRenderPass];
+        expect(content.filter!.depth).toBeUndefined();
+        expect(layersOf(screen)[0]!.depth).toBeUndefined();
+    });
+
+    it('keeps no depth for 2D things alone, which are laid as they always were', () => {
+        const { store } = createTestGame();
+        startTestScene(store, 'Level', () => {
+            useFilter({ effects: [glow()] }).add(square(50, 50));
+            return createScene();
+        });
+        const [content, screen] = frame(store).passes as [TRenderPass, TRenderPass];
+        expect(content.filter!.depth).toBeUndefined();
+        expect(layersOf(screen)[0]!.depth).toBeUndefined();
+    });
+
+    it('keeps the depth of a filter holding one that holds a model', () => {
+        const { store } = createTestGame();
+        startTestScene(store, 'Level', () => {
+            const outer = useSpawn(() => {
+                useTransform(block(0, 0));
+                const inner = useSpawn(() => {
+                    useTransform(block(10, 10));
+                    createMesh({ geometry: { vertices: new Float32Array(9), count: 3 } as never });
+                })();
+                useFilter({ effects: [glow()] }).add(inner);
+            })();
+            useFilter({ effects: [outline()] }).add(outer);
+            return createScene();
+        });
+        const [inner, outer, screen] = frame(store).passes as [TRenderPass, TRenderPass, TRenderPass];
+        expect(inner.filter!.depth).toBeDefined();
+        expect(layersOf(outer)[0]!.depth).toBe(true);
+        expect(outer.filter!.depth).toBeDefined();
+        expect(layersOf(screen)[0]!.depth).toBe(true);
+    });
+
     it('is split in two by something it does not filter sorted between its own', () => {
         const { store } = createTestGame();
         startTestScene(store, 'Level', () => {

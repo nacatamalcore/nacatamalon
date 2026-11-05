@@ -3,6 +3,16 @@
 What changed in the current release of `nacatamalon`, and what is waiting for the next one. Earlier
 releases are in [changelog/](./changelog/), one file each.
 
+## Unreleased
+
+### Fixed
+
+- **A model inside a filter keeps its depth.** It used to come back to the scene as one flat picture,
+  wholly in front of or behind the other models. Now the scene hides it and is hidden by it pixel by
+  pixel, and what its effects draw round it (a glow's halo, a shadow) takes the depth of the nearest
+  part of it, so the halo of a part that is hidden is hidden too. A filter over 2D things alone is
+  drawn as before, at no cost.
+
 ## 0.5.0 — 2026-11-05
 
 ### Added

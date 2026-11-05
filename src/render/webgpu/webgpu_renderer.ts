@@ -96,6 +96,7 @@ export const createWebGPURenderer = async (
         // And for the first frame that draws a line.
         lines: null,
         masks: null,
+        filterDepth: null,
         frameUniforms,
         sprites: createSpritePipeline(device, format, samples, frameUniforms.buffer, samplers, defaultSmooth, white),
         tilemaps: createTilemapPipeline(device, format, samples, frameUniforms.buffer, samplers, defaultSmooth),
@@ -143,6 +144,7 @@ export const createWebGPURenderer = async (
             gpu.shadowPipeline?.destroy();
             gpu.particles?.destroy();
             gpu.lines?.destroy();
+            gpu.filterDepth?.destroy();
             device.destroy();
             context.unconfigure();
         },

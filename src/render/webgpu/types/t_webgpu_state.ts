@@ -8,6 +8,7 @@ import type { TLinesPipeline } from "../lines/create_lines_pipeline";
 import type { TShadowMap } from "../shadow/shadow_map";
 import type { TShadowPipeline } from "../shadow/shadow_pipeline";
 import type { TMaskPipelines } from "../mask/mask_pipelines";
+import type { TFilterDepth } from "../mask/filter_depth";
 
 // render/webgpu/types/t_webgpu_state.ts
 export type TWebGPUState = {
@@ -101,4 +102,6 @@ export type TWebGPUState = {
     shadowsSpareFor: number;
     /** What writes masks and lays soft ones over a pass, made the first time a frame has one. */
     masks: TMaskPipelines | null;
+    /** What keeps the depth of a filter holding a model, made the first time a frame has one. */
+    filterDepth: TFilterDepth | null;
 };

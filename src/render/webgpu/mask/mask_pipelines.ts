@@ -41,6 +41,8 @@ export type TMaskPipelines = {
     filterLayerBindGroup(picture: ITexture, slot: number, rect: readonly [number, number, number, number], targetWidth: number, targetHeight: number): { group: GPUBindGroup; offset: number };
     /** The two pictures of a soft mask, bound together. */
     layerBindGroup(content: ITexture, shape: ITexture): GPUBindGroup;
+    /** What `filterLayerBindGroup` binds against: a filter layer laid with depth shares it. */
+    readonly filterPictureLayout: GPUBindGroupLayout;
 };
 
 /**
@@ -358,5 +360,6 @@ export const createMaskPipelines = (
             }
             return group;
         },
+        filterPictureLayout: filterPicture,
     };
 };

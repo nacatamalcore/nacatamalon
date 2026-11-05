@@ -84,11 +84,17 @@ export type TRenderPass = {
      * `renderTarget`) is run through `chain` and the result written into `into`, a picture the
      * region's size, which a `'filter-layer'` in a later pass lays on the screen. Left out by every
      * other pass.
+     *
+     * `depth` is there when what the pass draws has depth (a model, a line in 3D): the depth is kept
+     * for the region too, for the layer to be laid with (`TDrawFilterLayer.depth`). What the effects
+     * draw off the things themselves (a glow's halo, a shadow) is given the depth of the nearest of
+     * them within `depth.reach` real pixels, how far the effects reach.
      */
     filter?: {
         readonly region: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
         readonly chain: readonly TPostEffect[];
         readonly into: ITexture;
+        readonly depth?: { readonly reach: number };
     };
 };
 

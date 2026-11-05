@@ -11,6 +11,7 @@ import type { TLinesPipeline } from '../lines/create_lines_pipeline';
 import type { TShadowMap } from '../shadow/shadow_map';
 import type { TShadowPipeline } from '../shadow/shadow_pipeline';
 import type { TMaskPrograms } from '../mask/mask_programs';
+import type { TFilterDepth } from '../mask/filter_depth';
 
 /**
  * Everything the WebGL2 backend holds between frames.
@@ -128,4 +129,6 @@ export type TWebGL2State = {
     shadowsSpareFor: number;
     /** What writes masks and lays soft ones over a pass, made the first time a frame has one. */
     masks: TMaskPrograms | null;
+    /** What keeps the depth of a filter holding a model, made the first time a frame has one. */
+    filterDepth: TFilterDepth | null;
 };

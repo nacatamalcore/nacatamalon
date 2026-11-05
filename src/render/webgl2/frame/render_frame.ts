@@ -13,6 +13,10 @@ import { bindMultisampled, releaseUnusedMultisampled, resolveMultisampled } from
 import { writeFrameUniforms } from './write_frame_uniforms';
 import { drawMesh, writeMeshLights } from '../mesh/draw_meshes';
 import { applyStencil, beginStencil, createMaskPrograms, drawFilterLayer, drawMaskLayer, drawMaskRun, endStencil } from '../mask/mask_programs';
+import { createFilterDepth } from '../mask/filter_depth';
+import { deepLayerOrder } from '../../shared/deep_layer_order';
+import { LAYER_PARTS, LAYER_PARTS_IN_PLACE, LAYER_PARTS_LATER } from '../../shared/layer_parts';
+import type { TDrawFilterLayer } from '../../interface/draw/t_draw_filter_layer';
 import type { TDrawStencil } from '../../interface/draw/t_draw_stencil';
 import { createShadowMap } from '../shadow/shadow_map';
 import { createShadowPipeline } from '../shadow/shadow_pipeline';
@@ -160,6 +164,9 @@ const copyUpright = (state: TWebGL2State, pass: TRenderPass, width: number, heig
  */
 const lightMatrices: Float32Array[] = [];
 
+/** The filter layers of a pass waiting to be laid after a later entry, kept from pass to pass. */
+const waiting: number[] = [];
+
 /**
  * Lets go of the maps past the `used` ones once they have gone unused for `SPARE_SHADOW_FRAMES`
  * frames in a row.
@@ -191,6 +198,7 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
     // Said once here rather than by each draw: a set of bones is filled once however many models
     // wear it and however many passes they are drawn in.
     state.meshes.joints.beginFrame();
+    state.filterDepth?.beginFrame();
 
     // None of this happens for a frame with no effects: see `TFrameContext.post`.
     const chain = ctx.post ?? null;
@@ -238,6 +246,12 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
             uniforms: { view: source.view, matrix: lightMatrix, light: source.light, lightIndex: source.lightIndex, mapSize: map.size },
             map: map.texture,
         });
+    }
+
+    // Whether any filter keeps its depth this frame: only then can a layer be laid with it.
+    let deepFilters = false;
+    for (const pass of ctx.passes) {
+        deepFilters ||= pass.filter?.depth !== undefined;
     }
 
     for (const asked of ctx.passes) {
@@ -341,8 +355,29 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
         let litView = -1;
         // The map the view being drawn reads its shadow from, found when that view changes.
         let litShadow: WebGLTexture | null = null;
+        // The halo of a filter laid with depth may wait until the solid models straight after it are
+        // drawn: see `deepLayerOrder`. The layers waiting, in the order they are laid, and how many
+        // are laid.
+        const order = deepFilters && stencil !== null ? deepLayerOrder(drawables, stencil, (layer) => state.filterDepth?.kept(layer.picture) === true) : null;
+        waiting.length = 0;
+        let laid = 0;
+        // Lays the halo of each one that waits for entry `last`, inside its own masks.
+        const layWaiting = order === null ? null : (last: number): void => {
+            while (laid < waiting.length && order[waiting[laid]!] === last) {
+                const j = waiting[laid++]!;
+                if (spritesReady) {
+                    gl.bindVertexArray(null);
+                    spritesReady = false;
+                }
+                masking = applyStencil(gl, stencil![j]!, masking, ratio, target.width, target.height);
+                state.filterDepth!.drawLayer(drawables[j] as TDrawFilterLayer, target.width, target.height, state.masks!.layer.vao, LAYER_PARTS_LATER);
+            }
+        };
         for (let i = 0; i < drawables.length; i++) {
             const item = drawables[i];
+            if (layWaiting !== null && i > 0) {
+                layWaiting(i - 1);
+            }
             if (stencil !== null) {
                 masking = applyStencil(gl, stencil[i]!, masking, ratio, target.width, target.height);
             }
@@ -358,7 +393,18 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
                 if (spritesReady) {
                     gl.bindVertexArray(null);
                 }
-                drawFilterLayer(gl, state.sprites, state.masks!, item, target.width, target.height);
+                // With the depth of what it holds, when that was kept; otherwise over what is there,
+                // in its place. Only one laid with depth has its halo wait.
+                const deep = item.depth === true && state.filterDepth !== null && state.filterDepth.kept(item.picture);
+                const later = deep && order !== null && order[i] !== i;
+                if (later) {
+                    waiting.push(i);
+                }
+                if (deep) {
+                    state.filterDepth!.drawLayer(item, target.width, target.height, state.masks!.layer.vao, later ? LAYER_PARTS_IN_PLACE : LAYER_PARTS);
+                } else {
+                    drawFilterLayer(gl, state.sprites, state.masks!, item, target.width, target.height);
+                }
                 spritesReady = false;
                 continue;
             }
@@ -435,12 +481,21 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
             run++;
         }
 
+        if (layWaiting !== null && drawables.length > 0) {
+            layWaiting(drawables.length - 1);
+        }
         if (spritesReady) {
             gl.bindVertexArray(null);
         }
         // Before anything copies the picture: a box left on would keep the copy inside it.
         if (stencil !== null) {
             endStencil(gl);
+        }
+        // What a filter holding a model draws keeps its depth, copied out before the samples go.
+        const keepsDepth = drawn.filter?.depth !== undefined && drawn.renderTarget !== undefined;
+        if (keepsDepth) {
+            state.filterDepth ??= createFilterDepth(gl);
+            state.filterDepth.grab(target.width, target.height);
         }
         if (state.samples > 1) {
             resolveMultisampled(state, into, target.width, target.height);
@@ -457,6 +512,9 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
             const result = state.framebuffers.get(drawn.filter.into as TWebGL2Texture) ?? null;
             if (content !== null && result !== null) {
                 state.post!.runFilter(drawn.filter.chain, content, target.width, target.height, drawn.filter.region, result, ctx.time, ratio);
+            }
+            if (keepsDepth) {
+                state.filterDepth!.keep(drawn.filter.region, target.height, drawn.filter.depth!.reach, drawn.filter.into);
             }
         }
 
@@ -476,6 +534,7 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
     }
 
     state.post?.endFrame();
+    state.filterDepth?.endFrame();
     releaseUnusedUpright(state);
     releaseUnusedCanvasTargets(state);
     releaseUnusedMultisampled(state);

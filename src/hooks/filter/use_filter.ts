@@ -27,10 +27,13 @@ import type { TFilter, TFilterOptions } from '../../filter/types/t_filter';
  * in, and everything it filtered is drawn as it is again.
  *
  * Its radii and widths are pixels of the screen, so they keep their size when the camera zooms. A
- * model inside one is drawn on its own, in front of or behind the rest of the scene as `zIndex` says
- * rather than by depth. `crt()` and `lcd()` fill the part they are given, as a screen does: give them
- * a `rect`. An effect that reads its last frame (`motionBlur`, `phosphor`) reads the one it is handed
- * instead, since an object's part of the screen moves and changes size.
+ * model inside one keeps its depth: the rest of the scene hides it and is hidden by it pixel by pixel,
+ * and what an effect draws round it (a glow's halo) takes the depth of the nearest part of it, so the
+ * halo of a part that is hidden is hidden too. The halo is laid over the solid models drawn right
+ * after it as well; one drawn later still, past a sprite or a see-through model, is drawn over it.
+ * An effect that moves pixels (a wave) is still tested at the depth of where they were. `crt()` and `lcd()` fill the part they are given, as
+ * a screen does: give them a `rect`. An effect that reads its last frame (`motionBlur`, `phosphor`)
+ * reads the one it is handed instead, since an object's part of the screen moves and changes size.
  *
  * @param options The effects, and what part of the screen they work on.
  * @returns The filter, to `add` to objects, `remove` from them, and change at any moment: `enabled`,

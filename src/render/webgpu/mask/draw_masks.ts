@@ -5,6 +5,8 @@ import type { TDrawStencil } from '../../interface/draw/t_draw_stencil';
 import type { TSpritePipeline } from '../sprite/types/t_sprite_pipeline';
 import type { TSpriteRun } from '../sprite/types/t_sprite_run';
 import type { TMaskPipelines } from './mask_pipelines';
+import { LAYER_PARTS, type TLayerPart } from '../../shared/layer_parts';
+import type { TFilterDepth } from './filter_depth';
 
 /**
  * Puts the pass in an entry's state: the stencil's reference and the box it is kept inside, set only
@@ -84,7 +86,8 @@ export const drawMaskLayer = (gpuPass: GPURenderPassEncoder, masks: TMaskPipelin
 
 /**
  * Lays a filter's picture over its rectangle of the pass, in the slot it was given among the pass's
- * filter layers.
+ * filter layers. With `depth` and the pictures it kept for this one (`depthGroup`), laid with the
+ * depth of what the filter holds, in the `parts` asked for.
  *
  * @internal
  * @since 1.0.0
@@ -97,9 +100,22 @@ export const drawFilterLayer = (
     slot: number,
     targetWidth: number,
     targetHeight: number,
+    depth: TFilterDepth | null = null,
+    depthGroup: GPUBindGroup | null = null,
+    parts: readonly TLayerPart[] = LAYER_PARTS,
 ): void => {
     const { group, offset } = masks.filterLayerBindGroup(layer.picture, slot, [layer.x, layer.y, layer.width, layer.height], targetWidth, targetHeight);
-    gpuPass.setPipeline(masks.filterLayer());
-    gpuPass.setBindGroup(0, group, [offset]);
-    gpuPass.draw(4);
+    if (depth === null || depthGroup === null) {
+        gpuPass.setPipeline(masks.filterLayer());
+        gpuPass.setBindGroup(0, group, [offset]);
+        gpuPass.draw(4);
+        return;
+    }
+    // Laid in its parts, each where the others are not: see `filter_depth.ts`.
+    for (const part of parts) {
+        gpuPass.setPipeline(depth.layerPipeline(part));
+        gpuPass.setBindGroup(0, group, [offset]);
+        gpuPass.setBindGroup(1, depthGroup);
+        gpuPass.draw(4);
+    }
 };
