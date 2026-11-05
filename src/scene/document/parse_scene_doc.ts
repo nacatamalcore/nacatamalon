@@ -625,8 +625,10 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 ...optionalBoolean(raw, 'flipY'),
                 ...optionalBoolean(raw, 'smooth'),
                 ...(raw.blend === 'additive' ? { blend: 'additive' as const } : {}),
-                ...optionalBoolean(raw, 'repeat'),
-                ...(parsePoint(raw.repeatOffset) !== undefined ? { repeatOffset: parsePoint(raw.repeatOffset) } : {}),
+                // `repeat` and `repeatOffset` up to 0.5, and a file saved then still says so.
+                ...(typeof raw.repeat === 'boolean' ? { tile: raw.repeat } : {}),
+                ...optionalBoolean(raw, 'tile'),
+                ...(parsePoint(raw.tileOffset ?? raw.repeatOffset) !== undefined ? { tileOffset: parsePoint(raw.tileOffset ?? raw.repeatOffset) } : {}),
                 ...(parsePoint(raw.parallax) !== undefined ? { parallax: parsePoint(raw.parallax) } : {}),
                 ...optionalBoolean(raw, 'visible'),
                 ...optionalNumber(raw, 'zIndex'),

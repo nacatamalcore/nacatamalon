@@ -33,7 +33,7 @@ export type TParticleBlend = 'alpha' | 'additive';
  * as long plays it twice as fast, and every particle shows the last frame as it dies, which is what
  * an explosion that ends in smoke wants. The run's `fps` and `loop` mean nothing there, since a life
  * always ends; a `repeat` and a `yoyo` say how many times it goes and which way, counted the way a
- * sprite counts them, and a `repeat` for ever plays it once.
+ * sprite counts them, and one that goes round for ever plays it once.
  *
  * `'clip'` plays it at its own `fps`, exactly as `useSpriteAnimation` would, from the moment the
  * particle is born: for a fire that flickers or a coin that spins as it falls. One that does not

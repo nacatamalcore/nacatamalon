@@ -39,7 +39,7 @@ const anyFrameHas = (points: TSpriteAtlas['points'], name: string): boolean => {
  * Everything that moves the picture counts: its anchor and pivot, `flipX` and `flipY`, its size, its
  * scale and its turn, and every object above it. The camera does not, as in `localToWorld`, and so
  * neither does `parallax`: this is where it is placed, not where it is seen. In `useScreenSpace` the
- * answer is in screen pixels, as its placement is. With `repeat` the frame is taken as stretched over
+ * answer is in screen pixels, as its placement is. With `tile` the frame is taken as stretched over
  * the whole sprite, not as each copy.
  *
  * A point is a place and not a pixel, measured as `anchor` is: `{ x: 14, y: 10 }` is the top-left

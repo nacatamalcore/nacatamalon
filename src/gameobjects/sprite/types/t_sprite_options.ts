@@ -61,15 +61,15 @@ export type TSpriteOptions = T2dOptions & {
      */
     flipY?: boolean;
     /**
-     * Repeats its picture across its size instead of stretching it: a wall of bricks, a strip of
+     * Tiles its picture across its size instead of stretching it: a wall of bricks, a strip of
      * grass, clouds. Set `width` and `height` to the size to cover; the picture (or its frame, from an
      * atlas) is laid as many times as fits. Omitted is stretched.
      */
-    repeat?: boolean;
+    tile?: boolean;
     /**
-     * With `repeat`, where the pattern starts inside the sprite, in its picture's pixels: moving it
+     * With `tile`, where the pattern starts inside the sprite, in its picture's pixels: moving it
      * every frame scrolls the pattern while the sprite stays put. `{ x: 0, y: 0 }` by default.
      */
-    repeatOffset?: { x: number; y: number };
+    tileOffset?: { x: number; y: number };
 };
 

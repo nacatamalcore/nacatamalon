@@ -39,10 +39,14 @@ export type TTweenOptions = {
      */
     delay?: number;
     /**
-     * How many **extra** times it runs after the first trip, so `1` means it goes twice. A negative
-     * number means for ever. Default `0`.
+     * How many **extra** times it runs after the first trip, so `1` means it goes twice. Default `0`.
      */
     repeat?: number;
+    /**
+     * Whether it goes round for ever, until it is stopped or finished. `repeat` is for a number of times.
+     * Default `false`.
+     */
+    loop?: boolean;
     /**
      * Whether each repeat comes back the other way, there and back. Default `false`.
      */
@@ -138,10 +142,14 @@ export type TTweenTargetOptions<T extends object> = {
      */
     delay?: number;
     /**
-     * How many **extra** times it runs after the first trip. A negative number means for ever.
-     * Default `0`.
+     * How many **extra** times it runs after the first trip. Default `0`.
      */
     repeat?: number;
+    /**
+     * Whether it goes round for ever, until it is stopped or finished. `repeat` is for a number of times.
+     * Default `false`.
+     */
+    loop?: boolean;
     /**
      * Whether each repeat comes back the other way, there and back. Default `false`.
      */
@@ -208,7 +216,7 @@ export type TTweenHandle = {
      * ```ts
      * // A lamp that fades out and back for ever, and how many blinks it has made: two trips each.
      * let blinks = 0;
-     * const blink = tween({ target: lamp, to: { tint: { a: 0 } }, duration: 0.3, yoyo: true, repeat: -1 });
+     * const blink = tween({ target: lamp, to: { tint: { a: 0 } }, duration: 0.3, yoyo: true, loop: true });
      * blink.onRepeat((times) => { blinks = Math.floor(times / 2); });
      * blink.play();
      * ```

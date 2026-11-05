@@ -162,7 +162,7 @@ const textureAt = (sprite: TSprite, u: number, v: number): { x: number; y: numbe
     const repeat = spriteRepeat(sprite as TDrawSprite);
     let x = (u * repeat.tilesX + repeat.shiftX) * window.scaleX + window.offsetX;
     let y = (v * repeat.tilesY + repeat.shiftY) * window.scaleY + window.offsetY;
-    if (sprite.repeat === true) {
+    if (sprite.tile === true) {
         const lowX = Math.min(window.offsetX, window.offsetX + window.scaleX);
         const lowY = Math.min(window.offsetY, window.offsetY + window.scaleY);
         const sizeX = Math.abs(window.scaleX);

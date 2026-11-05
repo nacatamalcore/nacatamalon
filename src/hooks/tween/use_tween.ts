@@ -1,3 +1,4 @@
+import { warnLoopAndRepeat } from '../animation/warn_loop_and_repeat';
 import { getActiveBox, getActiveGame } from '../../store';
 import { linear } from '../../math/easing';
 import type { TTweenHandle, TTweenOptions, TTweenStarter, TTweenTargetOptions } from './types/t_tween';
@@ -147,9 +148,9 @@ type TWriter = {
  * One trip of a number or of fields, with its delay and its repeats.
  */
 const tripNode = (options: TTweenOptions | TTweenTargetOptions<object>, writer: TWriter): TNode => {
-    // A negative repeat means for ever, the usual convention for tweens. Turned into Infinity here
-    // so the countdown can never reach zero.
-    const repeat = options.repeat ?? 0;
+    // For ever is turned into Infinity here so the countdown can never reach zero.
+    warnLoopAndRepeat('tween', 'one', options);
+    const repeat = options.repeat ?? (options.loop === true ? -1 : 0);
     const repeatsFor = repeat < 0 ? Infinity : repeat;
     const duration = options.duration;
     const ease = options.ease ?? linear;
@@ -559,7 +560,7 @@ const groupNode = (members: TNode[]): TNode => {
  *     const tween = useTween();
  *
  *     // Up and down for ever, from the moment the scene starts
- *     tween({ target: coin, to: { transform: { y: 84 } }, duration: 0.6, ease: easeInOutSine, yoyo: true, repeat: -1 }).play();
+ *     tween({ target: coin, to: { transform: { y: 84 } }, duration: 0.6, ease: easeInOutSine, yoyo: true, loop: true }).play();
  *
  *     // Declared once, played on every hit: two blinks and a step back at the same time
  *     const hurt = tween.all(

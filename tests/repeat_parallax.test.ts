@@ -53,19 +53,19 @@ describe('a sprite that repeats', () => {
     const picture = { width: 32, height: 16, status: 'ready' } as TDrawSprite['texture'];
 
     it('lays its picture as many times as fit, from where its pattern starts', () => {
-        const repeated = { type: 'sprite', transform: at(0, 0), texture: picture, tint, width: 96, height: 48, repeat: true, repeatOffset: { x: 8, y: 4 } } as TDrawSprite;
+        const repeated = { type: 'sprite', transform: at(0, 0), texture: picture, tint, width: 96, height: 48, tile: true, tileOffset: { x: 8, y: 4 } } as TDrawSprite;
         expect(spriteRepeat(repeated)).toEqual({ tilesX: 3, tilesY: 3, shiftX: 0.25, shiftY: 0.25 });
     });
 
     it('lays a frame of a sheet, not the whole sheet', () => {
-        const framed = { type: 'sprite', transform: at(0, 0), texture: picture, tint, width: 64, height: 16, repeat: true, uvScale: { x: 0.5, y: 1 } } as TDrawSprite;
+        const framed = { type: 'sprite', transform: at(0, 0), texture: picture, tint, width: 64, height: 16, tile: true, uvScale: { x: 0.5, y: 1 } } as TDrawSprite;
         expect(spriteRepeat(framed).tilesX).toBe(4);
     });
 
     it('is laid once, from the start, when it does not repeat or has no picture', () => {
         const once = { tilesX: 1, tilesY: 1, shiftX: 0, shiftY: 0 };
         expect(spriteRepeat({ type: 'sprite', transform: at(0, 0), texture: picture, tint, width: 96, height: 48 } as TDrawSprite)).toEqual(once);
-        expect(spriteRepeat({ type: 'sprite', transform: at(0, 0), texture: null, tint, width: 96, height: 48, repeat: true } as TDrawSprite)).toEqual(once);
+        expect(spriteRepeat({ type: 'sprite', transform: at(0, 0), texture: null, tint, width: 96, height: 48, tile: true } as TDrawSprite)).toEqual(once);
     });
 });
 
@@ -276,7 +276,7 @@ describe('createBackdrop', () => {
             backdrop = createBackdrop({ parallax: { x: 0.2, y: 0 }, y: 40, height: 32, tint });
             return createScene();
         });
-        expect(backdrop.repeat).toBe(true);
+        expect(backdrop.tile).toBe(true);
         expect(backdrop.width).toBeGreaterThan(10000);
         expect(backdrop.height).toBe(32);
         expect(backdrop.parallax).toEqual({ x: 0.2, y: 0 });
@@ -290,7 +290,7 @@ describe('createBackdrop', () => {
         let sky!: TSprite;
         const { store } = createTestGame();
         startTestScene(store, 'Level', () => {
-            sky = createBackdrop({ parallax: { x: 0, y: 0 }, repeatY: true, tint });
+            sky = createBackdrop({ parallax: { x: 0, y: 0 }, tileY: true, tint });
             return createScene();
         });
         expect(sky.height).toBeGreaterThan(10000);

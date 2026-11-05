@@ -39,7 +39,13 @@ releases are in [changelog/](./changelog/), one file each.
   `restitution` still reads.
 - **Breaking: what a character's body says about where it stands reads as a question:** `onGround`,
   `onCeiling`, `onWall`, `onOneWay` and `onLadder` are `isOnGround`, `isOnCeiling`, `isOnWall`, `isOnOneWay`
-  and `isOnLadder`. An `on…` is always something that listens now.
+  and `isOnLadder`, and a 3D character's `isGrounded` is `isOnGround` too. An `on…` is always something that
+  listens now.
+- **`loop: true` goes round for ever, everywhere, and `repeat` counts.** A tween takes `loop: true` in place of
+  `repeat: -1`, and a clip given both says that `repeat` decides. A negative `repeat` still works, so a saved file
+  keeps its meaning.
+- **Breaking: a sprite's `repeat` is `tile`**, because `repeat` now only counts: `tile`, `tileOffset`, and a
+  backdrop's `tileY`. A scene saved with the old names still reads.
 
 ### Fixed
 

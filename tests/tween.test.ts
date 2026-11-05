@@ -124,7 +124,26 @@ describe('useTween', () => {
         expect(completed).toBe(1);
     });
 
-    it('never ends with a negative repeat', () => {
+    it('never ends with loop', () => {
+        const { tween, tick } = scened();
+        let completed = 0;
+
+        const handle = tween({
+            from: 0, to: 10, duration: 0.1, loop: true,
+            onUpdate: () => {},
+        });
+        handle.onEnd(() => { completed += 1; });
+        handle.play();
+
+        for (let i = 0; i < 100; i += 1) {
+            tick(0.1);
+        }
+
+        expect(completed).toBe(0);
+        expect(handle.playing).toBe(true);
+    });
+
+    it('still never ends with a negative repeat, which a saved file may say', () => {
         const { tween, tick } = scened();
         let completed = 0;
 

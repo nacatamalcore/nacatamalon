@@ -12,7 +12,7 @@ import type { TDrawSprite } from '../interface';
  * @author Francisco Pereira Alvarado
  */
 export const spriteRepeat = (sprite: TDrawSprite): { tilesX: number; tilesY: number; shiftX: number; shiftY: number } => {
-    if (sprite.repeat !== true || sprite.texture === null) {
+    if (sprite.tile !== true || sprite.texture === null) {
         return { tilesX: 1, tilesY: 1, shiftX: 0, shiftY: 0 };
     }
     // The picture's size in pixels: the frame of a sheet, or the whole image.
@@ -25,7 +25,7 @@ export const spriteRepeat = (sprite: TDrawSprite): { tilesX: number; tilesY: num
     return {
         tilesX: size.width / pictureWidth,
         tilesY: size.height / pictureHeight,
-        shiftX: (sprite.repeatOffset?.x ?? 0) / pictureWidth,
-        shiftY: (sprite.repeatOffset?.y ?? 0) / pictureHeight,
+        shiftX: (sprite.tileOffset?.x ?? 0) / pictureWidth,
+        shiftY: (sprite.tileOffset?.y ?? 0) / pictureHeight,
     };
 };

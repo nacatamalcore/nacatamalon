@@ -24,8 +24,8 @@ import type { TGltfModel, TTexture } from '../src/loaders';
 import type { TModel } from '../src/gameobjects/model';
 
 /**
- * Going round a number of times, and there and back, in the words a tween already uses: `repeat` is
- * how many extra times (negative for ever), `yoyo` comes back the other way each time, and
+ * Going round a number of times, and there and back, in the same words everywhere: `loop` is for
+ * ever, `repeat` how many extra times, `yoyo` comes back the other way each time, and
  * `onRepeat` says each time it starts again. The same for a tween, a sprite's run and a model's
  * movement.
  */
@@ -45,6 +45,13 @@ const tweened = () => {
 };
 
 describe('a tween that repeats', () => {
+    it('says so when it has both loop and repeat', () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        tweened().tween({ from: 0, to: 1, duration: 1, loop: true, repeat: 1, onUpdate: () => {} });
+        expect(warn.mock.calls.some(([text]) => String(text).includes('tween: one has both loop and repeat'))).toBe(true);
+        warn.mockRestore();
+    });
+
     it('says each time it starts again, with how many so far, and not when it ends', () => {
         const { tween, tick } = tweened();
         const told: number[] = [];
@@ -61,7 +68,7 @@ describe('a tween that repeats', () => {
     it('stops saying it once the listener is handed back, and a group never says it', () => {
         const { tween, tick } = tweened();
         const told: number[] = [];
-        const handle = tween({ from: 0, to: 1, duration: 1, repeat: -1, onUpdate: () => {} });
+        const handle = tween({ from: 0, to: 1, duration: 1, loop: true, onUpdate: () => {} });
         const stop = handle.onRepeat((times) => told.push(times));
         handle.play();
         tick(1);
@@ -114,6 +121,13 @@ describe('a sprite\'s run that repeats', () => {
         expect(told).toEqual([1, 2]);
         expect(ended).toEqual(['hit']);
         expect(anim.playing).toBe(false);
+    });
+
+    it('says so when a clip has both loop and repeat', () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        animated({ clips: { both: { frames: [0, 1], fps: 10, loop: true, repeat: 2 } }, play: 'both' });
+        expect(warn.mock.calls.some(([text]) => String(text).includes("the clip 'both' has both loop and repeat"))).toBe(true);
+        warn.mockRestore();
     });
 
     it('lets repeat decide over loop, and goes for ever with a negative one', () => {
@@ -245,6 +259,15 @@ const withRig = async (options: TSkeletalAnimationOptions) => {
 };
 
 describe('a model\'s movement that repeats', () => {
+    it('says so when it, or one of its movements, has both loop and repeat', async () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        await withRig({ loop: true, repeat: 2, play: 'Slide', clips: { Slide: { loop: true, repeat: 1 } } });
+        const said = warn.mock.calls.map(([text]) => String(text));
+        expect(said.some((text) => text.includes('useSkeletalAnimation: it has both'))).toBe(true);
+        expect(said.some((text) => text.includes("useSkeletalAnimation: the movement 'Slide' has both"))).toBe(true);
+        warn.mockRestore();
+    });
+
     it('goes round three times with repeat 2, says each time, then ends', async () => {
         const { moves, at, step } = await withRig({ repeat: 2 });
         const told: number[] = [];
@@ -314,7 +337,7 @@ describe('each movement of a model played its own way', () => {
     });
 
     it('takes its own repeat and yoyo over the animator\'s', async () => {
-        const { moves, at, step } = await withRig({ play: 'Slide', repeat: -1, clips: { Slide: { repeat: 0, yoyo: true } } });
+        const { moves, at, step } = await withRig({ play: 'Slide', loop: true, clips: { Slide: { repeat: 0, yoyo: true } } });
         const ended: string[] = [];
         moves.onEnd((clip) => ended.push(clip));
         step(1.25);

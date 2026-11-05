@@ -1,3 +1,4 @@
+import { warnLoopAndRepeat } from './warn_loop_and_repeat';
 import { blendPoses, sampleClip } from '../../math/skinning';
 import { copyJointInto, restingJoint } from '../../animation';
 import { addBoneLayer, holdBelowIn, readyBoneLayer } from './bone_layer';
@@ -95,6 +96,7 @@ const holdPoseIn = (model: TModel, room: TJointPose[][]): void => {
  * @author Francisco Pereira Alvarado
  */
 export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationOptions = {}): TSkeletalAnimation => {
+    warnLoopAndRepeat('useSkeletalAnimation', 'it', options);
     // The movements are the file's, read each time because they arrive with it; the bones they
     // turn are this model's own.
     const file = model.model;
@@ -276,9 +278,9 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
         time = 0;
         reached = false;
         playing = true;
-        // The movement's own first, then the animator's. A negative repeat means for ever, as it does
-        // for a tween; with none, `loop` says yes or no.
+        // The movement's own first, then the animator's. With no repeat, `loop` says yes or no.
         const own = options.clips?.[name];
+        if (own) warnLoopAndRepeat('useSkeletalAnimation', `the movement '${name}'`, own);
         const repeat = own?.repeat
             ?? (own?.loop !== undefined ? (own.loop ? -1 : 0) : options.repeat ?? (loop ? -1 : 0));
         repeatsLeft = repeat < 0 ? Infinity : repeat;

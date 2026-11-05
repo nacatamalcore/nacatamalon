@@ -159,7 +159,7 @@ describe('a run over a particle\'s life', () => {
     });
 
     it('plays a run that loops for ever once, since a life always ends', () => {
-        const file = fileOf({}, sheet(), { frames: [0, 1, 2, 3], repeat: -1 });
+        const file = fileOf({}, sheet(), { frames: [0, 1, 2, 3], loop: true });
 
         expect([0.1, 0.9].map((age) => frameAt(file, age, 1))).toEqual([0, 3]);
     });

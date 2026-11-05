@@ -245,7 +245,7 @@ describe('a walking character', () => {
         await run(root, 180);
 
         expect(player).not.toBeNull();
-        expect(player!.isGrounded).toBe(true);
+        expect(player!.isOnGround).toBe(true);
         // Its feet on the floor: the capsule's centre is 0.9 above the object's origin, so the
         // origin lands at nothing.
         expect(box.transform!.y).toBeCloseTo(0, 1);

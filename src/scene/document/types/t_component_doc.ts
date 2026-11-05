@@ -265,12 +265,12 @@ export type TSpriteComponent = {
      * Repeats the picture across the sprite's `width` and `height` instead of stretching it: a wall
      * of bricks, a strip of grass. Absent, stretched.
      */
-    repeat?: boolean;
+    tile?: boolean;
     /**
-     * With `repeat`, where the pattern starts inside the sprite, in its picture's pixels. Absent,
+     * With `tile`, where the pattern starts inside the sprite, in its picture's pixels. Absent,
      * `{ x: 0, y: 0 }`.
      */
-    repeatOffset?: { x: number; y: number };
+    tileOffset?: { x: number; y: number };
     /**
      * How much it moves with the camera: `1` as everything else, `0` not at all, between them further
      * away. Absent, `{ x: 1, y: 1 }`.

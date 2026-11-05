@@ -72,8 +72,7 @@ export type TAtlasSequenceDoc = {
      */
     loop?: boolean;
     /**
-     * How many extra times it runs after the first: `2` is three times, then it ends. Negative is for
-     * ever. Given, it says it and `loop` is not looked at. As a tween's `repeat`.
+     * How many extra times it runs after the first: `2` is three times, then it ends. Given, it decides. A negative one, which older files have, is for ever. As a tween's `repeat`.
      */
     repeat?: number;
     /**
@@ -82,7 +81,7 @@ export type TAtlasSequenceDoc = {
     yoyo?: boolean;
     /**
      * The run to play when this one ends: a punch that drops back to standing. Only means something
-     * for a run that ends (`loop: false`, or a `repeat` that is not negative), since one that loops
+     * for a run that ends (`loop: false`, or a `repeat`), since one that loops
      * never does.
      *
      * In the file and not in the script that starts the punch, because what follows a punch is a

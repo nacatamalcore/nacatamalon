@@ -14,7 +14,7 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  * is a property of the object, so there is nothing for a scene to keep, and steering one with
  * forces gives you something that slides on slopes and falls over on its face.
  *
- * Set `velocity` and it walks. Falling is applied for you, and `isGrounded` is the answer to
+ * Set `velocity` and it walks. Falling is applied for you, and `isOnGround` is the answer to
  * whether it may jump.
  *
  * `null` when the scene has no physics world, which is what a tool opening a scene to edit it
@@ -31,7 +31,7 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  *     useUpdate(() => {
  *         if (!player) return;
  *         player.velocity.x = keys.isDown('d') ? 4 : keys.isDown('a') ? -4 : 0;
- *         if (keys.isDown('Space') && player.isGrounded) player.velocity.y = 5;
+ *         if (keys.isDown('Space') && player.isOnGround) player.velocity.y = 5;
  *     });
  * };
  * ```

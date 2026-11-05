@@ -1,3 +1,4 @@
+import { warnLoopAndRepeat } from './warn_loop_and_repeat';
 import { setSpriteFrame } from '../../atlas';
 import { rememberSpriteAnimation } from './get_sprite_animation';
 import type { TClipEvent } from '../../animation';
@@ -153,7 +154,9 @@ export const useSpriteAnimation = (sprite: TSprite, options: TSpriteAnimationOpt
         frames = clip.frames;
         // Seconds per frame, worked out once per clip rather than every frame.
         step = 1 / (clip.fps ?? DEFAULT_FPS);
-        // A negative repeat means for ever, as it does for a tween; with none, `loop` says yes or no.
+        // Here and not when it was made: a clip from an `.atlas` arrives with the file.
+        warnLoopAndRepeat('useSpriteAnimation', `the clip '${name}'`, clip);
+        // A file may say for ever as a negative repeat; with none, `loop` says yes or no.
         const repeat = clip.repeat ?? ((clip.loop ?? true) ? -1 : 0);
         repeatsLeft = repeat < 0 ? Infinity : repeat;
         repeats = 0;

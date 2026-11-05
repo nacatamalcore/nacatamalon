@@ -48,14 +48,14 @@ const resolveFrame = (options: TSpriteOptions) => {
 };
 
 const cleanSpriteOptions = (options: TSpriteOptions) => {
-    const { width, height, smooth, blend, anchor, pivot, zIndex, flipX, flipY, repeat, repeatOffset, parallax, visible, material, uniforms, tint: tintOption = 'white' } = options;
+    const { width, height, smooth, blend, anchor, pivot, zIndex, flipX, flipY, tile, tileOffset, parallax, visible, material, uniforms, tint: tintOption = 'white' } = options;
     const tint = getColor(tintOption);
     const { uvOffset, uvScale } = resolveFrame(options);
 
     // Default transform
     const transform = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, ...options.transform };
 
-    return { width, height, smooth, blend, anchor, pivot, zIndex, flipX, flipY, repeat, repeatOffset, parallax, visible, material, uniforms, uvOffset, uvScale, atlas: options.atlas, texture: resolveTexture(options), transform, tint };
+    return { width, height, smooth, blend, anchor, pivot, zIndex, flipX, flipY, tile, tileOffset, parallax, visible, material, uniforms, uvOffset, uvScale, atlas: options.atlas, texture: resolveTexture(options), transform, tint };
 };
 
 /**
@@ -160,7 +160,7 @@ export const createSprite = ((options: TSpriteOptions): TSprite => {
         throw outsideSceneBody('createSprite');
     }
 
-    const { width, height, smooth, blend, anchor, pivot, zIndex, flipX, flipY, repeat, repeatOffset, parallax, visible, material, uniforms, uvOffset, uvScale, atlas, texture, transform, tint } = cleanSpriteOptions(options);
+    const { width, height, smooth, blend, anchor, pivot, zIndex, flipX, flipY, tile, tileOffset, parallax, visible, material, uniforms, uvOffset, uvScale, atlas, texture, transform, tint } = cleanSpriteOptions(options);
 
     // Create a record
     // The frame only means something with a sheet, and is kept so a saved scene keeps its picture.
@@ -168,8 +168,8 @@ export const createSprite = ((options: TSpriteOptions): TSprite => {
     // Left out when not given, rather than written as `undefined`, so a sprite that never mentions them
     // looks as it always did to whatever reads it.
     const extras = {
-        ...(repeat !== undefined ? { repeat } : {}),
-        ...(repeatOffset !== undefined ? { repeatOffset } : {}),
+        ...(tile !== undefined ? { tile } : {}),
+        ...(tileOffset !== undefined ? { tileOffset } : {}),
         ...(parallax !== undefined ? { parallax } : {}),
         ...(pivot !== undefined ? { pivot } : {}),
     };

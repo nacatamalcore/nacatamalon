@@ -22,8 +22,7 @@ export type TAnimationClip = {
     loop?: boolean;
     /**
      * How many **extra** times it runs after the first, as a tween's `repeat`: `2` shows it three
-     * times and then it ends, telling `onEnd`. A negative number means for ever. Given, it says it
-     * and `loop` is not looked at.
+     * times and then it ends, telling `onEnd`. Given, it decides, and with `loop` too it says so.
      */
     repeat?: number;
     /**

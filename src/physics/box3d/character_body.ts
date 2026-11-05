@@ -61,7 +61,7 @@ export type TCharacterBody = {
      * the step just taken (`normal.y >= cos(slopeLimit)`), so a wall never counts and a ramp
      * steeper than the limit slides you off instead of letting you climb it.
      */
-    readonly isGrounded: boolean;
+    readonly isOnGround: boolean;
     /**
      * Places the character without consulting the world: spawning, respawning, a cutscene. The
      * ordinary way to move is {@link TCharacterBody.velocity}; this is the escape hatch, and it
@@ -89,7 +89,7 @@ export type TCharacterOptions = {
     radius: number;
     height: number;
     /**
-     * The steepest surface that still counts as ground, in radians. Default ~50°. Anything steeper is a wall as far as {@link TCharacterBody.isGrounded} is
+     * The steepest surface that still counts as ground, in radians. Default ~50°. Anything steeper is a wall as far as {@link TCharacterBody.isOnGround} is
      * concerned, so you slide down it rather than stand on it.
      */
     slopeLimit?: number;
@@ -358,7 +358,7 @@ export const createCharacter = (deps: {
 
     const body: TCharacterBody = {
         velocity,
-        get isGrounded() { return grounded; },
+        get isOnGround() { return grounded; },
         setPosition: (x, y, z) => {
             centre.x = x + shift.x;
             centre.y = y + shift.y;

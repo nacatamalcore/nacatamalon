@@ -25,13 +25,13 @@ export type TBackdropOptions = Pick<TSpriteOptions, 'key' | 'texture' | 'atlas' 
      */
     y?: number;
     /**
-     * How tall it is. Its picture's height by default; with `repeatY`, ignored.
+     * How tall it is. Its picture's height by default; with `tileY`, ignored.
      */
     height?: number;
     /**
      * Repeats down as well as across, filling everything: a sky, a cave wall. `false` by default.
      */
-    repeatY?: boolean;
+    tileY?: boolean;
     /**
      * Where it is drawn among the rest. Behind everything by default.
      */
@@ -46,7 +46,7 @@ export type TBackdropOptions = Pick<TSpriteOptions, 'key' | 'texture' | 'atlas' 
  * frame, and it is there wherever the camera goes. It moves in whole pixels.
  *
  * @param options The picture, its `parallax`, and where its top is.
- * @returns The sprite, to tint, hide or scroll (`repeatOffset` moves the pattern: clouds drifting).
+ * @returns The sprite, to tint, hide or scroll (`tileOffset` moves the pattern: clouds drifting).
  *
  * @example
  * ```ts
@@ -64,7 +64,7 @@ export type TBackdropOptions = Pick<TSpriteOptions, 'key' | 'texture' | 'atlas' 
  * @author Francisco Pereira Alvarado
  */
 export const createBackdrop = (options: TBackdropOptions): TSprite => {
-    const repeatY = options.repeatY === true;
+    const tileY = options.tileY === true;
     const sprite = createSprite({
         key: options.key,
         texture: options.texture,
@@ -73,14 +73,14 @@ export const createBackdrop = (options: TBackdropOptions): TSprite => {
         tint: options.tint,
         smooth: options.smooth,
         width: SPAN,
-        height: repeatY ? SPAN : options.height ?? 1,
-        anchor: { x: 0.5, y: repeatY ? 0.5 : 0 },
+        height: tileY ? SPAN : options.height ?? 1,
+        anchor: { x: 0.5, y: tileY ? 0.5 : 0 },
         transform: { x: 0, y: options.y ?? 0 },
-        repeat: true,
+        tile: true,
         parallax: options.parallax,
         zIndex: options.zIndex ?? -10000,
     });
-    if (!repeatY && options.height === undefined) {
+    if (!tileY && options.height === undefined) {
         // Its picture's height once the picture is there: until then a sprite has no size of its own.
         const fit = (): void => {
             const texture = sprite.texture;

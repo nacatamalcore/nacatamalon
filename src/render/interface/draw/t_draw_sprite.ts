@@ -81,13 +81,13 @@ export type TDrawSprite = {
     readonly flipX?: boolean;
     readonly flipY?: boolean;
     /**
-     * Repeats the picture across the sprite's size: see `TSprite.repeat`.
+     * Repeats the picture across the sprite's size: see `TSprite.tile`.
      */
-    readonly repeat?: boolean;
+    readonly tile?: boolean;
     /**
-     * Where the repeated pattern starts, in the picture's pixels: see `TSprite.repeatOffset`.
+     * Where the repeated pattern starts, in the picture's pixels: see `TSprite.tileOffset`.
      */
-    readonly repeatOffset?: { x: number; y: number };
+    readonly tileOffset?: { x: number; y: number };
     /**
      * How the texture is sampled: `false` nearest (crisp), `true` linear (blended). Omitted, the
      * backend uses whatever the game asked for at boot.

@@ -19,7 +19,7 @@ export type TSkeletalClipOptions = {
     loop?: boolean;
     /**
      * How many **extra** times it runs after the first: `2` is three times, then it ends, telling
-     * `onEnd`. Negative is for ever. Given, `loop` is not looked at.
+     * `onEnd`. Given, it decides, and with `loop` too it says so.
      */
     repeat?: number;
     /**
@@ -60,8 +60,7 @@ export type TSkeletalAnimationOptions = {
     loop?: boolean;
     /**
      * How many **extra** times a movement runs after the first, as a tween's `repeat`: `2` is three
-     * times, then it ends, telling `onEnd`. A negative number means for ever. Given, it says it and
-     * `loop` is not looked at. One movement's own, in `clips`, comes first.
+     * times, then it ends, telling `onEnd`. Given, it decides, and with `loop` too it says so. One movement's own, in `clips`, comes first.
      */
     repeat?: number;
     /**
