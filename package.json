@@ -42,6 +42,30 @@
             "types": "./dist/types/index.d.ts",
             "default": "./dist/index.js"
         },
+        "./math": {
+            "types": "./dist/types/math.d.ts",
+            "default": "./dist/math.js"
+        },
+        "./pixels": {
+            "types": "./dist/types/pixels.d.ts",
+            "default": "./dist/pixels.js"
+        },
+        "./shader": {
+            "types": "./dist/types/shader.d.ts",
+            "default": "./dist/shader.js"
+        },
+        "./effects": {
+            "types": "./dist/types/effects.d.ts",
+            "default": "./dist/effects.js"
+        },
+        "./transitions": {
+            "types": "./dist/types/transitions.d.ts",
+            "default": "./dist/transitions.js"
+        },
+        "./files": {
+            "types": "./dist/types/files.d.ts",
+            "default": "./dist/files.js"
+        },
         "./authoring": {
             "types": "./dist/types/authoring.d.ts",
             "default": "./dist/authoring/index.js"
@@ -74,26 +98,44 @@
     },
     "typesVersions": {
         "*": {
+            "math": [
+                "./dist/types/math.d.ts"
+            ],
+            "pixels": [
+                "./dist/types/pixels.d.ts"
+            ],
+            "shader": [
+                "./dist/types/shader.d.ts"
+            ],
+            "effects": [
+                "./dist/types/effects.d.ts"
+            ],
+            "transitions": [
+                "./dist/types/transitions.d.ts"
+            ],
+            "files": [
+                "./dist/types/files.d.ts"
+            ],
             "authoring": [
-                "./dist/types/authoring/index.d.ts"
+                "./dist/types/authoring.d.ts"
             ],
             "extend": [
-                "./dist/types/extend/index.d.ts"
+                "./dist/types/extend.d.ts"
             ],
             "physics2d": [
-                "./dist/types/physics/rapier2d/index.d.ts"
+                "./dist/types/physics2d.d.ts"
             ],
             "physics3d": [
-                "./dist/types/physics/box3d/index.d.ts"
+                "./dist/types/physics3d.d.ts"
             ],
             "react": [
-                "./dist/types/react/index.d.ts"
+                "./dist/types/react.d.ts"
             ],
             "headless": [
-                "./dist/types/headless/index.d.ts"
+                "./dist/types/headless.d.ts"
             ],
             "speech": [
-                "./dist/types/speech/index.d.ts"
+                "./dist/types/speech.d.ts"
             ]
         }
     },
@@ -104,7 +146,7 @@
         "typecheck": "tsc --noEmit",
         "clean": "rm -rf dist",
         "build": "bun run clean && bun run build:js && bun run build:strip && bun run build:types && bun run build:llms",
-        "build:js": "esbuild src/index.ts src/authoring/index.ts src/extend/index.ts src/react/index.ts src/headless/index.ts src/speech/index.ts physics2d=src/physics/rapier2d/index.ts physics3d=src/physics/box3d/index.ts --bundle --splitting --format=esm --outdir=dist --packages=external --sourcemap --log-level=warning",
+        "build:js": "esbuild src/index.ts src/authoring/index.ts src/extend/index.ts src/react/index.ts src/headless/index.ts src/speech/index.ts math=src/doors/math.ts pixels=src/doors/pixels.ts shader=src/doors/shader.ts effects=src/doors/effects.ts transitions=src/doors/transitions.ts files=src/doors/files.ts physics2d=src/physics/rapier2d/index.ts physics3d=src/physics/box3d/index.ts --bundle --splitting --format=esm --outdir=dist --packages=external --sourcemap --log-level=warning",
         "build:strip": "bun scripts/strip_bare_imports.ts",
         "build:types": "bun scripts/build_types.ts",
         "build:llms": "bun scripts/build_llms.ts",

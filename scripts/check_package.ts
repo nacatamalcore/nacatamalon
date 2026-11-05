@@ -10,6 +10,7 @@
  *   every game on TypeScript 5.)
  * - does the README's physics example compile against the physics engines it installs?
  * - do the doors in `exports` resolve, and does a deep import into the engine's files fail?
+ * - does `typesVersions` name files that are there, for a project on `moduleResolution: node`?
  * - how big is that game once bundled, and did anything only a tool uses end up inside it?
  * - do the files for coding assistants and the guides ship (`llms.txt`, `llms-full.txt`,
  *   `guides/`), and does the game in `llms.txt` compile too?
@@ -127,12 +128,12 @@ if (offline) {
 } else {
     const old = run(['bunx', '-p', `typescript@${OLD_TYPESCRIPT}`, 'tsc', '-p', '.'], work);
     check(old.code === 0, `a game compiles against it (TypeScript ${OLD_TYPESCRIPT})`, old.out);
-    // The doors of tools and extensions too, with no `@webgpu/types` installed: TypeScript 5 has no
+    // The other doors too, with no `@webgpu/types` installed: TypeScript 5 has no
     // WebGPU, and a door naming one of its types stops every project on it that loads the door.
-    writeFileSync(join(work, 'src', 'tool_doors.ts'), ['authoring', 'extend', 'headless', 'speech'].map((door, i) => `import * as tool${i} from 'nacatamalon/${door}';\nvoid tool${i};`).join('\n'));
+    writeFileSync(join(work, 'src', 'tool_doors.ts'), ['math', 'pixels', 'shader', 'effects', 'transitions', 'files', 'authoring', 'extend', 'headless', 'speech'].map((door, i) => `import * as tool${i} from 'nacatamalon/${door}';\nvoid tool${i};`).join('\n'));
     writeFileSync(join(work, 'tsconfig.tools.json'), JSON.stringify({ extends: './tsconfig.json', include: ['src/tool_doors.ts'] }));
     const oldTools = run(['bunx', '-p', `typescript@${OLD_TYPESCRIPT}`, 'tsc', '-p', 'tsconfig.tools.json'], work);
-    check(oldTools.code === 0, `the doors of tools compile against it (TypeScript ${OLD_TYPESCRIPT}, no WebGPU types)`, oldTools.out);
+    check(oldTools.code === 0, `the other doors compile against it (TypeScript ${OLD_TYPESCRIPT}, no WebGPU types)`, oldTools.out);
 }
 
 // 3. The README's physics example, compiling against the physics engines installed beside it.
@@ -158,6 +159,11 @@ for (const door of doors) check(!unresolved(door), `${door} resolves`, doorsOut)
 for (const spec of deep) check(unresolved(spec), `${spec} is closed`);
 const doorErrors = doorsOut.split('\n').filter((line) => line.includes('error TS') && !deep.some((spec) => line.includes(`'${spec}'`)));
 check(doorErrors.length === 0, 'every door compiles', doorErrors.join('\n'));
+
+// What a project on the older `moduleResolution: node` reads in place of `exports`.
+for (const [door, [file]] of Object.entries(pkg.typesVersions['*'] as Record<string, string[]>)) {
+    check(existsSync(join(packageDir, file!)), `typesVersions finds the types of ${door}`);
+}
 
 // 5. The game, bundled: how big, and nothing a tool uses inside it.
 const bundle = join(work, 'game.js');

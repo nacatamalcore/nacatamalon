@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { renderSong, parseSongDoc, DOCUMENTS } from '../src';
+import { renderSong } from '../src';
+import { parseSongDoc, DOCUMENTS } from '../src/doors/files';
 import { serializeSongDoc, songInstrumentErrors, writeSongNotes } from '../src/authoring';
 import { parseSongNotes } from '../src/audio/synth/parse_song_notes';
 import type { TSongDoc, TSongInstrument } from '../src';

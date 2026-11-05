@@ -93,7 +93,7 @@ const stepWith = (look: TStepLook, s: TSurfaceState, name: TNamer): TSurfaceStat
  *
  * @example
  * ```ts
- * import { rim, toonLighting } from 'nacatamalon';
+ * import { rim, toonLighting } from 'nacatamalon/shader';
  * import { lookKnobs } from 'nacatamalon/authoring';
  *
  * lookKnobs(toonLighting(), [rim(), rim()]);

@@ -84,6 +84,24 @@ const Game = () => {
 createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })({ Game });
 ```
 
+## Where to import from
+
+`nacatamalon` has what almost every game uses: the game, scenes, sprites, text, models, cameras, input,
+sound, tweens, timers, tags, collisions, stores. A subject of its own has its own import, and a name is in
+one place only:
+
+| Import from | What is there |
+|---|---|
+| `nacatamalon/math` | `clamp`, `lerp`, `degToRad`, `TAU`, `vec2*`, `vec3*`, `quat*`, `useRandom`, the `ease*` curves and `linear` |
+| `nacatamalon/pixels` | pictures painted in code: `createPixels`, `fillRect`, `pixelsFromRows`, `drawText`, `createPixelTexture`, `useLoadPixels`… |
+| `nacatamalon/effects` | `usePostProcess`, `useFilter`, every effect (`crt`, `glow`, `outline`, `dither`…), `useLoadPalette`, `useLoadLut`, `POST_EFFECTS` |
+| `nacatamalon/transitions` | `fade`, `wipe`, `iris`, `pixelate`, `dissolve`, `crossfade`, `push`, `crossWipe`, `crossIris`, `crossDissolve` |
+| `nacatamalon/shader` | the shader composer (`composer*`, `compileShader`), `toonLighting`, `unlitLighting`, `mangaDots`, `rim`, `useLoadShader`, `parseShader*` |
+| `nacatamalon/files` | reading the engine's files by hand: `parse*Doc`, `parseProject`, `sceneFromDoc`, `boxFromDoc`, `DOCUMENTS` and the formats' types |
+
+`createMaterial` and `useLoadParticles` are on `nacatamalon`. The names below are written bare; a wrong
+import says which name it does not have, and `llms-full.txt` lists each door.
+
 ## Conventions
 
 - **2D is pixels**, origin at the top-left of the game, y grows down. With no `useCamera2d`, `x`
@@ -272,8 +290,8 @@ createGame('#app', { width: 480, height: 320, background: getColor('#12102b') })
   loop rests on its last frame. `repeat` and `yoyo` count as they do for a sprite. Frames are drawn on a square, so draw them
   square; a tail shows the frame its particle shows now.
 - **Angles** are radians.
-- **Types** come from the same imports as the functions, all starting with `T`:
-  `import type { TSprite, TText } from 'nacatamalon';`.
+- **Types** come from the same imports as the functions they go with, all starting with `T`:
+  `import type { TSprite, TText } from 'nacatamalon';`, `import type { TPixels } from 'nacatamalon/pixels';`.
 - **Scenes** are registered by name: `createGame(...)({ Title, Level })`, an object, not an array.
   `useScene().change('Level')` starts `Level` and stops the current scene: its objects are removed
   and its `useUpdate` stops. Changing back runs that scene's function again from the start, so
@@ -487,7 +505,7 @@ const App = () => (
 
 ## Where things are (search llms-full.txt for each name)
 
-- **Constants**: on the root, in groups, read only and frozen (writing into one throws): `import { LIMITS, BUILTIN } from 'nacatamalon'`. `RENDER` (how it draws: `TYPE.WEBGL2`… for `createGame({ renderer })`, `PIXEL_SNAP.SCREEN`/`GAME`/`OFF` for `createGame({ pixelSnap })`, `LINE_VERTEX_FLOATS`), `SCREEN` (the game's screen: `CONSOLES.snes`… to spread into `createGame`, `SCALING.INTEGER`…, `KEEP.BOTH`…, `ALIGN.TOP`…), `INPUT` (`GAMEPAD_BUTTONS`, `GAMEPAD_AXES` and their `…_LABELS`, `POINTER_BUTTONS`, `DEADZONE`, `ACTION_PRESS`), `LIMITS` (`LIGHTS`, `PHYSICS_LAYERS`, `PALETTE_COLORS`), `PHYSICS` (`ALL_LAYERS`), `POST_EFFECTS` (`NAMES`, `CRT_PRESETS`, `COLOR_LEVELS`; `NAMES` are what a project's `post` list takes), `BUILTIN` (what the engine carries, by kind: `FONTS`, `MUSIC.SONGS`, `MUSIC.INSTRUMENTS`, `MUSIC.SAMPLES`, `SOUNDS`, `LOOKS`), `DOCUMENTS` (what a document's fields hold, for one written by hand: `SCENE.FORMAT` and `SCENE.VERSION`, `MOTION` and `STORE` the same, and `TILEMAP`, `PALETTE`, `ATLAS`, `PARTICLES`, `SONG`, `SHADER_GRAPH` with `FORMAT` alone, which is their version). A game carries only the groups it reads.
+- **Constants**: in groups, read only and frozen (writing into one throws): `import { LIMITS, BUILTIN } from 'nacatamalon'`, with `POST_EFFECTS` from `nacatamalon/effects` and `DOCUMENTS` from `nacatamalon/files`. `RENDER` (how it draws: `TYPE.WEBGL2`… for `createGame({ renderer })`, `PIXEL_SNAP.SCREEN`/`GAME`/`OFF` for `createGame({ pixelSnap })`, `LINE_VERTEX_FLOATS`), `SCREEN` (the game's screen: `CONSOLES.snes`… to spread into `createGame`, `SCALING.INTEGER`…, `KEEP.BOTH`…, `ALIGN.TOP`…), `INPUT` (`GAMEPAD_BUTTONS`, `GAMEPAD_AXES` and their `…_LABELS`, `POINTER_BUTTONS`, `DEADZONE`, `ACTION_PRESS`), `LIMITS` (`LIGHTS`, `PHYSICS_LAYERS`, `PALETTE_COLORS`), `PHYSICS` (`ALL_LAYERS`), `POST_EFFECTS` (`NAMES`, `CRT_PRESETS`, `COLOR_LEVELS`; `NAMES` are what a project's `post` list takes), `BUILTIN` (what the engine carries, by kind: `FONTS`, `MUSIC.SONGS`, `MUSIC.INSTRUMENTS`, `MUSIC.SAMPLES`, `SOUNDS`, `LOOKS`), `DOCUMENTS` (what a document's fields hold, for one written by hand: `SCENE.FORMAT` and `SCENE.VERSION`, `MOTION` and `STORE` the same, and `TILEMAP`, `PALETTE`, `ATLAS`, `PARTICLES`, `SONG`, `SHADER_GRAPH` with `FORMAT` alone, which is their version). A game carries only the groups it reads.
 - **Game and scenes**: `createGame`, `createScene`, `useScene`, `useGame`, `useSpawn` (what the component returns is the object's `api`: `useSpawn(Bat)({ x: 200 }).api.hurt(1)`; a name for what it makes, when something finds it by name, `useSpawn(Bat, 'Bat')`: the function's own is shortened by a published build), `useSelf`, `sceneOf` and `findObject` (the scene something is in, and a box of it by name, destroyed ones left out: `findObject(sceneOf(self), 'Score')`), `ownerOf` (the object a sprite, text or mesh belongs to, the scene for one made in its body: from what was touched to the whole piece, `destroy(ownerOf(info.target))`; `destroy(sprite)` alone takes only that sprite and leaves its piece running), `destroy`, `useReady`, `useSceneTransitionEnd` (once the transition the scene came in with is over: see above), `useCleanup` (runs when its component is destroyed or its scene stops: for a window listener or an interval; what the engine made needs none).
 - **Tags**: what something is, `'enemy'`, `'coin'`, as many as it likes: `useTag('enemy')` gives the tag, to `add(thing)`, `remove`, `has`, `all()` (everything in the scene carrying it) and `clear()`; a piece adds itself with `useTag('enemy').add(useSelf())`, or is made with `useSpawn(Bat, { tags: ['enemy'] })`; a sprite, text or panel can carry tags on its own (`createSprite({ tags: ['wall'] })`). A saved scene's box keeps them (`"tags": [...]`).
 - **Touching, with no physics**: `collisionBetween(a, b)`; `useHitbox({ width?, height? })` (the picture's size by default; change `x`, `y`, `width`, `height`, `enabled` any time); collisions are asked by component or by tag: `useCollisionWith(Enemy, (enemy) => enemy.api.hurt(1))` in a piece's own body meets the pieces made from `Enemy`, their `api` typed; `useCollisionWith('damageable', (thing) => ...)` meets everything carrying the tag, pieces and tagged sprites alike (`'api' in thing` tells which). `{ when: 'start' }` once, `'end'` on parting; every frame by default. So a bullet and an enemy written apart need no rule in the scene; `useCollisionBetween(Shot, Enemy, (shot, enemy) => ...)` (components or tags) is a rule of the scene, every frame each pair touches. Both run after the updates and measure a piece by its hitboxes (or what it draws) and a tagged sprite by itself; two pieces with physics bodies (2D or 3D) also meet when the simulation says they touch, so the same line works with or without physics.

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test';
-import { DOCUMENTS, parsePaletteDoc, parseSongDoc, parseStoreDoc } from '../src';
+import { DOCUMENTS, parsePaletteDoc, parseSongDoc, parseStoreDoc } from '../src/doors/files';
 
 /**
  * A document written by a newer engine than the one reading it. A song, a palette and a store are

@@ -25,8 +25,9 @@ export { compilePreviewShader } from './compile_preview_shader';
 export { SHADER_GRAPH_FORMAT, emptyShaderGraph, parseShaderGraph } from './document';
 export { NODE_CATALOG, NODE_DEFS, NODE_CATEGORIES, nodeDef, defaultParams } from './catalog';
 export { compileShaderGraph, inferGraphTypes, compileNodePreviews } from './compile_shader_graph';
-// The preview harness is left out of this barrel on purpose: it names WebGPU's own types, and the
-// front door imports from here, so anything listed here is type-checked in every game. Tools take
+// The preview harness is left out of this barrel on purpose: it names WebGPU's own types, and
+// `nacatamalon/shader` imports from here, so anything listed here is type-checked in every game that
+// opens that door. Tools take
 // it from `./preview_harness` directly.
 
 export type {

@@ -10,7 +10,7 @@ import { join } from 'node:path';
  * compiled against the engine's own source, as a module of its own.
  *
  * An example has to stand on its own to pass: it imports what it uses from `'nacatamalon'` (or is
- * given every name from the front door when it imports nothing) and declares what it only refers to.
+ * given every name a game's doors hand out when it imports nothing) and declares what it only refers to.
  * Every category is checked: they were reviewed one by one, and one left out is where an example went
  * wrong unseen (`registerScript`'s callback written with the wrong arguments in a sound's).
  */
@@ -18,6 +18,12 @@ import { join } from 'node:path';
 const ROOT = join(import.meta.dir, '..', 'src');
 const DOORS = {
     nacatamalon: 'index.ts',
+    'nacatamalon/math': 'doors/math.ts',
+    'nacatamalon/pixels': 'doors/pixels.ts',
+    'nacatamalon/shader': 'doors/shader.ts',
+    'nacatamalon/effects': 'doors/effects.ts',
+    'nacatamalon/transitions': 'doors/transitions.ts',
+    'nacatamalon/files': 'doors/files.ts',
     'nacatamalon/authoring': 'authoring/index.ts',
     'nacatamalon/extend': 'extend/index.ts',
     'nacatamalon/physics2d': 'physics/rapier2d/index.ts',
@@ -43,15 +49,15 @@ type TExample = { symbol: string; category: string; index: number; code: string 
 /**
  * Every `@example` code block on every export, with the category its symbol is filed under.
  */
-const collect = (): { examples: TExample[]; frontNames: string[] } => {
+const collect = (): { examples: TExample[]; gameNames: Map<string, string[]> } => {
     const program = ts.createProgram(Object.values(DOORS).map((file) => join(ROOT, file)), OPTIONS);
     const checker = program.getTypeChecker();
     const examples: TExample[] = [];
-    let frontNames: string[] = [];
+    const gameNames = new Map<string, string[]>();
     for (const [spec, file] of Object.entries(DOORS)) {
         const module = checker.getSymbolAtLocation(program.getSourceFile(join(ROOT, file))!)!;
         const exports = checker.getExportsOfModule(module);
-        if (spec === 'nacatamalon') frontNames = exports.map((s) => s.name);
+        if (spec === 'nacatamalon' || file.startsWith('doors/')) gameNames.set(spec, exports.map((s) => s.name));
         for (const exported of exports) {
             const real = exported.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(exported) : exported;
             const declarations = real.declarations ?? [];
@@ -77,7 +83,7 @@ const collect = (): { examples: TExample[]; frontNames: string[] } => {
             }
         }
     }
-    return { examples, frontNames };
+    return { examples, gameNames };
 };
 
 /**
@@ -98,13 +104,13 @@ const declaredIn = (code: string): Set<string> => {
 /**
  * Each example as a module of its own, all compiled in one program: its errors, by example.
  */
-const compileAll = (all: TExample[], frontNames: string[]): Map<TExample, string[]> => {
+const compileAll = (all: TExample[], gameNames: Map<string, string[]>): Map<TExample, string[]> => {
     const files = new Map<string, { example: TExample; source: string }>();
     all.forEach((example, i) => {
         const own = declaredIn(example.code);
         const prelude = /^\s*import\s/m.test(example.code)
             ? ''
-            : `import { ${frontNames.filter((name) => !own.has(name)).join(', ')} } from 'nacatamalon';\n`;
+            : [...gameNames].map(([spec, names]) => `import { ${names.filter((name) => !own.has(name)).join(', ')} } from '${spec}';\n`).join('');
         files.set(join(ROOT, '..', `__example_${i}.ts`), { example, source: `${prelude}${example.code}\nexport {};\n` });
     });
     const host = ts.createCompilerHost(OPTIONS);
@@ -123,8 +129,8 @@ const compileAll = (all: TExample[], frontNames: string[]): Map<TExample, string
     return out;
 };
 
-const { examples, frontNames } = collect();
-const results = compileAll(examples, frontNames);
+const { examples, gameNames } = collect();
+const results = compileAll(examples, gameNames);
 
 describe('the examples in the public documentation', () => {
     it('are found', () => {

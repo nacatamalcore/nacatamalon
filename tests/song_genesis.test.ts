@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { renderSong, parseSongDoc, DOCUMENTS, BUILTIN } from '../src';
+import { renderSong, BUILTIN } from '../src';
+import { parseSongDoc, DOCUMENTS } from '../src/doors/files';
 import { serializeSongDoc } from '../src/authoring';
 import { psgFrequencyOf, psgGainOf } from '../src/audio/synth/genesis';
 import type { TFmPatch, TSongDoc } from '../src';

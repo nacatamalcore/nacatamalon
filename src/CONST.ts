@@ -37,9 +37,10 @@ import type { TCanvasScaling } from './DOM/types/t_canvas_scaling';
 import type { TCanvasKeep } from './DOM/types/t_canvas_keep';
 
 /**
- * The engine's constants: what a game reads and never changes. They live on the root, in groups,
- * `import { LIMITS, BUILTIN } from 'nacatamalon'`, and each group stands alone, so a game carries
- * only the ones it reads.
+ * The engine's constants: what a game reads and never changes. They go out in groups,
+ * `import { LIMITS, BUILTIN } from 'nacatamalon'`, with `POST_EFFECTS` in `nacatamalon/effects` and
+ * `DOCUMENTS` in `nacatamalon/files`, and each group stands alone, so a game carries only the ones it
+ * reads.
  *
  * Everything in them is frozen all the way down: they are the same lists the engine reads, and a
  * game that wrote into one would change it for every game on the page.

@@ -23,7 +23,13 @@ const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')) as { ve
  * The doors, in the order a game meets them, and who each one is for.
  */
 const DOORS: { spec: string; file: string; who: string }[] = [
-    { spec: 'nacatamalon', file: 'src/index.ts', who: 'Everything a game calls.' },
+    { spec: 'nacatamalon', file: 'src/index.ts', who: 'What almost every game uses.' },
+    { spec: 'nacatamalon/math', file: 'src/doors/math.ts', who: 'Arithmetic, random numbers, vectors, quaternions and easing curves.' },
+    { spec: 'nacatamalon/pixels', file: 'src/doors/pixels.ts', who: 'Pictures painted in code, and the textures made from them.' },
+    { spec: 'nacatamalon/shader', file: 'src/doors/shader.ts', who: 'The shader composer and `.shader` files.' },
+    { spec: 'nacatamalon/effects', file: 'src/doors/effects.ts', who: 'Screen effects and filters: `usePostProcess`, `useFilter` and the effects they take.' },
+    { spec: 'nacatamalon/transitions', file: 'src/doors/transitions.ts', who: 'How one scene gives way to another: `fade`, `wipe`, `iris`…' },
+    { spec: 'nacatamalon/files', file: 'src/doors/files.ts', who: 'The engine\'s file formats, for a game that reads one itself.' },
     { spec: 'nacatamalon/physics2d', file: 'src/physics/rapier2d/index.ts', who: '2D physics on Rapier2D, which comes with the package. Call `installPhysics2d()` once.' },
     { spec: 'nacatamalon/physics3d', file: 'src/physics/box3d/index.ts', who: '3D physics on box3d, which comes with the package. Call `installPhysics3d()` once.' },
     { spec: 'nacatamalon/react', file: 'src/react/index.ts', who: 'A game inside a React page: `<Game>`, and hooks for the React components drawn over it. Needs `react`. Browser only: the native runtime does not show React components.' },

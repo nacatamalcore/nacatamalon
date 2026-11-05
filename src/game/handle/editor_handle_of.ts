@@ -95,7 +95,8 @@ export const openHost = (instance: TGameInstance): {
  *
  * @example
  * ```ts
- * import { createGame, sceneFromDoc, type TSceneDoc } from 'nacatamalon';
+ * import { createGame } from 'nacatamalon';
+ * import { sceneFromDoc, type TSceneDoc } from 'nacatamalon/files';
  * import { editorHandleOf } from 'nacatamalon/authoring';
  *
  * declare const container: HTMLElement;

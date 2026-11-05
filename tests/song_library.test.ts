@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test';
-import { renderSong, parseSongDoc, BUILTIN } from '../src';
+import { renderSong, BUILTIN } from '../src';
+import { parseSongDoc } from '../src/doors/files';
 import { analyzeAudio, mixSong, serializeSongDoc } from '../src/authoring';
 import { loadBuiltinSong } from '../src/audio/synth/builtin';
 import { createScene } from '../src/scene/create_scene';

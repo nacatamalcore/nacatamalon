@@ -18,7 +18,7 @@
  * `TSceneDoc` and `TScriptField` describe the format, and the format is the engine's, so a game
  * that types a variable never has to reach in here. A tool's own types come here with it.
  *
- * **And reading is not authoring.** Every `parse*` stays on the front door, because opening a
+ * **And reading is not authoring.** Every `parse*` stays in a game's doors, because opening a
  * document is something a running game legitimately does; its `serialize*` twin comes here.
  *
  * @since 1.0.0
@@ -26,7 +26,7 @@
  */
 
 // Turning a live scene back into a document. The read direction (`parseSceneDoc`, `sceneFromDoc`)
-// stays on the front door: that is how a published game boots.
+// stays in `nacatamalon/files`: that is how a published game boots.
 export { serializeScene } from '../scene';
 
 // Looking inside the behaviour registry: what lets a form be built for a behaviour without living
@@ -41,7 +41,7 @@ export {
 // The same again for the stores, which are invisible for the same reason a behaviour's settings
 // are: a store is a module singleton, so nothing enumerates it and no tool can show a project's
 // state without this. Writing one down and opening a new one are here; resolving one and applying
-// what a file authors stay on the front door, because a published game does both on the way up.
+// what a file authors stay in a game's doors, because a published game does both on the way up.
 export {
     listGameStores, clearGameStores, serializeStoreDoc, emptyStoreDoc, storeFieldsFromState,
     defaultStoreFieldValue, isProvisionalStore, resetStores,
@@ -102,7 +102,7 @@ export type { TPostBuiltinInfo, TEffectField } from '../post';
 
 // The material looks the same way: the list a tool offers with their knobs, finding one by the name a
 // document gives it, and which of a material's uniforms each knob is. The makers (`rim()`, `toonLighting()`)
-// and the looks' types are the format and stay on the front door.
+// and the looks' types are the format and stay in a game's doors.
 export { MATERIAL_LOOKS, findMaterialLook, lookKnobs } from '../shader_composer';
 export type { TMaterialLookInfo } from '../shader_composer';
 
@@ -114,8 +114,8 @@ export { DEFAULT_PROJECT_SETTINGS } from '../project';
 export { eulerAim } from '../render/shared';
 
 // The shader composer's tooling: starting a new `.shader`, the node catalogue a palette is built
-// from, and the types and small pictures a canvas draws. A game compiles a graph (that stays on the
-// front door) but never lists the kinds of node there are. The harness is what those pictures are
+// from, and the types and small pictures a canvas draws. A game compiles a graph (that stays in
+// `nacatamalon/shader`) but never lists the kinds of node there are. The harness is what those pictures are
 // drawn through: the shader a sprite material compiles to, and the quad and sprite that fill one.
 export {
     emptyShaderGraph, NODE_CATALOG, NODE_DEFS, NODE_CATEGORIES, nodeDef, defaultParams, inferGraphTypes,

@@ -5,6 +5,36 @@ releases are in [changelog/](./changelog/), one file each.
 
 ## Unreleased
 
+### Changed
+
+- **Breaking: what is a subject of its own has its own import.** `nacatamalon` had 421 functions and values
+  in one list, and now keeps the 187 almost every game uses. Nothing was renamed and nothing changed but
+  where it is imported from, and each name is in one place only:
+
+  | Import from | What moved there |
+  |---|---|
+  | `nacatamalon/math` | `clamp`, `lerp`, `TAU`, `degToRad`, `radToDeg`, `lerpAngle`, `wrapAngle`, `vec2*`, `vec3*`, `quat*`, `useRandom`, the `ease*` curves, `linear` |
+  | `nacatamalon/pixels` | `createPixels`, `setPixel`, `getPixel`, `fill*`, `draw*`, `blitPixels`, `mapPixels`, `clonePixels`, `swapColors`, `outlinePixels`, `mirrorPixels`, `snapToPalette`, `checkColorLimit`, `shadeWithRamp`, `pixelsFromRows`, `sheetFromRows`, `createPixelTexture`, `updatePixelTexture`, `useLoadPixels` |
+  | `nacatamalon/shader` | `composer*`, `compileShader`, `compileShaderGraph`, `parseShaderGraph`, `parseShaderFile`, `parseShaderSource`, `toonLighting`, `unlitLighting`, `mangaDots`, `rim`, `useLoadShader` |
+  | `nacatamalon/effects` | `usePostProcess`, `useFilter`, every effect (`crt`, `glow`, `outline`, `dither`, `blur`…), `useLoadLut`, `useLoadPalette`, `POST_EFFECTS` |
+  | `nacatamalon/transitions` | `fade`, `wipe`, `iris`, `pixelate`, `dissolve`, `crossfade`, `push`, `crossWipe`, `crossIris`, `crossDissolve` |
+  | `nacatamalon/files` | `parseSceneDoc`, `parseAtlasDoc`, `parseMotionDoc`, `parsePaletteDoc`, `parseParticlesDoc`, `parseSongDoc`, `parseStoreDoc`, `parseTilemapDoc`, `parseProject`, `sceneFromDoc`, `boxFromDoc`, `applyStoreDocs`, `gameOptionsFromProject`, `DOCUMENTS` |
+
+  A type goes with its subject, even when something on `nacatamalon` takes it: `TPixels` is in `pixels`,
+  `TEaseFn` in `math`, `TTransition` in `transitions`. A format's type that a function on `nacatamalon` is
+  built around stays there (`TSongDoc`, for `useSong`). To move a game over, split its imports:
+
+  ```ts
+  // Before
+  import { createGame, clamp, createPixels, fade } from 'nacatamalon';
+
+  // After
+  import { createGame } from 'nacatamalon';
+  import { clamp } from 'nacatamalon/math';
+  import { createPixels } from 'nacatamalon/pixels';
+  import { fade } from 'nacatamalon/transitions';
+  ```
+
 ### Fixed
 
 - **A model inside a filter keeps its depth.** It used to come back to the scene as one flat picture,
@@ -12,6 +42,8 @@ releases are in [changelog/](./changelog/), one file each.
   pixel, and what its effects draw round it (a glow's halo, a shadow) takes the depth of the nearest
   part of it, so the halo of a part that is hidden is hidden too. A filter over 2D things alone is
   drawn as before, at no cost.
+- **A project on `moduleResolution: node` finds the types of every door.** `typesVersions` named files the
+  build no longer writes, so `nacatamalon/authoring`, `nacatamalon/physics2d` and the rest did not resolve there.
 
 ## 0.5.0 — 2026-11-05
 

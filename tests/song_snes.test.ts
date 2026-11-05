@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { renderSong, parseSongDoc, DOCUMENTS, BUILTIN } from '../src';
+import { renderSong, BUILTIN } from '../src';
+import { parseSongDoc, DOCUMENTS } from '../src/doors/files';
 import { mixSong, serializeSongDoc } from '../src/authoring';
 import { toSnes, SNES_RATE } from '../src/audio/synth/snes';
 import type { TSongDoc } from '../src';

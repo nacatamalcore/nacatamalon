@@ -39,6 +39,12 @@ const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
  */
 const ENTRIES: Record<string, string> = {
     '.': 'index.d.ts',
+    './math': 'doors/math.d.ts',
+    './pixels': 'doors/pixels.d.ts',
+    './shader': 'doors/shader.d.ts',
+    './effects': 'doors/effects.d.ts',
+    './transitions': 'doors/transitions.d.ts',
+    './files': 'doors/files.d.ts',
     './authoring': 'authoring/index.d.ts',
     './extend': 'extend/index.d.ts',
     './react': 'react/index.d.ts',

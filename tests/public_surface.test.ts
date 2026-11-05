@@ -4,7 +4,9 @@ import { readFileSync } from 'node:fs';
 /**
  * Which door each name goes out of.
  *
- * The front one is for whoever writes a game, `nacatamalon/authoring` for a tool,
+ * The front one is for whoever writes a game, with a door of its own for each subject that would
+ * only crowd it (`nacatamalon/math`, `/pixels`, `/shader`, `/effects`, `/transitions`, `/files`),
+ * `nacatamalon/authoring` for a tool,
  * `nacatamalon/extend` for a package that extends the engine, and `nacatamalon/physics2d` and
  * `nacatamalon/physics3d` for a game that simulates. The rule is literal, **would a published game ever run this**, and the reason it needs a
  * test is that breaking it is completely silent: a name for an editor sitting on the front door
@@ -33,6 +35,12 @@ const valuesOf = (path: string): string[] => {
 };
 
 const front = valuesOf('../src/index.ts');
+const SECTIONS = ['math', 'pixels', 'shader', 'effects', 'transitions', 'files'];
+const sections = Object.fromEntries(SECTIONS.map((door) => [door, valuesOf(`../src/doors/${door}.ts`)]));
+const game = [...front, ...Object.values(sections).flat()];
+const sourceOfGame = ['index', ...SECTIONS.map((door) => `doors/${door}`)]
+    .map((file) => readFileSync(new URL(`../src/${file}.ts`, import.meta.url), 'utf8'))
+    .join('\n');
 const tools = valuesOf('../src/authoring/index.ts');
 const extend = valuesOf('../src/extend/index.ts');
 const physics2d = valuesOf('../src/physics/rapier2d/index.ts');
@@ -45,7 +53,7 @@ describe('the front door', () => {
         // rather than carved out by prefix, so the trap still catches the next one: a game really
         // does clear an emitter's particles, and really does listen to a signal.
         const gamesOwn = ['clearParticles', 'listen'];
-        const toolOnly = front.filter((name) => !gamesOwn.includes(name) && (
+        const toolOnly = game.filter((name) => !gamesOwn.includes(name) && (
             name.startsWith('serialize')
             || name.startsWith('empty')
             || name.startsWith('list')
@@ -72,7 +80,7 @@ describe('the front door', () => {
             'parseTilemapDoc', 'parsePaletteDoc', 'parseShaderFile', 'parseShaderSource',
             'bindingKey', 'describeBinding',
         ]) {
-            expect(front).toContain(name);
+            expect(game).toContain(name);
         }
     });
 
@@ -80,13 +88,20 @@ describe('the front door', () => {
         // Measured on the web's examples: `clamp` written out eighteen times, the distance between two
         // transforms eight. The matrices are deliberately not here: they are the renderer's.
         for (const name of ['clamp', 'lerp', 'degToRad', 'wrapAngle', 'lerpAngle', 'vec2Distance', 'vec2Angle', 'vec3Cross']) {
-            expect(front).toContain(name);
+            expect(sections.math).toContain(name);
         }
-        expect(front.some((name) => name.startsWith('mat4'))).toBe(false);
+        expect(game.some((name) => name.startsWith('mat4'))).toBe(false);
+    });
+
+    it('keeps each subject behind its own door, and every name behind one', () => {
+        for (const name of ['clamp', 'vec2Add', 'quatSlerp', 'createPixels', 'composerMix', 'compileShader', 'crt', 'usePostProcess', 'fade', 'parseSceneDoc', 'DOCUMENTS']) {
+            expect(front).not.toContain(name);
+        }
+        expect(game.filter((name, i) => game.indexOf(name) !== i)).toEqual([]);
     });
 
     it('keeps the vocabulary: the values move, the types of the format stay', () => {
-        const source = readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8');
+        const source = sourceOfGame;
         // A game that types a variable as one of these must never have to reach into the tools door.
         for (const name of ['TSceneDoc', 'TScriptField', 'TScriptProps', 'TBoxNode', 'TStoreDoc', 'TStoreField']) {
             expect(source).toContain(name);

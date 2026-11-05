@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'bun:test';
 import {
-    TAU, clamp, degToRad, lerp, lerpAngle, radToDeg, wrapAngle,
-    vec2Add, vec2Angle, vec2Distance, vec2Dot, vec2Equals, vec2Length, vec2Lerp, vec2Negate, vec2Normalize, vec2Scale, vec2Sub,
-    vec3Cross, vec3Distance, vec3Length, vec3Normalize,
-} from '../src';
+    TAU, clamp, degToRad, lerp, lerpAngle, radToDeg, wrapAngle, vec2Add, vec2Angle, vec2Distance,
+    vec2Dot, vec2Equals, vec2Length, vec2Lerp, vec2Negate, vec2Normalize, vec2Scale, vec2Sub, vec3Cross,
+    vec3Distance, vec3Length, vec3Normalize,
+} from '../src/doors/math';
 
 /**
- * The arithmetic a game reaches for, through the front door and under the names a game uses.
+ * The arithmetic a game reaches for, through its door and under the names a game uses.
  *
- * Imported from `../src` on purpose: what is tested is the public name, so an export that points
+ * Imported from its door on purpose: what is tested is the public name, so an export that points
  * at the wrong function (`vec2Length` at `lenSq`) fails here and not in somebody's game.
  */
 

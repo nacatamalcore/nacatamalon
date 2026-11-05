@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'bun:test';
-import { BUILTIN, DOCUMENTS, INPUT, LIMITS, PHYSICS, POST_EFFECTS, RENDER, SCREEN, parseSceneDoc, parseSongDoc, renderSfx } from '../src';
+import { BUILTIN, INPUT, LIMITS, PHYSICS, RENDER, SCREEN, renderSfx } from '../src';
+import { POST_EFFECTS } from '../src/doors/effects';
+import { DOCUMENTS, parseSceneDoc, parseSongDoc } from '../src/doors/files';
 import { CANVAS_ALIGNS } from '../src/DOM/types/t_canvas_align';
 import { POST_BUILTINS, MATERIAL_LOOKS } from '../src/authoring';
 import { ARCADE_FONT } from '../src/gameobjects/text/fonts/arcade_font';
