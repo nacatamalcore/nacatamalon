@@ -18,6 +18,8 @@ import type { TPixels } from './types/t_pixels';
 export type TPixelPalette = Record<string, TColorOption>;
 
 /**
+ * How a drawing written as rows is laid into pixels, for `pixelsFromRows` and `sheetFromRows`.
+ *
  * @category Pixels
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
