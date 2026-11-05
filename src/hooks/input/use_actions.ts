@@ -50,7 +50,7 @@ const sourceOf = (hook: string) => {
  *     useUpdate((delta) => {
  *         // Four actions, one direction: the keys, the d-pad and the stick all arrive here, and the
  *         // dead zone is round, so a gentle diagonal stays a diagonal.
- *         const { x, y } = input.vector('move_left', 'move_right', 'move_up', 'move_down');
+ *         const { x, y } = input.direction('move_left', 'move_right', 'move_up', 'move_down');
  *         hero.transform.x += x * 120 * delta;
  *         hero.transform.y += y * 120 * delta;
  *
@@ -64,7 +64,7 @@ const sourceOf = (hook: string) => {
  * ```
  *
  * @param options - Which player's devices to read, in a game with more than one.
- * @returns The actions, read by name: `isDown`, `justPressed`, `value`, `vector`...
+ * @returns The actions, read by name: `isDown`, `justPressed`, `value`, `direction`...
  *
  * @category Input
  * @since 1.0.0
@@ -150,5 +150,5 @@ export const useDirection = (
     options: TUseActionsOptions & { deadzone?: number } = {},
 ): (() => { x: number; y: number }) => {
     const handle = sourceOf('useDirection').handle(options.device);
-    return () => handle.vector(negativeX, positiveX, negativeY, positiveY, options.deadzone);
+    return () => handle.direction(negativeX, positiveX, negativeY, positiveY, options.deadzone);
 };

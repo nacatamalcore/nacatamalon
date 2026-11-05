@@ -482,7 +482,7 @@ export const createActions = (options: TActionSourceOptions): TActionSource => {
             rawValue: raw,
             strength: (negative, positive, deadzone) =>
                 deadzoneScalar(raw(positive) - raw(negative), deadzone ?? widestDeadzone([negative, positive])),
-            vector: (negX, posX, negY, posY, deadzone) => deadzoneRadial(
+            direction: (negX, posX, negY, posY, deadzone) => deadzoneRadial(
                 raw(posX) - raw(negX),
                 raw(posY) - raw(negY),
                 deadzone ?? widestDeadzone([negX, posX, negY, posY]),

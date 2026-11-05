@@ -179,7 +179,7 @@ export type TActionsHandle = {
      * what makes it identical to reading the stick, and what keeps a keyboard diagonal from coming
      * out 41 % faster than a straight line.
      */
-    vector(negX: TActionName, posX: TActionName, negY: TActionName, posY: TActionName, deadzone?: number): { x: number; y: number };
+    direction(negX: TActionName, posX: TActionName, negY: TActionName, posY: TActionName, deadzone?: number): { x: number; y: number };
     /**
      * Whether the game has an action by that name.
      */

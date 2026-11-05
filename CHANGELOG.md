@@ -50,7 +50,8 @@ releases are in [changelog/](./changelog/), one file each.
   `TSphereGeometryOptions`), `useHelperLines` is `useLines` (`TUseLinesOptions`, `TLinesHandle`), `useLoader` is
   `useLoadProgress` (`TLoadProgress`), `useVector` is `useDirection`, and `useLoadGltf` is `useLoadModel`
   (`TUseLoadModelOptions`). A 2D character's `onWall` is `wallSide`, since it says which side and is not a yes
-  or no. A scene file's `kind: 'uvSphere'` stays as it is.
+  or no, and `useActions().vector()` is `direction()`, like `useDirection`. A scene file's
+  `kind: 'uvSphere'` stays as it is.
 
 ### Added
 
