@@ -164,7 +164,7 @@ for (const kind of KINDS) {
 
                 frames(90);
 
-                expect(h.body.onGround).toBe(true);
+                expect(h.body.isOnGround).toBe(true);
                 expect(h.sprite.transform.y).toBeCloseTo(80 - 12, 0);
                 expect(h.body.velocity.y).toBe(0);
             });
@@ -211,7 +211,7 @@ for (const kind of KINDS) {
                 frames(1);
 
                 expect(h.sprite.transform.x).toBeCloseTo(96 - 6 + 0.3 - 0.1, 3);
-                expect(h.body.onWall).toBeNull();
+                expect(h.body.isOnWall).toBeNull();
             });
 
             it('walks off an edge and falls, rather than staying stuck to the floor it left', async () => {
@@ -224,13 +224,13 @@ for (const kind of KINDS) {
                     '####      ',
                     '          ',
                     '##########',
-                ], () => { h = hero(40, 36, (b) => { b.velocity.x = 60; air.push(!b.onGround); }); });
+                ], () => { h = hero(40, 36, (b) => { b.velocity.x = 60; air.push(!b.isOnGround); }); });
 
                 frames(120);
 
                 expect(air).toContain(true);
                 expect(h.sprite.transform.y).toBeCloseTo(80 - 12, 0);
-                expect(h.body.onGround).toBe(true);
+                expect(h.body.isOnGround).toBe(true);
             });
 
             it('stays on a slope walking down it', async () => {
@@ -245,7 +245,7 @@ for (const kind of KINDS) {
                     '####d     ',
                     '##########',
                 ], () => {
-                    h = hero(40, 52, (b) => { b.velocity.x = watching ? 40 : 0; grounded.push(b.onGround); });
+                    h = hero(40, 52, (b) => { b.velocity.x = watching ? 40 : 0; grounded.push(b.isOnGround); });
                 });
                 frames(20);
                 watching = true;
@@ -276,7 +276,7 @@ for (const kind of KINDS) {
                 frames(60);
 
                 expect(h.sprite.transform.y).toBeCloseTo(128 - 12, 0);
-                expect(h.body.onGround).toBe(true);
+                expect(h.body.isOnGround).toBe(true);
             });
 
             it('runs faster than a tile a frame into a wall one tile thick, and stops at it', async () => {
@@ -293,7 +293,7 @@ for (const kind of KINDS) {
                 frames(10);
 
                 expect(h.sprite.transform.x).toBeCloseTo(96 - 6, 0);
-                expect(h.body.onWall).toBe('right');
+                expect(h.body.isOnWall).toBe('right');
             });
 
             it('stops at a wall, and says which side it is on', async () => {
@@ -309,7 +309,7 @@ for (const kind of KINDS) {
 
                 frames(90);
 
-                expect(h.body.onWall).toBe('right');
+                expect(h.body.isOnWall).toBe('right');
                 expect(h.sprite.transform.x).toBeCloseTo(112 - 6, 0);
             });
 
@@ -326,15 +326,15 @@ for (const kind of KINDS) {
                     '##########',
                 ], () => {
                     h = hero(40, 68, (b) => {
-                        if (b.onGround && !jumped) { b.velocity.y = -400; jumped = true; }
-                        ceilings.push(b.onCeiling);
+                        if (b.isOnGround && !jumped) { b.velocity.y = -400; jumped = true; }
+                        ceilings.push(b.isOnCeiling);
                     });
                 });
 
                 frames(120);
 
                 expect(ceilings).toContain(true);
-                expect(h.body.onGround).toBe(true);
+                expect(h.body.isOnGround).toBe(true);
                 // The ceiling's underside is at 32: the head never went past it.
                 expect(h.sprite.transform.y).toBeCloseTo(68, 0);
             });
@@ -355,7 +355,7 @@ for (const kind of KINDS) {
 
                 expect(h.sprite.transform.x).toBeGreaterThan(110);
                 expect(h.sprite.transform.y).toBeCloseTo(64 - 12, 0);
-                expect(h.body.onGround).toBe(true);
+                expect(h.body.isOnGround).toBe(true);
             });
         });
 
@@ -366,12 +366,12 @@ for (const kind of KINDS) {
                 const { frames } = await level(LEDGE, () => { h = hero(40, 10); });
 
                 frames(60);
-                expect(h.body.onOneWay).toBe(true);
+                expect(h.body.isOnOneWay).toBe(true);
                 expect(h.sprite.transform.y).toBeCloseTo(48 - 12, 0);
 
                 h.body.dropThrough();
                 frames(60);
-                expect(h.body.onOneWay).toBe(false);
+                expect(h.body.isOnOneWay).toBe(false);
                 expect(h.sprite.transform.y).toBeCloseTo(80 - 12, 0);
             });
 
@@ -381,7 +381,7 @@ for (const kind of KINDS) {
                 let highest = Infinity;
                 const { frames } = await level(LEDGE, () => {
                     h = hero(40, 68, (b) => {
-                        if (b.onGround && !jumped) { b.velocity.y = -380; jumped = true; }
+                        if (b.isOnGround && !jumped) { b.velocity.y = -380; jumped = true; }
                     });
                 });
 
@@ -391,7 +391,7 @@ for (const kind of KINDS) {
                 }
 
                 expect(highest).toBeLessThan(36);
-                expect(h.body.onOneWay).toBe(true);
+                expect(h.body.isOnOneWay).toBe(true);
                 expect(h.sprite.transform.y).toBeCloseTo(36, 0);
             });
 
@@ -410,13 +410,13 @@ for (const kind of KINDS) {
                     '##########',
                 ], () => {
                     h = hero(72, 68, (b) => {
-                        if (climb && b.onLadder) { b.climbing = true; }
+                        if (climb && b.isOnLadder) { b.climbing = true; }
                         if (b.climbing) b.velocity.y = -60;
                     });
                 });
 
                 frames(10);
-                expect(h.body.onLadder).toBe(true);
+                expect(h.body.isOnLadder).toBe(true);
                 expect(h.body.climbing).toBe(false);
 
                 climb = true;
@@ -444,7 +444,7 @@ for (const kind of KINDS) {
                 ], () => {
                     h = hero(72, 68, (b) => {
                         // Up, held the whole time, the way a player holds it, but only from below.
-                        if (b.onLadder && !b.onOneWay) b.climbing = true;
+                        if (b.isOnLadder && !b.isOnOneWay) b.climbing = true;
                         if (b.climbing) b.velocity.y = -60;
                     });
                 });
@@ -452,7 +452,7 @@ for (const kind of KINDS) {
                 frames(120);
 
                 expect(h.body.climbing).toBe(false);
-                expect(h.body.onOneWay).toBe(true);
+                expect(h.body.isOnOneWay).toBe(true);
                 expect(h.sprite.transform.y).toBeCloseTo(32 - 12, 0);
             });
 
@@ -468,14 +468,14 @@ for (const kind of KINDS) {
                     '##########',
                 ], () => {
                     h = hero(72, 10, (b) => {
-                        if (down && b.onLadder) b.climbing = true;
+                        if (down && b.isOnLadder) b.climbing = true;
                         if (b.climbing) b.velocity.y = 60;
                     });
                 });
 
                 frames(60);
-                expect(h.body.onOneWay).toBe(true);
-                expect(h.body.onLadder).toBe(true);
+                expect(h.body.isOnOneWay).toBe(true);
+                expect(h.body.isOnLadder).toBe(true);
                 expect(h.sprite.transform.y).toBeCloseTo(32 - 12, 0);
 
                 down = true;
@@ -619,7 +619,7 @@ describe('the map and the character, placed and taken away', () => {
         let h!: ReturnType<typeof hero>;
         const { store } = createTestGame();
         startTestScene(store, 'Level', () => { h = hero(40, 20, (b) => { b.velocity.x = 60; }); return createScene(); });
-        expect(h.body.onGround).toBe(false);
+        expect(h.body.isOnGround).toBe(false);
         expect(warn).not.toHaveBeenCalled();
         warn.mockRestore();
     });
@@ -666,7 +666,7 @@ describe('useTileBody2d on objects with a still collider', () => {
             h = hero(40, 20);
         });
         frames(90);
-        expect(h.body.onGround).toBe(true);
+        expect(h.body.isOnGround).toBe(true);
         expect(h.sprite.transform.y).toBeCloseTo(92 - 12, 0);
     });
 
@@ -679,7 +679,7 @@ describe('useTileBody2d on objects with a still collider', () => {
         });
         frames(90);
         expect(h.sprite.transform.x).toBeCloseTo(92 - 6, 1);
-        expect(h.body.onWall).toBe('right');
+        expect(h.body.isOnWall).toBe('right');
     });
 
     it('hits its head on one above and comes back down', async () => {
@@ -690,7 +690,7 @@ describe('useTileBody2d on objects with a still collider', () => {
             block(80, 100, 160, 16);
             block(40, 30, 64, 8);
             h = hero(40, 80, (b) => {
-                if (!jumped && b.onGround) { b.velocity.y = -400; jumped = true; }
+                if (!jumped && b.isOnGround) { b.velocity.y = -400; jumped = true; }
                 highest = Math.min(highest, h.sprite.transform.y);
             });
         });

@@ -103,7 +103,7 @@ const warnMissingGeometry = (box: TGameObject, key: string): void => {
  * record once rather than spelled out in each of the five branches below.
  */
 const surfaceOf = (record: TPhysicsBody3d): TColliderOptions3d => ({
-    restitution: record.restitution,
+    bounce: record.bounce,
     friction: record.friction,
     density: record.density,
     sensor: record.sensor,

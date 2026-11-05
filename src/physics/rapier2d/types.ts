@@ -20,11 +20,11 @@ export type TColliderSurface2d = {
     /**
      * How much approach speed survives as separation speed, 0..1.
      *
-     * Careful: restitution belongs to the **pair**, not to this body. Rapier combines the two
+     * Careful: a bounce belongs to the **pair**, not to this body. Rapier combines the two
      * colliders' values, by default by averaging them, so a ball asking for `0.8` landing on a
      * floor that never set one (and is therefore `0`) bounces at `0.4`. Set both sides.
      */
-    restitution?: number;
+    bounce?: number;
     friction?: number;
     density?: number;
     /**

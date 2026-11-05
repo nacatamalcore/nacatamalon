@@ -39,8 +39,8 @@ export const readCharacterTiles = (
     centre: { x: number; y: number },
     halfWidth: number,
     halfHeight: number,
-    onGround: boolean,
-): { onLadder: boolean; inLadder: boolean; damage: number; ground: TTileDoc | undefined } => {
+    isOnGround: boolean,
+): { isOnLadder: boolean; inLadder: boolean; damage: number; ground: TTileDoc | undefined } => {
     // A hair inside its edges, so a wall it is merely touching is not a tile it is in.
     const inset = 0.5;
     const feet = centre.y + halfHeight;
@@ -52,9 +52,9 @@ export const readCharacterTiles = (
     // in the air above it, which grabs nothing. Only the first keeps a character climbing, so one that
     // climbs out of the top lands on it.
     const inLadder = touching.some((tile) => tile.ladder === true);
-    const onLadder = inLadder || (onGround && tilesUnder(maps, centre.x, feet + 1, centre.x, feet + 1).some((tile) => tile.ladder === true));
-    if (!onGround) {
-        return { onLadder, inLadder, damage, ground: undefined };
+    const isOnLadder = inLadder || (isOnGround && tilesUnder(maps, centre.x, feet + 1, centre.x, feet + 1).some((tile) => tile.ladder === true));
+    if (!isOnGround) {
+        return { isOnLadder, inLadder, damage, ground: undefined };
     }
     // Under the middle of its feet first, and failing that under either edge: a character half over a
     // gap still stands on the tile it is standing on.
@@ -63,5 +63,5 @@ export const readCharacterTiles = (
         // Walking on a slope, the feet are inside the slope's own cell.
         ?? tilesUnder(maps, x, feet - 1, x, feet - 1).find((tile) => tile.slope !== undefined);
     const ground = probe(centre.x) ?? probe(centre.x - halfWidth + inset) ?? probe(centre.x + halfWidth - inset);
-    return { onLadder, inLadder, damage, ground };
+    return { isOnLadder, inLadder, damage, ground };
 };

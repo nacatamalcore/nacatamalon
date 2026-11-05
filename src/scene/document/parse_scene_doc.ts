@@ -518,7 +518,9 @@ const parseCollider3d = (value: unknown): TCollider3d | null => {
  * What a collider is made of, filled in from the defaults for anything the file leaves out.
  */
 const parseSurface = (raw: Record<string, unknown>): Partial<TPhysicsSurface> => ({
-    ...optionalNumber(raw, 'restitution'),
+    // Called `restitution` up to 0.5, and a file saved then still says so.
+    ...(typeof raw.restitution === 'number' && Number.isFinite(raw.restitution) ? { bounce: raw.restitution } : {}),
+    ...optionalNumber(raw, 'bounce'),
     ...optionalNumber(raw, 'friction'),
     ...optionalNumber(raw, 'density'),
     ...optionalBoolean(raw, 'sensor'),

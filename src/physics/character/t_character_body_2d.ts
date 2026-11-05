@@ -22,7 +22,7 @@ export type TCharacterBody2d = {
     velocity: { x: number; y: number };
     /**
      * On a ladder, climbing: no gravity, ledges passed through, moved only by `velocity`. The game
-     * sets it, when up is pressed on a ladder (`onLadder`) or down on its top; it goes back to `false`
+     * sets it, when up is pressed on a ladder (`isOnLadder`) or down on its top; it goes back to `false`
      * by itself once the character is off the ladder, out of its top (where it then stands, on a top that
      * is a ledge) or its side.
      */
@@ -30,24 +30,24 @@ export type TCharacterBody2d = {
     /**
      * Standing on something: a floor, a ledge, a slope, a crate.
      */
-    readonly onGround: boolean;
+    readonly isOnGround: boolean;
     /**
      * Its head hit something on the way up.
      */
-    readonly onCeiling: boolean;
+    readonly isOnCeiling: boolean;
     /**
      * Pressed against a wall, and on which side.
      */
-    readonly onWall: 'left' | 'right' | null;
+    readonly isOnWall: 'left' | 'right' | null;
     /**
      * Standing on a ledge (`oneWay`), which `dropThrough()` falls through.
      */
-    readonly onOneWay: boolean;
+    readonly isOnOneWay: boolean;
     /**
      * In front of a ladder tile, or standing on top of one, which is when the game may set `climbing`:
      * up in front of it climbs it, down on its top climbs down it.
      */
-    readonly onLadder: boolean;
+    readonly isOnLadder: boolean;
     /**
      * The tile underfoot, for what the game wrote on it (`ground?.props?.ice`), or `undefined` in the
      * air and on anything that is not a map.

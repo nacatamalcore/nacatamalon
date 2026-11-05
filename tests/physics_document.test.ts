@@ -61,7 +61,7 @@ describe('a scene with physics, written and read', () => {
             usePhysicsWorld2d({ gravity: { x: 0, y: 900 } });
             useSpawn(function Crate() {
                 createSprite({ width: 24, height: 24, tint, transform: at(10, 10) });
-                usePhysicsBody2d({ body: 'dynamic', collider: rect, restitution: 0.4, layer: 2, collidesWith: 0b101 });
+                usePhysicsBody2d({ body: 'dynamic', collider: rect, bounce: 0.4, layer: 2, collidesWith: 0b101 });
             })();
             useSpawn(function Ball() {
                 createSprite({ width: 16, height: 16, tint, transform: at(60, 10) });
@@ -206,8 +206,18 @@ describe('what a file can say wrongly', () => {
         expect(doc.root.components[0]).toEqual({
             type: 'physics-body-2d', id: 'b1', name: 'Body', body: 'static',
             collider: { shape: 'rect', width: 10, height: 10 },
-            restitution: 0, friction: 0.5, density: 1, sensor: false, layer: 0, collidesWith: ALL_LAYERS,
+            bounce: 0, friction: 0.5, density: 1, sensor: false, layer: 0, collidesWith: ALL_LAYERS,
         });
+    });
+
+    it('reads a bounce saved under its old name, and the new one wins', () => {
+        const rect = { shape: 'rect', width: 10, height: 10 };
+        const bounceOf = (fields: object) => {
+            const doc = parseSceneDoc(level({ type: 'physics-body-2d', id: 'b1', collider: rect, ...fields }), 'test');
+            return (doc.root.components[0] as { bounce: number }).bounce;
+        };
+        expect(bounceOf({ restitution: 0.8 })).toBe(0.8);
+        expect(bounceOf({ restitution: 0.8, bounce: 0.3 })).toBe(0.3);
     });
 
     it('keeps a shape it cannot make instead of dropping or guessing it', () => {

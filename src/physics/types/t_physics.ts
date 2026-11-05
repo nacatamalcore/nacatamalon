@@ -92,7 +92,7 @@ export type TPhysicsSurface = {
      * (usually by averaging), so a ball asking for `0.8` landing on a floor left at `0` bounces at
      * `0.4`. Set both sides.
      */
-    restitution: number;
+    bounce: number;
     friction: number;
     /**
      * Weight comes from this and the shape's size, and is never set directly.

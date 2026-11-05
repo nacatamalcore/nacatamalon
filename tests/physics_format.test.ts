@@ -59,7 +59,7 @@ describe('a collider as a record', () => {
         // scene means would depend on who reads it.
         expect(body).toMatchObject({
             _type: 'physics-body-2d', body: 'dynamic',
-            restitution: 0, friction: 0.5, density: 1, sensor: false, layer: 0, collidesWith: ALL_LAYERS,
+            bounce: 0, friction: 0.5, density: 1, sensor: false, layer: 0, collidesWith: ALL_LAYERS,
         });
         expect(body.id).not.toBe('');
     });

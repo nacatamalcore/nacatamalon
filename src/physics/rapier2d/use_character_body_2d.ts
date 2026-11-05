@@ -12,11 +12,11 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
 const inert = (): TCharacterBody2d => ({
     velocity: { x: 0, y: 0 },
     climbing: false,
-    onGround: false,
-    onCeiling: false,
-    onWall: null,
-    onOneWay: false,
-    onLadder: false,
+    isOnGround: false,
+    isOnCeiling: false,
+    isOnWall: null,
+    isOnOneWay: false,
+    isOnLadder: false,
     ground: undefined,
     damage: 0,
     dropThrough: () => {},
@@ -38,7 +38,7 @@ const inert = (): TCharacterBody2d => ({
  * runs, so a camera follows it where it ended up.
  *
  * What it reads from the map's tiles: walls (`solid`), ledges (`oneWay`, landed on from above,
- * `dropThrough()` to fall through), slopes (`slope`), ladders (`onLadder`, then the game sets
+ * `dropThrough()` to fall through), slopes (`slope`), ladders (`isOnLadder`, then the game sets
  * `climbing`), belts and currents (`push`, which carry it), harm (`damage`, which it reports and
  * never applies) and the tile underfoot (`ground`, for whatever the game wrote in its `props`).
  *
@@ -61,13 +61,13 @@ const inert = (): TCharacterBody2d => ({
  *     useUpdate(() => {
  *         const walk = (keys.isDown('ArrowRight') ? 1 : 0) - (keys.isDown('ArrowLeft') ? 1 : 0);
  *         body.velocity.x = walk * 90;
- *         if (keys.justPressed('x') && body.onGround) body.velocity.y = -300;
- *         if (keys.justPressed('ArrowDown') && body.onOneWay && !body.onLadder) body.dropThrough();
+ *         if (keys.justPressed('x') && body.isOnGround) body.velocity.y = -300;
+ *         if (keys.justPressed('ArrowDown') && body.isOnOneWay && !body.isOnLadder) body.dropThrough();
  *
  *         // Onto a ladder with up in front of it, or with down standing on its top.
- *         const up = keys.isDown('ArrowUp') && !body.onOneWay;
- *         const down = keys.isDown('ArrowDown') && body.onOneWay;
- *         if (body.onLadder && (up || down)) body.climbing = true;
+ *         const up = keys.isDown('ArrowUp') && !body.isOnOneWay;
+ *         const down = keys.isDown('ArrowDown') && body.isOnOneWay;
+ *         if (body.isOnLadder && (up || down)) body.climbing = true;
  *         if (body.climbing) body.velocity.y = keys.isDown('ArrowUp') ? -60 : keys.isDown('ArrowDown') ? 60 : 0;
  *     });
  * };

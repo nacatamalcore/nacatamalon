@@ -35,6 +35,12 @@ releases are in [changelog/](./changelog/), one file each.
   import { fade } from 'nacatamalon/transitions';
   ```
 
+- **Breaking: `restitution` is `bounce`**, on a body, a collider and in a scene file. A file saved with
+  `restitution` still reads.
+- **Breaking: what a character's body says about where it stands reads as a question:** `onGround`,
+  `onCeiling`, `onWall`, `onOneWay` and `onLadder` are `isOnGround`, `isOnCeiling`, `isOnWall`, `isOnOneWay`
+  and `isOnLadder`. An `on…` is always something that listens now.
+
 ### Fixed
 
 - **A model inside a filter keeps its depth.** It used to come back to the scene as one flat picture,

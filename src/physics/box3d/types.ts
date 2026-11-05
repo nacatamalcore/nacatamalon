@@ -91,7 +91,7 @@ export type TPhysicsBodyHandle3d = {
 
 /**
  * Optional surface tuning for a collider: how a contact resolves, and whether it resolves at
- * all. `restitution` is bounciness (0 = dead, 1 = elastic), `friction` resists sliding,
+ * all. `bounce` is how much it bounces (0 = dead, 1 = elastic), `friction` resists sliding,
  * `density` (kg/m³) sets the body's mass from its volume, and `sensor` detects overlaps
  * without resolving them, which is a trigger volume. All optional; omitted fields keep Box3D's
  * defaults.
@@ -104,7 +104,7 @@ export type TPhysicsBodyHandle3d = {
  * @author Francisco Pereira Alvarado
  */
 export type TColliderSurface3d = {
-    restitution?: number;
+    bounce?: number;
     friction?: number;
     density?: number;
     sensor?: boolean;

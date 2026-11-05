@@ -259,7 +259,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
             if (mat.density !== undefined) shapeDef.density = mat.density;
             // baseMaterial may be a copy on read (Embind), so mutate then write it back.
             const bm = shapeDef.baseMaterial;
-            if (mat.restitution !== undefined) bm.restitution = mat.restitution;
+            if (mat.bounce !== undefined) bm.restitution = mat.bounce;
             if (mat.friction !== undefined) bm.friction = mat.friction;
             shapeDef.baseMaterial = bm;
             if (mat.sensor) shapeDef.isSensor = true;
@@ -591,7 +591,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
      */
     const materialOf = (opts: TColliderSurface3d): TColliderSurface3d | undefined => {
         const material: TColliderSurface3d = {
-            restitution: opts.restitution,
+            bounce: opts.bounce,
             friction: opts.friction,
             density: opts.density,
             sensor: opts.sensor,

@@ -90,7 +90,7 @@ const worldOfBody = new WeakMap<TGameObject, TPhysicsWorldHandle2d>();
  * record once rather than spelled out in each of the three branches below.
  */
 const surfaceOf = (record: TPhysicsBody): TColliderSurface2d => ({
-    restitution: record.restitution,
+    bounce: record.bounce,
     friction: record.friction,
     density: record.density,
     sensor: record.sensor,

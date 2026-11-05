@@ -64,7 +64,7 @@ const layerNames = (): readonly string[] => getActiveGame()?.get('config').physi
  *
  * const Crate = (x: number, y: number) => {
  *     createSprite({ tint: BROWN, width: 24, height: 24, transform: { x, y } });
- *     usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'rect', width: 24, height: 24 }, restitution: 0.2 });
+ *     usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'rect', width: 24, height: 24 }, bounce: 0.2 });
  * };
  * ```
  *

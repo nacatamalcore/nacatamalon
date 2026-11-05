@@ -45,7 +45,7 @@ const fakeWorld = () => {
 const box = (name: string): TGameObject => ({ id: name, name } as TGameObject);
 
 const surface = {
-    restitution: 0.4, friction: 0.2, density: 3, sensor: true, layer: 2, collidesWith: 0b101,
+    bounce: 0.4, friction: 0.2, density: 3, sensor: true, layer: 2, collidesWith: 0b101,
 };
 
 describe('what a declared collider becomes', () => {

@@ -555,7 +555,7 @@ describe('the whole loop', () => {
         warn = spyOn(console, 'warn').mockImplementation(() => {});
         const { doc } = written(() => {
             usePhysicsWorld2d({ gravity: { x: 0, y: 900 } });
-            usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'rect', width: 32, height: 32 }, restitution: 0.3 });
+            usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'rect', width: 32, height: 32 }, bounce: 0.3 });
             useCamera2d({ transform: { x: 10, y: 20 }, zoom: 2 });
             useCamera3d({ fov: 55, near: 0.2, far: 120 });
             createSprite({ width: 32, height: 32, tint, anchor: { x: 0, y: 1 }, zIndex: 3, transform: at(40, 60) });

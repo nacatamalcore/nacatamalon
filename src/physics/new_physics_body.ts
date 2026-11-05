@@ -11,7 +11,7 @@ import type {
  * body written before the record existed behaves the same once it has one.
  */
 const DEFAULT_SURFACE: TPhysicsSurface = {
-    restitution: 0,
+    bounce: 0,
     friction: 0.5,
     density: 1,
     sensor: false,
@@ -23,7 +23,7 @@ const DEFAULT_SURFACE: TPhysicsSurface = {
  * The six fields of a surface, taken from what was asked for and filled in from the defaults.
  */
 const surface = (options: Partial<TPhysicsSurface>): TPhysicsSurface => ({
-    restitution: options.restitution ?? DEFAULT_SURFACE.restitution,
+    bounce: options.bounce ?? DEFAULT_SURFACE.bounce,
     friction: options.friction ?? DEFAULT_SURFACE.friction,
     density: options.density ?? DEFAULT_SURFACE.density,
     sensor: options.sensor ?? DEFAULT_SURFACE.sensor,

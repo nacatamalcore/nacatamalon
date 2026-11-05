@@ -1037,7 +1037,7 @@ const createColliderDesc = (rapier: TRapierModule, options: TBodyOptions): Colli
     }
 
     if (colliderDesc) {
-        if (options.restitution !== undefined) colliderDesc.setRestitution(options.restitution);
+        if (options.bounce !== undefined) colliderDesc.setRestitution(options.bounce);
         if (options.friction !== undefined) colliderDesc.setFriction(options.friction);
         if (options.density !== undefined) colliderDesc.setDensity(options.density);
         // A sensor detects the overlap and declines to resolve it, so things pass through.

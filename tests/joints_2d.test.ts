@@ -174,7 +174,7 @@ describe('a bridge of planks', () => {
 
         await run(store, root, 120);
 
-        expect(body.onGround).toBe(true);
+        expect(body.isOnGround).toBe(true);
         expect(spriteOf(hero).transform.y).toBeLessThan(140);
     });
 });

@@ -129,7 +129,7 @@ describe('createTilemap from a document in code', () => {
             tiles: { 1: { frame: 0, solid: true } },
             layers: [{ name: 'ground', order: 'under', data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1] }],
         };
-        let onGround = false;
+        let isOnGround = false;
         let y = 0;
         const game = headless(() => {
             createTilemap({ doc: floor, atlas: sheet() });
@@ -137,7 +137,7 @@ describe('createTilemap from a document in code', () => {
                 const transform = useTransform({ x: 16, y: 4 });
                 const body = useTileBody2d({ width: 4, height: 4, gravity: 400 });
                 useUpdate(() => {
-                    onGround = body.onGround;
+                    isOnGround = body.isOnGround;
                     y = transform.y;
                 });
             })();
@@ -145,7 +145,7 @@ describe('createTilemap from a document in code', () => {
         }, 32, 32);
         game.run(120);
 
-        expect(onGround).toBe(true);
+        expect(isOnGround).toBe(true);
         expect(y).toBeGreaterThan(20);
         expect(y).toBeLessThanOrEqual(24);
     });

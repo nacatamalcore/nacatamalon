@@ -92,11 +92,11 @@ export const createTileBody2d = (deps: {
     const velocity = { x: 0, y: 0 };
     const state = {
         climbing: false,
-        onGround: false,
-        onCeiling: false,
-        onWall: null as 'left' | 'right' | null,
-        onOneWay: false,
-        onLadder: false,
+        isOnGround: false,
+        isOnCeiling: false,
+        isOnWall: null as 'left' | 'right' | null,
+        isOnOneWay: false,
+        isOnLadder: false,
         ground: undefined as TTileDoc | undefined,
         damage: 0,
     };
@@ -169,7 +169,7 @@ export const createTileBody2d = (deps: {
         centre.x += dx;
         const feet = centre.y + hh;
         // On the ground, the floor is followed: up a slope, and down one.
-        if (state.onGround) {
+        if (state.isOnGround) {
             const floor = floorAt(grids, blocks, feet, feet, Math.abs(dx) + INSET, Math.abs(dx) + SNAP);
             if (floor !== null) {
                 centre.y = floor.y - hh;
@@ -200,14 +200,14 @@ export const createTileBody2d = (deps: {
         }
         if (stop !== null) {
             centre.x = stop;
-            state.onWall = dx > 0 ? 'right' : 'left';
+            state.isOnWall = dx > 0 ? 'right' : 'left';
         }
     };
 
     const moveY = (grids: readonly TGrid[], blocks: readonly TBlock[], dy: number): void => {
         const feet = centre.y + hh;
         if (dy < 0) {
-            state.onGround = false;
+            state.isOnGround = false;
             onSlope = false;
             const head = centre.y - hh;
             let stop: number | null = null;
@@ -223,7 +223,7 @@ export const createTileBody2d = (deps: {
             }
             if (stop !== null) {
                 centre.y = stop + hh;
-                state.onCeiling = true;
+                state.isOnCeiling = true;
             } else {
                 centre.y += dy;
             }
@@ -231,19 +231,19 @@ export const createTileBody2d = (deps: {
         }
         // Standing, the floor is looked for a little below too, which keeps it on a slope going down;
         // falling, only as far as it falls.
-        const floor = state.onGround
+        const floor = state.isOnGround
             ? floorAt(grids, blocks, feet, feet, INSET, dy + SNAP)
             : floorAt(grids, blocks, feet + dy, feet, dy + INSET, 0);
         if (floor !== null) {
             centre.y = floor.y - hh;
-            state.onGround = true;
+            state.isOnGround = true;
             onSlope = floor.kind === 'slope';
-            state.onOneWay = floor.kind === 'oneWay';
+            state.isOnOneWay = floor.kind === 'oneWay';
         } else {
             centre.y += dy;
-            state.onGround = false;
+            state.isOnGround = false;
             onSlope = false;
-            state.onOneWay = false;
+            state.isOnOneWay = false;
         }
     };
 
@@ -257,12 +257,12 @@ export const createTileBody2d = (deps: {
             velocity.y = Math.min(velocity.y + gravity * dt, maxFall);
         }
         // A belt carries what stands on it; a current or the wind, what is in it.
-        const push = state.onGround ? state.ground?.push : tilesUnder(maps, centre.x, centre.y, centre.x, centre.y).find((tile) => tile.push !== undefined)?.push;
+        const push = state.isOnGround ? state.ground?.push : tilesUnder(maps, centre.x, centre.y, centre.x, centre.y).find((tile) => tile.push !== undefined)?.push;
         const dx = (velocity.x + (push?.x ?? 0)) * dt;
         const dy = (velocity.y + (push?.y ?? 0)) * dt;
 
-        state.onWall = null;
-        state.onCeiling = false;
+        state.isOnWall = null;
+        state.isOnCeiling = false;
         // In pieces no longer than half the smallest cell, so nothing is passed through between two.
         const smallest = blocks.reduce(
             (least, block) => Math.min(least, Math.max(2, block.right - block.left), Math.max(2, block.bottom - block.top)),
@@ -274,7 +274,7 @@ export const createTileBody2d = (deps: {
             moveY(grids, blocks, dy / pieces);
         }
 
-        if ((state.onGround && velocity.y > 0) || (state.onCeiling && velocity.y < 0)) {
+        if ((state.isOnGround && velocity.y > 0) || (state.isOnCeiling && velocity.y < 0)) {
             velocity.y = 0;
         }
         // Fallen through: a ledge it dropped through holds it again once it is wholly below it.
@@ -283,8 +283,8 @@ export const createTileBody2d = (deps: {
             if (head > dropping[i]) dropping.splice(i, 1);
         }
 
-        const tiles = readCharacterTiles(maps, centre, hw, hh, state.onGround);
-        state.onLadder = tiles.onLadder;
+        const tiles = readCharacterTiles(maps, centre, hw, hh, state.isOnGround);
+        state.isOnLadder = tiles.isOnLadder;
         state.damage = tiles.damage;
         state.ground = tiles.ground;
         // Climbed out of the ladder, by its top or its side: no longer climbing.
@@ -298,23 +298,23 @@ export const createTileBody2d = (deps: {
         get climbing() { return state.climbing; },
         // Climbing passes through ledges (see `floorAt`), so from the top of a ladder it goes down.
         set climbing(value: boolean) { state.climbing = value; },
-        get onGround() { return state.onGround; },
-        get onCeiling() { return state.onCeiling; },
-        get onWall() { return state.onWall; },
-        get onOneWay() { return state.onOneWay; },
-        get onLadder() { return state.onLadder; },
+        get isOnGround() { return state.isOnGround; },
+        get isOnCeiling() { return state.isOnCeiling; },
+        get isOnWall() { return state.isOnWall; },
+        get isOnOneWay() { return state.isOnOneWay; },
+        get isOnLadder() { return state.isOnLadder; },
         get ground() { return state.ground; },
         get damage() { return state.damage; },
         dropThrough: () => {
-            if (!state.onOneWay) return;
+            if (!state.isOnOneWay) return;
             dropping.push(centre.y + hh);
-            state.onGround = false;
-            state.onOneWay = false;
+            state.isOnGround = false;
+            state.isOnOneWay = false;
         },
         setPosition: (x, y) => {
             centre.x = x + shift.x;
             centre.y = y + shift.y;
-            state.onGround = false;
+            state.isOnGround = false;
             writeWorldPose2d(box, x, y, 0);
         },
         destroy: () => { removed = true; },

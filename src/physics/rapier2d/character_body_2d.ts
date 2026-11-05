@@ -105,11 +105,11 @@ export const createCharacter2d = (deps: {
     const velocity = { x: 0, y: 0 };
     const state = {
         climbing: false,
-        onGround: false,
-        onCeiling: false,
-        onWall: null as 'left' | 'right' | null,
-        onOneWay: false,
-        onLadder: false,
+        isOnGround: false,
+        isOnCeiling: false,
+        isOnWall: null as 'left' | 'right' | null,
+        isOnOneWay: false,
+        isOnLadder: false,
         ground: undefined as TTileDoc | undefined,
         damage: 0,
     };
@@ -153,8 +153,8 @@ export const createCharacter2d = (deps: {
      * under its feet.
      */
     const readTiles = (): void => {
-        const tiles = readCharacterTiles(deps.tilemaps(), centre, halfWidth, halfHeight, state.onGround);
-        state.onLadder = tiles.onLadder;
+        const tiles = readCharacterTiles(deps.tilemaps(), centre, halfWidth, halfHeight, state.isOnGround);
+        state.isOnLadder = tiles.isOnLadder;
         state.damage = tiles.damage;
         state.ground = tiles.ground;
         inLadder = tiles.inLadder;
@@ -171,12 +171,12 @@ export const createCharacter2d = (deps: {
             velocity.y = Math.min(velocity.y + gravity * dt, maxFall);
         }
         // A belt carries what stands on it; a current or the wind, what is in it.
-        const push = state.onGround ? state.ground?.push : tilesUnder(deps.tilemaps(), centre.x, centre.y, centre.x, centre.y).find((tile) => tile.push !== undefined)?.push;
+        const push = state.isOnGround ? state.ground?.push : tilesUnder(deps.tilemaps(), centre.x, centre.y, centre.x, centre.y).find((tile) => tile.push !== undefined)?.push;
         const desired = { x: (velocity.x + (push?.x ?? 0)) * dt, y: (velocity.y + (push?.y ?? 0)) * dt };
         // Standing, gravity is not pressed into the floor: asked to walk and sink at once, the
         // controller now and then walks nowhere. Staying on a floor that drops away (a slope going
         // down) is what its snap to the ground does.
-        if (state.onGround && !state.climbing && velocity.y >= 0 && desired.y > 0) {
+        if (state.isOnGround && !state.climbing && velocity.y >= 0 && desired.y > 0) {
             desired.y = 0;
         }
 
@@ -201,8 +201,8 @@ export const createCharacter2d = (deps: {
         centre.x += moved.x;
         centre.y += moved.y;
 
-        const wasOnGround = state.onGround;
-        state.onGround = controller.computedGrounded();
+        const wasOnGround = state.isOnGround;
+        state.isOnGround = controller.computedGrounded();
         const hits = [];
         for (let i = 0; i < controller.numComputedCollisions(); i++) {
             const hit = controller.computedCollision(i);
@@ -212,7 +212,7 @@ export const createCharacter2d = (deps: {
         // Walking over the point where two pieces of the level meet (a floor and the top of a slope)
         // lifts it a hair, and for that frame it would be in the air. Something that was standing and
         // is not jumping is pressed back down a little, and stands if there is ground there.
-        if (wasOnGround && !state.onGround && !state.climbing && velocity.y >= 0 && desired.y >= 0) {
+        if (wasOnGround && !state.isOnGround && !state.climbing && velocity.y >= 0 && desired.y >= 0) {
             collider.setTranslation(centre);
             controller.computeColliderMovement(collider, { x: 0, y: SETTLE }, rapier.QueryFilterFlags.EXCLUDE_SENSORS, collider.collisionGroups(), (other) => {
                 const ledge = deps.ledgeOf(other.handle);
@@ -221,30 +221,30 @@ export const createCharacter2d = (deps: {
             const settle = controller.computedMovement();
             if (settle.y < SETTLE - 1e-3) {
                 centre.y += settle.y;
-                state.onGround = true;
+                state.isOnGround = true;
             }
         }
-        state.onCeiling = false;
-        state.onWall = null;
-        state.onOneWay = false;
+        state.isOnCeiling = false;
+        state.isOnWall = null;
+        state.isOnOneWay = false;
         // Each obstacle's normal, pointing at the character.
         for (const { x, y, ledge } of hits) {
-            if (y >= FACING && desired.y < 0) state.onCeiling = true;
-            else if (x >= FACING) state.onWall = 'left';
-            else if (x <= -FACING) state.onWall = 'right';
-            if (y <= -FACING && ledge) state.onOneWay = true;
+            if (y >= FACING && desired.y < 0) state.isOnCeiling = true;
+            else if (x >= FACING) state.isOnWall = 'left';
+            else if (x <= -FACING) state.isOnWall = 'right';
+            if (y <= -FACING && ledge) state.isOnOneWay = true;
         }
-        if (state.onGround && !state.onOneWay) {
+        if (state.isOnGround && !state.isOnOneWay) {
             // Resting on a ledge reports no collision once it has settled, so it is asked directly.
             const standing = centre.y + halfHeight;
             for (const [handle, ledge] of deps.ledges()) {
                 if (!dropping.has(handle) && Math.abs(ledge.top - standing) <= SKIN * 3 && centre.x + halfWidth > ledge.left && centre.x - halfWidth < ledge.right) {
-                    state.onOneWay = true;
+                    state.isOnOneWay = true;
                     break;
                 }
             }
         }
-        if ((state.onGround && velocity.y > 0) || (state.onCeiling && velocity.y < 0)) {
+        if ((state.isOnGround && velocity.y > 0) || (state.isOnCeiling && velocity.y < 0)) {
             velocity.y = 0;
         }
 
@@ -268,7 +268,7 @@ export const createCharacter2d = (deps: {
         // floor (see above), so without this a bridge would not feel it, would come up under it, be
         // shoved back down, and the two would bounce off each other for ever.
         const under = new Set<number>();
-        if (state.onGround && !state.climbing) {
+        if (state.isOnGround && !state.climbing) {
             const feet = centre.y + halfHeight - SKIN;
             const sides = [centre.x - halfWidth + CORNER, centre.x, centre.x + halfWidth - CORNER];
             for (const x of sides) {
@@ -310,23 +310,23 @@ export const createCharacter2d = (deps: {
         velocity,
         get climbing() { return state.climbing; },
         set climbing(value: boolean) { state.climbing = value; },
-        get onGround() { return state.onGround; },
-        get onCeiling() { return state.onCeiling; },
-        get onWall() { return state.onWall; },
-        get onOneWay() { return state.onOneWay; },
-        get onLadder() { return state.onLadder; },
+        get isOnGround() { return state.isOnGround; },
+        get isOnCeiling() { return state.isOnCeiling; },
+        get isOnWall() { return state.isOnWall; },
+        get isOnOneWay() { return state.isOnOneWay; },
+        get isOnLadder() { return state.isOnLadder; },
         get ground() { return state.ground; },
         get damage() { return state.damage; },
         dropThrough: () => {
-            if (!state.onOneWay) return;
+            if (!state.isOnOneWay) return;
             const standing = centre.y + halfHeight;
             for (const [handle, ledge] of deps.ledges()) {
                 if (Math.abs(ledge.top - standing) <= SKIN * 3 && centre.x + halfWidth > ledge.left && centre.x - halfWidth < ledge.right) {
                     dropping.add(handle);
                 }
             }
-            state.onGround = false;
-            state.onOneWay = false;
+            state.isOnGround = false;
+            state.isOnOneWay = false;
         },
         setPosition: (x, y) => {
             centre.x = x + shift.x;
