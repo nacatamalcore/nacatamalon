@@ -1,11 +1,9 @@
 import { createParticleState } from './particle_pool';
-import { dropIdleEffectUser, noteEffectUser } from '../../loaders/particles/effect_users';
 import type { TParticles } from './types/t_particles';
 import type { TParticles3d } from './types/t_particles_3d';
 import type { TChildParticles, TParticleState } from './types/t_particle_pool';
 import type { TParticlesFile } from '../../loaders/particles/types/t_particles_file';
-import { dropIdleSheetUser, noteSheetUser } from '../../loaders/sheet_users';
-import { dropIdleWearer, wearAgainWhileDrawn } from '../../loaders/worn_pictures';
+import { dropIdle, hold } from '../../loaders/asset_holds';
 
 /**
  * What each emitter owns beyond its record, found by the record rather than kept in it.
@@ -128,17 +126,7 @@ export const unbindParticles = (emitter: TParticles | TParticles3d): void => {
     // An effect written in code holds its sheet, its picture and what it sets off only while it is
     // drawn: with its last emitter gone, it lets go of its place on them, and is taken on again if it
     // is used again.
-    if (file.atlas !== null && 'type' in file.atlas) {
-        dropIdleSheetUser(file.atlas, file);
-    }
-    if (file.texture !== null) {
-        dropIdleWearer(file.texture, file);
-    }
-    for (const child of file.children) {
-        if (child !== null) {
-            dropIdleEffectUser(child, file);
-        }
-    }
+    dropIdle(file);
 };
 
 /**
@@ -154,14 +142,14 @@ export const bindParticles = (emitter: TParticles | TParticles3d): void => {
     const { file } = emitter;
     file.bound.push(emitter);
     if (file.atlas !== null && 'type' in file.atlas) {
-        noteSheetUser(file.atlas, file);
+        hold(file.atlas, file);
     }
     if (file.texture !== null) {
-        wearAgainWhileDrawn(file.texture, file);
+        hold(file.texture, file);
     }
     for (const child of file.children) {
         if (child !== null) {
-            noteEffectUser(child, file);
+            hold(child, file);
         }
     }
 };

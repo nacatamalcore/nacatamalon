@@ -1,5 +1,4 @@
 import { bumpVersion } from '../../store/record_version';
-import { noteEffectUser } from './effect_users';
 import { loadTexture } from '../texture/load_texture';
 import { newTexture } from '../texture/new_texture';
 import { openParticleState } from '../../gameobjects/particles/particle_state';
@@ -14,7 +13,7 @@ import { newAtlas } from '../atlas/new_atlas';
 import { loadAtlas } from '../atlas/load_atlas';
 import { trackLoad } from '../track_load';
 import type { TLoadedAtlas } from '../atlas/types/t_loaded_atlas';
-import { noteSheetUser } from '../sheet_users';
+import { hold } from '../asset_holds';
 
 /**
  * Said once per file, never per emitter and never per frame.
@@ -82,7 +81,7 @@ export const particlesAtlas = (store: TRuntimeStore, fromSrc: string, src: strin
         trackLoad(atlas, loadAtlas(store, atlas));
     }
     // So letting go of another effect or a map on the same sheet leaves it for this one.
-    noteSheetUser(atlas, by, drawn);
+    hold(atlas, by, { whileDrawn: drawn });
     return atlas;
 };
 
@@ -161,7 +160,7 @@ export const childFileFor = (store: TRuntimeStore, parent: TParticlesFile, src: 
         particles.set(path, file);
         void loadParticles(store, file);
     }
-    noteEffectUser(file, parent, drawn);
+    hold(file, parent, { whileDrawn: drawn });
     return file;
 };
 
@@ -211,6 +210,7 @@ export const loadParticles = async (store: TRuntimeStore, file: TParticlesFile):
             file.atlas = particlesAtlas(store, file.src, doc.atlas, file);
         } else if (doc.texture !== null) {
             file.texture = particlesTexture(store, file.src, doc.texture);
+            hold(file.texture, file);
         }
 
         // Asked for now and not waited on: the effect can start before the ones it sets off have

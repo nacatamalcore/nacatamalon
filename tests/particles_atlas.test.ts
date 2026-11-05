@@ -21,7 +21,7 @@ import { newParticlesFile } from '../src/loaders/particles/new_particles_file';
 import { parseParticlesDoc } from '../src/loaders/particles/parse_particles_doc';
 import { serializeParticlesDoc } from '../src/loaders/particles/serialize_particles_doc';
 import { newAtlas } from '../src/loaders/atlas/new_atlas';
-import { noteSheetUser, sheetUsersOf } from '../src/loaders/sheet_users';
+import { hold, holdersOf } from '../src/loaders/asset_holds';
 import { applyParticlesDoc } from '../src/gameobjects/particles/tools/apply_particles_doc';
 import { PARTICLE_FLOATS, PARTICLE_OFFSET } from '../src/render/shared/particle_instance';
 import { PARTICLES_SHADER } from '../src/render/webgpu/particles/particles_shader';
@@ -453,7 +453,7 @@ describe('letting go of an effect on a sheet', () => {
         const map = { type: 'tilemap-asset', key: '/map.tilemap', src: '/map.tilemap', status: 'loading', atlas: null } as never;
         store.get('assets').tilemaps.set('/map.tilemap', map);
         // As the map's loader notes it, before it waits for the sheet to land.
-        noteSheetUser(atlas, map);
+        hold(atlas, map);
 
         createGameHandle(store).releaseAsset(first);
         expect(atlas.status).not.toBe('released');
@@ -483,7 +483,7 @@ describe('letting go of an effect on a sheet', () => {
         const atlas = sheetOf(effectOn(store, '/fx/burst.particles'));
         const map = { type: 'tilemap-asset', key: '/map.tilemap', src: '/map.tilemap', status: 'ready', atlas } as never;
         store.get('assets').tilemaps.set('/map.tilemap', map);
-        noteSheetUser(atlas, map);
+        hold(atlas, map);
         const game = createGameHandle(store);
         game.releaseAsset('/fx/burst.particles');
 
@@ -536,16 +536,16 @@ describe('letting go of an effect on a sheet', () => {
         const atlas = sheetOf(file);
 
         destroy(emitters[0]!, { immediate: true });
-        expect(sheetUsersOf(atlas)).toContain(inCode);
+        expect(holdersOf(atlas)).toContain(inCode);
         destroy(emitters[1]!, { immediate: true });
         // Nothing draws it, so it no longer holds the sheet, nor is it held for it.
-        expect(sheetUsersOf(atlas)).not.toContain(inCode);
+        expect(holdersOf(atlas)).not.toContain(inCode);
         expect(atlas.status).not.toBe('released');
 
         createGameHandle(store).releaseAsset(file);
 
         expect(atlas.status).toBe('released');
-        expect(sheetUsersOf(atlas)).toHaveLength(0);
+        expect(holdersOf(atlas)).toHaveLength(0);
     });
 
     it('lets a sheet go once the effect written in code that kept it stops being drawn', () => {
@@ -562,7 +562,7 @@ describe('letting go of an effect on a sheet', () => {
 
         destroy(emitter, { immediate: true });
         expect(atlas.status).toBe('released');
-        expect(sheetUsersOf(atlas)).toHaveLength(0);
+        expect(holdersOf(atlas)).toHaveLength(0);
     });
 
     it('lets a sheet go when its effect\'s emitter is destroyed in the same frame as the file is let go of', () => {
@@ -591,7 +591,7 @@ describe('letting go of an effect on a sheet', () => {
         const file = effectOn(store, '/fx/a.particles');
         const atlas = sheetOf(file);
         const map = { status: 'ready' };
-        noteSheetUser(atlas, map);
+        hold(atlas, map);
         createGameHandle(store).releaseAsset(file);
         destroy(emitter, { immediate: true });
 
@@ -644,7 +644,7 @@ describe('letting go of an effect on a sheet', () => {
         expect(fresh).not.toBe(old);
         expect(fresh.status).not.toBe('released');
         expect(store.get('assets').atlases.get(fresh.key)).toBe(fresh);
-        expect(sheetUsersOf(fresh)).toContain(inCode);
+        expect(holdersOf(fresh)).toContain(inCode);
     });
 
     it('lets a sheet a file and its child share go once, with both', () => {

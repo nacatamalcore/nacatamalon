@@ -8,13 +8,10 @@ import type { TTexture } from './texture/types/t_texture';
 import type { TGeometry } from '../geometry/types/t_geometry';
 import type { TAsset } from './types/t_asset';
 import { findAsset } from './asset_key';
-import { askAgainUnworn, picturesWornBy, releaseWhenUnworn, stopWearing, stopWearingForOthers, wearersOf, wearPicture, wearsOnlyWhileDrawn, wornByAnother } from './worn_pictures';
-import { askedByGame, forgetAskedByGame } from './asked_by_game';
-import { leaveSheet, releaseWhenUnused, sheetUsersOf, stopUsingSheet, usesSheetOnlyWhileDrawn } from './sheet_users';
+import { GAME, drop, dropAll, heldBy, heldByOthers, holdersOf, holdOnlyWhileDrawn, stopCounting, whenFree } from './asset_holds';
 import { freeTexture } from './texture/free_texture';
 import type { TLoadedAtlas } from './atlas/types/t_loaded_atlas';
 import type { TParticlesFile } from './particles/types/t_particles_file';
-import { effectsSettingOff, forgetWhenUnset, leaveEffect, releaseWhenUnset, setsOffOnlyWhileDrawn, stillSetOff, stopSettingOff } from './particles/effect_users';
 
 /**
  * Whether a drawing shows `thing`: as its picture (a sprite, a panel, particles), as a model's
@@ -84,52 +81,28 @@ const releaseTexture = (store: TRuntimeStore, texture: TTexture | null): void =>
 };
 
 /**
- * The pictures an asset wears as its own: a model's, an atlas's, a font's, a particle file's.
- */
-const picturesOf = (asset: TAsset): Array<TTexture | null> => {
-    switch (asset.type) {
-        case 'atlas':
-        case 'bitmap-font':
-        case 'font':
-        case 'particles-file':
-            return [asset.texture];
-        case 'gltf':
-            return asset.parts.flatMap((part) => [part.texture, part.emissiveTexture, part.occlusion?.texture ?? null]);
-        default:
-            return [];
-    }
-};
-
-/**
- * Lets go of a picture `leaving` wore, unless another asset still loaded wears it too: two model
- * files carrying the same picture share one, and so do two that point at the same sheet. Letting go
- * of one of them must not take it from the other. The last one to go takes it.
+ * Lets go of a picture `leaving` held, unless someone else still holds it (see `asset_holds`): two
+ * model files carrying the same picture share one, and so do two effects that name the same image.
+ * Letting go of one of them must not take it from the other. The last one to go takes it.
  *
  * Also how the game lets go of a picture itself, with `leaving` the picture: then it waits for
- * whatever still wears it.
+ * whatever still holds it.
  *
  * `made` for a picture `leaving` made itself, as a font draws its letters: one made in the game
- * otherwise goes only with whatever made it, never with a file that wore it.
+ * otherwise goes only with whatever made it, never with a file that held it.
  */
-const releaseWorn = (store: TRuntimeStore, texture: TTexture | null, leaving: TAsset, made = false): void => {
-    // One the game asked for itself goes when the game lets go of it, not with a file that names it.
-    if (texture === null || askedByGame(texture) || (!made && isMadeTexture(texture))) {
+const releasePicture = (store: TRuntimeStore, texture: TTexture | null, leaving: TAsset | null, made = false): void => {
+    if (texture === null || (!made && isMadeTexture(texture))) {
         return;
     }
-    if (wornByAnother(texture, leaving)) {
-        // Another model goes the same way when it is let go of; an effect written in code is let go
-        // of by nobody, so it finishes this when it stops being drawn.
-        releaseWhenUnworn(texture, () => { releaseWorn(store, texture, leaving, made); });
+    if (heldByOthers(texture, leaving ?? undefined)) {
+        // Another model goes the same way when it is let go of, and the game when it lets go of one it
+        // asked for; an effect written in code is let go of by nobody, so it finishes this when it
+        // stops being drawn.
+        // It runs only once nobody holds it, `leaving` included, so `leaving` is not kept for it: a
+        // model let go of would otherwise stay in memory for as long as the game holds the picture.
+        whenFree(texture, 'release', () => { releasePicture(store, texture, null, made); });
         return;
-    }
-    for (const cache of Object.values(store.get('assets')) as Map<string, TAsset>[]) {
-        for (const other of cache.values()) {
-            if (other !== leaving && other.status !== 'released' && picturesOf(other).includes(texture)) {
-                // That one finishes this when it is let go of, and so does taking it out of the game.
-                releaseWhenUnworn(texture, () => { releaseWorn(store, texture, leaving, made); });
-                return;
-            }
-        }
     }
     releaseTexture(store, texture);
 };
@@ -143,20 +116,20 @@ const releaseWorn = (store: TRuntimeStore, texture: TTexture | null, leaving: TA
  * Also how the game lets go of a sheet itself, with `leaving` the sheet: then it waits for whatever
  * still uses it.
  */
-const releaseSheet = (store: TRuntimeStore, sheet: unknown, leaving: TAsset): void => {
+const releaseSheet = (store: TRuntimeStore, sheet: unknown, leaving: TAsset | null): void => {
     if (sheet === null || (sheet as { type?: unknown }).type !== 'atlas') {
         return;
     }
     const atlas = sheet as TLoadedAtlas;
-    const othersLeft = leaveSheet(atlas, leaving);
-    if (atlas.status === 'released' || askedByGame(atlas)) {
+    if (atlas.status === 'released') {
         return;
     }
-    if (othersLeft) {
+    if (heldByOthers(atlas, leaving ?? undefined)) {
         // Another effect goes the same way when it is let go of, and a map finishes this when it goes;
         // an effect written in code is let go of by nobody, so it finishes this when it stops being
         // drawn.
-        releaseWhenUnused(atlas, () => { releaseSheet(store, atlas, leaving); });
+        // As with a picture, `leaving` is not kept: this runs only once nobody holds the sheet.
+        whenFree(atlas, 'release', () => { releaseSheet(store, atlas, null); });
         return;
     }
     releaseOne(store, atlas);
@@ -205,13 +178,10 @@ const releasing = new WeakSet<TAsset>();
  * last of which takes it.
  */
 const releaseWhenNotSetOff = (store: TRuntimeStore, child: TParticlesFile): void => {
-    if (askedByGame(child)) {
-        return;
-    }
-    if (stillSetOff(child)) {
+    if (heldByOthers(child)) {
         // Another file goes the same way when it is let go of; an effect written in code is let go of
         // by nobody, so it finishes this when it stops being drawn.
-        releaseWhenUnset(child, () => { releaseWhenNotSetOff(store, child); });
+        whenFree(child, 'release', () => { releaseWhenNotSetOff(store, child); });
         return;
     }
     releaseOne(store, child);
@@ -233,7 +203,7 @@ export const releaseUnnamed = (store: TRuntimeStore, child: TParticlesFile): voi
  * Lets go of an effect another one set off, with that one, unless something else still wants it.
  */
 const releaseChild = (store: TRuntimeStore, child: TParticlesFile, leaving: TParticlesFile): void => {
-    leaveEffect(child, leaving);
+    drop(child, leaving);
     releaseWhenNotSetOff(store, child);
 };
 
@@ -253,27 +223,27 @@ const releaseOne = (store: TRuntimeStore, asset: TAsset): void => {
             return;
         case 'atlas':
         case 'bitmap-font':
-            releaseWorn(store, asset.texture, asset);
+            releasePicture(store, asset.texture, asset);
             break;
         case 'font':
             // Its letters are drawn into a picture of its own.
-            releaseWorn(store, asset.texture, asset, true);
+            releasePicture(store, asset.texture, asset, true);
             break;
         case 'gltf':
             for (const part of asset.parts) {
                 releaseGeometry(store, part.geometry);
-                releaseWorn(store, part.texture, asset);
-                releaseWorn(store, part.emissiveTexture, asset);
-                releaseWorn(store, part.occlusion?.texture ?? null, asset);
+                releasePicture(store, part.texture, asset);
+                releasePicture(store, part.emissiveTexture, asset);
+                releasePicture(store, part.occlusion?.texture ?? null, asset);
             }
             // One still on its way, or that failed on the way, has no pieces to name what it found.
-            for (const texture of picturesWornBy(asset)) {
-                releaseWorn(store, texture, asset);
+            for (const texture of heldBy(asset) as TTexture[]) {
+                releasePicture(store, texture, asset);
             }
             break;
         case 'particles-file':
-            // Its children first: one that wears the same picture has let go of it by the time this
-            // one asks whether anything else still wears it.
+            // Its children first: one that holds the same picture has let go of it by the time this
+            // one asks whether anything else still holds it.
             releasing.add(asset);
             try {
                 for (const child of asset.children) {
@@ -284,7 +254,7 @@ const releaseOne = (store: TRuntimeStore, asset: TAsset): void => {
             } finally {
                 releasing.delete(asset);
             }
-            releaseWorn(store, asset.texture, asset);
+            releasePicture(store, asset.texture, asset);
             releaseSheet(store, asset.atlas, asset);
             break;
         case 'palette':
@@ -307,7 +277,7 @@ const releaseOne = (store: TRuntimeStore, asset: TAsset): void => {
             // Its sheet stays, as a map never takes its sheet with it, but no longer on this map's
             // account: one the game let go of while this map used it goes now.
             if (asset.atlas !== null) {
-                stopUsingSheet(asset.atlas, asset);
+                drop(asset.atlas, asset);
             }
             break;
         // Plain data, and nothing of the card's or the sound's: out of the cache is all there is.
@@ -320,8 +290,10 @@ const releaseOne = (store: TRuntimeStore, asset: TAsset): void => {
         case 'scene':
             break;
     }
-    stopWearing(asset);
     end(store, asset);
+    // Let go of what it held only once it is gone itself: what waited on those may run now, and must
+    // not count this one as still holding them.
+    dropAll(asset);
 };
 
 /**
@@ -338,18 +310,18 @@ const madeOfIt = (store: TRuntimeStore, shape: TGeometry): boolean => {
 
 /**
  * Lets go of what the game itself let go of. What something else still uses waits for the last of
- * them: a picture a model, a sheet, a font or an effect wears, a sheet an effect or a map takes its
+ * them: a picture a model, a sheet, a font or an effect holds, a sheet an effect or a map takes its
  * frames from, an effect others set off, a shape a model is made of. Let go of at once, they would go
  * on drawing it with its picture already off the card, or with no shape at all.
  */
 const letGo = (store: TRuntimeStore, asset: TAsset): void => {
-    forgetAskedByGame(asset);
+    drop(asset, GAME);
     switch (asset.type) {
         case 'particles-file':
             releaseWhenNotSetOff(store, asset);
             return;
         case 'texture':
-            releaseWorn(store, asset, asset);
+            releasePicture(store, asset, asset);
             return;
         case 'atlas':
             releaseSheet(store, asset, asset);
@@ -366,50 +338,29 @@ const letGo = (store: TRuntimeStore, asset: TAsset): void => {
 };
 
 /**
- * What in the game's caches uses `asset` as its own part: an effect setting it off, or taking its
- * frames or its picture from it, a map on it as its sheet, a model wearing it, loaded or still on its
- * way. Each holds that very
- * record, so it is taken out with it, or it would go on with the old version once loaded afresh.
+ * What in the game's caches holds `asset` as its own part: an effect setting it off, or taking its
+ * frames or its picture from it, a map on it as its sheet, a model with it as a picture, loaded or
+ * still on its way. Each holds that very record, so it is taken out with it, or it would go on with
+ * the old version once loaded afresh.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
 export const usersOf = (store: TRuntimeStore, asset: TAsset): TAsset[] => {
-    const found = new Set<TAsset>();
     const cached = new Set<TAsset>();
     for (const cache of Object.values(store.get('assets')) as Map<string, TAsset>[]) {
         for (const other of cache.values()) {
             cached.add(other);
         }
     }
-    // Those still on their way have not filled in what they use yet, but have said so already.
-    const noted: readonly unknown[] = asset.type === 'texture' ? wearersOf(asset)
-        : asset.type === 'atlas' ? sheetUsersOf(asset)
-            : asset.type === 'particles-file' ? effectsSettingOff(asset)
-                : [];
-    for (const user of noted) {
-        if (cached.has(user as TAsset) && user !== asset) {
-            found.add(user as TAsset);
-        }
-    }
-    for (const cache of Object.values(store.get('assets')) as Map<string, TAsset>[]) {
-        for (const other of cache.values()) {
-            const uses = (other.type === 'particles-file' && (other.children.includes(asset as TParticlesFile) || other.atlas === asset))
-                || (other.type === 'tilemap-asset' && other.atlas === asset)
-                || (other.type === 'gltf' && asset.type === 'texture' && picturesOf(other).includes(asset))
-                || (other.type === 'particles-file' && other.texture === asset);
-            if (uses && other !== asset) {
-                found.add(other);
-            }
-        }
-    }
-    return [...found];
+    // Each noted what it holds as it asked for it, so those still on their way are found too.
+    return holdersOf(asset).filter((user) => user !== asset && cached.has(user as TAsset)) as TAsset[];
 };
 
 /**
  * Takes `asset` off what it uses, as it is taken out of the game to be loaded afresh: the effects it
- * sets off, the sheet it takes its frames from, the pictures it wears. Each stays for whatever else
+ * sets off, the sheet it takes its frames from, the pictures it holds. Each stays for whatever else
  * uses it, and one let go of while this one held it goes now. Nothing of its own is let go: what
  * still shows it keeps what it had until its scene is built again. An effect another one still sets
  * off is left as it is, since that one still sets it off, and is taken off what it uses once nothing
@@ -422,26 +373,16 @@ export const usersOf = (store: TRuntimeStore, asset: TAsset): TAsset[] => {
 export const stopHolding = (asset: TAsset): void => {
     // An effect another one still sets off is still in the game through that one, which goes on
     // setting off this very record: it holds what it holds, and goes with the last of them.
-    if (asset.type === 'particles-file' && stillSetOff(asset)) {
-        // Its picture was kept only by its being in the cache, which it no longer is.
-        if (asset.texture !== null) {
-            wearPicture(asset.texture, asset);
-        }
-        forgetWhenUnset(asset, () => { stopHolding(asset); });
+    if (asset.type === 'particles-file' && heldByOthers(asset, GAME)) {
+        whenFree(asset, 'forget', () => { stopHolding(asset); }, GAME);
         return;
     }
     if (asset.type === 'particles-file') {
         // Nothing lets go of it any more, so from now on it holds what it uses only while something
         // draws it, as an effect written in code does.
-        setsOffOnlyWhileDrawn(asset);
-        usesSheetOnlyWhileDrawn(asset);
-        wearsOnlyWhileDrawn(asset);
-        // An emitter still drawing it keeps what it shows: it is let go of when the last one goes. Its
-        // picture was kept only by its being in the cache, which it no longer is.
+        holdOnlyWhileDrawn(asset);
+        // An emitter still drawing it keeps what it shows: it is let go of when the last one goes.
         if (asset.bound.length > 0) {
-            if (asset.texture !== null) {
-                wearPicture(asset.texture, asset);
-            }
             return;
         }
     }
@@ -451,22 +392,14 @@ export const stopHolding = (asset: TAsset): void => {
         asset.status = 'released';
         bumpVersion(asset);
     }
-    if (asset.type === 'particles-file') {
-        for (const child of asset.children) {
-            if (child !== null) {
-                stopSettingOff(child, asset);
-            }
-        }
+    // Out of the game, it holds nothing for anyone any more. A model still knows which pictures it
+    // fetched, failed or not: letting it go later takes them, and a failed one has no pieces to
+    // name them.
+    if (asset.type === 'gltf') {
+        stopCounting(asset);
+        return;
     }
-    if ((asset.type === 'particles-file' || asset.type === 'tilemap-asset') && (asset.atlas as { type?: unknown } | null)?.type === 'atlas') {
-        stopUsingSheet(asset.atlas as TLoadedAtlas, asset);
-    }
-    stopWearingForOthers(asset);
-    for (const texture of picturesOf(asset)) {
-        if (texture !== null) {
-            askAgainUnworn(texture);
-        }
-    }
+    dropAll(asset);
 };
 
 /**
@@ -500,7 +433,7 @@ export const releaseLeftBehind = (store: TRuntimeStore, asset: TAsset): boolean 
     }
     switch (asset.type) {
         case 'particles-file':
-            if (asset.bound.length > 0 || stillSetOff(asset)) {
+            if (asset.bound.length > 0 || heldByOthers(asset, GAME)) {
                 return false;
             }
             end(store, asset);
@@ -518,9 +451,9 @@ export const releaseLeftBehind = (store: TRuntimeStore, asset: TAsset): boolean 
             }
             // A picture or a sheet goes the way the game lets go of one: after the last thing still
             // drawn with it, an emitter kept from before or an effect written in code.
-            forgetAskedByGame(asset);
+            drop(asset, GAME);
             if (asset.type === 'texture') {
-                releaseWorn(store, asset, asset);
+                releasePicture(store, asset, asset);
             } else if (asset.type === 'atlas') {
                 releaseSheet(store, asset, asset);
             } else {

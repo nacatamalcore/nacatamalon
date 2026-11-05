@@ -18,7 +18,7 @@ import { serveTilemap, TEST_ATLAS, TEST_MAP } from './helpers/test_tilemap';
 import { createGameHandle } from '../src/game/handle';
 import { editorHandleOf, openHost } from '../src/game/handle/editor_handle_of';
 import type { TGameInstance } from '../src/game/types/t_game_instance';
-import { sheetUsersOf } from '../src/loaders/sheet_users';
+import { holdersOf } from '../src/loaders/asset_holds';
 import type { TLoadedAtlas } from '../src/loaders/atlas/types/t_loaded_atlas';
 import type { TFrameContext } from '../src/render';
 import type { TRuntimeStore } from '../src/store';
@@ -509,7 +509,7 @@ describe('a map let go of while it loads', () => {
             return createScene();
         });
         // Until the map has read its file and is waiting for the sheet.
-        while (!sheetUsersOf(atlas).includes(map)) {
+        while (!holdersOf(atlas).includes(map)) {
             await new Promise((done) => setTimeout(done, 0));
         }
         return { store, atlas, map, open, fail };
@@ -526,7 +526,7 @@ describe('a map let go of while it loads', () => {
         await whenLoaded(map);
         await whenLoaded(atlas);
         expect([map.status, atlas.status]).toEqual(['released', 'released']);
-        expect(sheetUsersOf(atlas)).toHaveLength(0);
+        expect(holdersOf(atlas)).toHaveLength(0);
     });
 
     it('stays let go of, rather than coming back ready when its sheet lands', async () => {
@@ -550,7 +550,7 @@ describe('a map let go of while it loads', () => {
         open();
         await whenLoaded(map);
         await whenLoaded(atlas);
-        expect(sheetUsersOf(atlas)).not.toContain(map);
+        expect(holdersOf(atlas)).not.toContain(map);
         expect(atlas.status).toBe('released');
     });
 
@@ -560,6 +560,6 @@ describe('a map let go of while it loads', () => {
         fail();
         await whenLoaded(map);
         expect(map.status).toBe('error');
-        expect(sheetUsersOf(atlas)).not.toContain(map);
+        expect(holdersOf(atlas)).not.toContain(map);
     });
 });

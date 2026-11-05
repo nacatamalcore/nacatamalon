@@ -1,8 +1,6 @@
 import { markWatchable } from '../../store/record_version';
 import { childFileFor, particlesAtlas, particlesTexture } from './load_particles';
-import { noteSheetUser, stopUsingSheet } from '../sheet_users';
-import { askAgainUnworn, stopWearing, wearPicture } from '../worn_pictures';
-import { stopSettingOff } from './effect_users';
+import { drop, hold } from '../asset_holds';
 import { isForgotten } from '../forgotten_assets';
 import { parseParticlesDoc } from './parse_particles_doc';
 import type { TParticlesEffect } from './types/t_particles_effect';
@@ -48,17 +46,16 @@ export const fileFromEffect = (store: TRuntimeStore, effect: TParticlesEffect): 
         const sheet = known.atlas;
         if (typeof effect.atlas === 'string' && sheet !== null && 'type' in sheet && gone(sheet)) {
             // Off the old one first: drawn again, this effect would go on counting as using it.
-            stopUsingSheet(sheet, known);
+            drop(sheet, known);
             known.atlas = particlesAtlas(store, IN_CODE, effect.atlas, known, true);
         }
         // Its picture the same.
         if (typeof effect.texture === 'string' && known.texture !== null && gone(known.texture)) {
             const old = known.texture;
-            stopWearing(known);
-            // One the game let go of while this wore it goes now, if nothing else does.
-            askAgainUnworn(old);
+            // One the game let go of while this held it goes now, if nothing else does.
+            drop(old, known);
             known.texture = particlesTexture(store, IN_CODE, effect.texture);
-            wearPicture(known.texture, known, true);
+            hold(known.texture, known, { whileDrawn: true });
         }
         // And what it sets off.
         if (known.children.some((child) => child !== null && gone(child))) {
@@ -66,7 +63,7 @@ export const fileFromEffect = (store: TRuntimeStore, effect: TParticlesEffect): 
             known.children = (known.doc?.children ?? []).map((child) => childFileFor(store, known, child.src, true));
             for (const child of before) {
                 if (child !== null && !known.children.includes(child)) {
-                    stopSettingOff(child, known);
+                    drop(child, known);
                 }
             }
         }
@@ -102,18 +99,18 @@ export const fileFromEffect = (store: TRuntimeStore, effect: TParticlesEffect): 
         if ('type' in sheet) {
             // A sheet the game loaded, which letting go of a file on the same sheet must leave
             // while this effect is drawn.
-            noteSheetUser(sheet, file, true);
+            hold(sheet, file, { whileDrawn: true });
         }
     } else if (typeof picture === 'string' && picture.trim() !== '') {
         file.texture = particlesTexture(store, IN_CODE, picture);
-        // A picture from the cache, which letting go of a model wearing it must leave while this
+        // A picture from the cache, which letting go of a model holding it must leave while this
         // effect is drawn.
-        wearPicture(file.texture, file, true);
+        hold(file.texture, file, { whileDrawn: true });
     } else if (picture !== null && picture !== undefined && typeof picture === 'object') {
         file.texture = picture;
         // The game's own picture, which letting go of must leave while this effect is drawn, as it
         // does one named by its path.
-        wearPicture(picture, file, true);
+        hold(picture, file, { whileDrawn: true });
     }
     file.children = doc.children.map((child) => childFileFor(store, file, child.src, true));
 

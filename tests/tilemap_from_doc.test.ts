@@ -21,7 +21,7 @@ import { destroy } from '../src/destroy';
 import { encodePng } from '../src/pixels/encode_png';
 import { serializeScene } from '../src/scene/document';
 import { whenLoaded } from '../src/loaders';
-import { sheetUsersOf } from '../src/loaders/sheet_users';
+import { holdersOf } from '../src/loaders/asset_holds';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -402,12 +402,12 @@ describe('createTilemap from a document in code', () => {
 
         expect(map.status).toBe('ready');
         expect(map.atlas).toBe(loaded);
-        expect(sheetUsersOf(loaded)).toContain(map as never);
+        expect(holdersOf(loaded)).toContain(map as never);
 
         destroy(holder);
         game.run(1);
 
-        expect(sheetUsersOf(loaded)).not.toContain(map as never);
+        expect(holdersOf(loaded)).not.toContain(map as never);
         expect(map.status).toBe('released');
     });
 

@@ -1,5 +1,5 @@
 import { bumpVersion } from '../../store/record_version';
-import { noteSheetUser, stopUsingSheet } from '../sheet_users';
+import { drop, hold } from '../asset_holds';
 import { trackLoad, whenLoaded } from '../track_load';
 import { fillTilemap } from './load_tilemap';
 import { newTilemap } from './new_tilemap';
@@ -110,13 +110,13 @@ export const tilemapFromDoc = (
         sequences: { ...sequences },
     };
     if (loaded !== null) {
-        noteSheetUser(loaded, map);
+        hold(loaded, map);
     }
     const letGo = (): void => {
         map.status = 'released';
         bumpVersion(map);
         if (loaded !== null) {
-            stopUsingSheet(loaded, map);
+            drop(loaded, map);
         }
     };
     const fill = (): void => {
@@ -142,7 +142,7 @@ export const tilemapFromDoc = (
         map.status = 'error';
         bumpVersion(map);
         if (loaded !== null) {
-            stopUsingSheet(loaded, map);
+            drop(loaded, map);
         }
         console.warn(`[NacatamalOn] createTilemap: the sheet of a map written in code could not be loaded ('${waitedFor.src}'). It draws nothing.`);
     }));

@@ -21,7 +21,7 @@ import type { TShading } from './shading';
 import type { TTexture } from '../texture/types/t_texture';
 import { findAssetFile } from '../asset_key';
 import { crc32 } from '../../pixels/crc32';
-import { stopWearingForOthers, wearPicture } from '../worn_pictures';
+import { hold, stopCounting } from '../asset_holds';
 
 /** No light of its own. */
 const NO_GLOW = { r: 0, g: 0, b: 0, a: 1 };
@@ -119,11 +119,11 @@ const surfaceTexture = async (
 };
 
 /**
- * Notes, as soon as it is found, that `model` wears `texture`: before its pieces are out, so letting
+ * Notes, as soon as it is found, that `model` holds `texture`: before its pieces are out, so letting
  * go of another model that shares it leaves it for this one.
  */
-const worn = (model: TGltfModel, texture: TTexture): TTexture => {
-    wearPicture(texture, model);
+const holding = (model: TGltfModel, texture: TTexture): TTexture => {
+    hold(texture, model);
     return texture;
 };
 
@@ -145,14 +145,14 @@ const keptPicture = async (
     const content = contentKeyOf(new Uint8Array(bytes));
     const cached = textures.get(content);
     if (cached !== undefined) {
-        worn(model, cached);
+        holding(model, cached);
         // In the store is not the same as arrived: another model may still be sending it up.
         await whenLoaded(cached);
         return cached;
     }
 
     const key = `${model.key}#image:${image.bufferView}`;
-    const texture = worn(model, newTexture(key, key));
+    const texture = holding(model, newTexture(key, key));
     textures.set(key, texture);
     textures.set(content, texture);
     const sending = (async () => {
@@ -185,7 +185,7 @@ const filePicture = async (store: TRuntimeStore, model: TGltfModel, image: TGltf
     const src = isDataUri(image.uri) ? image.uri : resolveAssetPath(model.src, image.uri);
     const cached = findAssetFile(textures, src);
     if (cached !== undefined) {
-        worn(model, cached);
+        holding(model, cached);
         // In the store is not the same as arrived: another piece may have asked for it a moment ago
         // and still be waiting. Waiting here is what keeps the model from calling itself ready
         // while one of its pictures is still on the way.
@@ -193,7 +193,7 @@ const filePicture = async (store: TRuntimeStore, model: TGltfModel, image: TGltf
         return cached;
     }
 
-    const texture = worn(model, newTexture(src, src));
+    const texture = holding(model, newTexture(src, src));
     textures.set(src, texture);
     // Tracked, so the wait above has something to wait on when the next piece asks for it.
     const loading = loadTexture(store, texture);
@@ -326,7 +326,7 @@ export const loadGltf = async (store: TRuntimeStore, model: TGltfModel, options:
         }
         model.status = 'error';
         bumpVersion(model);
-        stopWearingForOthers(model);
+        stopCounting(model);
         console.warn(`[NacatamalOn] useLoadGltf: '${model.src}' could not be loaded. Nothing is drawn for it.`, error);
     }
 };

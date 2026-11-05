@@ -20,13 +20,11 @@ import { destroy } from '../src/destroy/destroy';
 import { flushDestroyed } from '../src/destroy/flush_destroyed';
 import { applyParticlesDoc } from '../src/gameobjects/particles/tools/apply_particles_doc';
 import { childFileFor, loadParticles, particlesAtlas } from '../src/loaders/particles/load_particles';
-import { markAskedByGame } from '../src/loaders/asked_by_game';
-import { wearPicture } from '../src/loaders/worn_pictures';
 import { newAtlas } from '../src/loaders/atlas/new_atlas';
 import { uploadGeometry } from '../src/geometry/upload_geometry';
 import { installPostChain } from '../src/post/install_post_chain';
 import { newGltfModel } from '../src/loaders/gltf/new_gltf_model';
-import { dropIdleEffectUser, effectsSettingOff, noteEffectUser } from '../src/loaders/particles/effect_users';
+import { GAME, dropIdle, hold, holdersOf } from '../src/loaders/asset_holds';
 import type { TParticlesFile } from '../src/loaders/particles/types/t_particles_file';
 import { createGameHandle } from '../src/game/handle';
 import { editorHandleOf, openHost } from '../src/game/handle/editor_handle_of';
@@ -347,14 +345,14 @@ describe('releaseAsset', () => {
 
         // Its last emitter goes, as `unbindParticles` has it: nothing else would finish letting go.
         written.bound = [];
-        dropIdleEffectUser(shared, written);
+        dropIdle(written);
         expect(shared.status).toBe('released');
     });
 
     it('does not count one written in code that nothing draws, and counts it again once something does', () => {
         const { store, a, b, shared } = twoSettingOffOne();
         const written = writtenSettingOff(store);
-        dropIdleEffectUser(shared, written);
+        dropIdle(written);
         const game = createGameHandle(store);
 
         game.releaseAsset(a);
@@ -362,7 +360,7 @@ describe('releaseAsset', () => {
 
         // Drawn again, as `bindParticles` has it: it wants what it sets off once more.
         written.bound = [{}] as never[];
-        noteEffectUser(shared, written);
+        hold(shared, written);
         game.releaseAsset(b);
         expect(shared.status).toBe('ready');
     });
@@ -447,7 +445,7 @@ describe('releaseAsset', () => {
 
     it('keeps an effect an edit no longer sets off, when the game asked for it itself', () => {
         const { store, a, b, shared } = twoSettingOffOne();
-        markAskedByGame(shared);
+        hold(shared, GAME);
         const emitter = drawnSettingOff(store);
         const game = createGameHandle(store);
         game.releaseAsset(a);
@@ -466,6 +464,8 @@ describe('releaseAsset', () => {
         });
         const file = newParticlesFile('/fx/glow.particles', '/fx/glow.particles');
         file.texture = made;
+        // As the loader does: a file holds the picture it names.
+        hold(made, file);
         file.status = 'ready';
         store.get('assets').particles.set(file.key, file);
 
@@ -493,6 +493,8 @@ describe('releaseAsset', () => {
         const { store, a, shared } = twoSettingOffOne();
         const picture = loaded(store, 'spark');
         shared.texture = picture;
+        // As the loader does: a file holds the picture it names.
+        hold(picture, shared);
         const game = createGameHandle(store);
         game.releaseAsset(store.get('assets').particles.get('/fx/b.particles')!);
         const destroy = spyOn(store.get('screen').renderer, 'destroyTexture').mockImplementationOnce(() => { throw new Error('the card'); });
@@ -506,7 +508,7 @@ describe('releaseAsset', () => {
 
     it('leaves an effect the game asked for itself, when one that sets it off goes', () => {
         const { store, a, b, shared } = twoSettingOffOne();
-        markAskedByGame(shared);
+        hold(shared, GAME);
         const game = createGameHandle(store);
 
         game.releaseAsset(a);
@@ -543,7 +545,7 @@ describe('releaseAsset', () => {
 
     it('takes an effect the game asked for and let go of with the last one setting it off', () => {
         const { store, a, b, shared } = twoSettingOffOne();
-        markAskedByGame(shared);
+        hold(shared, GAME);
         const game = createGameHandle(store);
 
         game.releaseAsset(shared);
@@ -557,7 +559,7 @@ describe('releaseAsset', () => {
         const game = createGameHandle(store);
 
         game.releaseAsset(shared);
-        markAskedByGame(shared);
+        hold(shared, GAME);
         game.releaseAsset(a);
         game.releaseAsset(b);
         expect(shared.status).toBe('ready');
@@ -575,7 +577,7 @@ describe('releaseAsset', () => {
         expect(shared.status).toBe('ready');
 
         written.bound = [];
-        dropIdleEffectUser(shared, written);
+        dropIdle(written);
         expect(shared.status).toBe('released');
     });
 
@@ -639,6 +641,8 @@ describe('releaseAsset', () => {
         const spark = loaded(store, 'spark');
         const file = newParticlesFile('/fx/sparks.particles', '/fx/sparks.particles');
         file.texture = spark;
+        // As the loader does: a file holds the picture it names.
+        hold(spark, file);
         file.status = 'ready';
         store.get('assets').particles.set(file.key, file);
         const game = createGameHandle(store);
@@ -656,7 +660,7 @@ describe('releaseAsset', () => {
         const skin = loaded(store, 'skin');
         const model = { type: 'gltf', key: '/robot.glb', src: '/robot.glb', status: 'ready', parts: [] } as never;
         store.get('assets').gltf.set('/robot.glb', model);
-        wearPicture(skin, model);
+        hold(skin, model);
         const game = createGameHandle(store);
 
         game.releaseAsset(skin);
@@ -670,6 +674,8 @@ describe('releaseAsset', () => {
         const { store, a, b, shared } = twoSettingOffOne();
         const spark = loaded(store, 'spark');
         shared.texture = spark;
+        // As the loader does: a file holds the picture it names.
+        hold(spark, shared);
         store.get('assets').particles.set('spark', shared);
         const game = createGameHandle(store);
 
@@ -714,6 +720,8 @@ describe('releaseAsset', () => {
         const child = newParticlesFile('/fx/trail.particles', 'trail');
         for (const file of [parent, child]) {
             file.texture = spark;
+            // As the loader does: a file holds the picture it names.
+            hold(spark, file);
             file.status = 'ready';
             store.get('assets').particles.set(file.key, file);
         }
@@ -777,6 +785,8 @@ describe('evictAsset', () => {
         const { store, a } = twoSettingOffOne();
         const spark = loaded(store, 'spark');
         a.texture = spark;
+        // As the loader does: a file holds the picture it names.
+        hold(spark, a);
         const editor = await editorOn(store);
         editor.releaseAsset(spark);
         expect(spark.status).toBe('ready');
@@ -831,7 +841,7 @@ describe('evictAsset', () => {
             await new Promise((done) => setTimeout(done, 10));
             // Neither is found any more: the rocket would have gone on setting off the old sparks.
             expect([...store.get('assets').particles.values()]).toEqual([]);
-            expect(effectsSettingOff(sparks)).toEqual([]);
+            expect(holdersOf(sparks)).toEqual([]);
         } finally {
             fetching.mockRestore();
         }
@@ -925,7 +935,7 @@ describe('evictAsset', () => {
         const model = newGltfModel('/ship.glb', '/ship.glb');
         store.get('assets').gltf.set(model.key, model);
         // As its loader does, before its pieces are out.
-        wearPicture(wood, model);
+        hold(wood, model);
         const editor = await editorOn(store);
 
         editor.evictAsset('wood');
@@ -941,7 +951,7 @@ describe('evictAsset', () => {
         model.parts = [{ geometry: shape, texture: wood, emissiveTexture: null, occlusion: null } as never];
         model.status = 'ready';
         store.get('assets').gltf.set(model.key, model);
-        wearPicture(wood, model);
+        hold(wood, model);
         const editor = await editorOn(store);
         editor.evictAsset('wood');
 
@@ -1022,7 +1032,7 @@ describe('evictAsset', () => {
                 return createScene();
             });
             expect(again.file.children[0]).not.toBe(old!);
-            expect(effectsSettingOff(old!)).toEqual([]);
+            expect(holdersOf(old!)).toEqual([]);
             destroy(first, { immediate: true });
         } finally {
             fetching.mockRestore();
@@ -1095,6 +1105,8 @@ describe('evictAsset', () => {
         const spark = loaded(store, 'spark');
         const [file] = chainOf(store, ['glow']);
         file!.texture = spark;
+        // As the loader does: a file holds the picture it names.
+        hold(spark, file!);
         let emitter!: ReturnType<typeof createParticles>;
         startTestScene(store, 'S', () => {
             emitter = createParticles({ effect: file! });
@@ -1114,6 +1126,8 @@ describe('evictAsset', () => {
         const spark = loaded(store, 'spark');
         const [file] = chainOf(store, ['glow']);
         file!.texture = spark;
+        // As the loader does: a file holds the picture it names.
+        hold(spark, file!);
         let emitter!: ReturnType<typeof createParticles>;
         startTestScene(store, 'S', () => {
             emitter = createParticles({ effect: file! });
@@ -1158,6 +1172,8 @@ describe('evictAsset', () => {
         const spark = loaded(store, 'spark');
         const [sparks] = chainOf(store, ['sparks']);
         sparks!.texture = spark;
+        // As the loader does: a file holds the picture it names.
+        hold(spark, sparks!);
         let emitter!: ReturnType<typeof createParticles>;
         startTestScene(store, 'S', () => {
             emitter = createParticles({ effect: { kind: 'particles-2d', children: [{ on: 'death', src: '/fx/sparks.particles' }] } as never });

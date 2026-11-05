@@ -1,5 +1,6 @@
 import { markWatchable } from '../../store/record_version';
 import { newTexture } from '../texture/new_texture';
+import { hold } from '../asset_holds';
 import type { TLoadedAtlas } from './types/t_loaded_atlas';
 
 /**
@@ -13,14 +14,19 @@ import type { TLoadedAtlas } from './types/t_loaded_atlas';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const newAtlas = (src: string, key: string): TLoadedAtlas => markWatchable({
-    type: 'atlas',
-    key,
-    src,
-    status: 'loading',
-    texture: newTexture('', `${key}:texture`),
-    columns: 0,
-    rows: 0,
-    frames: 0,
-    sequences: {},
-});
+export const newAtlas = (src: string, key: string): TLoadedAtlas => {
+    const atlas: TLoadedAtlas = markWatchable({
+        type: 'atlas',
+        key,
+        src,
+        status: 'loading',
+        texture: newTexture('', `${key}:texture`),
+        columns: 0,
+        rows: 0,
+        frames: 0,
+        sequences: {},
+    });
+    // Its own picture, held like any other, so what lets pictures go needs no rule of its own for it.
+    hold(atlas.texture, atlas);
+    return atlas;
+};

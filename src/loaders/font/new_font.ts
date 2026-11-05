@@ -1,6 +1,7 @@
 import { markWatchable } from '../../store/record_version';
 import { newTexture } from '../texture/new_texture';
 import { markMadeTexture } from '../texture/made_texture';
+import { hold } from '../asset_holds';
 import type { TFont } from './types/t_font';
 
 /**
@@ -24,7 +25,7 @@ export const DEFAULT_FONT_ATLAS_SIZE = 48;
 export const newFont = (src: string, key: string, size: number): TFont => {
     const texture = newTexture('', `${key}:atlas`);
     markMadeTexture(texture);
-    return markWatchable({
+    const font: TFont = markWatchable({
         type: 'font',
         key,
         src,
@@ -33,4 +34,7 @@ export const newFont = (src: string, key: string, size: number): TFont => {
         texture,
         meta: null,
     });
+    // Its own picture, held like any other, so what lets pictures go needs no rule of its own for it.
+    hold(texture, font);
+    return font;
 };

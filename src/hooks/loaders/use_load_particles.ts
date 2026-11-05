@@ -1,4 +1,4 @@
-import { markAskedByGame } from '../../loaders/asked_by_game';
+import { GAME, hold } from '../../loaders/asset_holds';
 import { warnIfKeyTaken } from '../../loaders/key_taken';
 import { getActiveBox, getActiveGame } from '../../store';
 import { loadParticles, newParticlesFile } from '../../loaders/particles';
@@ -70,7 +70,7 @@ export const useLoadParticles = ({ src, key }: TUseLoadParticlesOptions): TParti
     }
     // Even when another effect's file had already brought it: asked for now, it goes when the game
     // lets go of it, and not with that effect.
-    markAskedByGame(file);
+    hold(file, GAME);
 
     const { loads } = rootOf(box);
     if (!loads.includes(file)) {

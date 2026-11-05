@@ -6,7 +6,7 @@ import { destroy, flushDestroyed } from '../src/destroy';
 import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
 import { releaseAsset, whenLoaded } from '../src/loaders';
 import { useLoadTexture } from '../src/hooks/loaders/use_load_texture';
-import { wearersOf } from '../src/loaders/worn_pictures';
+import { holdersOf } from '../src/loaders/asset_holds';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { asGlb, serveGltf, TEST_QUAD } from './helpers/test_gltf';
 import type { TGltfModel } from '../src/loaders';
@@ -64,11 +64,11 @@ describe('a picture an effect written in code shares with a model', () => {
 
     it('does not keep hold of an effect that nothing draws any more', async () => {
         const { store, emitter, texture, restore } = await withBoth();
-        expect(wearersOf(texture)).toContain(emitter.file);
+        expect(holdersOf(texture)).toContain(emitter.file);
         destroy(emitter);
         flushDestroyed(store);
 
-        expect(wearersOf(texture)).not.toContain(emitter.file);
+        expect(holdersOf(texture)).not.toContain(emitter.file);
         restore();
     });
 
@@ -82,7 +82,7 @@ describe('a picture an effect written in code shares with a model', () => {
             return createScene();
         });
         expect(effect.bound.length).toBe(1);
-        expect(wearersOf(texture)).toContain(effect);
+        expect(holdersOf(texture)).toContain(effect);
 
         releaseAsset(store, crate);
         expect(texture.status).toBe('ready');
@@ -133,7 +133,7 @@ describe('a picture let go of while an effect written in code still showed it', 
         flushDestroyed(store);
         expect(texture.status).toBe('released');
         expect(texture.gpu).toBeNull();
-        expect(wearersOf(texture)).toEqual([]);
+        expect(holdersOf(texture)).toEqual([]);
         restore();
     });
 

@@ -3,7 +3,9 @@ import { createScene } from '../src/scene/create_scene';
 import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
 import { useLoadTexture } from '../src/hooks/loaders/use_load_texture';
 import { releaseAsset, whenLoaded } from '../src/loaders';
-import { wearersOf } from '../src/loaders/worn_pictures';
+import { holdersOf } from '../src/loaders/asset_holds';
+import { editorHandleOf, openHost } from '../src/game/handle/editor_handle_of';
+import type { TGameInstance } from '../src/game/types/t_game_instance';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { asGlb, asGltf, serveGltf, TEST_QUAD } from './helpers/test_gltf';
 import type { TGltfModel, TTexture } from '../src/loaders';
@@ -656,7 +658,7 @@ describe('a picture kept inside a model file, the same in more than one', () => 
                 tower = useLoadGltf({ src: 'tower.gltf' });
                 return createScene();
             });
-            while (!wearersOf(atlas).includes(tower)) {
+            while (!holdersOf(atlas).includes(tower)) {
                 await new Promise((done) => setTimeout(done, 0));
             }
             releaseAsset(store, atlas);
@@ -689,6 +691,33 @@ describe('a picture kept inside a model file, the same in more than one', () => 
             expect(atlas.status).toBe('ready');
 
             releaseAsset(store, tower);
+            expect(atlas.status).toBe('released');
+        } finally {
+            console.warn = warn;
+            served.restore();
+        }
+    });
+
+    it('still takes the pictures it sent for itself when taken out by the editor after failing', async () => {
+        const served = failsAfterAPicture();
+        const warn = console.warn;
+        console.warn = () => {};
+        try {
+            const { store } = createTestGame();
+            let tower!: TGltfModel;
+            startTestScene(store, 'Shop', () => {
+                tower = useLoadGltf({ src: 'tower.gltf' });
+                return createScene();
+            });
+            await whenLoaded(tower);
+            expect(tower.status).toBe('error');
+            const atlas = [...store.get('assets').textures.values()].find((texture) => texture.src.endsWith('atlas.png'))!;
+            const instance: TGameInstance = { destroy: () => {}, on: () => () => {} };
+            openHost(instance).resolve(store);
+            const editor = await editorHandleOf(instance);
+
+            expect(editor.evictAsset(tower.key)).toBe(true);
+            editor.releaseForgotten();
             expect(atlas.status).toBe('released');
         } finally {
             console.warn = warn;
@@ -770,7 +799,7 @@ describe('a picture kept inside a model file, the same in more than one', () => 
             }
 
             expect(sheet.status).toBe('ready');
-            expect(wearersOf(sheet)).toEqual([crate]);
+            expect(holdersOf(sheet)).toEqual([crate]);
         } finally {
             served.restore();
         }

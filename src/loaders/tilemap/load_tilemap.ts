@@ -9,7 +9,7 @@ import { resolveLayerOrder } from './types/t_tilemap_doc';
 import type { TRuntimeStore } from '../../store';
 import type { TTilemap, TTilemapLayer } from '../../gameobjects/tilemap/types/t_tilemap';
 import { findAssetFile } from '../asset_key';
-import { noteSheetUser, stopUsingSheet } from '../sheet_users';
+import { drop, hold } from '../asset_holds';
 import type { TLoadedAtlas } from '../atlas/types/t_loaded_atlas';
 import type { TTilemapDoc } from './types/t_tilemap_doc';
 
@@ -87,7 +87,7 @@ export const loadTilemap = async (store: TRuntimeStore, map: TTilemap): Promise<
         const atlas = found ?? newAtlas(atlasSrc, atlasSrc);
         // Noted before waiting, not once the sheet is here: an effect on the same sheet let go of
         // meanwhile must leave it for this map.
-        noteSheetUser(atlas, map);
+        hold(atlas, map);
         noted = atlas;
         if (found === undefined) {
             atlases.set(atlasSrc, atlas);
@@ -107,7 +107,7 @@ export const loadTilemap = async (store: TRuntimeStore, map: TTilemap): Promise<
         if (letGo()) {
             // Let go of while it waited: it holds the sheet no more, and one the game let go of
             // meanwhile, which waited for this map, goes now.
-            stopUsingSheet(atlas, map);
+            drop(atlas, map);
             return;
         }
         if (atlas.status !== 'ready') {
@@ -118,7 +118,7 @@ export const loadTilemap = async (store: TRuntimeStore, map: TTilemap): Promise<
     } catch (error: unknown) {
         // A map that draws nothing uses no sheet.
         if (noted !== null) {
-            stopUsingSheet(noted, map);
+            drop(noted, map);
         }
         // One let go of on the way has nothing to say: it was not wanted any more.
         if (letGo()) {

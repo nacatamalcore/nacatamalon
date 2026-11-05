@@ -1,4 +1,4 @@
-import { markAskedByGame } from '../../loaders/asked_by_game';
+import { GAME, hold } from '../../loaders/asset_holds';
 import { warnIfKeyTaken } from '../../loaders/key_taken';
 import { rootOf } from '../../box';
 import { getActiveBox, getActiveGame } from '../../store';
@@ -73,7 +73,7 @@ export const useLoadTexture = ({ src, key }: TUseLoadTextureOptions): TTexture =
 
     // Asked for by the game, which a file naming the same one does not undo: letting go of the file
     // leaves it.
-    markAskedByGame(texture);
+    hold(texture, GAME);
 
     // Listed on the scene even when it came from the cache: `useLoader()` counts everything the
     // scene asked for, and a cached texture counts as already loaded.

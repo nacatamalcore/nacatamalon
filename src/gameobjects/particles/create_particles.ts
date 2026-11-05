@@ -1,4 +1,4 @@
-import { markAskedByGame } from '../../loaders/asked_by_game';
+import { GAME, hold } from '../../loaders/asset_holds';
 import { createRecord } from '../create_record';
 import { getActiveBox, getActiveGame } from '../../store';
 import { getColor } from '../../color';
@@ -60,7 +60,7 @@ export const resolveEffect = (
     // Drawn by its key, or handed over as a file: the game wants it, whoever fetched it first. One
     // written in code is the game's already, and in no cache to be let go of from.
     if (effectFromCode(found) === undefined) {
-        markAskedByGame(found);
+        hold(found, GAME);
     }
     return found;
 };

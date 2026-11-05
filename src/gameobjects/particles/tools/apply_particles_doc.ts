@@ -1,6 +1,6 @@
 import { bakeColorCurve, bakeScaleCurve } from '../bake_curves';
 import { childrenOf, closeParticleState, openParticleState, particleStateOf } from '../particle_state';
-import { effectsSettingOff, stopSettingOff } from '../../../loaders/particles/effect_users';
+import { GAME, drop, holdersOf } from '../../../loaders/asset_holds';
 import { resolveAssetPath } from '../../../loaders/resolve_asset_path';
 import { releaseUnnamed } from '../../../loaders/release_asset';
 import { ownerOfDrawable } from '../../../box';
@@ -32,7 +32,8 @@ const refit = (state: TParticleState, file: TParticlesFile, doc: TParticlesDoc):
 const setOffBelow = (file: TParticlesFile): TChildParticles[] => {
     const above = new Set<TParticlesFile>();
     const climb = (at: TParticlesFile): void => {
-        for (const by of effectsSettingOff(at)) {
+        // Only effects set one off; the game holding it is not one of them.
+        for (const by of holdersOf(at).filter((holder) => holder !== GAME) as TParticlesFile[]) {
             if (by !== file && !above.has(by)) {
                 above.add(by);
                 climb(by);
@@ -122,7 +123,7 @@ export const applyParticlesDoc = (emitter: TParticles | TParticles3d, doc: TPart
     // else wants goes now, as it would have gone with this effect.
     const store = ownerOfDrawable(emitter)?.store;
     for (const child of gone) {
-        stopSettingOff(child!, file);
+        drop(child!, file);
         if (store !== undefined) {
             releaseUnnamed(store, child!);
         }
