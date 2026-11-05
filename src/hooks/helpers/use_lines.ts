@@ -3,13 +3,13 @@ import type { TNewLinesOptions } from '../../gameobjects/lines';
 import type { TLines } from '../../gameobjects/lines';
 
 /**
- * What `useHelperLines` is asked for.
+ * What `useLines` is asked for.
  *
  * @category Debug
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TUseHelperLinesOptions = TNewLinesOptions & {
+export type TUseLinesOptions = TNewLinesOptions & {
     /**
      * The first lines to draw. Left out, it starts empty, which is normal for lines rewritten every frame.
      */
@@ -17,13 +17,13 @@ export type TUseHelperLinesOptions = TNewLinesOptions & {
 };
 
 /**
- * What `useHelperLines` gives back: the lines, and the function that replaces them.
+ * What `useLines` gives back: the lines, and the function that replaces them.
  *
  * @category Debug
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type THelperLines = [lines: TLines, setVertices: (vertices: Float32Array) => void];
+export type TLinesHandle = [lines: TLines, setVertices: (vertices: Float32Array) => void];
 
 /**
  * Draws any lines you like, and hands back the function that replaces them at any time.
@@ -48,7 +48,7 @@ export type THelperLines = [lines: TLines, setVertices: (vertices: Float32Array)
  *
  * const Level = () => {
  *     useCamera3d({ projection: 'perspective', fov: 60, transform: { z: 6 } });
- *     const [, setPath] = useHelperLines();
+ *     const [, setPath] = useLines();
  *
  *     useUpdate(() => {
  *         // One yellow line from the origin to wherever the enemy is heading.
@@ -63,7 +63,7 @@ export type THelperLines = [lines: TLines, setVertices: (vertices: Float32Array)
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const useHelperLines = (options: TUseHelperLinesOptions = {}): THelperLines => {
-    const lines = newLines('useHelperLines', options, options.vertices ?? new Float32Array(0));
+export const useLines = (options: TUseLinesOptions = {}): TLinesHandle => {
+    const lines = newLines('useLines', options, options.vertices ?? new Float32Array(0));
     return [lines, (vertices: Float32Array) => writeLines(lines, vertices)];
 };

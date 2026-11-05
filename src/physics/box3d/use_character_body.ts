@@ -24,7 +24,7 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  * ```ts
  * const Player = () => {
  *     useTransform({ x: 0, y: 1, z: 0 });
- *     createMesh({ geometry: useUvSphereGeometry({ radius: 0.35 }), tint: BLUE });
+ *     createMesh({ geometry: useSphereGeometry({ radius: 0.35 }), tint: BLUE });
  *
  *     const player = useCharacterBody({ radius: 0.35, height: 1.8 });
  *     const keys = useKeyboard();

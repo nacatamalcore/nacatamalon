@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
-import { useAction, useActions, useVector } from '../src/hooks/input/use_actions';
+import { useAction, useActions, useDirection } from '../src/hooks/input/use_actions';
 import { useGamepad } from '../src/hooks/input/use_gamepad';
 import { useInputMap } from '../src/hooks/input/use_input_map';
 import { normalizeActionMap } from '../src/input';
@@ -119,7 +119,7 @@ describe('actions', () => {
         let move!: () => { x: number; y: number };
         let pad!: TGamepad;
         startTestScene(store, 'Level', () => {
-            move = useVector('move_left', 'move_right', 'move_up', 'move_down');
+            move = useDirection('move_left', 'move_right', 'move_up', 'move_down');
             pad = useGamepad();
             return createScene();
         });
@@ -139,7 +139,7 @@ describe('actions', () => {
         const { store } = createTestGame({ actions: MOVE_MAP });
         let move!: () => { x: number; y: number };
         startTestScene(store, 'Level', () => {
-            move = useVector('move_left', 'move_right', 'move_up', 'move_down');
+            move = useDirection('move_left', 'move_right', 'move_up', 'move_down');
             return createScene();
         });
 

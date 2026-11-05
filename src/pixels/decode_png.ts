@@ -151,7 +151,12 @@ export const decodePng = (bytes: Uint8Array): TPixels => {
         compressed.set(part, joined);
         joined += part.length;
     }
-    const raw = inflate(compressed);
+    let raw: Uint8Array = new Uint8Array(0);
+    try {
+        raw = inflate(compressed);
+    } catch (error) {
+        fail(`its picture data cannot be unpacked: ${error instanceof Error ? error.message : String(error)}`);
+    }
 
     const bitsPerPixel = channels! * depth;
     const stride = Math.ceil((width * bitsPerPixel) / 8);

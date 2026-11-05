@@ -3,7 +3,7 @@ import { createParticles, createParticles3d } from '../src/gameobjects/particles
 import { createScene } from '../src/scene/create_scene';
 import { stopScene } from '../src/scene/stop_scene';
 import { destroy, flushDestroyed } from '../src/destroy';
-import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
+import { useLoadModel } from '../src/hooks/loaders/use_load_model';
 import { releaseAsset, whenLoaded } from '../src/loaders';
 import { useLoadTexture } from '../src/hooks/loaders/use_load_texture';
 import { holdersOf } from '../src/loaders/asset_holds';
@@ -31,7 +31,7 @@ const withBoth = async () => {
     let crate!: TGltfModel;
     let emitter!: TParticles;
     startTestScene(store, 'Shop', () => {
-        crate = useLoadGltf({ src: 'crate.glb' });
+        crate = useLoadModel({ src: 'crate.glb' });
         emitter = createParticles({ effect: { ...EFFECT } });
         return createScene();
     });
@@ -99,7 +99,7 @@ describe('a picture an effect written in code shares with a model', () => {
         let crate!: TGltfModel;
         let first!: TParticles;
         startTestScene(store, 'Shop', () => {
-            crate = useLoadGltf({ src: 'crate.glb' });
+            crate = useLoadModel({ src: 'crate.glb' });
             first = createParticles({ effect });
             return createScene();
         });
@@ -157,7 +157,7 @@ describe('a picture let go of while an effect written in code still showed it', 
         let crate!: TGltfModel;
         const emitters: TParticles[] = [];
         startTestScene(store, 'Shop', () => {
-            crate = useLoadGltf({ src: 'crate.glb' });
+            crate = useLoadModel({ src: 'crate.glb' });
             emitters.push(createParticles({ effect }), createParticles({ effect }));
             return createScene();
         });
@@ -181,7 +181,7 @@ describe('a picture let go of while an effect written in code still showed it', 
         let crate!: TGltfModel;
         let emitter!: TParticles;
         startTestScene(store, 'Shop', () => {
-            crate = useLoadGltf({ src: 'crate.glb' });
+            crate = useLoadModel({ src: 'crate.glb' });
             useLoadTexture({ src: 'spark.png' });
             emitter = createParticles({ effect: { ...EFFECT } });
             return createScene();

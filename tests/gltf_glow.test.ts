@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, mock } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
 import { createModel } from '../src/gameobjects/model/create_model';
-import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
+import { useLoadModel } from '../src/hooks/loaders/use_load_model';
 import { whenLoaded } from '../src/loaders';
 import { readMaterial } from '../src/loaders/gltf/read_material';
 import { parseSceneDoc, sceneFromDoc, SCENE_FORMAT } from '../src/scene/document';
@@ -49,7 +49,7 @@ const load = async (model: TTestModel | ArrayBuffer, extra: Record<string, unkno
     const { store } = createTestGame();
     let loaded!: TGltfModel;
     startTestScene(store, 'Loading', () => {
-        loaded = useLoadGltf({ src });
+        loaded = useLoadModel({ src });
         return createScene();
     });
     await whenLoaded(loaded);

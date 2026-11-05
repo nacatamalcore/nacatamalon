@@ -3,13 +3,13 @@ import { useGeometry } from './use_geometry';
 import type { TGeometry } from '../../geometry';
 
 /**
- * What useUvSphereGeometry can be asked for. Everything is optional.
+ * What useSphereGeometry can be asked for. Everything is optional.
  *
  * @category Geometry
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TUvSphereGeometryOptions = {
+export type TSphereGeometryOptions = {
     /**
      * Default `0.5`, so it is one across.
      */
@@ -45,7 +45,7 @@ export type TUvSphereGeometryOptions = {
  * ```ts
  * const Level = () => {
  *     useCamera3d({ projection: 'perspective', transform: { z: 4 } });
- *     const shape = useUvSphereGeometry();
+ *     const shape = useSphereGeometry();
  *     createMesh({ geometry: shape });
  *
  *     return createScene();
@@ -56,11 +56,11 @@ export type TUvSphereGeometryOptions = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const useUvSphereGeometry = (options: TUvSphereGeometryOptions = {}): TGeometry => {
+export const useSphereGeometry = (options: TSphereGeometryOptions = {}): TGeometry => {
     const radius = options.radius ?? 0.5;
     const segments = options.segments ?? 32;
     const rings = options.rings ?? 16;
     const key = options.key ?? `uv_sphere:${radius}:${segments}:${rings}`;
 
-    return useGeometry('useUvSphereGeometry', key, () => buildUvSphere(radius, segments, rings), { kind: 'uvSphere', radius, segments, rings });
+    return useGeometry('useSphereGeometry', key, () => buildUvSphere(radius, segments, rings), { kind: 'uvSphere', radius, segments, rings });
 };

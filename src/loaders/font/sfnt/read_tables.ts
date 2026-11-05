@@ -48,7 +48,14 @@ const readWeb = (bytes: Uint8Array, view: DataView): Map<string, DataView> => {
         const tag = tagAt(view, entry);
         const stored = slice(bytes, view.getUint32(entry + 4), view.getUint32(entry + 8), tag);
         const length = view.getUint32(entry + 12);
-        const table = stored.length < length ? inflate(stored) : stored;
+        let table = stored;
+        if (stored.length < length) {
+            try {
+                table = inflate(stored);
+            } catch (error) {
+                fail(`its '${tag}' table cannot be unpacked: ${error instanceof Error ? error.message : String(error)}`);
+            }
+        }
         if (table.length !== length) {
             fail(`its '${tag}' table did not unpack to the size the file says.`);
         }

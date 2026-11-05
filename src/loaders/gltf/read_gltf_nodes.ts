@@ -5,7 +5,7 @@ import type { TGltfNodeInfo } from './types/t_gltf_node_info';
 /**
  * Reads the tree of a `.gltf` file's scene, so a tool can turn a model's pieces into boxes.
  *
- * This is the half of glTF a running game does not have. `useLoadGltf` takes the pieces that draw
+ * This is the half of glTF a running game does not have. `useLoadModel` takes the pieces that draw
  * and nothing else, because the structure a game draws is the scene's, not the file's. But something
  * has to turn one into the other once, when the model is brought in, and this is it: names, where
  * each piece sits and which ones draw. After that the engine only knows boxes, as if someone had

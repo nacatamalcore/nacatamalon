@@ -10,17 +10,17 @@ import type { TGltfDoc } from './types/t_gltf_doc';
 const locate = (doc: TGltfDoc, buffers: ArrayBuffer[], index: number) => {
     const accessor = doc.accessors?.[index];
     if (accessor === undefined) {
-        throw new Error(`[NacatamalOn] useLoadGltf: the file points at a run of numbers (${index}) it does not contain.`);
+        throw new Error(`[NacatamalOn] useLoadModel: the file points at a run of numbers (${index}) it does not contain.`);
     }
 
     const view = accessor.bufferView !== undefined ? doc.bufferViews?.[accessor.bufferView] : undefined;
     if (view === undefined) {
-        throw new Error('[NacatamalOn] useLoadGltf: a run of numbers in the file points nowhere.');
+        throw new Error('[NacatamalOn] useLoadModel: a run of numbers in the file points nowhere.');
     }
 
     const bytes = buffers[view.buffer];
     if (bytes === undefined) {
-        throw new Error('[NacatamalOn] useLoadGltf: the file points at a block of numbers it does not contain.');
+        throw new Error('[NacatamalOn] useLoadModel: the file points at a block of numbers it does not contain.');
     }
     return { accessor, view, bytes, at: (view.byteOffset ?? 0) + (accessor.byteOffset ?? 0) };
 };
@@ -39,7 +39,7 @@ const locate = (doc: TGltfDoc, buffers: ArrayBuffer[], index: number) => {
 export const readFloats = (doc: TGltfDoc, buffers: ArrayBuffer[], index: number): Float32Array => {
     const { accessor, view, bytes, at } = locate(doc, buffers, index);
     if (accessor.componentType !== GLTF_FLOAT) {
-        throw new Error(`[NacatamalOn] useLoadGltf: a run of numbers is stored as kind ${accessor.componentType}; only decimals are read.`);
+        throw new Error(`[NacatamalOn] useLoadModel: a run of numbers is stored as kind ${accessor.componentType}; only decimals are read.`);
     }
 
     const each = GLTF_COMPONENT_COUNT[accessor.type];
@@ -96,7 +96,7 @@ export const readIndices = (doc: TGltfDoc, buffers: ArrayBuffer[], index: number
         return out;
     }
 
-    throw new Error(`[NacatamalOn] useLoadGltf: the triangle order is stored as kind ${accessor.componentType}, which is not one this engine reads.`);
+    throw new Error(`[NacatamalOn] useLoadModel: the triangle order is stored as kind ${accessor.componentType}, which is not one this engine reads.`);
 };
 
 /**
@@ -134,7 +134,7 @@ export const readJoints = (doc: TGltfDoc, buffers: ArrayBuffer[], index: number)
         return out;
     }
 
-    throw new Error(`[NacatamalOn] useLoadGltf: the bones of a corner are stored as kind ${accessor.componentType}, which is not one this engine reads.`);
+    throw new Error(`[NacatamalOn] useLoadModel: the bones of a corner are stored as kind ${accessor.componentType}, which is not one this engine reads.`);
 };
 
 /**
@@ -162,7 +162,7 @@ export const readColors = (doc: TGltfDoc, buffers: ArrayBuffer[], index: number)
     const { accessor, view, bytes, at } = locate(doc, buffers, index);
     const each = GLTF_COMPONENT_COUNT[accessor.type];
     if (each !== 3 && each !== 4) {
-        throw new Error(`[NacatamalOn] useLoadGltf: a corner's colour has ${each} numbers; it should have three or four.`);
+        throw new Error(`[NacatamalOn] useLoadModel: a corner's colour has ${each} numbers; it should have three or four.`);
     }
 
     const data = new DataView(bytes);
@@ -203,7 +203,7 @@ export const readColors = (doc: TGltfDoc, buffers: ArrayBuffer[], index: number)
         return out;
     }
 
-    throw new Error(`[NacatamalOn] useLoadGltf: a corner's colour is stored as kind ${accessor.componentType}, which is not one this engine reads.`);
+    throw new Error(`[NacatamalOn] useLoadModel: a corner's colour is stored as kind ${accessor.componentType}, which is not one this engine reads.`);
 };
 
 /**
@@ -216,7 +216,7 @@ export const readColors = (doc: TGltfDoc, buffers: ArrayBuffer[], index: number)
 export const readBufferView = (doc: TGltfDoc, buffers: ArrayBuffer[], index: number): ArrayBuffer => {
     const view = doc.bufferViews?.[index];
     if (view === undefined || buffers[view.buffer] === undefined) {
-        throw new Error('[NacatamalOn] useLoadGltf: the file points at a slice of itself that is not there.');
+        throw new Error('[NacatamalOn] useLoadModel: the file points at a slice of itself that is not there.');
     }
     const at = view.byteOffset ?? 0;
     return buffers[view.buffer].slice(at, at + (view.byteLength ?? 0));

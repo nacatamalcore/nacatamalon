@@ -11,7 +11,7 @@ import type { TLightingLook, TStepLook } from '../../../shader_composer/surface/
  */
 export type TModelOptions = T3dOptions & {
     /**
-     * The loaded model, from `useLoadGltf`.
+     * The loaded model, from `useLoadModel`.
      */
     model: TGltfModel;
     /**

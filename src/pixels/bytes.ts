@@ -1,4 +1,5 @@
-import type { TColor } from '../color';
+import { getColor } from '../color/get_color';
+import type { TColor, TColorOption } from '../color';
 import type { TPixels } from './types/t_pixels';
 
 /**
@@ -27,11 +28,39 @@ export const put = (pixels: TPixels, x: number, y: number, r: number, g: number,
 };
 
 /**
+ * Colours written as text or a number, read once: a picture painted every frame names the same few
+ * again and again. Emptied when it grows past a few hundred, so colours made up on the fly do not
+ * pile up.
+ */
+const read = new Map<string | number, TColor>();
+
+/**
+ * A colour as the pixel functions take it, `'#ff6b1a'` as well as `{ r, g, b, a }`, as every option
+ * of the engine does.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const colorOf = (color: TColorOption): TColor => {
+    if (typeof color === 'object') return color;
+    let known = read.get(color);
+    if (known === undefined) {
+        if (read.size >= 256) read.clear();
+        known = getColor(color);
+        read.set(color, known);
+    }
+    return known;
+};
+
+/**
  * A colour as its four bytes, worked out once for a whole fill instead of once per pixel.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const bytesOf = (color: TColor): [number, number, number, number] =>
-    [toByte(color.r), toByte(color.g), toByte(color.b), toByte(color.a)];
+export const bytesOf = (option: TColorOption): [number, number, number, number] => {
+    const color = colorOf(option);
+    return [toByte(color.r), toByte(color.g), toByte(color.b), toByte(color.a)];
+};

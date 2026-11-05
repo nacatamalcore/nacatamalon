@@ -1,12 +1,12 @@
 /**
- * How a batch of loads is doing, returned by `useLoader`. Plain data, updated in place as each
+ * How a batch of loads is doing, returned by `useLoadProgress`. Plain data, updated in place as each
  * asset settles, so a scene reads it in `useUpdate` to drive a progress bar or move on.
  *
  * @category Assets & loading
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TLoader = {
+export type TLoadProgress = {
     /**
      * How many assets the batch tracks.
      */

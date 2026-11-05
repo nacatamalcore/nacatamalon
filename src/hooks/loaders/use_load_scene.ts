@@ -35,7 +35,7 @@ export type TUseLoadSceneOptions = {
  * like a scene written in code, and what it uses (its pictures, sounds, models) is asked for at once,
  * so it starts with all of it there.
  *
- * Handed back at once and filled in when it lands, like every other asset, and `useLoader` counts it
+ * Handed back at once and filled in when it lands, like every other asset, and `useLoadProgress` counts it
  * until what it uses has arrived too. Asking for the same file twice, in this scene or another, gives
  * back the one already loaded.
  *
@@ -50,7 +50,7 @@ export type TUseLoadSceneOptions = {
  * const Loading: TSceneFn = () => {
  *     const scene = useScene();
  *     const cave = useLoadScene({ src: 'scenes/cave.scene' });
- *     const loader = useLoader();
+ *     const loader = useLoadProgress();
  *     useUpdate(() => {
  *         if (loader.done) scene.change(cave.name);
  *     });

@@ -9,7 +9,7 @@ import { createTestGame, startTestScene } from './helpers/test_game';
 import { runHookUpdates } from '../src/game/loop/runHookUpdates';
 import { createScene } from '../src/scene/create_scene';
 import { createMesh } from '../src/gameobjects/mesh';
-import { useCubeGeometry, useUvSphereGeometry } from '../src/hooks/geometry';
+import { useCubeGeometry, useSphereGeometry } from '../src/hooks/geometry';
 import { usePhysicsBody3d, usePhysicsWorld3d } from '../src/hooks/physics';
 import { useSelf } from '../src/hooks/spawn/use_self';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
@@ -111,7 +111,7 @@ describe('a body that is simulated', () => {
             useSpawn(function Ball() {
                 // No useTransform: the shape carries the placement, which is how most scenes in
                 // this engine are written.
-                createMesh({ geometry: useUvSphereGeometry({ radius: 0.5 }), tint, transform: { y: 5 } });
+                createMesh({ geometry: useSphereGeometry({ radius: 0.5 }), tint, transform: { y: 5 } });
                 usePhysicsBody3d({ body: 'dynamic', collider: { shape: 'sphere', radius: 0.5 } });
             })();
             return createScene();
@@ -235,7 +235,7 @@ describe('a walking character', () => {
             useSpawn(Floor)();
             useSpawn(function Player() {
                 useTransform({ y: 3 });
-                createMesh({ geometry: useUvSphereGeometry({ radius: 0.35 }), tint });
+                createMesh({ geometry: useSphereGeometry({ radius: 0.35 }), tint });
                 player = useCharacterBody({ radius: 0.35, height: 1.8, offset: [0, 0.9, 0] });
             })();
             return createScene();
@@ -264,7 +264,7 @@ describe('a walking character', () => {
             })();
             useSpawn(function Player() {
                 useTransform({ y: 1 });
-                createMesh({ geometry: useUvSphereGeometry({ radius: 0.35 }), tint });
+                createMesh({ geometry: useSphereGeometry({ radius: 0.35 }), tint });
                 player = useCharacterBody({ radius: 0.35, height: 1.8, offset: [0, 0.9, 0] });
             })();
             return createScene();

@@ -163,7 +163,7 @@ describe('the swap', () => {
 
         registerScene(store, 'Slow', () => {
             // Registered exactly the way a real loader registers one: on the scene's own list,
-            // which is what `useLoader` counts, with its promise behind the same door.
+            // which is what `useLoadProgress` counts, with its promise behind the same door.
             store.get('world').boxStack[0].loads.push(asset);
             trackLoad(asset, new Promise<void>((resolve) => {
                 arrive = () => { asset.status = 'ready'; resolve(); };

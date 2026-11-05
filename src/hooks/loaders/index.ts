@@ -3,7 +3,7 @@ export { useLoadAtlas } from './use_load_atlas';
 export { useLoadAudio } from './use_load_audio';
 export { useLoadBitmapFont } from './use_load_bitmap_font';
 export { useLoadFont } from './use_load_font';
-export { useLoadGltf } from './use_load_gltf';
+export { useLoadModel } from './use_load_model';
 export { useLoadShader } from './use_load_shader';
 export { useLoadPalette } from './use_load_palette';
 export { useLoadLut } from './use_load_lut';
@@ -15,14 +15,14 @@ export { useLoadPack } from './use_load_pack';
 export type { TUseLoadPackOptions } from './use_load_pack';
 export { useLoadScene } from './use_load_scene';
 export type { TUseLoadSceneOptions } from './use_load_scene';
-export { useLoader } from './use_loader';
+export { useLoadProgress } from './use_load_progress';
 
 export type { TUseLoadTextureOptions } from './use_load_texture';
 export type { TUseLoadAtlasOptions } from './use_load_atlas';
 export type { TUseLoadAudioOptions } from './use_load_audio';
 export type { TUseLoadBitmapFontOptions } from './use_load_bitmap_font';
 export type { TUseLoadFontOptions } from './use_load_font';
-export type { TUseLoadGltfOptions } from './use_load_gltf';
+export type { TUseLoadModelOptions } from './use_load_model';
 export type { TUseLoadShaderOptions } from './use_load_shader';
 
 export type { TUseLoadPaletteOptions } from './use_load_palette';

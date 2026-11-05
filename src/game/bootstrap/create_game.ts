@@ -70,7 +70,7 @@ const logBanner = (backend: TRendererBackend): void => {
  * const game = createGame('#game', {
  *     width: 320,
  *     height: 224,
- *     background: getColor('#000000'),
+ *     background: '#000000',
  *     scaling: 'integer',
  * })({ Title, Level }, 'Title');
  *

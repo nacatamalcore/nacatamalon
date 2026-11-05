@@ -3,7 +3,7 @@ import { createScene } from '../src/scene/create_scene';
 import { buildParts } from '../src/loaders/gltf/build_parts';
 import { findMeshNodes } from '../src/loaders/gltf/find_mesh_nodes';
 import { useCubeGeometry } from '../src/hooks/geometry';
-import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
+import { useLoadModel } from '../src/hooks/loaders/use_load_model';
 import { whenLoaded } from '../src/loaders';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { asGltf, serveGltf, TEST_QUAD } from './helpers/test_gltf';
@@ -64,7 +64,7 @@ describe('what the shape tells the backend', () => {
         const { store } = createTestGame();
         let model: TGltfModel | null = null;
         startTestScene(store, 'Level', () => {
-            model = useLoadGltf({ src: 'model.gltf' });
+            model = useLoadModel({ src: 'model.gltf' });
             return createScene();
         });
         await whenLoaded(model as unknown as TGltfModel);

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, mock } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
-import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
+import { useLoadModel } from '../src/hooks/loaders/use_load_model';
 import { useCubeGeometry } from '../src/hooks/geometry';
 import { whenLoaded } from '../src/loaders';
 import { MESH_SHADER } from '../src/render/webgpu/mesh/mesh_shader';
@@ -36,7 +36,7 @@ const loadQuad = async (primitive: Partial<TTestPrimitive>, options: Record<stri
     const { store, renderer } = createTestGame();
     let loaded!: TGltfModel;
     startTestScene(store, 'Level', () => {
-        loaded = useLoadGltf({ src: 'model.gltf', ...options });
+        loaded = useLoadModel({ src: 'model.gltf', ...options });
         return createScene();
     });
     await whenLoaded(loaded);

@@ -211,7 +211,7 @@ for (const kind of KINDS) {
                 frames(1);
 
                 expect(h.sprite.transform.x).toBeCloseTo(96 - 6 + 0.3 - 0.1, 3);
-                expect(h.body.isOnWall).toBeNull();
+                expect(h.body.wallSide).toBeNull();
             });
 
             it('walks off an edge and falls, rather than staying stuck to the floor it left', async () => {
@@ -293,7 +293,7 @@ for (const kind of KINDS) {
                 frames(10);
 
                 expect(h.sprite.transform.x).toBeCloseTo(96 - 6, 0);
-                expect(h.body.isOnWall).toBe('right');
+                expect(h.body.wallSide).toBe('right');
             });
 
             it('stops at a wall, and says which side it is on', async () => {
@@ -309,7 +309,7 @@ for (const kind of KINDS) {
 
                 frames(90);
 
-                expect(h.body.isOnWall).toBe('right');
+                expect(h.body.wallSide).toBe('right');
                 expect(h.sprite.transform.x).toBeCloseTo(112 - 6, 0);
             });
 
@@ -679,7 +679,7 @@ describe('useTileBody2d on objects with a still collider', () => {
         });
         frames(90);
         expect(h.sprite.transform.x).toBeCloseTo(92 - 6, 1);
-        expect(h.body.isOnWall).toBe('right');
+        expect(h.body.wallSide).toBe('right');
     });
 
     it('hits its head on one above and comes back down', async () => {

@@ -107,7 +107,7 @@ export const createCharacter2d = (deps: {
         climbing: false,
         isOnGround: false,
         isOnCeiling: false,
-        isOnWall: null as 'left' | 'right' | null,
+        wallSide: null as 'left' | 'right' | null,
         isOnOneWay: false,
         isOnLadder: false,
         ground: undefined as TTileDoc | undefined,
@@ -225,13 +225,13 @@ export const createCharacter2d = (deps: {
             }
         }
         state.isOnCeiling = false;
-        state.isOnWall = null;
+        state.wallSide = null;
         state.isOnOneWay = false;
         // Each obstacle's normal, pointing at the character.
         for (const { x, y, ledge } of hits) {
             if (y >= FACING && desired.y < 0) state.isOnCeiling = true;
-            else if (x >= FACING) state.isOnWall = 'left';
-            else if (x <= -FACING) state.isOnWall = 'right';
+            else if (x >= FACING) state.wallSide = 'left';
+            else if (x <= -FACING) state.wallSide = 'right';
             if (y <= -FACING && ledge) state.isOnOneWay = true;
         }
         if (state.isOnGround && !state.isOnOneWay) {
@@ -312,7 +312,7 @@ export const createCharacter2d = (deps: {
         set climbing(value: boolean) { state.climbing = value; },
         get isOnGround() { return state.isOnGround; },
         get isOnCeiling() { return state.isOnCeiling; },
-        get isOnWall() { return state.isOnWall; },
+        get wallSide() { return state.wallSide; },
         get isOnOneWay() { return state.isOnOneWay; },
         get isOnLadder() { return state.isOnLadder; },
         get ground() { return state.ground; },

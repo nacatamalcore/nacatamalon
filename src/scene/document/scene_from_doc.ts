@@ -29,9 +29,9 @@ import { attachPicture, newSpriteTexture } from '../../gameobjects/sprite_textur
 import type { TSpriteTexture } from '../../gameobjects/sprite_texture';
 import {
     useCircleGeometry, useConeGeometry, useCubeGeometry, useCylinderGeometry,
-    useIcoSphereGeometry, useLatheGeometry, usePlaneGeometry, useTorusGeometry, useUvSphereGeometry,
+    useIcoSphereGeometry, useLatheGeometry, usePlaneGeometry, useTorusGeometry, useSphereGeometry,
 } from '../../hooks/geometry';
-import { useLoadAtlas, useLoadAudio, useLoadBitmapFont, useLoadFont, useLoadGltf, useLoadParticles, useLoadShader, useLoadSong, useLoadMotion, useLoadTexture } from '../../hooks/loaders';
+import { useLoadAtlas, useLoadAudio, useLoadBitmapFont, useLoadFont, useLoadModel, useLoadParticles, useLoadShader, useLoadSong, useLoadMotion, useLoadTexture } from '../../hooks/loaders';
 import { useMotion } from '../../hooks/motion';
 import { useScreenSpace } from '../../hooks/camera/use_screen_space';
 import { useWorldOffScreen } from '../../hooks/camera/use_world_off_screen';
@@ -144,7 +144,7 @@ const loadGeometry = (asset: Extract<TAssetEntry, { type: 'geometry' }>, src: st
         case 'cube': useCubeGeometry({ key, ...source }); break;
         case 'plane': usePlaneGeometry({ key, ...source }); break;
         case 'circle': useCircleGeometry({ key, ...source }); break;
-        case 'uvSphere': useUvSphereGeometry({ key, ...source }); break;
+        case 'uvSphere': useSphereGeometry({ key, ...source }); break;
         case 'icoSphere': useIcoSphereGeometry({ key, ...source }); break;
         case 'cylinder': useCylinderGeometry({ key, ...source }); break;
         case 'cone': useConeGeometry({ key, ...source }); break;
@@ -157,7 +157,7 @@ const loadGeometry = (asset: Extract<TAssetEntry, { type: 'geometry' }>, src: st
             // By the key the document gave it, which is how a mesh names it: the piece called
             // `node`, the `occurrence`-th of that name, or the first piece when there is no `node`.
             // That last is the old engine's rule, so a document written by it finds its models.
-            const model = useLoadGltf({ src: source.src });
+            const model = useLoadModel({ src: source.src });
             const store = getActiveGame();
             if (store !== null) modelShapesOf(store).set(key, { model, node: source.node, occurrence: source.occurrence ?? 0 });
             break;

@@ -94,7 +94,7 @@ export const createTileBody2d = (deps: {
         climbing: false,
         isOnGround: false,
         isOnCeiling: false,
-        isOnWall: null as 'left' | 'right' | null,
+        wallSide: null as 'left' | 'right' | null,
         isOnOneWay: false,
         isOnLadder: false,
         ground: undefined as TTileDoc | undefined,
@@ -200,7 +200,7 @@ export const createTileBody2d = (deps: {
         }
         if (stop !== null) {
             centre.x = stop;
-            state.isOnWall = dx > 0 ? 'right' : 'left';
+            state.wallSide = dx > 0 ? 'right' : 'left';
         }
     };
 
@@ -261,7 +261,7 @@ export const createTileBody2d = (deps: {
         const dx = (velocity.x + (push?.x ?? 0)) * dt;
         const dy = (velocity.y + (push?.y ?? 0)) * dt;
 
-        state.isOnWall = null;
+        state.wallSide = null;
         state.isOnCeiling = false;
         // In pieces no longer than half the smallest cell, so nothing is passed through between two.
         const smallest = blocks.reduce(
@@ -300,7 +300,7 @@ export const createTileBody2d = (deps: {
         set climbing(value: boolean) { state.climbing = value; },
         get isOnGround() { return state.isOnGround; },
         get isOnCeiling() { return state.isOnCeiling; },
-        get isOnWall() { return state.isOnWall; },
+        get wallSide() { return state.wallSide; },
         get isOnOneWay() { return state.isOnOneWay; },
         get isOnLadder() { return state.isOnLadder; },
         get ground() { return state.ground; },

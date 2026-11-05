@@ -42,13 +42,13 @@ export const startScene = (store: TRuntimeStore, name: string, props: object = {
         // A scene file is only known by its name once it lands, so any still on its way may be it.
         const arriving = [...store.get('assets').scenes.values()].filter((scene) => scene.status === 'loading' && scene.name === '').map((scene) => scene.src);
         throw new Error(arriving.length > 0
-            ? `[NacatamalOn] startScene: '${name}' is not registered yet, and ${arriving.join(', ')} ${arriving.length === 1 ? 'is' : 'are'} still loading. Wait for useLoadScene with useLoader before changing to it.`
-            : `[NacatamalOn] startScene: '${name}' is not registered. Add it to the object passed to createGame, or load its .scene file with useLoadScene.`);
+            ? `[NacatamalOn] scenes: '${name}' is not registered yet, and ${arriving.join(', ')} ${arriving.length === 1 ? 'is' : 'are'} still loading. Wait for useLoadScene with useLoadProgress before changing to it.`
+            : `[NacatamalOn] scenes: '${name}' is not registered. Add it to the object passed to createGame, or load its .scene file with useLoadScene.`);
     }
     // By either name: a scene built from a document answers to the one its document gave it, and
     // is still the scene started under this one.
     if (scenes.some((scene) => scene.name === name || startedAs(scene) === name)) {
-        throw new Error(`[NacatamalOn] startScene: '${name}' is already running.`);
+        throw new Error(`[NacatamalOn] scenes: '${name}' is already running. Stop it first, or change to it from the scene that is running.`);
     }
 
     const root = newBox(name);
@@ -58,17 +58,17 @@ export const startScene = (store: TRuntimeStore, name: string, props: object = {
 
     // TypeScript already rejects both of these. They are here for plain JavaScript.
     if (typeof (result as { then?: unknown } | undefined)?.then === 'function') {
-        throw new Error(`[NacatamalOn] startScene: '${name}' returned a promise. Scene bodies must be synchronous.`);
+        throw new Error(`[NacatamalOn] scenes: '${name}' returned a promise. A scene's function cannot be async: load what it needs with the useLoad… hooks, which return at once.`);
     }
     if (result === undefined || !Array.isArray(result.children)) {
-        throw new Error(`[NacatamalOn] startScene: '${name}' must end with \`return createScene()\`.`);
+        throw new Error(`[NacatamalOn] scenes: '${name}' must end with \`return createScene()\`.`);
     }
 
     for (const child of result.children) {
         // Created inside the body, or listed twice: already attached here.
         if (child.parent === root) continue;
         if (child.parent !== null) {
-            throw new Error(`[NacatamalOn] startScene: '${child.name}' already belongs to '${child.parent.name}'.`);
+            throw new Error(`[NacatamalOn] scenes: '${child.name}' already belongs to '${child.parent.name}'.`);
         }
         child.parent = root;
         root.children.push(child);

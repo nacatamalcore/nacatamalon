@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, mock } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
-import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
+import { useLoadModel } from '../src/hooks/loaders/use_load_model';
 import { useLoadTexture } from '../src/hooks/loaders/use_load_texture';
 import { releaseAsset, whenLoaded } from '../src/loaders';
 import { holdersOf } from '../src/loaders/asset_holds';
@@ -37,7 +37,7 @@ const load = async (model: TTestModel | ArrayBuffer, options: Record<string, unk
     const { store } = createTestGame();
     let loaded: TGltfModel | null = null;
     startTestScene(store, 'Level', () => {
-        loaded = useLoadGltf({ src, ...options });
+        loaded = useLoadModel({ src, ...options });
         return createScene();
     });
     await whenLoaded(loaded as unknown as TGltfModel);
@@ -46,9 +46,9 @@ const load = async (model: TTestModel | ArrayBuffer, options: Record<string, unk
 
 afterEach(() => { mock.restore(); });
 
-describe('useLoadGltf', () => {
+describe('useLoadModel', () => {
     it('refuses to be called outside a scene body', () => {
-        expect(() => useLoadGltf({ src: 'a.gltf' })).toThrow('[NacatamalOn] useLoadGltf');
+        expect(() => useLoadModel({ src: 'a.gltf' })).toThrow('[NacatamalOn] useLoadModel');
     });
 
     it('comes back at once, still loading, with nothing to draw yet', () => {
@@ -56,7 +56,7 @@ describe('useLoadGltf', () => {
         const { store } = createTestGame();
         let model: TGltfModel | null = null;
         startTestScene(store, 'Level', () => {
-            model = useLoadGltf({ src: 'model.gltf' });
+            model = useLoadModel({ src: 'model.gltf' });
             return createScene();
         });
 
@@ -175,8 +175,8 @@ describe('useLoadGltf', () => {
         let first: TGltfModel | null = null;
         let second: TGltfModel | null = null;
         startTestScene(store, 'Level', () => {
-            first = useLoadGltf({ src: 'model.gltf' });
-            second = useLoadGltf({ src: 'model.gltf' });
+            first = useLoadModel({ src: 'model.gltf' });
+            second = useLoadModel({ src: 'model.gltf' });
             return createScene();
         });
         await whenLoaded(first as unknown as TGltfModel);
@@ -192,7 +192,7 @@ describe('useLoadGltf', () => {
         const { store } = createTestGame();
         let model: TGltfModel | null = null;
         startTestScene(store, 'Level', () => {
-            model = useLoadGltf({ src: 'missing.gltf' });
+            model = useLoadModel({ src: 'missing.gltf' });
             return createScene();
         });
         await whenLoaded(model as unknown as TGltfModel);
@@ -221,7 +221,7 @@ describe('pictures', () => {
         const { store } = createTestGame();
         let model: TGltfModel | null = null;
         startTestScene(store, 'Level', () => {
-            model = useLoadGltf({ src: 'models/tower.gltf' });
+            model = useLoadModel({ src: 'models/tower.gltf' });
             return createScene();
         });
         await whenLoaded(model as unknown as TGltfModel);
@@ -317,7 +317,7 @@ describe('a picture kept inside a model file, the same in more than one', () => 
             const { store } = createTestGame();
             const models: TGltfModel[] = [];
             startTestScene(store, 'Shop', () => {
-                for (const name of Object.keys(files)) models.push(useLoadGltf({ src: name }));
+                for (const name of Object.keys(files)) models.push(useLoadModel({ src: name }));
                 return createScene();
             });
             for (const model of models) await whenLoaded(model);
@@ -357,8 +357,8 @@ describe('a picture kept inside a model file, the same in more than one', () => 
             let crate!: TGltfModel;
             let barrel!: TGltfModel;
             startTestScene(store, 'Shop', () => {
-                crate = useLoadGltf({ src: 'crate.glb' });
-                barrel = useLoadGltf({ src: 'barrel.glb' });
+                crate = useLoadModel({ src: 'crate.glb' });
+                barrel = useLoadModel({ src: 'barrel.glb' });
                 return createScene();
             });
             await whenLoaded(crate);
@@ -402,8 +402,8 @@ describe('a picture kept inside a model file, the same in more than one', () => 
             let crate!: TGltfModel;
             let barrel!: TGltfModel;
             startTestScene(store, 'Shop', () => {
-                crate = useLoadGltf({ src: 'crate.glb' });
-                barrel = useLoadGltf({ src: 'barrel.glb' });
+                crate = useLoadModel({ src: 'crate.glb' });
+                barrel = useLoadModel({ src: 'barrel.glb' });
                 return createScene();
             });
             await whenLoaded(crate);
@@ -431,7 +431,7 @@ describe('a picture kept inside a model file, the same in more than one', () => 
             const { store } = createTestGame();
             let crate!: TGltfModel;
             startTestScene(store, 'Shop', () => {
-                crate = useLoadGltf({ src: 'crate.glb' });
+                crate = useLoadModel({ src: 'crate.glb' });
                 return createScene();
             });
             const geometries = store.get('assets').geometries.size;
@@ -466,7 +466,7 @@ describe('a picture kept inside a model file, the same in more than one', () => 
             const { store } = createTestGame();
             let barrel!: TGltfModel;
             startTestScene(store, 'Shop', () => {
-                barrel = useLoadGltf({ src: 'barrel.glb' });
+                barrel = useLoadModel({ src: 'barrel.glb' });
                 return createScene();
             });
             const geometries = store.get('assets').geometries.size;
@@ -513,7 +513,7 @@ describe('a picture kept inside a model file, the same in more than one', () => 
             const { store } = createTestGame();
             let barrel!: TGltfModel;
             startTestScene(store, 'Shop', () => {
-                barrel = useLoadGltf({ src: 'barrel.glb' });
+                barrel = useLoadModel({ src: 'barrel.glb' });
                 return createScene();
             });
             for (let i = 0; i < 20; i++) await new Promise((resolve) => setTimeout(resolve, 0));
@@ -558,8 +558,8 @@ describe('a picture kept inside a model file, the same in more than one', () => 
             let crate!: TGltfModel;
             let barrel!: TGltfModel;
             startTestScene(store, 'Shop', () => {
-                crate = useLoadGltf({ src: 'crate.glb' });
-                barrel = useLoadGltf({ src: 'barrel.glb' });
+                crate = useLoadModel({ src: 'crate.glb' });
+                barrel = useLoadModel({ src: 'barrel.glb' });
                 return createScene();
             });
             await whenLoaded(crate);
@@ -588,7 +588,7 @@ describe('a picture kept inside a model file, the same in more than one', () => 
             const { store } = createTestGame();
             let bad!: TGltfModel;
             startTestScene(store, 'Shop', () => {
-                bad = useLoadGltf({ src: 'bad.gltf' });
+                bad = useLoadModel({ src: 'bad.gltf' });
                 return createScene();
             });
             await whenLoaded(bad);
@@ -627,7 +627,7 @@ describe('a picture kept inside a model file, the same in more than one', () => 
             let tower!: TGltfModel;
             startTestScene(store, 'Shop', () => {
                 atlas = useLoadTexture({ src: 'atlas.png' });
-                tower = useLoadGltf({ src: 'tower.gltf' });
+                tower = useLoadModel({ src: 'tower.gltf' });
                 return createScene();
             });
             await whenLoaded(tower);
@@ -655,7 +655,7 @@ describe('a picture kept inside a model file, the same in more than one', () => 
             let tower!: TGltfModel;
             startTestScene(store, 'Shop', () => {
                 atlas = useLoadTexture({ src: 'atlas.png' });
-                tower = useLoadGltf({ src: 'tower.gltf' });
+                tower = useLoadModel({ src: 'tower.gltf' });
                 return createScene();
             });
             while (!holdersOf(atlas).includes(tower)) {
@@ -683,7 +683,7 @@ describe('a picture kept inside a model file, the same in more than one', () => 
             const { store } = createTestGame();
             let tower!: TGltfModel;
             startTestScene(store, 'Shop', () => {
-                tower = useLoadGltf({ src: 'tower.gltf' });
+                tower = useLoadModel({ src: 'tower.gltf' });
                 return createScene();
             });
             await whenLoaded(tower);
@@ -706,7 +706,7 @@ describe('a picture kept inside a model file, the same in more than one', () => 
             const { store } = createTestGame();
             let tower!: TGltfModel;
             startTestScene(store, 'Shop', () => {
-                tower = useLoadGltf({ src: 'tower.gltf' });
+                tower = useLoadModel({ src: 'tower.gltf' });
                 return createScene();
             });
             await whenLoaded(tower);
@@ -755,7 +755,7 @@ describe('a picture kept inside a model file, the same in more than one', () => 
                 if (alsoTheGame) {
                     useLoadTexture({ src: 'atlas.png' });
                 }
-                tower = useLoadGltf({ src: 'tower.gltf' });
+                tower = useLoadModel({ src: 'tower.gltf' });
                 return createScene();
             });
             const textures = store.get('assets').textures;
@@ -803,7 +803,7 @@ describe('a picture kept inside a model file, the same in more than one', () => 
             const { store } = createTestGame();
             let crate!: TGltfModel;
             startTestScene(store, 'Shop', () => {
-                crate = useLoadGltf({ src: 'crate.glb' });
+                crate = useLoadModel({ src: 'crate.glb' });
                 return createScene();
             });
             await whenLoaded(crate);
@@ -828,7 +828,7 @@ describe('a picture kept inside a model file, the same in more than one', () => 
             const { store } = createTestGame();
             let crate!: TGltfModel;
             startTestScene(store, 'Shop', () => {
-                crate = useLoadGltf({ src: 'nowhere.glb' });
+                crate = useLoadModel({ src: 'nowhere.glb' });
                 return createScene();
             });
             releaseAsset(store, crate);
@@ -852,7 +852,7 @@ describe('a picture kept inside a model file, the same in more than one', () => 
             const { store } = createTestGame();
             let crate!: TGltfModel;
             startTestScene(store, 'Shop', () => {
-                crate = useLoadGltf({ src: 'crate.glb' });
+                crate = useLoadModel({ src: 'crate.glb' });
                 return createScene();
             });
             await whenLoaded(crate);
@@ -862,7 +862,7 @@ describe('a picture kept inside a model file, the same in more than one', () => 
             for (let round = 0; round < 5; round++) {
                 let barrel!: TGltfModel;
                 startTestScene(store, `Aisle${round}`, () => {
-                    barrel = useLoadGltf({ src: 'barrel.glb' });
+                    barrel = useLoadModel({ src: 'barrel.glb' });
                     return createScene();
                 });
                 await whenLoaded(barrel);

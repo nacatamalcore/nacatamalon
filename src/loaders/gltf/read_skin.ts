@@ -165,7 +165,7 @@ export const readSkin = (
 ): { skeleton: TSkeleton; renumber: Int32Array } => {
     const skin = doc.skins?.[skinIndex];
     if (skin === undefined) {
-        throw new Error('[NacatamalOn] useLoadGltf: the file points at a rig it does not contain.');
+        throw new Error('[NacatamalOn] useLoadModel: the file points at a rig it does not contain.');
     }
 
     const nodes = doc.nodes ?? [];

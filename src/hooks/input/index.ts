@@ -1,7 +1,7 @@
 export { useKeyboard } from './use_keyboard';
 export { usePointer } from './use_pointer';
 export { useGamepad } from './use_gamepad';
-export { useActions, useAction, useVector } from './use_actions';
+export { useActions, useAction, useDirection } from './use_actions';
 export { useInputMap } from './use_input_map';
 export { useTouchAction } from './use_touch_action';
 export { useDraggable } from './use_draggable';

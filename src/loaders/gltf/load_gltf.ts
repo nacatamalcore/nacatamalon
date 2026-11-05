@@ -164,7 +164,7 @@ const keptPicture = async (
             }
             texture.status = 'error';
             bumpVersion(texture);
-            console.warn(`[NacatamalOn] useLoadGltf: a picture inside '${model.src}' could not be read. That piece draws as its tint.`, error);
+            console.warn(`[NacatamalOn] useLoadModel: a picture inside '${model.src}' could not be read. That piece draws as its tint.`, error);
         }
     })();
     // Tracked, so the wait above has something to wait on when the next model asks for it.
@@ -327,6 +327,6 @@ export const loadGltf = async (store: TRuntimeStore, model: TGltfModel, options:
         model.status = 'error';
         bumpVersion(model);
         stopCounting(model);
-        console.warn(`[NacatamalOn] useLoadGltf: '${model.src}' could not be loaded. Nothing is drawn for it.`, error);
+        console.warn(`[NacatamalOn] useLoadModel: '${model.src}' could not be loaded. Nothing is drawn for it.`, error);
     }
 };

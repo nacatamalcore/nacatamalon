@@ -39,7 +39,7 @@ export type TGltfContainer = {
  */
 export const readGltfContainer = (bytes: ArrayBuffer): TGltfContainer => {
     if (bytes.byteLength < 4) {
-        throw new Error('[NacatamalOn] useLoadGltf: the file is empty.');
+        throw new Error('[NacatamalOn] useLoadModel: the file is empty.');
     }
 
     const head = new DataView(bytes);
@@ -48,12 +48,12 @@ export const readGltfContainer = (bytes: ArrayBuffer): TGltfContainer => {
     }
 
     if (bytes.byteLength < 20) {
-        throw new Error('[NacatamalOn] useLoadGltf: the file says it is a binary model but stops before its first part.');
+        throw new Error('[NacatamalOn] useLoadModel: the file says it is a binary model but stops before its first part.');
     }
 
     const version = head.getUint32(4, true);
     if (version !== 2) {
-        throw new Error(`[NacatamalOn] useLoadGltf: binary models of version ${version} are not read; this engine reads version 2.`);
+        throw new Error(`[NacatamalOn] useLoadModel: binary models of version ${version} are not read; this engine reads version 2.`);
     }
 
     let doc: TGltfDoc | null = null;
@@ -68,7 +68,7 @@ export const readGltfContainer = (bytes: ArrayBuffer): TGltfContainer => {
         const kind = head.getUint32(at + 4, true);
         const start = at + 8;
         if (start + length > bytes.byteLength) {
-            throw new Error('[NacatamalOn] useLoadGltf: a part of the binary model runs past the end of the file.');
+            throw new Error('[NacatamalOn] useLoadModel: a part of the binary model runs past the end of the file.');
         }
 
         if (kind === CHUNK_JSON && doc === null) {
@@ -82,7 +82,7 @@ export const readGltfContainer = (bytes: ArrayBuffer): TGltfContainer => {
     }
 
     if (doc === null) {
-        throw new Error('[NacatamalOn] useLoadGltf: the binary model carries no description.');
+        throw new Error('[NacatamalOn] useLoadModel: the binary model carries no description.');
     }
     return { doc, embedded };
 };
@@ -98,7 +98,7 @@ export const readGltfContainer = (bytes: ArrayBuffer): TGltfContainer => {
 export const decodeDataUri = (uri: string): ArrayBuffer => {
     const comma = uri.indexOf(',');
     if (comma < 0) {
-        throw new Error('[NacatamalOn] useLoadGltf: a built-in address inside the file is malformed.');
+        throw new Error('[NacatamalOn] useLoadModel: a built-in address inside the file is malformed.');
     }
 
     const body = uri.slice(comma + 1);

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, mock } from 'bun:test';
 import { createModel } from '../src/gameobjects/model';
 import { createScene } from '../src/scene/create_scene';
 import { runHookUpdates } from '../src/game/loop/runHookUpdates';
-import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
+import { useLoadModel } from '../src/hooks/loaders/use_load_model';
 import { useSkeletalAnimation } from '../src/hooks/animation/use_skeletal_animation';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { destroy, flushDestroyed } from '../src/destroy';
@@ -57,7 +57,7 @@ const withBody = async (top: TSkeletalAnimationOptions, body: TSkeletalAnimation
     let below!: TSkeletalAnimation;
     let above!: TSkeletalAnimation;
     const scene: TBox = startTestScene(store, 'Level', () => {
-        file = useLoadGltf({ src: 'model.gltf' });
+        file = useLoadModel({ src: 'model.gltf' });
         model = createModel({ model: file });
         below = useSkeletalAnimation(model, body);
         above = useSkeletalAnimation(model, top);
@@ -291,7 +291,7 @@ describe('what the body and the layers do to each other', () => {
         let first!: TSkeletalAnimation;
         let second!: TSkeletalAnimation;
         const scene: TBox = startTestScene(store, 'Level', () => {
-            file = useLoadGltf({ src: 'model.gltf' });
+            file = useLoadModel({ src: 'model.gltf' });
             model = createModel({ model: file });
             useSkeletalAnimation(model, { play: 'Run' });
             first = useSkeletalAnimation(model, { only: ['Tail'] });
@@ -338,7 +338,7 @@ describe('what the body and the layers do to each other', () => {
         let file!: TGltfModel;
         let model!: TModel;
         const scene: TBox = startTestScene(store, 'Level', () => {
-            file = useLoadGltf({ src: 'model.gltf' });
+            file = useLoadModel({ src: 'model.gltf' });
             model = createModel({ model: file });
             const Body = () => { useSkeletalAnimation(model, { play: 'Run' }); };
             useSpawn(Body)();
@@ -363,7 +363,7 @@ describe('what the body and the layers do to each other', () => {
         let model!: TModel;
         let gone!: () => void;
         const scene: TBox = startTestScene(store, 'Level', () => {
-            file = useLoadGltf({ src: 'model.gltf' });
+            file = useLoadModel({ src: 'model.gltf' });
             model = createModel({ model: file });
             useSkeletalAnimation(model, { play: 'Run' });
             const Waving = () => { useSkeletalAnimation(model, { only: ['Spine'], play: 'Wave' }); };
@@ -464,7 +464,7 @@ describe('stopping', () => {
         let file!: TGltfModel;
         let model!: TModel;
         const scene: TBox = startTestScene(store, 'Level', () => {
-            file = useLoadGltf({ src: 'model.gltf' });
+            file = useLoadModel({ src: 'model.gltf' });
             model = createModel({ model: file });
             useSkeletalAnimation(model, { play: 'Run' }).stop();
             return createScene();
@@ -485,7 +485,7 @@ describe('stopping', () => {
         let model!: TModel;
         let moves!: TSkeletalAnimation;
         const scene: TBox = startTestScene(store, 'Level', () => {
-            file = useLoadGltf({ src: 'model.gltf' });
+            file = useLoadModel({ src: 'model.gltf' });
             model = createModel({ model: file });
             moves = useSkeletalAnimation(model, { play: 'Wave' });
             moves.stop();
@@ -540,7 +540,7 @@ describe('stopping', () => {
         let model!: TModel;
         let moves!: TSkeletalAnimation;
         const scene: TBox = startTestScene(store, 'Level', () => {
-            file = useLoadGltf({ src: 'model.gltf' });
+            file = useLoadModel({ src: 'model.gltf' });
             model = createModel({ model: file });
             moves = useSkeletalAnimation(model, { play: 'Wave' });
             moves.stop();

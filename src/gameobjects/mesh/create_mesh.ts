@@ -57,7 +57,7 @@ const resolveTexture = (options: TMeshOptions): TTexture | null => {
  * ```ts
  * const Level = () => {
  *     useCamera3d({ projection: 'perspective', transform: { z: 4 } });
- *     const crate = createMesh({ geometry: useCubeGeometry(), tint: getColor('#c08040') });
+ *     const crate = createMesh({ geometry: useCubeGeometry(), tint: '#c08040' });
  *
  *     useUpdate((delta) => {
  *         crate.transform.rotationY += delta;

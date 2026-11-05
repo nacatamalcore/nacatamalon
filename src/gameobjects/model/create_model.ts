@@ -163,7 +163,7 @@ const buildPart = (
  *     useCamera3d({ projection: 'perspective', transform: { z: 6 } });
  *     useDirectionalLight({ intensity: 1 });
  *
- *     const tower = useLoadGltf({ src: '/models/tower.glb' });
+ *     const tower = useLoadModel({ src: '/models/tower.glb' });
  *     const placed = createModel({ model: tower, transform: { y: -1 } });
  *
  *     useUpdate((delta) => {

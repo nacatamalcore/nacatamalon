@@ -6,7 +6,7 @@ import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useCamera2d } from '../src/hooks/camera/use_camera_2d';
 import { useScreenSpace } from '../src/hooks/camera/use_screen_space';
 import { useLoadBitmapFont } from '../src/hooks/loaders/use_load_bitmap_font';
-import { useLoader } from '../src/hooks/loaders/use_loader';
+import { useLoadProgress } from '../src/hooks/loaders/use_load_progress';
 import { fillFrameContext } from '../src/game/loop/fill_frame_context';
 import { pickTargets } from '../src/input/pick_targets';
 import { destroy, flushDestroyed } from '../src/destroy';
@@ -178,7 +178,7 @@ describe('createText', () => {
             const font = useLoadBitmapFont({ json: '/f.json', atlas: '/f.png' });
             // The same font asked twice is loaded once and listed once.
             useLoadBitmapFont({ json: '/f.json', atlas: '/f.png' });
-            fontsCounted = useLoader([font]).total;
+            fontsCounted = useLoadProgress([font]).total;
             return createScene();
         });
 

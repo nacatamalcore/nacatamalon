@@ -25,7 +25,7 @@ export const localStorageAdapter = <S = any>(): TStorePersistence<S> => ({
             const raw = globalThis.localStorage.getItem(key);
             return raw === null ? null : (JSON.parse(raw) as S);
         } catch (error) {
-            console.warn(`[NacatamalOn] localStorage: '${key}' could not be read.`, error);
+            console.warn(`[NacatamalOn] localStorageAdapter: '${key}' could not be read, so what the game declares is used.`, error);
             return null;
         }
     },
@@ -33,7 +33,7 @@ export const localStorageAdapter = <S = any>(): TStorePersistence<S> => ({
         try {
             globalThis.localStorage.setItem(key, JSON.stringify(state));
         } catch (error) {
-            console.warn(`[NacatamalOn] localStorage: '${key}' could not be saved.`, error);
+            console.warn(`[NacatamalOn] localStorageAdapter: '${key}' could not be saved. The browser may be full or in a private window.`, error);
         }
     },
 });

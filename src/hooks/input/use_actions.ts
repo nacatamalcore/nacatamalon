@@ -122,7 +122,7 @@ export const useAction = (name: TActionName, options: TUseActionsOptions = {}): 
  * declare const hero: TSprite;
  * const SPEED = 120;
  *
- * const move = useVector('move_left', 'move_right', 'move_up', 'move_down');
+ * const move = useDirection('move_left', 'move_right', 'move_up', 'move_down');
  * useUpdate((delta) => {
  *     const { x, y } = move();
  *     hero.transform.x += x * SPEED * delta;
@@ -142,13 +142,13 @@ export const useAction = (name: TActionName, options: TUseActionsOptions = {}): 
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const useVector = (
+export const useDirection = (
     negativeX: TActionName,
     positiveX: TActionName,
     negativeY: TActionName,
     positiveY: TActionName,
     options: TUseActionsOptions & { deadzone?: number } = {},
 ): (() => { x: number; y: number }) => {
-    const handle = sourceOf('useVector').handle(options.device);
+    const handle = sourceOf('useDirection').handle(options.device);
     return () => handle.vector(negativeX, positiveX, negativeY, positiveY, options.deadzone);
 };

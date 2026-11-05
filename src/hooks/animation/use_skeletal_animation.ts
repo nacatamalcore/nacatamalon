@@ -59,7 +59,7 @@ const holdPoseIn = (model: TModel, room: TJointPose[][]): void => {
  *     useCamera3d({ projection: 'perspective', transform: { z: 200 } });
  *     useDirectionalLight({ intensity: 1 });
  *
- *     const file = useLoadGltf({ src: '/models/fox.glb' });
+ *     const file = useLoadModel({ src: '/models/fox.glb' });
  *     const fox = createModel({ model: file });
  *     const moves = useSkeletalAnimation(fox, { play: 'Walk', fade: 0.25 });
  *
@@ -78,7 +78,7 @@ const holdPoseIn = (model: TModel, room: TJointPose[][]): void => {
  *     useCamera3d({ projection: 'perspective', transform: { z: 20 } });
  *     useDirectionalLight({ intensity: 1 });
  *
- *     const hero = createModel({ model: useLoadGltf({ src: '/models/hero.glb' }) });
+ *     const hero = createModel({ model: useLoadModel({ src: '/models/hero.glb' }) });
  *     useSkeletalAnimation(hero, { play: 'run' });
  *     const top = useSkeletalAnimation(hero, { only: ['spine'], fade: 0.2, clips: { greet: { loop: false } } });
  *

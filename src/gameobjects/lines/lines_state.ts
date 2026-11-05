@@ -46,7 +46,7 @@ export const linesStateOf = (lines: TLines): TLinesState => {
 export const writeLines = (lines: TLines, vertices: Float32Array): void => {
     if (vertices.length % (LINE_VERTEX_FLOATS * 2) !== 0) {
         throw new Error(
-            `[NacatamalOn] useHelperLines: ${vertices.length} numbers is not a whole number of lines. ` +
+            `[NacatamalOn] useLines: ${vertices.length} numbers is not a whole number of lines. ` +
             `Each corner takes ${LINE_VERTEX_FLOATS} (x, y, z, r, g, b, a) and each line two corners.`,
         );
     }

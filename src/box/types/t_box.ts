@@ -191,7 +191,7 @@ export type TBox = {
     time: number;
     /**
      * Only meaningful on a scene root: every asset the scene's body asked for, ready or not, in the
-     * order asked. What `useLoader()` counts. Runtime only.
+     * order asked. What `useLoadProgress()` counts. Runtime only.
      */
     loads: TLoadable[];
     /**

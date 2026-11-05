@@ -38,7 +38,7 @@ export type TCharacterBody2d = {
     /**
      * Pressed against a wall, and on which side.
      */
-    readonly isOnWall: 'left' | 'right' | null;
+    readonly wallSide: 'left' | 'right' | null;
     /**
      * Standing on a ledge (`oneWay`), which `dropThrough()` falls through.
      */

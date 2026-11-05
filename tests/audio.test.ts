@@ -6,7 +6,7 @@ import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useCamera2d } from '../src/hooks/camera/use_camera_2d';
 import { useLoadAudio } from '../src/hooks/loaders/use_load_audio';
-import { useLoader } from '../src/hooks/loaders/use_loader';
+import { useLoadProgress } from '../src/hooks/loaders/use_load_progress';
 import { useSound } from '../src/hooks/audio/use_sound';
 import { useAudio } from '../src/hooks/audio/use_audio';
 import { updateAudio } from '../src/audio';
@@ -71,12 +71,12 @@ const withSound = async (options: Parameters<typeof useSound>[1] = {}) => {
 };
 
 describe('useLoadAudio', () => {
-    it('fills the clip in place and counts as loaded for useLoader', async () => {
+    it('fills the clip in place and counts as loaded for useLoadProgress', async () => {
         const { store } = createTestGame();
-        let loader!: ReturnType<typeof useLoader>;
+        let loader!: ReturnType<typeof useLoadProgress>;
         startTestScene(store, 'Level', () => {
             useLoadAudio({ src: '/audio/coin.mp3', key: 'coin' });
-            loader = useLoader();
+            loader = useLoadProgress();
             return createScene();
         });
 

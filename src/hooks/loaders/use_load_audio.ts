@@ -35,7 +35,7 @@ export type TUseLoadAudioOptions = {
  * then does nothing, so nothing has to check whether it is ready. Asking twice for the same key
  * gives the same sound, already loaded: load it once in a loading scene and use it in the level.
  *
- * It can be watched with `useLoader` to show a loading bar.
+ * It can be watched with `useLoadProgress` to show a loading bar.
  *
  * This is also what opens the game's sound, so a game that never loads or plays anything never does.
  *
@@ -78,7 +78,7 @@ export const useLoadAudio = ({ src, key }: TUseLoadAudioOptions): TAudioClip => 
         trackLoad(clip, loadAudio(store, clip, (data) => context.decodeAudioData(data)));
     }
 
-    // Listed on the scene even when it came from the cache: `useLoader()` counts everything the
+    // Listed on the scene even when it came from the cache: `useLoadProgress()` counts everything the
     // scene asked for, and one already loaded counts as done.
     const { loads } = rootOf(box);
     if (!loads.includes(clip)) {

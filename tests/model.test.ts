@@ -8,7 +8,7 @@ import { destroy, flushDestroyed } from '../src/destroy';
 import { fillFrameContext } from '../src/game/loop/fill_frame_context';
 import { getColor } from '../src/color';
 import { mangaDots, toonLighting } from '../src/shader_composer/surface/looks';
-import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
+import { useLoadModel } from '../src/hooks/loaders/use_load_model';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { whenLoaded } from '../src/loaders';
 import { createTestGame, startTestScene } from './helpers/test_game';
@@ -61,7 +61,7 @@ describe('createModel', () => {
         let placed: TModel | null = null;
         let source: TGltfModel | null = null;
         startTestScene(store, 'Level', () => {
-            source = useLoadGltf({ src: 'model.gltf' });
+            source = useLoadModel({ src: 'model.gltf' });
             placed = createModel({ model: source });
             return createScene();
         });
@@ -82,7 +82,7 @@ describe('createModel', () => {
         let placed: TModel | null = null;
         let source: TGltfModel | null = null;
         startTestScene(store, 'Level', () => {
-            source = useLoadGltf({ src: 'model.gltf' });
+            source = useLoadModel({ src: 'model.gltf' });
             placed = createModel({ model: source });
             return createScene();
         });
@@ -108,7 +108,7 @@ describe('createModel', () => {
         let placed: TModel | null = null;
         let source: TGltfModel | null = null;
         startTestScene(store, 'Level', () => {
-            source = useLoadGltf({ src: 'model.gltf' });
+            source = useLoadModel({ src: 'model.gltf' });
             placed = createModel({ model: source, visible: false });
             return createScene();
         });
@@ -124,14 +124,14 @@ describe('createModel', () => {
         const { store } = createTestGame();
         let source: TGltfModel | null = null;
         startTestScene(store, 'First', () => {
-            source = useLoadGltf({ src: 'model.gltf' });
+            source = useLoadModel({ src: 'model.gltf' });
             return createScene();
         });
         await whenLoaded(source as unknown as TGltfModel);
 
         let placed: TModel | null = null;
         startTestScene(store, 'Second', () => {
-            placed = createModel({ model: useLoadGltf({ src: 'model.gltf' }) });
+            placed = createModel({ model: useLoadModel({ src: 'model.gltf' }) });
             return createScene();
         });
 
@@ -145,7 +145,7 @@ describe('createModel', () => {
         let placed: TModel | null = null;
         let source: TGltfModel | null = null;
         startTestScene(store, 'Level', () => {
-            source = useLoadGltf({ src: 'model.gltf' });
+            source = useLoadModel({ src: 'model.gltf' });
             placed = createModel({ model: source, transform: { x: 4, y: 2 } });
             return createScene();
         });
@@ -167,7 +167,7 @@ describe('createModel', () => {
         let placed: TModel | null = null;
         let source: TGltfModel | null = null;
         startTestScene(store, 'Level', () => {
-            source = useLoadGltf({ src: 'model.gltf' });
+            source = useLoadModel({ src: 'model.gltf' });
             placed = createModel({ model: source, tint: getColor('#808080') });
             return createScene();
         });
@@ -187,7 +187,7 @@ describe('createModel', () => {
         let placed: TModel | null = null;
         let source: TGltfModel | null = null;
         startTestScene(store, 'Level', () => {
-            source = useLoadGltf({ src: 'model.gltf' });
+            source = useLoadModel({ src: 'model.gltf' });
             placed = createModel({ model: source, lighting: toonLighting(), steps: [mangaDots()] });
             return createScene();
         });
@@ -211,7 +211,7 @@ describe('createModel', () => {
         let placed: TModel | null = null;
         let source: TGltfModel | null = null;
         startTestScene(store, 'Level', () => {
-            source = useLoadGltf({ src: 'model.gltf' });
+            source = useLoadModel({ src: 'model.gltf' });
             placed = createModel({ model: source });
             return createScene();
         });
@@ -230,7 +230,7 @@ describe('createModel', () => {
 
         const root = startTestScene(store, 'Level', () => {
             const spawn = useSpawn(() => {
-                source = useLoadGltf({ src: 'model.gltf' });
+                source = useLoadModel({ src: 'model.gltf' });
                 placed = createModel({ model: source });
             });
             const made = spawn();
@@ -254,7 +254,7 @@ describe('createModel', () => {
 
         startTestScene(store, 'Level', () => {
             const spawn = useSpawn(() => {
-                source = useLoadGltf({ src: 'model.gltf' });
+                source = useLoadModel({ src: 'model.gltf' });
                 createModel({ model: source });
             });
             made = spawn();
@@ -279,7 +279,7 @@ describe('a placed model, used like any other drawing', () => {
         let placed!: TModel;
         let source!: TGltfModel;
         startTestScene(store, 'Level', () => {
-            source = useLoadGltf({ src: 'model.gltf' });
+            source = useLoadModel({ src: 'model.gltf' });
             placed = createModel({ model: source, ...options });
             return createScene();
         });

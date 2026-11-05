@@ -34,7 +34,7 @@ export type TUseLoadBitmapFontOptions = {
  * Loads a bitmap font: an image with the characters drawn in it, and a file saying where each one is.
  *
  * You get the font back at once, still loading. Hand it to `createText` straight away: the text
- * appears by itself when the font arrives, and `useLoader` counts it like any other asset.
+ * appears by itself when the font arrives, and `useLoadProgress` counts it like any other asset.
  *
  * Asking for the same font twice, in this scene or another, gives back the one already loaded.
  *
@@ -77,7 +77,7 @@ export const useLoadBitmapFont = ({ json, atlas, key }: TUseLoadBitmapFontOption
         trackLoad(font, loadBitmapFont(store, font));
     }
 
-    // Listed on the scene even when it came from the cache, so `useLoader()` counts it.
+    // Listed on the scene even when it came from the cache, so `useLoadProgress()` counts it.
     const { loads } = rootOf(box);
     if (!loads.includes(font)) {
         loads.push(font);

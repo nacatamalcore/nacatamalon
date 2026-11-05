@@ -41,7 +41,7 @@ export type TUseLoadFontOptions = {
  * Loads a vector font: a `.ttf` or `.woff` file, the kind a computer has installed.
  *
  * You get the font back at once, still loading. Hand it to `createText` straight away: the text
- * appears by itself when the font arrives, and `useLoader` counts it like any other asset.
+ * appears by itself when the font arrives, and `useLoadProgress` counts it like any other asset.
  *
  * Unlike a bitmap font (`useLoadBitmapFont`), it looks sharp at any `fontSize`, and when the text is
  * scaled, turned or seen through a zoomed camera: each letter is kept as a distance field, drawn the
@@ -92,7 +92,7 @@ export const useLoadFont = ({ src, key, size, chars }: TUseLoadFontOptions): TFo
         trackLoad(font, loadFont(store, font, chars));
     }
 
-    // Listed on the scene even when it came from the cache, so `useLoader()` counts it.
+    // Listed on the scene even when it came from the cache, so `useLoadProgress()` counts it.
     const { loads } = rootOf(box);
     if (!loads.includes(font)) {
         loads.push(font);

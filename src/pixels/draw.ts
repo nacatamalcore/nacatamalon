@@ -1,5 +1,5 @@
-import { bytesOf, put, toByte } from './bytes';
-import type { TColor } from '../color';
+import { bytesOf, colorOf, put, toByte } from './bytes';
+import type { TColor, TColorOption } from '../color';
 import type { TPixels } from './types/t_pixels';
 
 // Every function here writes the colour as it is, alpha included: nothing is blended, so painting a
@@ -22,11 +22,12 @@ const inside = (pixels: TPixels, x: number, y: number): boolean =>
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const setPixel = (pixels: TPixels, x: number, y: number, color: TColor): TPixels => {
+export const setPixel = (pixels: TPixels, x: number, y: number, color: TColorOption): TPixels => {
     const px = Math.floor(x);
     const py = Math.floor(y);
     if (inside(pixels, px, py)) {
-        put(pixels, px, py, toByte(color.r), toByte(color.g), toByte(color.b), toByte(color.a));
+        const c = colorOf(color);
+        put(pixels, px, py, toByte(c.r), toByte(c.g), toByte(c.b), toByte(c.a));
     }
     return pixels;
 };
@@ -78,7 +79,7 @@ export const getPixel = (pixels: TPixels, x: number, y: number): TColor => {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const fillRect = (pixels: TPixels, x: number, y: number, width: number, height: number, color: TColor): TPixels => {
+export const fillRect = (pixels: TPixels, x: number, y: number, width: number, height: number, color: TColorOption): TPixels => {
     const left = Math.max(0, Math.floor(x));
     const top = Math.max(0, Math.floor(y));
     const right = Math.min(pixels.width, Math.floor(x) + Math.floor(width));
@@ -108,7 +109,7 @@ export const fillRect = (pixels: TPixels, x: number, y: number, width: number, h
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const drawLine = (pixels: TPixels, x0: number, y0: number, x1: number, y1: number, color: TColor): TPixels => {
+export const drawLine = (pixels: TPixels, x0: number, y0: number, x1: number, y1: number, color: TColorOption): TPixels => {
     // Always drawn from the same end, the left one (the upper one for an upright line), so a line
     // from A to B and one from B to A are the same pixels: stepping the other way would settle the
     // ties between two equally near pixels the other way too.
@@ -169,7 +170,7 @@ export const drawLine = (pixels: TPixels, x0: number, y0: number, x1: number, y1
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const fillCircle = (pixels: TPixels, cx: number, cy: number, radius: number, color: TColor): TPixels => {
+export const fillCircle = (pixels: TPixels, cx: number, cy: number, radius: number, color: TColorOption): TPixels => {
     const x0 = Math.round(cx);
     const y0 = Math.round(cy);
     const r = Math.max(0, Math.round(radius));
@@ -223,7 +224,7 @@ export const fillCircle = (pixels: TPixels, cx: number, cy: number, radius: numb
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const drawCircle = (pixels: TPixels, cx: number, cy: number, radius: number, color: TColor): TPixels => {
+export const drawCircle = (pixels: TPixels, cx: number, cy: number, radius: number, color: TColorOption): TPixels => {
     const x0 = Math.round(cx);
     const y0 = Math.round(cy);
     const [r, g, b, a] = bytesOf(color);
@@ -326,7 +327,7 @@ const ellipseQuarter = (rx: number, ry: number, visit: (x: number, y: number) =>
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const fillEllipse = (pixels: TPixels, cx: number, cy: number, rx: number, ry: number, color: TColor): TPixels => {
+export const fillEllipse = (pixels: TPixels, cx: number, cy: number, rx: number, ry: number, color: TColorOption): TPixels => {
     const a = Math.max(0, Math.round(rx));
     const b = Math.max(0, Math.round(ry));
     if (a === b) {
@@ -373,7 +374,7 @@ export const fillEllipse = (pixels: TPixels, cx: number, cy: number, rx: number,
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const drawEllipse = (pixels: TPixels, cx: number, cy: number, rx: number, ry: number, color: TColor): TPixels => {
+export const drawEllipse = (pixels: TPixels, cx: number, cy: number, rx: number, ry: number, color: TColorOption): TPixels => {
     const a = Math.max(0, Math.round(rx));
     const b = Math.max(0, Math.round(ry));
     if (a === b) {
@@ -422,7 +423,7 @@ export const drawEllipse = (pixels: TPixels, cx: number, cy: number, rx: number,
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const fillPolygon = (pixels: TPixels, points: ReadonlyArray<{ x: number; y: number }>, color: TColor): TPixels => {
+export const fillPolygon = (pixels: TPixels, points: ReadonlyArray<{ x: number; y: number }>, color: TColorOption): TPixels => {
     if (points.length < 3) {
         return pixels;
     }

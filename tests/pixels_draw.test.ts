@@ -5,7 +5,9 @@ import {
 } from '../src/pixels';
 import { BAYER_4X4 } from '../src/pixels/bayer';
 import { BAYER_WGSL } from '../src/post/builtin/bayer';
-import type { TColor } from '../src/color';
+import { getColor } from '../src/color';
+import { fillDither, outlinePixels } from '../src/pixels';
+import type { TColor, TColorOption } from '../src/color';
 import type { TPixels } from '../src/pixels';
 
 /**
@@ -300,5 +302,23 @@ describe('a polygon', () => {
         const bow = fillPolygon(createPixels(8, 8), [{ x: 0, y: 0 }, { x: 8, y: 8 }, { x: 8, y: 0 }, { x: 0, y: 8 }], RED);
         expect(shape(bow)).toEqual(['#......#', '##....##', '###..###', '########', '########', '###..###', '##....##', '#......#']);
         expect(shape(fillPolygon(createPixels(2, 2), [{ x: 0, y: 0 }, { x: 2, y: 2 }], RED))).toEqual(['..', '..']);
+    });
+});
+
+describe('a colour written as text', () => {
+    it('paints the same as the colour itself, in every function that takes one', () => {
+        const paint = (color: TColorOption) => {
+            const p = createPixels(8, 8, color);
+            setPixel(p, 0, 0, color);
+            fillRect(p, 1, 1, 2, 2, color);
+            drawLine(p, 0, 7, 7, 7, color);
+            fillCircle(p, 5, 3, 2, color);
+            outlinePixels(p, color);
+            fillDither(p, 4, 4, 4, 2, color, '#000000', 0.5);
+            fillGradient(p, { from: color, to: 0x000000, region: { x: 0, y: 5, width: 8, height: 1 } });
+            return [...p.data];
+        };
+        expect(paint('#ff6b1a')).toEqual(paint(getColor('#ff6b1a')));
+        expect(paint('orange')).toEqual(paint(getColor('orange')));
     });
 });

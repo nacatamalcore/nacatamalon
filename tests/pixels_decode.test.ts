@@ -72,6 +72,16 @@ describe('inflate', () => {
 });
 
 describe('decodePng', () => {
+    it('says a picture whose data is damaged in its own name, not the unpacker\'s', () => {
+        const bytes = new Uint8Array([
+            0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+            ...chunk('IHDR', [...u32(1), ...u32(1), 8, 6, 0, 0, 0]),
+            ...chunk('IDAT', [0x78, 0x9c, 0xff, 0xff, 0xff]),
+            ...chunk('IEND', []),
+        ]);
+        expect(() => decodePng(bytes)).toThrow(/^\[NacatamalOn\] decodePng: its picture data cannot be unpacked: /);
+    });
+
     it('reads back exactly what encodePng wrote', () => {
         const picture = fillNoise(createPixels(37, 21), { seed: 5 });
         picture.data[3] = 9;

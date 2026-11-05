@@ -36,7 +36,7 @@ export type TUseLoadPixelsOptions = {
  * the drawing first. It reads PNG files, decoded in plain JavaScript with no canvas, so it works the
  * same in the browser and on the native runtime.
  *
- * It hands back a record at once, still loading, the way every loader does; `useLoader` counts it.
+ * It hands back a record at once, still loading, the way every loader does; `useLoadProgress` counts it.
  * Give it straight to `createPixelTexture` with a function that changes it: the texture appears by
  * itself when the file arrives, and the function works on a copy. Once `status` is `'ready'`, its
  * `pixels` can be read as well (with `getPixel`) but not painted on: the picture is shared by every
@@ -77,7 +77,7 @@ export const useLoadPixels = ({ src, key }: TUseLoadPixelsOptions): TLoadedPixel
         trackLoad(record, loadPixels(store, record));
     }
 
-    // Listed on the scene even when it came from the cache, so `useLoader()` counts it.
+    // Listed on the scene even when it came from the cache, so `useLoadProgress()` counts it.
     const { loads } = rootOf(box);
     if (!loads.includes(record)) {
         loads.push(record);

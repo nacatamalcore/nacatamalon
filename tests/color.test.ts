@@ -82,7 +82,7 @@ describe('fromCss', () => {
 
     it('throws on anything it does not understand', () => {
         for (const value of ['nosuchcolor', 'rgb(1,2)', 'hsl(a, b%, c%)', 'rgb(1,2,3,4,5)', '', 'rgb 1 2 3']) {
-            expect(() => fromCss(value)).toThrow(/Invalid CSS color string/);
+            expect(() => fromCss(value)).toThrow(/is not a colour/);
         }
     });
 

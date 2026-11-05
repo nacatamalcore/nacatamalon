@@ -4,7 +4,7 @@ import { createModel } from '../src/gameobjects/model';
 import { createMesh } from '../src/gameobjects/mesh/create_mesh';
 import { createMaterial } from '../src/gameobjects/material/create_material';
 import { useCubeGeometry } from '../src/hooks/geometry/use_cube_geometry';
-import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
+import { useLoadModel } from '../src/hooks/loaders/use_load_model';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useTransform } from '../src/hooks/transform/use_transform';
 import { whenLoaded } from '../src/loaders';
@@ -89,7 +89,7 @@ describe('a file that says both sides are seen', () => {
         let model: TModel | null = null;
         let source: TGltfModel | null = null;
         startTestScene(store, 'Level', () => {
-            source = useLoadGltf({ src: 'model.gltf' });
+            source = useLoadModel({ src: 'model.gltf' });
             model = createModel({ model: source, ...(cull !== undefined ? { cull } : {}) });
             return createScene();
         });

@@ -37,9 +37,8 @@ releases are in [changelog/](./changelog/), one file each.
 
 - **Breaking: `restitution` is `bounce`**, on a body, a collider and in a scene file. A file saved with
   `restitution` still reads.
-- **Breaking: what a character's body says about where it stands reads as a question:** `onGround`,
-  `onCeiling`, `onWall`, `onOneWay` and `onLadder` are `isOnGround`, `isOnCeiling`, `isOnWall`, `isOnOneWay`
-  and `isOnLadder`, and a 3D character's `isGrounded` is `isOnGround` too. An `on…` is always something that
+- **Breaking: what a character's body says about where it stands reads as a question:** `onGround`, `onCeiling`, `onOneWay` and `onLadder` are `isOnGround`, `isOnCeiling`, `isOnOneWay` and
+  `isOnLadder`, and a 3D character's `isGrounded` is `isOnGround` too. An `on…` is always something that
   listens now.
 - **`loop: true` goes round for ever, everywhere, and `repeat` counts.** A tween takes `loop: true` in place of
   `repeat: -1`, and a clip given both says that `repeat` decides. A negative `repeat` still works, so a saved file
@@ -47,8 +46,24 @@ releases are in [changelog/](./changelog/), one file each.
 - **Breaking: a sprite's `repeat` is `tile`**, because `repeat` now only counts: `tile`, `tileOffset`, and a
   backdrop's `tileY`. A scene saved with the old names still reads.
 
+- **Breaking: five names say what they do.** `useUvSphereGeometry` is `useSphereGeometry` (with
+  `TSphereGeometryOptions`), `useHelperLines` is `useLines` (`TUseLinesOptions`, `TLinesHandle`), `useLoader` is
+  `useLoadProgress` (`TLoadProgress`), `useVector` is `useDirection`, and `useLoadGltf` is `useLoadModel`
+  (`TUseLoadModelOptions`). A 2D character's `onWall` is `wallSide`, since it says which side and is not a yes
+  or no. A scene file's `kind: 'uvSphere'` stays as it is.
+
+### Added
+
+- **The pixel functions take a colour as text**, as every other option does: `fillRect(p, 0, 0, 8, 8, '#ff6b1a')`,
+  `drawText(p, 'MOTEL', 4, 4, { color: 'orange' })`, `fillGradient(p, { from: '#203060', to: '#f0a070' })`.
+
 ### Fixed
 
+- **Errors name what you were doing.** A colour that is not one says `colour`, whichever option it was given to;
+  a scene that is missing or already running says `scenes`; a renderer that cannot start says `createGame` and
+  why; a damaged PNG says `decodePng` (or the loader). Before, several named the engine's own insides
+  (`startScene`, `createRenderer`, `inflate`, `atlasFrame`), and asking for `renderer: 'WEBGPU'` on a browser
+  without a graphics adapter threw a bare message with no tag.
 - **A model inside a filter keeps its depth.** It used to come back to the scene as one flat picture,
   wholly in front of or behind the other models. Now the scene hides it and is hidden by it pixel by
   pixel, and what its effects draw round it (a glow's halo, a shadow) takes the depth of the nearest

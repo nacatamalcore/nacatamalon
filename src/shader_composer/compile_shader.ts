@@ -172,7 +172,7 @@ const withLooks = <S extends TGraphTarget>(graph: TShaderGraph<S>): TShaderGraph
  *         color: composerMix(composerSurface(), composerVec4(0.3, 0.7, 1, 1), composerFresnel(3)),
  *         position: composerAdd(composerVertexPosition(), composerMul(composerVertexNormal(), composerUniform('swell', 0.1))),
  *     });
- *     const material = createMaterial({ tint: getColor('#e08a3a'), ...glow });
+ *     const material = createMaterial({ tint: '#e08a3a', ...glow });
  *
  *     createMesh({ geometry: useIcoSphereGeometry(), material });
  *

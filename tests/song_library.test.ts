@@ -83,6 +83,6 @@ describe('a song asked for by its key', () => {
         await whenLoaded(file);
 
         expect(file.status).toBe('error');
-        expect(String(warn.mock.calls[0]?.[1])).toContain('SONG_BUILTINS');
+        expect(String(warn.mock.calls[0]?.[1])).toContain('BUILTIN.MUSIC.SONGS');
     });
 });

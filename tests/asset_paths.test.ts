@@ -6,7 +6,7 @@ import { whenLoaded } from '../src/loaders';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { serveTilemap } from './helpers/test_tilemap';
 import { asGltf, serveGltf, TEST_QUAD } from './helpers/test_gltf';
-import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
+import { useLoadModel } from '../src/hooks/loaders/use_load_model';
 import { useLoadAtlas } from '../src/hooks/loaders/use_load_atlas';
 import { useLoadTexture } from '../src/hooks/loaders/use_load_texture';
 import { assetKey } from '../src/loaders/asset_key';
@@ -150,7 +150,7 @@ describe('a model served from a subfolder', () => {
         const { store } = createTestGame();
         let model!: TGltfModel;
         startTestScene(store, 'Level', () => {
-            model = useLoadGltf({ src: './assets/models/tower.gltf' });
+            model = useLoadModel({ src: './assets/models/tower.gltf' });
             return createScene();
         });
         await whenLoaded(model);

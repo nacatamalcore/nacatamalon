@@ -13,7 +13,7 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TUseLoadGltfOptions = {
+export type TUseLoadModelOptions = {
     /**
      * The model file: either kind, `.gltf` or `.glb`.
      */
@@ -51,7 +51,7 @@ export type TUseLoadGltfOptions = {
  * asked, not its name.
  *
  * You get the model back at once, still loading. Hand it to `createModel` straight away: it appears
- * by itself when the file arrives, and `useLoader` counts it like any other asset.
+ * by itself when the file arrives, and `useLoadProgress` counts it like any other asset.
  *
  * A file is usually several pieces, each with its own colour or picture: a vehicle is a body, glass
  * and tyres. All of them come, and `createModel` draws them as one thing you move with one
@@ -69,7 +69,7 @@ export type TUseLoadGltfOptions = {
  *     useCamera3d({ projection: 'perspective', transform: { z: 6 } });
  *     useDirectionalLight({ intensity: 1 });
  *
- *     const tower = useLoadGltf({ src: '/models/tower.glb' });
+ *     const tower = useLoadModel({ src: '/models/tower.glb' });
  *     const placed = createModel({ model: tower });
  *
  *     useUpdate((delta) => {
@@ -84,11 +84,11 @@ export type TUseLoadGltfOptions = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const useLoadGltf = ({ src, node, shading = 'auto', textures = true, key }: TUseLoadGltfOptions): TGltfModel => {
+export const useLoadModel = ({ src, node, shading = 'auto', textures = true, key }: TUseLoadModelOptions): TGltfModel => {
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw outsideSceneBody('useLoadGltf');
+        throw outsideSceneBody('useLoadModel');
     }
 
     // The piece is part of the name: one file asked for whole and asked for a piece at a time are
@@ -97,14 +97,14 @@ export const useLoadGltf = ({ src, node, shading = 'auto', textures = true, key 
     const { gltf } = store.get('assets');
 
     let model = gltf.get(cacheKey);
-    if (model !== undefined) warnIfKeyTaken('useLoadGltf', cacheKey, model.src, src);
+    if (model !== undefined) warnIfKeyTaken('useLoadModel', cacheKey, model.src, src);
     if (model === undefined) {
         model = newGltfModel(src, cacheKey);
         gltf.set(cacheKey, model);
         trackLoad(model, loadGltf(store, model, { node, shading, textures }));
     }
 
-    // Listed on the scene even when it came from the cache, so `useLoader()` counts it.
+    // Listed on the scene even when it came from the cache, so `useLoadProgress()` counts it.
     const { loads } = rootOf(box);
     if (!loads.includes(model)) {
         loads.push(model);

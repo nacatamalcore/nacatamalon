@@ -14,7 +14,7 @@ const inert = (): TCharacterBody2d => ({
     climbing: false,
     isOnGround: false,
     isOnCeiling: false,
-    isOnWall: null,
+    wallSide: null,
     isOnOneWay: false,
     isOnLadder: false,
     ground: undefined,

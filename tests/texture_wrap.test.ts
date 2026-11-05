@@ -3,7 +3,7 @@ import { createScene } from '../src/scene/create_scene';
 import { createMesh } from '../src/gameobjects/mesh/create_mesh';
 import { createModel } from '../src/gameobjects/model';
 import { useCubeGeometry } from '../src/hooks/geometry/use_cube_geometry';
-import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
+import { useLoadModel } from '../src/hooks/loaders/use_load_model';
 import { whenLoaded } from '../src/loaders';
 import { readMaterial } from '../src/loaders/gltf/read_material';
 import { parseSceneDoc, serializeScene } from '../src/scene/document';
@@ -66,7 +66,7 @@ describe('a loaded model', () => {
         const { store } = createTestGame();
         let model!: TGltfModel;
         startTestScene(store, 'Loading', () => {
-            model = useLoadGltf({ src: 'model.gltf' });
+            model = useLoadModel({ src: 'model.gltf' });
             return createScene();
         });
         await whenLoaded(model);

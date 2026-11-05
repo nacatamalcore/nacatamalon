@@ -9,7 +9,7 @@ import { createModel } from '../src/gameobjects/model';
 import { runHookUpdates } from '../src/game/loop/runHookUpdates';
 import { useSpriteAnimation } from '../src/hooks/animation/use_sprite_animation';
 import { useSkeletalAnimation } from '../src/hooks/animation/use_skeletal_animation';
-import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
+import { useLoadModel } from '../src/hooks/loaders/use_load_model';
 import { useTween } from '../src/hooks/tween/use_tween';
 import { whenLoaded } from '../src/loaders';
 import { parseAtlasDoc } from '../src/atlas/document/parse_atlas_doc';
@@ -245,7 +245,7 @@ const withRig = async (options: TSkeletalAnimationOptions) => {
     let model!: TModel;
     let moves!: TSkeletalAnimation;
     const scene = startTestScene(store, 'Level', () => {
-        file = useLoadGltf({ src: 'model.gltf' });
+        file = useLoadModel({ src: 'model.gltf' });
         model = createModel({ model: file });
         moves = useSkeletalAnimation(model, options);
         return createScene();

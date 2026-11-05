@@ -38,7 +38,7 @@ const alpha = (part: string | undefined): number => {
 };
 
 const invalid = (value: string): never => {
-    throw new Error(`[NacatamalOn] Invalid CSS color string: "${value}"`);
+    throw new Error(`[NacatamalOn] colour: "${value}" is not a colour. Write '#ff6b1a', 0xff6b1a, a CSS name such as 'red', or rgb() or hsl().`);
 };
 
 /**

@@ -33,7 +33,7 @@ const inert = (): TSoftBody2d => ({
  *
  * @example
  * ```ts
- * import { createGame, createPolygon, createScene, getColor, useKeyboard, usePhysicsWorld2d, useSpawn, useTransform, useUpdate } from 'nacatamalon';
+ * import { createGame, createPolygon, createScene, useKeyboard, usePhysicsWorld2d, useSpawn, useTransform, useUpdate } from 'nacatamalon';
  * import { installPhysics2d, useSoftBody2d } from 'nacatamalon/physics2d';
  *
  * installPhysics2d();
@@ -42,7 +42,7 @@ const inert = (): TSoftBody2d => ({
  * const Blob = () => {
  *     useTransform({ x: 160, y: 40 });
  *     const ring = Array.from({ length: 16 }, (_, i) => ({ x: Math.cos(i / 16 * Math.PI * 2) * 20, y: Math.sin(i / 16 * Math.PI * 2) * 20 }));
- *     const polygon = createPolygon({ points: ring, tint: getColor('#5bd75b') });
+ *     const polygon = createPolygon({ points: ring, tint: '#5bd75b' });
  *     const blob = useSoftBody2d({ shape: 'disk', radius: 20, polygon });
  *     const keys = useKeyboard();
  *     useUpdate(() => {

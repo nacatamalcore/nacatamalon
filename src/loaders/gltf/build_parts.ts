@@ -207,7 +207,7 @@ export const buildParts = (
                 continue;
             }
             if (primitive.attributes.POSITION === undefined) {
-                throw new Error('[NacatamalOn] useLoadGltf: a piece of the model does not say where its corners are.');
+                throw new Error('[NacatamalOn] useLoadModel: a piece of the model does not say where its corners are.');
             }
 
             // A deformed piece is put where it belongs BY ITS BONES, so the node's own placement

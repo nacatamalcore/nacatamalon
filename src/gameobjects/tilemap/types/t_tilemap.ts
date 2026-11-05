@@ -112,7 +112,7 @@ export type TTilemapLayer = {
  * layers.
  *
  * From a file it comes back straight away, empty and `'loading'`, and fills itself in when the file
- * and its sheet arrive. Nothing has to be awaited, and `useLoader` counts it like any other asset.
+ * and its sheet arrive. Nothing has to be awaited, and `useLoadProgress` counts it like any other asset.
  * Made in code from a sheet that is there, it comes back `'ready'`.
  *
  * @category Tilemaps

@@ -29,7 +29,7 @@ export { readGltfNodes } from './gltf/read_gltf_nodes';
 export type { TLoadStatus } from './types/t_load_status';
 export type { TLoadable } from './types/t_loadable';
 export type { TAsset } from './types/t_asset';
-export type { TLoader } from './types/t_loader';
+export type { TLoadProgress } from './types/t_load_progress';
 export type { TTexture } from './texture/types/t_texture';
 export type { TAudioClip } from './audio/types/t_audio_clip';
 export type { TTerrainDoc, TTileDoc, TTilemapDoc, TTilemapLayerDoc, TTileLayerOrder } from './tilemap/types/t_tilemap_doc';

@@ -100,7 +100,7 @@ describe('useLoadPack', () => {
 
         expect(pack.status).toBe('loading');
         expect(pack.src).toBe('/packs/signs/');
-        // Counted with the scene's other loads, which is what `useLoader` reads.
+        // Counted with the scene's other loads, which is what `useLoadProgress` reads.
         expect(rootOf(root).loads).toContain(pack);
 
         await whenLoaded(pack);

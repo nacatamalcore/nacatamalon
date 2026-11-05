@@ -60,15 +60,15 @@ const FIXED_DISTANCES = buildHuffman(new Array<number>(30).fill(5));
  */
 export const inflate = (data: Uint8Array): Uint8Array => {
     if (data.length < 6) {
-        throw new Error('[NacatamalOn] inflate: the data is too short to be a zlib stream.');
+        throw new Error('the data is too short to be a zlib stream.');
     }
     const cmf = data[0]!;
     const flg = data[1]!;
     if ((cmf & 0x0f) !== 8 || ((cmf << 8) | flg) % 31 !== 0) {
-        throw new Error('[NacatamalOn] inflate: the data does not start with a zlib header.');
+        throw new Error('the data does not start with a zlib header.');
     }
     if ((flg & 0x20) !== 0) {
-        throw new Error('[NacatamalOn] inflate: a preset dictionary is not supported.');
+        throw new Error('a preset dictionary is not supported.');
     }
 
     let at = 2;
@@ -77,7 +77,7 @@ export const inflate = (data: Uint8Array): Uint8Array => {
     const bit = (): number => {
         if (count === 0) {
             if (at >= data.length) {
-                throw new Error('[NacatamalOn] inflate: the data ends in the middle of a block.');
+                throw new Error('the data ends in the middle of a block.');
             }
             bits = data[at++]!;
             count = 8;
@@ -110,7 +110,7 @@ export const inflate = (data: Uint8Array): Uint8Array => {
             first = (first + n) << 1;
             value <<= 1;
         }
-        throw new Error('[NacatamalOn] inflate: a code in the data matches no symbol.');
+        throw new Error('a code in the data matches no symbol.');
     };
 
     let out = new Uint8Array(Math.max(1024, data.length * 4));
@@ -134,16 +134,16 @@ export const inflate = (data: Uint8Array): Uint8Array => {
             // Stored: whole bytes from the next byte boundary, with the length written twice.
             count = 0;
             if (at + 4 > data.length) {
-                throw new Error('[NacatamalOn] inflate: a stored block is cut short.');
+                throw new Error('a stored block is cut short.');
             }
             const len = data[at]! | (data[at + 1]! << 8);
             const nlen = data[at + 2]! | (data[at + 3]! << 8);
             if ((len ^ 0xffff) !== nlen) {
-                throw new Error('[NacatamalOn] inflate: a stored block has a damaged length.');
+                throw new Error('a stored block has a damaged length.');
             }
             at += 4;
             if (at + len > data.length) {
-                throw new Error('[NacatamalOn] inflate: a stored block is cut short.');
+                throw new Error('a stored block is cut short.');
             }
             room(len);
             out.set(data.subarray(at, at + len), size);
@@ -152,7 +152,7 @@ export const inflate = (data: Uint8Array): Uint8Array => {
             continue;
         }
         if (type === 3) {
-            throw new Error('[NacatamalOn] inflate: the data has a block of a kind that does not exist.');
+            throw new Error('the data has a block of a kind that does not exist.');
         }
 
         let literals = FIXED_LITERALS;
@@ -176,7 +176,7 @@ export const inflate = (data: Uint8Array): Uint8Array => {
                 let repeat = 0;
                 let value = 0;
                 if (symbol === 16) {
-                    if (i === 0) throw new Error('[NacatamalOn] inflate: a length repeats before there is one.');
+                    if (i === 0) throw new Error('a length repeats before there is one.');
                     value = lengths[i - 1]!;
                     repeat = 3 + read(2);
                 } else if (symbol === 17) {
@@ -185,7 +185,7 @@ export const inflate = (data: Uint8Array): Uint8Array => {
                     repeat = 11 + read(7);
                 }
                 if (i + repeat > hlit + hdist) {
-                    throw new Error('[NacatamalOn] inflate: the code lengths run past their count.');
+                    throw new Error('the code lengths run past their count.');
                 }
                 lengths.fill(value, i, i + repeat);
                 i += repeat;
@@ -206,16 +206,16 @@ export const inflate = (data: Uint8Array): Uint8Array => {
             }
             const lengthIndex = symbol - 257;
             if (lengthIndex >= LENGTH_BASE.length) {
-                throw new Error('[NacatamalOn] inflate: a length code is out of range.');
+                throw new Error('a length code is out of range.');
             }
             const length = LENGTH_BASE[lengthIndex]! + read(LENGTH_EXTRA[lengthIndex]!);
             const distSymbol = decode(distances);
             if (distSymbol >= DIST_BASE.length) {
-                throw new Error('[NacatamalOn] inflate: a distance code is out of range.');
+                throw new Error('a distance code is out of range.');
             }
             const distance = DIST_BASE[distSymbol]! + read(DIST_EXTRA[distSymbol]!);
             if (distance > size) {
-                throw new Error('[NacatamalOn] inflate: the data refers back to before its start.');
+                throw new Error('the data refers back to before its start.');
             }
             room(length);
             // Byte by byte, because a copy may overlap what it is copying (a run of one colour).
@@ -228,7 +228,7 @@ export const inflate = (data: Uint8Array): Uint8Array => {
 
     // The checksum of what came out, after the last block on the next byte boundary.
     if (at + 4 > data.length) {
-        throw new Error('[NacatamalOn] inflate: the data ends before its checksum.');
+        throw new Error('the data ends before its checksum.');
     }
     let a = 1;
     let b = 0;
@@ -238,7 +238,7 @@ export const inflate = (data: Uint8Array): Uint8Array => {
     }
     const expected = ((data[at]! << 24) | (data[at + 1]! << 16) | (data[at + 2]! << 8) | data[at + 3]!) >>> 0;
     if ((((b << 16) | a) >>> 0) !== expected) {
-        throw new Error('[NacatamalOn] inflate: the data is damaged: its checksum does not match.');
+        throw new Error('the data is damaged: its checksum does not match.');
     }
     return out.slice(0, size);
 };

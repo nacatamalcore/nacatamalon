@@ -16,7 +16,7 @@ import type { TAtlasFrame, TSpriteAtlas } from './types/t_sprite_atlas';
  */
 export const atlasFrame = (atlas: TSpriteAtlas, index: number): TAtlasFrame => {
     if (!Number.isInteger(index) || index < 0 || index >= atlas.frames) {
-        throw new Error(`[NacatamalOn] atlasFrame: this sheet has frames 0 to ${atlas.frames - 1}, asked for ${index}.`);
+        throw new Error(`[NacatamalOn] frame ${index}: the sheet has frames 0 to ${atlas.frames - 1}. Ask for one of those.`);
     }
     if (atlas.rects !== undefined) {
         return atlas.rects[index];

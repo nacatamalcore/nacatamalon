@@ -52,7 +52,7 @@ const loadVocal = async (store: TRuntimeStore, file: TVocalFile): Promise<void> 
  * with `accompany`.
  *
  * It hands the file back at once and fills it in when it arrives, like every loader; it counts in
- * the scene's loading (`useLoader`), and `accompany` waits for it before the song plays. Asked for
+ * the scene's loading (`useLoadProgress`), and `accompany` waits for it before the song plays. Asked for
  * again, in this scene or another, it is the same file and is not fetched again.
  *
  * @param options - Where the file is, and what to keep it under.

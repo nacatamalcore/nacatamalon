@@ -283,7 +283,7 @@ const bringIn = (state: TTransitionState, incoming: TBox): void => {
     // updates, nor draws, nor answers the pointer until the swap.
     incoming.held = true;
 
-    // Everything the scene's body asked for, which is the list `useLoader` counts. The body is
+    // Everything the scene's body asked for, which is the list `useLoadProgress` counts. The body is
     // over, so nothing can be added to it: a held scene does not run, so it cannot ask for more.
     const settled = (): boolean => incoming.loads.every((asset) => asset.status !== 'loading');
     state.loaded = settled();

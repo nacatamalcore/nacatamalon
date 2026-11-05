@@ -1,6 +1,6 @@
 import { bayerAt } from './bayer';
 import { bytesOf, put } from './bytes';
-import type { TColor } from '../color';
+import type { TColorOption } from '../color';
 import type { TPixelRegion, TPixels } from './types/t_pixels';
 
 /**
@@ -25,16 +25,16 @@ export type TFillGradientOptions = {
     /**
      * The colour it starts at. With `to`, a gradient between two colours.
      */
-    from?: TColor;
+    from?: TColorOption;
     /**
      * The colour it ends at.
      */
-    to?: TColor;
+    to?: TColorOption;
     /**
      * Several colours, evenly spaced, in place of `from` and `to`: a sunset from deep blue through
      * purple and red to orange.
      */
-    colors?: readonly TColor[];
+    colors?: readonly TColorOption[];
     /**
      * `'down'` (default) runs from the top edge to the bottom one; `'right'` from left to right.
      */
@@ -78,7 +78,7 @@ export type TFillGradientOptions = {
  * @author Francisco Pereira Alvarado
  */
 export const fillGradient = (pixels: TPixels, options: TFillGradientOptions): TPixels => {
-    const colors = options.colors ?? [options.from, options.to].filter((color): color is TColor => color !== undefined);
+    const colors = options.colors ?? [options.from, options.to].filter((color): color is TColorOption => color !== undefined);
     if (colors.length < 2) {
         throw new Error('[NacatamalOn] fillGradient: a gradient needs two colours, as `from` and `to` or in `colors`.');
     }
@@ -152,11 +152,11 @@ export type TFillNoiseOptions = {
     /**
      * The colour of the lowest values. Default black.
      */
-    from?: TColor;
+    from?: TColorOption;
     /**
      * The colour of the highest values. Default white.
      */
-    to?: TColor;
+    to?: TColorOption;
 };
 
 /**
@@ -251,7 +251,7 @@ export const fillNoise = (pixels: TPixels, options: TFillNoiseOptions = {}): TPi
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const fillChecker = (pixels: TPixels, size: number, a: TColor, b: TColor): TPixels => {
+export const fillChecker = (pixels: TPixels, size: number, a: TColorOption, b: TColorOption): TPixels => {
     const cell = Math.max(1, Math.floor(size));
     const first = bytesOf(a);
     const second = bytesOf(b);
@@ -293,7 +293,7 @@ export const fillChecker = (pixels: TPixels, size: number, a: TColor, b: TColor)
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const fillDither = (pixels: TPixels, x: number, y: number, width: number, height: number, a: TColor, b: TColor, amount = 0.5): TPixels => {
+export const fillDither = (pixels: TPixels, x: number, y: number, width: number, height: number, a: TColorOption, b: TColorOption, amount = 0.5): TPixels => {
     if (typeof amount !== 'number' || Number.isNaN(amount)) {
         throw new Error(`[NacatamalOn] fillDither: amount is ${String(amount)}. Give how much of the second colour there is, from 0 to 1.`);
     }

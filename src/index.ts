@@ -15,9 +15,9 @@ export { createSpriteTexture, createView, setViewFilter, resizeSpriteTexture, vi
 export type { TSpriteTexture, TSpriteTextureSees, TSpriteTextureOptions, TViewFilter, TViewOptions, TViewPointInput, TViewToWorld, TWorldToView, TViewRay } from './gameobjects/sprite_texture';
 export type { TModel, TModelOptions } from './gameobjects/model';
 export type { TLight, TDirectionalLight, TPointLight, TSpotLight, TRectLight, TAmbientLight, TLightOptionsBase } from './light';
-export { useCubeGeometry, usePlaneGeometry, useCircleGeometry, useUvSphereGeometry, useIcoSphereGeometry, useCylinderGeometry, useConeGeometry, useTorusGeometry, useLatheGeometry } from './hooks';
+export { useCubeGeometry, usePlaneGeometry, useCircleGeometry, useSphereGeometry, useIcoSphereGeometry, useCylinderGeometry, useConeGeometry, useTorusGeometry, useLatheGeometry } from './hooks';
 export type { TBlobShadowOptions } from './hooks';
-export type { TCubeGeometryOptions, TPlaneGeometryOptions, TCircleGeometryOptions, TUvSphereGeometryOptions, TIcoSphereGeometryOptions, TCylinderGeometryOptions, TConeGeometryOptions, TTorusGeometryOptions, TLatheGeometryOptions } from './hooks';
+export type { TCubeGeometryOptions, TPlaneGeometryOptions, TCircleGeometryOptions, TSphereGeometryOptions, TIcoSphereGeometryOptions, TCylinderGeometryOptions, TConeGeometryOptions, TTorusGeometryOptions, TLatheGeometryOptions } from './hooks';
 export type { TGeometry, TGeometryData, TUvProjection } from './geometry';
 export type { TDrawable } from './gameobjects/types';
 export type { TTransformOptions } from './hooks';
@@ -31,20 +31,20 @@ export { registerScript } from './scripts';
 export type { TScriptFn, TScriptProps, TScriptField, TScriptOptions, TScriptRequirement, TScriptAttachment } from './scripts';
 export type { TDataRecord, TDataSetter, TWatchDep } from './hooks';
 export {
-    useUpdate, useLateUpdate, useLoadTexture, useLoadAtlas, useLoader, useScene, useCleanup, useReady,
+    useUpdate, useLateUpdate, useLoadTexture, useLoadAtlas, useLoadProgress, useScene, useCleanup, useReady,
     useSceneTransitionEnd, useSpawn, useSelf, useKeyboard, useGame, useSpriteAnimation,
     getSpriteAnimation, useSkeletalAnimation, useTween, useTimer, useCamera2d, useScreenSpace,
-    useWorldOffScreen, usePointer, useGamepad, useActions, useAction, useVector, useInputMap,
+    useWorldOffScreen, usePointer, useGamepad, useActions, useAction, useDirection, useInputMap,
     useTouchAction, useDraggable, useDropZone, useSignal, useStore, useStoreLink, usePhysicsBody2d,
-    usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d, useLoadBitmapFont, useLoadFont, useLoadGltf,
+    usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d, useLoadBitmapFont, useLoadFont, useLoadModel,
     useLoadParticles, useLoadPack, useLoadScene, useLoadAudio, useSound, useAudio, useMusic, useSong,
     useLoadSong, useLoadTrackerSong, useMotion, useLoadMotion, useAudioListener, useParticleCollider2d,
     useParticleCollider3d,
 } from './hooks';
 export { createMaterial } from './gameobjects/material';
 // Lines in space: the debug helpers (an axis gizmo, a floor grid) and any lines a game wants to draw.
-export { useHelperLines, useHelperAxis, useHelperGrid } from './hooks';
-export type { TUseHelperLinesOptions, THelperLines, TUseHelperAxisOptions, THelperAxisColors, TUseHelperGridOptions } from './hooks';
+export { useLines, useHelperAxis, useHelperGrid } from './hooks';
+export type { TUseLinesOptions, TLinesHandle, TUseHelperAxisOptions, THelperAxisColors, TUseHelperGridOptions } from './hooks';
 export type { TLines } from './gameobjects/lines';
 export type { TNewLinesOptions } from './gameobjects/lines';
 export { createParticles, createParticles3d, playParticles, stopParticles, pauseParticles, clearParticles, particleCount, emitParticles } from './gameobjects/particles';
@@ -126,12 +126,12 @@ export { getColor, lerpColor, fromHsl, consoleColor } from './color';
 export { useColor } from './hooks';
 export type { TColor, TColorInput, TColorOption } from './color';
 export type { TScene, TSceneFn } from './scene';
-export type { TUseLoadTextureOptions, TUseLoadAtlasOptions, TUseLoadGltfOptions, TSkeletalAnimation, TSkeletalAnimationOptions, TSkeletalClipOptions, TSceneHandle, TGameObject, TSpawnOptions } from './hooks';
+export type { TUseLoadTextureOptions, TUseLoadAtlasOptions, TUseLoadModelOptions, TSkeletalAnimation, TSkeletalAnimationOptions, TSkeletalClipOptions, TSceneHandle, TGameObject, TSpawnOptions } from './hooks';
 export type { TSpriteAnimation, TSpriteAnimationOptions, TAnimationClip } from './hooks';
 export type { TTweenOptions, TTweenTargetOptions, TTweenFields, TTweenHandle, TTweenStarter } from './hooks';
 export type { TTimer, TTimerHandle } from './hooks';
 export type { TDestroyOptions } from './destroy';
-export type { TLoader, TLoadStatus, TAsset, TTexture, TLoadedAtlas, TBitmapFont, TFont, TAudioClip, TGltfModel, TGltfPart, TShading } from './loaders';
+export type { TLoadProgress, TLoadStatus, TAsset, TTexture, TLoadedAtlas, TBitmapFont, TFont, TAudioClip, TGltfModel, TGltfPart, TShading } from './loaders';
 export type { TSkeleton, TSkeletalClip, TJointPose, TClipEvent } from './animation';
 export type {
     TMaterial, TSpriteMaterial, TMeshMaterial, TMaterialMap, TMaterialOcclusion, TTextureWrap, TCullMode, TMaterialShader, TMaterialOptions,

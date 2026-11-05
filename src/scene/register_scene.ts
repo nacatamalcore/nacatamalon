@@ -20,7 +20,7 @@ export const registerScene = (store: TRuntimeStore, name: string, scene: TSceneF
     const known = names.get(name);
     if (known === scene) return;
     if (known !== undefined) {
-        throw new Error(`[NacatamalOn] registerScene: '${name}' is already registered to another scene.`);
+        throw new Error(`[NacatamalOn] scenes: '${name}' is already the name of another scene. Give one of them another name.`);
     }
     store.setState('world', { names: new Map(names).set(name, scene) });
 };

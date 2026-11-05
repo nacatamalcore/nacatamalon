@@ -85,7 +85,7 @@ export const useLoadShader = ({ src, glslSrc, key }: TUseLoadShaderOptions): TSh
         trackLoad(shader, loadShader(store, shader));
     }
 
-    // Listed on the scene even when it came from the cache: `useLoader()` counts everything the
+    // Listed on the scene even when it came from the cache: `useLoadProgress()` counts everything the
     // scene asked for, and a cached shader counts as already loaded.
     const { loads } = rootOf(box);
     if (!loads.includes(shader)) {

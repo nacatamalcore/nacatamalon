@@ -1,7 +1,7 @@
 export { useCubeGeometry } from './use_cube_geometry';
 export { usePlaneGeometry } from './use_plane_geometry';
 export { useCircleGeometry } from './use_circle_geometry';
-export { useUvSphereGeometry } from './use_uv_sphere_geometry';
+export { useSphereGeometry } from './use_sphere_geometry';
 export { useIcoSphereGeometry } from './use_ico_sphere_geometry';
 export { useCylinderGeometry } from './use_cylinder_geometry';
 export { useConeGeometry } from './use_cone_geometry';
@@ -10,7 +10,7 @@ export { useLatheGeometry } from './use_lathe_geometry';
 export type { TCubeGeometryOptions } from './use_cube_geometry';
 export type { TPlaneGeometryOptions } from './use_plane_geometry';
 export type { TCircleGeometryOptions } from './use_circle_geometry';
-export type { TUvSphereGeometryOptions } from './use_uv_sphere_geometry';
+export type { TSphereGeometryOptions } from './use_sphere_geometry';
 export type { TIcoSphereGeometryOptions } from './use_ico_sphere_geometry';
 export type { TCylinderGeometryOptions } from './use_cylinder_geometry';
 export type { TConeGeometryOptions } from './use_cone_geometry';

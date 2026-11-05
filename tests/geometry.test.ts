@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
 import {
     useCircleGeometry, useConeGeometry, useCubeGeometry, useCylinderGeometry,
-    useIcoSphereGeometry, usePlaneGeometry, useTorusGeometry, useUvSphereGeometry,
+    useIcoSphereGeometry, usePlaneGeometry, useTorusGeometry, useSphereGeometry,
 } from '../src/hooks/geometry';
 import { GEOMETRY_STRIDE } from '../src/geometry';
 import { createTestGame, startTestScene } from './helpers/test_game';
@@ -66,7 +66,7 @@ describe('every shape', () => {
     it('faces outwards everywhere, in every shape', () => {
         const { renderer, made } = built(() => [
             useCubeGeometry(), usePlaneGeometry(), useCircleGeometry(),
-            useUvSphereGeometry(), useIcoSphereGeometry(),
+            useSphereGeometry(), useIcoSphereGeometry(),
             useCylinderGeometry(), useConeGeometry(), useTorusGeometry(),
         ]);
 
@@ -84,7 +84,7 @@ describe('every shape', () => {
     it('lands its picture inside the picture, in every shape', () => {
         const { renderer, made } = built(() => [
             useCubeGeometry(), usePlaneGeometry({ widthSegments: 3, depthSegments: 2 }),
-            useCircleGeometry(), useUvSphereGeometry(), useCylinderGeometry(), useTorusGeometry(),
+            useCircleGeometry(), useSphereGeometry(), useCylinderGeometry(), useTorusGeometry(),
         ]);
 
         for (const geometry of made) {
@@ -104,7 +104,7 @@ describe('every shape', () => {
     });
 
     it('never asks for a corner it does not have', () => {
-        const { renderer, made } = built(() => [useUvSphereGeometry(), useIcoSphereGeometry({ subdivisions: 1 }), useConeGeometry()]);
+        const { renderer, made } = built(() => [useSphereGeometry(), useIcoSphereGeometry({ subdivisions: 1 }), useConeGeometry()]);
 
         for (const geometry of made) {
             const indices = renderer.buffers.find((b) => b.handle === geometry.indexBuffer)!.data;

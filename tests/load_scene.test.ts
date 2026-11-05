@@ -4,13 +4,13 @@ import { startScene } from '../src/scene/start_scene';
 import { registerScene } from '../src/scene/register_scene';
 import { parseSceneDoc, sceneFromDoc } from '../src/scene/document';
 import { useLoadScene } from '../src/hooks/loaders/use_load_scene';
-import { useLoader } from '../src/hooks/loaders/use_loader';
+import { useLoadProgress } from '../src/hooks/loaders/use_load_progress';
 import { rootOf } from '../src/box';
 import { whenLoaded } from '../src/loaders/track_load';
 import { releaseAsset } from '../src/loaders/release_asset';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import type { TLoadedScene } from '../src/loaders/scene';
-import type { TLoader } from '../src/loaders/types/t_loader';
+import type { TLoadProgress } from '../src/loaders/types/t_load_progress';
 
 const tint = { r: 1, g: 1, b: 1, a: 1 };
 const NOWHERE = { x: 0, y: 0, z: 0, rotation: 0, rotationX: 0, rotationY: 0, scaleX: 1, scaleY: 1, scaleZ: 1 };
@@ -102,10 +102,10 @@ describe('useLoadScene', () => {
         serve({ 'scenes/cave.scene': CAVE });
         const { store } = createTestGame();
         let cave!: TLoadedScene;
-        let loader!: TLoader;
+        let loader!: TLoadProgress;
         startTestScene(store, 'Loading', () => {
             cave = useLoadScene({ src: 'scenes/cave.scene' });
-            loader = useLoader();
+            loader = useLoadProgress();
             return createScene();
         });
 

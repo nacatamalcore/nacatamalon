@@ -1,6 +1,7 @@
 import type { TColor } from './color';
 
-const invalidHex = (value: string): Error => new Error(`[NacatamalOn] Invalid hex color string: "${value}"`);
+const invalidHex = (value: string): Error =>
+    new Error(`[NacatamalOn] colour: "${value}" is not a colour. Write it with 3, 6 or 8 hex digits, such as '#ff6b1a'.`);
 
 /**
  * Every character has to be a hex digit, and that is checked *before* any channel is parsed

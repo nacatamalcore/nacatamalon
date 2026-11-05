@@ -16,7 +16,9 @@ const loadWebGL2 = async () => (await import('./webgl2')).createWebGL2Renderer;
 /**
  * The message of whatever was thrown, which is not always an `Error`.
  */
-const reasonOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
+const reasonOf = (error: unknown): string => (error instanceof Error ? error.message : String(error))
+    // Put inside a sentence of ours: without its own tag and its last full stop.
+    .replace(/^\[NacatamalOn\] /, '').replace(/\.\s*$/, '');
 
 /**
  * Resolves a request into a running backend. **The one place the engine decides what draws**:
@@ -56,7 +58,7 @@ export const createRenderer = async (
             return await (await loadWebGL2())(canvas, options);
         } catch (error) {
             throw new Error(
-                `[NacatamalOn] createRenderer: 'AUTO' could not start any renderer.\n` +
+                `[NacatamalOn] createGame: 'AUTO' could not start any renderer.\n` +
                 `  WebGPU: ${webgpuFailure}\n` +
                 `  WebGL2: ${reasonOf(error)}\n` +
                 `Try another browser, or check that hardware acceleration is enabled.`,
@@ -67,14 +69,21 @@ export const createRenderer = async (
     const currentRenderRequested = renderRequested;
 
     if (currentRenderRequested === 'WEBGL2') {
-        return (await loadWebGL2())(canvas, options);
+        try {
+            return await (await loadWebGL2())(canvas, options);
+        } catch (error) {
+            throw new Error(`[NacatamalOn] createGame: WebGL2 could not start: ${reasonOf(error)}. Check that hardware acceleration is enabled.`, { cause: error });
+        }
     }
 
     if (currentRenderRequested === 'WEBGPU') {
-        if (!hasWebGPU()) throw new Error('[NacatamalOn] createRenderer: WebGPU is not available in this browser.');
-        const rendererInstance = await (await loadWebGPU())(canvas, options);
-        return rendererInstance;
+        if (!hasWebGPU()) throw new Error("[NacatamalOn] createGame: this browser has no WebGPU. Leave renderer as 'AUTO' to fall back to WebGL2.");
+        try {
+            return await (await loadWebGPU())(canvas, options);
+        } catch (error) {
+            throw new Error(`[NacatamalOn] createGame: WebGPU could not start: ${reasonOf(error)}. Leave renderer as 'AUTO' to fall back to WebGL2.`, { cause: error });
+        }
     }
     
-    throw new Error(`[NacatamalOn] createRenderer: Unknown renderer requested: ${currentRenderRequested}`);
+    throw new Error(`[NacatamalOn] createGame: there is no renderer '${currentRenderRequested}'. Use 'AUTO', 'WEBGPU' or 'WEBGL2'.`);
 };

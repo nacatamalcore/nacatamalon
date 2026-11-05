@@ -5,7 +5,8 @@ import { bitmapFontGlyphs } from '../loaders/bitmap_font/bitmap_font_glyphs';
 import { bitmapFontPixels } from '../loaders/bitmap_font/bitmap_font_pixels';
 import { parsedFontOf } from '../loaders/font/font_glyphs';
 import { fillOutline } from './fill_outline';
-import type { TColor } from '../color';
+import { colorOf } from './bytes';
+import type { TColor, TColorOption } from '../color';
 import type { TBitmapFont } from '../loaders/bitmap_font/types/t_bitmap_font';
 import type { TFont } from '../loaders/font/types/t_font';
 import type { TOutline } from '../loaders/font/sfnt/t_outline';
@@ -26,7 +27,7 @@ export type TDrawTextOptions = TMeasureTextOptions & {
      * What the letters are painted in. Default white. A bitmap font's own colours are multiplied by
      * it, the way a text's tint is.
      */
-    color?: TColor;
+    color?: TColorOption;
     /**
      * Which point of the block of text lands on `x, y`, from `0, 0` (its top-left corner, the
      * default) to `1, 1` (its bottom-right). `0.5, 0.5` centres it on the point, which is what a
@@ -65,7 +66,7 @@ const drawBitmapText = (pixels: TPixels, text: string, x: number, y: number, fon
         return;
     }
     const layout = layoutText(text, options, font.meta, bitmapFontGlyphs(font));
-    const color = options.color ?? WHITE;
+    const color = colorOf(options.color ?? WHITE);
     const left = x - layout.width * (options.anchor?.x ?? 0);
     const top = y - layout.height * (options.anchor?.y ?? 0);
     const src = atlas.data;
@@ -170,7 +171,7 @@ const drawVectorText = (pixels: TPixels, text: string, x: number, y: number, fon
             outlineToPolygons(parsed.outline(glyph), left + offset + pen, lineBaseline, units, polygons);
         }
     });
-    fillOutline(pixels, polygons, options.color ?? WHITE, options.smooth ?? true);
+    fillOutline(pixels, polygons, colorOf(options.color ?? WHITE), options.smooth ?? true);
 };
 
 /**

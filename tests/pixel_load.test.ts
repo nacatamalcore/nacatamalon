@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
 import { createPixelTexture } from '../src/gameobjects/pixel_texture';
 import { useLoadPixels } from '../src/hooks/loaders/use_load_pixels';
-import { useLoader } from '../src/hooks/loaders/use_loader';
+import { useLoadProgress } from '../src/hooks/loaders/use_load_progress';
 import { whenLoaded } from '../src/loaders/track_load';
 import { stopScene } from '../src/scene/stop_scene';
 import { clonePixels, createPixels, fillRect, getPixel, swapColors } from '../src/pixels';
@@ -10,7 +10,7 @@ import { encodePng } from '../src/pixels/encode_png';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import type { TLoadedPixels } from '../src/loaders/pixels';
 import type { TTexture } from '../src/loaders';
-import type { TLoader } from '../src/loaders/types/t_loader';
+import type { TLoadProgress } from '../src/loaders/types/t_load_progress';
 
 /**
  * A drawn picture loaded as pixels to process in code, and the textures made from it.
@@ -71,15 +71,15 @@ describe('useLoadPixels', () => {
         expect(getPixel(hero.pixels!, 3, 0).a).toBe(0);
     });
 
-    it('fetches a file once however many scenes ask for it, and is counted by useLoader', async () => {
+    it('fetches a file once however many scenes ask for it, and is counted by useLoadProgress', async () => {
         const { store } = createTestGame();
         let first!: TLoadedPixels;
         let second!: TLoadedPixels;
-        let loader!: TLoader;
+        let loader!: TLoadProgress;
         startTestScene(store, 'S', () => {
             first = useLoadPixels({ src: '/hero.png' });
             second = useLoadPixels({ src: '/hero.png' });
-            loader = useLoader();
+            loader = useLoadProgress();
             return createScene();
         });
 

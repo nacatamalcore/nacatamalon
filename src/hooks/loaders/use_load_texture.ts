@@ -34,7 +34,7 @@ export type TUseLoadTextureOptions = {
  * Loads an image to draw with, and hands it back at once, still loading: a sprite made with it
  * appears by itself when the file arrives, so nothing has to wait for it.
  * 
- * You can use this hook with a `useLoader` to track its loading progress.
+ * You can use this hook with a `useLoadProgress` to track its loading progress.
  *
  * @example
  * ```ts
@@ -75,7 +75,7 @@ export const useLoadTexture = ({ src, key }: TUseLoadTextureOptions): TTexture =
     // leaves it.
     hold(texture, GAME);
 
-    // Listed on the scene even when it came from the cache: `useLoader()` counts everything the
+    // Listed on the scene even when it came from the cache: `useLoadProgress()` counts everything the
     // scene asked for, and a cached texture counts as already loaded.
     const { loads } = rootOf(box);
     if (!loads.includes(texture)) {

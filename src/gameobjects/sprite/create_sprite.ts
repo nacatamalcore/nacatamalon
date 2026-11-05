@@ -133,7 +133,7 @@ const liveFrame = (sprite: TSprite): void => {
  *     const texture = useLoadTexture({ src: '/assets/hero.png' });
  *     const hero = createSprite({ texture, transform: { x: 160, y: 120 } });
  *     // No picture: a coloured rectangle, placed by its top-left corner.
- *     createSprite({ width: 320, height: 16, tint: getColor('#3a2a1a'), anchor: { x: 0, y: 0 }, transform: { y: 224 } });
+ *     createSprite({ width: 320, height: 16, tint: '#3a2a1a', anchor: { x: 0, y: 0 }, transform: { y: 224 } });
  *
  *     useUpdate((delta) => {
  *         hero.transform.rotation += delta;

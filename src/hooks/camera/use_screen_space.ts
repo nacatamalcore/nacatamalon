@@ -21,7 +21,7 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  * ```ts
  * const Hud = () => {
  *     useScreenSpace();
- *     createSprite({ tint: getColor('#4ade80'), width: 120, height: 8, transform: { x: 70, y: 16 } });
+ *     createSprite({ tint: '#4ade80', width: 120, height: 8, transform: { x: 70, y: 16 } });
  * };
  *
  * export const Level: TSceneFn = () => {

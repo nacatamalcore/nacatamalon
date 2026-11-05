@@ -22,7 +22,7 @@ export const loadSong = async (store: TRuntimeStore, file: TSongFile): Promise<v
             // One of the engine's own, loaded the first time it is asked for.
             const builtin = loadBuiltinSong(file.src);
             if (builtin === null) {
-                throw new Error(`the engine has no song '${file.src}': see SONG_BUILTINS for the ones it has`);
+                throw new Error(`the engine has no song '${file.src}': BUILTIN.MUSIC.SONGS lists the ones it has`);
             }
             doc = await builtin;
         } else {

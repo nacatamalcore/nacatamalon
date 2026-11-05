@@ -6,7 +6,7 @@ import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useCamera3d } from '../src/hooks';
 import { createMesh } from '../src/gameobjects/mesh';
 import { useCubeGeometry } from '../src/hooks/geometry/use_cube_geometry';
-import { useHelperAxis, useHelperGrid, useHelperLines } from '../src/hooks/helpers';
+import { useHelperAxis, useHelperGrid, useLines } from '../src/hooks/helpers';
 import { writeLines } from '../src/gameobjects/lines';
 import { LINE_VERTEX_FLOATS } from '../src/render/shared/line_vertex';
 import { serializeScene } from '../src/scene';
@@ -44,7 +44,7 @@ describe('writing lines', () => {
         const { store } = createTestGame();
         let made!: TLines;
         startTestScene(store, 'Level', () => {
-            [made] = useHelperLines({ vertices: RED_LINE });
+            [made] = useLines({ vertices: RED_LINE });
             return createScene();
         });
 
@@ -56,7 +56,7 @@ describe('writing lines', () => {
         const { store } = createTestGame();
         let made!: TLines;
         startTestScene(store, 'Level', () => {
-            [made] = useHelperLines();
+            [made] = useLines();
             return createScene();
         });
 
@@ -68,7 +68,7 @@ describe('writing lines', () => {
         let set!: (vertices: Float32Array) => void;
         startTestScene(store, 'Level', () => {
             useCamera3d({ projection: 'perspective', transform: { z: 5 } });
-            [, set] = useHelperLines({ vertices: RED_LINE });
+            [, set] = useLines({ vertices: RED_LINE });
             return createScene();
         });
         expect(linesIn(frame(store))[0].count).toBe(2);
@@ -89,7 +89,7 @@ describe('writing lines', () => {
         let set!: (vertices: Float32Array) => void;
         startTestScene(store, 'Level', () => {
             useCamera3d({ projection: 'perspective', transform: { z: 5 } });
-            [, set] = useHelperLines();
+            [, set] = useLines();
             return createScene();
         });
         const mine = new Float32Array(RED_LINE);
@@ -105,7 +105,7 @@ describe('where the lines are drawn', () => {
         const { store } = createTestGame();
         startTestScene(store, 'Level', () => {
             useCamera3d({ projection: 'perspective', transform: { z: 5 } });
-            useHelperLines({ vertices: RED_LINE, transform: { x: 10, rotationY: Math.PI / 2, scaleX: 2 } });
+            useLines({ vertices: RED_LINE, transform: { x: 10, rotationY: Math.PI / 2, scaleX: 2 } });
             return createScene();
         });
 
@@ -126,7 +126,7 @@ describe('where the lines are drawn', () => {
             useCamera3d({ projection: 'perspective', transform: { z: 5 } });
             useSpawn(() => {
                 place = useTransform({ x: 3 });
-                useHelperLines({ vertices: RED_LINE });
+                useLines({ vertices: RED_LINE });
             })();
             return createScene();
         });

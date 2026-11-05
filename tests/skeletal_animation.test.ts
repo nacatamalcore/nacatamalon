@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, mock } from 'bun:test';
 import { createModel } from '../src/gameobjects/model';
 import { createScene } from '../src/scene/create_scene';
 import { runHookUpdates } from '../src/game/loop/runHookUpdates';
-import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
+import { useLoadModel } from '../src/hooks/loaders/use_load_model';
 import { useSkeletalAnimation } from '../src/hooks/animation/use_skeletal_animation';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { whenLoaded } from '../src/loaders';
@@ -61,7 +61,7 @@ const withRig = async (options: Record<string, unknown> = {}) => {
     let model!: TModel;
     let moves!: TSkeletalAnimation;
     const scene: TBox = startTestScene(store, 'Level', () => {
-        file = useLoadGltf({ src: 'model.gltf' });
+        file = useLoadModel({ src: 'model.gltf' });
         model = createModel({ model: file });
         moves = useSkeletalAnimation(model, options as never);
         return createScene();
@@ -262,7 +262,7 @@ describe('easing from one movement to another', () => {
         let model!: TModel;
         let moves!: TSkeletalAnimation;
         const scene = startTestScene(store, 'Level', () => {
-            file = useLoadGltf({ src: 'model.gltf' });
+            file = useLoadModel({ src: 'model.gltf' });
             model = createModel({ model: file });
             moves = useSkeletalAnimation(model, { play: 'Walk' });
             return createScene();
@@ -364,7 +364,7 @@ describe('when something is asked for that is not there', () => {
         let file!: TGltfModel;
         let moves!: TSkeletalAnimation;
         const scene: TBox = startTestScene(store, 'Level', () => {
-            file = useLoadGltf({ src: 'model.gltf' });
+            file = useLoadModel({ src: 'model.gltf' });
             moves = useSkeletalAnimation(createModel({ model: file }), { play: 'Dance' });
             return createScene();
         });
@@ -392,7 +392,7 @@ describe('when something is asked for that is not there', () => {
         const { store } = createTestGame();
         let file!: TGltfModel;
         const scene: TBox = startTestScene(store, 'Level', () => {
-            file = useLoadGltf({ src: 'model.gltf' });
+            file = useLoadModel({ src: 'model.gltf' });
             useSkeletalAnimation(createModel({ model: file }));
             return createScene();
         });
@@ -426,7 +426,7 @@ describe('when something is asked for that is not there', () => {
         let file!: TGltfModel;
         let moves!: TSkeletalAnimation;
         const scene = startTestScene(store, 'Level', () => {
-            file = useLoadGltf({ src: 'model.gltf' });
+            file = useLoadModel({ src: 'model.gltf' });
             moves = useSkeletalAnimation(createModel({ model: file }));
             return createScene();
         });
@@ -445,7 +445,7 @@ describe('two models of one file', () => {
         let file!: TGltfModel;
         const placed: TModel[] = [];
         const Enemy = ({ move }: { move: string }) => {
-            file = useLoadGltf({ src: 'model.gltf' });
+            file = useLoadModel({ src: 'model.gltf' });
             const model = createModel({ model: file });
             placed.push(model);
             useSkeletalAnimation(model, { play: move });

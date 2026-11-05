@@ -1,27 +1,27 @@
 import { rootOf } from '../../box';
 import { getActiveBox } from '../../store';
 import { whenLoaded } from '../../loaders';
-import type { TLoadable, TLoader } from '../../loaders';
+import type { TLoadable, TLoadProgress } from '../../loaders';
 import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
  * Keeps count of what a scene is loading, for a loading bar or to wait before changing scene.
  *
- * - `useLoader([hero, tiles])`: exactly those.
- * - `useLoader()`: everything this scene asks for with `useLoadTexture`, including what its body
+ * - `useLoadProgress([hero, tiles])`: exactly those.
+ * - `useLoadProgress()`: everything this scene asks for with `useLoadTexture`, including what its body
  *   asks for after this line. Counted once the body is over.
  *
  * The scene keeps drawing while it loads, so a loading bar made of sprites without a texture is on
  * screen from the first frame. Must be called inside a scene body, like every hook.
  * 
- * A clarification: If you use `useLoader()` with no arguments, it will track all assets requested by the scene, including those requested after the call.
+ * A clarification: If you use `useLoadProgress()` with no arguments, it will track all assets requested by the scene, including those requested after the call.
  * If you use with a specific list of assets, it will only track those and ignore any others requested by the scene.
  *
  * @example
  * ```ts
  * export const Loading: TSceneFn = () => {
  *     const scene = useScene();
- *     const loader = useLoader([
+ *     const loader = useLoadProgress([
  *         useLoadTexture({ src: '/assets/hero.png', key: 'hero' }),
  *         useLoadTexture({ src: '/assets/tiles.png', key: 'tiles' }),
  *     ]);
@@ -41,16 +41,16 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const useLoader = (assets?: readonly TLoadable[]): TLoader => {
+export const useLoadProgress = (assets?: readonly TLoadable[]): TLoadProgress => {
     const box = getActiveBox();
     if (box === null) {
-        throw outsideSceneBody('useLoader');
+        throw outsideSceneBody('useLoadProgress');
     }
 
     // With no list, the scene's own list and not a copy: what the body asks for after this line
     // lands in it too.
     const tracked = assets ?? rootOf(box).loads;
-    const loader: TLoader = { total: 0, loaded: 0, progress: 0, done: false };
+    const loader: TLoadProgress = { total: 0, loaded: 0, progress: 0, done: false };
 
     const recount = (): void => {
         loader.total = tracked.length;

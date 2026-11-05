@@ -1,5 +1,5 @@
 import { bytesOf, put } from './bytes';
-import type { TColor } from '../color';
+import type { TColorOption } from '../color';
 import type { TPixels, TPixelRegion } from './types/t_pixels';
 
 /**
@@ -41,7 +41,7 @@ export const clonePixels = (pixels: TPixels): TPixels => ({
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const swapColors = (pixels: TPixels, pairs: ReadonlyArray<readonly [TColor, TColor]>): TPixels => {
+export const swapColors = (pixels: TPixels, pairs: ReadonlyArray<readonly [TColorOption, TColorOption]>): TPixels => {
     const swaps = new Map<number, [number, number, number, number]>();
     for (const [from, to] of pairs) {
         const [r, g, b, a] = bytesOf(from);
@@ -132,7 +132,7 @@ export type TOutlinePixelsOptions = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const outlinePixels = (pixels: TPixels, color: TColor, options?: TOutlinePixelsOptions): TPixels => {
+export const outlinePixels = (pixels: TPixels, color: TColorOption, options?: TOutlinePixelsOptions): TPixels => {
     const { left, top, right, bottom } = partOf(pixels, options?.region);
     const wide = right - left;
     const high = bottom - top;

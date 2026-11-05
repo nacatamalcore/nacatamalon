@@ -73,7 +73,7 @@ export type TPolygonOptions = {
  *     const corners = Array.from({ length: 12 }, (_, i) => ({ angle: (i / 12) * Math.PI * 2 }));
  *     const blob = createPolygon({
  *         points: corners.map(({ angle }) => ({ x: Math.cos(angle) * 24, y: Math.sin(angle) * 24 })),
- *         tint: getColor('#5bd75b'),
+ *         tint: '#5bd75b',
  *         transform: { x: 160, y: 90 },
  *     });
  *

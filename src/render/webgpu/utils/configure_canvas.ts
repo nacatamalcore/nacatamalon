@@ -13,7 +13,7 @@ export type CanvasContext = {
 export const configureCanvas = (canvas: HTMLCanvasElement, device: GPUDevice): CanvasContext => {
     const context = canvas.getContext('webgpu');
     if (!context) {
-        throw new Error('Failed to get WebGPU context from canvas.');
+        throw new Error('the canvas gave no WebGPU context');
     }
 
     const format = navigator.gpu.getPreferredCanvasFormat();

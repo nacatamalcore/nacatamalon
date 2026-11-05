@@ -7,7 +7,7 @@ import type { TAtlasFrame, TAtlasFramePoints } from '../../../atlas/types/t_spri
  * A sheet described by a file: the image, how it is cut, and the runs of frames over it.
  *
  * It is a sheet **and** a load at once. Once it is `'ready'` it is exactly what `createSprite`
- * and `useSpriteAnimation` take, and until then it is something `useLoader` counts, like an
+ * and `useSpriteAnimation` take, and until then it is something `useLoadProgress` counts, like an
  * image.
  *
  * @category Assets & loading

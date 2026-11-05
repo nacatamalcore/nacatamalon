@@ -1,5 +1,5 @@
 import { bytesOf } from './bytes';
-import type { TColor } from '../color';
+import type { TColorOption } from '../color';
 import type { TPixels } from './types/t_pixels';
 
 /**
@@ -31,7 +31,7 @@ import type { TPixels } from './types/t_pixels';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const createPixels = (width: number, height: number, fill?: TColor): TPixels => {
+export const createPixels = (width: number, height: number, fill?: TColorOption): TPixels => {
     const w = Math.floor(width);
     const h = Math.floor(height);
     if (!(w >= 1 && h >= 1)) {

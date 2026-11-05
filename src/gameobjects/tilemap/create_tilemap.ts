@@ -157,7 +157,7 @@ const mapInCode = (options: TTilemapOptions, box: TBox, scene: TBox): TTilemap =
  * first map that is not tiny.
  *
  * What comes back is `'loading'` and fills itself in; its layers start drawing once the file and its
- * sheet have arrived, so nothing has to be awaited. `useLoader` counts it like any other asset.
+ * sheet have arrived, so nothing has to be awaited. `useLoadProgress` counts it like any other asset.
  *
  * **A level generated in code** has no file: give `doc` (what a `.tilemap` holds) and `atlas` (its
  * sheet, as an object) instead of `src`. It is ready at once when the sheet is, and everything else

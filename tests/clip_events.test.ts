@@ -4,7 +4,7 @@ import { createScene } from '../src/scene/create_scene';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { createSpriteAtlas } from '../src/atlas/create_sprite_atlas';
 import { runHookUpdates } from '../src/game/loop/runHookUpdates';
-import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
+import { useLoadModel } from '../src/hooks/loaders/use_load_model';
 import { useSkeletalAnimation } from '../src/hooks/animation/use_skeletal_animation';
 import { useSpriteAnimation } from '../src/hooks/animation/use_sprite_animation';
 import { whenLoaded } from '../src/loaders';
@@ -223,7 +223,7 @@ const withRig = async (options: Record<string, unknown> = {}) => {
     let model!: TModel;
     let moves!: TSkeletalAnimation;
     const scene: TBox = startTestScene(store, 'Level', () => {
-        file = useLoadGltf({ src: 'model.gltf' });
+        file = useLoadModel({ src: 'model.gltf' });
         model = createModel({ model: file });
         moves = useSkeletalAnimation(model, options as never);
         return createScene();

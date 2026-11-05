@@ -59,7 +59,7 @@ const builtinFont = (key: string): TBuiltinFont => {
  *
  * It goes through the same loader as `useLoadBitmapFont`, from `data:` addresses instead of files, so it
  * behaves exactly like a loaded font: one per game, ready a moment after the scene starts, and
- * counted by `useLoader()` like any other. Its description is handed over the same way, which is why
+ * counted by `useLoadProgress()` like any other. Its description is handed over the same way, which is why
  * it is a `data:` address too rather than set directly.
  */
 export const builtinFontOf = (store: TRuntimeStore, box: TBox, key: string = DEFAULT_FONT_KEY): TBitmapFont => {

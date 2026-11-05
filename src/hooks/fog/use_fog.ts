@@ -19,7 +19,7 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  * ```ts
  * export const Level: TSceneFn = () => {
  *     useCamera3d({ projection: 'perspective', transform: { z: 8 } });
- *     const fog = useFog({ color: getColor('#1a1426'), near: 6, far: 40 });
+ *     const fog = useFog({ color: '#1a1426', near: 6, far: 40 });
  *
  *     useUpdate((delta, time) => {
  *         // Breathing: the fog comes in and goes out

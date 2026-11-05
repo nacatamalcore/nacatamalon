@@ -38,7 +38,7 @@ export type TUseLoadPackOptions = {
  * them already. Its scripts are code, which a loader cannot bring: import the pack's `<name>.pack.ts`
  * once and they are registered.
  *
- * Handed back at once and filled in when it lands, like every other asset, and `useLoader` counts it.
+ * Handed back at once and filled in when it lands, like every other asset, and `useLoadProgress` counts it.
  * Asking for the same pack twice, in this scene or another, gives back the one already loaded.
  *
  * @param options Where the pack is, and what to keep it under.

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, spyOn } from 'bun:test';
 import { parseSceneDoc, sceneFromDoc, serializeScene, SCENE_FORMAT } from '../src/scene/document';
 import { createScene } from '../src/scene/create_scene';
 import { createModel } from '../src/gameobjects/model/create_model';
-import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
+import { useLoadModel } from '../src/hooks/loaders/use_load_model';
 import { whenLoaded } from '../src/loaders';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { asGlb, asGltf, serveGltf, TEST_QUAD } from './helpers/test_gltf';
@@ -155,7 +155,7 @@ describe('a model file in a scene that is saved and opened again', () => {
         const { store } = createTestGame();
         let model!: TGltfModel;
         startTestScene(store, 'Loading', () => {
-            model = useLoadGltf({ src: 'bottle.glb' });
+            model = useLoadModel({ src: 'bottle.glb' });
             return createScene();
         });
         await whenLoaded(model);
@@ -296,7 +296,7 @@ describe('pieces of a model file that share a name', () => {
         const { store } = createTestGame();
         let model!: TGltfModel;
         startTestScene(store, 'Loading', () => {
-            model = useLoadGltf({ src: 'car.glb' });
+            model = useLoadModel({ src: 'car.glb' });
             return createScene();
         });
         await whenLoaded(model);
@@ -373,8 +373,8 @@ describe('pieces of a model file that share a name', () => {
         let whole!: TGltfModel;
         let trailer!: TGltfModel;
         startTestScene(store, 'Loading', () => {
-            whole = useLoadGltf({ src: 'car.glb' });
-            trailer = useLoadGltf({ src: 'car.glb', node: 'Trailer' });
+            whole = useLoadModel({ src: 'car.glb' });
+            trailer = useLoadModel({ src: 'car.glb', node: 'Trailer' });
             return createScene();
         });
         await whenLoaded(whole);

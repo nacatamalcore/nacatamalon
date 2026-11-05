@@ -4,7 +4,7 @@ import { createText } from '../src/gameobjects/text/create_text';
 import { layoutFontText } from '../src/gameobjects/text/layout_font_text';
 import { useLoadFont } from '../src/hooks/loaders/use_load_font';
 import { useLoadBitmapFont } from '../src/hooks/loaders/use_load_bitmap_font';
-import { useLoader } from '../src/hooks/loaders/use_loader';
+import { useLoadProgress } from '../src/hooks/loaders/use_load_progress';
 import { fillFrameContext } from '../src/game/loop/fill_frame_context';
 import { whenLoaded } from '../src/loaders/track_load';
 import { newFontAtlas, packGlyph } from '../src/loaders/font/font_atlas';
@@ -179,7 +179,7 @@ describe('useLoadFont', () => {
             font = useLoadFont({ src: '/fonts/test.ttf', chars: 'IAO' });
             // The same font asked twice is loaded once and listed once.
             useLoadFont({ src: '/fonts/test.ttf' });
-            counted = useLoader([font]).total;
+            counted = useLoadProgress([font]).total;
             return createScene();
         });
         expect(font.status).toBe('loading');

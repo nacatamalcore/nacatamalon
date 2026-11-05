@@ -111,7 +111,6 @@ import {
     createGame,
     createScene,
     createSprite,
-    getColor,
     useKeyboard,
     useUpdate,
 } from "nacatamalon";
@@ -123,7 +122,7 @@ const Game = () => {
         transform: { x: 240, y: 296 },
         width: 64,
         height: 10,
-        tint: getColor("#ff6b1a"),
+        tint: "#ff6b1a",
     });
 
     useUpdate((dt) => {
@@ -142,7 +141,7 @@ const Game = () => {
 const game = createGame("#app", {
     width: 480,
     height: 320,
-    background: getColor("#12102b"),
+    background: "#12102b",
 });
 
 // Set scenes

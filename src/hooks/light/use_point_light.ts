@@ -27,7 +27,7 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  * const Level = () => {
  *     useCamera3d({ projection: 'perspective', transform: { z: 5 } });
  *     usePointLight({ intensity: 1.2 });
- *     createMesh({ geometry: useUvSphereGeometry() });
+ *     createMesh({ geometry: useSphereGeometry() });
  *
  *     return createScene();
  * };

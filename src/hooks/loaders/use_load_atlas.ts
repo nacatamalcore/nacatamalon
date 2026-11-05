@@ -39,7 +39,7 @@ export type TUseLoadAtlasOptions = {
  * themselves without arranging anything between them.
  *
  * What comes back can be used right away: sprites made from it show their frame when it arrives,
- * and `useLoader` counts it like an image.
+ * and `useLoadProgress` counts it like an image.
  *
  * @example
  * ```ts
@@ -83,7 +83,7 @@ export const useLoadAtlas = ({ src, key }: TUseLoadAtlasOptions): TLoadedAtlas =
     // leaves it.
     hold(atlas, GAME);
 
-    // Listed on the scene even when it came from the cache, so `useLoader()` counts everything
+    // Listed on the scene even when it came from the cache, so `useLoadProgress()` counts everything
     // the scene asked for and a cached sheet counts as already loaded.
     const { loads } = rootOf(box);
     if (!loads.includes(atlas)) {

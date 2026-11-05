@@ -124,7 +124,7 @@ const occlusionOf = (
             return null;
         }
         toldPastSecond.add(doc);
-        console.warn(`[NacatamalOn] useLoadGltf: a surface lays its occlusion out by picture coordinate ${set}, and only the first two (TEXCOORD_0 and TEXCOORD_1) are read. It is drawn without it.`);
+        console.warn(`[NacatamalOn] useLoadModel: a surface lays its occlusion out by picture coordinate ${set}, and only the first two (TEXCOORD_0 and TEXCOORD_1) are read. It is drawn without it.`);
         return null;
     }
     // Kept from 0 to 1, as the format says; anything that is not a number is all of it.

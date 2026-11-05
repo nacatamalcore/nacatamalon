@@ -4,7 +4,7 @@ import { createMesh } from '../src/gameobjects/mesh/create_mesh';
 import { createModel } from '../src/gameobjects/model';
 import { createMaterial } from '../src/gameobjects/material/create_material';
 import { useCubeGeometry } from '../src/hooks/geometry/use_cube_geometry';
-import { useLoadGltf } from '../src/hooks/loaders/use_load_gltf';
+import { useLoadModel } from '../src/hooks/loaders/use_load_model';
 import { useLoadTexture } from '../src/hooks/loaders/use_load_texture';
 import { releaseAsset, whenLoaded } from '../src/loaders';
 import { readMaterial } from '../src/loaders/gltf/read_material';
@@ -115,7 +115,7 @@ describe('a model loaded from a file', () => {
         const { store } = createTestGame();
         let loaded!: TGltfModel;
         startTestScene(store, 'Level', () => {
-            loaded = useLoadGltf({ src: 'model.gltf' });
+            loaded = useLoadModel({ src: 'model.gltf' });
             return createScene();
         });
         await whenLoaded(loaded);
