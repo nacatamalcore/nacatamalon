@@ -108,6 +108,16 @@ const releasePicture = (store: TRuntimeStore, texture: TTexture | null, leaving:
 };
 
 /**
+ * Lets go of every picture a model noted as fetched, from the record that holds it rather than from
+ * its pieces: one that failed, or was ended on the way, has none to name them.
+ */
+const releaseFetchedPictures = (store: TRuntimeStore, model: TAsset): void => {
+    for (const texture of heldBy(model) as TTexture[]) {
+        releasePicture(store, texture, model);
+    }
+};
+
+/**
  * Lets go of the sheet a particle file took its frames from, unless something else still uses it:
  * the game, which asked for it itself (`useLoadAtlas`, for its sprites), another effect (from a file
  * or written in code), or a map, loaded or still waiting for it. A sheet cut in code is not the
@@ -237,9 +247,7 @@ const releaseOne = (store: TRuntimeStore, asset: TAsset): void => {
                 releasePicture(store, part.occlusion?.texture ?? null, asset);
             }
             // One still on its way, or that failed on the way, has no pieces to name what it found.
-            for (const texture of heldBy(asset) as TTexture[]) {
-                releasePicture(store, texture, asset);
-            }
+            releaseFetchedPictures(store, asset);
             break;
         case 'particles-file':
             // Its children first: one that holds the same picture has let go of it by the time this
@@ -429,6 +437,13 @@ const heldOnScreen = (store: TRuntimeStore, asset: TAsset): boolean => {
  */
 export const releaseLeftBehind = (store: TRuntimeStore, asset: TAsset): boolean => {
     if (asset.status === 'released') {
+        // A model taken out while still on its way was ended then, so its loader would stop; the
+        // pictures it had fetched by then are still on the card, and go now unless something else
+        // holds them.
+        if (asset.type === 'gltf') {
+            releaseFetchedPictures(store, asset);
+            dropAll(asset);
+        }
         return true;
     }
     switch (asset.type) {

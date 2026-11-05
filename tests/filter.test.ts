@@ -1,4 +1,4 @@
-import { describe, expect, it, spyOn } from 'bun:test';
+import { beforeEach, describe, expect, it, spyOn } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { createMesh } from '../src/gameobjects/mesh/create_mesh';
@@ -15,7 +15,7 @@ import { anyFilters } from '../src/filter/create_filter';
 import { emptySpan, regionOf } from '../src/filter/filter_region';
 import { applyMasks } from '../src/mask/apply_masks';
 import { blur, crt, dither, dropShadow, glow, outline } from '../src/post';
-import { createTestGame, startTestScene } from './helpers/test_game';
+import { createTestGame, startTestScene, takeDownTestGames } from './helpers/test_game';
 import { parseSceneDoc, sceneFromDoc, serializeScene } from '../src/scene/document';
 import { registerScene } from '../src/scene/register_scene';
 import { startScene } from '../src/scene/start_scene';
@@ -32,6 +32,9 @@ import type { TRuntimeStore } from '../src/store';
  * is checked here: a pass before the screen's drawing what is filtered, with its part and its chain,
  * and one entry in the screen's pass laying the result where the object was sorted.
  */
+
+// How many objects are filtered is counted for every game at once: each test sees its own game alone.
+beforeEach(takeDownTestGames);
 
 const frame = (store: TRuntimeStore): TFrameContext => {
     const ctx: TFrameContext = { passes: [{}], time: 0, progress: 0, phase: 0 };

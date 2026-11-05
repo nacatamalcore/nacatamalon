@@ -1,6 +1,7 @@
 import { createRuntimeStore } from '../../src/store/runtime_store';
 import { registerScene } from '../../src/scene/register_scene';
 import { startScene } from '../../src/scene/start_scene';
+import { teardownBox } from '../../src/box/teardown_box';
 import type { TBox } from '../../src/box';
 import type { IRenderer, TFrameContext } from '../../src/render';
 // `ITexture` is not on the render barrel, only on the interface folder.
@@ -167,7 +168,25 @@ export const createTestGame = (
         renderer,
         config: { ...TEST_CONFIG, ...overrides },
     });
+    made.push(store);
     return { store, renderer };
+};
+
+/** Every game made by a test and not taken down yet. */
+const made: TRuntimeStore[] = [];
+
+/**
+ * Takes down every game made so far, as destroying a game does: its scenes run their cleanups. A
+ * test game is never destroyed, and some things are counted for every game at once (how many
+ * objects are masked or filtered), so a test that reads one of those counts calls this first, to
+ * see its own game alone and not what earlier tests, in this file or another, left behind.
+ */
+export const takeDownTestGames = (): void => {
+    for (const store of made.splice(0)) {
+        for (const scene of [...store.get('world').scenes]) {
+            teardownBox(scene);
+        }
+    }
 };
 
 /**

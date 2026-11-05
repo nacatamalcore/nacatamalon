@@ -725,6 +725,78 @@ describe('a picture kept inside a model file, the same in more than one', () => 
         }
     });
 
+    /**
+     * A model taken out by the editor once it has its first picture, while the second is still on
+     * its way; `alsoTheGame` has the game load the first picture itself too.
+     */
+    const takenOutWhileLoading = async (alsoTheGame: boolean) => {
+        const { json, bin } = asGltf({
+            nodes: [
+                { name: 'A', primitives: [{ ...TEST_QUAD, material: 0 }] },
+                { name: 'B', primitives: [{ ...TEST_QUAD, material: 1 }] },
+            ],
+            materials: [{ image: 'atlas.png' }, { image: 'slow.png' }],
+        });
+        const served = serveGltf({ 'tower.gltf': json, 'model.bin': bin, 'atlas.png': 'png', 'slow.png': 'png' });
+        // The second picture is held back, so the model is still on its way once it has the first.
+        let letThrough!: () => void;
+        const held = new Promise<void>((resolve) => { letThrough = resolve; });
+        const answer = globalThis.fetch;
+        globalThis.fetch = (async (input: string) => {
+            if (String(input).endsWith('slow.png')) {
+                await held;
+            }
+            return answer(input);
+        }) as unknown as typeof fetch;
+        try {
+            const { store } = createTestGame();
+            let tower!: TGltfModel;
+            startTestScene(store, 'Shop', () => {
+                if (alsoTheGame) {
+                    useLoadTexture({ src: 'atlas.png' });
+                }
+                tower = useLoadGltf({ src: 'tower.gltf' });
+                return createScene();
+            });
+            const textures = store.get('assets').textures;
+            const named = (end: string) => [...textures.values()].find((texture) => texture.src.endsWith(end));
+            while (named('slow.png') === undefined) {
+                await new Promise((resolve) => setTimeout(resolve, 0));
+            }
+            const atlas = named('atlas.png')!;
+            const slow = named('slow.png')!;
+            expect(atlas.status).toBe('ready');
+            expect(tower.status).toBe('loading');
+            const instance: TGameInstance = { destroy: () => {}, on: () => () => {} };
+            openHost(instance).resolve(store);
+            const editor = await editorHandleOf(instance);
+
+            expect(editor.evictAsset(tower.key)).toBe(true);
+            editor.releaseForgotten();
+            letThrough();
+            await whenLoaded(tower);
+            await whenLoaded(slow);
+            return { atlas, slow };
+        } finally {
+            globalThis.fetch = answer;
+            served.restore();
+        }
+    };
+
+    it('takes the pictures it sent for itself when taken out by the editor while still loading', async () => {
+        const { atlas, slow } = await takenOutWhileLoading(false);
+        expect(atlas.status).toBe('released');
+        // The one still on its way when it went never reaches the card.
+        expect(slow.status).toBe('released');
+        expect(slow.gpu).toBeNull();
+    });
+
+    it('leaves a picture the game asked for itself when the editor takes out a model still loading', async () => {
+        const { atlas, slow } = await takenOutWhileLoading(true);
+        expect(atlas.status).toBe('ready');
+        expect(slow.status).toBe('released');
+    });
+
     it('keeps a shape it is made of, let go of by the game, until the model goes', async () => {
         const served = serveGltf({ 'crate.glb': asGlb({ nodes: [{ name: 'Crate', primitives: [{ ...TEST_QUAD }] }] }) });
         try {
