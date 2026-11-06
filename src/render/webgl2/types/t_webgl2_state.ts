@@ -12,6 +12,7 @@ import type { TShadowMap } from '../shadow/shadow_map';
 import type { TShadowPipeline } from '../shadow/shadow_pipeline';
 import type { TMaskPrograms } from '../mask/mask_programs';
 import type { TFilterDepth } from '../mask/filter_depth';
+import type { TGpuPassHost } from '../../extensions/gpu_pass_host';
 
 /**
  * Everything the WebGL2 backend holds between frames.
@@ -131,4 +132,9 @@ export type TWebGL2State = {
     masks: TMaskPrograms | null;
     /** What keeps the depth of a filter holding a model, made the first time a frame has one. */
     filterDepth: TFilterDepth | null;
+    /**
+     * The passes of the game's plugins (`useGpuPass`), made with the first of them. A game that
+     * makes none never has it.
+     */
+    gpuPasses?: TGpuPassHost;
 };

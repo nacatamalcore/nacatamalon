@@ -195,6 +195,7 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
         return;
     }
     const { gl } = state;
+    state.gpuPasses?.run('before', ctx.time, ctx.delta ?? 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     // Said once here rather than by each draw: a set of bones is filled once however many models
     // wear it and however many passes they are drawn in.
     state.meshes.joints.beginFrame();
@@ -535,6 +536,7 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
 
     state.post?.endFrame();
     state.filterDepth?.endFrame();
+    state.gpuPasses?.run('after', ctx.time, ctx.delta ?? 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     releaseUnusedUpright(state);
     releaseUnusedCanvasTargets(state);
     releaseUnusedMultisampled(state);
@@ -542,4 +544,5 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
     // Back to the canvas, so anything asking questions afterwards (a readback, a resize) is not
     // looking at whatever the last pass drew into.
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    state.gpuPasses?.endFrame();
 };

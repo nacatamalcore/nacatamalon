@@ -223,3 +223,11 @@ describe('the physics doors', () => {
         expect(source).not.toMatch(/from '\.\/physics\/(rapier2d|box3d)/);
     });
 });
+
+describe('the door for a plugin\'s GPU passes', () => {
+    it('is the only one that hands over the GPU', () => {
+        const render = valuesOf('../src/extend/gpu/index.ts');
+        expect(render).toEqual(['useGpuPass']);
+        expect([...front, ...tools, ...extend]).not.toContain('useGpuPass');
+    });
+});

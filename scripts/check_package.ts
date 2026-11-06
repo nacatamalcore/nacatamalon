@@ -34,7 +34,7 @@ const TOOL_ONLY = ['serializeScene: the shape', 'atlasDocFrames: a grid needs', 
  * Strings of what a game carries only when it uses it, which the README's game does not: reading a
  * tracker's export comes in with `useLoadTrackerSong`, not with every game.
  */
-const ONLY_WHEN_USED = ['not a text export of FamiTracker'];
+const ONLY_WHEN_USED = ['not a text export of FamiTracker', 'useGpuPass'];
 
 const root = join(import.meta.dir, '..');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
@@ -134,6 +134,23 @@ if (offline) {
     writeFileSync(join(work, 'tsconfig.tools.json'), JSON.stringify({ extends: './tsconfig.json', include: ['src/tool_doors.ts'] }));
     const oldTools = run(['bunx', '-p', `typescript@${OLD_TYPESCRIPT}`, 'tsc', '-p', 'tsconfig.tools.json'], work);
     check(oldTools.code === 0, `the other doors compile against it (TypeScript ${OLD_TYPESCRIPT}, no WebGPU types)`, oldTools.out);
+}
+
+// The door for a plugin's GPU passes names WebGPU's types on purpose: its guide's example has to
+// compile, on TypeScript 5 too once the plugin adds those types, while the doors above keep needing
+// none of them.
+const renderGuide = readFileSync(join(packageDir, 'guides/gpu_pass.es.md'), 'utf8');
+const renderExample = renderGuide.match(/```ts\n([\s\S]*?)```/)?.[1];
+check(renderExample !== undefined, 'the render pass guide has a TypeScript example');
+writeFileSync(join(work, 'src', 'gpu_pass.ts'), renderExample ?? '');
+writeFileSync(join(work, 'tsconfig.gpu_pass.json'), JSON.stringify({ extends: './tsconfig.json', include: ['src/gpu_pass.ts'] }));
+const renderPass = run([tsc, '-p', 'tsconfig.gpu_pass.json'], work);
+check(renderPass.code === 0, 'the experimental GPU pass example compiles against the installed package', renderPass.out);
+if (!offline) {
+    besideIt('@webgpu/types');
+    writeFileSync(join(work, 'tsconfig.gpu_pass_old.json'), JSON.stringify({ extends: './tsconfig.gpu_pass.json', compilerOptions: { types: ['@webgpu/types'] } }));
+    const oldRenderPass = run(['bunx', '-p', `typescript@${OLD_TYPESCRIPT}`, 'tsc', '-p', 'tsconfig.gpu_pass_old.json'], work);
+    check(oldRenderPass.code === 0, `the experimental door compiles on TypeScript ${OLD_TYPESCRIPT} with explicit WebGPU types`, oldRenderPass.out);
 }
 
 // 3. The README's physics example, compiling against the physics engines installed beside it.

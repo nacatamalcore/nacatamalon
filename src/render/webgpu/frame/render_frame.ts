@@ -106,6 +106,8 @@ const flatSpace = newCameraSpace();
 
 export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
     let encoder = gpu.device.createCommandEncoder();
+    const screenSize = gpu.context.canvas as { width: number; height: number };
+    gpu.gpuPasses?.run('before', ctx.time, ctx.delta ?? 0, screenSize.width, screenSize.height, encoder);
     // Said once here rather than by each draw: a set of bones is written once however many pieces
     // wear it and however many passes they are drawn in. The groups pointing at bones let go of go
     // with them.
@@ -489,8 +491,10 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         }
     }
 
+    gpu.gpuPasses?.run('after', ctx.time, ctx.delta ?? 0, screenSize.width, screenSize.height, encoder);
     endSpriteFrame(gpu.sprites, spritePassCount);
     gpu.device.queue.submit([encoder.finish()]);
+    gpu.gpuPasses?.endFrame();
     gpu.post?.endFrame();
     gpu.filterDepth?.endFrame();
     releaseUnusedDepths(gpu);

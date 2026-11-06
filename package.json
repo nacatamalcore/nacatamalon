@@ -94,6 +94,10 @@
             "types": "./dist/types/speech.d.ts",
             "default": "./dist/speech/index.js"
         },
+        "./extend/gpu": {
+            "types": "./dist/types/extend/gpu.d.ts",
+            "default": "./dist/extend/gpu/index.js"
+        },
         "./package.json": "./package.json"
     },
     "typesVersions": {
@@ -136,6 +140,9 @@
             ],
             "speech": [
                 "./dist/types/speech.d.ts"
+            ],
+            "extend/gpu": [
+                "./dist/types/extend/gpu.d.ts"
             ]
         }
     },
@@ -146,7 +153,7 @@
         "typecheck": "tsc --noEmit",
         "clean": "rm -rf dist",
         "build": "bun run clean && bun run build:js && bun run build:strip && bun run build:types && bun run build:llms",
-        "build:js": "esbuild src/index.ts src/authoring/index.ts src/extend/index.ts src/react/index.ts src/headless/index.ts src/speech/index.ts math=src/doors/math.ts pixels=src/doors/pixels.ts shader=src/doors/shader.ts effects=src/doors/effects.ts transitions=src/doors/transitions.ts files=src/doors/files.ts physics2d=src/physics/rapier2d/index.ts physics3d=src/physics/box3d/index.ts --bundle --splitting --format=esm --outdir=dist --packages=external --sourcemap --log-level=warning",
+        "build:js": "esbuild src/index.ts src/authoring/index.ts src/extend/index.ts src/extend/gpu/index.ts src/react/index.ts src/headless/index.ts src/speech/index.ts math=src/doors/math.ts pixels=src/doors/pixels.ts shader=src/doors/shader.ts effects=src/doors/effects.ts transitions=src/doors/transitions.ts files=src/doors/files.ts physics2d=src/physics/rapier2d/index.ts physics3d=src/physics/box3d/index.ts --bundle --splitting --format=esm --outdir=dist --packages=external --sourcemap --log-level=warning",
         "build:strip": "bun scripts/strip_bare_imports.ts",
         "build:types": "bun scripts/build_types.ts",
         "build:llms": "bun scripts/build_llms.ts",

@@ -1,3 +1,4 @@
+import { attachGpuPassAccess } from '../extensions/gpu_pass_bridge';
 import { getColor } from '../../color';
 import type { IRenderer, TRendererOptions } from '../interface';
 import { createDevice } from './utils';
@@ -47,6 +48,7 @@ export const createWebGPURenderer = async (
             return null;
         }
         lost = true;
+        gpu.gpuPasses?.destroy();
         return new Error(
             `[NacatamalOn] WebGPU: the graphics card was lost (${info.message || info.reason}). The game has stopped drawing; reload the page to continue.`,
         );
@@ -107,7 +109,7 @@ export const createWebGPURenderer = async (
         multisampled: new Map(),
     };
 
-    return {
+    return attachGpuPassAccess({
         capabilities: {
             backend: 'WEBGPU',
             // What was actually obtained. Upstream reads this to decide, never the request.
@@ -139,6 +141,7 @@ export const createWebGPURenderer = async (
             gpu.tilemaps.defaultSmooth = smooth;
         },
         destroy: () => {
+            gpu.gpuPasses?.destroy();
             gpu.post?.destroy();
             for (const map of gpu.shadows) map.destroy();
             gpu.shadowPipeline?.destroy();
@@ -148,5 +151,5 @@ export const createWebGPURenderer = async (
             device.destroy();
             context.unconfigure();
         },
-    };
+    }, { backend: 'WEBGPU', state: gpu });
 };

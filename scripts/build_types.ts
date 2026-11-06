@@ -47,6 +47,7 @@ const ENTRIES: Record<string, string> = {
     './files': 'doors/files.d.ts',
     './authoring': 'authoring/index.d.ts',
     './extend': 'extend/index.d.ts',
+    './extend/gpu': 'extend/gpu/index.d.ts',
     './react': 'react/index.d.ts',
     './headless': 'headless/index.d.ts',
     './speech': 'speech/index.d.ts',

@@ -28,6 +28,7 @@ export const watchContextLoss = (canvas: HTMLCanvasElement, state: TWebGL2State)
     const onLost = (event: Event): void => {
         event.preventDefault();
         state.lost = true;
+        state.gpuPasses?.reset();
         for (const texture of state.textures) {
             texture.glTexture = null;
         }
@@ -74,6 +75,7 @@ export const watchContextLoss = (canvas: HTMLCanvasElement, state: TWebGL2State)
             buffer.glBuffer = restoreWebGL2Buffer(gl, buffer);
         }
         state.lost = false;
+        state.gpuPasses?.restore();
     };
 
     canvas.addEventListener('webglcontextlost', onLost);

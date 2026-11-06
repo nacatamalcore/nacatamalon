@@ -109,6 +109,11 @@ export type TRenderPass = {
  * @since 1.0.0
  */
 export type TFrameContext = {
+    /**
+     * Seconds of game time this frame moved the game by, however many views it draws: what a
+     * plugin's pass (`useGpuPass`) is told. Missing from a frame no game made, such as a tool's.
+     */
+    delta?: number;
     passes: TRenderPass[];
     /**
      * Seconds since the game started. Shaders that animate read it from here.

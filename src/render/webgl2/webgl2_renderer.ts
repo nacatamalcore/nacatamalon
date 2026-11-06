@@ -1,3 +1,4 @@
+import { attachGpuPassAccess } from '../extensions/gpu_pass_bridge';
 import { getColor } from '../../color';
 import type { IRenderer, TRendererOptions } from '../interface';
 import { watchContextLoss } from './context/watch_context_loss';
@@ -67,7 +68,7 @@ export const createWebGL2Renderer = async (
     };
     const unwatchContext = watchContextLoss(canvas, state);
 
-    return {
+    return attachGpuPassAccess({
         capabilities: {
             backend: 'WEBGL2',
             // What was obtained. The context itself has no antialiasing: the samples are the passes'
@@ -126,6 +127,7 @@ export const createWebGL2Renderer = async (
             state.tilemaps.defaultSmooth = smooth;
         },
         destroy: () => {
+            state.gpuPasses?.destroy();
             unwatchContext();
             state.post?.destroy();
             for (const map of state.shadows) map?.destroy();
@@ -143,5 +145,5 @@ export const createWebGL2Renderer = async (
             state.lost = true;
             gl.getExtension('WEBGL_lose_context')?.loseContext();
         },
-    };
+    }, { backend: 'WEBGL2', state: state });
 };

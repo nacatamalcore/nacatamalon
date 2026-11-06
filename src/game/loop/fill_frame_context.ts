@@ -1020,6 +1020,7 @@ const secondPass = (store: TRuntimeStore, seenThrough: TSeenThrough, clearColor:
 
 export const fillFrameContext = (store: TRuntimeStore, ctx: TFrameContext, delta = 0): void => {
     pass++;
+    ctx.delta = delta;
     startTextFrame();
     snapping = store.get('config').pixelSnap;
     drawingWith = store.get('screen').renderer;

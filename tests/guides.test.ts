@@ -33,6 +33,7 @@ const OPTIONS: ts.CompilerOptions = {
         nacatamalon: [join(ROOT, 'index.ts')],
         'nacatamalon/authoring': [join(ROOT, 'authoring', 'index.ts')],
         'nacatamalon/extend': [join(ROOT, 'extend', 'index.ts')],
+        'nacatamalon/extend/gpu': [join(ROOT, 'extend', 'gpu', 'index.ts')],
         'nacatamalon/react': [join(ROOT, 'react', 'index.ts')],
         'nacatamalon/headless': [join(ROOT, 'headless', 'index.ts')],
         'nacatamalon/speech': [join(ROOT, 'speech', 'index.ts')],
@@ -64,7 +65,7 @@ const compileEach = (codes: string[]): string[][] => {
 
 describe('the guides', () => {
     it('are there, in English and in Spanish', () => {
-        expect(files.sort()).toEqual(['music.es.md', 'music.md']);
+        expect(files.sort()).toEqual(['gpu_pass.es.md', 'gpu_pass.md', 'music.es.md', 'music.md']);
     });
 
     for (const file of files) {
@@ -75,7 +76,7 @@ describe('the guides', () => {
             expect(results.every((errors) => errors.length === 0) ? [] : results).toEqual([]);
         });
 
-        it(`${file}: every whole song plays with no mistakes`, () => {
+        if (file.startsWith('music.')) it(`${file}: every whole song plays with no mistakes`, () => {
             const songs = blocksOf(text, 'json').flatMap((block) => {
                 try {
                     const doc = JSON.parse(block) as { voices?: unknown };
@@ -96,11 +97,11 @@ describe('the guides', () => {
             const slug = (heading: string) => heading.toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu, '').trim().replace(/\s/g, '-');
             const anchors = new Set([...text.matchAll(/^#{1,6}\s+(.+)$/gm)].map((match) => slug(match[1]!)));
             const links = [...text.matchAll(/\]\(#([^)]+)\)/g)].map((match) => match[1]!);
-            expect(links.length).toBeGreaterThan(5);
+            if (file.startsWith('music.')) expect(links.length).toBeGreaterThan(5);
             expect(links.filter((link) => !anchors.has(link))).toEqual([]);
         });
 
-        it(`${file}: every line of notes reads`, () => {
+        if (file.startsWith('music.')) it(`${file}: every line of notes reads`, () => {
             const lines = [
                 ...[...text.matchAll(/"notes": "((?:[^"\\]|\\.)*)"/g)].map((match) => match[1]!),
                 ...blocksOf(text, 'text').map((block) => block.trim()),

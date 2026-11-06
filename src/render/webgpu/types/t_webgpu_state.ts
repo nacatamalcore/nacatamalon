@@ -9,6 +9,7 @@ import type { TShadowMap } from "../shadow/shadow_map";
 import type { TShadowPipeline } from "../shadow/shadow_pipeline";
 import type { TMaskPipelines } from "../mask/mask_pipelines";
 import type { TFilterDepth } from "../mask/filter_depth";
+import type { TGpuPassHost } from "../../extensions/gpu_pass_host";
 
 // render/webgpu/types/t_webgpu_state.ts
 export type TWebGPUState = {
@@ -104,4 +105,9 @@ export type TWebGPUState = {
     masks: TMaskPipelines | null;
     /** What keeps the depth of a filter holding a model, made the first time a frame has one. */
     filterDepth: TFilterDepth | null;
+    /**
+     * The passes of the game's plugins (`useGpuPass`), made with the first of them. A game that
+     * makes none never has it.
+     */
+    gpuPasses?: TGpuPassHost;
 };

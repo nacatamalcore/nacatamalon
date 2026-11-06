@@ -66,6 +66,12 @@ releases are in [changelog/](./changelog/), one file each.
 
 - **The pixel functions take a colour as text**, as every other option does: `fillRect(p, 0, 0, 8, 8, '#ff6b1a')`,
   `drawText(p, 'MOTEL', 4, 4, { color: 'orange' })`, `fillGradient(p, { from: '#203060', to: '#f0a070' })`.
+- **A plugin can run work of its own on the GPU** (experimental), with `useGpuPass` from the new door
+  `nacatamalon/extend/gpu`: a simulation in compute, a picture worked out on the GPU, anything a material or
+  a post effect cannot do. It runs once a frame, before the frame draws or after, and what it draws into comes
+  back as the game's own pictures, for sprites, models and materials. It goes with the component that made it,
+  and comes back by itself after a lost WebGL2 context. A game never calls it: it calls the hook the plugin
+  exports. A game that never imports the door carries none of it. See `guides/gpu_pass.md`.
 
 ### Fixed
 

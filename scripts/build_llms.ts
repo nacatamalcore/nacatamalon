@@ -35,6 +35,7 @@ const DOORS: { spec: string; file: string; who: string }[] = [
     { spec: 'nacatamalon/react', file: 'src/react/index.ts', who: 'A game inside a React page: `<Game>`, and hooks for the React components drawn over it. Needs `react`. Browser only: the native runtime does not show React components.' },
     { spec: 'nacatamalon/headless', file: 'src/headless/index.ts', who: 'A game run from Node or Bun with no browser, a frame at a time, the same every time: for tests and scripts that check what a game does. A game never needs it.' },
     { spec: 'nacatamalon/authoring', file: 'src/authoring/index.ts', who: 'For tools that write scenes (editors, generators). A game never needs it.' },
+    { spec: 'nacatamalon/extend/gpu', file: 'src/extend/gpu/index.ts', who: 'For a plugin that runs work of its own on the GPU once a frame (compute, a picture worked out on the GPU). Experimental. A game never needs it; on TypeScript 5 it needs `@webgpu/types`.' },
     { spec: 'nacatamalon/extend', file: 'src/extend/index.ts', who: 'For packages that extend the engine (another physics engine, a plugin). A game never needs it.' },
 ];
 
