@@ -1,16 +1,21 @@
 /**
- * Consecutive sprites that share one texture, one filtering and one effect, drawn with a single
- * call.
+ * Consecutive sprites that share a filtering, blend and effect, drawn with a single call. Their
+ * pictures may differ, up to eight of them.
  *
- * The effect is part of what makes a batch, not just the texture: two sprites running different
- * shaders are two programs, and no call can use two. Sharing one, they still come out in a single
- * draw. Its twin in the other backend groups by exactly the same three things.
+ * The effect is part of what makes a batch, and the picture no longer is: two sprites running
+ * different shaders are two programs, and no call can use two. Sharing one, they still come out in a
+ * single draw. Its twin in the other backend groups by exactly the same things.
  *
  * @internal
  */
 export type TSpriteRun = {
     /**
-     * The texture bound for this run.
+     * The run's pictures, in the order they first appear. A sprite's slot is its place here. A run
+     * with an effect or that cuts a mask's shape always has one.
+     */
+    textures: WebGLTexture[];
+    /**
+     * The first picture, the one bound when the run has only one.
      */
     texture: WebGLTexture;
     /**
@@ -34,14 +39,14 @@ export type TSpriteRun = {
      */
     uniforms: TUniformValues | null;
     /**
-     * Index of the run's first sprite in the instance buffer.
-     */
-    /**
      * Where these sprites may draw and what they do to the stencil, or `null` in a pass where
      * nothing is masked. A run never mixes two: a mask's shape and what it keeps in are told apart
      * here.
      */
     stencil: TDrawStencil | null;
+    /**
+     * Index of the run's first sprite in the instance buffer.
+     */
     start: number;
     /**
      * Where that first sprite sat in the frame's list of things to draw, so a map's layer drawn in

@@ -1,4 +1,5 @@
-import { SPRITE_DISTANCE_FIELD_SHADER, SPRITE_SHADER } from './sprite_shader';
+import { SPRITE_BATCH_DISTANCE_FIELD_SHADER, SPRITE_BATCH_SHADER } from './batch_shader';
+import { SPRITE_TEXTURE_SLOTS } from '../../shared/sprite_batch';
 import { buildSpriteDistanceFieldMaterialShader, buildSpriteMaterialShader } from '../material/sprite_material_shader';
 import { createFlatMaterials } from '../material/flat_materials';
 import type { TSpritePipeline } from './types/t_sprite_pipeline';
@@ -93,7 +94,7 @@ export const createSpritePipeline = (
         label: 'sprite texture layout',
         entries: [
             { binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
-            { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: {} },
+            ...Array.from({ length: SPRITE_TEXTURE_SLOTS }, (_, i) => ({ binding: i + 1, visibility: GPUShaderStage.FRAGMENT, texture: {} })),
         ],
     });
 
@@ -127,8 +128,8 @@ export const createSpritePipeline = (
             multisample: { count: samples },
         });
     };
-    const plain = device.createShaderModule({ label: 'sprite shader', code: SPRITE_SHADER });
-    const field = device.createShaderModule({ label: 'sprite distance field shader', code: SPRITE_DISTANCE_FIELD_SHADER });
+    const plain = device.createShaderModule({ label: 'sprite shader', code: SPRITE_BATCH_SHADER });
+    const field = device.createShaderModule({ label: 'sprite distance field shader', code: SPRITE_BATCH_DISTANCE_FIELD_SHADER });
     const pipeline = pipelineFor('sprite', plain, ALPHA_BLEND);
     const distanceFieldPipeline = pipelineFor('sprite distance field', field, ALPHA_BLEND);
     const additivePipeline = pipelineFor('sprite additive', plain, ADDITIVE_BLEND);
@@ -158,12 +159,13 @@ export const createSpritePipeline = (
     });
 
     // Group 1 for sprites without a usable texture. Built here, once, because every frame needs it.
+    const whiteView = whiteTexture.createView();
     const whiteBindGroup = device.createBindGroup({
         label: 'sprite white bind group',
         layout: textureLayout,
         entries: [
             { binding: 0, resource: defaultSmooth ? samplers.linear : samplers.nearest },
-            { binding: 1, resource: whiteTexture.createView() },
+            ...Array.from({ length: SPRITE_TEXTURE_SLOTS }, (_, i) => ({ binding: i + 1, resource: whiteView })),
         ],
     });
 
@@ -208,7 +210,9 @@ export const createSpritePipeline = (
         samplers,
         defaultSmooth,
         whiteBindGroup,
+        whiteTexture,
         textureBindGroups: new WeakMap(),
+        runsByPass: [],
         runs: [],
         runCount: 0,
     };

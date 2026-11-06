@@ -1,5 +1,6 @@
 import { OFF_THE_SEAM_WGSL } from '../../shared/texel_seam';
 import { DISTANCE_FIELD_RANGE } from '../../shared/distance_field';
+import { MAX_VIEWS } from './write_sprite_instance';
 
 /**
  * Everything a sprite shader needs before it decides a colour: the views, the sheet, the instance,
@@ -9,11 +10,14 @@ import { DISTANCE_FIELD_RANGE } from '../../shared/distance_field';
  * and not copied, so "the same preamble" is true by construction: a copy that drifted would show up
  * as an effect that is also in the wrong place, which reads as two bugs and is one.
  *
+ * With `batch` it declares the batch's other pictures and the functions that pick one of them, and
+ * the vertex also reads, from the view number, the picture each sprite takes.
+ *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const SPRITE_SHADER_HEAD = /* wgsl */ `
+export const spriteShaderHead = (batch: { textures: string; helpers: string } | null = null): string => /* wgsl */ `
 // A view is how the world is looked at: through a camera, or straight in screen pixels. Slot 0 is
 // always the screen (position 0, rotation 0, zoom 1), so "no camera" runs the same arithmetic as a
 // camera and there is no second path to keep in step.
@@ -23,13 +27,15 @@ export const SPRITE_SHADER_HEAD = /* wgsl */ `
 // at byte 8, because a vec2f only asks for 4-byte alignment and browsers no longer insist on 16 for
 // uniforms, and every camera is read shifted by one field (its y used as the zoom).
 struct View { position: vec2f, rotation: f32, zoom: f32 };
-const MAX_VIEWS = 16u;
+const MAX_VIEWS = ${MAX_VIEWS}u;
 struct Uniforms { resolution: vec2f, padding: vec2f, views: array<View, MAX_VIEWS> };
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
 // group 1 changes per texture batch: a sprite without texture gets a single white texel
 @group(1) @binding(0) var spriteSampler: sampler;
 @group(1) @binding(1) var spriteTexture: texture_2d<f32>;
+${batch?.textures ?? ''}
+${batch?.helpers ?? ''}
 
 struct Instance {
     @location(1) position: vec2f,
@@ -76,6 +82,7 @@ struct VertexOut {
     // Where this pixel is across the sprite as it is drawn, 0 to 1, whatever part of the sheet it
     // shows: what a material's localUv() reads.
     @location(4) across: vec2f,
+    ${batch ? '@location(5) @interpolate(flat) textureSlot: u32,' : ''}
 };
 
 // The read, kept inside the window so a pixel that landed on the boundary between two columns of
@@ -85,15 +92,15 @@ struct VertexOut {
 // A repeated sprite's read runs on past its window, once for each time the picture is laid, and is
 // wrapped back into it first.
 ${OFF_THE_SEAM_WGSL}
-fn insideWindow(uv: vec2f, window: vec4f, repeat: f32) -> vec2f {
-    let texel = 0.5 / vec2f(textureDimensions(spriteTexture, 0));
+fn insideWindow(uv: vec2f, window: vec4f, repeat: f32${batch ? ', slot: u32' : ''}) -> vec2f {
+    let texel = 0.5 / vec2f(${batch ? 'spriteDimensions(slot)' : 'textureDimensions(spriteTexture, 0)'});
     let size = window.zw - window.xy;
     var read = uv;
     if (repeat > 0.5) {
         read = window.xy + (uv - window.xy) - floor((uv - window.xy) / size) * size;
     }
     // A read on a seam takes the same texel on both cards: see OFF_THE_SEAM_WGSL.
-    read = offTheSeam(read, vec2f(textureDimensions(spriteTexture, 0)));
+    read = offTheSeam(read, vec2f(${batch ? 'spriteDimensions(slot)' : 'textureDimensions(spriteTexture, 0)'}));
     let lowest = window.xy + texel;
     // Guarded for a window thinner than one texel, where the two would cross over.
     let highest = max(lowest, window.zw - texel);
@@ -114,7 +121,7 @@ fn vs(@location(0) corner: vec2f, inst: Instance) -> VertexOut {
     // world pixels -> screen pixels through the view: move to the camera, turn against it, then
     // magnify. The camera is undone in the reverse order an object is placed in. Must match
     // applyView2d in render/shared, which is where this is tested.
-    let view = u.views[u32(inst.view)];
+    let view = u.views[u32(inst.view)${batch ? ' % MAX_VIEWS' : ''}];
     let fromCamera = pixel - view.position;
     let vc = cos(-view.rotation);
     let vs = sin(-view.rotation);
@@ -126,6 +133,7 @@ fn vs(@location(0) corner: vec2f, inst: Instance) -> VertexOut {
     var out: VertexOut;
     out.clip = vec4f(clip.x, -clip.y, 0.0, 1.0);
     out.tint = inst.tint;
+    ${batch ? 'out.textureSlot = u32(inst.view) / MAX_VIEWS;' : ''}
     // the corner, moved to 0..1: the top-left corner reads the top-left texel. A negative scale
     // mirrors the quad but not the uv, so the image mirrors with it.
     //
@@ -149,7 +157,18 @@ fn vs(@location(0) corner: vec2f, inst: Instance) -> VertexOut {
 `;
 
 /**
- * The built-in ending: the sheet read where the corner says, multiplied by the sprite's own colour.
+ * The preamble for one picture, which effects and masks start with.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const SPRITE_SHADER_HEAD = spriteShaderHead();
+
+/**
+ * The ending for one picture: the sheet read where the corner says, multiplied by the sprite's own
+ * colour. Sprites are drawn with `SPRITE_BATCH_SHADER`, built from the same preamble; this stays as
+ * the one-picture version the tests compare against.
  *
  * @internal
  * @since 1.0.0
@@ -162,7 +181,8 @@ fn fs(in: VertexOut) -> @location(0) vec4f {
 `;
 
 /**
- * The whole built-in sprite shader.
+ * The whole sprite shader for one picture. Not what sprites are drawn with any more, which is
+ * `SPRITE_BATCH_SHADER`.
  *
  * @internal
  * @since 1.0.0
@@ -181,16 +201,18 @@ export const SPRITE_SHADER = SPRITE_SHADER_HEAD + SPRITE_SHADER_FRAGMENT;
  * Called at the top of the ending and nowhere inside a branch, because `fwidth` needs every pixel of
  * the group to reach it together.
  *
+ * With `batch` the edge is measured on the picture the sprite reads, not on the first.
+ *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const DISTANCE_FIELD_COVERAGE = /* wgsl */ `
+export const distanceFieldCoverage = (batch = false): string => /* wgsl */ `
 const DISTANCE_FIELD_RANGE = ${DISTANCE_FIELD_RANGE}.0;
 
-fn distanceFieldCoverage(sample: vec4f, uv: vec2f) -> f32 {
+fn distanceFieldCoverage(sample: vec4f, uv: vec2f${batch ? ', slot: u32' : ''}) -> f32 {
     let distance = max(min(sample.r, sample.g), min(max(sample.r, sample.g), sample.b)) - 0.5;
-    let unit = vec2f(DISTANCE_FIELD_RANGE) / vec2f(textureDimensions(spriteTexture, 0));
+    let unit = vec2f(DISTANCE_FIELD_RANGE) / vec2f(${batch ? 'spriteDimensions(slot)' : 'textureDimensions(spriteTexture, 0)'});
     let screen = 1.0 / fwidth(uv);
     let range = max(0.5 * dot(unit, screen), 1.0);
     return clamp(distance * range + 0.5, 0.0, 1.0);
@@ -198,7 +220,17 @@ fn distanceFieldCoverage(sample: vec4f, uv: vec2f) -> f32 {
 `;
 
 /**
- * The built-in ending for a distance field: the tint, as opaque as the edge says.
+ * The coverage for one picture, which an effect on a vector font's letters uses.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const DISTANCE_FIELD_COVERAGE = distanceFieldCoverage();
+
+/**
+ * The ending for a distance field of one picture: the tint, as opaque as the edge says. Letters
+ * are drawn with `SPRITE_BATCH_DISTANCE_FIELD_SHADER`.
  *
  * @internal
  * @since 1.0.0
@@ -212,7 +244,8 @@ fn fs(in: VertexOut) -> @location(0) vec4f {
 `;
 
 /**
- * The whole built-in shader for sprites cut from a distance field: a vector font's letters.
+ * The whole shader for a distance field of one picture: a vector font's letters. Not what they are
+ * drawn with any more, which is `SPRITE_BATCH_DISTANCE_FIELD_SHADER`.
  *
  * @internal
  * @since 1.0.0

@@ -1,4 +1,5 @@
 // everyframe
+import { SPRITE_TEXTURE_SLOTS } from '../../shared/sprite_batch';
 import { SPRITE_ATTRIBUTES } from './create_sprite_pipeline';
 import { SPRITE_STRIDE } from './write_sprite_instances';
 import type { TSpritePipeline } from './types/t_sprite_pipeline';
@@ -29,7 +30,7 @@ export const beginSprites = (gl: WebGL2RenderingContext, sprites: TSpritePipelin
  *
  * WebGPU starts a batch at a given sprite; WebGL2 always starts at the first, so instead the
  * per-sprite attributes are pointed at the batch's first entry: the same buffer, read from a later
- * byte. Nine cheap calls per batch, and batches are few when a layer shares a sheet.
+ * byte. A handful of cheap calls per batch, and batches are few: one draws up to eight pictures.
  *
  * A batch with an effect of its own runs a different program over the same corners, which is legal
  * because both were built from the same vertex half and so name the attributes in the same places.
@@ -53,6 +54,7 @@ export const drawSpriteRun = (
     height: number,
 ): boolean => {
     let ordinary = true;
+    let custom = false;
     const material = run.material;
     const materials = run.distanceField ? sprites.distanceFieldMaterials : sprites.materials;
 
@@ -69,14 +71,18 @@ export const drawSpriteRun = (
                 // left something else there.
                 gl.bindBuffer(gl.ARRAY_BUFFER, sprites.instances);
                 ordinary = false;
+                custom = true;
             }
         }
     }
 
-    if (ordinary && run.distanceField) {
+    const batch = run.textures.length > 1;
+    if (ordinary && (run.distanceField || batch)) {
         // Everything but the program is what plain sprites use, so only that is swapped, and the
         // next plain batch is told to set it back.
-        gl.useProgram(sprites.distanceFieldProgram);
+        gl.useProgram(batch
+            ? (run.distanceField ? sprites.batchDistanceFieldProgram : sprites.batchProgram)
+            : sprites.distanceFieldProgram);
         ordinary = false;
     }
 
@@ -91,8 +97,19 @@ export const drawSpriteRun = (
     for (const { location, size, offset } of SPRITE_ATTRIBUTES) {
         gl.vertexAttribPointer(location, size, gl.FLOAT, false, SPRITE_STRIDE, base + offset);
     }
-    gl.bindTexture(gl.TEXTURE_2D, run.texture);
-    gl.bindSampler(0, run.sampler);
+    if (custom || !batch) {
+        // An effect reads its maps from units of its own; its main picture stays on unit zero.
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, run.texture);
+        gl.bindSampler(0, run.sampler);
+    } else {
+        for (let i = 0; i < SPRITE_TEXTURE_SLOTS; i++) {
+            gl.activeTexture(gl.TEXTURE0 + i);
+            gl.bindTexture(gl.TEXTURE_2D, run.textures[i] ?? sprites.whiteTexture);
+            gl.bindSampler(i, run.sampler);
+        }
+        gl.activeTexture(gl.TEXTURE0);
+    }
     // 4 corners (triangle strip) per sprite, `run.count` sprites.
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, run.count);
     return ordinary;

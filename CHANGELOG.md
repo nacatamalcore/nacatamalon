@@ -7,6 +7,15 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- **Built-in sprites share a draw across up to eight pictures.** Consecutive sprites with the same
+  filtering and blend stay in their original order, including overlapping transparent ones, instead
+  of ending a batch on every picture change. WebGPU and WebGL2 use the same eight slots without
+  adding bytes to each sprite. A model, layer, mask-state change or custom material still cuts the
+  batch; custom materials and stencil shapes keep their single-picture shader contract. WebGPU keeps
+  texture groups separately for each pass. Spare batches survive 120 unused frames so blinking
+  drawables reuse their groups; a longer absence releases the cache. WebGL2 compiles all built-in
+  sprite variants at boot and on context restoration, keeping compilation out of the draw path.
+
 - **Breaking: what is a subject of its own has its own import.** `nacatamalon` had 421 functions and values
   in one list, and now keeps the 187 almost every game uses. Nothing was renamed and nothing changed but
   where it is imported from, and each name is in one place only:

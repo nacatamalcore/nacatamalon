@@ -1,7 +1,9 @@
+import { SPRITE_TEXTURE_SLOTS } from '../../shared/sprite_batch';
 import type { TSpritePipeline } from './types/t_sprite_pipeline';
 
 /**
- * Group 1 (sampler + texture) for `texture` read the way `smooth` asks, made the first time that
+ * Group 1 for a run of one picture: the sampler `smooth` asks for, and `texture` in all eight of a
+ * batch's slots, so the batch shader reads it whatever slot it is told. Made the first time that
  * pairing is drawn and reused after.
  *
  * Two entries per texture at most, because the sampler is bound inside the group: the same image
@@ -31,12 +33,13 @@ export const getTextureBindGroup = (
         return existing;
     }
 
+    const view = texture.createView();
     const bindGroup = device.createBindGroup({
         label: `sprite texture bind group (${filter})`,
         layout: sprites.layouts.texture,
         entries: [
             { binding: 0, resource: sprites.samplers[filter] },
-            { binding: 1, resource: texture.createView() },
+            ...Array.from({ length: SPRITE_TEXTURE_SLOTS }, (_, i) => ({ binding: i + 1, resource: view })),
         ],
     });
     cached[filter] = bindGroup;

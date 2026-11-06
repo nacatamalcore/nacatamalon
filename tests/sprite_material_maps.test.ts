@@ -131,7 +131,9 @@ describe('how its maps are read', () => {
         const device = { queue: { writeBuffer: () => {} }, createBuffer: () => ({ destroy: () => {} }) } as unknown as GPUDevice;
         const sprites = {
             capacity: 16, instanceData: new Float32Array(16 * 32), runs: [], runCount: 0, whiteBindGroup: {},
-            defaultSmooth: false, textureBindGroups: new WeakMap(), instances: {},
+            whiteTexture: { createView: () => ({}) } as unknown as GPUTexture,
+            defaultSmooth: false, textureBindGroups: new WeakMap(),
+    runsByPass: [], instances: {},
         } as unknown as Parameters<typeof writeSpriteInstances>[1];
         const material = createMaterial({ maps: { grain: texture('grain') } });
         const plain = { type: 'sprite', texture: null, tint: { r: 1, g: 1, b: 1, a: 1 }, transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 }, width: 10, height: 10, material };

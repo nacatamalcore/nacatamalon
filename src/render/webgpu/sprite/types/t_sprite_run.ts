@@ -1,7 +1,8 @@
 /**
- * Consecutive sprites that share one sheet and one effect, drawn with a single call.
+ * Consecutive sprites that share a filtering, blend and effect, drawn with a single call. Their
+ * pictures may differ, up to eight of them.
  *
- * The effect is part of what makes a batch, not just the sheet: two sprites running different
+ * The effect is part of what makes a batch, and the picture no longer is: two sprites running different
  * shaders are two pipelines, and no call can set two. Sharing one, though, they still come out in a
  * single draw, which is the thing this engine has that drawing a quad apiece would not.
  *
@@ -9,9 +10,38 @@
  */
 export type TSpriteRun = {
     /**
-     * Group 1 for this run: the sampler and the texture.
+     * Frames in a row this record has not been drawn, 0 while it is. It is dropped after
+     * `SPARE_SPRITE_FRAMES`.
+     */
+    spareFor: number;
+    /**
+     * The run's pictures, in the order they first appear. A sprite's slot is its place here. A run
+     * with an effect or that cuts a mask's shape always has one.
+     */
+    textures: GPUTexture[];
+    /**
+     * Group 1 for this run: the sampler and eight picture slots. With one picture it is that
+     * picture's own group, in all eight.
      */
     bindGroup: GPUBindGroup;
+    /**
+     * The last group made for this run record when it held several pictures, kept for the next
+     * frame, which usually draws the same ones.
+     */
+    batchBindGroup?: GPUBindGroup;
+    /**
+     * The pictures `batchBindGroup` was made with, in their slots.
+     */
+    boundTextures?: GPUTexture[];
+    /**
+     * The filtering `batchBindGroup` was made with.
+     */
+    boundSmooth?: boolean;
+    /**
+     * Frames in a row `batchBindGroup` has not been drawn with, whether the run went back to one
+     * picture or stopped drawing. It is let go of after `SPARE_SPRITE_FRAMES`.
+     */
+    batchUnusedFor: number;
     /**
      * The effect these sprites share, or `null` for the built-in shader.
      */
@@ -38,14 +68,14 @@ export type TSpriteRun = {
      */
     uniforms: TUniformValues | null;
     /**
-     * Index of the run's first sprite in the instance buffer.
-     */
-    /**
      * Where these sprites may draw and what they do to the stencil, or `null` in a pass where
      * nothing is masked. A run never mixes two: a mask's shape and what it keeps in are told apart
      * here.
      */
     stencil: TDrawStencil | null;
+    /**
+     * Index of the run's first sprite in the instance buffer.
+     */
     start: number;
     /**
      * Where that first sprite sat in the frame's list of things to draw.

@@ -73,13 +73,24 @@ export type TSpritePipeline = {
      */
     whiteBindGroup: GPUBindGroup;
     /**
+     * The white texel itself, which also fills the slots of a batch that has fewer than eight pictures.
+     */
+    whiteTexture: GPUTexture;
+    /**
      * Group 1 per uploaded texture, made the first time it is drawn, and one per filtering: the
      * sampler is part of the group, so the same image shown crisp in one place and smooth in
      * another needs one of each.
      */
     textureBindGroups: WeakMap<GPUTexture, { nearest?: GPUBindGroup; linear?: GPUBindGroup }>;
     /**
-     * This frame's batches. Reused between frames: only the first `runCount` are valid.
+     * The batches of each pass, by its place among the passes drawn in the frame, kept for the same
+     * pass the next frame. With one list for all, a camera's view and the screen would undo each
+     * other's groups every frame.
+     */
+    runsByPass: TSpriteRun[][];
+    /**
+     * The batches of the pass being drawn, one of `runsByPass`. Only the first `runCount` are this
+     * frame's; the ones after them were drawn recently and are kept a while in case they come back.
      */
     runs: TSpriteRun[];
     /**

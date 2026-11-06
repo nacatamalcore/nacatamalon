@@ -1,4 +1,5 @@
-// Per frame
+// everyframe
+import { SPRITE_TEXTURE_SLOTS, pictureList } from '../../shared/sprite_batch';
 import type { TDrawItem } from '../../interface';
 import type { TDrawStencil } from '../../interface/draw/t_draw_stencil';
 import { spriteSize } from '../../shared/sprite_size';
@@ -19,8 +20,9 @@ const pivoted = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 };
 
 /**
  * Floats per sprite in the instance buffer: x, y, width, height, rotation, scaleX, scaleY,
- * r, g, b, a, uvOffset x, y, uvScale x, y, anchor x, y, view, then how many times the picture is laid
- * across and down and where its pattern starts, for a sprite that repeats.
+ * r, g, b, a, uvOffset x, y, uvScale x, y, anchor x, y, the view and the batch's picture packed into
+ * one number, then how many times the picture is laid across and down and where its pattern starts,
+ * for a sprite that repeats.
  *
  * A copy of the WebGPU backend's layout, kept on purpose instead of shared. The test
  * `webgl2_layout.test.ts` writes the same drawables through both and compares the floats, so the
@@ -38,8 +40,9 @@ export const SPRITE_FLOATS = 22;
 export const SPRITE_STRIDE = SPRITE_FLOATS * 4;
 
 /**
- * Views the shader holds: the screen in slot 0 and up to this many minus one cameras. Must match the
- * size of `views` in the sprite shader.
+ * Views the shader holds: the screen in slot 0 and up to this many minus one cameras. The sprite
+ * shader takes its size from here, and also uses it to unpack a batch's picture from the view
+ * number. The particles' and the maps' shaders still write 16 and must match it.
  *
  * @internal
  */
@@ -70,12 +73,10 @@ const growInstances = (gl: WebGL2RenderingContext, sprites: TSpritePipeline, cou
 };
 
 /**
- * Adds sprite `index` to the current run if it uses the same texture read the same way, the same
- * effect and the same blend, or opens a new run. Reuses the run objects of earlier frames, so batching allocates
- * nothing once the game has settled.
- *
- * A sprite carrying knobs of its own always opens a run and always closes it, because a run writes
- * one set of them.
+ * Joins the last consecutive run when its state matches and the picture already has a slot, or
+ * fits in a spare one. Custom materials and stencil shapes keep their single-picture contract.
+ * A sprite carrying its own knobs opens and closes a run, since a run writes one set of them.
+ * Run records and picture lists are reused after the first frame.
  */
 const addToRun = (
     sprites: TSpritePipeline,
@@ -89,11 +90,10 @@ const addToRun = (
     drawable: number,
     broken: boolean,
     stencil: TDrawStencil | null,
-): void => {
+): number => {
     const last = sprites.runCount > 0 ? sprites.runs[sprites.runCount - 1] : undefined;
     const joins = !broken
         && last !== undefined
-        && last.texture === texture
         && last.sampler === sampler
         && last.material === material
         && last.distanceField === distanceField
@@ -101,16 +101,23 @@ const addToRun = (
         && last.stencil === stencil
         && last.uniforms === null
         && uniforms === null;
-    if (joins) {
+    const slot = joins ? last!.textures.indexOf(texture) : -1;
+    // Stencil shapes use their own single-picture shader; their camera must stay unpacked too.
+    const severalPictures = material === null && (stencil === null || stencil.write === 'none');
+    if (joins && (slot >= 0 || (severalPictures && last!.textures.length < SPRITE_TEXTURE_SLOTS))) {
         last!.count++;
-        return;
+        if (slot >= 0) return slot;
+        last!.textures.push(texture);
+        return last!.textures.length - 1;
     }
 
     const run = sprites.runs[sprites.runCount];
     if (run === undefined) {
-        sprites.runs.push({ texture, sampler, material, uniforms, distanceField, additive, stencil, start: index, count: 1, firstDrawable: drawable });
+        sprites.runs.push({ texture, textures: pictureList(texture), sampler, material, uniforms, distanceField, additive, stencil, start: index, count: 1, firstDrawable: drawable });
     } else {
         run.texture = texture;
+        run.textures.length = 1;
+        run.textures[0] = texture;
         run.sampler = sampler;
         run.material = material;
         run.distanceField = distanceField;
@@ -122,11 +129,12 @@ const addToRun = (
         run.firstDrawable = drawable;
     }
     sprites.runCount++;
+    return 0;
 };
 
 /**
- * Turns this pass's sprites into the instance buffer, groups them into runs that share a texture and
- * a filtering, and returns how many sprites were written.
+ * Turns this pass's sprites into the instance buffer, groups consecutive sprites read the same way
+ * into runs of up to eight pictures, and returns how many sprites were written.
  *
  * The same walk as the WebGPU backend: a sprite whose texture is still loading is skipped, one whose
  * texture failed draws with the white texel as its tint, and runs are only ever **consecutive**
@@ -221,7 +229,10 @@ export const writeSpriteInstances = (
                 data[o + 20] = repeat.shiftX;
                 data[o + 21] = repeat.shiftY;
 
-                addToRun(sprites, glTexture, sampler, item.material ?? null, item.uniforms ?? null, item.distanceField === true, item.blend === 'additive', count, i, broken, stencil?.[i] ?? null);
+                const slot = addToRun(sprites, glTexture, sampler, item.material ?? null, item.uniforms ?? null, item.distanceField === true, item.blend === 'additive', count, i, broken, stencil?.[i] ?? null);
+                // The view number carries the batch's picture too: view + slot * MAX_VIEWS. It stays
+                // below 128, so a float holds it exactly.
+                data[o + 17] += slot * MAX_VIEWS;
                 broken = false;
                 count++;
                 break;

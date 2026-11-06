@@ -2,6 +2,7 @@ node_modules
 dist
 
 # Generated API docs (`bun run docs`)
+docs/
 docs/api
 
 .DS_Store

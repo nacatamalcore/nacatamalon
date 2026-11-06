@@ -1,5 +1,6 @@
 import { OFF_THE_SEAM_GLSL } from '../../shared/texel_seam';
 import { DISTANCE_FIELD_RANGE } from '../../shared/distance_field';
+import { MAX_VIEWS } from './write_sprite_instances';
 
 /**
  * The GLSL twin of `render/webgpu/sprite/sprite_shader.ts`. The two must draw the same picture, so
@@ -14,11 +15,14 @@ import { DISTANCE_FIELD_RANGE } from '../../shared/distance_field';
  *
  * Anything changed in one of the two shaders has to be changed in the other.
  *
+ * With `batch` the view number is also read for the picture each sprite takes from its batch, which
+ * it hands on to the fragment half.
+ *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const SPRITE_VERTEX_SHADER = /* glsl */ `#version 300 es
+export const spriteVertexShader = (batch = false): string => /* glsl */ `#version 300 es
 precision highp float;
 
 // A view is how the world is looked at: through a camera, or straight in screen pixels. Slot 0 is
@@ -27,7 +31,7 @@ struct View { vec2 position; float rotation; float zoom; };
 layout(std140) uniform Uniforms {
     vec2 resolution;
     vec2 padding;
-    View views[16];
+    View views[${MAX_VIEWS}];
 } u;
 
 layout(location = 0) in vec2 corner;
@@ -46,6 +50,7 @@ layout(location = 9) in float view;
 layout(location = 10) in vec2 tiles;
 layout(location = 11) in vec2 shift;
 
+${batch ? 'flat out int vTextureSlot;' : ''}
 out vec4 vTint;
 out vec2 vUv;
 // xy the lowest corner of this sprite's window into the sheet, zw the highest. Flat: it belongs to
@@ -65,7 +70,7 @@ void main() {
     vec2 pixel = position + turned;
 
     // world pixels -> screen pixels through the view. Must match applyView2d in render/shared.
-    View v = u.views[int(view)];
+    View v = u.views[int(view)${batch ? ` % ${MAX_VIEWS}` : ''}];
     vec2 fromCamera = pixel - v.position;
     float vc = cos(-v.rotation);
     float vs = sin(-v.rotation);
@@ -76,6 +81,7 @@ void main() {
 
     gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
     vTint = tint;
+    ${batch ? `vTextureSlot = int(view) / ${MAX_VIEWS};` : ''}
     // the corner moved to 0..1 and cropped to the frame, exactly as in the WGSL
     // A repeated sprite runs across its picture as many times as tiles says, starting shift pictures in.
     vUv = ((corner + 0.5) * tiles + shift) * uvScale + uvOffset;
@@ -89,17 +95,32 @@ void main() {
 `;
 
 /**
- * Fragment half of `SPRITE_VERTEX_SHADER`: the texture multiplied by the tint, so an untextured
- * sprite (the white texel) comes out as its tint.
+ * The corners of a sprite of one picture, for the built-in ending, effects and masks.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const SPRITE_FRAGMENT_HEAD_GLSL = /* glsl */ `#version 300 es
+export const SPRITE_VERTEX_SHADER = spriteVertexShader();
+
+/**
+ * Fragment half of `SPRITE_VERTEX_SHADER`: the texture multiplied by the tint, so an untextured
+ * sprite (the white texel) comes out as its tint.
+ *
+ * With `batch` it declares the batch's other pictures and the functions that pick one of them, and
+ * measures the picture the sprite reads instead of the first.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const spriteFragmentHeadGlsl = (batch: { textures: string; helpers: string } | null = null): string => /* glsl */ `#version 300 es
 precision highp float;
 
 uniform sampler2D spriteTexture;
+${batch ? 'flat in int vTextureSlot;' : ''}
+${batch?.textures ?? ''}
+${batch?.helpers ?? ''}
 
 in vec4 vTint;
 in vec2 vUv;
@@ -113,16 +134,25 @@ out vec4 fragColor;
 // once for each time the picture is laid, and is wrapped back into it first.
 ${OFF_THE_SEAM_GLSL}
 vec2 insideWindow(vec2 uv, vec4 window) {
-    vec2 texel = 0.5 / vec2(textureSize(spriteTexture, 0));
+    vec2 texel = 0.5 / vec2(${batch ? 'spriteDimensions(vTextureSlot)' : 'textureSize(spriteTexture, 0)'});
     vec2 size = window.zw - window.xy;
     vec2 read = vRepeat > 0.5 ? window.xy + (uv - window.xy) - floor((uv - window.xy) / size) * size : uv;
     // A read on a seam takes the same texel on both cards: see OFF_THE_SEAM_GLSL.
-    read = offTheSeam(read, vec2(textureSize(spriteTexture, 0)));
+    read = offTheSeam(read, vec2(${batch ? 'spriteDimensions(vTextureSlot)' : 'textureSize(spriteTexture, 0)'}));
     vec2 lowest = window.xy + texel;
     vec2 highest = max(lowest, window.zw - texel);
     return clamp(read, lowest, highest);
 }
 `;
+
+/**
+ * The declarations for one picture, which an effect's shader starts with.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const SPRITE_FRAGMENT_HEAD_GLSL = spriteFragmentHeadGlsl();
 
 /**
  * The built-in ending. Split from the declarations above so a material's shader can keep those and
@@ -152,21 +182,32 @@ export const SPRITE_FRAGMENT_SHADER = SPRITE_FRAGMENT_HEAD_GLSL + SPRITE_FRAGMEN
  * the edge one screen pixel soft at whatever size the letter is drawn. Line for line the same
  * arithmetic, so a vector font's text looks the same on both backends.
  *
+ * With `batch` the edge is measured on the picture the sprite reads, not on the first.
+ *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const DISTANCE_FIELD_COVERAGE_GLSL = /* glsl */ `
+export const distanceFieldCoverageGlsl = (batch = false): string => /* glsl */ `
 const float DISTANCE_FIELD_RANGE = ${DISTANCE_FIELD_RANGE}.0;
 
 float distanceFieldCoverage(vec4 sampled, vec2 uv) {
     float distance = max(min(sampled.r, sampled.g), min(max(sampled.r, sampled.g), sampled.b)) - 0.5;
-    vec2 unit = vec2(DISTANCE_FIELD_RANGE) / vec2(textureSize(spriteTexture, 0));
+    vec2 unit = vec2(DISTANCE_FIELD_RANGE) / vec2(${batch ? 'spriteDimensions(vTextureSlot)' : 'textureSize(spriteTexture, 0)'});
     vec2 screen = 1.0 / fwidth(uv);
     float range = max(0.5 * dot(unit, screen), 1.0);
     return clamp(distance * range + 0.5, 0.0, 1.0);
 }
 `;
+
+/**
+ * The coverage for one picture, which an effect on a vector font's letters uses.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const DISTANCE_FIELD_COVERAGE_GLSL = distanceFieldCoverageGlsl();
 
 /**
  * The built-in ending for a distance field: the tint, as opaque as the edge says.

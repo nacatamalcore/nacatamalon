@@ -22,7 +22,8 @@ export const beginSprites = (gpuPass: GPURenderPassEncoder, sprites: TSpritePipe
 };
 
 /**
- * Draws one batch of sprites: those next to each other that share a sheet and an effect.
+ * Draws one batch of sprites: those next to each other that share a filtering, a blend and an
+ * effect, with up to eight pictures among them.
  *
  * A batch with an effect of its own runs a different pipeline, so it sets everything itself and says
  * afterwards that it left none of the ordinary state behind. A batch with no effect is drawn exactly

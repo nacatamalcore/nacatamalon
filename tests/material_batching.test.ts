@@ -51,7 +51,9 @@ const webgpuPipeline = (): TWebGPUSpritePipeline => ({
     samplers: { nearest: {} as GPUSampler, linear: {} as GPUSampler },
     defaultSmooth: false,
     whiteBindGroup: {} as GPUBindGroup,
+    whiteTexture: { createView: () => ({}) } as unknown as GPUTexture,
     textureBindGroups: new WeakMap(),
+    runsByPass: [],
     runs: [],
     runCount: 0,
 });
@@ -61,6 +63,8 @@ const webgl2Pipeline = (): TWebGL2SpritePipeline => ({
     distanceFieldMaterials: nothing() as TWebGL2SpritePipeline['materials'],
     program: {} as WebGLProgram,
     distanceFieldProgram: {} as WebGLProgram,
+    batchProgram: {} as WebGLProgram,
+    batchDistanceFieldProgram: {} as WebGLProgram,
     vao: {} as WebGLVertexArrayObject,
     quad: {} as WebGLBuffer,
     instances: {} as WebGLBuffer,

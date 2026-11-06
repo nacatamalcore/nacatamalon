@@ -28,6 +28,12 @@ export type TSpritePipeline = {
      */
     distanceFieldProgram: WebGLProgram;
     /**
+     * Several pictures in one run, compiled at boot alongside the single-picture programs.
+     */
+    batchProgram: WebGLProgram;
+    /** The multi-picture program ending in a distance-field read, also compiled at boot. */
+    batchDistanceFieldProgram: WebGLProgram;
+    /**
      * Remembers which buffer feeds each attribute and that the per-sprite ones advance per instance.
      */
     vao: WebGLVertexArrayObject;

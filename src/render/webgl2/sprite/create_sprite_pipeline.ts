@@ -1,6 +1,8 @@
 import { compileProgram } from '../utils/compile_program';
 import { createWhiteTexture } from '../texture';
-import { SPRITE_DISTANCE_FIELD_FRAGMENT_SHADER, SPRITE_FRAGMENT_SHADER, SPRITE_VERTEX_SHADER } from './sprite_shader';
+import { SPRITE_BATCH_DISTANCE_FIELD_FRAGMENT_SHADER, SPRITE_BATCH_FRAGMENT_SHADER, SPRITE_BATCH_VERTEX_SHADER } from './batch_shader';
+import { SPRITE_TEXTURE_SLOTS } from '../../shared/sprite_batch';
+import { SPRITE_VERTEX_SHADER, SPRITE_FRAGMENT_SHADER, SPRITE_DISTANCE_FIELD_FRAGMENT_SHADER } from './sprite_shader';
 import { createSpriteMaterials } from '../material/sprite_materials';
 import { buildSpriteDistanceFieldMaterialShaderGlsl } from '../material/sprite_material_shader';
 import { INITIAL_SPRITE_CAPACITY, SPRITE_FLOATS, SPRITE_STRIDE } from './write_sprite_instances';
@@ -60,17 +62,23 @@ export const createSpritePipeline = (
     defaultSmooth: boolean,
 ): TSpritePipeline => {
     // The plain one and the one for distance fields share the corners and everything they read, and
-    // differ only in the ending, so both are set up alike.
-    const programFor = (fragment: string, label: string): WebGLProgram => {
-        const built = compileProgram(gl, SPRITE_VERTEX_SHADER, fragment, label);
+    // differ only in the ending, so both are set up alike, and so are their batch versions.
+    const programFor = (fragment: string, label: string, batch = false): WebGLProgram => {
+        const built = compileProgram(gl, batch ? SPRITE_BATCH_VERTEX_SHADER : SPRITE_VERTEX_SHADER, fragment, label);
         // The uniform block reads binding 0, and binding 0 holds the frame uniforms.
         gl.uniformBlockBinding(built, gl.getUniformBlockIndex(built, 'Uniforms'), FRAME_UNIFORMS_BINDING);
-        // The texture is always on unit 0.
+        // The picture is on unit 0. A batch reads its other seven on units 1 to 7.
         gl.useProgram(built);
-        gl.uniform1i(gl.getUniformLocation(built, 'spriteTexture'), 0);
+        for (let i = 0; i < (batch ? SPRITE_TEXTURE_SLOTS : 1); i++) {
+            gl.uniform1i(gl.getUniformLocation(built, i === 0 ? 'spriteTexture' : `spriteTexture${i}`), i);
+        }
         return built;
     };
     const distanceFieldProgram = programFor(SPRITE_DISTANCE_FIELD_FRAGMENT_SHADER, 'sprite distance field');
+    // Compile every built-in variant at boot (and on restore), never from a draw. A compiler or
+    // driver error is reported here once, before the game starts drawing.
+    const batchDistanceFieldProgram = programFor(SPRITE_BATCH_DISTANCE_FIELD_FRAGMENT_SHADER, 'sprite batch distance field', true);
+    const batchProgram = programFor(SPRITE_BATCH_FRAGMENT_SHADER, 'sprite batch', true);
     const program = programFor(SPRITE_FRAGMENT_SHADER, 'sprite');
     gl.bindBufferBase(gl.UNIFORM_BUFFER, FRAME_UNIFORMS_BINDING, frameUniforms);
 
@@ -103,6 +111,8 @@ export const createSpritePipeline = (
     gl.bindVertexArray(null);
 
     return {
+        batchProgram,
+        batchDistanceFieldProgram,
         materials: createSpriteMaterials(gl),
         distanceFieldMaterials: createSpriteMaterials(gl, buildSpriteDistanceFieldMaterialShaderGlsl),
         program,

@@ -1,7 +1,7 @@
 import { beginSprites, drawSpriteRun } from '../sprite/draw_sprites';
 import { drawTilemapLayer, reserveLayerSlots } from '../tilemap/draw_tilemaps';
 import { toGpuTexture } from '../texture';
-import { writeSpriteInstances } from '../sprite/write_sprite_instance';
+import { endSpriteFrame, writeSpriteInstances } from '../sprite/write_sprite_instance';
 import { writeFrameUniforms } from './write_frame_uniforms';
 import { drawParticles, drawParticles3d } from '../particles/draw_particles';
 import { countDrawn } from '../../shared/count_drawn';
@@ -208,6 +208,7 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
     }
     gpu.filterDepth?.beginFrame(deepFilters);
 
+    let spritePassCount = 0;
     for (let p = 0; p < ctx.passes.length; p++) {
         const pass = ctx.passes[p];
         // The pass a person looks at is sent into a picture instead, and the chain takes it from
@@ -287,7 +288,7 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
             gpu.masks ??= createMaskPipelines(gpu.device, gpu.format, gpu.samples, gpu.sprites, gpu.tilemaps);
         }
         let state: TDrawStencil | null = null;
-        const spriteCount = writeSpriteInstances(gpu.device, gpu.sprites, drawables, cameraIndex, stencil);
+        const spriteCount = writeSpriteInstances(gpu.device, gpu.sprites, drawables, cameraIndex, stencil, spritePassCount++);
         // Each filter's picture says where it goes in a slot of its own, so the room for all of them
         // is made before the first is drawn.
         let filterLayers = 0;
@@ -488,6 +489,7 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         }
     }
 
+    endSpriteFrame(gpu.sprites, spritePassCount);
     gpu.device.queue.submit([encoder.finish()]);
     gpu.post?.endFrame();
     gpu.filterDepth?.endFrame();
