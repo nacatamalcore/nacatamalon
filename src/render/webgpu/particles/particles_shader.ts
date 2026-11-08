@@ -1,4 +1,5 @@
 import { OFF_THE_SEAM_WGSL } from '../../shared/texel_seam';
+import { LIGHTING_2D_STRUCT_WGSL, LIGHTING_2D_WGSL } from '../../shared/lighting_2d_shader';
 /**
  * The whole shader a particle is drawn with.
  *
@@ -9,7 +10,8 @@ import { OFF_THE_SEAM_WGSL } from '../../shared/texel_seam';
  * What it **does** share is the view table, read exactly the way a sprite reads it: slot 0 is the
  * screen and a camera is its own slot. And the window into a sheet, read the same way too, kept half
  * a texel inside the frame. Working that out a second way here is how a cloud of sparks
- * would end up not quite following the camera the sprites follow.
+ * would end up not quite following the camera the sprites follow. The 2D lights too, by the same
+ * view: dust in a dark cave is dark, and sparks left out with `useUnlit2d` keep their colours.
  *
  * @internal
  * @since 1.0.0
@@ -18,8 +20,10 @@ import { OFF_THE_SEAM_WGSL } from '../../shared/texel_seam';
 export const PARTICLES_SHADER = /* wgsl */ `
 struct View { position: vec2f, rotation: f32, zoom: f32 };
 const MAX_VIEWS = 16u;
-struct Uniforms { resolution: vec2f, padding: vec2f, views: array<View, MAX_VIEWS> };
+${LIGHTING_2D_STRUCT_WGSL}
+struct Uniforms { resolution: vec2f, padding: vec2f, views: array<View, MAX_VIEWS>, lighting2d: array<Lighting2d, 16> };
 @group(0) @binding(0) var<uniform> u: Uniforms;
+${LIGHTING_2D_WGSL}
 
 @group(1) @binding(0) var particleSampler: sampler;
 @group(1) @binding(1) var particleTexture: texture_2d<f32>;
@@ -40,6 +44,8 @@ struct VertexOut {
     @location(1) uv: vec2f,
     // The lowest corner of the window and the highest, the same over the whole square.
     @location(2) @interpolate(flat) window: vec4f,
+    @location(3) worldPixel: vec2f,
+    @location(4) @interpolate(flat) lightView: u32,
 };
 
 // Kept half a texel inside its window, as a sprite's read is: a pixel that lands on the boundary
@@ -79,11 +85,13 @@ fn vs(@location(0) corner: vec2f, inst: Instance) -> VertexOut {
     out.tint = inst.tint;
     out.uv = inst.window.xy + (corner + 0.5) * inst.window.zw;
     out.window = vec4f(inst.window.xy, inst.window.xy + inst.window.zw);
+    out.worldPixel = pixel;
+    out.lightView = u32(inst.view) % MAX_VIEWS;
     return out;
 }
 
 @fragment
 fn fs(in: VertexOut) -> @location(0) vec4f {
-    return textureSample(particleTexture, particleSampler, insideWindow(in.uv, in.window)) * in.tint;
+    return illuminate2d(textureSample(particleTexture, particleSampler, insideWindow(in.uv, in.window)) * in.tint, in.worldPixel, in.lightView);
 }
 `;

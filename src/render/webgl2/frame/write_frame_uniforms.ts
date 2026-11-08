@@ -1,3 +1,4 @@
+import { fillLighting2d, FRAME_FLOATS_2D } from '../../shared/lighting_2d';
 import type { TDrawCamera2d } from '../../interface';
 import { MAX_VIEWS } from '../sprite/write_sprite_instances';
 import type { TWebGL2State } from '../types/t_webgl2_state';
@@ -22,7 +23,7 @@ const warnedTooManyCameras = new WeakSet<TWebGL2State>();
  *
  * @internal
  */
-export const FRAME_UNIFORM_FLOATS = VIEWS_START + MAX_VIEWS * VIEW_FLOATS;
+export const FRAME_UNIFORM_FLOATS = FRAME_FLOATS_2D;
 
 /**
  * Writes what every sprite of this frame shares: the resolution, the screen view in slot 0 and each
@@ -36,6 +37,9 @@ export const writeFrameUniforms = (state: TWebGL2State, width: number, height: n
     const { gl } = state;
     const data = state.frameUniforms.data;
 
+    // The views' 2D lights, and how far into the block this frame's views reach: what lies past
+    // them is read by no sprite, so it is not sent.
+    const used = fillLighting2d(data, cameras);
     data[0] = width;
     data[1] = height;
 
@@ -47,7 +51,7 @@ export const writeFrameUniforms = (state: TWebGL2State, width: number, height: n
 
     if (cameras.length > MAX_VIEWS - 1 && !warnedTooManyCameras.has(state)) {
         warnedTooManyCameras.add(state);
-        console.warn(`[NacatamalOn] More than ${MAX_VIEWS - 1} scenes with a camera at once: the extra ones are drawn as if they had none.`);
+        console.warn(`[NacatamalOn] 2D views: more than ${MAX_VIEWS - 1} at once (a scene takes one with a camera or 2D lights, and one more for what it leaves out of them), so the extra ones are drawn as if they had no camera. Run fewer scenes at once.`);
     }
 
     const count = Math.min(cameras.length, MAX_VIEWS - 1);
@@ -61,5 +65,5 @@ export const writeFrameUniforms = (state: TWebGL2State, width: number, height: n
     }
 
     gl.bindBuffer(gl.UNIFORM_BUFFER, state.frameUniforms.buffer);
-    gl.bufferSubData(gl.UNIFORM_BUFFER, 0, data);
+    gl.bufferSubData(gl.UNIFORM_BUFFER, 0, data, 0, used);
 };

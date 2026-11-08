@@ -1,3 +1,7 @@
+import { collectLighting2d } from './helper/collect_lights_2d';
+import { mayHaveLights2d, mayHaveUnlit2d } from '../../light/count_lights_2d';
+import { createCamera2d } from '../../camera/create_camera_2d';
+import type { TDrawCamera2d } from '../../render/interface/draw/t_draw_camera_2d';
 import type { TFog } from '../../fog/types/t_fog';
 import type { TDrawable } from '../../gameobjects/types';
 import { screenSizeOf } from '../../DOM/screen_size';
@@ -331,7 +335,7 @@ const pictureColliders = new WeakMap<TBox, TSceneColliders>();
 type TPassLists = {
     drawables: Array<TDrawable | TDrawSprite>;
     cameraIndex: number[];
-    cameras: TCamera2d[];
+    cameras: Array<TCamera2d & TDrawCamera2d>;
     views3d: TDrawView3d[];
     viewIndex: number[];
     /**
@@ -561,6 +565,13 @@ let screenNow: { width: number; height: number } | null = null;
  */
 let drawingWith: IRenderer | null = null;
 
+// A lit world with no authored camera still needs its own view slot: slot zero belongs to the HUD.
+const identity2d = createCamera2d();
+
+// Cameras a frame's 2D views hold: sixteen views, the first of them the screen's (`MAX_VIEWS` in the
+// sprite writers).
+const MAX_CAMERAS_2D = 15;
+
 const gatherTree = (
     root: TBox,
     lists: TPassLists,
@@ -576,17 +587,41 @@ const gatherTree = (
 
     // The camera itself goes over, not a copy: moving it between two frames needs nothing
     // rebuilt. A scene without one draws in screen pixels, which is `-1`. A tool looking at the
-    // screen through a camera of its own wins over the scene's.
+    // screen through a camera of its own wins over the scene's. A world with 2D lights is the one
+    // exception: its camera goes over in a copy carrying the lights (one that shares the camera's
+    // transform, so it still moves with it), and a lit world with no camera gets one that does
+    // nothing, because slot 0, the screen's, is the HUD's and is never lit.
     //
     // The scene's own camera is drawn on the same pixels as everything else under `pixelSnap`; a
     // tool's is not, since it is zoomed in to look and would pan in steps of its zoom. Models that
     // follow it are drawn through this same one, or they would slide against the sprites by however
     // much it was rounded.
+    // A view of another world (`sees: 'world'`) lit by a lamp of its own uses that, and the world's
+    // lights when it has none left: only a scene's world stays dark once lit. The lamps are the ones
+    // nearest what this camera shows, so a long level can hold more than a view lights.
     const camera2d = viewport?.camera2d == null ? cameraAsDrawn(root.camera2d, snapping) : viewport.camera2d;
+    const viewOfWorld = viewport?.worldOf !== undefined && viewport.worldOf !== root;
+    // Worked out only in a game with 2D lights: one with none pays nothing for them.
+    const lampSight = size !== null && size.width > 0 && size.height > 0 && mayHaveLights2d(root) ? sightOf(camera2d, size.width, size.height) : null;
+    const lighting2d = collectLighting2d(root, !viewOfWorld, lampSight)
+        ?? (viewOfWorld ? collectLighting2d(viewport!.worldOf!, true, lampSight) : undefined);
     let sceneCamera = -1;
-    if (camera2d !== null) {
+    if (camera2d !== null || lighting2d !== undefined) {
         sceneCamera = cameras.length;
-        cameras.push(camera2d);
+        cameras.push(lighting2d === undefined ? camera2d! : { ...(camera2d ?? identity2d), lighting2d });
+    }
+    // What is left out of a lit world's lights (`useUnlit2d`) goes through its camera as it is, with no
+    // lights; with no camera, through the screen's view, which is the same and never lit.
+    // With every view taken, it is drawn lit, with the scene, rather than through the screen's view,
+    // where it would come loose from the camera.
+    let unlitCamera: number | null = null;
+    if (lighting2d !== undefined && mayHaveUnlit2d(root)) {
+        if (camera2d === null) {
+            unlitCamera = -1;
+        } else if (cameras.length < MAX_CAMERAS_2D) {
+            unlitCamera = cameras.length;
+            cameras.push(camera2d);
+        }
     }
 
     // What is pinned to the screen goes through the tool's camera for it, when it has one.
@@ -628,7 +663,7 @@ const gatherTree = (
     const pinnedOnly = root.worldOffScreen && root.parent === null && viewWalk() === null && ownSight ? [] as boolean[] : null;
     notePinnedInto(pinnedOnly);
     try {
-        collectDrawables(root, drawables as TDrawable[], cameraIndex, sceneCamera, false, null, 0, colliders, pictures, screenCamera, measuredBy, null, snapping, lists.masks, null, null, sights);
+        collectDrawables(root, drawables as TDrawable[], cameraIndex, sceneCamera, false, null, 0, colliders, pictures, screenCamera, measuredBy, null, snapping, lists.masks, null, null, sights, unlitCamera);
     } finally {
         notePinnedInto(null);
     }
@@ -750,7 +785,7 @@ const gatherTree = (
     //
     // A second look in the same frame (a capture, a preview) shows what this one stepped instead.
     // Flat ones on the pixels the sprites of this pass are on, by the camera they are measured by.
-    const particlePixels = { perUnit: pixelsPerUnit(snapping, measuredBy), camera: sceneCamera };
+    const particlePixels = { perUnit: pixelsPerUnit(snapping, measuredBy), camera: sceneCamera, unlitCamera };
     if (again) {
         lookAgainAtParticles(drawables as TDrawable[], cameraIndex, start, particlePixels);
     } else {

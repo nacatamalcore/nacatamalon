@@ -11,7 +11,7 @@ import { SPRITE_SHADER_HEAD } from '../src/render/webgpu/sprite/sprite_shader';
 import { SPRITE_FRAGMENT_HEAD_GLSL } from '../src/render/webgl2/sprite/sprite_shader';
 import { PARTICLES_SHADER } from '../src/render/webgpu/particles/particles_shader';
 import { PARTICLES_3D_SHADER } from '../src/render/webgpu/particles/particles_3d_shader';
-import { PARTICLES_FRAGMENT_SHADER } from '../src/render/webgl2/particles/particles_shader';
+import { PARTICLES_3D_FRAGMENT_SHADER, PARTICLES_FRAGMENT_SHADER } from '../src/render/webgl2/particles/particles_shader';
 import { OFF_THE_SEAM_GLSL, OFF_THE_SEAM_WGSL } from '../src/render/shared/texel_seam';
 import type { TFrameContext, TRenderPass } from '../src/render';
 import type { TDrawParticles } from '../src/render/interface';
@@ -169,7 +169,7 @@ describe('a read on the seam between two texels', () => {
             expect(shader).toContain(OFF_THE_SEAM_WGSL);
             expect(shader).toContain('offTheSeam(');
         }
-        for (const shader of [SPRITE_FRAGMENT_HEAD_GLSL, PARTICLES_FRAGMENT_SHADER]) {
+        for (const shader of [SPRITE_FRAGMENT_HEAD_GLSL, PARTICLES_FRAGMENT_SHADER, PARTICLES_3D_FRAGMENT_SHADER]) {
             expect(shader).toContain(OFF_THE_SEAM_GLSL);
             expect(shader).toContain('offTheSeam(');
         }

@@ -5,6 +5,19 @@ releases are in [changelog/](./changelog/), one file each.
 
 ## Unreleased
 
+### Added
+
+- **2D lights without normal maps.** `useLight2d` adds a coloured lamp with a radius in world pixels
+  and adjustable falloff; `useAmbientLight2d` sets the world's base brightness. Lamps light
+  sprites, text, nine-slices, shapes, polygons, tilemap layers and particles in WebGPU and WebGL2,
+  including their custom materials. A world can have any number: each camera is lit by the eight
+  nearest what it shows. Lamps follow their box, scenes keep separate lights, and
+  screen-space HUD objects stay unlit. `useUnlit2d` keeps something in the world (a fire, a neon
+  sign) in its own colours, still moving with the camera. A scene once lit stays lit until it ends,
+  so losing its last lamp does not turn it to daylight. Both light kinds, and what is left out, save
+  and load with scene documents. No lights keeps the original colours, and a game that never makes
+  one pays nothing for them. See [the 2D lighting guide](guides/lighting_2d.md).
+
 ### Changed
 
 - **Built-in sprites share a draw across up to eight pictures.** Consecutive sprites with the same
@@ -75,6 +88,9 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **A light two boxes down a turned or scaled box is where its box is.** A point, spot or rect light on a
+  turret of a turned ship was placed as if the ship had not turned or grown. It now sits where a sprite in the
+  same box is drawn.
 - **Errors name what you were doing.** A colour that is not one says `colour`, whichever option it was given to;
   a scene that is missing or already running says `scenes`; a renderer that cannot start says `createGame` and
   why; a damaged PNG says `decodePng` (or the loader). Before, several named the engine's own insides

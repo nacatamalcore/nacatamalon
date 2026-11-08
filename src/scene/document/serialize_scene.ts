@@ -664,39 +664,57 @@ const writeFog = (fog: TFog): TComponentDoc => ({
     ...(fog.enabled ? {} : { enabled: false }),
 });
 
-const writeLight = (light: TLight): TComponentDoc => ({
+// A 2D light: a lamp has a place on the flat world, how far it reaches and how it fades, and the
+// ambient one only a colour. Neither has the 3D light's direction, range or shadow.
+const writeLight2d = (light: Extract<TLight, { type: 'point-2d' | 'ambient-2d' }>): TComponentDoc => ({
     type: 'light',
     id: light.id,
     kind: light.type,
     color: { ...light.color },
     intensity: light.intensity,
-    // Five fields and not nine: a lamp has no scale and no roll, so the rest are structurally
-    // fixed and writing them down would be writing four numbers nobody reads.
-    ...(light.type !== 'ambient' ? {
-        transform: {
-            x: light.transform.x,
-            y: light.transform.y,
-            z: light.transform.z,
-            rotationX: light.transform.rotationX,
-            rotationY: light.transform.rotationY,
-        },
+    ...(light.type === 'point-2d' ? {
+        transform: { x: light.transform.x, y: light.transform.y, z: 0, rotationX: 0, rotationY: 0 },
+        radius: light.radius,
+        falloff: light.falloff,
     } : {}),
-    ...(light.type !== 'ambient' ? { ambient: light.ambient } : {}),
-    ...(light.type === 'point' || light.type === 'spot' || light.type === 'rect' ? { range: light.range } : {}),
-    ...(light.type === 'rect' ? { width: light.width, height: light.height } : {}),
-    ...(light.type === 'spot' ? { angle: light.angle, penumbra: light.penumbra } : {}),
-    // Written for every kind that can carry them, a bulb included: what a light was told is what
-    // comes back, and a writer deciding a bulb "cannot mean it" would quietly edit somebody's file.
-    // An ambient one is left out because it has nowhere to put them: it is not a light in a place,
-    // it is the level everything sits at.
-    ...(light.type !== 'ambient' ? {
-        ...unless('castShadow', light.castShadow, false),
-        ...unless('shadowBias', light.shadowBias, undefined),
-        ...unless('shadowStrength', light.shadowStrength, undefined),
-    } : {}),
-    ...(light.type === 'directional' ? unless('shadowArea', light.shadowArea, undefined) : {}),
-    ...(light.type === 'directional' ? unless('shadowDistance', light.shadowDistance, undefined) : {}),
 });
+
+const writeLight = (light: TLight): TComponentDoc => {
+    if (light.type === 'point-2d' || light.type === 'ambient-2d') return writeLight2d(light);
+    return {
+        type: 'light',
+        id: light.id,
+        kind: light.type,
+        color: { ...light.color },
+        intensity: light.intensity,
+        // Five fields and not nine: a lamp has no scale and no roll, so the rest are structurally
+        // fixed and writing them down would be writing four numbers nobody reads.
+        ...(light.type !== 'ambient' ? {
+            transform: {
+                x: light.transform.x,
+                y: light.transform.y,
+                z: light.transform.z,
+                rotationX: light.transform.rotationX,
+                rotationY: light.transform.rotationY,
+            },
+        } : {}),
+        ...(light.type !== 'ambient' ? { ambient: light.ambient } : {}),
+        ...(light.type === 'point' || light.type === 'spot' || light.type === 'rect' ? { range: light.range } : {}),
+        ...(light.type === 'rect' ? { width: light.width, height: light.height } : {}),
+        ...(light.type === 'spot' ? { angle: light.angle, penumbra: light.penumbra } : {}),
+        // Written for every kind that can carry them, a bulb included: what a light was told is what
+        // comes back, and a writer deciding a bulb "cannot mean it" would quietly edit somebody's file.
+        // An ambient one is left out because it has nowhere to put them: it is not a light in a place,
+        // it is the level everything sits at.
+        ...(light.type !== 'ambient' ? {
+            ...unless('castShadow', light.castShadow, false),
+            ...unless('shadowBias', light.shadowBias, undefined),
+            ...unless('shadowStrength', light.shadowStrength, undefined),
+        } : {}),
+        ...(light.type === 'directional' ? unless('shadowArea', light.shadowArea, undefined) : {}),
+        ...(light.type === 'directional' ? unless('shadowDistance', light.shadowDistance, undefined) : {}),
+    };
+};
 
 /**
  * One drawable, or `null` for one there is nothing to write about.
@@ -914,6 +932,7 @@ const writeBox = (box: TBox, writing: TWriting): TBoxNode => {
         ...(box.data.length > 0 ? { data: box.data.map((record) => ({ value: record.value })) } : {}),
         ...unless('visible', box.visible, true),
         ...unless('screenSpace', box.screenSpace, false),
+        ...unless('unlit2d', box.unlit2d, false),
         ...unless('worldOffScreen', box.worldOffScreen, false),
         ...(Object.keys(extra).length > 0 ? { extra } : {}),
     };

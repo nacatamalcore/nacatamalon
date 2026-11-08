@@ -43,7 +43,7 @@ const read = `vec2 uv = insideWindow(vUv, vWindow);
  */
 export const SPRITE_BATCH_FRAGMENT_SHADER = head + `void main() {
     ${read}
-    fragColor = sampled * vTint;
+    fragColor = illuminate2d(sampled * vTint, vWorldPixel, vLightView);
 }`;
 
 /**
@@ -55,5 +55,5 @@ export const SPRITE_BATCH_FRAGMENT_SHADER = head + `void main() {
  */
 export const SPRITE_BATCH_DISTANCE_FIELD_FRAGMENT_SHADER = head + distanceFieldCoverageGlsl(true) + `void main() {
     ${read}
-    fragColor = vec4(vTint.rgb, vTint.a * distanceFieldCoverage(sampled, vUv));
+    fragColor = illuminate2d(vec4(vTint.rgb, vTint.a * distanceFieldCoverage(sampled, vUv)), vWorldPixel, vLightView);
 }`;

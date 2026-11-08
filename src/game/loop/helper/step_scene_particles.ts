@@ -107,12 +107,14 @@ const EMPTY = new Float32Array(0);
 /**
  * The pixels a pass puts flat particles on: how many of them a unit of the world takes for those seen
  * through the scene's camera (`pixelsPerUnit`, `0` under `pixelSnap: 'off'`), and which camera that
- * is in the pass. Pinned ones are drawn at zoom 1, as a pinned sprite is.
+ * is in the pass. Pinned ones are drawn at zoom 1, as a pinned sprite is. `unlitCamera` is the same
+ * camera without the 2D lights (`useUnlit2d`), when the scene has one: what is under it goes on the
+ * same grid as the rest of the world.
  *
  * @internal
  * @since 1.0.0
  */
-export type TParticlePixels = { perUnit: number; camera: number };
+export type TParticlePixels = { perUnit: number; camera: number; unlitCamera?: number | null };
 
 /**
  * Nothing put on pixels: what a pass is that does not say.
@@ -126,7 +128,9 @@ const perUnitAt = (pixels: TParticlePixels, cameraIndex: number[], i: number): n
     if (pixels.perUnit === 0) {
         return 0;
     }
-    return pixels.camera >= 0 && cameraIndex[i] === pixels.camera ? pixels.perUnit : 1;
+    const through = cameraIndex[i];
+    const unlit = pixels.unlitCamera ?? -1;
+    return (pixels.camera >= 0 && through === pixels.camera) || (unlit >= 0 && through === unlit) ? pixels.perUnit : 1;
 };
 
 /**

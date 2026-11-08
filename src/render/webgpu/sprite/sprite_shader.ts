@@ -1,3 +1,4 @@
+import { LIGHTING_2D_STRUCT_WGSL, LIGHTING_2D_WGSL } from '../../shared/lighting_2d_shader';
 import { OFF_THE_SEAM_WGSL } from '../../shared/texel_seam';
 import { DISTANCE_FIELD_RANGE } from '../../shared/distance_field';
 import { MAX_VIEWS } from './write_sprite_instance';
@@ -23,13 +24,16 @@ export const spriteShaderHead = (batch: { textures: string; helpers: string } | 
 // camera and there is no second path to keep in step.
 //
 // Laid out byte by byte: resolution at 0, 8 bytes of padding, then 16 views of 16 bytes each from
-// byte 16. 272 bytes in total. The padding is a real field on purpose: without it the views start
-// at byte 8, because a vec2f only asks for 4-byte alignment and browsers no longer insist on 16 for
-// uniforms, and every camera is read shifted by one field (its y used as the zoom).
+// byte 16, 272 bytes, and after them each view's 2D lights (render/shared/lighting_2d.ts). The
+// padding is a real field on purpose: without it the views start at byte 8, because a vec2f only
+// asks for 4-byte alignment and browsers no longer insist on 16 for uniforms, and every camera is
+// read shifted by one field (its y used as the zoom).
 struct View { position: vec2f, rotation: f32, zoom: f32 };
 const MAX_VIEWS = ${MAX_VIEWS}u;
-struct Uniforms { resolution: vec2f, padding: vec2f, views: array<View, MAX_VIEWS> };
+${LIGHTING_2D_STRUCT_WGSL}
+struct Uniforms { resolution: vec2f, padding: vec2f, views: array<View, MAX_VIEWS>, lighting2d: array<Lighting2d, 16> };
 @group(0) @binding(0) var<uniform> u: Uniforms;
+${LIGHTING_2D_WGSL}
 
 // group 1 changes per texture batch: a sprite without texture gets a single white texel
 @group(1) @binding(0) var spriteSampler: sampler;
@@ -72,6 +76,8 @@ struct Instance {
 // because a mirrored sprite has a negative width: spriteUvWindow folds flipping into the window,
 // so its start can be on the right.
 struct VertexOut {
+    @location(6) worldPixel: vec2f,
+    @location(7) @interpolate(flat) lightView: u32,
     @builtin(position) clip: vec4f,
     @location(0) tint: vec4f,
     @location(1) uv: vec2f,
@@ -131,6 +137,8 @@ fn vs(@location(0) corner: vec2f, inst: Instance) -> VertexOut {
     let clip = screen / u.resolution * 2.0 - 1.0;
 
     var out: VertexOut;
+    out.worldPixel = pixel;
+    out.lightView = u32(inst.view) % MAX_VIEWS;
     out.clip = vec4f(clip.x, -clip.y, 0.0, 1.0);
     out.tint = inst.tint;
     ${batch ? 'out.textureSlot = u32(inst.view) / MAX_VIEWS;' : ''}
@@ -176,7 +184,7 @@ export const SPRITE_SHADER_HEAD = spriteShaderHead();
  */
 export const SPRITE_SHADER_FRAGMENT = /* wgsl */ `@fragment
 fn fs(in: VertexOut) -> @location(0) vec4f {
-    return textureSample(spriteTexture, spriteSampler, insideWindow(in.uv, in.window, in.repeat)) * in.tint;
+    return illuminate2d(textureSample(spriteTexture, spriteSampler, insideWindow(in.uv, in.window, in.repeat)) * in.tint, in.worldPixel, in.lightView);
 }
 `;
 
@@ -239,7 +247,7 @@ export const DISTANCE_FIELD_COVERAGE = distanceFieldCoverage();
 export const SPRITE_DISTANCE_FIELD_FRAGMENT = /* wgsl */ `@fragment
 fn fs(in: VertexOut) -> @location(0) vec4f {
     let sample = textureSample(spriteTexture, spriteSampler, insideWindow(in.uv, in.window, in.repeat));
-    return vec4f(in.tint.rgb, in.tint.a * distanceFieldCoverage(sample, in.uv));
+    return illuminate2d(vec4f(in.tint.rgb, in.tint.a * distanceFieldCoverage(sample, in.uv)), in.worldPixel, in.lightView);
 }
 `;
 

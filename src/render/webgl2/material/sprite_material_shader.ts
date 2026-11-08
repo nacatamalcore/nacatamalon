@@ -31,7 +31,7 @@ vec2 layerUv() {
  */
 const TAIL = /* glsl */ `
 void main() {
-    fragColor = effect(sampleTexture(insideWindow(vUv, vWindow)) * vTint, vUv);
+    fragColor = illuminate2d(effect(sampleTexture(insideWindow(vUv, vWindow)) * vTint, vUv), vWorldPixel, vLightView);
 }
 `;
 
@@ -43,7 +43,7 @@ const DISTANCE_FIELD_TAIL = /* glsl */ `
 void main() {
     vec4 sampled = sampleTexture(insideWindow(vUv, vWindow));
     float coverage = distanceFieldCoverage(sampled, vUv);
-    fragColor = effect(vec4(vTint.rgb, vTint.a * coverage), vUv);
+    fragColor = illuminate2d(effect(vec4(vTint.rgb, vTint.a * coverage), vUv), vWorldPixel, vLightView);
 }
 `;
 

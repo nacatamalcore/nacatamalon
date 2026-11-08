@@ -669,7 +669,15 @@ export type TFogComponent = {
 export type TLightComponent = {
     type: 'light';
     id: string;
-    kind: 'directional' | 'point' | 'spot' | 'rect' | 'ambient';
+    kind: 'directional' | 'point' | 'spot' | 'rect' | 'ambient' | 'point-2d' | 'ambient-2d';
+    /**
+     * How far a 2D lamp (`point-2d`) reaches, in pixels of the world.
+     */
+    radius?: number;
+    /**
+     * How a 2D lamp fades towards its edge: `1` evenly, `2` dimmer sooner, `0` a hard edge.
+     */
+    falloff?: number;
     color: TColor;
     intensity: number;
     /**

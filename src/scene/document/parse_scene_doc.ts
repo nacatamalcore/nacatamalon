@@ -39,7 +39,7 @@ const BLACK: TColor = { r: 0, g: 0, b: 0, a: 1 };
 /**
  * Which keys of a box node the reader consumes. Everything else is somebody else's and is kept.
  */
-const BOX_KEYS = new Set(['id', 'name', 'tags', 'transform', 'components', 'children', 'data', 'visible', 'screenSpace', 'worldOffScreen', 'extra']);
+const BOX_KEYS = new Set(['id', 'name', 'tags', 'transform', 'components', 'children', 'data', 'visible', 'screenSpace', 'unlit2d', 'worldOffScreen', 'extra']);
 
 /**
  * Where an unknown component is kept, so that writing the document back puts it where it was.
@@ -800,7 +800,7 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
             };
         }
         case 'light': {
-            const kind = asOneOf(raw.kind, ['directional', 'point', 'spot', 'rect', 'ambient'] as const, 'directional');
+            const kind = asOneOf(raw.kind, ['directional', 'point', 'spot', 'rect', 'ambient', 'point-2d', 'ambient-2d'] as const, 'directional');
             const place = asRecord(raw.transform);
             return {
                 type: 'light',
@@ -808,7 +808,7 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 kind,
                 color: asColor(raw.color, WHITE),
                 intensity: asNumber(raw.intensity, 1),
-                ...(kind !== 'ambient' && place !== null ? {
+                ...(kind !== 'ambient' && kind !== 'ambient-2d' && place !== null ? {
                     transform: {
                         x: asNumber(place.x, 0),
                         y: asNumber(place.y, 0),
@@ -817,8 +817,9 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                         rotationY: asNumber(place.rotationY, 0),
                     },
                 } : {}),
-                ...(kind !== 'ambient' ? { ambient: asNumber(raw.ambient, 0) } : {}),
+                ...(kind !== 'ambient' && kind !== 'ambient-2d' && kind !== 'point-2d' ? { ambient: asNumber(raw.ambient, 0) } : {}),
                 ...(kind === 'point' || kind === 'spot' || kind === 'rect' ? { range: asNumber(raw.range, 10) } : {}),
+                ...(kind === 'point-2d' ? { radius: asNumber(raw.radius, 128), falloff: asNumber(raw.falloff, 1) } : {}),
                 ...(kind === 'rect' ? { width: asNumber(raw.width, 1), height: asNumber(raw.height, 1) } : {}),
                 ...(kind === 'spot' ? { angle: asNumber(raw.angle, Math.PI / 6), penumbra: asNumber(raw.penumbra, 0.1) } : {}),
                 // Read for every kind, including a bulb that can never cast: what was written is
@@ -1283,6 +1284,7 @@ const parseBox = (value: unknown, unknowns: TUnknowns): TBoxNode => {
         ...(Array.isArray(raw.data) && raw.data.length > 0 ? { data: parseData(raw.data) } : {}),
         ...optionalBoolean(raw, 'visible'),
         ...optionalBoolean(raw, 'screenSpace'),
+        ...optionalBoolean(raw, 'unlit2d'),
         ...optionalBoolean(raw, 'worldOffScreen'),
         ...(Object.keys(extra).length > 0 ? { extra } : {}),
     };

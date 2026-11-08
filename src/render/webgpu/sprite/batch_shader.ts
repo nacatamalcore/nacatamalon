@@ -39,7 +39,7 @@ const read = `let slot = in.textureSlot;
 export const SPRITE_BATCH_SHADER = head + `@fragment
 fn fs(in: VertexOut) -> @location(0) vec4f {
     ${read}
-    return sampled * in.tint;
+    return illuminate2d(sampled * in.tint, in.worldPixel, in.lightView);
 }`;
 
 /**
@@ -52,5 +52,5 @@ fn fs(in: VertexOut) -> @location(0) vec4f {
 export const SPRITE_BATCH_DISTANCE_FIELD_SHADER = head + distanceFieldCoverage(true) + `@fragment
 fn fs(in: VertexOut) -> @location(0) vec4f {
     ${read}
-    return vec4f(in.tint.rgb, in.tint.a * distanceFieldCoverage(sampled, in.uv, slot));
+    return illuminate2d(vec4f(in.tint.rgb, in.tint.a * distanceFieldCoverage(sampled, in.uv, slot)), in.worldPixel, in.lightView);
 }`;

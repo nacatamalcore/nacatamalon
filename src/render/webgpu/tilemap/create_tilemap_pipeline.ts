@@ -66,7 +66,7 @@ export const createTilemapPipeline = (
     // the very same groups: an automatic layout belongs to one pipeline and nothing else can use it.
     const frameLayout = device.createBindGroupLayout({
         label: 'tilemap frame layout',
-        entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } }],
+        entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }],
     });
     const textureLayout = device.createBindGroupLayout({
         label: 'tilemap texture layout',

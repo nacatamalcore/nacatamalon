@@ -131,7 +131,42 @@ export type TAmbientLight = { readonly type: 'ambient'; id: string; color: TColo
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TLight = TDirectionalLight | TPointLight | TSpotLight | TRectLight | TAmbientLight;
+export type TLight = TDirectionalLight | TPointLight | TSpotLight | TRectLight | TAmbientLight | TLight2d | TAmbientLight2d;
+
+/**
+ * A lamp of a 2D world, as `useLight2d` makes it: a circle of light over the sprites, texts, maps and
+ * particles around it, with no normal map. It goes where its box goes, and its box's scale does not
+ * change how far it reaches. What a camera shows is lit by the eight nearest its middle.
+ *
+ * `radius` is in pixels of the world. `falloff` is how it fades towards the edge: `1` evenly, `2`
+ * dimmer sooner, `0` not at all, a circle with a hard edge.
+ *
+ * @category Lighting
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TLight2d = {
+    readonly type: 'point-2d';
+    id: string;
+    color: TColor;
+    intensity: number;
+    transform: TTransform3d;
+    radius: number;
+    falloff: number;
+};
+
+/**
+ * How bright a scene's 2D world is where no lamp reaches, as `useAmbientLight2d` makes it. With more
+ * than one, the last is the one used. A world with lamps and none of these is black where they do
+ * not reach; one with neither keeps its own colours, until it has had one: then it stays lit until
+ * its scene ends. The HUD (`useScreenSpace`) and what is left out (`useUnlit2d`) are never lit, and the
+ * scene's 3D ambient light has nothing to do with it.
+ *
+ * @category Lighting
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TAmbientLight2d = { readonly type: 'ambient-2d'; id: string; color: TColor; intensity: number };
 
 /**
  * The lights that actually shine on something: the ones with a place in the world, a direction, or
@@ -146,6 +181,6 @@ export type TPunctualLight = TDirectionalLight | TPointLight | TSpotLight | TRec
 export { MAX_LIGHTS, MAX_SCENE_LIGHTS } from '../../DEFAULTS';
 
 /**
- * Whether this light takes part in the shading, which is everything but ambient.
+ * Whether this light takes part in three-dimensional surface shading.
  */
-export const isPunctualLight = (light: TLight): light is TPunctualLight => light.type !== 'ambient';
+export const isPunctualLight = (light: TLight): light is TPunctualLight => light.type === 'directional' || light.type === 'point' || light.type === 'spot' || light.type === 'rect';

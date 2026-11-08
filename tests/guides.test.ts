@@ -65,7 +65,7 @@ const compileEach = (codes: string[]): string[][] => {
 
 describe('the guides', () => {
     it('are there, in English and in Spanish', () => {
-        expect(files.sort()).toEqual(['gpu_pass.es.md', 'gpu_pass.md', 'music.es.md', 'music.md']);
+        expect(files.sort()).toEqual(['gpu_pass.es.md', 'gpu_pass.md', 'lighting_2d.es.md', 'lighting_2d.md', 'music.es.md', 'music.md']);
     });
 
     for (const file of files) {

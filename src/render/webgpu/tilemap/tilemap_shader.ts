@@ -1,3 +1,4 @@
+import { LIGHTING_2D_STRUCT_WGSL, LIGHTING_2D_WGSL } from '../../shared/lighting_2d_shader';
 /**
  * Everything a map's shader needs before it decides a colour.
  *
@@ -15,8 +16,10 @@ export const TILEMAP_SHADER_HEAD = /* wgsl */ `
 // table would be two chances to disagree.
 struct View { position: vec2f, rotation: f32, zoom: f32 };
 const MAX_VIEWS = 16u;
-struct Uniforms { resolution: vec2f, padding: vec2f, views: array<View, MAX_VIEWS> };
+${LIGHTING_2D_STRUCT_WGSL}
+struct Uniforms { resolution: vec2f, padding: vec2f, views: array<View, MAX_VIEWS>, lighting2d: array<Lighting2d, 16> };
 @group(0) @binding(0) var<uniform> u: Uniforms;
+${LIGHTING_2D_WGSL}
 
 // group 1 is the sheet, changed once per layer
 @group(1) @binding(0) var tilesSampler: sampler;
@@ -35,6 +38,8 @@ struct Layer {
 @group(2) @binding(0) var<uniform> layer: Layer;
 
 struct VertexOut {
+    @location(3) worldPixel: vec2f,
+    @location(4) @interpolate(flat) lightView: u32,
     @builtin(position) clip: vec4f,
     @location(0) uv: vec2f,
     // The cell's own piece of the sheet, half a texel in from each edge: left, top, right, bottom.
@@ -73,6 +78,8 @@ fn vs(@location(0) corner: vec2f, @location(1) uv: vec2f, @location(2) window: v
     let clip = screen / u.resolution * 2.0 - 1.0;
 
     var out: VertexOut;
+    out.worldPixel = pixel;
+    out.lightView = u32(layer.view);
     out.clip = vec4f(clip.x, -clip.y, 0.0, 1.0);
     out.uv = uv;
     out.window = window;
@@ -91,7 +98,7 @@ fn vs(@location(0) corner: vec2f, @location(1) uv: vec2f, @location(2) window: v
  */
 export const TILEMAP_SHADER_FRAGMENT = /* wgsl */ `@fragment
 fn fs(in: VertexOut) -> @location(0) vec4f {
-    return textureSample(tilesTexture, tilesSampler, tileUv(in)) * layer.tint;
+    return illuminate2d(textureSample(tilesTexture, tilesSampler, tileUv(in)) * layer.tint, in.worldPixel, in.lightView);
 }
 `;
 

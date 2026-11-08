@@ -1,3 +1,4 @@
+import { FLAT_FRAME_GLSL, LIGHTING_2D_GLSL } from '../../shared/lighting_2d_shader';
 import { OFF_THE_SEAM_GLSL } from '../../shared/texel_seam';
 import { DISTANCE_FIELD_RANGE } from '../../shared/distance_field';
 import { MAX_VIEWS } from './write_sprite_instances';
@@ -7,8 +8,9 @@ import { MAX_VIEWS } from './write_sprite_instances';
  * the arithmetic is copied line for line and only the language changes:
  *
  * - The uniforms are a `std140` block. With a `vec2` of padding after the resolution and views of
- *   `vec2 + float + float`, std140 lays it out byte for byte like the WGSL struct: 272 bytes, views
- *   from byte 16, 16 bytes each. The same `Float32Array` fills both.
+ *   `vec2 + float + float`, std140 lays it out byte for byte like the WGSL struct: views from byte
+ *   16, 16 bytes each, 272 bytes in all, and each view's 2D lights after them. The same
+ *   `Float32Array` fills both.
  * - `textureSample(texture, sampler, uv)` is `texture(sampler2D, uv)`. The filtering still comes
  *   from a sampler object bound beside the texture, which is what `bindSampler` is for.
  * - The attribute locations are the same numbers as in the WebGPU pipeline.
@@ -27,12 +29,7 @@ precision highp float;
 
 // A view is how the world is looked at: through a camera, or straight in screen pixels. Slot 0 is
 // always the screen (position 0, rotation 0, zoom 1).
-struct View { vec2 position; float rotation; float zoom; };
-layout(std140) uniform Uniforms {
-    vec2 resolution;
-    vec2 padding;
-    View views[${MAX_VIEWS}];
-} u;
+${FLAT_FRAME_GLSL}
 
 layout(location = 0) in vec2 corner;
 layout(location = 1) in vec2 position;
@@ -52,6 +49,8 @@ layout(location = 11) in vec2 shift;
 
 ${batch ? 'flat out int vTextureSlot;' : ''}
 out vec4 vTint;
+out vec2 vWorldPixel;
+flat out int vLightView;
 out vec2 vUv;
 // xy the lowest corner of this sprite's window into the sheet, zw the highest. Flat: it belongs to
 // the sprite and not to the corner. See its twin in webgpu/sprite/sprite_shader.ts for why.
@@ -79,6 +78,8 @@ void main() {
     // screen pixels -> clip space (-1..1), flipping y so it grows downwards
     vec2 clip = screen / u.resolution * 2.0 - 1.0;
 
+    vWorldPixel = pixel;
+    vLightView = int(view) % ${MAX_VIEWS};
     gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
     vTint = tint;
     ${batch ? `vTextureSlot = int(view) / ${MAX_VIEWS};` : ''}
@@ -123,6 +124,10 @@ ${batch?.textures ?? ''}
 ${batch?.helpers ?? ''}
 
 in vec4 vTint;
+${FLAT_FRAME_GLSL}
+${LIGHTING_2D_GLSL}
+in vec2 vWorldPixel;
+flat in int vLightView;
 in vec2 vUv;
 flat in vec4 vWindow;
 flat in float vRepeat;
@@ -164,7 +169,7 @@ export const SPRITE_FRAGMENT_HEAD_GLSL = spriteFragmentHeadGlsl();
  */
 export const SPRITE_FRAGMENT_MAIN_GLSL = /* glsl */ `
 void main() {
-    fragColor = texture(spriteTexture, insideWindow(vUv, vWindow)) * vTint;
+    fragColor = illuminate2d(texture(spriteTexture, insideWindow(vUv, vWindow)) * vTint, vWorldPixel, vLightView);
 }
 `;
 
@@ -219,7 +224,7 @@ export const DISTANCE_FIELD_COVERAGE_GLSL = distanceFieldCoverageGlsl();
 export const SPRITE_DISTANCE_FIELD_MAIN_GLSL = /* glsl */ `
 void main() {
     vec4 sampled = texture(spriteTexture, insideWindow(vUv, vWindow));
-    fragColor = vec4(vTint.rgb, vTint.a * distanceFieldCoverage(sampled, vUv));
+    fragColor = illuminate2d(vec4(vTint.rgb, vTint.a * distanceFieldCoverage(sampled, vUv)), vWorldPixel, vLightView);
 }
 `;
 

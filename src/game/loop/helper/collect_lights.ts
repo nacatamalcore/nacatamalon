@@ -35,6 +35,8 @@ export const resetLightWarnings = (): void => {
     forgetOnPage('lights: over the budget');
     forgetOnPage('lights: a second shadow caster');
     forgetOnPage('lights: a second ambient');
+    forgetOnPage('lights2d: budget');
+    forgetOnPage('lights2d: ambient');
 };
 
 /**
@@ -50,11 +52,37 @@ const compose = (parent: TTransform3d, local: TTransform3d): TTransform3d => {
 };
 
 /**
+ * Where each box of the walk ended up, one placement per depth, written over as the walk goes:
+ * a box is only placed to place what is under it, so the walk makes nothing for the boxes it passes
+ * and only copies the lights it finds. A box is placed as a sprite is, with the turns and the scales
+ * of every box above it added up: a lamp on a turret of a turned ship is where the turret's sprite
+ * is. Only the light itself keeps its own way of facing (`compose`).
+ */
+const places: TTransform3d[] = [];
+const turned = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 };
+const placeAt = (depth: number, parent: TTransform3d, local: TTransform3d): TTransform3d => {
+    const place = places[depth] ??= { x: 0, y: 0, z: 0, rotation: 0, rotationX: 0, rotationY: 0, scaleX: 1, scaleY: 1, scaleZ: 1 };
+    composeTransform2d(parent, local, turned);
+    place.x = turned.x;
+    place.y = turned.y;
+    place.z = parent.z + local.z;
+    place.rotation = turned.rotation;
+    place.scaleX = turned.scaleX;
+    place.scaleY = turned.scaleY;
+    return place;
+};
+
+/**
  * Walks the tree gathering lights, skipping whole branches that are not drawn, and the ones drawn
  * into a picture: a lamp inside a screen lights the screen's world, not the room the screen is in.
+ * `world2d` also leaves out the HUD (`useScreenSpace`), which the 2D lights never reach.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
  */
-const gather = (box: TBox, out: TLight[], parent: TTransform3d | null, top = true): void => {
-    if (!box.visible || (!top && box.spriteTexture !== null)) {
+export const gatherLights = (box: TBox, out: TLight[], parent: TTransform3d | null, top = true, world2d = false, depth = 0): void => {
+    if (!box.visible || (world2d && box.screenSpace) || (!top && box.spriteTexture !== null)) {
         return;
     }
 
@@ -62,14 +90,14 @@ const gather = (box: TBox, out: TLight[], parent: TTransform3d | null, top = tru
     // thing holding it, exactly as its sprites are.
     let world = parent;
     if (box.transform !== null) {
-        world = parent === null ? box.transform : compose(parent, box.transform);
+        world = parent === null ? box.transform : placeAt(depth, parent, box.transform);
     }
 
     for (const light of box.lights) {
-        out.push(isPunctualLight(light) && world !== null ? { ...light, transform: compose(world, light.transform) } : light);
+        out.push('transform' in light && world !== null ? { ...light, transform: compose(world, light.transform) } : light);
     }
     for (const child of box.children) {
-        gather(child, out, world, false);
+        gatherLights(child, out, world, false, world2d, depth + 1);
     }
 };
 
@@ -83,15 +111,15 @@ const gather = (box: TBox, out: TLight[], parent: TTransform3d | null, top = tru
  */
 export const holdsLights = (box: TBox): boolean => {
     const found: TLight[] = [];
-    gather(box, found, null);
-    return found.length > 0;
+    gatherLights(box, found, null);
+    return found.some(light => light.type === 'ambient' || isPunctualLight(light));
 };
 
 /**
  * The level of the dark side that the last of these ambient lights asks for, or `null` with none.
  */
 const levelOf = (found: readonly TLight[]): TColor | null => {
-    let last: TLight | null = null;
+    let last: Extract<TLight, { type: 'ambient' }> | null = null;
     for (const light of found) {
         if (light.type === 'ambient') last = light;
     }
@@ -108,7 +136,7 @@ const levelOf = (found: readonly TLight[]): TColor | null => {
  */
 export const ownAmbientOf = (view: TBox): TColor | null => {
     const found: TLight[] = [];
-    gather(view, found, null);
+    gatherLights(view, found, null);
     return levelOf(found);
 };
 
@@ -125,7 +153,7 @@ export const ownAmbientOf = (view: TBox): TColor | null => {
  */
 export const viewLighting = (view: TBox, world: TBox): TSceneLighting => {
     const found: TLight[] = [];
-    gather(view, found, null);
+    gatherLights(view, found, null);
     if (found.some(isPunctualLight)) {
         return collectLighting(view);
     }
@@ -157,7 +185,7 @@ export const viewLighting = (view: TBox, world: TBox): TSceneLighting => {
  */
 export const collectLighting = (scene: TBox): TSceneLighting => {
     const found: TLight[] = [];
-    gather(scene, found, null);
+    gatherLights(scene, found, null);
     // Each warning below is said once per game, the scene's: they would otherwise repeat every frame.
     const game = gameOfBox(scene);
 

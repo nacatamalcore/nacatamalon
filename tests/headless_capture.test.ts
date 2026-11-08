@@ -17,6 +17,7 @@ import { useLoadTexture } from '../src/hooks/loaders/use_load_texture';
 import { useMask } from '../src/hooks/mask';
 import { useSelf } from '../src/hooks';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
+import { useLight2d, useAmbientLight2d } from '../src/hooks/light';
 import { useTransform } from '../src/hooks/transform/use_transform';
 import { useUpdate } from '../src/hooks/loop/use_update';
 import { pixelsFromRows } from '../src/pixels';
@@ -237,6 +238,26 @@ describe('capture', () => {
             const said = warn.mock.calls.map((call) => String(call[0])).filter((text) => text.includes('capture'));
             expect(said).toHaveLength(1);
             expect(said[0]).toContain('3D');
+        } finally {
+            warn.mockRestore();
+        }
+    });
+
+    it('says that it paints a world with 2D lights in its own colours', () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        try {
+            const game = make(() => {
+                useAmbientLight2d({ intensity: 0.1 });
+                useLight2d({ radius: 2 });
+                createSprite({ width: 1, height: 1, tint: getColor('#ff0000'), anchor: { x: 0, y: 0 }, transform: { x: 0, y: 0 } });
+                return createScene();
+            });
+            const shot = game.capture();
+
+            expect(at(shot, 0, 0)).toEqual(RED);
+            const said = warn.mock.calls.map((call) => String(call[0])).filter((text) => text.includes('capture'));
+            expect(said).toHaveLength(1);
+            expect(said[0]).toContain('2D lights');
         } finally {
             warn.mockRestore();
         }

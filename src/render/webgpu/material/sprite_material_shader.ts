@@ -64,7 +64,7 @@ const TAIL = /* wgsl */ `
 @fragment
 fn fs(in: VertexOut) -> @location(0) vec4f {
     spriteAcross = in.across;
-    return effect(sampleTexture(insideWindow(in.uv, in.window, in.repeat)) * in.tint, in.uv);
+    return illuminate2d(effect(sampleTexture(insideWindow(in.uv, in.window, in.repeat)) * in.tint, in.uv), in.worldPixel, in.lightView);
 }
 `;
 
@@ -80,7 +80,7 @@ fn fs(in: VertexOut) -> @location(0) vec4f {
     spriteAcross = in.across;
     let sample = sampleTexture(insideWindow(in.uv, in.window, in.repeat));
     let coverage = distanceFieldCoverage(sample, in.uv);
-    return effect(vec4f(in.tint.rgb, in.tint.a * coverage), in.uv);
+    return illuminate2d(effect(vec4f(in.tint.rgb, in.tint.a * coverage), in.uv), in.worldPixel, in.lightView);
 }
 `;
 

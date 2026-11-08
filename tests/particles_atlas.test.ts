@@ -26,7 +26,7 @@ import { applyParticlesDoc } from '../src/gameobjects/particles/tools/apply_part
 import { PARTICLE_FLOATS, PARTICLE_OFFSET } from '../src/render/shared/particle_instance';
 import { PARTICLES_SHADER } from '../src/render/webgpu/particles/particles_shader';
 import { PARTICLES_3D_SHADER } from '../src/render/webgpu/particles/particles_3d_shader';
-import { PARTICLES_3D_VERTEX_SHADER, PARTICLES_FRAGMENT_SHADER, PARTICLES_VERTEX_SHADER } from '../src/render/webgl2/particles/particles_shader';
+import { PARTICLES_3D_FRAGMENT_SHADER, PARTICLES_3D_VERTEX_SHADER, PARTICLES_FRAGMENT_SHADER, PARTICLES_VERTEX_SHADER } from '../src/render/webgl2/particles/particles_shader';
 import { createGameHandle } from '../src/game/handle';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { noTint, somewhere } from './helpers/particles';
@@ -327,7 +327,9 @@ describe('what the card reads', () => {
             expect(shader).toContain('in vec4 uvWindow;');
             expect(shader).toContain('flat out vec4 vWindow;');
         }
-        expect(PARTICLES_FRAGMENT_SHADER).toContain('insideWindow(vUv, vWindow)');
+        for (const shader of [PARTICLES_FRAGMENT_SHADER, PARTICLES_3D_FRAGMENT_SHADER]) {
+            expect(shader).toContain('insideWindow(vUv, vWindow)');
+        }
     });
 });
 

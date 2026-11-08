@@ -101,6 +101,10 @@ export type TBoxNode = {
      */
     screenSpace?: boolean;
     /**
+     * Left out of the scene's 2D lights (`useUnlit2d`). Only ever written when it is `true`.
+     */
+    unlit2d?: boolean;
+    /**
      * On the scene's top box: the screen draws only what is pinned to it, and the world is seen
      * through views alone (`useWorldOffScreen`). Only ever written when it is `true`.
      */

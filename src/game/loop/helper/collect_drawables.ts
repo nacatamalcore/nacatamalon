@@ -382,6 +382,8 @@ export const notePinnedInto = (into: boolean[] | null): void => {
  * @param level The innermost mask of the boxes above this one, or `null`.
  * @param shapeOf The masks a box above this one is the shape of, or `null`. What a shape draws is
  * noted as the shape, and drawn only when one of them says `showShape`.
+ * @param unlitCamera The camera a box left out of the 2D lights (`useUnlit2d`) is drawn through: the
+ * scene's own, without its lights. `null` when the scene is not lit, and the box is drawn as any other.
  *
  * Hidden boxes and hidden drawables are left out here, so nothing further down the frame has to ask
  * again: what comes out is what is drawn. Each drawable is also placed as it is collected, since
@@ -405,6 +407,7 @@ export const collectDrawables = (
     level: TMaskLevel | null = null,
     shapeOf: readonly TMask[] | null = null,
     sights: { readonly scene: TSight; readonly pinned: TSight } | null = null,
+    unlitCamera: number | null = null,
 ): void => {
     // Before the check for hidden, because a hidden screen is a screen switched off: its picture is
     // still drawn, with nothing in it. The top of the walk is the picture's own, and is not stopped.
@@ -426,6 +429,11 @@ export const collectDrawables = (
     const walk = viewWalk();
     if (walk !== null && pinned) {
         return;
+    }
+    // Left out of the lights: this box and all under it go through the camera that carries none,
+    // which is the same camera, so nothing moves.
+    if (box.unlit2d && unlitCamera !== null) {
+        sceneCamera = unlitCamera;
     }
     const view = pinned ? screenCamera : sceneCamera;
     const world = worldOfBox(parent, box, depth);
@@ -501,6 +509,6 @@ export const collectDrawables = (
         pinnedOut?.push(pinned);
     }
     for (const child of box.children) {
-        collectDrawables(child, out, cameraIndex, sceneCamera, pinned, world, depth + 1, colliders, pictures, screenCamera, camera, parallax, snap, masks, here, shapes, sights);
+        collectDrawables(child, out, cameraIndex, sceneCamera, pinned, world, depth + 1, colliders, pictures, screenCamera, camera, parallax, snap, masks, here, shapes, sights, unlitCamera);
     }
 };

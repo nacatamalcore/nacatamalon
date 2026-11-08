@@ -1,3 +1,4 @@
+import { fillLighting2d, FRAME_FLOATS_2D } from '../../shared/lighting_2d';
 import type { TDrawCamera2d } from '../../interface';
 import { MAX_VIEWS } from '../sprite/write_sprite_instance';
 import type { TWebGPUState } from '../types/t_webgpu_state';
@@ -19,11 +20,12 @@ const VIEW_FLOATS = 4;
 const warnedTooManyCameras = new WeakSet<TWebGPUState>();
 
 /**
- * The size of the frame uniform buffer in bytes, matching `Uniforms` in the sprite shader.
+ * The size of the frame uniform buffer in floats, matching `Uniforms` in the sprite shader: the views,
+ * then each view's 2D lights.
  *
  * @internal
  */
-export const FRAME_UNIFORM_FLOATS = VIEWS_START + MAX_VIEWS * VIEW_FLOATS;
+export const FRAME_UNIFORM_FLOATS = FRAME_FLOATS_2D;
 
 /**
  * Writes what every sprite of this frame shares: the resolution, the screen view in slot 0 and each
@@ -39,6 +41,9 @@ export const FRAME_UNIFORM_FLOATS = VIEWS_START + MAX_VIEWS * VIEW_FLOATS;
 export const writeFrameUniforms = (gpu: TWebGPUState, width: number, height: number, cameras: readonly TDrawCamera2d[]): void => {
     const data = gpu.frameUniforms.data;
 
+    // The views' 2D lights, and how far into the block this frame's views reach: what lies past
+    // them is read by no sprite, so it is not sent.
+    const used = fillLighting2d(data, cameras);
     data[0] = width;
     data[1] = height;
 
@@ -50,7 +55,7 @@ export const writeFrameUniforms = (gpu: TWebGPUState, width: number, height: num
 
     if (cameras.length > MAX_VIEWS - 1 && !warnedTooManyCameras.has(gpu)) {
         warnedTooManyCameras.add(gpu);
-        console.warn(`[NacatamalOn] More than ${MAX_VIEWS - 1} scenes with a camera at once: the extra ones are drawn as if they had none.`);
+        console.warn(`[NacatamalOn] 2D views: more than ${MAX_VIEWS - 1} at once (a scene takes one with a camera or 2D lights, and one more for what it leaves out of them), so the extra ones are drawn as if they had no camera. Run fewer scenes at once.`);
     }
 
     const count = Math.min(cameras.length, MAX_VIEWS - 1);
@@ -63,5 +68,5 @@ export const writeFrameUniforms = (gpu: TWebGPUState, width: number, height: num
         data[o + 3] = camera.zoom;
     }
 
-    gpu.device.queue.writeBuffer(gpu.frameUniforms.buffer, 0, data);
+    gpu.device.queue.writeBuffer(gpu.frameUniforms.buffer, 0, data, 0, used);
 };

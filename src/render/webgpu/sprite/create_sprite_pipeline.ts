@@ -88,7 +88,7 @@ export const createSpritePipeline = (
     // could take, and nothing about them would look different.
     const frameLayout = device.createBindGroupLayout({
         label: 'sprite frame layout',
-        entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } }],
+        entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }],
     });
     const textureLayout = device.createBindGroupLayout({
         label: 'sprite texture layout',

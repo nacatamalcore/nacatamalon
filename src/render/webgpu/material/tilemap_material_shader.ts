@@ -61,7 +61,7 @@ const TAIL = /* wgsl */ `
 fn fs(in: VertexOut) -> @location(0) vec4f {
     tileAcross = acrossTile(in);
     layerAcross = in.acrossLayer;
-    return effect(sampleTexture(tileUv(in)) * layer.tint, in.uv);
+    return illuminate2d(effect(sampleTexture(tileUv(in)) * layer.tint, in.uv), in.worldPixel, in.lightView);
 }
 `;
 

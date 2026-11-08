@@ -91,8 +91,8 @@ describe('its shader, on WebGPU', () => {
     it('is handed where the pixel is across the sprite, set before the hook runs', () => {
         const code = buildSpriteMaterialShader(CRUMBLE, { gone: 'f32' }, ['grain', 'shine']);
         expect(SPRITE_SHADER).toContain('@location(4) across: vec2f');
-        expect(code).toMatch(/spriteAcross = in\.across;\s*return effect\(/);
-        expect(buildTilemapMaterialShader(CRUMBLE, { gone: 'f32' }, ['grain', 'shine'])).toMatch(/tileAcross = acrossTile\(in\);\s*layerAcross = in\.acrossLayer;\s*return effect\(/);
+        expect(code).toMatch(/spriteAcross = in\.across;\s*return illuminate2d\(effect\(/);
+        expect(buildTilemapMaterialShader(CRUMBLE, { gone: 'f32' }, ['grain', 'shine'])).toMatch(/tileAcross = acrossTile\(in\);\s*layerAcross = in\.acrossLayer;\s*return illuminate2d\(effect\(/);
     });
 });
 

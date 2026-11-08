@@ -221,7 +221,8 @@ console.log(game.drawn().map((p) => p.text ?? p.name));
   and whole-number scaling); vertex lighting, Nintendo 64 fog, PlayStation-style
   vertex snapping and affine textures, and blob shadows.
 - **2D:** sprites and atlases, sprite animation, tilemaps with solid-tile
-  queries, bitmap text, nine-slice, particles.
+  queries, bitmap text, nine-slice, particles, and coloured lights with ambient darkness
+  and radial falloff ([2D lighting guide](guides/lighting_2d.md)).
 - **3D:** meshes, glTF models with skeletal animation, up to eight lights,
   shadow maps, 3D particles, and 2D and 3D in the same frame.
 - **Everything around it:** scenes with transitions and pause, keyboard,

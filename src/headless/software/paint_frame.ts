@@ -524,6 +524,9 @@ export const paintFrame = (ctx: TFrameContext, width: number, height: number, st
         if (picture === undefined) {
             continue;
         }
+        if (pass.cameras?.some((camera) => camera.lighting2d !== undefined)) {
+            notDrawn.add('2D lights, useLight2d and useAmbientLight2d (painted as if there were none)');
+        }
         if (picture.data.length !== picture.width * picture.height * 4) {
             picture.data = new Uint8Array(picture.width * picture.height * 4);
         }

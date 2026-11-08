@@ -1,4 +1,5 @@
 import { OFF_THE_SEAM_GLSL } from '../../shared/texel_seam';
+import { FLAT_FRAME_GLSL, LIGHTING_2D_GLSL } from '../../shared/lighting_2d_shader';
 /**
  * The GLSL twin of `render/webgpu/particles/particles_shader.ts`.
  *
@@ -15,12 +16,7 @@ import { OFF_THE_SEAM_GLSL } from '../../shared/texel_seam';
 export const PARTICLES_VERTEX_SHADER = /* glsl */ `#version 300 es
 precision highp float;
 
-struct View { vec2 position; float rotation; float zoom; };
-layout(std140) uniform Uniforms {
-    vec2 resolution;
-    vec2 padding;
-    View views[16];
-} u;
+${FLAT_FRAME_GLSL}
 
 layout(location = 0) in vec2 corner;
 layout(location = 1) in vec2 position;
@@ -33,6 +29,8 @@ layout(location = 6) in vec4 uvWindow;
 out vec4 vTint;
 out vec2 vUv;
 flat out vec4 vWindow;
+out vec2 vWorldPixel;
+flat out int vLightView;
 
 void main() {
     // Square, and turned about its own middle: no anchor, because a particle has nothing to stand on.
@@ -54,17 +52,58 @@ void main() {
     vTint = tint;
     vUv = uvWindow.xy + (corner + 0.5) * uvWindow.zw;
     vWindow = vec4(uvWindow.xy, uvWindow.xy + uvWindow.zw);
+    vWorldPixel = pixel;
+    vLightView = int(view) % 16;
 }
 `;
 
 /**
- * The ending: the picture read where the corner says, multiplied by the particle's own colour.
+ * The ending: the picture read where the corner says, multiplied by the particle's own colour, then
+ * lit by the 2D lights of its view, as a sprite is. Its block is the vertex half's, as GLSL asks.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
 export const PARTICLES_FRAGMENT_SHADER = /* glsl */ `#version 300 es
+precision highp float;
+
+${FLAT_FRAME_GLSL}
+${LIGHTING_2D_GLSL}
+uniform sampler2D particleTexture;
+
+in vec4 vTint;
+in vec2 vUv;
+flat in vec4 vWindow;
+in vec2 vWorldPixel;
+flat in int vLightView;
+out vec4 fragColor;
+
+// Kept half a texel inside its window, as a sprite's read is, so a frame of a sheet never shows a
+// line of the one next door.
+${OFF_THE_SEAM_GLSL}
+vec2 insideWindow(vec2 uv, vec4 window) {
+    vec2 texel = 0.5 / vec2(textureSize(particleTexture, 0));
+    vec2 lowest = window.xy + texel;
+    vec2 highest = max(lowest, window.zw - texel);
+    // A read on a seam takes the same texel on both cards, as a sprite's does.
+    return clamp(offTheSeam(uv, vec2(textureSize(particleTexture, 0))), lowest, highest);
+}
+
+void main() {
+    fragColor = illuminate2d(texture(particleTexture, insideWindow(vUv, vWindow)) * vTint, vWorldPixel, vLightView);
+}
+`;
+
+/**
+ * The ending of a particle in three dimensions: the picture times its colour, with no 2D lights,
+ * which belong to flat worlds.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const PARTICLES_3D_FRAGMENT_SHADER = /* glsl */ `#version 300 es
 precision highp float;
 
 uniform sampler2D particleTexture;
@@ -96,7 +135,7 @@ void main() {
  *
  * The same reasoning as the other backend's, line for line: the point is placed first and the
  * square spread around it along the camera's axes, and `up` is subtracted because the corners are
- * laid out with y growing downwards. The fragment half is the flat one's, unchanged.
+ * laid out with y growing downwards. Its fragment half is `PARTICLES_3D_FRAGMENT_SHADER`.
  *
  * @internal
  * @since 1.0.0

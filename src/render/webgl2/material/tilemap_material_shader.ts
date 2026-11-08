@@ -31,7 +31,7 @@ vec2 layerUv() {
  */
 const TAIL = /* glsl */ `
 void main() {
-    fragColor = effect(sampleTexture(tileUv()) * layerTint, vUv);
+    fragColor = illuminate2d(effect(sampleTexture(tileUv()) * layerTint, vUv), vWorldPixel, vLightView);
 }
 `;
 

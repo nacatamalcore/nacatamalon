@@ -1,3 +1,4 @@
+import { FLAT_FRAME_GLSL, LIGHTING_2D_GLSL } from '../../shared/lighting_2d_shader';
 /**
  * The GLSL twin of `render/webgpu/tilemap/tilemap_shader.ts`. Same picture, other language, and the
  * differences are only the ones the two APIs force: the views arrive in a `std140` block laid out
@@ -11,12 +12,7 @@
 export const TILEMAP_VERTEX_SHADER = /* glsl */ `#version 300 es
 precision highp float;
 
-struct View { vec2 position; float rotation; float zoom; };
-layout(std140) uniform Uniforms {
-    vec2 resolution;
-    vec2 padding;
-    View views[16];
-} u;
+${FLAT_FRAME_GLSL}
 
 uniform vec2 layerPosition;
 uniform vec2 layerScale;
@@ -29,6 +25,8 @@ layout(location = 0) in vec2 corner;
 layout(location = 1) in vec2 uv;
 layout(location = 2) in vec4 window;
 
+out vec2 vWorldPixel;
+flat out int vLightView;
 out vec2 vUv;
 // The cell's own piece of the sheet, half a texel in from each edge. The same at every corner of a
 // cell, so it is not blended across it.
@@ -50,6 +48,8 @@ void main() {
 
     vec2 clip = screen / u.resolution * 2.0 - 1.0;
 
+    vWorldPixel = pixel;
+    vLightView = int(layerView);
     gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
     vUv = uv;
     vWindow = window;
@@ -70,6 +70,10 @@ precision highp float;
 uniform sampler2D tilesTexture;
 uniform vec4 layerTint;
 
+${FLAT_FRAME_GLSL}
+${LIGHTING_2D_GLSL}
+in vec2 vWorldPixel;
+flat in int vLightView;
 in vec2 vUv;
 flat in vec4 vWindow;
 out vec4 fragColor;
@@ -92,7 +96,7 @@ vec2 tileUv() {
  */
 export const TILEMAP_FRAGMENT_MAIN_GLSL = /* glsl */ `
 void main() {
-    fragColor = texture(tilesTexture, tileUv()) * layerTint;
+    fragColor = illuminate2d(texture(tilesTexture, tileUv()) * layerTint, vWorldPixel, vLightView);
 }
 `;
 

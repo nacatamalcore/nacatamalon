@@ -1,7 +1,7 @@
 import { compileProgram } from '../utils/compile_program';
 import { FRAME_UNIFORMS_BINDING } from '../bindings';
 import { PARTICLE_3D_OFFSET, PARTICLE_FLOATS, PARTICLE_OFFSET } from '../../shared/particle_instance';
-import { PARTICLES_3D_VERTEX_SHADER, PARTICLES_FRAGMENT_SHADER, PARTICLES_VERTEX_SHADER } from './particles_shader';
+import { PARTICLES_3D_FRAGMENT_SHADER, PARTICLES_3D_VERTEX_SHADER, PARTICLES_FRAGMENT_SHADER, PARTICLES_VERTEX_SHADER } from './particles_shader';
 import type { TCameraSpace } from '../../shared/compute_mvp_3d';
 
 /**
@@ -37,7 +37,7 @@ export const createParticlesPipeline = (gl: WebGL2RenderingContext, quad: WebGLB
 
     // The one for particles in space. Its camera is three plain uniforms rather than a block, set
     // once per emitter, because it is one scene's camera and not a table of them.
-    const program3d = compileProgram(gl, PARTICLES_3D_VERTEX_SHADER, PARTICLES_FRAGMENT_SHADER, 'particles 3d');
+    const program3d = compileProgram(gl, PARTICLES_3D_VERTEX_SHADER, PARTICLES_3D_FRAGMENT_SHADER, 'particles 3d');
     gl.useProgram(program3d);
     gl.uniform1i(gl.getUniformLocation(program3d, 'particleTexture'), TEXTURE_UNIT);
     gl.useProgram(null);

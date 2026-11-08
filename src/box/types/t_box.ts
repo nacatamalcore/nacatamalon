@@ -273,6 +273,11 @@ export type TBox = {
      */
     screenSpace: boolean;
     /**
+     * Leaves this box, and everything under it, out of the scene's 2D lights (`useUnlit2d`): drawn in
+     * its own colours where the world is dark, still moving with the camera. Inherited downwards.
+     */
+    unlit2d: boolean;
+    /**
      * On a scene's top box: the screen draws only what is pinned to it (`useScreenSpace`), and the
      * rest of the scene, its world, is seen only through views of it
      * (`createSpriteTexture({ sees: 'world' })`). The scene runs as ever. Set by `useWorldOffScreen`.

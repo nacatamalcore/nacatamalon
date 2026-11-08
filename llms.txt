@@ -239,6 +239,16 @@ import says which name it does not have, and `llms-full.txt` lists each door.
   a sun always, a lamp when its `range` touches the box around the model. Give lamps a realistic
   `range`, and make a long floor or road of pieces rather than one huge mesh, so each piece takes the
   lamps near it; lighting is worked out at the corners, so a big floor needs subdivisions anyway.
+- **2D lighting is separate from 3D**: `useAmbientLight2d({ intensity: 0.15 })` sets the world's base
+  brightness; `useLight2d({ transform: { x: 160, y: 90 }, radius: 100, color: '#ffbb66', falloff: 1 })`
+  lights sprites, tilemaps and particles without normal maps. Any number of lamps, following their
+  box; each camera is lit by the eight that reach what it shows, nearest its middle;
+  `falloff: 0` is a hard edge. A world with lamps and no ambient starts black, while a world with
+  neither keeps its original colours; once lit, a world stays lit until its scene ends, even with
+  every lamp gone (use `intensity: 1` on the ambient for daylight). `useScreenSpace()` keeps HUD
+  objects unlit; `useUnlit2d()` keeps a world object (a fire, a neon sign) in its own colours while it
+  still moves with the camera (leave sparks and fire out so they glow). These lights do not cast
+  shadows or illuminate meshes or 3D particles.
 - **An asset's `key`** (every `useLoad…`) is the name the game finds it by, here or in a later scene;
   without one, its `src`. `createSprite({ texture: 'hero' })` and `createText({ font: 'title' })` name
   it. One key names one file: asking for another file under a key already taken says so and hands back

@@ -5,7 +5,7 @@
 export { createGame } from './game/bootstrap/create_game';
 export { createScene } from './scene';
 export { useTransform, useCamera3d, useFog } from './hooks';
-export { useDirectionalLight, usePointLight, useSpotLight, useRectLight, useAmbientLight, useBlobShadow } from './hooks';
+export { useLight2d, useAmbientLight2d, useUnlit2d, useDirectionalLight, usePointLight, useSpotLight, useRectLight, useAmbientLight, useBlobShadow } from './hooks';
 export { createMesh } from './gameobjects/mesh';
 export type { TMesh, TMeshOptions } from './gameobjects/mesh';
 export { createModel } from './gameobjects/model';
@@ -14,7 +14,8 @@ export type { TPackOptions } from './gameobjects/pack';
 export { createSpriteTexture, createView, setViewFilter, resizeSpriteTexture, viewToWorld, worldToView, viewToRay } from './gameobjects/sprite_texture';
 export type { TSpriteTexture, TSpriteTextureSees, TSpriteTextureOptions, TViewFilter, TViewOptions, TViewPointInput, TViewToWorld, TWorldToView, TViewRay } from './gameobjects/sprite_texture';
 export type { TModel, TModelOptions } from './gameobjects/model';
-export type { TLight, TDirectionalLight, TPointLight, TSpotLight, TRectLight, TAmbientLight, TLightOptionsBase } from './light';
+export type { TLight2dOptions } from './hooks/light/use_light_2d';
+export type { TLight2d, TAmbientLight2d, TLight, TDirectionalLight, TPointLight, TSpotLight, TRectLight, TAmbientLight, TLightOptionsBase } from './light';
 export { useCubeGeometry, usePlaneGeometry, useCircleGeometry, useSphereGeometry, useIcoSphereGeometry, useCylinderGeometry, useConeGeometry, useTorusGeometry, useLatheGeometry } from './hooks';
 export type { TBlobShadowOptions } from './hooks';
 export type { TCubeGeometryOptions, TPlaneGeometryOptions, TCircleGeometryOptions, TSphereGeometryOptions, TIcoSphereGeometryOptions, TCylinderGeometryOptions, TConeGeometryOptions, TTorusGeometryOptions, TLatheGeometryOptions } from './hooks';

@@ -1,3 +1,4 @@
+import { useLight2d, useAmbientLight2d, useUnlit2d } from '../../hooks/light';
 import { createMaterial } from '../../gameobjects/material';
 import { createFilter, releaseFilter } from '../../filter/create_filter';
 import { effectFromEntry } from '../../post/install_post_chain';
@@ -640,6 +641,14 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
             }).id = component.id;
             break;
         case 'light': {
+            if (component.kind === 'point-2d') {
+                useLight2d(component).id = component.id;
+                break;
+            }
+            if (component.kind === 'ambient-2d') {
+                useAmbientLight2d(component).id = component.id;
+                break;
+            }
             const shared = { color: component.color, intensity: component.intensity };
             if (component.kind === 'ambient') {
                 useAmbientLight(shared).id = component.id;
@@ -892,6 +901,7 @@ const buildBox = (node: TBoxNode, store: TRuntimeStore, src: string): void => {
     if (node.tags !== undefined) box.tags = [...node.tags];
     if (node.visible === false) box.visible = false;
     if (node.screenSpace === true) useScreenSpace();
+    if (node.unlit2d === true) useUnlit2d();
     if (node.worldOffScreen === true) useWorldOffScreen();
     if (node.transform !== null) useTransform(node.transform);
     if (node.extra !== undefined) rememberBoxExtra(box, node.extra);
