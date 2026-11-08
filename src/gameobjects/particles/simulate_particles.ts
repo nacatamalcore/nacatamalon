@@ -275,7 +275,7 @@ const particlesOf = (child: TChildParticles, kind: 'particles-2d' | 'particles-3
     if (depth >= MAX_CHILD_DEPTH) {
         if (!tooDeep.has(child.file)) {
             tooDeep.add(child.file);
-            console.warn(`[NacatamalOn] particles "${child.file.src}" is set off more than ${MAX_CHILD_DEPTH} set-offs down from the first effect, so it is left out. Set off fewer.`);
+            console.warn(`[NacatamalOn] particles "${child.file.src}": it is set off more than ${MAX_CHILD_DEPTH} set-offs down from the first effect, so it is left out. Set off fewer.`);
         }
         return null;
     }
@@ -285,7 +285,7 @@ const particlesOf = (child: TChildParticles, kind: 'particles-2d' | 'particles-3
     if (doc.kind !== kind) {
         if (!wrongKind.has(child.file)) {
             wrongKind.add(child.file);
-            console.warn(`[NacatamalOn] particles "${child.file.src}" is set off by a ${kind} effect but is itself ${doc.kind}. It is left out.`);
+            console.warn(`[NacatamalOn] particles "${child.file.src}": it is set off by a ${kind} effect but is itself ${doc.kind}. It is left out.`);
         }
         return null;
     }

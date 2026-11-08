@@ -119,5 +119,5 @@ export const warnMissingPhysicsProvider = (): void => {
     if (!firstTimeIn(getActiveGame(), `physics: nothing installed: ${installs}`)) {
         return;
     }
-    console.warn('[NacatamalOn] This scene declares physics and nothing is installed to simulate it, so its colliders sit still. Install an adapter and call installPhysics2d() or installPhysics3d().');
+    console.warn('[NacatamalOn] physics: this scene declares physics and nothing is installed to simulate it, so its colliders sit still. Install an adapter and call installPhysics2d() or installPhysics3d().');
 };

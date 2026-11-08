@@ -20,7 +20,7 @@ import type { TTerrainDoc, TTileDoc, TTilemapDoc, TTilemapLayerDoc, TTileLayerOr
  */
 export const parseTilemapDoc = (value: unknown, src: string): TTilemapDoc => {
     const fail = (why: string): never => {
-        throw new Error(`[NacatamalOn] '${src}' is not a map that can be drawn: ${why}`);
+        throw new Error(`[NacatamalOn] tilemap "${src}": it is not a map that can be drawn: ${why}`);
     };
 
     if (typeof value !== 'object' || value === null) {

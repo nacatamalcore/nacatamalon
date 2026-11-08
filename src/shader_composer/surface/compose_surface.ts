@@ -145,14 +145,14 @@ const maker = (key: string): string => MAKERS[key] ?? `'${key}'`;
 export const checkLooks = (lighting: TLook | null | undefined, steps: readonly TLook[] | undefined): void => {
     if (lighting !== null && lighting !== undefined && !LIGHTING_KEYS.includes(lighting.look)) {
         throw new Error(
-            `[NacatamalOn] '${lighting.look}' is not a lighting look (${LIGHTING_KEYS.map(maker).join(', ')}): ` +
+            `[NacatamalOn] compileShader: '${lighting.look}' is not a lighting look (${LIGHTING_KEYS.map(maker).join(', ')}): ` +
             (STEP_KEYS.includes(lighting.look) ? `${maker(lighting.look)} goes in steps.` : 'the engine has no look by that name.'),
         );
     }
     for (const step of steps ?? []) {
         if (!STEP_KEYS.includes(step.look)) {
             throw new Error(
-                `[NacatamalOn] '${step.look}' is not a step (${STEP_KEYS.map(maker).join(', ')}): ` +
+                `[NacatamalOn] compileShader: '${step.look}' is not a step (${STEP_KEYS.map(maker).join(', ')}): ` +
                 (LIGHTING_KEYS.includes(step.look) ? `it is a lighting look, ${maker(step.look)}, and goes in lighting, alone.` : 'the engine has no look by that name.'),
             );
         }

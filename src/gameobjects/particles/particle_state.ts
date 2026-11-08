@@ -54,7 +54,7 @@ export const openParticleState = (emitter: TParticles | TParticles3d): TParticle
     if (doc.kind !== wanted) {
         if (!mismatched.has(emitter)) {
             mismatched.add(emitter);
-            console.warn(`[NacatamalOn] ${wrongDimension(emitter.file.src, doc.kind)} Until then it draws nothing.`);
+            console.warn(`[NacatamalOn] ${doc.kind === 'particles-3d' ? 'createParticles' : 'createParticles3d'}: ${wrongDimension(emitter.file.src, doc.kind)} Until then it draws nothing.`);
         }
         return null;
     }

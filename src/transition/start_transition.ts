@@ -234,7 +234,7 @@ const cover = (store: TRuntimeStore, transition: TTransition, outgoing: TBox | n
     // Ten seconds of cover is no transition anyone meant: it is almost always a number written in
     // milliseconds, which is what transitions took before.
     if (transition.duration > LONG_TRANSITION) {
-        console.warn(`[NacatamalOn] The transition '${transition.name ?? 'transition'}' takes ${transition.duration} seconds. Durations are in seconds: did you mean ${transition.duration / 1000}?`);
+        console.warn(`[NacatamalOn] ${transition.name ?? 'transition'}: it takes ${transition.duration} seconds. Durations are in seconds: did you mean ${transition.duration / 1000}?`);
     }
     const effect = newPostEffect({
         name: transition.name ?? 'transition',

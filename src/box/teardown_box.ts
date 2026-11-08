@@ -21,7 +21,7 @@ export const teardownBox = (box: TBox): void => {
         try {
             cleanup();
         } catch (error) {
-            console.warn(`[NacatamalOn] A cleanup of '${box.name}' threw while it was leaving:`, error);
+            console.warn(`[NacatamalOn] '${box.name}': a cleanup threw while it was leaving:`, error);
         }
     }
     box.cleanups.length = 0;

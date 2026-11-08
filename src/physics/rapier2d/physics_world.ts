@@ -153,7 +153,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
     }).catch((error) => {
         // Without this the failure is invisible: every body stays frozen at its authored
         // transform and the scene looks merely "wrong" rather than broken.
-        console.error('[NacatamalOn] Rapier2D failed to initialize, so physics is inert.', error);
+        console.error('[NacatamalOn] physics2d: Rapier2D failed to initialize, so physics is inert.', error);
     });
     // Remembered with the scene, for a host that moves the game itself and must not run a frame
     // before the world is there (see `pendingWorkOf`).
@@ -297,7 +297,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
                 // A turned map has no floor to stand on in any sense a platformer means.
                 if (!warnedTurnedMap) {
                     warnedTurnedMap = true;
-                    console.warn(`[NacatamalOn] ${nameOfMap(map)} is turned, so it has no colliders: a map in a 2D world can be moved and scaled, not turned.`);
+                    console.warn(`[NacatamalOn] physics2d: ${nameOfMap(map)} is turned, so it has no colliders: a map in a 2D world can be moved and scaled, not turned.`);
                 }
                 continue;
             }
@@ -463,7 +463,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
                 const atA = spec.atA ?? centreA;
                 const atB = spec.atB ?? (ownB !== null ? ownB.translation() : null);
                 if (atB === null) {
-                    console.warn(`[NacatamalOn] A ${spec.type} from '${entry.a.name}' to the world needs \`atB\`, the point of the world it is tied to. It was not made.`);
+                    console.warn(`[NacatamalOn] useJoint2d: a ${spec.type} from '${entry.a.name}' to the world needs \`atB\`, the point of the world it is tied to. It was not made.`);
                     entry.removed = true;
                     return;
                 }
@@ -661,7 +661,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         // own: `createSprite({ transform })` is how nearly every scene here is written, and asking for
         // `box.transform` alone would refuse almost all of them.
         if (placementOf(box) === null) {
-            throw new Error(`[NacatamalOn] '${box.name}' has a collider and is nowhere: give it a placement, or something to draw, so the simulation has somewhere to write back to.`);
+            throw new Error(`[NacatamalOn] physics2d: '${box.name}' has a collider and is nowhere: give it a placement, or something to draw, so the simulation has somewhere to write back to.`);
         }
 
         // The simulated shape is the authored shape times the object's scale. What the document
@@ -951,7 +951,7 @@ const scaleCollider = (options: TBodyOptions, sx: number, sy: number, game: TRun
         if (options.shape === 'circle') {
                 if (sx !== sy && firstTimeIn(game, 'physics 2d: circle scaled unevenly')) {
                         console.warn(
-                                `[NacatamalOn] A circle collider cannot be scaled non-uniformly (${sx}x${sy}): ` +
+                                `[NacatamalOn] physics2d: a circle collider cannot be scaled non-uniformly (${sx}x${sy}): ` +
                                 'that shape is an ellipse, which the 2D solver has no room for. Using the larger ' +
                                 'axis so the collider contains its art. Use a polygon if you need the real shape.',
                         );

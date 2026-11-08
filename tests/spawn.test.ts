@@ -79,7 +79,7 @@ describe('useSpawn', () => {
         }
         // Lantern has only its function's name; Signpost was given one; Gate named itself.
         expect(said).toHaveLength(1);
-        expect(said[0]).toContain("'Lantern' was found by its component's function name");
+        expect(said[0]).toContain("'Lantern': it was found by its component's function name");
         expect(said[0]).toContain("useSpawn(Lantern, 'Lantern')");
     });
 

@@ -81,7 +81,7 @@ export const createGameStore = <S extends object, A = Record<string, never>>(
     const persist = config.persist ?? null;
     const mode = persist?.mode ?? 'auto';
     const throttle = persist?.throttle ?? DEFAULT_THROTTLE;
-    saysMilliseconds('store persist throttle', throttle, LONGEST_THROTTLE);
+    saysMilliseconds('createGameStore', 'persist throttle', throttle, LONGEST_THROTTLE);
 
     // A list and not a set, like the signals: the same function subscribed twice is two subscriptions.
     // Taken over from the store being adopted, so that whoever was listening to the one the
@@ -104,7 +104,7 @@ export const createGameStore = <S extends object, A = Record<string, never>>(
                 run();
             } catch (error) {
                 // One broken listener must not silence the rest.
-                console.warn(`[NacatamalOn] A listener of the store '${key}' threw:`, error);
+                console.warn(`[NacatamalOn] store '${key}': a listener threw:`, error);
             }
         }
     };
@@ -123,7 +123,7 @@ export const createGameStore = <S extends object, A = Record<string, never>>(
             await persist.adapter.save(key, state);
         } catch (error) {
             // A lost save is bad; a game that crashes because of it is worse.
-            console.warn(`[NacatamalOn] The store '${key}' could not be saved:`, error);
+            console.warn(`[NacatamalOn] store '${key}': it could not be saved:`, error);
         }
     };
 
@@ -205,7 +205,7 @@ export const createGameStore = <S extends object, A = Record<string, never>>(
         try {
             saved = await persist.adapter.load(key);
         } catch (error) {
-            console.warn(`[NacatamalOn] The store '${key}' could not be loaded:`, error);
+            console.warn(`[NacatamalOn] store '${key}': it could not be loaded:`, error);
             return false;
         }
         if (saved === null || typeof saved !== 'object') {

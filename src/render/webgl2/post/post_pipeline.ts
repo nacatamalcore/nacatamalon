@@ -244,7 +244,7 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
             return { program, layout, failed: false };
         } catch (error) {
             console.warn(
-                `[NacatamalOn] the effect "${effect.name ?? 'post'}" did not compile on WebGL2. The ` +
+                `[NacatamalOn] usePostProcess: the effect "${effect.name ?? 'post'}" did not compile on WebGL2. The ` +
                 'frame is shown unchanged.',
                 error,
             );
@@ -302,7 +302,7 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
         }
         warned.add(source);
         console.warn(
-            `[NacatamalOn] the effect "${effect.name ?? 'post'}" is written in WGSL only, which ` +
+            `[NacatamalOn] usePostProcess: the effect "${effect.name ?? 'post'}" is written in WGSL only, which ` +
             'this card cannot compile. The frame is shown unchanged. Give it fragmentGlsl too (in a ' +
             'shader file, the same again after a // @glsl line) to have it on both.',
         );

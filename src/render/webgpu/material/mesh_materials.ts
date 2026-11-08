@@ -142,7 +142,7 @@ export const createMeshMaterials = (
         }
         if (mapNames.length > MAX_MATERIAL_MAPS) {
             console.warn(
-                `[NacatamalOn] the material "${material.name ?? 'mesh material'}" reads ${mapNames.length} maps ` +
+                `[NacatamalOn] createMaterial: the material "${material.name ?? 'mesh material'}" reads ${mapNames.length} maps ` +
                 `(${mapNames.join(', ')}) and a material has ${MAX_MATERIAL_MAPS}. It is drawing with the built-in shader instead.`,
             );
             return { pipeline: null, transparentPipeline: null, layout, failed: true, pending: false, mapNames };
@@ -158,7 +158,7 @@ export const createMeshMaterials = (
             entry.pipeline = null;
             entry.transparentPipeline = null;
             console.warn(
-                `[NacatamalOn] the material "${material.name ?? 'mesh material'}" did not compile. ` +
+                `[NacatamalOn] createMaterial: the material "${material.name ?? 'mesh material'}" did not compile. ` +
                 'It is drawing with the built-in shader instead.',
                 reason,
             );
@@ -262,7 +262,7 @@ export const createMeshMaterials = (
                     } else {
                         shadows.set(key, null);
                         console.warn(
-                            `[NacatamalOn] the shadow of the material "${material.name ?? 'mesh material'}" did not compile, so it casts the shape of its file${cuts ? ', cut by its picture alone' : ''}. ` +
+                            `[NacatamalOn] createMaterial: the shadow of the material "${material.name ?? 'mesh material'}" did not compile, so it casts the shape of its file${cuts ? ', cut by its picture alone' : ''}. ` +
                             'Its hooks read something only the drawn model has.',
                             bad.map((message) => `${message.lineNum}: ${message.message}`).join('\n'),
                         );
@@ -313,7 +313,7 @@ export const createMeshMaterials = (
                     const said = `${material.name ?? material.id} ${name}`;
                     if (!warned.has(said)) {
                         warned.add(said);
-                        console.warn(`[NacatamalOn] the material "${material.name ?? 'mesh material'}" reads the map '${name}' and has none by that name, so it reads as white. Add it to the material's maps.`);
+                        console.warn(`[NacatamalOn] createMaterial: the material "${material.name ?? 'mesh material'}" reads the map '${name}' and has none by that name, so it reads as white. Add it to the material's maps.`);
                     }
                 }
                 const ready = map !== undefined && map.texture.status === 'ready' && map.texture.gpu !== null;

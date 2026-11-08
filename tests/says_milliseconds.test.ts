@@ -15,11 +15,12 @@ afterEach(() => {
 describe('a time that looks like milliseconds', () => {
     it('is said once, with what it probably meant, and a sensible one says nothing', () => {
         const warn = spyOn(console, 'warn').mockImplementation(() => {});
-        saysMilliseconds('test wait', 0.5, 10);
+        saysMilliseconds('wait', 'test', 0.5, 10);
         expect(warn).not.toHaveBeenCalled();
-        saysMilliseconds('test wait', 250, 10);
-        saysMilliseconds('test wait', 250, 10);
+        saysMilliseconds('wait', 'test', 250, 10);
+        saysMilliseconds('wait', 'test', 250, 10);
         expect(warn).toHaveBeenCalledTimes(1);
+        expect(String(warn.mock.calls[0]![0])).toContain('wait: a test of 250 seconds');
         expect(String(warn.mock.calls[0]![0])).toContain('did you mean 0.25?');
     });
 

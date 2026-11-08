@@ -73,7 +73,7 @@ export const storeFieldsFromState = (state: Record<string, unknown>): TStoreFiel
         fields.push({ name, type, value: valueOf(type, value) });
     }
     if (dropped.length > 0) {
-        console.warn(`[NacatamalOn] a store's ${dropped.length} field(s) cannot be written as rows (${dropped.join(', ')}), so they are left out. Lists and nested objects have no row type; the code that declares them keeps them.`);
+        console.warn(`[NacatamalOn] storeFieldsFromState: ${dropped.length} field(s) of a store cannot be written as rows (${dropped.join(', ')}), so they are left out. Lists and nested objects have no row type; the code that declares them keeps them.`);
     }
     return fields;
 };

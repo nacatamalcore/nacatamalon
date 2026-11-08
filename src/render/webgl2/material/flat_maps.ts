@@ -100,7 +100,7 @@ export const createFlatMapBinder = (gl: WebGL2RenderingContext) => {
                     const said = `${material.name ?? material.id} ${name}`;
                     if (!warned.has(said)) {
                         warned.add(said);
-                        console.warn(`[NacatamalOn] the material "${material.name ?? 'flat material'}" reads the map '${name}' and has none by that name, so it reads as white. Add it to the material's maps.`);
+                        console.warn(`[NacatamalOn] createMaterial: the material "${material.name ?? 'flat material'}" reads the map '${name}' and has none by that name, so it reads as white. Add it to the material's maps.`);
                     }
                 }
                 const ready = map !== undefined && map.texture.status === 'ready' && map.texture.gpu !== null;

@@ -275,7 +275,7 @@ export const parseMotionDoc = (raw: unknown, src = 'motion'): TMotionDoc => {
     }
     const version = typeof file.version === 'number' ? file.version : MOTION_VERSION;
     if (version > MOTION_VERSION) {
-        console.warn(`[NacatamalOn] motion "${src}" is version ${version}, newer than this engine reads (${MOTION_VERSION}). What it can read plays.`);
+        console.warn(`[NacatamalOn] motion "${src}": it is version ${version}, newer than this engine reads (${MOTION_VERSION}). What it can read plays.`);
     }
     if (typeof file.duration !== 'number' || !Number.isFinite(file.duration) || file.duration <= 0) {
         fail(src, `"duration" has to be how long it lasts in seconds, above 0, and it is ${JSON.stringify(file.duration)}.`);
@@ -318,7 +318,7 @@ export const parseMotionDoc = (raw: unknown, src = 'motion'): TMotionDoc => {
     }
     if (moved.length > 0) {
         console.warn(
-            `[NacatamalOn] motion "${src}" was written before some knobs were renamed, so it reads ${moved.join(', ')}. ` +
+            `[NacatamalOn] motion "${src}": it was written before some knobs were renamed, so it reads ${moved.join(', ')}. ` +
             'Saving it writes the new names.',
         );
     }

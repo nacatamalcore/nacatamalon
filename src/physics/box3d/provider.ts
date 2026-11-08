@@ -92,7 +92,7 @@ const worldOfBody = new WeakMap<TGameObject, TPhysicsWorldHandle3d>();
 const warnMissingGeometry = (box: TGameObject, key: string): void => {
     if (!firstTimeIn(gameOfBox(box), `physics 3d: missing shape: ${key}`)) return;
     console.warn(
-        `[NacatamalOn] A collider is shaped after "${key}", which this scene has not loaded, so ` +
+        `[NacatamalOn] physics3d: a collider is shaped after "${key}", which this scene has not loaded, so ` +
         'it is inert. A collider names a shape the same way anything else that draws one does: ' +
         'put it in the scene\'s manifest.',
     );
@@ -169,7 +169,7 @@ export const box3dProvider: TPhysicsProvider = {
         if (world === null) {
             if (firstTimeIn(gameOfBox(box), 'physics 3d: collider with no world')) {
                 console.warn(
-                    '[NacatamalOn] An object declares a 3D collider but the scene has no physics ' +
+                    '[NacatamalOn] physics3d: an object declares a 3D collider but the scene has no physics ' +
                     'world: give the scene a Physics World 3D of its own. The collider is inert.',
                 );
             }

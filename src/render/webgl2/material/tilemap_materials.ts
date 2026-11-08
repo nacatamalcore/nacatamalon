@@ -75,7 +75,7 @@ export const createTilemapMaterials = (gl: WebGL2RenderingContext) => {
             }
             said.done = true;
             console.warn(
-                `[NacatamalOn] the material "${material.name ?? 'tilemap material'}" reads ${mapNames.length} maps ` +
+                `[NacatamalOn] createMaterial: the material "${material.name ?? 'tilemap material'}" reads ${mapNames.length} maps ` +
                 `(${mapNames.join(', ')}) and a material has ${MAX_MATERIAL_MAPS}. It is drawing with the built-in shader instead.`,
             );
             return { program: null, locations: empty, layout, failed: true, mapNames };
@@ -116,7 +116,7 @@ export const createTilemapMaterials = (gl: WebGL2RenderingContext) => {
             }
             said.done = true;
             console.warn(
-                `[NacatamalOn] the material "${material.name ?? 'tilemap material'}" did not compile on WebGL2. ` +
+                `[NacatamalOn] createMaterial: the material "${material.name ?? 'tilemap material'}" did not compile on WebGL2. ` +
                 'It is drawing with the built-in shader instead.',
                 error,
             );
@@ -135,7 +135,7 @@ export const createTilemapMaterials = (gl: WebGL2RenderingContext) => {
             }
             warned.add(source);
             console.warn(
-                `[NacatamalOn] the material "${material.name ?? 'tilemap material'}" is written in WGSL only, ` +
+                `[NacatamalOn] createMaterial: the material "${material.name ?? 'tilemap material'}" is written in WGSL only, ` +
                 'which this card cannot compile. It is drawing with the built-in shader instead. ' +
                 'Built with compileShader it is written in both at once; by hand, give it fragmentGlsl too ' +
                 '(in a shader file, the same again after a // @glsl line).',

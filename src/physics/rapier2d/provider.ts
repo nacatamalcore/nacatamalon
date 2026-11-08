@@ -155,7 +155,7 @@ export const rapier2dProvider: TPhysicsProvider = {
         if (world === null) {
             if (firstTimeIn(gameOfBox(box), 'physics 2d: collider with no world')) {
                 console.warn(
-                    '[NacatamalOn] A box declares a 2D collider but the scene has no physics ' +
+                    '[NacatamalOn] physics2d: a box declares a 2D collider but the scene has no physics ' +
                     'world: add a Physics World 2D component to the scene root. The collider ' +
                     'is inert.',
                 );

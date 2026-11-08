@@ -316,7 +316,7 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
             entry.failed = true;
             entry.pending = false;
             console.warn(
-                `[NacatamalOn] the effect "${effect.name ?? 'post'}" did not compile. The frame is ` +
+                `[NacatamalOn] usePostProcess: the effect "${effect.name ?? 'post'}" did not compile. The frame is ` +
                 'shown unchanged.',
                 reason,
             );

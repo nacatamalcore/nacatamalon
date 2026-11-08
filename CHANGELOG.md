@@ -24,6 +24,11 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- **Every warning and error says who speaks first.** Messages that read as a loose sentence now
+  start with what the game used, as the rest already did: `createMaterial: the material "water" did
+  not compile…`, `physics3d: a sphere collider cannot be scaled…`, `store 'save': it could not be
+  saved…`, `rumble: a duration of 200 seconds…`. A game that matched the old wording of a message
+  needs the new one.
 - **Built-in sprites share a draw across up to eight pictures.** Consecutive sprites with the same
   filtering and blend stay in their original order, including overlapping transparent ones, instead
   of ending a batch on every picture change. WebGPU and WebGL2 use the same eight slots without

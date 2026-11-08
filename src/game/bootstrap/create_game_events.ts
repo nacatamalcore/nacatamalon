@@ -18,17 +18,17 @@ export const createGameEvents = () => {
     const listeners = new Map<TGameEventName, Set<THandler<TGameEventName>>>();
     const happened = new Map<TGameEventName, TGameEvents[TGameEventName]>();
 
-    const call = <E extends TGameEventName>(handler: THandler<E>, payload: TGameEvents[E]): void => {
+    const call = <E extends TGameEventName>(event: E, handler: THandler<E>, payload: TGameEvents[E]): void => {
         try {
             handler(payload);
         } catch (error) {
-            console.error('[NacatamalOn] a game event listener threw:', error);
+            console.error(`[NacatamalOn] game: a listener of '${event}' threw:`, error);
         }
     };
 
     const on = <E extends TGameEventName>(event: E, handler: THandler<E>): (() => void) => {
         if (happened.has(event)) {
-            call(handler, happened.get(event) as TGameEvents[E]);
+            call(event, handler, happened.get(event) as TGameEvents[E]);
             return () => {};
         }
         let set = listeners.get(event);
@@ -51,7 +51,7 @@ export const createGameEvents = () => {
         const set = listeners.get(event);
         listeners.delete(event);
         for (const handler of set ?? []) {
-            call(handler as THandler<E>, payload);
+            call(event, handler as THandler<E>, payload);
         }
     };
 

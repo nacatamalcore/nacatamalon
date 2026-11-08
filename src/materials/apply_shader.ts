@@ -53,7 +53,7 @@ export const applyShader = (material: TMaterial, shader: TShader): void => {
             told.add(material.shader);
             misfits.set(shader, told);
             console.warn(
-                `[NacatamalOn] '${shader.src}' is a ${shader.shader} shader, but the material ` +
+                `[NacatamalOn] createMaterial: '${shader.src}' is a ${shader.shader} shader, but the material ` +
                 `${material.name !== null ? `"${material.name}" ` : ''}is ${material.shader}, so it keeps the built-in look. ` +
                 `Make the material with createMaterial({ shader: '${shader.shader}', ... }), or change the file's ` +
                 `'// @shader' line to ${material.shader}.`,

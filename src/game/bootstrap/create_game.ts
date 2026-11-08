@@ -174,7 +174,7 @@ export const createGame = (target: TGameTarget, game_options: TGameOptions) => {
             // Said once, so a game that asked for the splash and never sees it while being made
             // knows it is not broken, and knows it will show once published.
             if (splash === true && isDevelopmentPage()) {
-                console.info('[NacatamalOn] The splash is skipped while developing (localhost or a browser driven by automation); it shows once the game is published. `splash: \'always\'` shows it here too.');
+                console.info('[NacatamalOn] createGame: the splash is skipped while developing (localhost or a browser driven by automation); it shows once the game is published. `splash: \'always\'` shows it here too.');
             }
             // Not named `renderer`: that one is already taken by the destructuring above, where
             // it is the REQUEST ('AUTO' | 'WEBGPU' | 'WEBGL2'). This is the instance that won.

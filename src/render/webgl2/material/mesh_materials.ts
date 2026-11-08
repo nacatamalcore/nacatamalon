@@ -68,7 +68,7 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
         }
         if (mapNames.length > MAX_MATERIAL_MAPS) {
             console.warn(
-                `[NacatamalOn] the material "${material.name ?? 'mesh material'}" reads ${mapNames.length} maps ` +
+                `[NacatamalOn] createMaterial: the material "${material.name ?? 'mesh material'}" reads ${mapNames.length} maps ` +
                 `(${mapNames.join(', ')}) and a material has ${MAX_MATERIAL_MAPS}. It is drawing with the built-in shader instead.`,
             );
             return { program: null, layout, failed: true, mapNames };
@@ -118,7 +118,7 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
             return { program, layout, failed: false, mapNames };
         } catch (error) {
             console.warn(
-                `[NacatamalOn] the material "${material.name ?? 'mesh material'}" did not compile on WebGL2. ` +
+                `[NacatamalOn] createMaterial: the material "${material.name ?? 'mesh material'}" did not compile on WebGL2. ` +
                 'It is drawing with the built-in shader instead.',
                 error,
             );
@@ -179,7 +179,7 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
                     };
                 } catch (error) {
                     console.warn(
-                        `[NacatamalOn] the shadow of the material "${material.name ?? 'mesh material'}" did not compile on WebGL2, so it casts the shape of its file${cuts ? ', cut by its picture alone' : ''}. ` +
+                        `[NacatamalOn] createMaterial: the shadow of the material "${material.name ?? 'mesh material'}" did not compile on WebGL2, so it casts the shape of its file${cuts ? ', cut by its picture alone' : ''}. ` +
                         'Its hooks read something only the drawn model has.',
                         error,
                     );
@@ -198,7 +198,7 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
                 return;
             }
             warned.add(said);
-            console.warn(`[NacatamalOn] the material "${material.name ?? 'mesh material'}" reads the map '${name}' and has none by that name, so it reads as white. Add it to the material's maps.`);
+            console.warn(`[NacatamalOn] createMaterial: the material "${material.name ?? 'mesh material'}" reads the map '${name}' and has none by that name, so it reads as white. Add it to the material's maps.`);
         },
         /**
          * Says once that an effect was written for the other card only.
@@ -211,7 +211,7 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
             }
             warned.add(source);
             console.warn(
-                `[NacatamalOn] the material "${material.name ?? 'mesh material'}" is written in WGSL only, ` +
+                `[NacatamalOn] createMaterial: the material "${material.name ?? 'mesh material'}" is written in WGSL only, ` +
                 'which this card cannot compile. It is drawing with the built-in shader instead. ' +
                 'Built with compileShader it is written in both at once; by hand, give it fragmentGlsl too ' +
                 '(in a shader file, the same again after a // @glsl line).',

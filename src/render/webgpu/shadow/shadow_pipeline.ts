@@ -151,7 +151,7 @@ export const createShadowPipeline = (device: GPUDevice) => {
             textureLayout !== null,
         )).then((made) => { cache.set(cull, made); }, (error: unknown) => {
             cache.set(cull, null);
-            console.warn('[NacatamalOn] a material\'s shadow could not be built, so it casts the shape of its file.', error);
+            console.warn('[NacatamalOn] createMaterial: a material\'s shadow could not be built, so it casts the shape of its file.', error);
         });
         return 'pending';
     };

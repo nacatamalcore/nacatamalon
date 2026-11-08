@@ -48,7 +48,7 @@ const metaOf = (font: TBuiltinFont): TBitmapFontMeta => ({
 const builtinFont = (key: string): TBuiltinFont => {
     const font = BUILTIN_FONTS.get(key);
     if (font === undefined) {
-        throw new Error(`[NacatamalOn] '${key}' is not a font built into the engine: ${[...BUILTIN_FONTS.keys()].join(', ')}.`);
+        throw new Error(`[NacatamalOn] createText: '${key}' is not a font built into the engine: ${[...BUILTIN_FONTS.keys()].join(', ')}.`);
     }
     return font;
 };

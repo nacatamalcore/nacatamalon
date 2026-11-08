@@ -23,7 +23,7 @@ const warnUnsupported = (src: string, fields: string[]): void => {
         return;
     }
     console.warn(
-        `[NacatamalOn] particles "${src}" declares ${fields.join(' and ')}, which this version does ` +
+        `[NacatamalOn] particles "${src}": it declares ${fields.join(' and ')}, which this version does ` +
         'not draw. The effect is drawn without it, and the file is left exactly as it was written.',
     );
 };
@@ -141,7 +141,7 @@ export const childFileFor = (store: TRuntimeStore, parent: TParticlesFile, src: 
     const { particles } = store.get('assets');
     let file = findAssetFile(particles, path);
     if (path === parent.src || (file !== undefined && leadsTo(file, parent))) {
-        console.warn(`[NacatamalOn] particles "${parent.src}" sets off "${path}", which leads back to itself. That child is left out: take it out of the file.`);
+        console.warn(`[NacatamalOn] particles "${parent.src}": it sets off "${path}", which leads back to itself. That child is left out: take it out of the file.`);
         return null;
     }
     if (file === undefined) {
@@ -150,7 +150,7 @@ export const childFileFor = (store: TRuntimeStore, parent: TParticlesFile, src: 
         if (!spent.paths.has(path) && spent.paths.size >= MOST_FILES_BELOW) {
             if (!spent.said) {
                 spent.said = true;
-                console.warn(`[NacatamalOn] particles "${parent.src}" sets off "${path}", past ${MOST_FILES_BELOW} files fetched below the first file. The rest are left out: a path that keeps growing never ends, so check how it names its children.`);
+                console.warn(`[NacatamalOn] particles "${parent.src}": it sets off "${path}", past ${MOST_FILES_BELOW} files fetched below the first file. The rest are left out: a path that keeps growing never ends, so check how it names its children.`);
             }
             return null;
         }
@@ -197,7 +197,7 @@ export const loadParticles = async (store: TRuntimeStore, file: TParticlesFile):
         if (doc.collision !== null && !doc.worldSpace) {
             // Said once, here, rather than every frame the simulation skips it.
             console.warn(
-                `[NacatamalOn] particles "${file.src}" says how it collides but travels with its ` +
+                `[NacatamalOn] particles "${file.src}": it says how it collides but travels with its ` +
                 'emitter ("worldSpace": false), so its particles have no place of their own in the ' +
                 'world to collide at. Drawn by an emitter, it does not collide; set off by another ' +
                 'effect, it is born in the world and does.',

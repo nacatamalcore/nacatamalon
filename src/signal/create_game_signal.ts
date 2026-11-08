@@ -56,7 +56,7 @@ export const createGameSignal = <T = void>(): TGameSignal<T> => {
                     handler(payload);
                 } catch (error) {
                     // One broken listener must not silence the rest.
-                    console.warn('[NacatamalOn] A signal handler threw:', error);
+                    console.warn('[NacatamalOn] signal: a handler threw:', error);
                 }
             }
         },

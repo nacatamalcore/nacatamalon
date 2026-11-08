@@ -419,7 +419,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
         // Without this the failure is invisible: every body stays frozen at its authored
         // transform and the scene reads as merely "wrong" rather than broken. Same guard the
         // 2D adapter already has.
-        console.error('[NacatamalOn] Box3D failed to initialize, so physics is inert.', error);
+        console.error('[NacatamalOn] physics3d: Box3D failed to initialize, so physics is inert.', error);
     }));
 
     // 1/60, or exactly the game's own step when it has one: see `physicsStepOf`.
@@ -615,7 +615,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
             const [sx, sy, sz] = scaleOf(box);
             if ((sx !== sy || sy !== sz) && firstTimeIn(gameOfBox(box), 'physics 3d: round shape scaled unevenly')) {
                 console.warn(
-                    `[NacatamalOn] A sphere collider cannot be scaled non-uniformly (${sx}x${sy}x${sz}): ` +
+                    `[NacatamalOn] physics3d: a sphere collider cannot be scaled non-uniformly (${sx}x${sy}x${sz}): ` +
                     'that shape is an ellipsoid, which this solver has no room for. Using the largest ' +
                     'axis so the collider contains its art.',
                 );
@@ -635,7 +635,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
             const radial = Math.max(Math.abs(sx), Math.abs(sz));
             if (sx !== sz && firstTimeIn(gameOfBox(box), 'physics 3d: round shape scaled unevenly')) {
                 console.warn(
-                    `[NacatamalOn] A capsule collider cannot be scaled non-uniformly across X/Z ` +
+                    `[NacatamalOn] physics3d: a capsule collider cannot be scaled non-uniformly across X/Z ` +
                     `(${sx} vs ${sz}), because its cross-section is a circle. Using the larger axis so the ` +
                     'collider contains its art.',
                 );
@@ -761,7 +761,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
             let type = opts.type;
             if (type === 'dynamic') {
                 console.warn(
-                    '[NacatamalOn] A triangle-mesh collider cannot be dynamic: a mesh is a surface with ' +
+                    '[NacatamalOn] physics3d: a triangle-mesh collider cannot be dynamic: a mesh is a surface with ' +
                     'no interior, so the solver has nothing to push out of. Falling back to static; use a ' +
                     'hull or a primitive for a body that has to move.',
                 );

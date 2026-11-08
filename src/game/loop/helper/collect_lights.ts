@@ -191,7 +191,7 @@ export const collectLighting = (scene: TBox): TSceneLighting => {
 
     const punctual = found.filter(isPunctualLight);
     if (punctual.length > MAX_SCENE_LIGHTS && firstTimeIn(game, 'lights: over the budget')) {
-        console.warn(`[NacatamalOn] a scene has ${punctual.length} lights and holds ${MAX_SCENE_LIGHTS} at a time. The rest are ignored, in the order they were made.`);
+        console.warn(`[NacatamalOn] lights: a scene has ${punctual.length} and holds ${MAX_SCENE_LIGHTS} at a time. The rest are ignored, in the order they were made.`);
     }
     const lights = punctual.slice(0, MAX_SCENE_LIGHTS);
 
@@ -201,7 +201,7 @@ export const collectLighting = (scene: TBox): TSceneLighting => {
     // turning `castShadow` on and off on a light that was never going to be the one.
     const casters = lights.filter((light) => light.castShadow === true && light.type !== 'point' && light.type !== 'rect');
     if (casters.length > 1 && firstTimeIn(game, 'lights: a second shadow caster')) {
-        console.warn(`[NacatamalOn] ${casters.length} lights in a scene ask to cast shadows and one can. The first is used, the rest light the scene without casting.`);
+        console.warn(`[NacatamalOn] lights: ${casters.length} in a scene ask to cast shadows and one can. The first is used, the rest light the scene without casting.`);
     }
 
     // One level for the scene: the last one asked for, so a part of it can set its own over the
@@ -209,7 +209,7 @@ export const collectLighting = (scene: TBox): TSceneLighting => {
     const declared = found.filter((light) => light.type === 'ambient');
     if (declared.length > 0) {
         if (declared.length > 1 && firstTimeIn(game, 'lights: a second ambient')) {
-            console.warn(`[NacatamalOn] a scene has ${declared.length} ambient lights and one sets how dark its shade is: the last one made.`);
+            console.warn(`[NacatamalOn] lights: a scene has ${declared.length} ambient ones and one sets how dark its shade is: the last one made.`);
         }
         return { lights: lights.length > 0 ? lights : [], ambient: levelOf(declared)! };
     }

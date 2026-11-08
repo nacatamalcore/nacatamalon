@@ -43,7 +43,7 @@ export const noteFoundByName = (box: TBox, name: string): void => {
         return;
     }
     console.warn(
-        `[NacatamalOn] '${name}' was found by its component's function name, which a published build ` +
+        `[NacatamalOn] '${name}': it was found by its component's function name, which a published build ` +
         `shortens, so it would not be found there. Give it the name: useSpawn(${name}, '${name}').`,
     );
 };

@@ -388,7 +388,7 @@ export const createGamepads = (canvas: HTMLCanvasElement): TGamepadSource => {
                 }
 
                 // Seconds here, milliseconds for the browser.
-                saysMilliseconds('rumble duration', rumbleOptions.duration ?? 0, MAX_RUMBLE);
+                saysMilliseconds('rumble', 'duration', rumbleOptions.duration ?? 0, MAX_RUMBLE);
                 const duration = Math.min(Math.max(rumbleOptions.duration ?? 0.2, 0), MAX_RUMBLE) * 1000;
                 const startDelay = Math.max(rumbleOptions.delay ?? 0, 0) * 1000;
                 const port = portNow();

@@ -38,7 +38,7 @@ export const createInputMap = (source: TActionSource, persist: TActionPersist | 
             await persist.adapter.save(key, source.overrides());
         } catch (error) {
             // A player losing a remap should degrade, not crash.
-            console.warn('[NacatamalOn] The controls could not be saved:', error);
+            console.warn('[NacatamalOn] useActions: the controls could not be saved:', error);
         }
     };
 
@@ -49,7 +49,7 @@ export const createInputMap = (source: TActionSource, persist: TActionPersist | 
                     source.setOverrides(saved);
                 }
             })
-            .catch((error: unknown) => console.warn('[NacatamalOn] The controls could not be loaded:', error));
+            .catch((error: unknown) => console.warn('[NacatamalOn] useActions: the controls could not be loaded:', error));
     }
 
     /**

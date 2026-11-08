@@ -392,7 +392,7 @@ export const reportCastersOutside = (casters: readonly TDrawMesh[], light: TDraw
         if (Math.abs(cx) > 1 || Math.abs(cy) > 1 || cz < 0 || cz > 1) {
             warnedOutside.add(by);
             console.warn(
-                '[NacatamalOn] something that casts a shadow is outside the square the light covers, so it casts nothing. ' +
+                '[NacatamalOn] useDirectionalLight: something that casts a shadow is outside the square the light covers, so it casts nothing. ' +
                 `Raise 'shadowArea' on that light (it is ${light.shadowArea ?? DEFAULT_SHADOW_AREA} now): it is how far the shadows reach in front of the camera.`,
             );
             return;

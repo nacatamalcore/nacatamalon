@@ -16,6 +16,6 @@ export const reportFrameError = (store: TRuntimeStore, error: unknown): void => 
         return;
     }
     const failure = error instanceof Error ? error : new Error(String(error));
-    console.error('[NacatamalOn] a scene update threw. The scene skips the rest of its update on every frame this keeps happening; everything else goes on.', failure);
+    console.error('[NacatamalOn] scene update: something in it threw. The scene skips the rest of its update on every frame this keeps happening; everything else goes on.', failure);
     store.setState('loop', { failure });
 };

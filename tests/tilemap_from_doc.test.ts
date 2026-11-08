@@ -479,7 +479,7 @@ describe('createTilemap from a document in code', () => {
         };
 
         it('a document that is wrong, naming it', () => {
-            expect(() => inScene(() => createTilemap({ doc: { ...DOC, width: 9 }, atlas: sheet() }))).toThrow("'the doc given to createTilemap' is not a map that can be drawn: layer 'ground' has 6 cells");
+            expect(() => inScene(() => createTilemap({ doc: { ...DOC, width: 9 }, atlas: sheet() }))).toThrow('tilemap "the doc given to createTilemap": it is not a map that can be drawn: layer \'ground\' has 6 cells');
             expect(() => inScene(() => createTilemap({ doc: { ...DOC, tiles: {} }, atlas: sheet() }))).toThrow('uses tile 2');
         });
 

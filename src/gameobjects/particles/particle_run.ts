@@ -63,7 +63,7 @@ const tell = (file: TParticlesFile, message: string): void => {
     }
     if (!said.has(message)) {
         said.add(message);
-        console.warn(`[NacatamalOn] particles "${file.src}" ${message}`);
+        console.warn(`[NacatamalOn] particles "${file.src}": it ${message}`);
     }
 };
 
