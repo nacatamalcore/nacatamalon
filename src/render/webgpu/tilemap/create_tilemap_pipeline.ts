@@ -1,4 +1,5 @@
 import { TILEMAP_SHADER } from './tilemap_shader';
+import { withoutLights2d } from '../../shared/lighting_2d_shader';
 import { TILE_CORNER_BYTES } from '../../shared/tile_corner';
 import { buildTilemapMaterialShader } from '../material/tilemap_material_shader';
 import { createFlatMaterials } from '../material/flat_materials';
@@ -86,38 +87,44 @@ export const createTilemapPipeline = (
 
     const CORNERS = TILE_CORNERS;
 
-    const module = device.createShaderModule({ label: 'tilemap shader', code: TILEMAP_SHADER });
-    const pipeline = device.createRenderPipeline({
-        label: 'tilemap pipeline',
-        layout: device.createPipelineLayout({
-            label: 'tilemap pipeline layout',
-            bindGroupLayouts: [frameLayout, textureLayout, layerLayout],
-        }),
-        vertex: {
-            module,
-            entryPoint: 'vs',
-            buffers: CORNERS,
-        },
-        fragment: {
-            module,
-            entryPoint: 'fs',
-            targets: [{
-                format,
-                // Straight alpha, the same blend as the sprites: a map's transparent corners have to
-                // show what is behind them exactly as a sprite's do.
-                blend: {
-                    color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-                    alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-                },
-            }],
-        },
-        // A list and not a strip: a strip cannot start a new cell without wasted corners, and at a
-        // few thousand cells two extra corners each are cheaper than the bookkeeping.
-        primitive: { topology: 'triangle-list' },
-        // As for sprites: present so the pass will take it, and doing nothing.
-        depthStencil: FLAT_DEPTH,
-        multisample: { count: samples },
+    // Twice: lit by the 2D lights, and for a pass with none, which does not read them.
+    const pipelineLayout = device.createPipelineLayout({
+        label: 'tilemap pipeline layout',
+        bindGroupLayouts: [frameLayout, textureLayout, layerLayout],
     });
+    const pipelineFor = (lit: boolean): GPURenderPipeline => {
+        const module = device.createShaderModule({ label: lit ? 'tilemap shader' : 'tilemap unlit shader', code: lit ? TILEMAP_SHADER : withoutLights2d(TILEMAP_SHADER) });
+        return device.createRenderPipeline({
+            label: lit ? 'tilemap pipeline' : 'tilemap unlit pipeline',
+            layout: pipelineLayout,
+            vertex: {
+                module,
+                entryPoint: 'vs',
+                buffers: CORNERS,
+            },
+            fragment: {
+                module,
+                entryPoint: 'fs',
+                targets: [{
+                    format,
+                    // Straight alpha, the same blend as the sprites: a map's transparent corners have to
+                    // show what is behind them exactly as a sprite's do.
+                    blend: {
+                        color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+                        alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+                    },
+                }],
+            },
+            // A list and not a strip: a strip cannot start a new cell without wasted corners, and at a
+            // few thousand cells two extra corners each are cheaper than the bookkeeping.
+            primitive: { topology: 'triangle-list' },
+            // As for sprites: present so the pass will take it, and doing nothing.
+            depthStencil: FLAT_DEPTH,
+            multisample: { count: samples },
+        });
+    };
+    const pipeline = pipelineFor(true);
+    const unlitPipeline = pipelineFor(false);
 
     const frameBindGroup = device.createBindGroup({
         label: 'tilemap frame bind group',
@@ -147,6 +154,7 @@ export const createTilemapPipeline = (
             build: buildTilemapMaterialShader,
         }),
         pipeline,
+        unlitPipeline,
         frameBindGroup,
         textureBindGroups: new WeakMap(),
         samplers,

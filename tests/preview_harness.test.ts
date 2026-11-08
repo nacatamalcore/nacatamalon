@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'bun:test';
+import { FRAME_FLOATS_2D } from '../src/render/shared/lighting_2d';
+import { withoutLights2d } from '../src/render/shared/lighting_2d_shader';
 import {
     buildPreviewHarness, PREVIEW_FRAME_UNIFORMS, PREVIEW_INSTANCE, PREVIEW_QUAD_VERTICES, PREVIEW_VERTEX_BUFFERS,
 } from '../src/shader_composer/preview_harness';
@@ -40,8 +42,16 @@ describe('the harness a node picture draws through', () => {
     });
 
     it('holds the frame\'s numbers in the size the sprite shader reads them', () => {
-        // The shader declares 272 bytes: the resolution, its padding and sixteen views.
-        expect(PREVIEW_FRAME_UNIFORMS.byteLength).toBe(272);
+        // The shader declares the resolution, its padding, sixteen views and their 2D lights: a
+        // binding smaller than that is refused by the card.
+        expect(PREVIEW_FRAME_UNIFORMS.byteLength).toBe(FRAME_FLOATS_2D * 4);
+        expect(PREVIEW_FRAME_UNIFORMS.byteLength).toBe(4624);
+    });
+
+    it('draws through the shader a game with no 2D lights draws with, so a picture is never dark', () => {
+        const { wgsl } = buildPreviewHarness('fn effect(color: vec4f, uv: vec2f) -> vec4f { return color; }', {});
+        expect(wgsl).toContain('illuminate2d(');
+        expect(wgsl).not.toContain('u.lighting2d[');
     });
 
     it('fills the picture the right way up: uv (0, 0) at the top left', () => {
@@ -64,12 +74,12 @@ describe('the harness a node picture draws through', () => {
         expect(corners[3]).toEqual({ clip: [1, -1], uv: [1, 1] });
     });
 
-    it('compiles a picture to exactly what a sprite with that material compiles to', () => {
+    it('compiles a picture to exactly what a sprite with that material compiles to, in a game with no 2D lights', () => {
         const preview = compilePreviewShader(composerUv());
         const harness = buildPreviewHarness(preview.fragment, {});
 
-        expect(harness.wgsl).toBe(buildSpriteMaterialShader(preview.fragment, {}));
-        expect(harness.wgsl.startsWith(SPRITE_SHADER_HEAD)).toBe(true);
+        expect(harness.wgsl).toBe(withoutLights2d(buildSpriteMaterialShader(preview.fragment, {})));
+        expect(harness.wgsl.startsWith(withoutLights2d(SPRITE_SHADER_HEAD))).toBe(true);
     });
 
     it('writes the time, the size and the parameters where the shader reads them', () => {

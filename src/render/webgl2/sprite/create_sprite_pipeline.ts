@@ -1,4 +1,6 @@
 import { compileProgram } from '../utils/compile_program';
+import { withoutLights2d } from '../../shared/lighting_2d_shader';
+import type { TSpriteVariant } from './types/t_sprite_pipeline';
 import { createWhiteTexture } from '../texture';
 import { SPRITE_BATCH_DISTANCE_FIELD_FRAGMENT_SHADER, SPRITE_BATCH_FRAGMENT_SHADER, SPRITE_BATCH_VERTEX_SHADER } from './batch_shader';
 import { SPRITE_TEXTURE_SLOTS } from '../../shared/sprite_batch';
@@ -74,12 +76,21 @@ export const createSpritePipeline = (
         }
         return built;
     };
-    const distanceFieldProgram = programFor(SPRITE_DISTANCE_FIELD_FRAGMENT_SHADER, 'sprite distance field');
     // Compile every built-in variant at boot (and on restore), never from a draw. A compiler or
-    // driver error is reported here once, before the game starts drawing.
-    const batchDistanceFieldProgram = programFor(SPRITE_BATCH_DISTANCE_FIELD_FRAGMENT_SHADER, 'sprite batch distance field', true);
-    const batchProgram = programFor(SPRITE_BATCH_FRAGMENT_SHADER, 'sprite batch', true);
-    const program = programFor(SPRITE_FRAGMENT_SHADER, 'sprite');
+    // driver error is reported here once, before the game starts drawing. Each twice: lit by the
+    // 2D lights, and for a pass with none, where reading them would be work for nothing per pixel.
+    const variant = (lit: boolean): TSpriteVariant => {
+        const name = lit ? 'sprite' : 'sprite unlit';
+        const shader = (code: string) => (lit ? code : withoutLights2d(code));
+        return {
+            distanceFieldProgram: programFor(shader(SPRITE_DISTANCE_FIELD_FRAGMENT_SHADER), `${name} distance field`),
+            batchDistanceFieldProgram: programFor(shader(SPRITE_BATCH_DISTANCE_FIELD_FRAGMENT_SHADER), `${name} batch distance field`, true),
+            batchProgram: programFor(shader(SPRITE_BATCH_FRAGMENT_SHADER), `${name} batch`, true),
+            program: programFor(shader(SPRITE_FRAGMENT_SHADER), name),
+        };
+    };
+    const lit = variant(true);
+    const unlit = variant(false);
     gl.bindBufferBase(gl.UNIFORM_BUFFER, FRAME_UNIFORMS_BINDING, frameUniforms);
 
     const vao = gl.createVertexArray();
@@ -111,12 +122,10 @@ export const createSpritePipeline = (
     gl.bindVertexArray(null);
 
     return {
-        batchProgram,
-        batchDistanceFieldProgram,
+        lit,
+        unlit,
         materials: createSpriteMaterials(gl),
         distanceFieldMaterials: createSpriteMaterials(gl, buildSpriteDistanceFieldMaterialShaderGlsl),
-        program,
-        distanceFieldProgram,
         vao,
         quad,
         instances,

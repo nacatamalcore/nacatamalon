@@ -32,6 +32,7 @@ export const drawTilemapLayer = (
     height: number,
     mask: { program: WebGLProgram; uniforms: TTilemapPipeline['uniforms'] } | null = null,
     cameras: readonly TDrawCamera2d[] | null = null,
+    lit = true,
 ): void => {
     // Not drawn until the sheet is there, exactly like a sprite.
     const texture = layer.texture;
@@ -51,15 +52,16 @@ export const drawTilemapLayer = (
     if (material !== null && material.fragment !== null) {
         tilemaps.materials.warnIfWgpuOnly(material);
         if (material.fragmentGlsl !== null) {
-            const compiled = tilemaps.materials.get(material);
+            const compiled = tilemaps.materials.get(material, lit);
             if (!compiled.failed && compiled.program !== null) {
                 effect = compiled;
             }
         }
     }
-    const places = mask !== null ? mask.uniforms : effect !== null ? effect.locations : tilemaps.uniforms;
+    const plain = lit ? tilemaps : tilemaps.unlit;
+    const places = mask !== null ? mask.uniforms : effect !== null ? effect.locations : plain.uniforms;
 
-    gl.useProgram(mask !== null ? mask.program : effect !== null ? effect.program! : tilemaps.program);
+    gl.useProgram(mask !== null ? mask.program : effect !== null ? effect.program! : plain.program);
     gl.bindVertexArray(tilemaps.vao);
     gl.enable(gl.BLEND);
     gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);

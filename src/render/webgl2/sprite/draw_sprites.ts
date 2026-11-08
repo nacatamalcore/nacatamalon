@@ -8,14 +8,14 @@ import type { TSpriteRun } from './types/t_sprite_run';
 /**
  * Gets everything ready to draw sprites. WebGL2 is one big state machine, so this is set again every
  * time rather than trusted to be as the last draw left it: a map's layer in between changed all of
- * it.
+ * it. `lit` is whether the pass has any 2D lights: with none, the program that does not read them.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const beginSprites = (gl: WebGL2RenderingContext, sprites: TSpritePipeline): void => {
-    gl.useProgram(sprites.program);
+export const beginSprites = (gl: WebGL2RenderingContext, sprites: TSpritePipeline, lit: boolean): void => {
+    gl.useProgram((lit ? sprites.lit : sprites.unlit).program);
     gl.bindVertexArray(sprites.vao);
     // Straight alpha, the same blend as the WebGPU pipeline.
     gl.enable(gl.BLEND);
@@ -52,6 +52,7 @@ export const drawSpriteRun = (
     time: number,
     width: number,
     height: number,
+    lit: boolean,
 ): boolean => {
     let ordinary = true;
     let custom = false;
@@ -62,7 +63,7 @@ export const drawSpriteRun = (
         materials.warnIfWgpuOnly(material);
 
         if (material.fragmentGlsl !== null) {
-            const compiled = materials.get(material);
+            const compiled = materials.get(material, lit);
             if (!compiled.failed && compiled.program !== null) {
                 gl.useProgram(compiled.program);
                 // Its maps are read as its sheet is, when they say nothing.
@@ -80,9 +81,10 @@ export const drawSpriteRun = (
     if (ordinary && (run.distanceField || batch)) {
         // Everything but the program is what plain sprites use, so only that is swapped, and the
         // next plain batch is told to set it back.
+        const programs = lit ? sprites.lit : sprites.unlit;
         gl.useProgram(batch
-            ? (run.distanceField ? sprites.batchDistanceFieldProgram : sprites.batchProgram)
-            : sprites.distanceFieldProgram);
+            ? (run.distanceField ? programs.batchDistanceFieldProgram : programs.batchProgram)
+            : programs.distanceFieldProgram);
         ordinary = false;
     }
 

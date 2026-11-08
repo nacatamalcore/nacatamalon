@@ -1,6 +1,7 @@
 import { buildSpriteMaterialShader } from '../render/webgpu/material/sprite_material_shader';
 import { SPRITE_QUAD, VERTEX_BUFFERS } from '../render/webgpu/sprite/create_sprite_pipeline';
-import { MAX_VIEWS } from '../render/webgpu/sprite/write_sprite_instance';
+import { FRAME_FLOATS_2D, fillLighting2d } from '../render/shared/lighting_2d';
+import { withoutLights2d } from '../render/shared/lighting_2d_shader';
 import { buildUniformLayout, writeUniformValues } from '../render/shared/material_uniforms';
 import type { TUniformSignature, TUniformValues } from '../materials/types/t_uniforms';
 
@@ -112,8 +113,10 @@ export const PREVIEW_VERTEX_BUFFERS: readonly TPreviewVertexLayout[] =
  */
 export const PREVIEW_FRAME_UNIFORMS: Float32Array = (() => {
     // The resolution, two numbers of padding, then the views, four numbers each: a position, a turn
-    // and a zoom. Slot 0 is the screen, which does not move, turn or magnify.
-    const data = new Float32Array(4 + MAX_VIEWS * 4);
+    // and a zoom. Slot 0 is the screen, which does not move, turn or magnify. After them each view's
+    // 2D lights, which a picture has none of: the shader declares the whole block, so it is all here.
+    const data = new Float32Array(FRAME_FLOATS_2D);
+    fillLighting2d(data, []);
     data.set([1, 1], 0);
     data[4 + 3] = 1;
     return data;
@@ -169,7 +172,8 @@ export const PREVIEW_INSTANCE: Float32Array = new Float32Array([
 export const buildPreviewHarness = (fragment: string, sig: TUniformSignature): TPreviewHarness => {
     const layout = buildUniformLayout(sig);
     return {
-        wgsl: buildSpriteMaterialShader(fragment, sig),
+        // A picture has no 2D lights, so it is drawn the way a game with none draws its sprites.
+        wgsl: withoutLights2d(buildSpriteMaterialShader(fragment, sig)),
         materialFloatCount: layout.floatCount,
         writeMaterialUniforms: (data, values, time, width, height) =>
             writeUniformValues(data, layout, values, time, width, height),

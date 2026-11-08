@@ -13,7 +13,14 @@ export type TTilemapPipeline = {
      * The effects this game has compiled for map layers.
      */
     materials: TFlatMaterials;
+    /**
+     * How a layer is drawn in a pass with 2D lights in it.
+     */
     pipeline: GPURenderPipeline;
+    /**
+     * The same in a pass with none, which does not read them.
+     */
+    unlitPipeline: GPURenderPipeline;
     /**
      * Binds the shared frame uniforms, the same ones the sprites look through.
      */

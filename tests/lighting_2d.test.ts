@@ -19,6 +19,18 @@ import { createTestGame, startTestScene } from './helpers/test_game';
 import { PARTICLES_SHADER } from '../src/render/webgpu/particles/particles_shader';
 import { PARTICLES_3D_SHADER } from '../src/render/webgpu/particles/particles_3d_shader';
 import { PARTICLES_3D_FRAGMENT_SHADER, PARTICLES_FRAGMENT_SHADER, PARTICLES_VERTEX_SHADER } from '../src/render/webgl2/particles/particles_shader';
+import { withoutLights2d } from '../src/render/shared/lighting_2d_shader';
+import { anyLit2d } from '../src/render/shared/lighting_2d';
+import { SPRITE_BATCH_DISTANCE_FIELD_SHADER, SPRITE_BATCH_SHADER } from '../src/render/webgpu/sprite/batch_shader';
+import { TILEMAP_SHADER } from '../src/render/webgpu/tilemap/tilemap_shader';
+import { buildSpriteDistanceFieldMaterialShader, buildSpriteMaterialShader } from '../src/render/webgpu/material/sprite_material_shader';
+import { buildTilemapMaterialShader } from '../src/render/webgpu/material/tilemap_material_shader';
+import { SPRITE_DISTANCE_FIELD_FRAGMENT_SHADER, SPRITE_FRAGMENT_SHADER } from '../src/render/webgl2/sprite/sprite_shader';
+import { SPRITE_BATCH_DISTANCE_FIELD_FRAGMENT_SHADER, SPRITE_BATCH_FRAGMENT_SHADER } from '../src/render/webgl2/sprite/batch_shader';
+import { TILEMAP_FRAGMENT_SHADER } from '../src/render/webgl2/tilemap/tilemap_shader';
+import { buildSpriteMaterialShaderGlsl } from '../src/render/webgl2/material/sprite_material_shader';
+import { buildTilemapMaterialShaderGlsl } from '../src/render/webgl2/material/tilemap_material_shader';
+import { createSpriteMaterials } from '../src/render/webgl2/material/sprite_materials';
 import type { TFrameContext } from '../src/render';
 
 const level = (body: () => void) => {
@@ -278,3 +290,72 @@ describe('2D lighting', () => {
         expect(rebuilt.children.some(box => box.unlit2d)).toBe(true);
     });
 });
+
+describe('2D lighting, a pass with none', () => {
+    it('has a twin of every flat shader that reads none of the lights, on both cards', () => {
+        const wgsl = [
+            SPRITE_BATCH_SHADER, SPRITE_BATCH_DISTANCE_FIELD_SHADER, TILEMAP_SHADER, PARTICLES_SHADER,
+            buildSpriteMaterialShader('fn effect(color: vec4f, uv: vec2f) -> vec4f { return color; }', {}, []),
+            buildSpriteDistanceFieldMaterialShader('fn effect(color: vec4f, uv: vec2f) -> vec4f { return color; }', {}, []),
+            buildTilemapMaterialShader('fn effect(color: vec4f, uv: vec2f) -> vec4f { return color; }', {}, []),
+        ];
+        const glsl = [
+            SPRITE_FRAGMENT_SHADER, SPRITE_DISTANCE_FIELD_FRAGMENT_SHADER, SPRITE_BATCH_FRAGMENT_SHADER,
+            SPRITE_BATCH_DISTANCE_FIELD_FRAGMENT_SHADER, TILEMAP_FRAGMENT_SHADER, PARTICLES_FRAGMENT_SHADER,
+            buildSpriteMaterialShaderGlsl('vec4 effect(vec4 color, vec2 uv) { return color; }', {}, []).fragment,
+            buildTilemapMaterialShaderGlsl('vec4 effect(vec4 color, vec2 uv) { return color; }', {}, []).fragment,
+        ];
+        for (const lit of [...wgsl, ...glsl]) {
+            expect(lit).toContain('u.lighting2d[view]');
+            const unlit = withoutLights2d(lit);
+            expect(unlit).not.toContain('u.lighting2d[');
+            expect(unlit).toContain('illuminate2d(');
+            // Everything else is the same text: the two cannot drift apart.
+            expect(unlit.length).toBeLessThan(lit.length);
+        }
+        // A shader with no lights in it, a 3D particle's, comes back as it was.
+        expect(withoutLights2d(PARTICLES_3D_FRAGMENT_SHADER)).toBe(PARTICLES_3D_FRAGMENT_SHADER);
+    });
+
+    it('draws a pass lit only when one of the views it draws through has 2D lights', () => {
+        const view = { transform: { x: 0, y: 0, rotation: 0 }, zoom: 1 };
+        const lit = { ...view, lighting2d: { ambient: { r: 0, g: 0, b: 0, a: 1 }, lights: [] } };
+        expect(anyLit2d([])).toBe(false);
+        expect(anyLit2d([view, view])).toBe(false);
+        expect(anyLit2d([view, lit])).toBe(true);
+        // Past the fifteen views a frame has, a camera is drawn through the screen, never lit.
+        expect(anyLit2d([...Array.from({ length: 15 }, () => view), lit])).toBe(false);
+    });
+
+    it('compiles both of an effect at once, the first time it is seen, and says what is wrong with it once', () => {
+        let links = 0;
+        const fragments: string[] = [];
+        const gl = new Proxy({
+            createShader: () => ({}),
+            shaderSource: (_shader: unknown, source: string) => fragments.push(source),
+            getShaderParameter: () => true,
+            getProgramParameter: () => true,
+            linkProgram: () => links++,
+        }, { get: (target, name: string) => name in target ? target[name as keyof typeof target] : () => ({}) }) as unknown as WebGL2RenderingContext;
+        const materials = createSpriteMaterials(gl);
+        const material = { id: 'm', fragment: 'x', fragmentGlsl: 'vec4 effect(vec4 color, vec2 uv) { return color; }' } as never;
+        const unlit = materials.get(material, false);
+        expect(links).toBe(2);
+        expect(fragments.filter(source => source.includes('u.lighting2d[view]'))).toHaveLength(1);
+        const lit = materials.get(material, true);
+        expect(links).toBe(2);
+        expect(lit).not.toBe(unlit);
+        expect(materials.get(material, false)).toBe(unlit);
+
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        try {
+            const broken = new Proxy({ linkProgram: () => {}, getProgramParameter: () => false, getShaderParameter: () => false, getShaderInfoLog: () => 'no' },
+                { get: (target, name: string) => name in target ? target[name as keyof typeof target] : () => ({}) }) as unknown as WebGL2RenderingContext;
+            const failing = createSpriteMaterials(broken);
+            expect(failing.get(material, false).failed).toBe(true);
+            expect(failing.get(material, true).failed).toBe(true);
+            expect(warn.mock.calls).toHaveLength(1);
+        } finally { warn.mockRestore(); }
+    });
+});
+

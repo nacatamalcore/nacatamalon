@@ -6,6 +6,7 @@ import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
 import { toGpuTexture } from '../texture';
 import { FLAT_DEPTH } from '../frame/depth';
 import { ADDITIVE_BLEND, ALPHA_BLEND } from '../frame/blend';
+import { withoutLights2d } from '../../shared/lighting_2d_shader';
 import type { TDrawShader } from '../../interface/draw/t_draw_material';
 import type { TUniformLayout } from '../../shared/material_uniforms';
 import type { TTextureWrap, TUniformSignature, TUniformValues } from '../../../materials';
@@ -190,7 +191,9 @@ export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) 
         capacity = size;
     };
 
-    const build = (material: TDrawShader, additive: boolean): TCompiled => {
+    // `said` is shared by the two compiles of one effect, lit and not, so what is wrong with it is
+    // said once and not twice: they differ in a line the effect never touches.
+    const build = (material: TDrawShader, additive: boolean, lit: boolean, said: { done: boolean }): TCompiled => {
         const layout = buildUniformLayout(material.uniformSig ?? {});
         const source = material.fragment as string;
         const mapNames = mapNamesOf(source);
@@ -200,6 +203,10 @@ export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) 
             return { pipeline: null, layout, failed: true, pending: false, mapNames };
         }
         if (mapNames.length > MAX_MATERIAL_MAPS) {
+            if (said.done) {
+                return { pipeline: null, layout, failed: true, pending: false, mapNames };
+            }
+            said.done = true;
             console.warn(
                 `[NacatamalOn] the material "${material.name ?? 'flat material'}" reads ${mapNames.length} maps ` +
                 `(${mapNames.join(', ')}) and a material has ${MAX_MATERIAL_MAPS}. It is drawing with the built-in shader instead.`,
@@ -215,6 +222,13 @@ export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) 
             entry.failed = true;
             entry.pending = false;
             entry.pipeline = null;
+            // The lit one says it, with its lines: the two compile apart, and the unlit one's lines
+            // would be off by the lights it leaves out. They differ only in engine code, so when one
+            // fails both do.
+            if (!lit || said.done) {
+                return;
+            }
+            said.done = true;
             console.warn(
                 `[NacatamalOn] the material "${material.name ?? 'flat material'}" did not compile. ` +
                 'It is drawing with the built-in shader instead.',
@@ -224,9 +238,10 @@ export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) 
 
         // Caught here: what is wrong is said once below, in this engine's words and with its lines.
         device.pushErrorScope('validation');
+        const code = kind.build(source, material.uniformSig ?? {}, mapNames);
         const module = device.createShaderModule({
-            label: `flat material ${material.name ?? material.id}`,
-            code: kind.build(source, material.uniformSig ?? {}, mapNames),
+            label: `flat material ${material.name ?? material.id}${lit ? '' : ' unlit'}`,
+            code: lit ? code : withoutLights2d(code),
         });
         void device.popErrorScope();
 
@@ -234,7 +249,7 @@ export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) 
         // reported later. So the pipeline is built and checked apart from the frame, and only used
         // once the card says it is good: used before, a broken one takes the whole pass with it.
         void device.createRenderPipelineAsync({
-            label: `flat material pipeline ${material.name ?? material.id}`,
+            label: `flat material pipeline ${material.name ?? material.id}${lit ? '' : ' unlit'}`,
             layout: pipelineLayout,
             vertex: { module, entryPoint: 'vs', buffers: kind.vertexBuffers },
             fragment: {
@@ -281,13 +296,21 @@ export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) 
          *
          * How it blends is fixed in the pipeline, so the same effect adding light is a second compile,
          * made the first time a sprite asks for it.
+         *
+         * Lit by the 2D lights or not (`lit`, whether the pass has any) is two compiles too, and both
+         * are made the first time the effect is seen, so a scene that lights up later finds its
+         * effects ready rather than waiting a few frames without them.
          */
-        get: (material: TDrawShader, additive = false): TCompiled => {
+        get: (material: TDrawShader, additive = false, lit = true): TCompiled => {
             const key = `${additive ? '+' : ''}${JSON.stringify(material.uniformSig ?? {})} ${material.fragment ?? ''}`;
-            let entry = compiled.get(key);
+            let entry = compiled.get((lit ? 'lit ' : 'unlit ') + key);
             if (entry === undefined) {
-                entry = build(material, additive);
-                compiled.set(key, entry);
+                const said = { done: false };
+                const litEntry = build(material, additive, true, said);
+                const unlitEntry = build(material, additive, false, said);
+                compiled.set('lit ' + key, litEntry);
+                compiled.set('unlit ' + key, unlitEntry);
+                entry = lit ? litEntry : unlitEntry;
             }
             return entry;
         },

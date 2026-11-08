@@ -2,11 +2,11 @@ import type { TSpriteRun } from './t_sprite_run';
 import type { TFlatMaterials } from '../../material/flat_materials';
 
 /**
- * Everything the sprite pipeline creates once and reuses every frame.
+ * The four built-in sprite pipelines, lit by the 2D lights or not.
  *
  * @internal
  */
-export type TSpritePipeline = {
+export type TSpriteVariant = {
     /**
      * How the GPU reads the quad and the per-sprite data, and which shader runs.
      */
@@ -21,6 +21,23 @@ export type TSpritePipeline = {
      */
     additivePipeline: GPURenderPipeline;
     additiveDistanceFieldPipeline: GPURenderPipeline;
+};
+
+/**
+ * Everything the sprite pipeline creates once and reuses every frame.
+ *
+ * @internal
+ */
+export type TSpritePipeline = {
+    /**
+     * The pipelines for a pass with 2D lights in it.
+     */
+    lit: TSpriteVariant;
+    /**
+     * The same for a pass with none, which do not read them: what a game that never lights its
+     * world draws with.
+     */
+    unlit: TSpriteVariant;
     /**
      * The first two groups, spelled out rather than taken from the pipeline.
      *

@@ -304,10 +304,8 @@ const nothing = (): unknown => new Proxy(() => ({}), { get: () => nothing() });
 Object.assign(globalThis, { GPUBufferUsage: { VERTEX: 32, COPY_DST: 8 } });
 
 const webgpuPipeline = (): TWebGPUSpritePipeline => ({
-    pipeline: nothing() as GPURenderPipeline,
-    distanceFieldPipeline: nothing() as GPURenderPipeline,
-    additivePipeline: nothing() as GPURenderPipeline,
-    additiveDistanceFieldPipeline: nothing() as GPURenderPipeline,
+    lit: { pipeline: nothing() as GPURenderPipeline, distanceFieldPipeline: nothing() as GPURenderPipeline, additivePipeline: nothing() as GPURenderPipeline, additiveDistanceFieldPipeline: nothing() as GPURenderPipeline },
+    unlit: { pipeline: nothing() as GPURenderPipeline, distanceFieldPipeline: nothing() as GPURenderPipeline, additivePipeline: nothing() as GPURenderPipeline, additiveDistanceFieldPipeline: nothing() as GPURenderPipeline },
     layouts: nothing() as TWebGPUSpritePipeline['layouts'],
     materials: nothing() as TWebGPUSpritePipeline['materials'],
     distanceFieldMaterials: nothing() as TWebGPUSpritePipeline['materials'],
@@ -329,10 +327,8 @@ const webgpuPipeline = (): TWebGPUSpritePipeline => ({
 const webgl2Pipeline = (): TWebGL2SpritePipeline => ({
     materials: nothing() as TWebGL2SpritePipeline['materials'],
     distanceFieldMaterials: nothing() as TWebGL2SpritePipeline['materials'],
-    program: {} as WebGLProgram,
-    distanceFieldProgram: {} as WebGLProgram,
-    batchProgram: {} as WebGLProgram,
-    batchDistanceFieldProgram: {} as WebGLProgram,
+    lit: { program: {} as WebGLProgram, distanceFieldProgram: {} as WebGLProgram, batchProgram: {} as WebGLProgram, batchDistanceFieldProgram: {} as WebGLProgram },
+    unlit: { program: {} as WebGLProgram, distanceFieldProgram: {} as WebGLProgram, batchProgram: {} as WebGLProgram, batchDistanceFieldProgram: {} as WebGLProgram },
     vao: {} as WebGLVertexArrayObject,
     quad: {} as WebGLBuffer,
     instances: {} as WebGLBuffer,

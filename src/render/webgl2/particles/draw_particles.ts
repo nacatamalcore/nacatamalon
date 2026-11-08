@@ -20,6 +20,7 @@ const drawOneEmitter = (
     particles: TParticlesPipeline,
     sprites: TSpritePipeline,
     item: TDrawParticles,
+    lit: boolean,
 ): void => {
     if (item.count === 0) {
         return;
@@ -30,7 +31,7 @@ const drawOneEmitter = (
     const ready = texture !== null && texture.status === 'ready' && texture.gpu !== null;
     const smooth = item.smooth ?? sprites.defaultSmooth;
 
-    gl.useProgram(particles.program);
+    gl.useProgram(lit ? particles.program : particles.unlitProgram);
     gl.bindVertexArray(particles.vao);
     particles.write(item.instances, item.count);
 
@@ -122,7 +123,7 @@ const drawOneEmitter3d = (
  * Draws an emitter and then every effect its particles set off, each in a call of its own.
  *
  * The children are drawn even when the emitter has nothing left of its own: a rocket that has burnt
- * out still has its sparks in the air.
+ * out still has its sparks in the air. `lit` is whether the pass has any 2D lights.
  *
  * @internal
  * @since 1.0.0
@@ -133,10 +134,11 @@ export const drawParticles = (
     particles: TParticlesPipeline,
     sprites: TSpritePipeline,
     item: TDrawParticles,
+    lit: boolean,
 ): void => {
-    drawOneEmitter(gl, particles, sprites, item);
+    drawOneEmitter(gl, particles, sprites, item, lit);
     for (const child of item.children ?? []) {
-        drawParticles(gl, particles, sprites, child);
+        drawParticles(gl, particles, sprites, child, lit);
     }
 };
 

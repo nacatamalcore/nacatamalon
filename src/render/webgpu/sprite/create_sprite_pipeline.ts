@@ -6,6 +6,8 @@ import type { TSpritePipeline } from './types/t_sprite_pipeline';
 import { INITIAL_SPRITE_CAPACITY, SPRITE_FLOATS } from './write_sprite_instance';
 import { FLAT_DEPTH } from '../frame/depth';
 import { ADDITIVE_BLEND, ALPHA_BLEND } from '../frame/blend';
+import { withoutLights2d } from '../../shared/lighting_2d_shader';
+import type { TSpriteVariant } from './types/t_sprite_pipeline';
 
 /**
  * How the corners and the per-sprite data are read.
@@ -128,12 +130,20 @@ export const createSpritePipeline = (
             multisample: { count: samples },
         });
     };
-    const plain = device.createShaderModule({ label: 'sprite shader', code: SPRITE_BATCH_SHADER });
-    const field = device.createShaderModule({ label: 'sprite distance field shader', code: SPRITE_BATCH_DISTANCE_FIELD_SHADER });
-    const pipeline = pipelineFor('sprite', plain, ALPHA_BLEND);
-    const distanceFieldPipeline = pipelineFor('sprite distance field', field, ALPHA_BLEND);
-    const additivePipeline = pipelineFor('sprite additive', plain, ADDITIVE_BLEND);
-    const additiveDistanceFieldPipeline = pipelineFor('sprite distance field additive', field, ADDITIVE_BLEND);
+    // And each of the four twice: lit by the 2D lights, and for a pass with none, where reading
+    // them would be work for nothing on every pixel.
+    const variant = (lit: boolean): TSpriteVariant => {
+        const name = lit ? 'sprite' : 'sprite unlit';
+        const shader = (code: string) => (lit ? code : withoutLights2d(code));
+        const plain = device.createShaderModule({ label: `${name} shader`, code: shader(SPRITE_BATCH_SHADER) });
+        const field = device.createShaderModule({ label: `${name} distance field shader`, code: shader(SPRITE_BATCH_DISTANCE_FIELD_SHADER) });
+        return {
+            pipeline: pipelineFor(name, plain, ALPHA_BLEND),
+            distanceFieldPipeline: pipelineFor(`${name} distance field`, field, ALPHA_BLEND),
+            additivePipeline: pipelineFor(`${name} additive`, plain, ADDITIVE_BLEND),
+            additiveDistanceFieldPipeline: pipelineFor(`${name} distance field additive`, field, ADDITIVE_BLEND),
+        };
+    };
 
 
     // Buffers
@@ -179,10 +189,8 @@ export const createSpritePipeline = (
     });
 
     return {
-        pipeline,
-        distanceFieldPipeline,
-        additivePipeline,
-        additiveDistanceFieldPipeline,
+        lit: variant(true),
+        unlit: variant(false),
         layouts: { frame: frameLayout, texture: textureLayout },
         materials: createFlatMaterials(device, {
             label: 'sprite',

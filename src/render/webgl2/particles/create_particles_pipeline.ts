@@ -1,4 +1,5 @@
 import { compileProgram } from '../utils/compile_program';
+import { withoutLights2d } from '../../shared/lighting_2d_shader';
 import { FRAME_UNIFORMS_BINDING } from '../bindings';
 import { PARTICLE_3D_OFFSET, PARTICLE_FLOATS, PARTICLE_OFFSET } from '../../shared/particle_instance';
 import { PARTICLES_3D_FRAGMENT_SHADER, PARTICLES_3D_VERTEX_SHADER, PARTICLES_FRAGMENT_SHADER, PARTICLES_VERTEX_SHADER } from './particles_shader';
@@ -26,14 +27,20 @@ const TEXTURE_UNIT = 0;
  * @author Francisco Pereira Alvarado
  */
 export const createParticlesPipeline = (gl: WebGL2RenderingContext, quad: WebGLBuffer) => {
-    const program = compileProgram(gl, PARTICLES_VERTEX_SHADER, PARTICLES_FRAGMENT_SHADER, 'particles');
-    gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, 'Uniforms'), FRAME_UNIFORMS_BINDING);
-    // A sampler uniform belongs to the program it was compiled into, so that program has to be the
-    // current one while it is written. Getting this wrong is not an error anywhere: it writes into
-    // whichever program happens to be bound, and the picture comes back from the wrong unit.
-    gl.useProgram(program);
-    gl.uniform1i(gl.getUniformLocation(program, 'particleTexture'), TEXTURE_UNIT);
-    gl.useProgram(null);
+    // Twice: lit by the 2D lights, and for a pass with none, which does not read them.
+    const programFor = (lit: boolean): WebGLProgram => {
+        const built = compileProgram(gl, PARTICLES_VERTEX_SHADER, lit ? PARTICLES_FRAGMENT_SHADER : withoutLights2d(PARTICLES_FRAGMENT_SHADER), lit ? 'particles' : 'particles unlit');
+        gl.uniformBlockBinding(built, gl.getUniformBlockIndex(built, 'Uniforms'), FRAME_UNIFORMS_BINDING);
+        // A sampler uniform belongs to the program it was compiled into, so that program has to be the
+        // current one while it is written. Getting this wrong is not an error anywhere: it writes into
+        // whichever program happens to be bound, and the picture comes back from the wrong unit.
+        gl.useProgram(built);
+        gl.uniform1i(gl.getUniformLocation(built, 'particleTexture'), TEXTURE_UNIT);
+        gl.useProgram(null);
+        return built;
+    };
+    const program = programFor(true);
+    const unlitProgram = programFor(false);
 
     // The one for particles in space. Its camera is three plain uniforms rather than a block, set
     // once per emitter, because it is one scene's camera and not a table of them.
@@ -108,6 +115,7 @@ export const createParticlesPipeline = (gl: WebGL2RenderingContext, quad: WebGLB
 
     return {
         program,
+        unlitProgram,
         vao,
 
         /**
@@ -160,6 +168,7 @@ export const createParticlesPipeline = (gl: WebGL2RenderingContext, quad: WebGLB
 
         destroy: (): void => {
             gl.deleteProgram(program);
+            gl.deleteProgram(unlitProgram);
             gl.deleteProgram(program3d);
             gl.deleteBuffer(instances);
             gl.deleteVertexArray(vao);

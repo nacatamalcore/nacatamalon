@@ -22,6 +22,7 @@ const drawOneEmitter = (
     particles: TParticlesPipeline,
     sprites: TSpritePipeline,
     item: TDrawParticles,
+    lit: boolean,
 ): void => {
     if (item.count === 0) {
         return;
@@ -38,7 +39,7 @@ const drawOneEmitter = (
 
     const at = particles.write(item.instances, item.count);
 
-    gpuPass.setPipeline(particles.pipelineFor(item.blend));
+    gpuPass.setPipeline(particles.pipelineFor(item.blend, lit));
     gpuPass.setBindGroup(0, sprites.bindGroup);
     gpuPass.setBindGroup(1, group);
     gpuPass.setVertexBuffer(0, sprites.quad);
@@ -92,7 +93,7 @@ const drawOneEmitter3d = (
  * Draws an emitter and then every effect its particles set off, each in a call of its own.
  *
  * The children are drawn even when the emitter has nothing left of its own: a rocket that has burnt
- * out still has its sparks in the air.
+ * out still has its sparks in the air. `lit` is whether the pass has any 2D lights.
  *
  * @internal
  * @since 1.0.0
@@ -104,10 +105,11 @@ export const drawParticles = (
     particles: TParticlesPipeline,
     sprites: TSpritePipeline,
     item: TDrawParticles,
+    lit: boolean,
 ): void => {
-    drawOneEmitter(device, gpuPass, particles, sprites, item);
+    drawOneEmitter(device, gpuPass, particles, sprites, item, lit);
     for (const child of item.children ?? []) {
-        drawParticles(device, gpuPass, particles, sprites, child);
+        drawParticles(device, gpuPass, particles, sprites, child, lit);
     }
 };
 

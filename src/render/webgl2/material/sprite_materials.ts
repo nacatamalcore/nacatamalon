@@ -1,6 +1,7 @@
 import { buildSpriteMaterialShaderGlsl } from './sprite_material_shader';
 import { buildUniformLayout, MAX_MATERIAL_FLOATS, writeUniformValues } from '../../shared/material_uniforms';
 import { compileProgram } from '../utils/compile_program';
+import { withoutLights2d } from '../../shared/lighting_2d_shader';
 import { MATERIAL_UNIFORMS_BINDING } from './uniform_block';
 import { FRAME_UNIFORMS_BINDING } from '../bindings';
 import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
@@ -64,7 +65,9 @@ export const createSpriteMaterials = (
      */
     let parameters: WebGLBuffer | null = null;
 
-    const build = (material: TDrawShader): TCompiled => {
+    // `said` is shared by the two compiles of one effect, lit by the 2D lights and not, so what is
+    // wrong with it is said once and not twice: they differ in a line the effect never touches.
+    const build = (material: TDrawShader, lit: boolean, said: { done: boolean }): TCompiled => {
         const layout = buildUniformLayout(material.uniformSig ?? {});
         const mapNames = mapNamesOf(material.fragmentGlsl);
         // Too many numbers for its slot. Said once where it was made (`checkParameterRoom`).
@@ -72,6 +75,10 @@ export const createSpriteMaterials = (
             return { program: null, layout, failed: true, mapNames };
         }
         if (mapNames.length > MAX_MATERIAL_MAPS) {
+            if (said.done) {
+                return { program: null, layout, failed: true, mapNames };
+            }
+            said.done = true;
             console.warn(
                 `[NacatamalOn] the material "${material.name ?? 'sprite material'}" reads ${mapNames.length} maps ` +
                 `(${mapNames.join(', ')}) and a material has ${MAX_MATERIAL_MAPS}. It is drawing with the built-in shader instead.`,
@@ -84,8 +91,8 @@ export const createSpriteMaterials = (
             const program = compileProgram(
                 gl,
                 sources.vertex,
-                sources.fragment,
-                `sprite material ${material.name ?? material.id}`,
+                lit ? sources.fragment : withoutLights2d(sources.fragment),
+                `sprite material ${material.name ?? material.id}${lit ? '' : ' unlit'}`,
             );
             gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, 'Uniforms'), FRAME_UNIFORMS_BINDING);
             gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, 'MaterialUniforms'), MATERIAL_UNIFORMS_BINDING);
@@ -99,6 +106,10 @@ export const createSpriteMaterials = (
             gl.useProgram(null);
             return { program, layout, failed: false, mapNames };
         } catch (error) {
+            if (said.done) {
+                return { program: null, layout, failed: true, mapNames };
+            }
+            said.done = true;
             console.warn(
                 `[NacatamalOn] the material "${material.name ?? 'sprite material'}" did not compile on WebGL2. ` +
                 'It is drawing with the built-in shader instead.',
@@ -135,12 +146,18 @@ export const createSpriteMaterials = (
          * A material with no GLSL half never reaches here: the caller checks that first, and the
          * renderer has already said once that the effect is WebGPU only.
          */
-        get: (material: TDrawShader): TCompiled => {
+        get: (material: TDrawShader, lit = true): TCompiled => {
             const key = `${JSON.stringify(material.uniformSig ?? {})} ${material.fragmentGlsl ?? ''}`;
-            let entry = compiled.get(key);
+            let entry = compiled.get((lit ? 'lit ' : 'unlit ') + key);
             if (entry === undefined) {
-                entry = build(material);
-                compiled.set(key, entry);
+                // Both at once, lit by the 2D lights and not, so a scene that lights up later does
+                // not stop to compile in the middle of a frame.
+                const said = { done: false };
+                const litEntry = build(material, true, said);
+                const unlitEntry = build(material, false, said);
+                compiled.set('lit ' + key, litEntry);
+                compiled.set('unlit ' + key, unlitEntry);
+                entry = lit ? litEntry : unlitEntry;
             }
             return entry;
         },

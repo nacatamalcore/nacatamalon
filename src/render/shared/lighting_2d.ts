@@ -97,3 +97,19 @@ export const fillLighting2d = (data: Float32Array, cameras: readonly TDrawCamera
     }
     return LIGHTING_2D_START + views * LIGHTING_2D_FLOATS;
 };
+
+/**
+ * Whether any view a pass draws through has 2D lights: if not, its sprites, maps and particles are
+ * drawn with the shaders that do not read them, and cost what they cost before there were any.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const anyLit2d = (cameras: readonly TDrawCamera2d[]): boolean => {
+    const views = Math.min(15, cameras.length);
+    for (let i = 0; i < views; i++) {
+        if (cameras[i]!.lighting2d !== undefined) return true;
+    }
+    return false;
+};

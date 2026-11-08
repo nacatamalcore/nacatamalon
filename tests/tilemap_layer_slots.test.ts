@@ -44,6 +44,7 @@ const pipeline = (): TTilemapPipeline => {
         layouts: { frame: {}, texture: {}, layer: {} } as TTilemapPipeline['layouts'],
         materials: {} as TTilemapPipeline['materials'],
         pipeline: {} as GPURenderPipeline,
+        unlitPipeline: {} as GPURenderPipeline,
         frameBindGroup: {} as GPUBindGroup,
         textureBindGroups: new WeakMap(),
         samplers: { nearest: {} as GPUSampler, linear: {} as GPUSampler },

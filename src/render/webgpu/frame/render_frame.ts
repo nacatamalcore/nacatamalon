@@ -3,6 +3,7 @@ import { drawTilemapLayer, reserveLayerSlots } from '../tilemap/draw_tilemaps';
 import { toGpuTexture } from '../texture';
 import { endSpriteFrame, writeSpriteInstances } from '../sprite/write_sprite_instance';
 import { writeFrameUniforms } from './write_frame_uniforms';
+import { anyLit2d } from '../../shared/lighting_2d';
 import { drawParticles, drawParticles3d } from '../particles/draw_particles';
 import { countDrawn } from '../../shared/count_drawn';
 import { createParticlesPipeline } from '../particles/create_particles_pipeline';
@@ -273,6 +274,8 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         // thing to split when a second one (split screen, a capture) needs its own cameras.
         // Not split: each pass is submitted on its own instead, at the end of this loop.
         writeFrameUniforms(gpu, width, height, drawn.cameras ?? []);
+        // With no 2D lights in any of its views, the pass draws with the shaders that do not read them.
+        const lit = anyLit2d(drawn.cameras ?? []);
 
         const drawables = drawn.drawables ?? [];
         const cameraIndex = drawn.cameraIndex ?? [];
@@ -407,7 +410,7 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
                 continue;
             }
             if (item.type === 'particles') {
-                drawParticles(gpu.device, gpuPass, gpu.particles!, gpu.sprites, item);
+                drawParticles(gpu.device, gpuPass, gpu.particles!, gpu.sprites, item, lit);
                 // Its pipeline left none of the sprite state set.
                 spritesReady = false;
                 continue;
@@ -427,7 +430,7 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
                 // A mask's shape drawn as a layer writes the stencil instead of colour.
                 const writes = state !== null && state.write !== 'none' && state.write !== 'reset' ? state : null;
                 drawTilemapLayer(gpu.device, gpuPass, gpu.tilemaps, item, cameraIndex[i] ?? -1, layerSlot, ctx.time, width, height,
-                    writes === null ? null : gpu.masks!.tilemap(writes.channel, writes.write as 'add' | 'sub'), drawn.cameras ?? []);
+                    writes === null ? null : gpu.masks!.tilemap(writes.channel, writes.write as 'add' | 'sub'), drawn.cameras ?? [], lit);
                 layerSlot++;
                 // The layer's pipeline left none of the sprite state set.
                 spritesReady = false;
@@ -449,11 +452,11 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
                 continue;
             }
             if (!spritesReady) {
-                beginSprites(gpuPass, gpu.sprites);
+                beginSprites(gpuPass, gpu.sprites, lit);
                 spritesReady = true;
             }
             spritesReady = drawSpriteRun(
-                gpuPass, gpu.sprites, opened, ctx.time, width, height,
+                gpuPass, gpu.sprites, opened, ctx.time, width, height, lit,
             );
             run++;
         }

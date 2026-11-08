@@ -8,14 +8,15 @@ import type { TSpriteRun } from './types/t_sprite_run';
  * own and left none of this set.
  *
  * The slot numbers match the shader: group 0 is the resolution and the views, group 1 is the sheet
- * (changed per batch), buffer 0 is the quad and buffer 1 is the per-sprite data.
+ * (changed per batch), buffer 0 is the quad and buffer 1 is the per-sprite data. `lit` is whether the
+ * pass has any 2D lights: with none, the pipeline that does not read them.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const beginSprites = (gpuPass: GPURenderPassEncoder, sprites: TSpritePipeline): void => {
-    gpuPass.setPipeline(sprites.pipeline);
+export const beginSprites = (gpuPass: GPURenderPassEncoder, sprites: TSpritePipeline, lit: boolean): void => {
+    gpuPass.setPipeline((lit ? sprites.lit : sprites.unlit).pipeline);
     gpuPass.setBindGroup(0, sprites.bindGroup);
     gpuPass.setVertexBuffer(0, sprites.quad);
     gpuPass.setVertexBuffer(1, sprites.instances);
@@ -46,11 +47,12 @@ export const drawSpriteRun = (
     time: number,
     width: number,
     height: number,
+    lit: boolean,
 ): boolean => {
     const material = run.material;
     const materials = run.distanceField ? sprites.distanceFieldMaterials : sprites.materials;
     if (material !== null && material.fragment !== null) {
-        const compiled = materials.get(material, run.additive);
+        const compiled = materials.get(material, run.additive, lit);
         // Not drawn while its effect is still being compiled, as a sprite is not drawn until its
         // sheet is there. Nothing was set, but the next plain batch is told to set its state anyway.
         if (compiled.pending) {
@@ -81,9 +83,10 @@ export const drawSpriteRun = (
     if (run.distanceField || run.additive) {
         // Everything but the pipeline is what the plain sprites use, so only that is swapped, and
         // the next plain batch is told to set it back.
+        const pipelines = lit ? sprites.lit : sprites.unlit;
         gpuPass.setPipeline(run.additive
-            ? (run.distanceField ? sprites.additiveDistanceFieldPipeline : sprites.additivePipeline)
-            : sprites.distanceFieldPipeline);
+            ? (run.distanceField ? pipelines.additiveDistanceFieldPipeline : pipelines.additivePipeline)
+            : pipelines.distanceFieldPipeline);
         gpuPass.setBindGroup(0, sprites.bindGroup);
         gpuPass.setBindGroup(1, run.bindGroup);
         gpuPass.setVertexBuffer(0, sprites.quad);

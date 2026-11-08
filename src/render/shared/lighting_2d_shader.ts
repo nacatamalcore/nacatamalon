@@ -90,3 +90,34 @@ layout(std140) uniform Uniforms {
     Lighting2d lighting2d[16];
 } u;
 `;
+
+/**
+ * `illuminate2d` for a pass with no 2D lights: the colour as it came. The frame block is the same, but
+ * nothing in it is read, so a game that never lights its world pays nothing per pixel for the lights.
+ */
+const UNLIT_2D_WGSL = `
+fn illuminate2d(color: vec4f, pixel: vec2f, view: u32) -> vec4f {
+    return color;
+}
+`;
+
+/**
+ * The GLSL twin of `UNLIT_2D_WGSL`.
+ */
+const UNLIT_2D_GLSL = `
+vec4 illuminate2d(vec4 color, vec2 pixel, int view) {
+    return color;
+}
+`;
+
+/**
+ * The same flat shader for a pass that has no 2D lights: its `illuminate2d` handed the colour back as
+ * it came. Every flat shader is written once, lit, and this is the other one, so the two cannot drift
+ * apart. A shader that does not light (one of the masks) comes back as it was.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const withoutLights2d = (code: string): string =>
+    code.replace(LIGHTING_2D_WGSL, UNLIT_2D_WGSL).replace(LIGHTING_2D_GLSL, UNLIT_2D_GLSL);

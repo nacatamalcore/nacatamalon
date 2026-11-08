@@ -1,6 +1,28 @@
 import type { TSpriteRun } from './t_sprite_run';
 
 /**
+ * The four built-in sprite programs, lit by the 2D lights or not.
+ *
+ * @internal
+ */
+export type TSpriteVariant = {
+    /**
+     * The linked sprite shader.
+     */
+    program: WebGLProgram;
+    /**
+     * The same corners, ending in the distance-field read: for the characters of a text in a vector font.
+     */
+    distanceFieldProgram: WebGLProgram;
+    /**
+     * Several pictures in one run, compiled at boot alongside the single-picture programs.
+     */
+    batchProgram: WebGLProgram;
+    /** The multi-picture program ending in a distance-field read, also compiled at boot. */
+    batchDistanceFieldProgram: WebGLProgram;
+};
+
+/**
  * Everything the WebGL2 sprite pipeline creates once and reuses every frame. The same shape as the
  * WebGPU one, with GL objects where that one has bind groups.
  *
@@ -20,19 +42,14 @@ export type TSpritePipeline = {
      */
     distanceFieldMaterials: TSpriteMaterials;
     /**
-     * The linked sprite shader.
+     * The programs for a pass with 2D lights in it.
      */
-    program: WebGLProgram;
+    lit: TSpriteVariant;
     /**
-     * The same corners, ending in the distance-field read: for the characters of a text in a vector font.
+     * The same for a pass with none, which do not read them: what a game that never lights its
+     * world draws with.
      */
-    distanceFieldProgram: WebGLProgram;
-    /**
-     * Several pictures in one run, compiled at boot alongside the single-picture programs.
-     */
-    batchProgram: WebGLProgram;
-    /** The multi-picture program ending in a distance-field read, also compiled at boot. */
-    batchDistanceFieldProgram: WebGLProgram;
+    unlit: TSpriteVariant;
     /**
      * Remembers which buffer feeds each attribute and that the per-sprite ones advance per instance.
      */

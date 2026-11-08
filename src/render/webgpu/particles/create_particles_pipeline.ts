@@ -2,6 +2,7 @@ import { ADDITIVE_BLEND, ALPHA_BLEND } from '../frame/blend';
 import { DEPTH_FORMAT, FLAT_DEPTH, STENCIL_TEST } from '../frame/depth';
 import { PARTICLE_3D_OFFSET, PARTICLE_FLOATS, PARTICLE_OFFSET } from '../../shared/particle_instance';
 import { PARTICLES_SHADER } from './particles_shader';
+import { withoutLights2d } from '../../shared/lighting_2d_shader';
 import { PARTICLES_3D_SHADER } from './particles_3d_shader';
 import type { TCameraSpace } from '../../shared/compute_mvp_3d';
 import type { TParticleBlend } from '../../../loaders/particles';
@@ -87,7 +88,9 @@ export const createParticlesPipeline = (
     samples: number,
     layouts: { frame: GPUBindGroupLayout; texture: GPUBindGroupLayout },
 ) => {
+    // Lit by the 2D lights, and for a pass with none, which does not read them.
     const module = device.createShaderModule({ label: 'particles', code: PARTICLES_SHADER });
+    const unlitModule = device.createShaderModule({ label: 'particles unlit', code: withoutLights2d(PARTICLES_SHADER) });
     const module3d = device.createShaderModule({ label: 'particles 3d', code: PARTICLES_3D_SHADER });
     const viewLayout = device.createBindGroupLayout({
         label: 'particles 3d view layout',
@@ -106,16 +109,18 @@ export const createParticlesPipeline = (
         attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }],
     };
 
-    const built = new Map<TParticleBlend, GPURenderPipeline>();
-    const pipelineFor = (blend: TParticleBlend): GPURenderPipeline => {
-        let pipeline = built.get(blend);
+    const built = new Map<string, GPURenderPipeline>();
+    const pipelineFor = (blend: TParticleBlend, lit = true): GPURenderPipeline => {
+        const key = `${blend}${lit ? '' : ' unlit'}`;
+        let pipeline = built.get(key);
         if (pipeline === undefined) {
+            const shader = lit ? module : unlitModule;
             pipeline = device.createRenderPipeline({
-                label: `particles (${blend})`,
+                label: `particles (${key})`,
                 layout: pipelineLayout,
-                vertex: { module, entryPoint: 'vs', buffers: [quadLayout, INSTANCE_LAYOUT] },
+                vertex: { module: shader, entryPoint: 'vs', buffers: [quadLayout, INSTANCE_LAYOUT] },
                 fragment: {
-                    module,
+                    module: shader,
                     entryPoint: 'fs',
                     targets: [{ format, blend: blend === 'additive' ? ADDITIVE_BLEND : ALPHA_BLEND }],
                 },
@@ -126,7 +131,7 @@ export const createParticlesPipeline = (
                 depthStencil: FLAT_DEPTH,
                 multisample: { count: samples },
             });
-            built.set(blend, pipeline);
+            built.set(key, pipeline);
         }
         return pipeline;
     };

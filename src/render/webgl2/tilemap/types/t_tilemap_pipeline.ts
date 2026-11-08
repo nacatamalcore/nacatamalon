@@ -9,6 +9,9 @@ export type TTilemapPipeline = {
      * The effects this game has compiled for map layers on this card.
      */
     materials: TTilemapMaterials;
+    /**
+     * How a layer is drawn in a pass with 2D lights in it.
+     */
     program: WebGLProgram;
     /**
      * Remembers which buffer feeds the corners. The buffer itself changes per layer.
@@ -24,6 +27,10 @@ export type TTilemapPipeline = {
         view: WebGLUniformLocation | null;
         tint: WebGLUniformLocation | null;
     };
+    /**
+     * The same program and places for a pass with no 2D lights, which does not read them.
+     */
+    unlit: { program: WebGLProgram; uniforms: TTilemapPipeline['uniforms'] };
     samplers: { nearest: WebGLSampler; linear: WebGLSampler };
     defaultSmooth: boolean;
 };

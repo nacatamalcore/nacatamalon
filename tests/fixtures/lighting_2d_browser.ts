@@ -126,3 +126,53 @@ import type { TFrameContext } from '../../src/render';
     renderer.destroyTexture(target); renderer.destroyTexture(texture); renderer.destroyBuffer(buffer); renderer.destroy(); canvas.remove();
     return { backend, before, customTile, moved, disabled, unlit };
 };
+
+// A world whose only lamp starts hidden: drawn with the shaders that read no lights, in its own
+// colours, then lit the frame the lamp shows, its effect included, with no frame without it.
+(window as any).probeUnlitThenLit = async (backend: 'WEBGPU' | 'WEBGL2') => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64; canvas.height = 32; document.body.append(canvas);
+    const renderer = await (backend === 'WEBGPU' ? createWebGPURenderer : createWebGL2Renderer)(canvas, { msaa: 1 });
+    const { store } = createTestGame({ width: 64, height: 32, pixelSnap: 'off' }, canvas);
+    store.setState('screen', { renderer });
+    let holder!: { visible: boolean };
+    startTestScene(store, 'Dark', () => {
+        createSprite({ width: 32, height: 32, anchor: { x: 0, y: 0 }, tint: '#ff8040' });
+        const material = createMaterial({
+            fragment: 'fn effect(color: vec4f, uv: vec2f) -> vec4f { return vec4f(color.rgb * 0.5, color.a); }',
+            fragmentGlsl: 'vec4 effect(vec4 color, vec2 uv) { return vec4(color.rgb * 0.5, color.a); }',
+        });
+        createSprite({ width: 32, height: 32, anchor: { x: 0, y: 0 }, tint: '#ffffff', transform: { x: 32 }, material });
+        holder = useSpawn(() => { useLight2d({ transform: { x: 32, y: 16 }, radius: 1000, falloff: 0, intensity: 0.5 }); })();
+        return createScene();
+    });
+    holder.visible = false;
+    const target = renderer.createRenderTexture(64, 32);
+    const ctx: TFrameContext = { passes: [{}], time: 0, progress: 0, phase: 0 };
+    const draw = async () => {
+        fillFrameContext(store, ctx);
+        ctx.passes[0]!.renderTarget = target;
+        renderer.frame(ctx);
+        const { data } = await renderer.readTexture(target);
+        const pixel = (x: number, y: number) => [...data.slice((y * 64 + x) * 4, (y * 64 + x) * 4 + 4)];
+        return { sprite: pixel(16, 16), material: pixel(48, 16) };
+    };
+    // Waits for the effect, in the pass with no lights.
+    let dark = await draw();
+    const deadline = performance.now() + 10000;
+    while (dark.material[0] === 0 && performance.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 30));
+        dark = await draw();
+    }
+    holder.visible = true;
+    const lit = await draw();
+    const equal = (a: unknown, b: unknown, label: string) => {
+        if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${backend} ${label}: ${JSON.stringify(a)} != ${JSON.stringify(b)}`);
+    };
+    equal(dark.sprite, [255, 128, 64, 255], 'no lights, sprite in its own colours');
+    equal(dark.material, [128, 128, 128, 255], 'no lights, effect in its own colours');
+    equal(lit.sprite, [128, 64, 32, 255], 'lit the frame the lamp shows');
+    equal(lit.material, [64, 64, 64, 255], 'its effect lit the same frame, already compiled');
+    renderer.destroyTexture(target); renderer.destroy(); canvas.remove();
+    return { backend, dark, lit };
+};

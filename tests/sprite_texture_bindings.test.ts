@@ -13,7 +13,8 @@ const fixture = () => {
     const picture = {} as WebGLTexture;
     const sprites = {
         whiteTexture: {}, samplers: { nearest: {}, linear: {} },
-        program: {}, distanceFieldProgram: {}, batchProgram: {}, batchDistanceFieldProgram: {},
+        lit: { program: {}, distanceFieldProgram: {}, batchProgram: {}, batchDistanceFieldProgram: {} },
+        unlit: { program: {}, distanceFieldProgram: {}, batchProgram: {}, batchDistanceFieldProgram: {} },
     } as unknown as TSpritePipeline;
     const run: TSpriteRun = {
         texture: picture, textures: [picture], sampler: sprites.samplers.nearest, material: null,
@@ -26,8 +27,8 @@ describe('WebGL2 picture bindings', () => {
     it('keeps singleton runs on the original one-picture path, including additive sprites and distance fields', () => {
         for (const fields of [{}, { additive: true }, { distanceField: true }]) {
             const { gl, sprites, run, calls } = fixture();
-            drawSpriteRun(gl, sprites, { ...run, ...fields }, 0, 32, 32);
-            expect(calls.some(c => c.name === 'useProgram' && [sprites.batchProgram, sprites.batchDistanceFieldProgram].includes(c.args[0] as WebGLProgram))).toBe(false);
+            drawSpriteRun(gl, sprites, { ...run, ...fields }, 0, 32, 32, true);
+            expect(calls.some(c => c.name === 'useProgram' && [sprites.lit.batchProgram, sprites.lit.batchDistanceFieldProgram].includes(c.args[0] as WebGLProgram))).toBe(false);
             expect(calls.filter(c => c.name === 'bindTexture')).toHaveLength(1);
             expect(calls.filter(c => c.name === 'bindSampler')).toHaveLength(1);
         }
@@ -35,9 +36,9 @@ describe('WebGL2 picture bindings', () => {
 
     it('binds eight valid units only when a run actually combines pictures, then requests ordinary state again', () => {
         const { gl, sprites, run, calls } = fixture();
-        const ready = drawSpriteRun(gl, sprites, { ...run, textures: [run.texture, {} as WebGLTexture] }, 0, 32, 32);
+        const ready = drawSpriteRun(gl, sprites, { ...run, textures: [run.texture, {} as WebGLTexture] }, 0, 32, 32, true);
         expect(ready).toBe(false);
-        expect(calls.filter(c => c.name === 'useProgram')).toEqual([{ name: 'useProgram', args: [sprites.batchProgram] }]);
+        expect(calls.filter(c => c.name === 'useProgram')).toEqual([{ name: 'useProgram', args: [sprites.lit.batchProgram] }]);
         expect(calls.filter(c => c.name === 'bindTexture')).toHaveLength(8);
         expect(calls.filter(c => c.name === 'bindSampler')).toHaveLength(8);
         expect(calls.filter(c => c.name === 'activeTexture').at(-1)?.args).toEqual([gl.TEXTURE0]);
@@ -49,11 +50,18 @@ describe('WebGL2 picture bindings', () => {
             warnIfWgpuOnly: () => {}, get: () => ({ failed: false, program: {} }),
             bind: () => { gl.activeTexture(gl.TEXTURE0 + 4); },
         } as unknown as TSpritePipeline['materials'];
-        drawSpriteRun(gl, sprites, { ...run, material: { fragment: 'effect', fragmentGlsl: 'effect' } as never }, 0, 32, 32);
+        drawSpriteRun(gl, sprites, { ...run, material: { fragment: 'effect', fragmentGlsl: 'effect' } as never }, 0, 32, 32, true);
         expect(calls.filter(c => c.name === 'bindTexture')).toHaveLength(1);
         expect(calls.filter(c => c.name === 'bindSampler')).toEqual([{ name: 'bindSampler', args: [0, run.sampler] }]);
         expect(calls.filter(c => c.name === 'activeTexture').at(-1)?.args).toEqual([gl.TEXTURE0]);
-        expect(calls.some(c => c.name === 'useProgram' && c.args[0] === sprites.batchProgram)).toBe(false);
+        expect(calls.some(c => c.name === 'useProgram' && c.args[0] === sprites.lit.batchProgram)).toBe(false);
+    });
+
+    it('draws a pass with no 2D lights with the programs that do not read them', () => {
+        const { gl, sprites, run, calls } = fixture();
+        drawSpriteRun(gl, sprites, { ...run, textures: [run.texture, {} as WebGLTexture] }, 0, 32, 32, false);
+        drawSpriteRun(gl, sprites, { ...run, distanceField: true }, 0, 32, 32, false);
+        expect(calls.filter(c => c.name === 'useProgram').map(c => c.args[0])).toEqual([sprites.unlit.batchProgram, sprites.unlit.distanceFieldProgram]);
     });
 });
 
@@ -77,28 +85,27 @@ const compiler = (rejectBatch = false) => {
 };
 
 describe('WebGL2 built-in sprite program lifetime', () => {
-    it('compiles all four variants at creation and restoration, and compiles nothing while drawing', () => {
+    it('compiles all four variants, lit and unlit, at creation and restoration, and compiles nothing while drawing', () => {
         const { gl, counts } = compiler();
         let previous: TSpritePipeline | undefined;
         for (let boot = 1; boot <= 2; boot++) {
             const sprites = createSpritePipeline(gl, {} as WebGLBuffer, false);
-            expect(counts()).toEqual({ compilations: boot * 8, links: boot * 4 });
-            const programs = [sprites.program, sprites.distanceFieldProgram, sprites.batchProgram, sprites.batchDistanceFieldProgram];
+            expect(counts()).toEqual({ compilations: boot * 16, links: boot * 8 });
+            const programs = [sprites.lit, sprites.unlit].flatMap(set => [set.program, set.distanceFieldProgram, set.batchProgram, set.batchDistanceFieldProgram]);
             expect(programs.every(program => typeof program === 'object' && program !== null)).toBe(true);
-            expect(new Set(programs).size).toBe(4);
+            expect(new Set(programs).size).toBe(8);
             if (previous !== undefined) {
-                expect(sprites.program).not.toBe(previous.program);
-                expect(sprites.distanceFieldProgram).not.toBe(previous.distanceFieldProgram);
-                expect(sprites.batchProgram).not.toBe(previous.batchProgram);
-                expect(sprites.batchDistanceFieldProgram).not.toBe(previous.batchDistanceFieldProgram);
+                expect(sprites.lit.program).not.toBe(previous.lit.program);
+                expect(sprites.unlit.program).not.toBe(previous.unlit.program);
+                expect(sprites.lit.batchDistanceFieldProgram).not.toBe(previous.lit.batchDistanceFieldProgram);
             }
             const { run } = fixture();
             for (let frame = 0; frame < 3; frame++) {
                 for (const distanceField of [false, true]) {
-                    drawSpriteRun(gl, sprites, { ...run, distanceField, textures: [run.texture, {} as WebGLTexture] }, 0, 32, 32);
+                    drawSpriteRun(gl, sprites, { ...run, distanceField, textures: [run.texture, {} as WebGLTexture] }, 0, 32, 32, frame % 2 === 0);
                 }
             }
-            expect(counts()).toEqual({ compilations: boot * 8, links: boot * 4 });
+            expect(counts()).toEqual({ compilations: boot * 16, links: boot * 8 });
             previous = sprites;
         }
     });

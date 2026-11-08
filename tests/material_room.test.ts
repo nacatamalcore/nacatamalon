@@ -122,7 +122,8 @@ describe('on each card, a material with too many numbers', () => {
     it('builds one that fits exactly on WebGL2', () => {
         const { gl, programs } = fakeGl();
         expect(createSpriteMaterials(gl).get(drawShader(15, 'vec4 effect(vec4 color, vec2 uv) { return color; }')).failed).toBe(false);
-        expect(programs()).toBe(1);
+        // Two: lit by the 2D lights and not, built together the first time it is seen.
+        expect(programs()).toBe(2);
     });
 
     it('is drawn the built-in way on WebGPU, quietly', () => {

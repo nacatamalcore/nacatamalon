@@ -11,6 +11,7 @@ import { createPostPipelines } from '../post/post_pipeline';
 import { canvasTargetFor, presentToCanvas, releaseUnusedCanvasTargets } from './canvas_target';
 import { bindMultisampled, releaseUnusedMultisampled, resolveMultisampled } from './multisample';
 import { writeFrameUniforms } from './write_frame_uniforms';
+import { anyLit2d } from '../../shared/lighting_2d';
 import { drawMesh, writeMeshLights } from '../mesh/draw_meshes';
 import { applyStencil, beginStencil, createMaskPrograms, drawFilterLayer, drawMaskLayer, drawMaskRun, endStencil } from '../mask/mask_programs';
 import { createFilterDepth } from '../mask/filter_depth';
@@ -310,6 +311,8 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
 
         writeFrameUniforms(state, width, height, drawn.cameras ?? []);
+        // With no 2D lights in any of its views, the pass draws with the programs that do not read them.
+        const lit = anyLit2d(drawn.cameras ?? []);
 
         const drawables = drawn.drawables ?? [];
         const cameraIndex = drawn.cameraIndex ?? [];
@@ -429,7 +432,7 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
                 continue;
             }
             if (item.type === 'particles') {
-                drawParticles(gl, state.particles!, state.sprites, item);
+                drawParticles(gl, state.particles!, state.sprites, item, lit);
                 // Its program left none of the sprite state set.
                 spritesReady = false;
                 continue;
@@ -452,7 +455,7 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
                     gl.useProgram(state.masks!.tilemap.program);
                     gl.uniform1i(state.masks!.tilemap.reading, writes.channel === 'luminance' ? 1 : 0);
                 }
-                drawTilemapLayer(gl, state.tilemaps, item, cameraIndex[i] ?? -1, ctx.time, width, height, writes === null ? null : state.masks!.tilemap, drawn.cameras ?? []);
+                drawTilemapLayer(gl, state.tilemaps, item, cameraIndex[i] ?? -1, ctx.time, width, height, writes === null ? null : state.masks!.tilemap, drawn.cameras ?? [], lit);
                 // The layer's program left none of the sprite state set.
                 spritesReady = false;
                 continue;
@@ -473,11 +476,11 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
                 continue;
             }
             if (!spritesReady) {
-                beginSprites(gl, state.sprites);
+                beginSprites(gl, state.sprites, lit);
                 spritesReady = true;
             }
             spritesReady = drawSpriteRun(
-                gl, state.sprites, opened, ctx.time, width, height,
+                gl, state.sprites, opened, ctx.time, width, height, lit,
             );
             run++;
         }
