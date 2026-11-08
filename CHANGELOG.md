@@ -17,6 +17,10 @@ releases are in [changelog/](./changelog/), one file each.
   so losing its last lamp does not turn it to daylight. Both light kinds, and what is left out, save
   and load with scene documents. No lights keeps the original colours, and a game that never makes
   one pays nothing for them. See [the 2D lighting guide](guides/lighting_2d.md).
+- **A sprite's run can pause.** `useSpriteAnimation` gains `pause()`, and `play()` with no name
+  carries on from the frame it held. `stop()` still holds the frame, and `play()` after it starts the
+  last run again from its first frame. A run stopped while its sheet is still loading no longer
+  starts when the sheet lands.
 
 ### Changed
 

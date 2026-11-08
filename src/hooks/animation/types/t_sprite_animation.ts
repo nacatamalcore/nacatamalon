@@ -79,10 +79,18 @@ export type TSpriteAnimationOptions = {
 export type TSpriteAnimation = {
     /**
      * Starts a run from its first frame. Starting the one already playing restarts it.
+     *
+     * Called with nothing, it carries on from where `pause` held it. After `stop`, or once a run
+     * that does not loop has ended, it starts the last run again from its first frame.
      */
-    play(clip: string): void;
+    play(clip?: string): void;
     /**
-     * Stops where it is, leaving the frame on screen.
+     * Holds it where it is, leaving the frame on screen. `play()` carries on from that frame.
+     */
+    pause(): void;
+    /**
+     * Stops where it is, leaving the frame on screen. `play()` starts the run again from its first
+     * frame.
      */
     stop(): void;
     /**
@@ -90,7 +98,8 @@ export type TSpriteAnimation = {
      */
     setSpeed(speed: number): void;
     /**
-     * Whether a run is going right now. False once a clip that does not loop has finished.
+     * Whether a run is going right now. False while it is paused or stopped, and once a clip that
+     * does not loop has finished.
      */
     readonly playing: boolean;
     /**

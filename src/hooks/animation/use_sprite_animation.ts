@@ -52,7 +52,7 @@ const NO_EVENTS: readonly TClipEvent[] = [];
  * });
  * ```
  *
- * @returns Its controls: `play`, `stop`, `setSpeed`, what is `playing` and on which `frame`.
+ * @returns Its controls: `play`, `pause`, `stop`, `setSpeed`, what is `playing` and on which `frame`.
  *
  * @category Animation
  * @since 1.0.0
@@ -79,6 +79,16 @@ export const useSpriteAnimation = (sprite: TSprite, options: TSpriteAnimationOpt
      */
     let forward = true;
     let playing = false;
+    /**
+     * Held by `pause`, so a `play()` with no name carries on from the same picture. `stop` and the
+     * end of a run leave it false: a `play()` after those starts the run again.
+     */
+    let paused = false;
+    /**
+     * The last run asked for by name, the one a `play()` with no name goes back to. Kept apart from
+     * `clipName` because it may still be waiting for its sheet.
+     */
+    let asked: string | null = null;
     let elapsed = 0;
     let speed = options.speed ?? 1;
     let warnedPace = false;
@@ -143,9 +153,14 @@ export const useSpriteAnimation = (sprite: TSprite, options: TSpriteAnimationOpt
                 console.warn(`[NacatamalOn] useSpriteAnimation: no clip called '${name}'. It knows: ${Object.keys(options.clips).join(', ')}.`);
                 return;
             }
+            asked = name;
+            paused = false;
             pending = name;
             return;
         }
+
+        asked = name;
+        paused = false;
 
         pending = null;
 
@@ -193,7 +208,13 @@ export const useSpriteAnimation = (sprite: TSprite, options: TSpriteAnimationOpt
         if (pending !== null) {
             // Cheap while it lasts, and it lasts until the sheet lands.
             if (options.clips[pending] !== undefined) {
+                // Paused while it waited: it shows its first picture and holds it there.
+                const held = paused;
                 play(pending);
+                if (held) {
+                    playing = false;
+                    paused = true;
+                }
             }
             return;
         }
@@ -298,8 +319,33 @@ export const useSpriteAnimation = (sprite: TSprite, options: TSpriteAnimationOpt
     }
 
     const animation: TSpriteAnimation = {
-        play,
-        stop: () => { playing = false; },
+        play: (clip?: string) => {
+            if (clip !== undefined) {
+                play(clip);
+                return;
+            }
+            if (paused) {
+                paused = false;
+                playing = pending === null;
+                return;
+            }
+            // Stopped, ended, or never paused: the last run asked for, from its first picture.
+            if (asked !== null) {
+                play(asked);
+            }
+        },
+        pause: () => {
+            if (playing || pending !== null) {
+                playing = false;
+                paused = true;
+            }
+        },
+        stop: () => {
+            playing = false;
+            paused = false;
+            // A run waiting for its sheet does not start once it is stopped.
+            pending = null;
+        },
         setSpeed: (value: number) => { speed = value; },
         get playing() { return playing; },
         get clip() { return clipName; },

@@ -122,6 +122,73 @@ describe('useSpriteAnimation', () => {
         expect(shownFrame()).toBe(1);
     });
 
+    it('starts the run again from its first picture when played after a stop', () => {
+        const { anim, shownFrame, tick } = animated({ clips: { walk: WALK }, play: 'walk' });
+
+        tick(0.2);
+        anim.stop();
+        anim.play();
+
+        expect(anim.playing).toBe(true);
+        expect(shownFrame()).toBe(0);
+        tick(0.1);
+        expect(shownFrame()).toBe(1);
+    });
+
+    it('holds where it is on a pause, and carries on from there when played', () => {
+        const { anim, shownFrame, tick } = animated({ clips: { walk: WALK }, play: 'walk' });
+
+        tick(0.15);
+        anim.pause();
+        tick(1);
+        expect(anim.playing).toBe(false);
+        expect(shownFrame()).toBe(1);
+
+        anim.play();
+        expect(anim.playing).toBe(true);
+        // Half a picture was already gone when it paused, so a little over half more reaches the
+        // next one, where a run from the start would still be on its first.
+        tick(0.06);
+        expect(shownFrame()).toBe(2);
+    });
+
+    it('starts from the first picture when the run is named, paused or not', () => {
+        const { anim, shownFrame, tick } = animated({ clips: { walk: WALK }, play: 'walk' });
+
+        tick(0.2);
+        anim.pause();
+        anim.play('walk');
+
+        expect(anim.playing).toBe(true);
+        expect(shownFrame()).toBe(0);
+    });
+
+    it('plays a run that has ended again from its start', () => {
+        const { anim, shownFrame, tick } = animated({
+            clips: { hit: { frames: [4, 5], fps: 10, loop: false } },
+            play: 'hit',
+        });
+
+        tick(0.5);
+        expect(anim.playing).toBe(false);
+        anim.pause();
+        anim.play();
+
+        expect(anim.playing).toBe(true);
+        expect(shownFrame()).toBe(4);
+    });
+
+    it('does nothing when played with no name before any run was asked for', () => {
+        const { anim, shownFrame, tick } = animated({ clips: { walk: WALK } });
+
+        anim.play();
+        tick(0.5);
+
+        expect(anim.playing).toBe(false);
+        expect(anim.clip).toBe(null);
+        expect(shownFrame()).toBe(0);
+    });
+
     it('says so when asked for a clip it does not know, and carries on', () => {
         const warnings: string[] = [];
         const original = console.warn;
@@ -159,6 +226,38 @@ describe('clips that arrive late', () => {
 
         expect(anim.clip).toBe('spin');
         expect(shownFrame()).toBe(2);
+    });
+
+    it('does not start a clip that was stopped while it waited, until it is played', () => {
+        const clips: Record<string, { frames: number[]; fps?: number }> = {};
+        const { anim, shownFrame, tick } = animated({ clips, play: 'spin' });
+
+        anim.stop();
+        clips.spin = { frames: [2, 3], fps: 10 };
+        tick(0.016);
+        expect(anim.clip).toBe(null);
+        expect(shownFrame()).toBe(0);
+
+        anim.play();
+        expect(anim.clip).toBe('spin');
+        expect(shownFrame()).toBe(2);
+    });
+
+    it('shows the first picture of a clip paused while it waited, and holds it', () => {
+        const clips: Record<string, { frames: number[]; fps?: number }> = {};
+        const { anim, shownFrame, tick } = animated({ clips, play: 'spin' });
+
+        anim.pause();
+        clips.spin = { frames: [2, 3], fps: 10 };
+        tick(0.016);
+        tick(0.5);
+        expect(anim.clip).toBe('spin');
+        expect(anim.playing).toBe(false);
+        expect(shownFrame()).toBe(2);
+
+        anim.play();
+        tick(0.1);
+        expect(shownFrame()).toBe(3);
     });
 
     it('still says so when the table has clips but not that one', () => {
