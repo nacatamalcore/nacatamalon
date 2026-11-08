@@ -71,8 +71,8 @@ export const getPixel = (pixels: TPixels, x: number, y: number): TColor => {
  *
  * @example
  * ```ts
- * const bar = createPixels(64, 6, getColor('#200a0a'));
- * fillRect(bar, 1, 1, 40, 4, getColor('#e23d3d'));
+ * const bar = createPixels(64, 6, '#200a0a');
+ * fillRect(bar, 1, 1, 40, 4, '#e23d3d');
  * ```
  *
  * @category Pixels
@@ -163,7 +163,7 @@ export const drawLine = (pixels: TPixels, x0: number, y0: number, x1: number, y1
  * @example
  * ```ts
  * const sun = createPixels(33, 33);
- * fillCircle(sun, 16, 16, 15, getColor('#ffd75a'));
+ * fillCircle(sun, 16, 16, 15, '#ffd75a');
  * ```
  *
  * @category Pixels
@@ -320,7 +320,7 @@ const ellipseQuarter = (rx: number, ry: number, visit: (x: number, y: number) =>
  * @example
  * ```ts
  * const sheep = createPixels(24, 16);
- * fillEllipse(sheep, 12, 8, 10, 6, getColor('#f4f1e8'));
+ * fillEllipse(sheep, 12, 8, 10, 6, '#f4f1e8');
  * ```
  *
  * @category Pixels
@@ -416,7 +416,7 @@ export const drawEllipse = (pixels: TPixels, cx: number, cy: number, rx: number,
  * ```ts
  * // A ramp rising to the right, 96 wide and 48 high.
  * const ramp = createPixels(96, 48);
- * fillPolygon(ramp, [{ x: 0, y: 48 }, { x: 96, y: 0 }, { x: 96, y: 48 }], getColor('#8a5a2b'));
+ * fillPolygon(ramp, [{ x: 0, y: 48 }, { x: 96, y: 0 }, { x: 96, y: 48 }], '#8a5a2b');
  * ```
  *
  * @category Pixels

@@ -23,8 +23,8 @@ import type { TPixels } from './types/t_pixels';
  *
  * @example
  * ```ts
- * const tile = createPixels(16, 16, getColor('#2a6b3a'));
- * fillRect(tile, 0, 15, 16, 1, getColor('#1a4a28'));
+ * const tile = createPixels(16, 16, '#2a6b3a');
+ * fillRect(tile, 0, 15, 16, 1, '#1a4a28');
  * ```
  *
  * @category Pixels

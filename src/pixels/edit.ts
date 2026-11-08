@@ -34,7 +34,7 @@ export const clonePixels = (pixels: TPixels): TPixels => ({
  * @example
  * ```ts
  * const hero = useLoadPixels({ src: '/assets/hero.png' });
- * const red = createPixelTexture(hero, (p) => swapColors(p, [[getColor('#3a7bff'), getColor('#e23d3d')]]));
+ * const red = createPixelTexture(hero, (p) => swapColors(p, [['#3a7bff', '#e23d3d']]));
  * ```
  *
  * @category Pixels
@@ -125,7 +125,7 @@ export type TOutlinePixelsOptions = {
  *     '....r....',
  *     '.........',
  * ], { r: '#f80058' });
- * outlinePixels(heart, getColor('#14141f'));
+ * outlinePixels(heart, '#14141f');
  * ```
  *
  * @category Pixels

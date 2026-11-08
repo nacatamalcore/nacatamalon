@@ -67,7 +67,7 @@ export type TFillGradientOptions = {
  * ```ts
  * const sky = createPixels(320, 120);
  * fillGradient(sky, {
- *     colors: ['#140a33', '#5a1667', '#e0446e', '#ffb36b'].map((hex) => getColor(hex)),
+ *     colors: ['#140a33', '#5a1667', '#e0446e', '#ffb36b'],
  *     bands: 12,
  *     dither: true,
  * });
@@ -175,7 +175,7 @@ export type TFillNoiseOptions = {
  * ```ts
  * // A tiling rock texture for a model.
  * const rock = fillNoise(createPixels(64, 64), {
- *     seed: 7, scale: 16, octaves: 4, from: getColor('#2b2730'), to: getColor('#8a8090'),
+ *     seed: 7, scale: 16, octaves: 4, from: '#2b2730', to: '#8a8090',
  * });
  * createMaterial({ name: 'rock', shader: 'mesh3d', texture: createPixelTexture(rock), wrap: 'repeat' });
  * ```
@@ -283,10 +283,10 @@ export const fillChecker = (pixels: TPixels, size: number, a: TColorOption, b: T
  *
  * @example
  * ```ts
- * const wall = createPixels(32, 32, getColor('#6d4c8f'));
+ * const wall = createPixels(32, 32, '#6d4c8f');
  * // A shadow that thickens to the bottom.
- * fillDither(wall, 0, 16, 32, 8, getColor('#6d4c8f'), getColor('#3a2a55'), 0.25);
- * fillDither(wall, 0, 24, 32, 8, getColor('#6d4c8f'), getColor('#3a2a55'), 0.75);
+ * fillDither(wall, 0, 16, 32, 8, '#6d4c8f', '#3a2a55', 0.25);
+ * fillDither(wall, 0, 24, 32, 8, '#6d4c8f', '#3a2a55', 0.75);
  * ```
  *
  * @category Pixels

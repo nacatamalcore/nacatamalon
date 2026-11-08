@@ -70,11 +70,10 @@ const filtered = (pixels: TPixels): Uint8Array => {
  * @example
  * ```ts
  * import { writeFileSync } from 'node:fs';
- * import { getColor } from 'nacatamalon';
  * import { createPixels, fillGradient } from 'nacatamalon/pixels';
  * import { encodePng } from 'nacatamalon/authoring';
  *
- * const sky = fillGradient(createPixels(320, 120), { from: getColor('#140a33'), to: getColor('#ffb36b'), bands: 10 });
+ * const sky = fillGradient(createPixels(320, 120), { from: '#140a33', to: '#ffb36b', bands: 10 });
  * writeFileSync('public/images/sky.png', encodePng(sky));
  * ```
  *

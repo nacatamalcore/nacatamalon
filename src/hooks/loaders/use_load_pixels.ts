@@ -49,7 +49,7 @@ export type TUseLoadPixelsOptions = {
  * ```ts
  * const Level = () => {
  *     const hero = useLoadPixels({ src: '/assets/hero.png' });
- *     const gold = createPixelTexture(hero, (p) => swapColors(p, [[getColor('#3a7bff'), getColor('#ffd75a')]]));
+ *     const gold = createPixelTexture(hero, (p) => swapColors(p, [['#3a7bff', '#ffd75a']]));
  *     createSprite({ texture: gold, width: 32, height: 32 });
  *     return createScene();
  * };

@@ -49,7 +49,7 @@ export type TDissolveOptions = {
  * scene.change('Level2', { transition: dissolve(0.8, grain) });
  *
  * // or:
- * const fall = createPixelTexture(fillGradient(createPixels(1, 32), { from: getColor('#000'), to: getColor('#fff') }));
+ * const fall = createPixelTexture(fillGradient(createPixels(1, 32), { from: '#000', to: '#fff' }));
  * scene.change('Level2', { transition: dissolve(0.6, fall, { softness: 0.2 }) });
  * ```
  *

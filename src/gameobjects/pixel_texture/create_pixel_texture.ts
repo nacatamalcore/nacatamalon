@@ -114,13 +114,13 @@ export type TPixelTextureOptions = {
  * ```ts
  * const Level = () => {
  *     // Painted in code.
- *     const art = createPixels(16, 16, getColor('#1d2b53'));
- *     fillCircle(art, 8, 8, 6, getColor('#ffec27'));
+ *     const art = createPixels(16, 16, '#1d2b53');
+ *     fillCircle(art, 8, 8, 6, '#ffec27');
  *     createSprite({ texture: createPixelTexture(art), width: 64, height: 64 });
  *
  *     // A drawn sprite in another colour, made from the one file.
  *     const hero = useLoadPixels({ src: '/assets/hero.png' });
- *     const red = createPixelTexture(hero, (p) => swapColors(p, [[getColor('#3a7bff'), getColor('#e23d3d')]]));
+ *     const red = createPixelTexture(hero, (p) => swapColors(p, [['#3a7bff', '#e23d3d']]));
  *     createSprite({ texture: red, width: 32, height: 32 });
  *     return createScene();
  * };
@@ -282,7 +282,7 @@ const adopt = (store: TRuntimeStore, texture: TTexture, pixels: TPixels | null, 
  * declare const hitX: number;
  * declare const hitY: number;
  *
- * fillCircle(ground, hitX, hitY, 6, getColor('transparent'));
+ * fillCircle(ground, hitX, hitY, 6, 'transparent');
  * updatePixelTexture(groundTexture, { x: hitX - 6, y: hitY - 6, width: 13, height: 13 });
  * ```
  *

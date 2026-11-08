@@ -70,7 +70,7 @@ export type TSnapToPaletteOptions = {
  * @example
  * ```ts
  * const sky = createPixels(64, 32);
- * fillGradient(sky, { from: getColor('#203060'), to: getColor('#f0a070') });
+ * fillGradient(sky, { from: '#203060', to: '#f0a070' });
  * snapToPalette(sky, BUILTIN.PALETTES.nes);
  * ```
  *

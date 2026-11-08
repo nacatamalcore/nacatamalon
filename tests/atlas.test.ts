@@ -46,9 +46,9 @@ describe('atlasFrame', () => {
     it('throws for a frame that is not there, rather than showing a neighbour', () => {
         const atlas = createSpriteAtlas({ texture: sheet(), columns: 6 });
 
-        expect(() => atlasFrame(atlas, 6)).toThrow(/frames 0 to 5/);
-        expect(() => atlasFrame(atlas, -1)).toThrow(/frames 0 to 5/);
-        expect(() => atlasFrame(atlas, 1.5)).toThrow(/frames 0 to 5/);
+        expect(() => atlasFrame(atlas, 6)).toThrow(/no frame .*go from 0 to 5/);
+        expect(() => atlasFrame(atlas, -1)).toThrow(/no frame .*go from 0 to 5/);
+        expect(() => atlasFrame(atlas, 1.5)).toThrow(/no frame .*go from 0 to 5/);
     });
 });
 
@@ -89,7 +89,7 @@ describe('createSprite with a sheet', () => {
     it('shows nothing of a sheet frame that does not exist', () => {
         const atlas = createSpriteAtlas({ texture: sheet(), columns: 6 });
 
-        expect(() => spriteFrom({ atlas, frame: 99 })).toThrow(/frames 0 to 5/);
+        expect(() => spriteFrom({ atlas, frame: 99 })).toThrow(/no frame .*go from 0 to 5/);
     });
 });
 

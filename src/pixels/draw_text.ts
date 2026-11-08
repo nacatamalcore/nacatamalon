@@ -197,8 +197,8 @@ const drawVectorText = (pixels: TPixels, text: string, x: number, y: number, fon
  *
  * @example
  * ```ts
- * const sign = createPixels(64, 20, getColor('#2a1a3a'));
- * drawText(sign, 'MOTEL', 32, 10, { anchor: { x: 0.5, y: 0.5 }, color: getColor('#ff4fd8') });
+ * const sign = createPixels(64, 20, '#2a1a3a');
+ * drawText(sign, 'MOTEL', 32, 10, { anchor: { x: 0.5, y: 0.5 }, color: '#ff4fd8' });
  * createSprite({ texture: createPixelTexture(sign) });
  * ```
  *
