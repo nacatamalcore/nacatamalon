@@ -3,6 +3,7 @@ import { defaultScriptProps, getScript, isToolScript, warnUnregisteredScript } f
 import { nanoId } from '../../utils';
 import type { TScriptProps } from '../../scripts';
 import { outsideSceneBody } from '../../utils/outside_scene_body';
+import { withDataOwner } from '../state/use_data';
 
 /**
  * What `useScript` takes besides the behaviour and its settings.
@@ -70,7 +71,8 @@ export const useScript = (ref: string, props?: TScriptProps, options: TUseScript
     const resolved: TScriptProps = { ...defaultScriptProps(ref), ...props };
 
     // Recorded before anything can decline to run it, so the attachment survives either way.
-    box.scripts.push({ id: options.id ?? nanoId(), ref, props: resolved });
+    const id = options.id ?? nanoId();
+    box.scripts.push({ id, ref, props: resolved });
 
     const fn = getScript(ref);
     if (fn === undefined) {
@@ -84,7 +86,8 @@ export const useScript = (ref: string, props?: TScriptProps, options: TUseScript
         return;
     }
 
-    const api = fn(box, resolved);
+    // Its state is its own: saved as this attachment's, and given back to it and to no other.
+    const api = withDataOwner(box, id, () => fn(box, resolved));
     if (api !== undefined) {
         box.scriptApis.set(ref, api);
     }

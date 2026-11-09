@@ -17,7 +17,7 @@ import { rememberBoxExtra } from './serialize_scene';
 import { spawnBox } from '../../box';
 import { useAmbientLight, useDirectionalLight, usePointLight, useRectLight, useSpotLight } from '../../hooks/light';
 import { useCamera2d } from '../../hooks/camera/use_camera_2d';
-import { useData } from '../../hooks/state';
+import { offerSavedData, keepUnclaimedData } from '../../hooks/state/use_data';
 import { useScript } from '../../hooks/script';
 import { useAudioListener, useMusic, useSong, useSound } from '../../hooks/audio';
 import { useStoreLink } from '../../hooks/store';
@@ -917,11 +917,11 @@ const buildBox = (node: TBoxNode, store: TRuntimeStore, src: string): void => {
         }
     }
 
-    // Before the components, so the box carries the state it was saved with by the time anything
-    // on it exists. Asked for in file order, because that order is what identifies each one.
-    for (const entry of node.data ?? []) {
-        useData(entry.value);
-    }
+    // Before the components, so the state it was saved with is waiting for whatever on the box asks
+    // for it. Each one goes back to its owner (the behaviour named by `by`, or the box's body) and,
+    // among an owner's, in file order, because that order is what identifies each one. What none of
+    // them asks for is kept once they have all run, so it is neither lost nor written twice.
+    offerSavedData(box, node.data ?? []);
 
     // Behaviours are held back to the end of the box, whatever order the file lists them in: an
     // object has to **be** itself before anything can behave like it. A behaviour reaches for what
@@ -930,11 +930,17 @@ const buildBox = (node: TBoxNode, store: TRuntimeStore, src: string): void => {
     // of the order somebody happened to add things in.
     //
     // Among themselves the file's order is kept, because that is the order they run in.
-    for (const component of node.components) {
-        if (component.type !== 'script') buildComponent(component, store, src);
-    }
-    for (const component of node.components) {
-        if (component.type === 'script') buildComponent(component, store, src);
+    // What none of them asked for is kept even if one of them throws: a broken behaviour must not
+    // also cost the box the state it was saved with.
+    try {
+        for (const component of node.components) {
+            if (component.type !== 'script') buildComponent(component, store, src);
+        }
+        for (const component of node.components) {
+            if (component.type === 'script') buildComponent(component, store, src);
+        }
+    } finally {
+        keepUnclaimedData(box);
     }
     for (const child of node.children) {
         spawnBox(store, box, child.name, () => buildBox(child, store, src), []);

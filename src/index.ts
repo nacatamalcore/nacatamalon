@@ -23,14 +23,14 @@ export type { TGeometry, TGeometryData, TUvProjection } from './geometry';
 export type { TDrawable } from './gameobjects/types';
 export type { TTransformOptions } from './hooks';
 export type { TTransform3d } from './gameobjects/types/t_transform_3d';
-export { useData, useWatch } from './hooks';
+export { useData, useWatch, useStateMachine } from './hooks';
 export { useScript, provide, useScriptApi, useReport } from './hooks';
 export type { TUseScriptOptions } from './hooks';
 // Registering a behaviour is a game's own business: its entry point calls this, next to where the
 // behaviour is written. Looking INSIDE the registry is a tool's, and lives in `nacatamalon/authoring`.
 export { registerScript } from './scripts';
 export type { TScriptFn, TScriptProps, TScriptField, TScriptOptions, TScriptRequirement, TScriptAttachment } from './scripts';
-export type { TDataRecord, TDataSetter, TWatchDep } from './hooks';
+export type { TDataRecord, TDataSetter, TWatchDep, TStateMachine, TStateDef, TStateGoOptions, TStateMachineOptions } from './hooks';
 export {
     useUpdate, useLateUpdate, useLoadTexture, useLoadAtlas, useLoadProgress, useScene, useCleanup, useReady,
     useSceneTransitionEnd, useSpawn, useSelf, useKeyboard, useGame, useSpriteAnimation,

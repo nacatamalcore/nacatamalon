@@ -3,6 +3,44 @@
 What changed in the current release of `nacatamalon`, and what is waiting for the next one. Earlier
 releases are in [changelog/](./changelog/), one file each.
 
+## Unreleased
+
+### Added
+
+- **A state machine, `useStateMachine`.** A character that stands, runs and jumps, an enemy that
+  patrols, chases and goes back, a door, a boss's phases: each state says what it does on the way in
+  (`onEnter`), every frame it lasts (`onUpdate`) and on the way out (`onExit`), and the machine is in
+  one of them at a time. It works in a scene, in a piece made with `useSpawn` and in a behaviour, and
+  belongs to that object: it updates with it, stops in a paused scene and goes when it goes (without
+  `onExit`: being destroyed is not a change of state). `go(state)` changes state there and then, or,
+  asked from inside a change, once that one is over, and says where two states keep sending to each
+  other; going to the state it is in does nothing unless `{ restart: true }`. It tells `state`,
+  `previous`, `time` (seconds in this state) and `is(...)`, and `onChange` hears every change. The
+  state names come from the object, so a name it does not have is a type error. It can be watched
+  with `useWatch`, and its state is saved with the object and comes back, entered, when the scene is
+  opened again.
+- **States inside a state.** A `useStateMachine` given `{ parent, state }` lives inside that state of
+  another machine: it enters its `initial` when the other enters the state and leaves with it, from
+  the inside out (`onExit` of its state, then of the other's) and in from the outside in. Each frame
+  the outer `onUpdate` runs first, so what holds for every move of a state (a guard that has lost
+  the hero leaves combat, whichever move it was in) is written once there. `go` on a machine that is
+  not running takes its parent there and comes in straight at that state (`combat.go('swing')` from
+  calm). Each has its own names, `time`, `onChange` and `active`, and a change asked for from inside
+  a change of any of them waits for it. It can live in the same object or in a piece of its own, as
+  deep as needed, and each one's state is saved and comes back.
+
+### Fixed
+
+- **`useData` in a behaviour gets back what it was saved with.** A scene saved while running and
+  opened again handed the behaviour its first value again, and kept the saved one next to it, so each
+  save wrote the state once more. Now each piece of state a scene writes says whose it is (`by`, the
+  behaviour's attachment id; absent for the object's own body), and each one gets back its own, in
+  the order it asks for them. A behaviour removed, reordered or not registered any more keeps its
+  entries untouched and never hands them to another, and what nothing asks for (a scene shown rather
+  than played) is still kept. What comes back is a copy, so changing it in place leaves the document
+  as it was saved. Files written before have no `by`: their entries are kept as the object's own and
+  are not handed to its behaviours, which start fresh, as they did before.
+
 ## 0.7.0 — 2026-11-09
 
 ### Added

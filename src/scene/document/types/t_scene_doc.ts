@@ -39,12 +39,21 @@ export const SCENE_VERSION = 1;
  * the same order, and adding one in the middle of a body that has already been saved hands the old
  * values to the wrong places.
  *
+ * The position counts **within each owner**: the box's body, and each behaviour on it (`by`). So a
+ * behaviour removed, reordered or not registered any more costs only its own entries, which are
+ * kept untouched, and never shifts another's.
+ *
  * @category Scenes
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
 export type TDataEntry = {
     value: unknown;
+    /**
+     * The behaviour it belongs to, by its attachment's `id`. Absent is the box's own body. A
+     * behaviour gets back its own entries and no other's, in the order it asks for them.
+     */
+    by?: string;
 };
 
 /**

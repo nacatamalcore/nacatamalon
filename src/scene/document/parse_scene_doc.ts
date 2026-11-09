@@ -1237,7 +1237,8 @@ const parseGeometrySource = (value: unknown, key: string): TGeometrySource | nul
 const parseData = (raw: unknown): TDataEntry[] =>
     asArray(raw).map((entry) => {
         const record = asRecord(entry);
-        return { value: record === null ? null : record.value ?? null };
+        const value = record === null ? null : record.value ?? null;
+        return typeof record?.by === 'string' && record.by.length > 0 ? { value, by: record.by } : { value };
     });
 
 /**

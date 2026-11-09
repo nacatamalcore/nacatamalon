@@ -1,3 +1,4 @@
+import { dataOwnerOf } from '../../hooks/state/use_data';
 import { SCENE_FORMAT, SCENE_VERSION } from './types/t_scene_doc';
 import { builtinKeyOf, entryExtrasOf } from '../../post/install_post_chain';
 import type { TPostEffect } from '../../post/types/t_post_effect';
@@ -931,7 +932,10 @@ const writeBox = (box: TBox, writing: TWriting): TBoxNode => {
         children: box.children.filter((child) => !child.spawned).map((child) => writeBox(child, writing)),
         // Written only when there is some, and in the order it was asked for, which is what reading
         // it back matches on.
-        ...(box.data.length > 0 ? { data: box.data.map((record) => ({ value: record.value })) } : {}),
+        ...(box.data.length > 0 ? { data: box.data.map((record) => {
+            const by = dataOwnerOf(record);
+            return by === undefined ? { value: record.value } : { value: record.value, by };
+        }) } : {}),
         ...unless('visible', box.visible, true),
         ...unless('screenSpace', box.screenSpace, false),
         ...unless('unlit2d', box.unlit2d, false),

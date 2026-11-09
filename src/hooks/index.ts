@@ -29,7 +29,7 @@ export type { TUseLoadPackOptions, TUseLoadSceneOptions } from './loaders';
 export { usePostProcess } from './post/use_post_process';
 export { useScene, useCleanup, useReady, useSceneTransitionEnd } from './scene';
 export { useSpawn, useSelf } from './spawn';
-export { useData, useWatch } from './state';
+export { useData, useWatch, useStateMachine } from './state';
 export { useScript, provide, useScriptApi } from './script';
 export type { TUseScriptOptions } from './script';
 export { useReport } from './events';
@@ -37,7 +37,7 @@ export { useCapture } from './capture';
 
 export type { TUseLoadTextureOptions, TUseLoadAtlasOptions, TUseLoadBitmapFontOptions, TUseLoadFontOptions, TUseLoadModelOptions, TUseLoadShaderOptions } from './loaders';
 export type { TSceneHandle } from './scene';
-export type { TDataRecord, TDataSetter, TWatchDep } from './state';
+export type { TDataRecord, TDataSetter, TWatchDep, TStateMachine, TStateDef, TStateGoOptions, TStateMachineOptions } from './state';
 export type { TTransformOptions } from './transform';
 export type { TBlobShadowOptions } from './light';
 export type { TCubeGeometryOptions, TPlaneGeometryOptions, TCircleGeometryOptions, TSphereGeometryOptions, TIcoSphereGeometryOptions, TCylinderGeometryOptions, TConeGeometryOptions, TTorusGeometryOptions, TLatheGeometryOptions } from './geometry';
