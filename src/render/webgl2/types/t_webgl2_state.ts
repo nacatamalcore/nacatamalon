@@ -1,3 +1,4 @@
+import type { TCustomsOnGl } from '../custom/customs';
 import type { TColor } from '../../../color';
 import type { ITexture } from '../../interface';
 import type { TSpritePipeline } from '../sprite/types/t_sprite_pipeline';
@@ -101,6 +102,11 @@ export type TWebGL2State = {
      * Lines, or `null` for a game that has never drawn one. Built on the first frame that does.
      */
     lines: TLinesPipeline | null;
+    /**
+     * What draws each kind of drawing a plugin registered, made the first frame that draws one of
+     * that kind, and again after the context comes back. Empty for a game that has none.
+     */
+    customs: TCustomsOnGl;
     /**
      * The screen-wide effects, or `null` for a game that has never had one.
      *

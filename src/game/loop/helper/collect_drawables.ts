@@ -13,6 +13,7 @@ import { pivotPlace } from '../../../render/shared/pivot_place';
 import { layoutOfText } from '../../../layout/measure_text';
 import { spriteHeight, spriteWidth } from '../../../render/shared/sprite_size';
 import { keepTextLayout, noteTextBlock } from '../../../gameobjects/text/expand_text';
+import { drawableKindOf } from '../../../gameobjects/custom/drawable_kinds';
 import type { TSprite } from '../../../gameobjects/sprite/types/t_sprite';
 import type { TText } from '../../../gameobjects/text/types/t_text';
 import type { TNineSlice } from '../../../gameobjects/nine_slice/types/t_nine_slice';
@@ -22,7 +23,7 @@ import { filterLevelFor, maskLevelFor, masksNow, noteShape } from '../../../mask
 import { filtersNow } from '../../../filter/create_filter';
 import type { TMask } from '../../../mask/types/t_mask';
 import type { TMaskLevel, TMaskWalk } from '../../../mask/mask_walk';
-import { pictureBeingDrawn, showsPicture, standInFor, viewKeeps, viewWalk } from './view_walk';
+import { pictureBeingDrawn, recordOf, showsPicture, standInFor, viewKeeps, viewWalk } from './view_walk';
 
 /**
  * A placement to put children inside, or `null` for "nothing above has moved anything".
@@ -94,9 +95,9 @@ const worldOfBox = (parent: TWorld, box: TBox, depth: number): TWorld => {
  * one comparison per drawable and a scene that does pays no memory after its first frame.
  */
 const placeDrawable = (drawable: TDrawable, world: TWorld): void => {
-    // An emitter in depth, and a set of lines, are placed like a model: a turn in three dimensions
-    // is only a matrix.
-    if (drawable.type === 'mesh' || drawable.type === 'particles-3d' || drawable.type === 'lines') {
+    // An emitter in depth, a set of lines and a drawing of a plugin's kind are placed like a model:
+    // a turn in three dimensions is only a matrix.
+    if (drawable.type === 'mesh' || drawable.type === 'particles-3d' || drawable.type === 'lines' || (drawable.type === 'custom' && drawable.space !== '2d')) {
         // Written into the one it already has, which is what the line above this function has
         // always claimed and what it now does: a scene that moves a box used to leave two matrices
         // behind per model per frame, and a collection pause reads as a stutter rather than as
@@ -153,7 +154,7 @@ const keptPlace = (drawable: TDrawable): TTransform2d => {
  * the layer's own travel is put on.
  */
 const applyParallax = (drawable: TDrawable, factor: { x: number; y: number }, camera: TCamera2d, snap: TPixelSnap): void => {
-    if (drawable.type === 'mesh' || drawable.type === 'particles-3d' || drawable.type === 'lines' || drawable.type === 'particles') {
+    if (drawable.type === 'mesh' || drawable.type === 'particles-3d' || drawable.type === 'lines' || (drawable.type === 'custom' && drawable.space !== '2d') || drawable.type === 'particles') {
         return;
     }
     const base = drawable.worldTransform ?? drawable.transform;
@@ -231,10 +232,37 @@ const cornerOffset = (drawable: TSprite | TText | TNineSlice, base: TTransform2d
 };
 
 /**
+ * Whether a flat drawing of a plugin's kind reaches into `sight`: its kind's box, moved, turned and
+ * grown with it, as `stepSceneCustom` places it for the backend.
+ */
+const customInSight = (drawable: Extract<TDrawable, { type: 'custom' }>, sight: TSight): boolean => {
+    const bounds = drawableKindOf(drawable.kind)?.bounds?.(recordOf(drawable)) ?? null;
+    if (bounds === null) {
+        return true;
+    }
+    const place = drawable.worldTransform ?? drawable.transform;
+    const sx = place.scaleX;
+    const sy = place.scaleY;
+    const c = place.rotation === 0 ? 1 : Math.cos(place.rotation);
+    const s = place.rotation === 0 ? 0 : Math.sin(place.rotation);
+    const mx = ((bounds.min.x + bounds.max.x) / 2) * sx;
+    const my = ((bounds.min.y + bounds.max.y) / 2) * sy;
+    const ex = ((bounds.max.x - bounds.min.x) / 2) * sx;
+    const ey = ((bounds.max.y - bounds.min.y) / 2) * sy;
+    const cx = place.x + mx * c - my * s;
+    const cy = place.y + mx * s + my * c;
+    const hx = Math.abs(ex * c) + Math.abs(ey * s);
+    const hy = Math.abs(ex * s) + Math.abs(ey * c);
+    return cx + hx >= sight.minX && cx - hx <= sight.maxX && cy + hy >= sight.minY && cy - hy <= sight.maxY;
+};
+
+/**
  * Whether a flat drawable puts anything inside what a camera shows (`sightOf`): its picture where it
  * is drawn, held by its anchor, turned about its pivot and grown, as the renderer and the pointer
- * place it. What is not a sprite, a text or a panel is always kept: a map, a shape, particles and
- * everything in depth are judged elsewhere, or not at all.
+ * place it. A flat drawing of a plugin's kind is judged by the box its kind gives (`bounds`), placed
+ * as it is drawn; one whose kind gives none is kept. What is not a sprite, a text, a panel or one of
+ * those is always kept: a map, a shape, particles and everything in depth are judged elsewhere, or
+ * not at all.
  *
  * A text is measured as it is laid out this frame, the layout its drawing takes, and kept within its
  * own height of the camera: a letter can reach a little past the block it is laid out in, the soft
@@ -245,6 +273,9 @@ const cornerOffset = (drawable: TSprite | TText | TNineSlice, base: TTransform2d
  * @author Francisco Pereira Alvarado
  */
 export const inSight = (drawable: TDrawable, sight: TSight): boolean => {
+    if (drawable.type === 'custom') {
+        return drawable.space !== '2d' || customInSight(drawable, sight);
+    }
     if (drawable.type !== 'sprite' && drawable.type !== 'text' && drawable.type !== 'nine-slice') {
         return true;
     }

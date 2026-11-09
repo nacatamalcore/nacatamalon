@@ -273,13 +273,13 @@ const softLayer = (context: TContext, level: TMaskLevel, group: TEntry[], depth:
 };
 
 /**
- * Whether anything in a filter's list writes depth: a solid model, a line in 3D, or a filter inside it
- * that holds one. Only then is its depth kept, and its layer laid with it; a filter over 2D things, a
+ * Whether anything in a filter's list writes depth: a solid model, a line in 3D, a drawing of a plugin's
+ * kind, or a filter inside it that holds one. Only then is its depth kept, and its layer laid with it; a filter over 2D things, a
  * see-through model or an emitter alone is drawn exactly as it was, since none of them leaves a depth
  * to keep.
  */
 const hasDepth = (drawables: readonly TMaskedItem[]): boolean => drawables.some((item) =>
-    (item.type === 'mesh' && !isTransparentMesh(item as unknown as TDrawMesh)) || item.type === 'lines'
+    (item.type === 'mesh' && !isTransparentMesh(item as unknown as TDrawMesh)) || item.type === 'lines' || (item.type === 'custom' && item.space !== '2d')
     || (item.type === 'filter-layer' && item.depth === true));
 
 /**

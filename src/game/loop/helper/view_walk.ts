@@ -98,8 +98,9 @@ export const drawingPicture = <T>(picture: TTexture, gather: () => T): T => {
 
 /**
  * The drawings whose place on the picture depends on the camera looking at them: put on its pixels,
- * moved by parallax, and, for a text or a panel, laid out into pieces that hold that place. What is
- * in depth and what emits is placed the same through any camera.
+ * moved by parallax, and, for a text or a panel, laid out into pieces that hold that place, and a
+ * plugin's flat drawing too (`standInFor`). What is in depth and what emits is placed the same
+ * through any camera.
  */
 const PLACED_BY_CAMERA: ReadonlySet<string> = new Set(['sprite', 'text', 'nine-slice', 'tilemap', 'polygon', 'shapes']);
 
@@ -128,7 +129,8 @@ export const recordOf = <T extends object>(drawable: T): T => (standingInFor(dra
  * @author Francisco Pereira Alvarado
  */
 export const standInFor = (view: TViewWalk, record: TDrawable): TDrawable => {
-    if (!PLACED_BY_CAMERA.has(record.type)) {
+    // A plugin's flat drawing is placed as a sprite is, parallax and all.
+    if (!PLACED_BY_CAMERA.has(record.type) && !(record.type === 'custom' && record.space === '2d')) {
         return record;
     }
     let standIn = view.standIns.get(record);

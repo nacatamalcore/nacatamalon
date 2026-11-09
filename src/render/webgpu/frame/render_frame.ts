@@ -1,3 +1,4 @@
+import { flatSlotOf } from '../../shared/flat_cameras';
 import { beginSprites, drawSpriteRun } from '../sprite/draw_sprites';
 import { drawTilemapLayer, reserveLayerSlots } from '../tilemap/draw_tilemaps';
 import { toGpuTexture } from '../texture';
@@ -9,6 +10,7 @@ import { countDrawn } from '../../shared/count_drawn';
 import { createParticlesPipeline } from '../particles/create_particles_pipeline';
 import { drawLines } from '../lines/draw_lines';
 import { createLinesPipeline } from '../lines/create_lines_pipeline';
+import { beginCustomPass, beginCustomShadows, drawCustom, drawCustomShadows } from '../custom/customs';
 import { createPostPipelines } from '../post/post_pipeline';
 import { countPostSteps } from '../../shared/post_steps';
 import { depthViewFor, multisampledViewFor, readableDepthFor, releaseUnusedDepths } from './depth';
@@ -156,11 +158,17 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         const screenRatio = ctx.pixelRatio ?? 1;
         const screen = gpu.context.canvas as { width: number; height: number };
 
+        // Every light's matrix first, so a plugin's kind told about all the maps at once is told
+        // them already worked out.
+        for (let s = 0; s < sources.length; s++) {
+            lightSpaceMatrix(sources[s].light, sources[s].camera, lightMatrices[s] ??= new Float32Array(16));
+        }
+        const casting = beginCustomShadows(gpu, sources, lightMatrices, ctx.time);
+
         let casterSlot = 0;
         sources.forEach((source, s) => {
             const map = gpu.shadows[s] ??= createShadowMap(gpu.device);
-            const lightMatrix = lightMatrices[s] ??= new Float32Array(16);
-            lightSpaceMatrix(source.light, source.camera, lightMatrix);
+            const lightMatrix = lightMatrices[s]!;
             reportCastersOutside(source.casters, source.light, lightMatrix, gpu);
 
             const shadowPass = encoder.beginRenderPass({
@@ -183,6 +191,10 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
                 if (pipeline.draw(shadowPass, gpu.meshes, caster, lightMatrix, model, casterSlot, ctx.time, screen.width / screenRatio, screen.height / screenRatio)) {
                     casterSlot++;
                 }
+            }
+            // And whatever a plugin's kind casts into it.
+            if (casting.length > 0) {
+                drawCustomShadows(casting, shadowPass, s);
             }
             shadowPass.end();
 
@@ -313,7 +325,7 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         // already written, so the room has to be there first.
         writeMeshLights(gpu.device, gpu.meshes, views3d, shadows);
         // One walk for all of them, before anything is drawn.
-        const { meshes: meshCount, layers: layerCount, particles: particleCount, lineCorners } = countDrawn(drawables);
+        const { meshes: meshCount, layers: layerCount, particles: particleCount, lineCorners, customs: customCount } = countDrawn(drawables);
         reserveMeshSlots(gpu.device, gpu.meshes, meshCount);
         gpu.meshes.materials.beginFrame(meshCount);
         let withEffect = 0;
@@ -345,6 +357,12 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
             gpu.lines ??= createLinesPipeline(gpu.device, gpu.format, gpu.samples);
             gpu.lines.beginFrame(lineCorners);
             gpu.lines.writeViews(spaces);
+        }
+
+        // And each kind a plugin registered, told about the pass with everything a model is drawn
+        // with, so it makes its room before anything is recorded.
+        if (customCount > 0) {
+            beginCustomPass(gpu, drawables, viewIndex, cameraIndex, drawn.cameras ?? [], spaces, judges, views3d, shadows, ctx.time, width, height);
         }
 
         let run = 0;
@@ -422,6 +440,12 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
             }
             if (item.type === 'lines') {
                 drawLines(gpuPass, gpu.lines!, item, viewIndex[i] ?? -1);
+                // Its pipeline left none of the sprite state set.
+                spritesReady = false;
+                continue;
+            }
+            if (item.type === 'custom') {
+                drawCustom(gpu, gpuPass, i, item, item.space === '2d' ? flatSlotOf(cameraIndex[i]) : viewIndex[i] ?? -1);
                 // Its pipeline left none of the sprite state set.
                 spritesReady = false;
                 continue;

@@ -4,6 +4,7 @@ import type { Mat4 } from '../../math/mat4';
 import type { TDrawCamera3d } from '../interface/draw/t_draw_camera_3d';
 import type { TDrawLight } from '../interface/draw/t_draw_light';
 import type { TDrawMesh } from '../interface/draw/t_draw_mesh';
+import type { TDrawCustom } from '../interface/draw/t_draw_custom';
 import type { TDrawView3d } from '../interface/draw/t_draw_view_3d';
 import type { TFrameContext } from '../interface/t_frame_context';
 
@@ -35,6 +36,10 @@ export type TShadowSource = {
      * The models drawn into the map: this scene's, visible, and not opted out.
      */
     casters: readonly TDrawMesh[];
+    /**
+     * The drawings of a plugin's kinds in the same scene: each kind decides which of them cast.
+     */
+    customs: readonly TDrawCustom[];
 };
 
 /**
@@ -280,6 +285,12 @@ export const lightSpaceMatrix = (light: TDrawLight, camera: TDrawCamera3d | null
 };
 
 /**
+ * The drawings of a plugin's kind in a scene that has none, which is nearly every scene: one empty
+ * list for all of them.
+ */
+const NO_CUSTOMS: readonly TDrawCustom[] = [];
+
+/**
  * The lights a frame draws its shadows from, one for each view whose scene has a light asking to
  * cast, with everything each pass needs to draw them.
  *
@@ -313,8 +324,13 @@ export const findShadowSources = (ctx: TFrameContext): TShadowSource[] => {
             const drawables = pass.drawables ?? [];
             const viewIndex = pass.viewIndex ?? [];
             const casters: TDrawMesh[] = [];
+            // Made only for a scene that has a drawing of a plugin's kind: most never do.
+            let customs: TDrawCustom[] | null = null;
             for (let i = 0; i < drawables.length; i++) {
                 const item = drawables[i];
+                if (item.type === 'custom' && (viewIndex[i] ?? -1) === view) {
+                    (customs ??= []).push(item);
+                }
                 // Its own view's, and only the ones that asked to be in it. A floor left out here
                 // still receives: being drawn into the map is about casting, never about receiving.
                 if (item.type === 'mesh' && (viewIndex[i] ?? -1) === view && item.castShadow !== false) {
@@ -322,7 +338,7 @@ export const findShadowSources = (ctx: TFrameContext): TShadowSource[] => {
                 }
             }
 
-            sources.push({ view: views[view], light: views[view].lights[index], lightIndex: index, camera: views[view].camera, casters });
+            sources.push({ view: views[view], light: views[view].lights[index], lightIndex: index, camera: views[view].camera, casters, customs: customs ?? NO_CUSTOMS });
             if (sources.length === MAX_SHADOW_MAPS) {
                 return sources;
             }

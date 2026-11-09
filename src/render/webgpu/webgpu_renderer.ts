@@ -1,3 +1,4 @@
+import { destroyCustoms, newCustomsOnCard } from './custom/customs';
 import { attachGpuPassAccess } from '../extensions/gpu_pass_bridge';
 import { getColor } from '../../color';
 import type { IRenderer, TRendererOptions } from '../interface';
@@ -97,6 +98,8 @@ export const createWebGPURenderer = async (
         particles: null,
         // And for the first frame that draws a line.
         lines: null,
+        // And each kind a plugin registered, the first frame that draws one.
+        customs: newCustomsOnCard(),
         masks: null,
         filterDepth: null,
         frameUniforms,
@@ -147,6 +150,7 @@ export const createWebGPURenderer = async (
             gpu.shadowPipeline?.destroy();
             gpu.particles?.destroy();
             gpu.lines?.destroy();
+            destroyCustoms(gpu.customs);
             gpu.filterDepth?.destroy();
             device.destroy();
             context.unconfigure();

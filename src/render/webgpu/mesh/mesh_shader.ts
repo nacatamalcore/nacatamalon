@@ -2,6 +2,53 @@ import { MAX_LIGHTS, MAX_SCENE_LIGHTS } from '../../../light';
 import type { TCullMode } from '../../../materials/types/t_material';
 
 /**
+ * The scene's lights as a model reads them: the structs `LightItem` and `Lights`, which one packer
+ * (`fillLightUniforms`) fills for every view. Its own constant because a plugin's kind of drawing
+ * reads the same block (`TWebGpuDrawableContext.lights`), and a copy of it would drift.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const LIGHTS_WGSL = /* wgsl */ `
+struct LightItem {
+    // xyz = the way towards the light (a sun) or where it is (a lamp, a torch);
+    // w = which: 0 sun, 1 lamp, 2 torch, 3 panel.
+    vector: vec4<f32>,
+    // rgb = colour times strength; a = how far it reaches.
+    color: vec4<f32>,
+    // xyz = the way the beam travels; w = the cosine of the outer angle. Torch only.
+    // For a panel, xyz = its half width along its own X.
+    spotDirection: vec4<f32>,
+    // x = the cosine of the inner angle, where the soft edge ends. Torch only.
+    // For a panel, xyz = its half height along its own Y.
+    spotParams: vec4<f32>,
+};
+
+struct Lights {
+    // rgb = the level everything is lit to; w = how many of the items below are real.
+    ambient: vec4<f32>,
+    // Every light of the scene; each model reads the ones its own block names.
+    items: array<LightItem, ${MAX_SCENE_LIGHTS}>,
+    // The matrix the shadow map was drawn with, and how to read it.
+    shadowMatrix: mat4x4<f32>,
+    // x = how far off the surface to test, towards the light in the world's units; y = how dark it
+    // goes; z = one step of the map;
+    // w = which of the items above casts, or -1 for a scene that casts none.
+    shadowParams: vec4<f32>,
+    // rgb = what things fade into, w = which kinds are on (0 none, 1 by distance, 2 by height, 3
+    // both); x = how far it starts, y = how far it is complete, z = the height it starts at, w = the
+    // height it is complete at. Same place and order as its twin in GLSL, because one packer fills
+    // both.
+    fog: vec4<f32>,
+    fogRange: vec4<f32>,
+    // xyz = the way back towards the viewer, w = 1 when the view is orthographic and that way is
+    // the same everywhere; 0 for a perspective one, whose way is from the point to its eye.
+    look: vec4<f32>,
+};
+`;
+
+/**
  * What draws a model.
  *
  * **The light is worked out at the corners, not at every pixel**, and the card smears it across
@@ -42,41 +89,7 @@ struct Uniforms {
     specular: vec4<f32>,
 };
 
-struct LightItem {
-    // xyz = the way towards the light (a sun) or where it is (a lamp, a torch);
-    // w = which: 0 sun, 1 lamp, 2 torch, 3 panel.
-    vector: vec4<f32>,
-    // rgb = colour times strength; a = how far it reaches.
-    color: vec4<f32>,
-    // xyz = the way the beam travels; w = the cosine of the outer angle. Torch only.
-    // For a panel, xyz = its half width along its own X.
-    spotDirection: vec4<f32>,
-    // x = the cosine of the inner angle, where the soft edge ends. Torch only.
-    // For a panel, xyz = its half height along its own Y.
-    spotParams: vec4<f32>,
-};
-
-struct Lights {
-    // rgb = the level everything is lit to; w = how many of the items below are real.
-    ambient: vec4<f32>,
-    // Every light of the scene; each model reads the ones its own block names.
-    items: array<LightItem, ${MAX_SCENE_LIGHTS}>,
-    // The matrix the shadow map was drawn with, and how to read it.
-    shadowMatrix: mat4x4<f32>,
-    // x = how far off the surface to test, towards the light in the world's units; y = how dark it
-    // goes; z = one step of the map;
-    // w = which of the items above casts, or -1 for a scene that casts none.
-    shadowParams: vec4<f32>,
-    // rgb = what things fade into, w = which kinds are on (0 none, 1 by distance, 2 by height, 3
-    // both); x = how far it starts, y = how far it is complete, z = the height it starts at, w = the
-    // height it is complete at. Same place and order as its twin in GLSL, because one packer fills
-    // both.
-    fog: vec4<f32>,
-    fogRange: vec4<f32>,
-    // xyz = the way back towards the viewer, w = 1 when the view is orthographic and that way is
-    // the same everywhere; 0 for a perspective one, whose way is from the point to its eye.
-    look: vec4<f32>,
-};
+${LIGHTS_WGSL}
 
 // All three in group 0, which already means "how this view is lit". A shadow is one map, one light
 // and one point of view, the same for every model in the scene, so it belongs exactly where the

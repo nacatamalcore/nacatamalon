@@ -1,3 +1,4 @@
+import { destroyCustomsGl, newCustomsOnGl } from './custom/customs';
 import { attachGpuPassAccess } from '../extensions/gpu_pass_bridge';
 import { getColor } from '../../color';
 import type { IRenderer, TRendererOptions } from '../interface';
@@ -50,6 +51,7 @@ export const createWebGL2Renderer = async (
         // The same, for the first frame that draws an emitter.
         particles: null,
         lines: null,
+        customs: newCustomsOnGl(),
         masks: null,
         filterDepth: null,
         framebuffers: new Map(),
@@ -134,6 +136,7 @@ export const createWebGL2Renderer = async (
             state.shadowPipeline?.destroy();
             state.particles?.destroy();
             state.lines?.destroy();
+            destroyCustomsGl(state.customs);
             state.filterDepth?.destroy();
             for (const texture of state.textures) {
                 if (texture.source.kind === 'image') {

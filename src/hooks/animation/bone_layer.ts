@@ -1,7 +1,7 @@
 import { copyJointInto, restingJoint } from '../../animation';
 import { blendJoint } from '../../math/skinning';
 import type { TJointPose } from '../../animation';
-import type { TModel } from '../../gameobjects/model';
+import type { TAnimatable } from './types/t_skeletal_animation';
 
 /**
  * An animator with `only`: a movement laid over some of a model's bones.
@@ -42,16 +42,16 @@ type TModelLayers = {
     laid: TJointPose[][];
 };
 
-const layersOfModel = new WeakMap<TModel, TModelLayers>();
+const layersOfModel = new WeakMap<TAnimatable, TModelLayers>();
 
-const roomFor = (model: TModel): TJointPose[][] =>
+const roomFor = (model: TAnimatable): TJointPose[][] =>
     model.skeletons.map((skeleton) => skeleton.pose.map(() => restingJoint()));
 
 /**
  * Finds the bones named and all that hangs from them. Parents come before their children in the
  * list, so one pass from the front reaches every one.
  */
-const bonesOf = (model: TModel, only: readonly string[]): Int32Array[] => {
+const bonesOf = (model: TAnimatable, only: readonly string[]): Int32Array[] => {
     const found = new Set<string>();
     const bones = model.skeletons.map((skeleton) => {
         const inside = new Array<boolean>(skeleton.pose.length).fill(false);
@@ -84,7 +84,7 @@ const bonesOf = (model: TModel, only: readonly string[]): Int32Array[] => {
  * Works out how skeleton `s` stands with every layer laid over what the body wrote, in the order they
  * were made. With none showing, that is the body's own pose and nothing is copied.
  */
-const layBones = (model: TModel, s: number): TJointPose[] => {
+const layBones = (model: TAnimatable, s: number): TJointPose[] => {
     const { pose } = model.skeletons[s];
     const held = layersOfModel.get(model)!;
     if (!held.layers.some((layer) => layer.reach > 0)) {
@@ -124,7 +124,7 @@ const layBones = (model: TModel, s: number): TJointPose[] => {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const addBoneLayer = (model: TModel, layer: TBoneLayer): (() => void) => {
+export const addBoneLayer = (model: TAnimatable, layer: TBoneLayer): (() => void) => {
     let held = layersOfModel.get(model);
     if (held === undefined) {
         held = { layers: [], laid: [] };
@@ -144,7 +144,7 @@ export const addBoneLayer = (model: TModel, layer: TBoneLayer): (() => void) => 
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const readyBoneLayer = (model: TModel, layer: TBoneLayer): void => {
+export const readyBoneLayer = (model: TAnimatable, layer: TBoneLayer): void => {
     if (layer.bones !== null) {
         return;
     }

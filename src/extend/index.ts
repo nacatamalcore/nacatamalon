@@ -19,6 +19,9 @@
  * @author Francisco Pereira Alvarado
  */
 
+// Whether the running engine is one the plugin was made for, said the same way by every plugin.
+export { requireEngine } from './require_engine';
+
 // Installing what simulates physics, and the shape of one. `null` uninstalls it.
 export { registerPhysicsProvider } from '../physics';
 export type { TPhysicsProvider } from '../physics';

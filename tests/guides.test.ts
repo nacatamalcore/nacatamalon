@@ -50,22 +50,26 @@ const OPTIONS: ts.CompilerOptions = {
  */
 const compileEach = (codes: string[]): string[][] => {
     const sources = new Map(codes.map((code, i) => [join(ROOT, '..', `__guide_example_${i}.ts`), `${code}\nexport {};\n`]));
+    // The plugins guide shows a game importing a plugin, which is not here: any package named
+    // `nacatamalon-…` is taken as it comes. The engine's own doors (`nacatamalon/…`) are still checked.
+    const plugins = join(ROOT, '..', '__guide_plugins.d.ts');
+    const stubs = new Map([[plugins, "declare module 'nacatamalon-*';\n"]]);
     const host = ts.createCompilerHost(OPTIONS);
     const { readFile, fileExists, getSourceFile } = host;
-    host.readFile = (file) => sources.get(file) ?? readFile(file);
-    host.fileExists = (file) => sources.has(file) || fileExists(file);
+    host.readFile = (file) => sources.get(file) ?? stubs.get(file) ?? readFile(file);
+    host.fileExists = (file) => sources.has(file) || stubs.has(file) || fileExists(file);
     host.getSourceFile = (file, version) => {
-        const source = sources.get(file);
+        const source = sources.get(file) ?? stubs.get(file);
         return source === undefined ? getSourceFile(file, version) : ts.createSourceFile(file, source, version);
     };
-    const program = ts.createProgram([...sources.keys()], OPTIONS, host);
+    const program = ts.createProgram([...sources.keys(), plugins], OPTIONS, host);
     return [...sources.keys()].map((name) =>
         ts.getPreEmitDiagnostics(program, program.getSourceFile(name)).map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n')));
 };
 
 describe('the guides', () => {
     it('are there, in English and in Spanish', () => {
-        expect(files.sort()).toEqual(['gpu_pass.es.md', 'gpu_pass.md', 'lighting_2d.es.md', 'lighting_2d.md', 'music.es.md', 'music.md']);
+        expect(files.sort()).toEqual(['gpu_pass.es.md', 'gpu_pass.md', 'lighting_2d.es.md', 'lighting_2d.md', 'music.es.md', 'music.md', 'plugins.es.md', 'plugins.md']);
     });
 
     for (const file of files) {

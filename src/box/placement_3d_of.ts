@@ -3,7 +3,8 @@ import type { TTransform3d } from '../gameobjects/types/t_transform_3d';
 
 /**
  * Where an object really is in three dimensions: its own placement, and failing that the placement
- * of the first thing it draws, **when that thing is a shape**.
+ * of the first thing it draws, **when that thing is a shape** (a model, or a drawing of a plugin's
+ * kind, which is placed like one).
  *
  * The flat twin of this ({@link placementOf}) takes the first drawable whatever it is, and that is
  * right there: everything flat carries `x`, `y` and a turn in the plane. Here it is not. A picture's
@@ -25,5 +26,5 @@ export const placement3dOf = (box: TBox): TTransform3d | null => {
         return box.transform;
     }
     const drawable = box.drawables[0];
-    return drawable !== undefined && drawable.type === 'mesh' ? drawable.transform : null;
+    return drawable !== undefined && (drawable.type === 'mesh' || (drawable.type === 'custom' && drawable.space !== '2d')) ? drawable.transform : null;
 };

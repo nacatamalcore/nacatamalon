@@ -18,12 +18,14 @@ export type TDrawnCounts = {
     particles: number;
     /** Corners of lines. */
     lineCorners: number;
+    /** Drawings of a kind a plugin registered. */
+    customs: number;
 };
 
 /**
  * Filled again by every call, so counting allocates nothing frame after frame.
  */
-const counts: TDrawnCounts = { meshes: 0, layers: 0, particles: 0, lineCorners: 0 };
+const counts: TDrawnCounts = { meshes: 0, layers: 0, particles: 0, lineCorners: 0, customs: 0 };
 
 /**
  * An emitter's particles and those of every effect they set off, however deep.
@@ -52,6 +54,7 @@ export const countDrawn = (drawables: readonly TDrawItem[]): TDrawnCounts => {
     counts.layers = 0;
     counts.particles = 0;
     counts.lineCorners = 0;
+    counts.customs = 0;
     for (let i = 0; i < drawables.length; i++) {
         const item = drawables[i];
         switch (item.type) {
@@ -69,6 +72,9 @@ export const countDrawn = (drawables: readonly TDrawItem[]): TDrawnCounts => {
                 break;
             case 'lines':
                 counts.lineCorners += item.count;
+                break;
+            case 'custom':
+                counts.customs++;
                 break;
             default:
                 break;

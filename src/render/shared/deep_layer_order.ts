@@ -61,7 +61,7 @@ export const deepLayerOrder = (
             }
             continue;
         }
-        if ((item.type === 'mesh' && !isTransparentMesh(item)) || item.type === 'lines') {
+        if ((item.type === 'mesh' && !isTransparentMesh(item)) || item.type === 'lines' || (item.type === 'custom' && item.space !== '2d')) {
             if (last < 0) {
                 last = i;
             }

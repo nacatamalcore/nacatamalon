@@ -10,6 +10,7 @@ import type { TShadowPipeline } from "../shadow/shadow_pipeline";
 import type { TMaskPipelines } from "../mask/mask_pipelines";
 import type { TFilterDepth } from "../mask/filter_depth";
 import type { TGpuPassHost } from "../../extensions/gpu_pass_host";
+import type { TCustomsOnCard } from "../custom/customs";
 
 // render/webgpu/types/t_webgpu_state.ts
 export type TWebGPUState = {
@@ -75,6 +76,11 @@ export type TWebGPUState = {
      * the particles.
      */
     lines: TLinesPipeline | null;
+    /**
+     * What draws each kind of drawing a plugin registered, made the first frame that draws one of
+     * that kind. Empty for a game that has none.
+     */
+    customs: TCustomsOnCard;
     /**
      * The screen-wide effects, or `null` for a game that has never had one.
      *

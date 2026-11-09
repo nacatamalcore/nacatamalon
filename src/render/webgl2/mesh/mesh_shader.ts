@@ -17,25 +17,16 @@ import type { TCullMode } from '../../../materials/types/t_material';
  * @author Francisco Pereira Alvarado
  */
 /**
- * The block of numbers one model is drawn from, declared again per stage because GLSL insists.
- *
- * Exported so a material's own shaders declare the very same thing rather than a copy of it.
+ * The scene's lights as a model reads them: the struct `LightItem` and the block `Lights`, read as
+ * `lights`, which one packer (`fillLightUniforms`) fills for every view. Its own constant because a
+ * plugin's kind of drawing reads the same block (`TWebGl2DrawableContext.lights`), and a copy of it
+ * would drift.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const MESH_UNIFORMS_GLSL = /* glsl */ `
-layout(std140) uniform Uniforms {
-    mat4 mvp;
-    mat4 model;
-    mat4 normalMatrix;
-    vec4 tint;
-    vec4 emissive;
-    vec4 cameraPosition;
-    vec4 specular;
-} uniforms;
-
+export const LIGHTS_GLSL = /* glsl */ `
 struct LightItem {
     vec4 vector;
     vec4 color;
@@ -62,6 +53,29 @@ layout(std140) uniform Lights {
     // the same everywhere; 0 for a perspective one, whose way is from the point to its eye.
     vec4 look;
 } lights;
+`;
+
+/**
+ * The block of numbers one model is drawn from, declared again per stage because GLSL insists.
+ *
+ * Exported so a material's own shaders declare the very same thing rather than a copy of it.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const MESH_UNIFORMS_GLSL = /* glsl */ `
+layout(std140) uniform Uniforms {
+    mat4 mvp;
+    mat4 model;
+    mat4 normalMatrix;
+    vec4 tint;
+    vec4 emissive;
+    vec4 cameraPosition;
+    vec4 specular;
+} uniforms;
+
+${LIGHTS_GLSL}
 
 // The way from a point towards whoever is looking, which the shine and the fresnel need. An
 // orthographic camera has no eye for it to point at: its rays are parallel, so the way is one.

@@ -491,6 +491,9 @@ const paintPass = (pass: TRenderPass, picture: TPicture, clearColor: TColor, sto
             case 'particles-3d':
                 notDrawn.add('3D (models, lines and particles in depth)');
                 break;
+            case 'custom':
+                notDrawn.add(`the drawings of '${item.kind}'`);
+                break;
             default: {
                 const missing: never = item;
                 notDrawn.add(`a '${(missing as { type: string }).type}'`);

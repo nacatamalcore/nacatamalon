@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { watchContextLoss } from '../src/render/webgl2/context/watch_context_loss';
+import { newCustomsOnGl } from '../src/render/webgl2/custom/customs';
 import type { TWebGL2State } from '../src/render/webgl2/types/t_webgl2_state';
 import { createWebGL2Buffer, updateWebGL2Buffer, type TWebGL2Buffer } from '../src/render/webgl2/resources';
 
@@ -39,6 +40,7 @@ const stateWithEverything = (): TWebGL2State => ({
     lost: false,
     particles: nothing() as TWebGL2State['particles'],
     lines: nothing() as TWebGL2State['lines'],
+    customs: newCustomsOnGl(),
     post: nothing() as TWebGL2State['post'],
     shadows: [nothing() as TWebGL2State['shadows'][number]],
     shadowsSpareFor: 0,
@@ -123,6 +125,22 @@ describe('coming back from a lost context', () => {
 
         expect(state.lost).toBe(true);
         expect((texture as { glTexture: unknown }).glTexture).toBeNull();
+    });
+
+    it('has each kind of a plugin let go of what it made while that is still the lost context\'s', () => {
+        const canvas = new EventTarget() as HTMLCanvasElement;
+        const state = stateWithEverything();
+        const said: string[] = [];
+        state.customs.byKind.set('blobs', { name: 'blobs', backend: { beginPass: () => {}, draw: () => {}, destroy: () => said.push('destroy') }, pass: {} as never, shadows: [] });
+        watchContextLoss(canvas, state);
+
+        canvas.dispatchEvent(new Event('webglcontextlost'));
+        expect(said).toEqual(['destroy']);
+        expect(state.customs.byKind.size).toBe(0);
+
+        // On the context that comes back the same calls would name objects it never made.
+        canvas.dispatchEvent(new Event('webglcontextrestored'));
+        expect(said).toEqual(['destroy']);
     });
 
     it('gives back the corners of every model, map layer and shape, as last written', () => {

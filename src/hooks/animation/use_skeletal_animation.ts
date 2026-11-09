@@ -5,21 +5,20 @@ import { addBoneLayer, holdBelowIn, readyBoneLayer } from './bone_layer';
 import { useUpdate } from '../loop/use_update';
 import { useCleanup } from '../scene/use_cleanup';
 import type { TBoneLayer } from './bone_layer';
-import type { TModel } from '../../gameobjects/model';
 import type { TSkeletalClip, TJointPose } from '../../animation';
-import type { TSkeletalAnimation, TSkeletalAnimationOptions } from './types/t_skeletal_animation';
+import type { TAnimatable, TSkeletalAnimation, TSkeletalAnimationOptions } from './types/t_skeletal_animation';
 
 /**
  * Somewhere to put a sampled pose, one set per skeleton, made once and written over after that.
  */
-const roomFor = (model: TModel): TJointPose[][] =>
+const roomFor = (model: TAnimatable): TJointPose[][] =>
     model.skeletons.map((skeleton) => skeleton.pose.map(() => restingJoint()));
 
 /**
  * Writes how the bones stand now into a room. A movement only writes the bones it turns, so the rest
  * of them have to start somewhere: where they are, or easing would take them all to nothing.
  */
-const holdPoseIn = (model: TModel, room: TJointPose[][]): void => {
+const holdPoseIn = (model: TAnimatable, room: TJointPose[][]): void => {
     model.skeletons.forEach((skeleton, s) => {
         skeleton.pose.forEach((joint, j) => {
             copyJointInto(joint, room[s][j]);
@@ -95,7 +94,7 @@ const holdPoseIn = (model: TModel, room: TJointPose[][]): void => {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationOptions = {}): TSkeletalAnimation => {
+export const useSkeletalAnimation = (model: TAnimatable, options: TSkeletalAnimationOptions = {}): TSkeletalAnimation => {
     warnLoopAndRepeat('useSkeletalAnimation', 'it', options);
     // The movements are the file's, read each time because they arrive with it; the bones they
     // turn are this model's own.
@@ -221,7 +220,7 @@ export const useSkeletalAnimation = (model: TModel, options: TSkeletalAnimationO
      * Whether the file is here to be asked, which an empty table of movements does not say: it may
      * still be on its way, or have arrived with none.
      */
-    const arrived = (): boolean => file.status === 'ready' || known().length > 0;
+    const arrived = (): boolean => (file.status ?? 'ready') === 'ready' || known().length > 0;
     const warnedNext = new Set<string>();
 
     /**

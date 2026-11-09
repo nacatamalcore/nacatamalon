@@ -25,6 +25,7 @@ import type { TMaskLevel, TMaskWalk } from '../../mask/mask_walk';
 import type { TMaskTarget } from '../../mask/apply_masks';
 import type { TDrawItem } from '../../render/interface';
 import { stepSceneLines } from './helper/step_scene_lines';
+import { stepSceneCustom } from './helper/step_scene_custom';
 import type { TFrameContext } from '../../render';
 import type { TDrawSprite } from '../../render/interface';
 import { expandText, startTextFrame } from '../../gameobjects/text/expand_text';
@@ -53,10 +54,11 @@ import { computeView } from '../../render/shared/compute_mvp_3d';
 import * as mat from '../../math/mat4';
 
 /**
- * Whether a drawable is seen through its scene's camera in depth: a model, particles or lines in space.
+ * Whether a drawable is seen through its scene's camera in depth: a model, particles or lines in space,
+ * or a drawing of a plugin's kind.
  */
 const inDepth = (drawable: TDrawable | TDrawSprite): boolean =>
-    drawable.type === 'mesh' || drawable.type === 'particles-3d' || drawable.type === 'lines';
+    drawable.type === 'mesh' || drawable.type === 'particles-3d' || drawable.type === 'lines' || (drawable.type === 'custom' && drawable.space !== '2d');
 
 /**
  * Which half of the engine a drawable belongs to: what is in depth first (models, particles and lines
@@ -710,6 +712,7 @@ const gatherTree = (
             }
             poseSkeletons(modelsOffScreen, 0);
             stepSceneLines(modelsOffScreen as TDrawable[], 0);
+            stepSceneCustom(modelsOffScreen as TDrawable[], 0, root.camera3d !== null && followsFlat(root.camera3d));
         }
     }
     // A tool showing only some kinds: dropped before anything else is worked out for them, so a kind
@@ -800,6 +803,10 @@ const gatherTree = (
 
     // After the walk as well: a set of lines follows its object, and is placed in the world here.
     stepSceneLines(drawables as TDrawable[], start);
+    // And a drawing of a kind a plugin registered: its kind gets it ready, once it is placed, and
+    // standing upright where the scene's models are seen through the 2D camera.
+    const seenFlat = viewport?.camera3d ?? root.camera3d;
+    stepSceneCustom(drawables as TDrawable[], start, seenFlat !== null && followsFlat(seenFlat));
 
     // After the sort, so a text or a nine-slice moves as one block and its parts stay together.
     expandSceneIntoSprites(drawables, cameraIndex, start, viewIndex, levels);

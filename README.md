@@ -262,6 +262,14 @@ import { installPhysics2d } from "nacatamalon/physics2d";
 installPhysics2d();
 ```
 
+## Plugins
+
+A plugin is a package other games import: written as a game is, with the same hooks, and used by
+calling what it exports. Start one from the plugin template,
+`npm create nacatamalon@latest my-plugin -- --template plugin`. How it is made, the rules it keeps,
+how it is shared and the store: `node_modules/nacatamalon/guides/plugins.md`, and in Spanish,
+`guides/plugins.es.md`.
+
 ## Community
 
 - Website: [nacatamalon.com](https://nacatamalon.com)

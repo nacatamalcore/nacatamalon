@@ -233,6 +233,28 @@ describe('the GL state around a WebGL2 pass', () => {
         expect(framebuffers()).toEqual({ draw: engine, read: engine });
     });
 
+    it('leaves the engine\'s framebuffer bound for code that draws into the pass, and puts back the rest', () => {
+        const { gl, guard, k, state, framebuffers } = fakeContext();
+        const engine = {} as WebGLFramebuffer;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, engine);
+        let seen: unknown = null;
+        // Never through the screen and back: it did not start there.
+        const bind = gl.bindFramebuffer.bind(gl);
+        let bound = 0;
+        gl.bindFramebuffer = (target: number, framebuffer: WebGLFramebuffer | null) => {
+            bound++;
+            bind(target, framebuffer);
+        };
+        guard.run(() => {
+            seen = framebuffers().draw;
+            guard.gl.depthFunc(guard.gl.NEVER);
+        }, false, true);
+        expect(seen).toBe(engine);
+        expect(bound).toBe(0);
+        expect(framebuffers()).toEqual({ draw: engine, read: engine });
+        expect(state.get(k.DEPTH_FUNC)).not.toBe(k.NEVER);
+    });
+
     it('puts back what a pass changes for one draw buffer through OES_draw_buffers_indexed', () => {
         const { gl, guard, k, state, counts } = fakeContext();
         gl.enable(gl.BLEND);

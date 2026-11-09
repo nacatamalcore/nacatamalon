@@ -185,6 +185,8 @@ describe('the tools door', () => {
 describe('the extension door', () => {
     it('is where a package that extends the engine reaches in', () => {
         expect(extend.sort()).toEqual([
+            // Whether the running engine is one the plugin was made for.
+            'requireEngine',
             // Installing what simulates physics. A game never calls it: the adapter's own
             // `installPhysics2d()` does.
             'registerPhysicsProvider',
@@ -227,7 +229,9 @@ describe('the physics doors', () => {
 describe('the door for a plugin\'s GPU passes', () => {
     it('is the only one that hands over the GPU', () => {
         const render = valuesOf('../src/extend/gpu/index.ts');
-        expect(render).toEqual(['useGpuPass']);
-        expect([...front, ...tools, ...extend]).not.toContain('useGpuPass');
+        expect(render.sort()).toEqual(['createDrawable', 'registerDrawableKind', 'useGpuPass']);
+        for (const name of ['useGpuPass', 'registerDrawableKind', 'createDrawable']) {
+            expect([...front, ...tools, ...extend]).not.toContain(name);
+        }
     });
 });

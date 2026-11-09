@@ -1,4 +1,22 @@
-import type { TClipEvent } from '../../../animation';
+import type { TClipEvent, TSkeletalClip, TSkeleton } from '../../../animation';
+import type { TLoadStatus } from '../../../loaders/types/t_load_status';
+
+/**
+ * Anything with bones and movements for them, which is all `useSkeletalAnimation` reads: a model
+ * placed from a file (`createModel`), or a body a plugin gives bones of its own.
+ *
+ * `model.clips` are the movements it knows, by name, read every time so movements that arrive later
+ * can be played at once; `model.status` says whether they have all arrived (left out, they have).
+ * `skeletons` are the bones they turn: the animator writes each one's `pose`.
+ *
+ * @category Animation
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TAnimatable = {
+    readonly model: { readonly clips: Readonly<Record<string, TSkeletalClip>>; readonly status?: TLoadStatus };
+    readonly skeletons: readonly TSkeleton[];
+};
 
 /**
  * How one movement of a model plays: what its sprite twin, `TAnimationClip`, says on the clip, said

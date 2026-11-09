@@ -1,3 +1,4 @@
+import { drawableKindOf } from '../gameobjects/custom';
 import { closeParticleState, unbindParticles } from '../gameobjects/particles/particle_state';
 import { releaseLayer } from '../gameobjects/tilemap/release_layer';
 import { releasePolygon } from '../gameobjects/polygon/polygon_state';
@@ -72,6 +73,11 @@ export const disposeDrawable = (store: TRuntimeStore, drawable: TDrawable): void
         case 'lines': {
             // Its corners live beside it in a weak map and go with it. On the card it owns nothing:
             // every set of lines is written into one buffer the pipeline owns.
+            return;
+        }
+        case 'custom': {
+            // Whatever its kind keeps beside it, the kind lets go of.
+            drawableKindOf(drawable.kind)?.dispose?.(drawable);
             return;
         }
         default: {

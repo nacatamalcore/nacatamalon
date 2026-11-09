@@ -16,6 +16,7 @@ export type { TDrawMesh } from './draw/t_draw_mesh';
 export type { TDrawParticles } from './draw/t_draw_particles';
 export type { TDrawParticles3d } from './draw/t_draw_particles_3d';
 export type { TDrawLines } from './draw/t_draw_lines';
+export type { TDrawCustom } from './draw/t_draw_custom';
 export type { TDrawStencil } from './draw/t_draw_stencil';
 export type { TDrawMaskLayer } from './draw/t_draw_mask_layer';
 export type { TDrawFilterLayer } from './draw/t_draw_filter_layer';

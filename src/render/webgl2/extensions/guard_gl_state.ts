@@ -156,9 +156,10 @@ export type TGlGuard = {
     /**
      * Runs `callback` and puts the state back afterwards, even when it throws. `careful` asks GL
      * whether each binding is still alive before setting it back: for making and letting go of a
-     * pass, never for its frames.
+     * pass, never for its frames. `inPass` leaves the framebuffer bound, for code that draws into
+     * the engine's own pass (a plugin's kind of drawing) rather than beside it.
      */
-    run<T>(callback: () => T, careful?: boolean): T;
+    run<T>(callback: () => T, careful?: boolean, inPass?: boolean): T;
 };
 
 /**
@@ -225,6 +226,8 @@ export const createGlGuard = (gl: WebGL2RenderingContext): TGlGuard => {
     const deleted = new WeakSet<object>();
     let depth = 0;
     let careful = false;
+    // Whether the run going on draws inside the engine's pass (`inPass`).
+    let inside = false;
 
     const note = (state: TNotedState): void => {
         if (depth > 0 && !changed.has(state)) changed.set(state, state.read());
@@ -361,8 +364,9 @@ export const createGlGuard = (gl: WebGL2RenderingContext): TGlGuard => {
         if (gl.getParameter(gl.CURRENT_PROGRAM) !== program) gl.useProgram(alive(program, gl.isProgram));
         if (gl.getParameter(gl.VERTEX_ARRAY_BINDING) !== vertexArray) gl.bindVertexArray(alive(vertexArray, gl.isVertexArray));
         // The screen first, when the engine had a framebuffer of its own bound: the pass started on
-        // the screen and may have changed what it draws into.
-        if (drawFramebuffer !== null || readFramebuffer !== null) {
+        // the screen and may have changed what it draws into. Not for code drawn inside the
+        // engine's pass, which started on the engine's framebuffer and never on the screen.
+        if (!inside && (drawFramebuffer !== null || readFramebuffer !== null)) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             if (gl.getParameter(gl.DRAW_BUFFER0) !== screenDraw) gl.drawBuffers([screenDraw]);
             if (gl.getParameter(gl.READ_BUFFER) !== screenRead) gl.readBuffer(screenRead);
@@ -411,10 +415,11 @@ export const createGlGuard = (gl: WebGL2RenderingContext): TGlGuard => {
 
     return {
         gl: tracked as unknown as WebGL2RenderingContext,
-        run: (callback, carefully = false) => {
+        run: (callback, carefully = false, inPass = false) => {
             // Inside another run, the outer one sets everything back.
             if (depth > 0 || gl.isContextLost()) return callback();
             careful = carefully;
+            inside = inPass;
             save();
             // Making and letting go of a pass also runs the engine's own code, on its own context:
             // the viewport is kept whether or not the pass's `gl` sees it change.
@@ -422,9 +427,11 @@ export const createGlGuard = (gl: WebGL2RenderingContext): TGlGuard => {
             // The engine's own objects are out of the pass's reach: ordinary setup code such as
             // vertexAttribPointer would otherwise change the engine's vertex array.
             gl.bindVertexArray(null);
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            if (!inPass) {
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            }
             gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, null);
-            if (drawFramebuffer !== null || readFramebuffer !== null) {
+            if (!inPass && (drawFramebuffer !== null || readFramebuffer !== null)) {
                 screenDraw = gl.getParameter(gl.DRAW_BUFFER0);
                 screenRead = gl.getParameter(gl.READ_BUFFER);
             }

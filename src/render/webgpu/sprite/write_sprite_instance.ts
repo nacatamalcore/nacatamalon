@@ -290,6 +290,7 @@ export const writeSpriteInstances = (
             case 'particles':
             case 'particles-3d':
             case 'lines':
+            case 'custom':
             case 'mask-layer':
             case 'filter-layer': {
                 // Drawn by its own pipeline, in `renderFrame`, where the two lists are walked

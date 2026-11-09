@@ -127,7 +127,7 @@ export { getColor, lerpColor, fromHsl, consoleColor } from './color';
 export { useColor } from './hooks';
 export type { TColor, TColorInput, TColorOption } from './color';
 export type { TScene, TSceneFn } from './scene';
-export type { TUseLoadTextureOptions, TUseLoadAtlasOptions, TUseLoadModelOptions, TSkeletalAnimation, TSkeletalAnimationOptions, TSkeletalClipOptions, TSceneHandle, TGameObject, TSpawnOptions } from './hooks';
+export type { TUseLoadTextureOptions, TUseLoadAtlasOptions, TUseLoadModelOptions, TSkeletalAnimation, TSkeletalAnimationOptions, TSkeletalClipOptions, TAnimatable, TSceneHandle, TGameObject, TSpawnOptions } from './hooks';
 export type { TSpriteAnimation, TSpriteAnimationOptions, TAnimationClip } from './hooks';
 export type { TTweenOptions, TTweenTargetOptions, TTweenFields, TTweenHandle, TTweenStarter } from './hooks';
 export type { TTimer, TTimerHandle } from './hooks';

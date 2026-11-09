@@ -121,3 +121,51 @@ vec4 illuminate2d(vec4 color, vec2 pixel, int view) {
  */
 export const withoutLights2d = (code: string): string =>
     code.replace(LIGHTING_2D_WGSL, UNLIT_2D_WGSL).replace(LIGHTING_2D_GLSL, UNLIT_2D_GLSL);
+
+/**
+ * The 2D lighting of one view as a plugin's kind of drawing reads it: the structs, and
+ * `illuminate2d(lighting, color, pixel)`, the same light a sprite is given, from a block the kind
+ * keeps itself (`TDrawableCamera.lights`). Its arithmetic is `LIGHTING_2D_WGSL`'s, line for line.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const LIGHTS_2D_WGSL = `${LIGHTING_2D_STRUCT_WGSL}
+fn illuminate2d(lighting: Lighting2d, color: vec4f, pixel: vec2f) -> vec4f {
+    var light = lighting.ambient.rgb;
+    let count = u32(lighting.ambient.a);
+    for (var i = 0u; i < count; i++) {
+        let lamp = lighting.lamps[i];
+        let distance = length(pixel - lamp.place.xy);
+        if (lamp.place.z > 0.0 && distance < lamp.place.z) {
+            let falloff = pow(max(1.0 - distance / lamp.place.z, 0.000001), lamp.place.w);
+            light += lamp.color.rgb * falloff;
+        }
+    }
+    return vec4f(color.rgb * light, color.a);
+}
+`;
+
+/**
+ * The GLSL twin of `LIGHTS_2D_WGSL`.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const LIGHTS_2D_GLSL = `${LIGHTING_2D_STRUCT_GLSL}
+vec4 illuminate2d(Lighting2d lighting, vec4 color, vec2 pixel) {
+    vec3 light = lighting.ambient.rgb;
+    int count = int(lighting.ambient.a);
+    for (int i = 0; i < count; i++) {
+        Lamp2d lamp = lighting.lamps[i];
+        float distance = length(pixel - lamp.place.xy);
+        if (lamp.place.z > 0.0 && distance < lamp.place.z) {
+            float falloff = pow(max(1.0 - distance / lamp.place.z, 0.000001), lamp.place.w);
+            light += lamp.color.rgb * falloff;
+        }
+    }
+    return vec4(color.rgb * light, color.a);
+}
+`;

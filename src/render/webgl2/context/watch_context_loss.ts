@@ -1,3 +1,4 @@
+import { destroyCustomsGl } from '../custom/customs';
 import { createGpuResources } from '../create_gpu_resources';
 import { restoreTexture } from '../texture';
 import { restoreWebGL2Buffer } from '../resources';
@@ -35,6 +36,11 @@ export const watchContextLoss = (canvas: HTMLCanvasElement, state: TWebGL2State)
         for (const buffer of state.buffers) {
             buffer.glBuffer = null;
         }
+        // A plugin's kinds let go of what they held now, while what they delete is still of this
+        // context (calls on a lost one do nothing): on the one that comes back the same calls would
+        // name objects it never made, and leave an error behind. Each is made again the first frame
+        // that draws one of its drawings.
+        destroyCustomsGl(state.customs, true);
     };
 
     const onRestored = (): void => {

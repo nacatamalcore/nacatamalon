@@ -4,6 +4,7 @@ import type { TDrawMesh } from './t_draw_mesh';
 import type { TDrawParticles } from './t_draw_particles';
 import type { TDrawParticles3d } from './t_draw_particles_3d';
 import type { TDrawLines } from './t_draw_lines';
+import type { TDrawCustom } from './t_draw_custom';
 import type { TDrawMaskLayer } from './t_draw_mask_layer';
 import type { TDrawFilterLayer } from './t_draw_filter_layer';
 
@@ -18,4 +19,4 @@ import type { TDrawFilterLayer } from './t_draw_filter_layer';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TDrawItem = TDrawSprite | TDrawTilemapLayer | TDrawMesh | TDrawParticles | TDrawParticles3d | TDrawLines | TDrawMaskLayer | TDrawFilterLayer;
+export type TDrawItem = TDrawSprite | TDrawTilemapLayer | TDrawMesh | TDrawParticles | TDrawParticles3d | TDrawLines | TDrawCustom | TDrawMaskLayer | TDrawFilterLayer;

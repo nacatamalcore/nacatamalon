@@ -1,0 +1,229 @@
+# Hacer plugins
+
+Un plugin es un paquete que importan los juegos de otros: un cuadro de diálogo que escribe, una forma
+de arrastrar cosas, una barra de vida, una simulación en la GPU. Se escribe como se escribe un juego,
+con los mismos hooks, y se usa como cualquier librería: el juego importa lo que el plugin exporta y
+lo llama. No se configura nada del motor para él.
+
+```ts
+// Un juego que usa un plugin.
+import { createText } from 'nacatamalon';
+import { useTypewriter } from 'nacatamalon-typewriter';
+
+const Sign = () => {
+    const line = createText({ text: '' });
+    useTypewriter(line, { speed: 30 }).type('Bienvenido al pueblo.');
+};
+```
+
+## Empezar uno
+
+Hace falta Node.js 20.19 o superior. Quien usa tu plugin no lo necesita.
+
+```bash
+npm create nacatamalon@latest mi-plugin -- --template plugin
+cd mi-plugin
+npm install
+npm run rename -- health-bar   # una vez: nacatamalon-health-bar, useHealthBar en src/use_health_bar.ts
+npm run dev                    # la vista: una página tuya para probar el plugin
+npm run demo                   # la demo: un juego pequeño que usa el plugin, el escaparate de la tienda
+```
+
+El `PLUGIN_GUIDE.md` del proyecto lo explica paso a paso, y su `AGENTS.md` lleva a un asistente de
+programación a las mismas reglas.
+
+```
+src/index.ts       lo que importa un juego, y nada más
+src/plugin.ts      el nombre del plugin y su rango del motor, del package.json; engineFits()
+src/use_*.ts       un hook por archivo
+view/              la página en la que pruebas el plugin mientras lo haces; nunca se empaqueta
+demo/              un juego pequeño que usa el plugin por su nombre; la tienda la muestra
+tests/             el plugin en un juego sin navegador
+store/             icono y capturas para la ficha de la tienda
+```
+
+## Un hook
+
+```ts
+import { useSelf, useUpdate, useCleanup } from 'nacatamalon';
+import { placementOf, requireEngine } from 'nacatamalon/extend';
+
+// La plantilla lo tiene en src/plugin.ts, leído del package.json.
+const engineFits = (): boolean => requireEngine('nacatamalon-spin', '>=0.7.0 <1');
+
+export const useSpin = ({ speed = 0.25 } = {}): void => {
+    if (!engineFits()) return;
+    const self = useSelf();
+    useUpdate((delta) => {
+        const placement = placementOf(self);
+        if (placement) placement.rotation += speed * Math.PI * 2 * delta;
+    });
+    useCleanup(() => {});
+};
+```
+
+Un juego lo llama dentro de un componente, `const Coin = () => { useSpin(); createSprite(...) }`, y
+trabaja sobre ese objeto mientras viva. Nadie lo registra: cuando se ejecuta, el motor tiene en la
+mano ese juego y ese objeto, y `useSelf` y `useUpdate` les pertenecen.
+
+**El ciclo de vida son los hooks.** No hay un init, update o destroy aparte que aprender:
+
+| Cuándo | En un plugin |
+|---|---|
+| Se crea el objeto | el cuerpo del hook; `useReady` cuando la escena está completa |
+| Cada fotograma | `useUpdate`, `useLateUpdate` |
+| El objeto se va | `useCleanup` |
+| Pausa, pestaña oculta, salir de la página | `useGame().onPaused`, `onResumed`, `onHidden`, `onShown`, `onLeaving` |
+| Cambia la escena | `useScene`, `useSceneTransitionEnd` |
+
+Para lo que es de todo el juego, el plugin exporta una función `install…()` que el juego llama una
+vez al principio de `main.ts`, como `installPhysics2d()`.
+
+## Lo que `nacatamalon/extend` da a un plugin
+
+Un juego nunca lo importa; un plugin sí.
+
+- `requireEngine(plugin, rango)`: si el motor que corre es uno para el que se hizo el plugin. Cuando
+  no lo es, lo dice una vez, en nombre del plugin. El `engineFits()` de la plantilla lo llama con el
+  rango de `peerDependencies` del `package.json`, así que los dos nunca dicen cosas distintas.
+- `getActiveGame()`, `getActiveGameObject()`: qué juego, y qué objeto suyo, se está construyendo,
+  para lo que un plugin guarda por juego.
+- `placementOf`, `worldPlacementOf`, `localPositionFrom`, y lo mismo en 3D: dónde está de verdad un
+  objeto, se haya colocado él o a través de lo que dibuja.
+- `registerPhysicsProvider`: otro motor de física.
+
+`nacatamalon/extend/gpu` tiene `useGpuPass`, para trabajo propio del plugin en la GPU: una simulación
+en compute, una imagen calculada en la GPU. Ver [la guía de la pasada de GPU](gpu_pass.es.md). Tiene
+también un tipo de dibujo propio del plugin, más abajo.
+
+Todo lo demás que usa un plugin es la API del propio juego: `measureText`, `useKeyboard`,
+`createSprite`, los stores.
+
+## Las reglas
+
+- **Solo las puertas públicas del motor**: `nacatamalon` y sus subrutas en `exports` de su
+  `package.json`. Nunca una ruta de dentro del motor. El `npm run check` de la plantilla dice dónde.
+- **El motor se queda fuera del build.** `nacatamalon` es una `peerDependency`: el juego trae el
+  suyo, y dos copias serían dos motores que no se ven.
+- **Todo lo demás va dentro.** Un juego que copia el plugin a mano no tiene npm para instalar sus
+  dependencias, así que el build las empaqueta.
+- **Nada en una variable de módulo** que sea de un juego: una página puede tener varios juegos.
+- **Los mensajes empiezan por el nombre del plugin**, y uno que se repetiría cada fotograma se dice
+  una vez.
+- **Un juego que no importa el plugin no paga nada por él** (`sideEffects: false`).
+
+## Probarlo
+
+Los tests de la plantilla ejecutan el plugin en un juego sin navegador, con `nacatamalon/headless`:
+igual cada vez, un fotograma cada vez.
+
+```ts
+import { createScene, createText } from 'nacatamalon';
+import { createHeadlessGame } from 'nacatamalon/headless';
+import { useTypewriter } from 'nacatamalon-typewriter';
+
+const Level = () => {
+    const line = createText({ text: '' });
+    useTypewriter(line).type('Hola.');
+    return createScene();
+};
+
+const game = createHeadlessGame({ width: 320, height: 180, scenes: { Level } });
+await game.loaded();   // no ejecuta ningún fotograma: el primer game.run(1) es el primero
+game.run(30);
+```
+
+Lo que es un objeto ahora se lee mejor del propio objeto (`text.text`, `sprite.transform`).
+
+## Compartirlo
+
+`npm run pack` construye, comprueba y deja dos archivos en `release/`:
+
+- **`<nombre>-<versión>.zip`**: para mandarlo a mano, subirlo a una página de versiones o darlo a la
+  tienda.
+- **`<nombre>-<versión>.tgz`**: lo mismo para npm, que es opcional.
+
+Un juego lo usa de cualquiera de las dos formas. Descomprimido en la carpeta `plugins/` del juego, con
+`"nacatamalon-health-bar": "file:./plugins/nacatamalon-health-bar"` en las `dependencies` del juego,
+se importa por su nombre:
+
+```ts
+import { useHealthBar } from 'nacatamalon-health-bar';
+```
+
+o por su ruta, `'../plugins/nacatamalon-health-bar/dist/index.js'`, sin nada en `dependencies`.
+Desde npm, `npm install nacatamalon-health-bar`.
+
+## La tienda
+
+La tienda de nacatamalon.com tiene plugins gratuitos y de pago. La ficha de un plugin sale del propio
+plugin: el icono y las capturas de `store/`, listados en el `package.json` bajo `nacatamalon`, y la
+demo, que se puede jugar. Con `npm run demo` abierto, **F9** guarda la demo como captura en `store/`.
+
+`npm run check` hace las mismas comprobaciones que la tienda. Después, el equipo de nacatamalon revisa
+cada plugin, y cada versión nueva, antes de publicarlo. Manda el código sin ofuscar: ofuscar se puede
+(`OBFUSCATE` en `scripts/build.mjs`), pero hace más lento el código que corre cada fotograma y no lo
+protege de verdad, porque el código llega al navegador de cada jugador.
+
+## Un tipo de dibujo propio
+
+Un plugin que dibuja algo que ningún sprite, modelo o material puede (formas calculadas en el shader
+en vez de hechas de triángulos, un campo de hierba en una sola llamada) le enseña al motor un **tipo
+de dibujo**, desde `nacatamalon/extend/gpu`. El motor trata cada uno de sus dibujos como un modelo:
+sigue a su objeto, se ordena con los modelos de la escena, se oculta y se va con él, lo dibuja cada
+cámara de su escena y puede proyectar en los mapas de sombra. Lo dibuja el pipeline del plugin,
+dentro de las pasadas del motor, con la misma profundidad, máscaras y luces.
+
+```ts
+import { createDrawable, registerDrawableKind } from 'nacatamalon/extend/gpu';
+import type { TCustomDrawable, TDrawableKind, TWebGpuDrawableContext, TWebGpuDrawables } from 'nacatamalon/extend/gpu';
+
+type TBlob = TCustomDrawable & { radius: number };
+type TBlobPayload = { radius: number };
+// El pipeline propio del plugin: su shader, hecho sobre `context.depthStencil` y `context.lights.wgsl`.
+declare const createBlobPipeline: (context: TWebGpuDrawableContext) => TWebGpuDrawables<TBlobPayload>;
+
+const BLOBS: TDrawableKind<TBlobPayload> = {
+    name: 'nacatamalon-blobs',
+    // Una vez por fotograma para cada uno, cuando el motor ya lo ha colocado.
+    prepare: (drawable) => ({ radius: (drawable as TBlob).radius }),
+    webgpu: createBlobPipeline,
+};
+
+export const useBlob = (radius: number): TBlob => {
+    registerDrawableKind(BLOBS);
+    return createDrawable(BLOBS.name, {}, { radius });
+};
+```
+
+A lo que lo dibuja se le cuenta cada pasada antes de grabar nada en ella (`beginPass`, con todos sus
+dibujos y la cámara, las luces y el mapa de sombra de cada escena), luego se le pide dibujar cada uno
+donde cae (`draw`, con dónde está en esa pasada, `world`: se lee ahí y no se guarda lo que recibió
+`prepare`, porque una imagen del mundo puede ponerlo en otro sitio) y, para proyectar sombra, se le cuentan los mapas de sombra del fotograma
+(`beginShadows`, `drawShadow`). Su sitio en cualquier buffer se hace en `beginPass`, nunca mientras
+dibuja. Los tipos dicen el resto: `TWebGpuDrawables`, `TWebGpuDrawableContext`. TypeScript 6 conoce los tipos de WebGPU pero no
+sus constantes (`GPUBufferUsage`, `GPUShaderStage`, `GPUTextureUsage`): un plugin que hace un pipeline
+añade `@webgpu/types` a sus `devDependencies` y a `types` en su `tsconfig.json`.
+
+Un tipo vive en profundidad (lo normal) o plano, `space: '2d'`: entonces sus dibujos se colocan y se
+ordenan como sprites (`x`, `y`, `rotation`, `scaleX`, `scaleY`, con su parallax), y cada pasada le da
+sus vistas 2D (`cameras`: la pantalla y luego cada cámara 2D), cada una con la matriz de los píxeles
+del mundo a la pantalla y sus luces 2D, con las que `context.lights2d` ilumina un color
+(`illuminate2d`) como se ilumina un sprite.
+
+Un tipo da lo que lo dibuja en cada backend: `webgpu` y `webgl2`, con los mismos momentos en los dos
+(`TWebGl2Drawables`, sin encoder porque WebGL2 dibuja al momento; cada llamada corre dentro de la
+pasada del motor y el estado de GL se deja como estaba al volver, y pone él mismo cada estado con el
+que dibuja). Un backend para el que no da nada deja sus dibujos fuera, y el motor lo dice una vez;
+igual en un juego sin navegador.
+
+El motor deja fuera de cada cámara y de cada mapa de sombra los dibujos que no se pueden ver en ellos,
+si el tipo dice cuánto ocupa cada uno (`bounds`, una caja en el espacio del propio dibujo, que incluya
+lo que mueva su shader). Deja fuera dibujos enteros: uno extendido por una zona grande, un campo o un
+bosque, mejor hecho como varios.
+
+## Lo que un plugin todavía no puede hacer
+
+Registrar un tipo de archivo, poner un componente propio en un
+documento de escena para el editor, o correr para todo el juego sin que el juego lo llame. Cada una
+está planeada como su propia parte de `nacatamalon/extend`.

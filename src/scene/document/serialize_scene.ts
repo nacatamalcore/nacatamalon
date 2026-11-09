@@ -739,6 +739,8 @@ const writeDrawable = (drawable: TDrawable, writing: TWriting): TComponentDoc | 
         // when the scene is opened.
         case 'polygon': return null;
         case 'shapes': return writeShapes(drawable);
+        // A plugin's kind: the game's code makes it again when the scene is opened.
+        case 'custom': return null;
         default: {
             const never: never = drawable;
             return never;

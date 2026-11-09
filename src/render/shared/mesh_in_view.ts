@@ -5,6 +5,7 @@ import type { TCameraSpace } from './compute_mvp_3d';
 import { snapGridOf, UPRIGHT } from './fill_mesh_uniforms';
 import type { TDrawCamera3d } from '../interface/draw/t_draw_camera_3d';
 import type { TDrawMesh } from '../interface/draw/t_draw_mesh';
+import type { TDrawCustom } from '../interface/draw/t_draw_custom';
 
 /**
  * Where a model's placement and the whole way onto the screen are worked out. Never handed out.
@@ -146,7 +147,19 @@ export const meshInView = (mesh: TDrawMesh, viewProjection: Mat4, space: TCamera
     const sx = rows > 0 ? 1 + 1 / columns : 1;
     const sy = rows > 0 ? 1 + 1 / rows : 1;
 
-    const { cx, cy, cz, ex, ey, ez } = box;
+    return boxInClip(m, box, sx, sy);
+};
+
+/**
+ * Whether any of a box, its middle and half sizes in its own space, can be on the screen once put
+ * through `m` (the projection over the view over its placement): false only when all eight corners
+ * are past the same edge. `sx` and `sy` widen the side edges, for corners pulled onto the screen.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const boxInClip = (m: ArrayLike<number>, { cx, cy, cz, ex, ey, ez }: TBox, sx = 1, sy = 1): boolean => {
     // Each bit an edge; what is left after all eight is an edge every corner is past.
     let past = 0b111111;
     for (let corner = 0; corner < 8 && past !== 0; corner++) {
@@ -160,6 +173,31 @@ export const meshInView = (mesh: TDrawMesh, viewProjection: Mat4, space: TCamera
         past &= (x < -w * sx ? 1 : 0) | (x > w * sx ? 2 : 0) | (y < -w * sy ? 4 : 0) | (y > w * sy ? 8 : 0) | (z > w ? 16 : 0) | (w <= 0 ? 32 : 0);
     }
     return past === 0;
+};
+
+/**
+ * Whether a drawing of a plugin's kind can be seen through `viewProjection`: its kind's box, in its
+ * own space, put through where it is. One with no box is always drawn. Its `world` is already turned
+ * upright in a scene seen through the 2D camera (`stepSceneCustom`), so it is not turned again here.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const customInView = (item: TDrawCustom, viewProjection: Mat4): boolean => {
+    const bounds = item.bounds;
+    if (bounds === null) {
+        return true;
+    }
+    box.cx = (bounds.min.x + bounds.max.x) / 2;
+    box.cy = (bounds.min.y + bounds.max.y) / 2;
+    // A flat drawing has no depth: its box is judged on the plane it is drawn in.
+    const flat = item.space === '2d';
+    box.cz = flat ? 0 : (bounds.min.z + bounds.max.z) / 2;
+    box.ex = (bounds.max.x - bounds.min.x) / 2;
+    box.ey = (bounds.max.y - bounds.min.y) / 2;
+    box.ez = flat ? 0 : (bounds.max.z - bounds.min.z) / 2;
+    return boxInClip(mat.multiply(viewProjection, item.world, clipScratch), box);
 };
 
 /**

@@ -43,7 +43,7 @@ export type { TBlobShadowOptions } from './light';
 export type { TCubeGeometryOptions, TPlaneGeometryOptions, TCircleGeometryOptions, TSphereGeometryOptions, TIcoSphereGeometryOptions, TCylinderGeometryOptions, TConeGeometryOptions, TTorusGeometryOptions, TLatheGeometryOptions } from './geometry';
 export type { TUseActionsOptions, TUseDraggableOptions, TDraggableHandle, TDraggableDropInfo, TUseDropZoneOptions, TDropZoneHandle } from './input';
 export type { TGameObject, TSpawnOptions } from './spawn';
-export type { TSpriteAnimation, TSpriteAnimationOptions, TAnimationClip, TSkeletalAnimation, TSkeletalAnimationOptions, TSkeletalClipOptions } from './animation';
+export type { TSpriteAnimation, TSpriteAnimationOptions, TAnimationClip, TSkeletalAnimation, TSkeletalAnimationOptions, TSkeletalClipOptions, TAnimatable } from './animation';
 export type { TTweenOptions, TTweenTargetOptions, TTweenFields, TTweenHandle, TTweenStarter } from './tween';
 export type { TTimer, TTimerHandle } from './timer';
 export { useLines, useHelperAxis, useHelperGrid } from './helpers';

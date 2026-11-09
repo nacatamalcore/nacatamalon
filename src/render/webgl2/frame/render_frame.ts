@@ -1,3 +1,4 @@
+import { beginCustomPassGl, beginCustomShadowsGl, drawCustomsGl, drawCustomShadowsGl } from '../custom/customs';
 import { beginSprites, drawSpriteRun } from '../sprite/draw_sprites';
 import { drawTilemapLayer } from '../tilemap/draw_tilemaps';
 import { toGlTexture, textureSize } from '../texture';
@@ -218,6 +219,12 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
     // What a material's corner hook is told about the screen: the screen's size, in the game's
     // pixels, as its twin tells it.
     const screenRatio = ctx.pixelRatio ?? 1;
+    // Every light's matrix first, so a plugin's kind told about all the maps at once is told them
+    // already worked out.
+    for (let s = 0; s < sources.length; s++) {
+        lightSpaceMatrix(sources[s]!.light, sources[s]!.camera, lightMatrices[s] ??= new Float32Array(16));
+    }
+    const casting = sources.length > 0 ? beginCustomShadowsGl(state, sources, lightMatrices, ctx.time) : null;
     for (let s = 0; s < sources.length; s++) {
         const source = sources[s]!;
         // A card that would not give a depth picture said so when it was asked. The scene is lit
@@ -227,8 +234,7 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
             break;
         }
         state.shadowPipeline ??= createShadowPipeline(gl);
-        const lightMatrix = lightMatrices[s] ??= new Float32Array(16);
-        lightSpaceMatrix(source.light, source.camera, lightMatrix);
+        const lightMatrix = lightMatrices[s]!;
         reportCastersOutside(source.casters, source.light, lightMatrix, state);
         state.shadowPipeline.begin(map, lightMatrix);
         for (const caster of source.casters) {
@@ -241,6 +247,10 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
                 state.meshes, caster, caster.worldMatrix ?? computeModelMatrix(caster.transform),
                 ctx.time, gl.drawingBufferWidth / screenRatio, gl.drawingBufferHeight / screenRatio,
             );
+        }
+        // And whatever a plugin's kind casts into it, into the map still bound.
+        if (casting !== null && casting.length > 0) {
+            drawCustomShadowsGl(state, casting, s);
         }
         state.shadowPipeline.end();
 
@@ -341,7 +351,7 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
 
         // Counted and reserved before anything is drawn, so the buffer cannot be swapped out from
         // under a draw that was already pointed at it.
-        const { particles: particleCount, lineCorners } = countDrawn(drawables);
+        const { particles: particleCount, lineCorners, customs: customCount } = countDrawn(drawables);
         if (particleCount > 0) {
             state.particles ??= createParticlesPipeline(gl, state.sprites.quad);
             state.particles.beginFrame(particleCount);
@@ -351,6 +361,11 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
         if (lineCorners > 0) {
             state.lines ??= createLinesPipeline(gl);
             state.lines.beginFrame(lineCorners);
+        }
+
+        // And each kind a plugin registered, told about the pass before anything in it is drawn.
+        if (customCount > 0) {
+            beginCustomPassGl(state, drawables, viewIndex, cameraIndex, drawn.cameras ?? [], spaces, judges, views3d, shadows, ctx.time, width, height);
         }
 
         let run = 0;
@@ -440,6 +455,22 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
             if (item.type === 'particles-3d') {
                 drawParticles3d(gl, state.particles!, state.sprites, item, spaces[viewIndex[i] ?? -1] ?? null);
                 spritesReady = false;
+                continue;
+            }
+            if (item.type === 'custom') {
+                // Drawn by its kind inside a guard that puts every binding back, so what was ready
+                // for the sprites still is: one guard for the drawings of the same kind that follow
+                // under the same mask, with no halo waiting to be laid between them.
+                let last = i;
+                while (order === null && last + 1 < drawables.length) {
+                    const next = drawables[last + 1];
+                    if (next.type !== 'custom' || next.kind !== item.kind || (stencil !== null && stencil[last + 1] !== stencil[i])) {
+                        break;
+                    }
+                    last++;
+                }
+                drawCustomsGl(state, drawables, i, last, viewIndex, cameraIndex);
+                i = last;
                 continue;
             }
             if (item.type === 'lines') {
