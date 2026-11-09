@@ -21,16 +21,18 @@ const Sign = () => {
 Hace falta Node.js 20.19 o superior. Quien usa tu plugin no lo necesita.
 
 ```bash
-npm create nacatamalon@latest mi-plugin -- --template plugin
-cd mi-plugin
+npm create nacatamalon@latest health-bar -- --template plugin   # nacatamalon-health-bar, useHealthBar
+cd health-bar
 npm install
-npm run rename -- health-bar   # una vez: nacatamalon-health-bar, useHealthBar en src/use_health_bar.ts
 npm run dev                    # la vista: una página tuya para probar el plugin
 npm run demo                   # la demo: un juego pequeño que usa el plugin, el escaparate de la tienda
 ```
 
-El `PLUGIN_GUIDE.md` del proyecto lo explica paso a paso, y su `AGENTS.md` lleva a un asistente de
-programación a las mismas reglas.
+La carpeta le da el nombre al plugin. Desde el `.zip` de la plantilla (en
+[nacatamalon.com/docs/plugins](https://nacatamalon.com/docs/plugins), con un tutorial que hace uno de
+principio a fin), `npm install` y luego, una vez, `npm run rename -- health-bar`. El `PLUGIN_GUIDE.md`
+del proyecto lo explica paso a paso, y su `AGENTS.md` lleva a un asistente de programación a las
+mismas reglas.
 
 ```
 src/index.ts       lo que importa un juego, y nada más

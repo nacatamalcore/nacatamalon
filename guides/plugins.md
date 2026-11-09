@@ -21,16 +21,17 @@ const Sign = () => {
 You need Node.js 20.19 or newer. The people who use your plugin do not.
 
 ```bash
-npm create nacatamalon@latest my-plugin -- --template plugin
-cd my-plugin
+npm create nacatamalon@latest health-bar -- --template plugin   # nacatamalon-health-bar, useHealthBar
+cd health-bar
 npm install
-npm run rename -- health-bar   # once: nacatamalon-health-bar, useHealthBar in src/use_health_bar.ts
 npm run dev                    # the view: a page of your own to try the plugin on
 npm run demo                   # the demo: a small game using the plugin, the store's shop window
 ```
 
-The project's `PLUGIN_GUIDE.md` walks through it, and its `AGENTS.md` points a coding assistant at
-the same rules.
+The folder gives the plugin its name. From the template's `.zip` instead (on
+[nacatamalon.com/docs/plugins](https://nacatamalon.com/docs/plugins), with a tutorial that makes one
+from start to finish), `npm install` and then, once, `npm run rename -- health-bar`. The project's
+`PLUGIN_GUIDE.md` walks through it, and its `AGENTS.md` points a coding assistant at the same rules.
 
 ```
 src/index.ts       what a game imports, and nothing else
