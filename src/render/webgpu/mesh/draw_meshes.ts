@@ -1,6 +1,7 @@
 import { fillLightUniforms, fillMeshUniforms, LIGHT_UNIFORM_FLOATS, MESH_UNIFORM_FLOATS } from '../../shared';
 import { cullOf } from '../../shared/cull_of';
 import { isTransparentMesh } from '../../shared/is_transparent_mesh';
+import { instancesOf } from '../../shared/mesh_instances';
 import { occlusionWrapOf, textureWrapOf, wrapKey } from '../../shared/texture_wrap';
 import { toGpuBuffer } from '../resources';
 import { toGpuTexture } from '../texture';
@@ -228,6 +229,12 @@ export const drawMesh = (
         return false;
     }
 
+    // None of its instances to draw, or none on the card yet: nothing, and no slot taken.
+    const drawnAsMany = instancesOf(mesh);
+    if (drawnAsMany !== null && (drawnAsMany.buffer === null || drawnAsMany.count <= 0)) {
+        return false;
+    }
+
     const at = slot * MESH_STRIDE / 4;
     // Written at an offset rather than through a slice of it: a slice is an object, and one per
     // model per frame is the last thing this path was still making.
@@ -242,15 +249,20 @@ export const drawMesh = (
         });
     }
 
+    // Drawn as many: the run of its instances, which is the last thing its pipeline reads.
+    const many = drawnAsMany;
+
     // Bones and the corners that name them have to arrive together: a model with one and not the
-    // other would read whichever corners happened to be bound and scatter.
-    const bends = mesh.skeleton !== null && geometry.skinBuffer !== null;
+    // other would read whichever corners happened to be bound and scatter. One drawn as many never
+    // bends.
+    const bends = many === null && mesh.skeleton !== null && geometry.skinBuffer !== null;
 
     // A model that bends takes the effect's skinned twin: the same hooks, with the bones bending the
-    // corner after the corner hook has moved it.
+    // corner after the corner hook has moved it. One drawn as many, the twin that places each
+    // instance before the corner hook runs.
     const surface = mesh.material;
     const custom = surface.fragment !== null || surface.vertex !== null
-        ? meshes.materials.get(surface, bends, cullOf(mesh))
+        ? meshes.materials.get(surface, bends, cullOf(mesh), many !== null)
         : null;
     // A shape with no detail run cannot feed a material's pipeline, which reads one: it is drawn
     // the built-in way instead.
@@ -270,12 +282,18 @@ export const drawMesh = (
     // detail run. A shape with no detail run has no second coordinate of its own, and its first
     // stands in, as it does for a material's `ctx.uv2`.
     const secondUv = effect === null && laidOutBySecondUv(mesh);
-    const set = secondUv ? meshes.secondUv(cull) : cull === 'back' ? meshes : meshes.sided(cull);
-    const pipeline = effect !== null
-        ? (glass ? effect.transparentPipeline : effect.pipeline)!
-        : bends
+    let pipeline: GPURenderPipeline;
+    if (effect !== null) {
+        pipeline = (glass ? effect.transparentPipeline : effect.pipeline)!;
+    } else if (many !== null) {
+        const pair = meshes.instanced(cull, secondUv);
+        pipeline = glass ? pair.transparentPipeline : pair.pipeline;
+    } else {
+        const set = secondUv ? meshes.secondUv(cull) : cull === 'back' ? meshes : meshes.sided(cull);
+        pipeline = bends
             ? (glass ? set.transparentSkinnedPipeline : set.skinnedPipeline)
             : (glass ? set.transparentPipeline : set.pipeline);
+    }
     pass.setPipeline(pipeline);
     // Its own scene's lights. A model always belongs to one: a scene with models had its lighting
     // worked out when the frame was put together.
@@ -304,6 +322,13 @@ export const drawMesh = (
     }
 
     pass.setIndexBuffer(toGpuBuffer(geometry.indexBuffer), geometry.indexType);
+    if (many !== null) {
+        // After everything its corners have: the detail run when a material or a second picture
+        // coordinate reads it.
+        pass.setVertexBuffer(effect !== null || secondUv ? 3 : 2, toGpuBuffer(many.buffer!));
+        pass.drawIndexed(geometry.indexCount, many.count);
+        return true;
+    }
     pass.drawIndexed(geometry.indexCount);
     return true;
 };

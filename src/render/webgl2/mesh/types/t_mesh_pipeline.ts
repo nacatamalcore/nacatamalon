@@ -33,6 +33,12 @@ export type TMeshPipeline = {
      */
     secondUv: (cull: 'back' | 'front' | 'none') => { program: WebGLProgram; skinnedProgram: WebGLProgram };
     /**
+     * The one for a model drawn as many instances of its shape (`createMeshInstances`), for each side
+     * thrown away and for an occlusion laid out by the second picture coordinate or not. Built the
+     * first time one is drawn.
+     */
+    instanced: (cull: 'back' | 'front' | 'none', secondUv: boolean) => WebGLProgram;
+    /**
      * Each skeleton's bones as a picture, filled once a frame however many models wear them.
      */
     joints: TJointTextures;
@@ -41,6 +47,12 @@ export type TMeshPipeline = {
      */
     skinnedVertexArrays: WeakMap<IBuffer, WebGLVertexArrayObject>;
     vertexArrays: WeakMap<IBuffer, WebGLVertexArrayObject>;
+    /**
+     * And a third, for a model drawn as many, kept by the run of its instances: the shape's corners
+     * and that run, with the corners' buffer it was made for, so a shape that was made again is
+     * bound again.
+     */
+    instancedVertexArrays: WeakMap<IBuffer, { vao: WebGLVertexArrayObject; corners: IBuffer }>;
     /**
      * The block of one model's numbers, rewritten before each draw.
      */

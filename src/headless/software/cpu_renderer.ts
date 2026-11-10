@@ -69,13 +69,14 @@ export const createCpuRenderer = (options: { background: TColor; smooth: boolean
             store.buffers.set(made, data.slice());
             return made;
         },
-        updateBuffer: (buffer, data) => {
+        updateBuffer: (buffer, data, at = 0) => {
             // From the beginning, as a card's buffer is written: whatever was past it is kept. What
             // does not fit is not written at all, as a card refuses it, so a picture taken here
             // does not show what the screen would not.
             const held = store.buffers.get(buffer);
-            if (held !== undefined && held.length >= data.length) {
-                held.set(data);
+            const first = at / data.BYTES_PER_ELEMENT;
+            if (held !== undefined && held.length >= first + data.length) {
+                held.set(data, first);
             }
         },
         destroyBuffer: (buffer) => {

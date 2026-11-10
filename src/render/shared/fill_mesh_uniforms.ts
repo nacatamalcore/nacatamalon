@@ -2,6 +2,7 @@ import * as mat from '../../math/mat4';
 import { computeModelMatrix, normalMatrixOf } from './compute_mvp_3d';
 import type { TCameraSpace } from './compute_mvp_3d';
 import { pickMeshLights } from './pick_mesh_lights';
+import { meshBoundsOf } from './mesh_instances';
 import type { TDrawMesh } from '../interface/draw/t_draw_mesh';
 import type { TDrawLight } from '../interface/draw/t_draw_light';
 
@@ -96,7 +97,7 @@ export const fillMeshUniforms = (out: Float32Array, at: number, mesh: TDrawMesh,
     out[at + 47] = surface.affine === true ? 1 : 0;
     // The other three of that column are free the same way, and two of them carry which of the
     // scene's lights reach this model: eight places in its block, four to a number.
-    const [first, second] = pickMeshLights(lights, model, mesh.geometry?.bounds ?? null);
+    const [first, second] = pickMeshLights(lights, model, meshBoundsOf(mesh));
     out[at + 44] = first;
     out[at + 45] = second;
     // And the last one carries the alpha below which a pixel is cut out: zero cuts nothing, since

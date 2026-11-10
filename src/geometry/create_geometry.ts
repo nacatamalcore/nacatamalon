@@ -2,7 +2,7 @@ import { getActiveBox, getActiveGame } from '../store';
 import { freeGeometryBuffers } from './free_geometry';
 import { nanoId } from '../utils';
 import { computeDetail } from './build/compute_tangents';
-import { computeNormals, toFlatShaded } from './build/normals';
+import { computeNormals, splitPerCorner, toFlatShaded } from './build/normals';
 import { projectUvs, UV_PROJECTIONS } from './build/project_uvs';
 import { boundsOf, colorsFor, positionsOf, uploadGeometry } from './upload_geometry';
 import { COLOR_STRIDE, DETAIL_STRIDE, GEOMETRY_STRIDE } from './types/t_geometry';
@@ -54,6 +54,14 @@ export type TGeometryData = {
      * Round an axis (`'cylinder'`, `'sphere'`) it is rounded to whole times, so the seam meets itself.
      */
     uvScale?: number;
+    /**
+     * A second place in a picture for each corner: `u, v`, two numbers a corner, like `uvs`. For a
+     * picture laid out differently from the colour picture: an occlusion map baked over the whole
+     * shape once while the colour repeats (`occlusion: { texture, uv: 'uv2' }`), or a hook that
+     * reads `ctx.uv2`. A corner `uvs` worked out by name splits keeps its second place. Left out, it
+     * is `uvs` again.
+     */
+    uv2?: ArrayLike<number>;
     /**
      * The colour painted on each corner: `r, g, b, a` from 0 to 1, four numbers a corner, multiplied
      * with the picture and the tint and smeared across each triangle. Left out, white.
@@ -113,7 +121,7 @@ const checkLength = (hook: string, name: string, list: ArrayLike<number> | undef
  * The shape as the card takes it: the corners, their facings and picture places woven into one run,
  * the triangles, and the painted colours. Checked first, so a mistake is said in the shape's own terms.
  */
-const assemble = (hook: string, data: TGeometryData): { vertices: Float32Array; indices: Uint16Array | Uint32Array; colors: Uint8Array | null } => {
+const assemble = (hook: string, data: TGeometryData): { vertices: Float32Array; indices: Uint16Array | Uint32Array; colors: Uint8Array | null; uv2: Float32Array | null } => {
     const { positions } = data;
     if (positions === undefined || positions.length === 0) {
         throw new Error(`[NacatamalOn] ${hook}: 'positions' is empty. Give it three numbers a corner: x, y, z.`);
@@ -139,6 +147,7 @@ const assemble = (hook: string, data: TGeometryData): { vertices: Float32Array; 
         }
     }
     checkLength(hook, 'colors', data.colors, 4, corners);
+    checkLength(hook, 'uv2', data.uv2, 2, corners);
 
     const indexCount = data.indices?.length ?? corners;
     if (indexCount % 3 !== 0) {
@@ -194,11 +203,23 @@ const assemble = (hook: string, data: TGeometryData): { vertices: Float32Array; 
         }
     }
 
+    // The second places, numbered for the corners there are now: a corner split for the picture
+    // keeps the one of the corner it came from.
+    let uv2: Float32Array | null = null;
+    if (data.uv2 !== undefined) {
+        uv2 = new Float32Array(count * 2);
+        for (let c = 0; c < count; c++) {
+            const was = from(c);
+            uv2[c * 2] = data.uv2[was * 2];
+            uv2[c * 2 + 1] = data.uv2[was * 2 + 1];
+        }
+    }
+
     if (data.flat === true) {
         const split = toFlatShaded(vertices, indices, null, colors);
-        return { vertices: split.vertices, indices: split.indices, colors: split.colors };
+        return { vertices: split.vertices, indices: split.indices, colors: split.colors, uv2: uv2 === null ? null : splitPerCorner(uv2, 2, indices) };
     }
-    return { vertices, indices, colors };
+    return { vertices, indices, colors, uv2 };
 };
 
 /**
@@ -224,7 +245,8 @@ const release = (geometry: TGeometry): void => {
  *
  * Only `positions` has to be there. Without `indices`, every three corners are a triangle; without
  * `normals`, the facings are worked out from the triangles, smooth, or one per triangle with `flat`;
- * without `uvs`, every corner reads the picture's top left; without `colors`, white. `uvs` can also
+ * without `uvs`, every corner reads the picture's top left; without `uv2`, it is `uvs` again; without
+ * `colors`, white. `uvs` can also
  * be worked out by name, `'box'` for a rock or a building, `'planar'` for a terrain, `'cylinder'`
  * or `'sphere'`, with `uvScale` to lay the picture by the units the corners are given in rather than once over it.
  *
@@ -267,7 +289,7 @@ export const createGeometry = (data: TGeometryData): TGeometry => {
         throw outsideSceneBody('createGeometry');
     }
     const built = assemble('createGeometry', data);
-    const geometry = uploadGeometry(store, `geometry:${nanoId()}`, built, null);
+    const geometry = uploadGeometry(store, `geometry:${nanoId()}`, { ...built, detail: computeDetail(built.vertices, built.indices, null, built.uv2) }, null);
     owned.set(geometry, {
         store,
         vertexBytes: built.vertices.byteLength,
@@ -340,7 +362,7 @@ export const updateGeometry = (geometry: TGeometry, data: TGeometryData): void =
     const built = assemble('updateGeometry', data);
     const renderer = held.store.get('screen').renderer;
     const colors = colorsFor(built.vertices.length / GEOMETRY_STRIDE, built.colors);
-    const detail = computeDetail(built.vertices, built.indices);
+    const detail = computeDetail(built.vertices, built.indices, null, built.uv2);
     const indexType = built.indices instanceof Uint32Array ? 'uint32' : 'uint16';
 
     const fits = built.vertices.byteLength <= held.vertexBytes && built.indices.byteLength <= held.indexBytes && indexType === held.indexType;

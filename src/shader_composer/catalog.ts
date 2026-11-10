@@ -2,7 +2,7 @@ import { composerFloat, composerSwizzle, composerVec2, composerVec3, composerVec
 import {
     composerEmissive, composerEnvUv, composerLight, composerMapSample, composerShine, composerResolution, composerSurface, composerTextureSample, composerTime,
     composerUniform, composerUv, composerVertexColor, composerVertexNormal, composerVertexPosition, composerViewDir, composerWorldNormal,
-    composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent, composerFrontFacing, composerCarry, composerOcclusion, composerLocalUv, composerLayerUv,
+    composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent, composerInstanceData, composerInstanceOrigin, composerFrontFacing, composerCarry, composerOcclusion, composerLocalUv, composerLayerUv,
     composerWorldPos,
 } from './inputs';
 import {
@@ -207,11 +207,13 @@ const DEFS: TNodeDef[] = [
     inputNode('vertexNormal', 'Vertex Normal', V3, 'The vertex\'s normal. Vertex stage only.', ['mesh3d']),
     inputNode('vertexColor', 'Vertex Color', V4, 'The color painted on the model\'s vertices. Already part of Surface.', ['mesh3d']),
     inputNode('screenPos', 'Screen Position', V2, 'Where the fragment is on the screen, in game pixels from the top left: for patterns that stay put while the model moves.', ['mesh3d']),
-    inputNode('uv2', 'UV 2', V2, 'A second texture coordinate: the model file\'s own, or UV again.', ['mesh3d']),
+    inputNode('uv2', 'UV 2', V2, 'A second texture coordinate: the model file\'s own or createGeometry\'s uv2, or UV again.', ['mesh3d']),
     inputNode('worldTangent', 'World Tangent', V3, 'Which way across the surface the texture runs, in world space.', ['mesh3d']),
     inputNode('worldBitangent', 'World Bitangent', V3, 'Which way down the surface the texture runs, in world space.', ['mesh3d']),
     inputNode('vertexTangent', 'Vertex Tangent', V3, 'The vertex\'s tangent in the model\'s own space. Vertex stage only.', ['mesh3d']),
     inputNode('vertexBitangent', 'Vertex Bitangent', V3, 'The vertex\'s bitangent in the model\'s own space. Vertex stage only.', ['mesh3d']),
+    inputNode('instanceData', 'Instance Data', V4, 'The four numbers of the instance this vertex belongs to, for a model drawn as many (createMeshInstances). Vertex stage only.', ['mesh3d']),
+    inputNode('instanceOrigin', 'Instance Origin', V3, 'Where the instance this vertex belongs to stands, in the space Vertex Position is in. Vertex stage only.', ['mesh3d']),
     inputNode('carry', 'Carry', V4, 'What the Carry Output worked out at each corner, smeared across the triangle: a wave\'s height, a light of your own, the local position. Zeros when nothing is carried.', ['mesh3d']),
     inputNode('occlusion', 'Occlusion', F32, 'How open this place is to the light from all around, from the material\'s occlusion: 1 wide open, 0 shut in a crease. Already part of Light.', ['mesh3d']),
     inputNode('localUv', 'Local UV', V2, 'Where the pixel is across the sprite, 0 to 1, however its frames change: one tile of a map, one letter of a text, one piece of a nine-slice. Read a mask there so it stays put.', ['sprite2d']),
@@ -608,6 +610,8 @@ export const INPUT_BUILDERS: Record<string, () => TComposerNode> = {
     worldBitangent: composerWorldBitangent,
     vertexTangent: composerVertexTangent,
     vertexBitangent: composerVertexBitangent,
+    instanceData: composerInstanceData,
+    instanceOrigin: composerInstanceOrigin,
     frontFacing: composerFrontFacing,
     carry: composerCarry,
     occlusion: composerOcclusion,

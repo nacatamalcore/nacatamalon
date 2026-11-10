@@ -36,6 +36,28 @@ releases are in [changelog/](./changelog/), one file each.
   and give a height map `smooth: true`, or it rises in flat terraces.
   Until now a vertex hook that read a map did not compile, and the model drew with the built-in
   shader.
+- **A second picture coordinate in `createGeometry`.** `uv2`, two numbers a corner, in
+  `createGeometry` and `updateGeometry`: for an occlusion map laid once over a shape whose colour
+  repeats (`occlusion: { texture, uv: 'uv2' }`), or a hook that reads `ctx.uv2`. A corner that `uvs`
+  worked out by name or `flat` splits keeps it. Left out, it is `uvs` again, as before; a glTF model
+  already brought its own.
+- **Many of one shape in one draw, `createMeshInstances`.** A meadow of grass, a hillside of rocks,
+  a forest: `createMeshInstances({ geometry, capacity, ... })` takes what `createMesh` takes and is
+  one model drawn many times over, one draw however many there are. `set(i, { x, y, z, rotationY,
+  scale, tint, data })` places each instance inside it, with a colour that multiplies in and four
+  numbers of its own, and `count` is how many are drawn; only the instances that changed are sent to
+  the card, once a frame. Its `transform` moves them all and its material is every one's surface.
+  It is lit, shadowed (casting and receiving, cut out by `alphaCutoff` too), fogged and skipped off
+  screen as one model, by the box around all its instances, on both backends. It has no bones, and
+  is made in code: a scene document leaves it out.
+- **A material knows which instance a corner belongs to.** `VertContext` has `instance`, the four
+  numbers `set` gave as `data`, and `origin`, where the instance stands (`composerInstanceData()`
+  and `composerInstanceOrigin()` in the composer); both are zeros on a single model, so one material
+  serves both. On a group the vertex hook runs after the instance has placed the corner, in the
+  group's space, so wind crossing a field is written once for every blade. What the colour hook
+  needs is handed on through `carry`.
+- **`updateBuffer(buffer, data, at)`** on a renderer writes from `at` bytes in, for a long run of
+  which only a stretch changed.
 - **Mipmaps.** `useLoadTexture({ src, mipmaps: true })` and `createPixelTexture(pixels, { mipmaps:
   true })` give a picture smaller and smaller copies of itself, made on the graphics card, and a
   model reads far away the copy its size on the screen asks for, so a floor, a road or a wall running

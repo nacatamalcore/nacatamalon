@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { buildMeshMaterialShaderGlsl, buildMeshMaterialShadowShaderGlsl } from '../src/render/webgl2/material/mesh_material_shader';
 import { meshVertexGlsl } from '../src/render/webgl2/mesh/mesh_shader';
 import { skinnedVertexGlsl } from '../src/render/webgl2/mesh/skinned_shader';
+import { instancedVertexGlsl } from '../src/render/webgl2/mesh/instanced_shader';
 import type { TCullMode } from '../src/materials';
 
 /**
@@ -56,6 +57,14 @@ const stages = (): Array<[string, string]> => {
     for (const cull of CULLS) {
         all.push([`built-in, ${cull}`, meshVertexGlsl(cull)]);
         all.push([`built-in with bones, ${cull}`, skinnedVertexGlsl(cull)]);
+        // Drawn as many: an instance is read at the corner and carries nothing more to the pixel.
+        all.push([`built-in as many, ${cull}`, instancedVertexGlsl(cull)]);
+        all.push([`built-in as many, second uv, ${cull}`, instancedVertexGlsl(cull, true)]);
+        all.push([`material as many, ${cull}`, buildMeshMaterialShaderGlsl(
+            'vec4 effect(vec4 surface, FragContext ctx) { return surface * ctx.carry; }',
+            'vec3 vertex(vec3 pos, VertContext ctx) { carry = ctx.instance; return pos; }',
+            {}, [], false, cull, true,
+        ).vertex]);
         for (const skinned of [false, true]) {
             const bones = skinned ? ' with bones' : '';
             all.push([`material${bones}, ${cull}`, buildMeshMaterialShaderGlsl(null, null, {}, [], skinned, cull).vertex]);
@@ -76,6 +85,8 @@ const stages = (): Array<[string, string]> => {
         all.push([`material shadow${bones}`, buildMeshMaterialShadowShaderGlsl(null, {}, [], skinned).vertex]);
         all.push([`material shadow cut out${bones}`, buildMeshMaterialShadowShaderGlsl(null, {}, [], skinned, { fragment: null }).vertex]);
     }
+    all.push(['material shadow as many', buildMeshMaterialShadowShaderGlsl(null, {}, [], false, null, true).vertex]);
+    all.push(['material shadow cut out as many', buildMeshMaterialShadowShaderGlsl(null, {}, [], false, { fragment: null }, true).vertex]);
     return all;
 };
 

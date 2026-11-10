@@ -6,6 +6,7 @@ import { snapGridOf, UPRIGHT } from './fill_mesh_uniforms';
 import type { TDrawCamera3d } from '../interface/draw/t_draw_camera_3d';
 import type { TDrawMesh } from '../interface/draw/t_draw_mesh';
 import type { TDrawCustom } from '../interface/draw/t_draw_custom';
+import { meshBoundsOf } from './mesh_instances';
 
 /**
  * Where a model's placement and the whole way onto the screen are worked out. Never handed out.
@@ -76,7 +77,7 @@ const coverPose = (joints: Float32Array, out: TBox): void => {
  * **It answers `true` whenever it cannot be sure**, because a model that vanishes at the edge of the
  * screen is a fault nobody can explain, and one drawn for nothing is only slower:
  * - one that says `alwaysDrawn`;
- * - one with no box to measure;
+ * - one with no box to measure (a run of instances has one once its shape has, around them all);
  * - one whose material moves its corners in a shader (`vertex`), which no box on this side can know
  *   about, unless it says how far with `boundsMargin`.
  *
@@ -97,7 +98,7 @@ export const meshInView = (mesh: TDrawMesh, viewProjection: Mat4, space: TCamera
     if (mesh.alwaysDrawn === true) {
         return true;
     }
-    const bounds = mesh.geometry?.bounds ?? null;
+    const bounds = meshBoundsOf(mesh);
     if (bounds === null) {
         return true;
     }
@@ -116,7 +117,8 @@ export const meshInView = (mesh: TDrawMesh, viewProjection: Mat4, space: TCamera
     box.ey = (bounds.max.y - bounds.min.y) / 2 + pad;
     box.ez = (bounds.max.z - bounds.min.z) / 2 + pad;
 
-    const skeleton = mesh.skeleton;
+    // One drawn as many never bends, whatever it holds: its box is its instances'.
+    const skeleton = mesh.instances !== null && mesh.instances !== undefined ? null : mesh.skeleton;
     if (skeleton !== null && skeleton.jointMatrices.length >= 16) {
         const pose = skeleton.posedOn;
         let kept = posed.get(mesh);

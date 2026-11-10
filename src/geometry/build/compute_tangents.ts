@@ -42,7 +42,8 @@ const anyAcross = (nx: number, ny: number, nz: number): [number, number, number]
  * @param vertices The shape's corners, `GEOMETRY_STRIDE` numbers each (place, facing, picture).
  * @param indices Which corners make each triangle.
  * @param tangents The file's own tangents, four numbers a corner, or `null` to work them out.
- * @param uv2 The file's own second coordinates, two numbers a corner, or `null` to copy the first.
+ * @param uv2 The second coordinates given (a file's, or `createGeometry`'s `uv2`), two numbers a
+ * corner, or `null` to copy the first.
  * @returns `DETAIL_STRIDE` numbers a corner: tangent `x y z`, its hand, then `u v` of the second.
  *
  * @internal

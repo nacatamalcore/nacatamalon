@@ -162,7 +162,8 @@ export type TMaterialOcclusion = {
     strength?: number;
     /**
      * Which picture coordinate it is laid out by: `'uv'`, the one the colour picture uses, or
-     * `'uv2'`, a second one the model file brings (shapes with none read their first again).
+     * `'uv2'`, a second one the model file brings or `createGeometry` is given (shapes with none read
+     * their first again).
      * Default `'uv'`.
      */
     uv?: 'uv' | 'uv2';

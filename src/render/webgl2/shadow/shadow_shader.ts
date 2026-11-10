@@ -1,3 +1,5 @@
+import { INSTANCE_HEAD_GLSL } from '../mesh/mesh_shader';
+
 /**
  * What is drawn into the shadow map: where a corner lands from the light, and nothing else.
  *
@@ -172,5 +174,41 @@ void main() {
     if (texture(uTexture, vUv).a * uCut.y * vAlpha < uCut.x) {
         discard;
     }
+}
+`;
+
+/**
+ * The shadow of a model drawn as many instances of its shape: each where its instance puts it. The
+ * twin of SHADOW_INSTANCED_WGSL.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const SHADOW_INSTANCED_VERTEX_GLSL = /* glsl */ `#version 300 es
+layout(location = 0) in vec3 aPosition;
+${INSTANCE_HEAD_GLSL}
+uniform mat4 uLightViewProj;
+uniform mat4 uModel;
+
+void main() {
+    gl_Position = uLightViewProj * uModel * (instancePlace() * vec4(aPosition, 1.0));
+}
+`;
+
+/**
+ * The same, cut out of its picture by its corners' alpha times its instance's.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const SHADOW_CUT_INSTANCED_VERTEX_GLSL = /* glsl */ `#version 300 es
+${SHADOW_CUT_IN_GLSL}
+${INSTANCE_HEAD_GLSL}
+void main() {
+    gl_Position = uLightViewProj * uModel * (instancePlace() * vec4(aPosition, 1.0));
+    vUv = aUv;
+    vAlpha = aColor.a * aInstanceColor.a;
 }
 `;

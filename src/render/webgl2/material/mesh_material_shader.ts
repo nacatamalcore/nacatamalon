@@ -1,6 +1,6 @@
 import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import {
-    FACED_LIGHT_GLSL, FACING_TURN_GLSL, LIT_BY_GLSL, MESH_FRAGMENT_HEAD_GLSL, MESH_SAMPLE_LIGHT_GLSL, MESH_VERTEX_ATTRIBUTES_GLSL,
+    FACED_LIGHT_GLSL, FACING_TURN_GLSL, INSTANCE_HEAD_GLSL, LIT_BY_GLSL, MESH_FRAGMENT_HEAD_GLSL, MESH_SAMPLE_LIGHT_GLSL, MESH_VERTEX_ATTRIBUTES_GLSL,
     TWO_SIDED_VARYINGS_GLSL, TWO_SIDED_WRITE_GLSL, worldNormalOfGlsl,
 } from '../mesh/mesh_shader';
 import { MAX_LIGHTS } from '../../../light';
@@ -24,6 +24,10 @@ struct VertContext {
     vec3 tangent;
     vec3 bitangent;
     vec2 uv2;
+    // For a model drawn as many: its instance's four numbers and where that instance stands. Zeros
+    // for a single model.
+    vec4 instance;
+    vec3 origin;
 };
 
 // Four numbers the corner hook hands on to the colour hook, as its twin keeps them.
@@ -197,8 +201,8 @@ const DEFORMED_NORMAL = /* glsl */ `
     vec3 reference = abs(ctx.normal.y) > 0.9 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
     vec3 tangent = normalize(cross(ctx.normal, reference));
     vec3 bitangent = cross(ctx.normal, tangent);
-    vec3 moved1 = vertex(aPosition + tangent * ${EPSILON}, ctx);
-    vec3 moved2 = vertex(aPosition + bitangent * ${EPSILON}, ctx);
+    vec3 moved1 = vertex(rest + tangent * ${EPSILON}, ctx);
+    vec3 moved2 = vertex(rest + bitangent * ${EPSILON}, ctx);
     vec3 shaped = normalize(cross(moved1 - local, moved2 - local));
 `;
 
@@ -246,7 +250,7 @@ const SKIN = /* glsl */ `
     // The facing by the inverse of the mix, so a bone stretched more one way than another leans it
     // the right way; what lies along the surface by the mix itself.
     vec3 facing = facingTurnOf(mat3(skin)) * shaped;
-    vec3 across = mat3(skin) * aTangent.xyz;
+    vec3 across = mat3(skin) * restTangent;
 `;
 
 /**
@@ -255,8 +259,43 @@ const SKIN = /* glsl */ `
 const STILL = /* glsl */ `
     vec4 placed = vec4(local, 1.0);
     vec3 facing = shaped;
-    vec3 across = aTangent.xyz;
+    vec3 across = restTangent;
 `;
+
+/**
+ * The corner as the hook finds it, for a single model: as its shape has it.
+ */
+const REST = /* glsl */ `
+    vec3 rest = aPosition;
+    vec3 restNormal = aNormal;
+    vec3 restTangent = aTangent.xyz;
+    vec4 restColor = aColor;
+    vec4 restInstance = vec4(0.0);
+    vec3 restOrigin = vec3(0.0);
+`;
+
+/**
+ * The corner as the hook finds it, for a model drawn as many: already placed by its instance, with
+ * the instance's colour over its own. The twin of REST_INSTANCED in
+ * webgpu/material/mesh_material_shader.ts.
+ */
+const REST_INSTANCED = /* glsl */ `
+    mat4 instance = instancePlace();
+    vec3 rest = (instance * vec4(aPosition, 1.0)).xyz;
+    vec3 restNormal = normalize(facingTurnOf(mat3(instance)) * aNormal);
+    vec3 restTangent = normalize(mat3(instance) * aTangent.xyz);
+    vec4 restColor = aColor * aInstanceColor;
+    vec4 restInstance = aInstanceData;
+    vec3 restOrigin = instance[3].xyz;
+`;
+
+const restOf = (instanced: boolean): string => instanced ? REST_INSTANCED : REST;
+
+/**
+ * What a corner of a model drawn as many reads of its instance, with the helper its facing is turned
+ * by, which the bones' helpers bring for a model that bends.
+ */
+const INSTANCED_HEAD = INSTANCE_HEAD_GLSL + FACING_TURN_GLSL;
 
 /**
  * What the corner hook is told, and the corner it gives back: the same in the pass that draws the
@@ -264,20 +303,22 @@ const STILL = /* glsl */ `
  */
 const CORNER_CONTEXT = /* glsl */ `
     VertContext ctx;
-    ctx.normal = aNormal;
+    ctx.normal = restNormal;
     ctx.uv = aUv;
-    ctx.color = aColor;
-    ctx.tangent = aTangent.xyz;
-    ctx.bitangent = cross(aNormal, aTangent.xyz) * aTangent.w;
+    ctx.color = restColor;
+    ctx.tangent = restTangent;
+    ctx.bitangent = cross(restNormal, restTangent) * aTangent.w;
     ctx.uv2 = aUv2;
+    ctx.instance = restInstance;
+    ctx.origin = restOrigin;
 
-    vec3 local = vertex(aPosition, ctx);
+    vec3 local = vertex(rest, ctx);
     // Kept now: a surface measured again calls the hook twice more, at corners beside this one.
     vec4 carried = carry;
 `;
 
-const vertexBody = (normal: string, skinned: boolean, cull: TCullMode): string => /* glsl */ `
-void main() {${CORNER_CONTEXT}${normal}${skinned ? SKIN : STILL}
+const vertexBody = (normal: string, skinned: boolean, cull: TCullMode, instanced: boolean): string => /* glsl */ `
+void main() {${restOf(instanced)}${CORNER_CONTEXT}${normal}${skinned ? SKIN : STILL}
     gl_Position = snapToPixels(uniforms.mvp * placed);
 
     vec3 worldPos = (uniforms.model * placed).xyz;
@@ -314,7 +355,7 @@ void main() {${CORNER_CONTEXT}${normal}${skinned ? SKIN : STILL}
     vNormal = vec4(worldNormal, stretched2.x);
     vWorldPos = worldPos;
 ${cull === 'none' ? '' : `    vViewDir = viewDir;
-`}    vColor = aColor;
+`}    vColor = restColor;
     vFog = fogAt(worldPos);
     vScreen = vec4(gl_Position.xyw, stretched2.y);
     // A direction, so it is moved by the model's own turn and stretch rather than the facing's.
@@ -395,7 +436,8 @@ void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
  * hooks are all things the body uses.
  *
  * `skinned` is the same shader for a model that bends: it also reads the bones each corner names and
- * bends the corner around them, after the corner hook has moved it.
+ * bends the corner around them, after the corner hook has moved it. `instanced` is the same for a
+ * model drawn as many: each corner is placed by its instance before the corner hook runs. Never both.
  *
  * @internal
  * @since 1.0.0
@@ -408,11 +450,12 @@ export const buildMeshMaterialShaderGlsl = (
     mapNames: readonly string[] = [],
     skinned = false,
     cull: TCullMode = 'back',
+    instanced = false,
 ): { vertex: string; fragment: string } => ({
     vertex: [
         MESH_VERTEX_ATTRIBUTES_GLSL,
         DETAIL_HEAD,
-        skinned ? SKIN_HEAD : '',
+        skinned ? SKIN_HEAD : instanced ? INSTANCED_HEAD : '',
         glslUniformBlock(sig),
         VARYINGS('out', cull),
         MESH_SAMPLE_LIGHT_GLSL,
@@ -420,7 +463,7 @@ export const buildMeshMaterialShaderGlsl = (
         VERT_CONTEXT,
         cornerMaps(vertex, mapNames),
         vertex ?? DEFAULT_VERTEX,
-        vertexBody(vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL, skinned, cull),
+        vertexBody(vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL, skinned, cull, instanced),
     ].join('\n'),
     fragment: [
         MESH_FRAGMENT_HEAD_GLSL,
@@ -468,6 +511,7 @@ export const buildMeshMaterialShadowShaderGlsl = (
     mapNames: readonly string[] = [],
     skinned = false,
     cut: { fragment: string | null } | null = null,
+    instanced = false,
 ): { vertex: string; fragment: string } => {
     const bend = skinned ? `
     mat4 skin =
@@ -482,14 +526,14 @@ export const buildMeshMaterialShadowShaderGlsl = (
             vertex: [
                 SHADOW_CORNERS_GLSL,
                 DETAIL_HEAD,
-                skinned ? SKIN_HEAD : '',
+                skinned ? SKIN_HEAD : instanced ? INSTANCED_HEAD : '',
                 glslUniformBlock(sig),
                 'uniform mat4 uLightViewProj;\nuniform mat4 uModel;',
                 VERT_CONTEXT,
                 cornerMaps(vertex, mapNames),
                 vertex ?? DEFAULT_VERTEX,
                 /* glsl */ `
-void main() {${CORNER_CONTEXT}${bend}
+void main() {${restOf(instanced)}${CORNER_CONTEXT}${bend}
     gl_Position = uLightViewProj * uModel * placed;
 }
 `,
@@ -503,17 +547,17 @@ void main() {${CORNER_CONTEXT}${bend}
         vertex: [
             SHADOW_CORNERS_GLSL,
             DETAIL_HEAD,
-            skinned ? SKIN_HEAD : '',
+            skinned ? SKIN_HEAD : instanced ? INSTANCED_HEAD : '',
             glslUniformBlock(sig),
             'uniform mat4 uLightViewProj;\nuniform mat4 uModel;',
             'out vec2 vUv;\nout vec3 vNormal;\nout vec3 vWorldPos;\nout vec4 vColor;\nout vec4 vTangent;\nout vec2 vUv2;\nout vec4 vCarry;',
-            // Already among the bones' helpers when it bends.
-            skinned ? '' : FACING_TURN_GLSL,
+            // Already among the bones' helpers when it bends, and an instance's when drawn as many.
+            skinned || instanced ? '' : FACING_TURN_GLSL,
             VERT_CONTEXT,
             cornerMaps(vertex, mapNames),
             vertex ?? DEFAULT_VERTEX,
             /* glsl */ `
-void main() {${CORNER_CONTEXT}${vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL}${bend}
+void main() {${restOf(instanced)}${CORNER_CONTEXT}${vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL}${bend}
     // Turned as the model is, and measured again where the hook moved it, as the drawn model's is:
     // what the colour hook reads of the surface. The facing by the inverse of the placement, as the
     // drawn model's normal matrix turns it, so a model stretched unevenly is cut by the same facing.
@@ -522,8 +566,8 @@ void main() {${CORNER_CONTEXT}${vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL
     vUv = aUv;
     vNormal = normalize(facingTurnOf(mat3(uModel)) * ${skinned ? '(facingTurnOf(turn) * shaped)' : 'shaped'});
     vWorldPos = (uModel * placed).xyz;
-    vColor = aColor;
-    vTangent = vec4(normalize((uModel * vec4(turn * aTangent.xyz, 0.0)).xyz), aTangent.w);
+    vColor = restColor;
+    vTangent = vec4(normalize((uModel * vec4(turn * restTangent, 0.0)).xyz), aTangent.w);
     vUv2 = aUv2;
     vCarry = carried;
 }

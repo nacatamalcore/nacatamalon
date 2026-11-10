@@ -54,9 +54,9 @@ describe('what a vertex hook carries to the colour hook, on WebGPU', () => {
         const wgsl = buildMeshMaterialShader(EFFECT, HOOK, {}, [], false, 'back');
         expect(wgsl).toContain('var<private> carry: vec4<f32>;');
         const kept = wgsl.indexOf('let carried = carry;');
-        expect(kept).toBeGreaterThan(wgsl.indexOf('let local = vertex(position, ctx);'));
+        expect(kept).toBeGreaterThan(wgsl.indexOf('let local = vertex(rest, ctx);'));
         // The hook is called twice more to measure the moved surface, after it was kept.
-        expect(wgsl.indexOf('vertex(position + tangent')).toBeGreaterThan(kept);
+        expect(wgsl.indexOf('vertex(rest + tangent')).toBeGreaterThan(kept);
         expect(wgsl).toContain('out.carry = carried;');
         expect(wgsl).toContain('ctx.carry = in.carry;');
     });
@@ -85,7 +85,7 @@ describe('what a vertex hook carries to the colour hook, on WebGL2', () => {
                 expect(vertex).toContain('vec4 carry = vec4(0.0);');
                 expect(vertex).toContain('out vec4 vCarry;');
                 expect(vertex).toContain('vCarry = carried;');
-                expect(vertex.indexOf('vec4 carried = carry;')).toBeGreaterThan(vertex.indexOf('vec3 local = vertex(aPosition, ctx);'));
+                expect(vertex.indexOf('vec4 carried = carry;')).toBeGreaterThan(vertex.indexOf('vec3 local = vertex(rest, ctx);'));
                 expect(fragment).toContain('in vec4 vCarry;');
                 expect(fragment).toContain('ctx.carry = vCarry;');
             }

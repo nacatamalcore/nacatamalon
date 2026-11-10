@@ -13,6 +13,16 @@ export type TSidedMeshPipelines = {
 };
 
 /**
+ * The two ways a model drawn as many instances is drawn: solid, and see-through.
+ *
+ * @internal
+ */
+export type TInstancedMeshPipelines = {
+    pipeline: GPURenderPipeline;
+    transparentPipeline: GPURenderPipeline;
+};
+
+/**
  * Everything the mesh pipeline keeps between frames.
  *
  * Two shared buffers and their bind groups, one for what a frame's lights are and one for what each
@@ -48,6 +58,12 @@ export type TMeshPipeline = {
      * the first time one is drawn.
      */
     secondUv: (cull: 'back' | 'front' | 'none') => TSidedMeshPipelines;
+    /**
+     * The pair for a model drawn as many instances of its shape (`createMeshInstances`), for each
+     * side thrown away and for an occlusion laid out by the second picture coordinate or not: they
+     * read the run of instances after the corners. Built the first time one is drawn.
+     */
+    instanced: (cull: 'back' | 'front' | 'none', secondUv: boolean) => TInstancedMeshPipelines;
     /**
      * Spelled out and shared, so a bind group made once works with either pipeline. Worked out from
      * each shader instead, they would be two sets that look identical and are not interchangeable.

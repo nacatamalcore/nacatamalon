@@ -42,9 +42,9 @@ describe('the detail a material reads', () => {
         const glsl = buildMeshMaterialShaderGlsl(HOOK_GLSL, null, {}, [], true).vertex;
 
         expect(wgsl).toContain('let facing = facingTurnOf(turn) * shaped;');
-        expect(wgsl).toContain('let across = turn * cornerTangent.xyz;');
+        expect(wgsl).toContain('let across = turn * restTangent;');
         expect(glsl).toContain('vec3 facing = facingTurnOf(mat3(skin)) * shaped;');
-        expect(glsl).toContain('vec3 across = mat3(skin) * aTangent.xyz;');
+        expect(glsl).toContain('vec3 across = mat3(skin) * restTangent;');
     });
 
     it('works out the bitangent from the facing and the hand, never carrying it', () => {

@@ -121,4 +121,38 @@ export type TDrawMesh = {
      * skipped.
      */
     readonly boundsMargin?: number;
+    /**
+     * Many of the same shape in one draw (`createMeshInstances`): where each one is, its colour and
+     * four numbers of its own, on the card. Absent or `null` is a single model. With it the shape is
+     * drawn `count` times, each placed inside this model's own placement, and never bends: `skeleton`
+     * is not read.
+     */
+    readonly instances?: TDrawMeshInstances | null;
+};
+
+/**
+ * What a backend needs of a run of instances: the numbers on the card, how many of them are drawn,
+ * and the box they all fit in.
+ *
+ * Twenty numbers apiece (`INSTANCE_FLOATS`): the three rows of its placement, four numbers each
+ * with the move in the fourth, then its colour, then its four numbers.
+ *
+ * @category Render
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TDrawMeshInstances = {
+    /**
+     * The run on the card. `null` before the first frame it is drawn, which draws nothing.
+     */
+    readonly buffer: IBuffer | null;
+    /**
+     * How many are drawn, from the first.
+     */
+    readonly count: number;
+    /**
+     * The box every instance's shape fits in, in the model's own space: what it is skipped by, and
+     * what its lights are found by. `null` while it is not known, which is never skipped.
+     */
+    readonly bounds: { min: { x: number; y: number; z: number }; max: { x: number; y: number; z: number } } | null;
 };

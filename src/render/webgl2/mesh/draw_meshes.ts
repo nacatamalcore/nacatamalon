@@ -1,13 +1,14 @@
 import { fillLightUniforms, fillMeshUniforms } from '../../shared';
 import { cullOf } from '../../shared/cull_of';
 import { isTransparentMesh } from '../../shared/is_transparent_mesh';
+import { INSTANCE_BYTES, INSTANCE_LOCATION, instancesOf } from '../../shared/mesh_instances';
 import { occlusionWrapOf, textureWrapOf, wrapKey } from '../../shared/texture_wrap';
 import { toGlBuffer } from '../resources';
 import { toGlTexture } from '../texture';
 import { isAway } from '../../../loaders/texture/is_away';
 import { MESH_EMISSIVE_UNIT, MESH_OCCLUSION_UNIT, MESH_JOINTS_UNIT, MESH_LIGHTS_BINDING, MESH_MAP_UNITS, MESH_SHADOW_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
 import type { TCameraSpace } from '../../shared/compute_mvp_3d';
-import type { TDrawLight, TDrawMesh, TDrawView3d } from '../../interface';
+import type { IBuffer, TDrawLight, TDrawMesh, TDrawView3d } from '../../interface';
 import type { TShadowUniforms } from '../../shared/fill_light_uniforms';
 import type { TMeshPipeline } from './types/t_mesh_pipeline';
 
@@ -31,6 +32,36 @@ export const vertexArrayFor = (gl: WebGL2RenderingContext, meshes: TMeshPipeline
         return null;
     }
 
+    // Drawn as many: the shape's corners and the run of its instances, kept by that run. Made again
+    // when the shape was (its corners are another buffer), and none while the run is not on the card.
+    const many = instancesOf(mesh);
+    if (many !== null) {
+        if (many.buffer === null) {
+            return null;
+        }
+        const kept = meshes.instancedVertexArrays.get(many.buffer);
+        if (kept !== undefined && kept.corners === geometry.vertexBuffer) {
+            return kept.vao;
+        }
+        if (kept !== undefined) {
+            gl.deleteVertexArray(kept.vao);
+        }
+        const vao = gl.createVertexArray();
+        gl.bindVertexArray(vao);
+        bindCorners(gl, geometry as TShape, false);
+        // Its three rows, its colour and its four numbers: read once an instance, not once a corner.
+        gl.bindBuffer(gl.ARRAY_BUFFER, toGlBuffer(many.buffer));
+        for (let i = 0; i < 5; i++) {
+            gl.enableVertexAttribArray(INSTANCE_LOCATION + i);
+            gl.vertexAttribPointer(INSTANCE_LOCATION + i, 4, gl.FLOAT, false, INSTANCE_BYTES, i * 16);
+            gl.vertexAttribDivisor(INSTANCE_LOCATION + i, 1);
+        }
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, toGlBuffer(geometry.indexBuffer));
+        gl.bindVertexArray(null);
+        meshes.instancedVertexArrays.set(many.buffer, { vao, corners: geometry.vertexBuffer });
+        return vao;
+    }
+
     // Two sets, keyed the same way: the same shape could be drawn either way, and one set keyed
     // only by its corners would hand back whichever was built first.
     const bends = geometry.skinBuffer !== null;
@@ -42,6 +73,24 @@ export const vertexArrayFor = (gl: WebGL2RenderingContext, meshes: TMeshPipeline
 
     const vao = gl.createVertexArray();
     gl.bindVertexArray(vao);
+    bindCorners(gl, geometry as TShape, bends);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, toGlBuffer(geometry.indexBuffer));
+    gl.bindVertexArray(null);
+
+    held.set(geometry.vertexBuffer, vao);
+    return vao;
+};
+
+/**
+ * A shape with the runs every draw of it needs on the card.
+ */
+type TShape = NonNullable<TDrawMesh['geometry']> & { vertexBuffer: IBuffer; colorBuffer: IBuffer; indexBuffer: IBuffer };
+
+/**
+ * Points the vertex array being built at a shape's corners: where each is, which way it faces and
+ * what it shows, its colour, its detail when it has one, and its bones when it bends.
+ */
+const bindCorners = (gl: WebGL2RenderingContext, geometry: TShape, bends: boolean): void => {
     gl.bindBuffer(gl.ARRAY_BUFFER, toGlBuffer(geometry.vertexBuffer));
     // Where the corner is, which way its surface faces, and what it shows: 32 bytes in all.
     gl.enableVertexAttribArray(0);
@@ -77,12 +126,6 @@ export const vertexArrayFor = (gl: WebGL2RenderingContext, meshes: TMeshPipeline
         gl.enableVertexAttribArray(4);
         gl.vertexAttribPointer(4, 4, gl.FLOAT, false, 32, 16);
     }
-
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, toGlBuffer(geometry.indexBuffer));
-    gl.bindVertexArray(null);
-
-    held.set(geometry.vertexBuffer, vao);
-    return vao;
 };
 
 /**
@@ -160,6 +203,10 @@ export const drawMesh = (
     if (isAway(mesh.material.texture)) {
         return false;
     }
+    // None of its instances to draw.
+    if ((instancesOf(mesh)?.count ?? 1) <= 0) {
+        return false;
+    }
 
     // The depth range is already dealt with: this card's runs from -1 to 1 where the other's runs
     // from 0 to 1, and the fix is a multiplication from the left, so it was folded into the camera
@@ -170,9 +217,13 @@ export const drawMesh = (
     gl.bufferSubData(gl.UNIFORM_BUFFER, 0, meshes.uniformData);
     gl.bindBuffer(gl.UNIFORM_BUFFER, null);
 
+    // Drawn as many: its vertex array already points at the run of its instances.
+    const many = instancesOf(mesh);
+
     // Bones and the corners that name them have to arrive together: a model with one and not the
-    // other would read whichever corners happened to be bound and scatter.
-    const bends = mesh.skeleton !== null && mesh.geometry.skinBuffer !== null;
+    // other would read whichever corners happened to be bound and scatter. One drawn as many never
+    // bends.
+    const bends = many === null && mesh.skeleton !== null && mesh.geometry.skinBuffer !== null;
 
     // A model that bends takes the effect's skinned twin: the same hooks, with the bones bending the
     // corner after the corner hook has moved it. Its bones are bound below, on the same unit either way.
@@ -184,7 +235,7 @@ export const drawMesh = (
         meshes.materials.warnIfWgpuOnly(surface);
         // A shape with no detail run cannot feed a material's program, which reads one.
         if ((surface.fragmentGlsl !== null || surface.vertexGlsl !== null) && mesh.geometry.detailBuffer !== null) {
-            const compiled = meshes.materials.get(surface, bends, cull);
+            const compiled = meshes.materials.get(surface, bends, cull, many !== null);
             if (!compiled.failed && compiled.program !== null) {
                 effect = compiled;
             }
@@ -197,8 +248,14 @@ export const drawMesh = (
     const crease = surface.occlusion?.texture;
     const creaseReady = crease !== undefined && crease.status === 'ready' && crease.gpu !== null;
     const secondUv = effect === null && surface.occlusion?.uv === 'uv2' && creaseReady && mesh.geometry.detailBuffer !== null;
-    const set = secondUv ? meshes.secondUv(cull) : cull === 'back' ? meshes : meshes.sided(cull);
-    gl.useProgram(effect !== null ? effect.program! : bends ? set.skinnedProgram : set.program);
+    if (effect !== null) {
+        gl.useProgram(effect.program!);
+    } else if (many !== null) {
+        gl.useProgram(meshes.instanced(cull, secondUv));
+    } else {
+        const set = secondUv ? meshes.secondUv(cull) : cull === 'back' ? meshes : meshes.sided(cull);
+        gl.useProgram(bends ? set.skinnedProgram : set.program);
+    }
     gl.bindBufferBase(gl.UNIFORM_BUFFER, MESH_UNIFORMS_BINDING, meshes.uniforms);
     gl.bindBufferBase(gl.UNIFORM_BUFFER, MESH_LIGHTS_BINDING, meshes.lights);
 
@@ -275,7 +332,11 @@ export const drawMesh = (
     // Wide triangle points are part of WebGL2 itself: it was WebGL1 that needed an extension asked
     // for, and this backend would not be running at all without the one that has them.
     const indexType = mesh.geometry.indexType === 'uint32' ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
-    gl.drawElements(gl.TRIANGLES, mesh.geometry.indexCount, indexType, 0);
+    if (many !== null) {
+        gl.drawElementsInstanced(gl.TRIANGLES, mesh.geometry.indexCount, indexType, 0, many.count);
+    } else {
+        gl.drawElements(gl.TRIANGLES, mesh.geometry.indexCount, indexType, 0);
+    }
     gl.bindVertexArray(null);
 
     gl.disable(gl.CULL_FACE);

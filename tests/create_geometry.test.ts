@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { createGeometry, updateGeometry } from '../src/geometry/create_geometry';
 import { buildLathe } from '../src/geometry/shapes/lathe';
 import { buildCylinder } from '../src/geometry/shapes/cylinder';
-import { GEOMETRY_STRIDE } from '../src/geometry/types/t_geometry';
+import { DETAIL_STRIDE, GEOMETRY_STRIDE } from '../src/geometry/types/t_geometry';
 import { createScene } from '../src/scene/create_scene';
 import { createMesh } from '../src/gameobjects/mesh/create_mesh';
 import { useLatheGeometry } from '../src/hooks/geometry/use_lathe_geometry';
@@ -258,5 +258,60 @@ describe('useLatheGeometry', () => {
             root: { id: 'root', name: 'Level', transform: null, components: [], children: [] },
         }, '/scenes/level.scene');
         expect(parsed.assets.filter((asset) => asset.type === 'geometry')).toHaveLength(0);
+    });
+});
+
+describe('a second picture coordinate, uv2', () => {
+    /** The second places on the card, two a corner, from the detail run where they ride. */
+    const secondOf = (renderer: ReturnType<typeof made>['renderer'], geometry: TGeometry): number[] => {
+        const detail = renderer.buffers.find((buffer) => buffer.handle === geometry.detailBuffer)!.data as Float32Array;
+        const out: number[] = [];
+        for (let c = 0; c < geometry.vertexCount; c++) {
+            out.push(detail[c * DETAIL_STRIDE + 4], detail[c * DETAIL_STRIDE + 5]);
+        }
+        return out;
+    };
+    const UV2 = [0, 0, 0.5, 0, 0.5, 0.5, 0, 0.5];
+
+    it('puts each corner\'s second place on the card, and the first again when there is none', () => {
+        const given = made({ ...SQUARE, uv2: UV2 });
+        expect(secondOf(given.renderer, given.geometry)).toEqual(UV2);
+        const left = made(SQUARE);
+        expect(secondOf(left.renderer, left.geometry)).toEqual([0, 1, 1, 1, 1, 0, 0, 0]);
+    });
+
+    it('refuses a list of the wrong length, saying what it should have been', () => {
+        expect(() => made({ ...SQUARE, uv2: [0, 0, 1] })).toThrow("'uv2' has 3 numbers for 4 corners, and it takes 2 a corner (8)");
+    });
+
+    it('follows the corners when flat splits them', () => {
+        const { renderer, geometry } = made({ ...SQUARE, uv2: UV2, flat: true });
+        // One corner per triangle point, in the order of the triangles: 0 1 2, then 0 2 3.
+        expect(secondOf(renderer, geometry)).toEqual([0, 0, 0.5, 0, 0.5, 0.5, 0, 0, 0.5, 0.5, 0, 0.5]);
+    });
+
+    it('keeps a corner\'s second place when a picture worked out by name splits it', () => {
+        // A cube's eight corners, split by the box layout into one per face: each split corner keeps
+        // the second place of the corner it came from, which is its own place here.
+        const positions = [-1, -1, -1, 1, -1, -1, 1, 1, -1, -1, 1, -1, -1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1, 1];
+        const indices = [0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 3, 6, 2, 3, 7, 6, 0, 4, 7, 0, 7, 3, 1, 2, 6, 1, 6, 5];
+        const uv2 = Array.from({ length: 8 }, (_, c) => [c / 8, 1 - c / 8]).flat();
+        const { renderer, geometry } = made({ positions, indices, uvs: 'box', uv2 });
+        expect(geometry.vertexCount).toBeGreaterThan(8);
+        const vertices = renderer.buffers.find((buffer) => buffer.handle === geometry.vertexBuffer)!.data as Float32Array;
+        const second = secondOf(renderer, geometry);
+        for (let c = 0; c < geometry.vertexCount; c++) {
+            const p = [vertices[c * GEOMETRY_STRIDE], vertices[c * GEOMETRY_STRIDE + 1], vertices[c * GEOMETRY_STRIDE + 2]];
+            const was = positions.findIndex((_, i) => i % 3 === 0 && positions[i] === p[0] && positions[i + 1] === p[1] && positions[i + 2] === p[2]) / 3;
+            expect([second[c * 2], second[c * 2 + 1]]).toEqual([uv2[was * 2], uv2[was * 2 + 1]]);
+        }
+    });
+
+    it('is changed by updateGeometry', () => {
+        const { renderer, geometry } = made({ ...SQUARE, uv2: UV2 });
+        updateGeometry(geometry, { ...SQUARE, uv2: [1, 1, 1, 1, 1, 1, 1, 1] });
+        expect(secondOf(renderer, geometry)).toEqual([1, 1, 1, 1, 1, 1, 1, 1]);
+        updateGeometry(geometry, SQUARE);
+        expect(secondOf(renderer, geometry)).toEqual([0, 1, 1, 1, 1, 0, 0, 0]);
     });
 });

@@ -13,7 +13,7 @@ export {
     composerWorldNormal, composerWorldPos, composerViewDir, composerLight, composerEmissive,
     composerShine, composerEnvUv, composerVertexPosition, composerVertexNormal, composerVertexColor,
     composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent,
-    composerVertexBitangent, composerFrontFacing, composerCarry, composerOcclusion, composerLocalUv,
+    composerVertexBitangent, composerInstanceData, composerInstanceOrigin, composerFrontFacing, composerCarry, composerOcclusion, composerLocalUv,
     composerLayerUv, composerTextureSample, composerMapSample, composerUniform, composerAdd, composerSub,
     composerMul, composerDiv, composerAbs, composerFloor, composerFract, composerSin, composerCos,
     composerSqrt, composerSign, composerNormalize, composerLength, composerDistance, composerDot,

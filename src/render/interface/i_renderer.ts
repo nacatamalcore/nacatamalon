@@ -61,8 +61,11 @@ export type IRenderer = {
      * flickers, and asking for new memory every time a brick breaks would churn the graphics card
      * for nothing. What is written has to fit: whoever owns the buffer keeps count and asks for a
      * bigger one when it stops fitting.
+     *
+     * `at` is where the writing starts, in bytes and a multiple of four, for a long run of which only
+     * a stretch changed: a thousand rocks of which one moved. Left out, from the beginning.
      */
-    updateBuffer(buffer: IBuffer, data: Float32Array | Uint16Array | Uint32Array): void;
+    updateBuffer(buffer: IBuffer, data: Float32Array | Uint16Array | Uint32Array, at?: number): void;
     /**
      * Lets a buffer go. Anything still pointing at it is pointing at nothing.
      */

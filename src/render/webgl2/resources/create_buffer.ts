@@ -82,17 +82,17 @@ export const createWebGL2Buffer = (gl: WebGL2RenderingContext, lost: boolean, da
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const updateWebGL2Buffer = (gl: WebGL2RenderingContext, lost: boolean, buffer: IBuffer, data: Float32Array | Uint16Array | Uint32Array): void => {
+export const updateWebGL2Buffer = (gl: WebGL2RenderingContext, lost: boolean, buffer: IBuffer, data: Float32Array | Uint16Array | Uint32Array, at = 0): void => {
     const target = buffer as TWebGL2Buffer;
-    if (data.byteLength > target.capacity) {
-        throw new Error(`[NacatamalOn] updateBuffer: ${data.byteLength} bytes do not fit in a buffer of ${target.capacity}. Make a bigger one.`);
+    if (at + data.byteLength > target.capacity) {
+        throw new Error(`[NacatamalOn] updateBuffer: ${data.byteLength} bytes${at > 0 ? ` at ${at}` : ''} do not fit in a buffer of ${target.capacity}. Make a bigger one.`);
     }
-    target.kept.set(bytesOf(data));
+    target.kept.set(bytesOf(data), at);
     if (lost || target.glBuffer === null) {
         return;
     }
     gl.bindBuffer(target.target, target.glBuffer);
-    gl.bufferSubData(target.target, 0, data);
+    gl.bufferSubData(target.target, at, data);
     gl.bindBuffer(target.target, null);
 };
 

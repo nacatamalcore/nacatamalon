@@ -1,4 +1,5 @@
 import { DEPTH_FORMAT, STENCIL_TEST } from '../frame/depth';
+import { INSTANCE_BYTES, INSTANCE_LOCATION } from '../../shared/mesh_instances';
 import type { TCullMode } from '../../../materials/types/t_material';
 
 /**
@@ -126,5 +127,27 @@ export const MESH_DETAIL: GPUVertexBufferLayout = {
     attributes: [
         { shaderLocation: 6, offset: 0, format: 'float32x4' },
         { shaderLocation: 7, offset: 16, format: 'float32x2' },
+    ],
+};
+
+/**
+ * One instance of a model drawn as many, from the run of them: the three rows of its placement, its
+ * colour, and its four numbers, twenty numbers in all, read once an instance and not once a corner.
+ *
+ * Always the last run a pipeline for instances reads, after whatever its corners have.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const MESH_INSTANCES: GPUVertexBufferLayout = {
+    arrayStride: INSTANCE_BYTES,
+    stepMode: 'instance',
+    attributes: [
+        { shaderLocation: INSTANCE_LOCATION, offset: 0, format: 'float32x4' },
+        { shaderLocation: INSTANCE_LOCATION + 1, offset: 16, format: 'float32x4' },
+        { shaderLocation: INSTANCE_LOCATION + 2, offset: 32, format: 'float32x4' },
+        { shaderLocation: INSTANCE_LOCATION + 3, offset: 48, format: 'float32x4' },
+        { shaderLocation: INSTANCE_LOCATION + 4, offset: 64, format: 'float32x4' },
     ],
 };

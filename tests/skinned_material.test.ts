@@ -41,7 +41,7 @@ describe('a material on a model that bends, WGSL', () => {
     });
 
     it('bends what the corner hook made, so a ripple goes with the arm it is on', () => {
-        expect(skinned.indexOf('let local = vertex(position, ctx);')).toBeLessThan(skinned.indexOf('let skin ='));
+        expect(skinned.indexOf('let local = vertex(rest, ctx);')).toBeLessThan(skinned.indexOf('let skin ='));
         expect(skinned).toContain('let placed = skin * vec4<f32>(local, 1.0);');
         expect(skinned).toContain('out.position = snapToPixels(uniforms.mvp * placed);');
     });
@@ -69,7 +69,7 @@ describe('a material on a model that bends, GLSL', () => {
     });
 
     it('bends what the corner hook made', () => {
-        expect(skinned.indexOf('vec3 local = vertex(aPosition, ctx);')).toBeLessThan(skinned.indexOf('mat4 skin ='));
+        expect(skinned.indexOf('vec3 local = vertex(rest, ctx);')).toBeLessThan(skinned.indexOf('mat4 skin ='));
         expect(skinned).toContain('vec4 placed = skin * vec4(local, 1.0);');
     });
 
@@ -84,7 +84,7 @@ describe('the facing of a model that bends', () => {
     it('is turned by the inverse of the mix, built in and in a material, on both cards', () => {
         const material = buildMeshMaterialShader(HOOK, VERTEX, {}, [], true);
         expect(material).toContain('let facing = facingTurnOf(turn) * shaped;');
-        expect(material).toContain('let across = turn * cornerTangent.xyz;');
+        expect(material).toContain('let across = turn * restTangent;');
         expect(SKINNED_SHADER).toContain('let bentNormal = facingTurnOf(mat3x3<f32>(skin[0].xyz, skin[1].xyz, skin[2].xyz)) * normal;');
         for (const source of [material, SKINNED_SHADER]) {
             expect(source.split('fn facingTurnOf(').length).toBe(2);
@@ -92,7 +92,7 @@ describe('the facing of a model that bends', () => {
 
         const materialGlsl = buildMeshMaterialShaderGlsl(null, VERTEX_GLSL, {}, [], true).vertex;
         expect(materialGlsl).toContain('vec3 facing = facingTurnOf(mat3(skin)) * shaped;');
-        expect(materialGlsl).toContain('vec3 across = mat3(skin) * aTangent.xyz;');
+        expect(materialGlsl).toContain('vec3 across = mat3(skin) * restTangent;');
         expect(SKINNED_VERTEX_GLSL).toContain('vec3 bentNormal = facingTurnOf(mat3(skin)) * aNormal;');
         for (const source of [materialGlsl, SKINNED_VERTEX_GLSL]) {
             expect(source.split('mat3 facingTurnOf(').length).toBe(2);

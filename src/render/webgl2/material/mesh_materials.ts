@@ -61,7 +61,7 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
 
     let parameters: WebGLBuffer | null = null;
 
-    const build = (material: TDrawShader, skinned: boolean, cull: TCullMode): TCompiled => {
+    const build = (material: TDrawShader, skinned: boolean, cull: TCullMode, instanced: boolean): TCompiled => {
         const layout = buildUniformLayout(material.uniformSig ?? {});
         // The corner hook's too, so a map only it reads has a unit and a reader.
         const mapNames = mapNamesOf(material.fragmentGlsl, material.vertexGlsl);
@@ -83,6 +83,7 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
             mapNames,
             skinned,
             cull,
+            instanced,
         );
 
         try {
@@ -90,7 +91,7 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
                 gl,
                 sources.vertex,
                 sources.fragment,
-                `${skinned ? 'skinned mesh material' : 'mesh material'} ${material.name ?? material.id}`,
+                `${skinned ? 'skinned mesh material' : instanced ? 'instanced mesh material' : 'mesh material'} ${material.name ?? material.id}`,
             );
             gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, 'Uniforms'), MESH_UNIFORMS_BINDING);
             gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, 'Lights'), MESH_LIGHTS_BINDING);
@@ -143,19 +144,19 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
          * the pixels its picture and its hook leave out left out. `null` when it did not compile: the model then
          * casts its file's shape, as it always did, and says so once.
          */
-        shadow: (material: TDrawShader, skinned = false, cuts = false): TMaterialShadow | null => {
+        shadow: (material: TDrawShader, skinned = false, cuts = false, instanced = false): TMaterialShadow | null => {
             if (material.vertexGlsl === null && !(cuts && material.fragmentGlsl !== null)) {
                 return null;
             }
-            const key = `${skinned ? 'skinned ' : ''}${cuts ? 'cut ' : ''}${JSON.stringify(material.uniformSig ?? {})} ${material.fragmentGlsl ?? ''} ${material.vertexGlsl ?? ''}`;
+            const key = `${skinned ? 'skinned ' : instanced ? 'instanced ' : ''}${cuts ? 'cut ' : ''}${JSON.stringify(material.uniformSig ?? {})} ${material.fragmentGlsl ?? ''} ${material.vertexGlsl ?? ''}`;
             let held = shadows.get(key);
             if (held === undefined) {
                 try {
                     // In the drawn model's order, which is the order its units are bound in.
                     const mapNames = mapNamesOf(material.fragmentGlsl, material.vertexGlsl);
                     const cut = cuts ? { fragment: material.fragmentGlsl } : null;
-                    const sources = buildMeshMaterialShadowShaderGlsl(material.vertexGlsl, material.uniformSig ?? {}, mapNames, skinned, cut);
-                    const program = compileProgram(gl, sources.vertex, sources.fragment, `${skinned ? 'skinned ' : ''}${cuts ? 'cut ' : ''}mesh material shadow ${material.name ?? material.id}`);
+                    const sources = buildMeshMaterialShadowShaderGlsl(material.vertexGlsl, material.uniformSig ?? {}, mapNames, skinned, cut, instanced && !skinned);
+                    const program = compileProgram(gl, sources.vertex, sources.fragment, `${skinned ? 'skinned ' : instanced ? 'instanced ' : ''}${cuts ? 'cut ' : ''}mesh material shadow ${material.name ?? material.id}`);
                     // Only if the hook reads its knobs: asking for a block the card left out is an
                     // error of its own.
                     const knobs = gl.getUniformBlockIndex(program, 'MaterialUniforms');
@@ -228,11 +229,11 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
          * The compiled effect, for a model that bends (`skinned`) or one that does not, and for the
          * side of its triangles thrown away: each built the first time it is wanted.
          */
-        get: (material: TDrawShader, skinned = false, cull: TCullMode = 'back'): TCompiled => {
-            const key = `${skinned ? 'skinned ' : ''}${cull === 'back' ? '' : `cull ${cull} `}${JSON.stringify(material.uniformSig ?? {})} ${material.fragmentGlsl ?? ''} ${material.vertexGlsl ?? ''}`;
+        get: (material: TDrawShader, skinned = false, cull: TCullMode = 'back', instanced = false): TCompiled => {
+            const key = `${skinned ? 'skinned ' : instanced ? 'instanced ' : ''}${cull === 'back' ? '' : `cull ${cull} `}${JSON.stringify(material.uniformSig ?? {})} ${material.fragmentGlsl ?? ''} ${material.vertexGlsl ?? ''}`;
             let entry = compiled.get(key);
             if (entry === undefined) {
-                entry = build(material, skinned, cull);
+                entry = build(material, skinned, cull, instanced && !skinned);
                 compiled.set(key, entry);
             }
             return entry;

@@ -1,8 +1,9 @@
-import { MESH_BONES, MESH_COLORS, MESH_CORNERS, MESH_DETAIL } from '../mesh/pipeline_state';
+import { MESH_BONES, MESH_COLORS, MESH_CORNERS, MESH_DETAIL, MESH_INSTANCES } from '../mesh/pipeline_state';
+import { instancesOf } from '../../shared/mesh_instances';
 import { cullOf } from '../../shared/cull_of';
 import { SHADOW_DEPTH_BIAS, SHADOW_SLOPE_BIAS } from '../../shared/light_space';
 import { SHADOW_FORMAT } from './shadow_map';
-import { SHADOW_CUT_SKINNED_WGSL, SHADOW_CUT_WGSL, SHADOW_SKINNED_WGSL, SHADOW_WGSL } from './shadow_shader';
+import { SHADOW_CUT_INSTANCED_WGSL, SHADOW_CUT_SKINNED_WGSL, SHADOW_CUT_WGSL, SHADOW_INSTANCED_WGSL, SHADOW_SKINNED_WGSL, SHADOW_WGSL } from './shadow_shader';
 import { textureBindGroup } from '../mesh/draw_meshes';
 import { toGpuBuffer } from '../resources';
 import type { TDrawMaterial, TDrawMesh } from '../../interface';
@@ -109,6 +110,31 @@ export const createShadowPipeline = (device: GPUDevice) => {
         return made;
     };
 
+    // A model drawn as many instances of its shape casts every one of them: its own pipelines, which
+    // read the run of instances after the corners, made the first time one casts, by the side thrown
+    // away and whether it is cut out of its picture.
+    const manyModules: { plain: GPUShaderModule | null; cut: GPUShaderModule | null } = { plain: null, cut: null };
+    const manySides = new Map<string, GPURenderPipeline>();
+    const instancedPipeline = (cull: GPUCullMode, textureLayout: GPUBindGroupLayout | null): GPURenderPipeline => {
+        const key = `${cull}${textureLayout === null ? '' : ' cut'}`;
+        let made = manySides.get(key);
+        if (made === undefined) {
+            if (textureLayout === null) {
+                manyModules.plain ??= device.createShaderModule({ label: 'shadow instanced', code: SHADOW_INSTANCED_WGSL });
+                made = device.createRenderPipeline(describe(`shadow instanced, cull ${cull}`, manyModules.plain, plainLayout, [MESH_CORNERS, MESH_INSTANCES], cull));
+            } else {
+                manyModules.cut ??= device.createShaderModule({ label: 'shadow cut instanced', code: SHADOW_CUT_INSTANCED_WGSL });
+                made = device.createRenderPipeline(describe(
+                    `shadow cut instanced, cull ${cull}`, manyModules.cut,
+                    device.createPipelineLayout({ bindGroupLayouts: [cutUniformsLayout, textureLayout] }),
+                    [MESH_CORNERS, MESH_COLORS, MESH_INSTANCES], cull, true,
+                ));
+            }
+            manySides.set(key, made);
+        }
+        return made;
+    };
+
     // A material whose hook moves its corners casts through a shader of its own, built from that
     // hook (see buildMeshMaterialShadowShader): made the first time one casts, by its module and the
     // side its material throws away. Its own group sits where the material's always does, the
@@ -125,6 +151,7 @@ export const createShadowPipeline = (device: GPUDevice) => {
         skinned: boolean,
         cull: GPUCullMode,
         textureLayout: GPUBindGroupLayout | null,
+        instanced = false,
     ): GPURenderPipeline | 'pending' | null => {
         let byCull = hooked.get(module);
         if (byCull === undefined) {
@@ -146,7 +173,9 @@ export const createShadowPipeline = (device: GPUDevice) => {
                     : [cutUniformsLayout, textureLayout, empty, materialLayout],
             }),
             // The runs a material's pipeline reads, in its order: the bones before the detail.
-            skinned ? [MESH_CORNERS, MESH_COLORS, MESH_BONES, MESH_DETAIL] : [MESH_CORNERS, MESH_COLORS, MESH_DETAIL],
+            skinned
+                ? [MESH_CORNERS, MESH_COLORS, MESH_BONES, MESH_DETAIL]
+                : instanced ? [MESH_CORNERS, MESH_COLORS, MESH_DETAIL, MESH_INSTANCES] : [MESH_CORNERS, MESH_COLORS, MESH_DETAIL],
             cull,
             textureLayout !== null,
         )).then((made) => { cache.set(cull, made); }, (error: unknown) => {
@@ -267,6 +296,14 @@ export const createShadowPipeline = (device: GPUDevice) => {
                 return false;
             }
 
+            // Drawn as many: every instance casts, from the same run the scene's pass reads. None to
+            // draw, or none on the card yet, casts nothing.
+            const many = instancesOf(mesh);
+            if (many !== null && (many.buffer === null || many.count <= 0)) {
+                return false;
+            }
+            const drawn = many === null ? 1 : many.count;
+
             slotData.set(lightViewProj, 0);
             slotData.set(model, 16);
             const surface = mesh.material;
@@ -274,7 +311,7 @@ export const createShadowPipeline = (device: GPUDevice) => {
             slotData[33] = surface.alpha * surface.tint.a;
             device.queue.writeBuffer(buffer, slot * SLOT, slotData);
 
-            const bends = mesh.skeleton !== null && geometry.skinBuffer !== null;
+            const bends = many === null && mesh.skeleton !== null && geometry.skinBuffer !== null;
             const cull = cullOf(mesh);
 
             // Cut out of its picture, by the same alpha and cutoff the model is drawn with. A shape
@@ -285,17 +322,17 @@ export const createShadowPipeline = (device: GPUDevice) => {
             // made and that flat ghost shadows the model wherever the hook takes it behind. Cut out,
             // a colour hook casts through its own shader too: what it leaves out is left out here.
             const effect = (surface.vertex !== null || (cuts && surface.fragment !== null)) && geometry.colorBuffer !== null && geometry.detailBuffer !== null
-                ? meshes.materials.get(surface, bends, cull)
+                ? meshes.materials.get(surface, bends, cull, many !== null)
                 : null;
             // Its shadow's shader is asked for at once, so it is compiled alongside the material's
             // rather than after it, and the model does not stand there a few frames casting nothing.
-            const shadow = effect !== null && !effect.failed ? meshes.materials.shadow(surface, bends, cuts) : null;
+            const shadow = effect !== null && !effect.failed ? meshes.materials.shadow(surface, bends, cuts, many !== null) : null;
             // A model not drawn yet, while its material compiles, casts nothing yet either.
             if (effect !== null && effect.pending) {
                 return false;
             }
             const hookedOne = shadow !== null && shadow !== 'pending'
-                ? hookedPipeline(shadow.module, shadow.layout, bends, cull, cuts ? meshes.layouts.texture : null)
+                ? hookedPipeline(shadow.module, shadow.layout, bends, cull, cuts ? meshes.layouts.texture : null, many !== null)
                 : shadow;
             if (hookedOne === 'pending') {
                 return false;
@@ -314,8 +351,27 @@ export const createShadowPipeline = (device: GPUDevice) => {
                     pass.setVertexBuffer(2, toGpuBuffer(geometry.skinBuffer!));
                 }
                 pass.setVertexBuffer(bends ? 3 : 2, toGpuBuffer(geometry.detailBuffer!));
+                if (many !== null) {
+                    pass.setVertexBuffer(3, toGpuBuffer(many.buffer!));
+                }
                 pass.setIndexBuffer(toGpuBuffer(geometry.indexBuffer), geometry.indexType);
-                pass.drawIndexed(geometry.indexCount);
+                pass.drawIndexed(geometry.indexCount, drawn);
+                return true;
+            }
+
+            if (many !== null) {
+                // Its shape as its file made it, each instance where it stands: cut by its picture
+                // alone when its material cuts.
+                pass.setPipeline(instancedPipeline(cull, cuts ? meshes.layouts.texture : null));
+                pass.setBindGroup(0, cuts ? cutGroupFor(slot) : groupFor(slot));
+                pass.setVertexBuffer(0, toGpuBuffer(geometry.vertexBuffer));
+                if (cuts) {
+                    pass.setBindGroup(1, textureBindGroup(device, meshes, mesh));
+                    pass.setVertexBuffer(1, toGpuBuffer(geometry.colorBuffer!));
+                }
+                pass.setVertexBuffer(cuts ? 2 : 1, toGpuBuffer(many.buffer!));
+                pass.setIndexBuffer(toGpuBuffer(geometry.indexBuffer), geometry.indexType);
+                pass.drawIndexed(geometry.indexCount, drawn);
                 return true;
             }
 

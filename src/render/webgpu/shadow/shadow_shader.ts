@@ -1,3 +1,5 @@
+import { INSTANCE_INPUTS, INSTANCE_PLACE } from '../mesh/mesh_shader';
+
 /**
  * Where a caster's corners are seen from: the light's view and the caster's own placement. The same
  * block in every shadow shader, a material's included.
@@ -70,6 +72,24 @@ fn vs(
         weights.z * joints[u32(bones.z)] +
         weights.w * joints[u32(bones.w)];
     return shadow.lightViewProj * shadow.model * (skin * vec4<f32>(position, 1.0));
+}
+`;
+
+/**
+ * The same, for a model drawn as many instances of its shape: each one where its instance puts it,
+ * the placement put together as the pass that draws them does (`INSTANCE_PLACE`).
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const SHADOW_INSTANCED_WGSL = /* wgsl */ `
+${SHADOW_UNIFORMS_WGSL}
+@vertex
+fn vs(
+    @location(0) position: vec3<f32>,${INSTANCE_INPUTS}
+) -> @builtin(position) vec4<f32> {${INSTANCE_PLACE}
+    return shadow.lightViewProj * shadow.model * (instance * vec4<f32>(position, 1.0));
 }
 `;
 
@@ -171,3 +191,28 @@ fn vs(
     return out;
 }
 ${shadowCutFragment(2)}`;
+
+/**
+ * The same, for a model drawn as many instances of its shape: each where its instance puts it, cut
+ * out of its picture by its corners' alpha times its instance's.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const SHADOW_CUT_INSTANCED_WGSL = /* wgsl */ `
+${SHADOW_CUT_UNIFORMS_WGSL}
+${SHADOW_CUT_OUTPUT_WGSL}
+@vertex
+fn vs(
+    @location(0) position: vec3<f32>,
+    @location(2) uv: vec2<f32>,
+    @location(5) color: vec4<f32>,${INSTANCE_INPUTS}
+) -> CutOutput {${INSTANCE_PLACE}
+    var out: CutOutput;
+    out.position = shadow.lightViewProj * shadow.model * (instance * vec4<f32>(position, 1.0));
+    out.uv = uv;
+    out.alpha = color.a * instanceColor.a;
+    return out;
+}
+${shadowCutFragment(1)}`;

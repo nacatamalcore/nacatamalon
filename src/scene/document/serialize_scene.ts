@@ -450,6 +450,11 @@ const writeMesh = (mesh: TMesh, writing: TWriting): TComponentDoc | null => {
     if (geometry === null) {
         return null;
     }
+    // Drawn as many (`createMeshInstances`): where each one is was said by the game's code, which
+    // says it again when the scene is opened. Written as one model it would come back as one.
+    if (mesh.instances !== null && mesh.instances !== undefined) {
+        return null;
+    }
     if (geometry.source === null) {
         // Built from raw vertex data, so there is no recipe to write and nothing could make it
         // again. The mesh is left out rather than written pointing at a shape nobody can build.

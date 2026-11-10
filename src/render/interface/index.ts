@@ -12,7 +12,7 @@ export type { TDrawCamera2d } from './draw/t_draw_camera_2d';
 export type { TRendererBackend, TRendererType, TRendererCapabilities } from './t_renderer_capabilities';
 export type { TRendererOptions } from './t_renderer_options';
 export type { TDrawMaterial, TDrawShader } from './draw/t_draw_material';
-export type { TDrawMesh } from './draw/t_draw_mesh';
+export type { TDrawMesh, TDrawMeshInstances } from './draw/t_draw_mesh';
 export type { TDrawParticles } from './draw/t_draw_particles';
 export type { TDrawParticles3d } from './draw/t_draw_particles_3d';
 export type { TDrawLines } from './draw/t_draw_lines';

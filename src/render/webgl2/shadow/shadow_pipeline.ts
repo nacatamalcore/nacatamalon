@@ -3,9 +3,10 @@ import { cullOf } from '../../shared/cull_of';
 import { MESH_JOINTS_UNIT } from '../bindings';
 import { SHADOW_DEPTH_BIAS, SHADOW_SLOPE_BIAS, SHADOW_MAP_SIZE } from '../../shared/light_space';
 import {
-    SHADOW_CUT_FRAGMENT_GLSL, SHADOW_CUT_SKINNED_VERTEX_GLSL, SHADOW_CUT_VERTEX_GLSL, SHADOW_FRAGMENT_GLSL,
-    SHADOW_SKINNED_VERTEX_GLSL, SHADOW_VERTEX_GLSL,
+    SHADOW_CUT_FRAGMENT_GLSL, SHADOW_CUT_INSTANCED_VERTEX_GLSL, SHADOW_CUT_SKINNED_VERTEX_GLSL, SHADOW_CUT_VERTEX_GLSL, SHADOW_FRAGMENT_GLSL,
+    SHADOW_INSTANCED_VERTEX_GLSL, SHADOW_SKINNED_VERTEX_GLSL, SHADOW_VERTEX_GLSL,
 } from './shadow_shader';
+import { instancesOf } from '../../shared/mesh_instances';
 import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
 import { toGlTexture } from '../texture';
 import { toGlClip } from '../mesh/depth_range';
@@ -63,6 +64,16 @@ export const createShadowPipeline = (gl: WebGL2RenderingContext) => {
         return cutting;
     };
 
+    // A model drawn as many instances of its shape casts every one of them: two more programs, made
+    // the first time one casts, whole and cut out of its picture.
+    const many: { plain: TShadowProgram | null; cut: TShadowProgram | null } = { plain: null, cut: null };
+    const instancedProgram = (cuts: boolean): TShadowProgram => {
+        if (cuts) {
+            return many.cut ??= locate(compileProgram(gl, SHADOW_CUT_INSTANCED_VERTEX_GLSL, SHADOW_CUT_FRAGMENT_GLSL, 'shadow cut instanced'));
+        }
+        return many.plain ??= locate(compileProgram(gl, SHADOW_INSTANCED_VERTEX_GLSL, SHADOW_FRAGMENT_GLSL, 'shadow instanced'));
+    };
+
     // The light's matrix in this card's range, kept between frames: one matrix for the whole frame,
     // however many models cast into it.
     const lightClip = new Float32Array(16);
@@ -106,6 +117,11 @@ export const createShadowPipeline = (gl: WebGL2RenderingContext) => {
             if (vao === null || mesh.geometry === null || mesh.geometry.indexCount === 0) {
                 return false;
             }
+            // Drawn as many: every instance casts, from the run its vertex array already points at.
+            const instances = instancesOf(mesh);
+            if (instances !== null && instances.count <= 0) {
+                return false;
+            }
 
             // The side its material throws away, here as in the pass that lights the scene: a leaf
             // drawn on both sides casts from both.
@@ -117,7 +133,7 @@ export const createShadowPipeline = (gl: WebGL2RenderingContext) => {
                 gl.cullFace(cull === 'front' ? gl.FRONT : gl.BACK);
             }
 
-            const bends = mesh.skeleton !== null && mesh.geometry.skinBuffer !== null;
+            const bends = instances === null && mesh.skeleton !== null && mesh.geometry.skinBuffer !== null;
             const surface = mesh.material;
             // Cut out of its picture, by the same alpha and cutoff the model is drawn with.
             const cuts = (surface.alphaCutoff ?? 0) > 0;
@@ -125,12 +141,13 @@ export const createShadowPipeline = (gl: WebGL2RenderingContext) => {
             // made and that flat ghost shadows the model wherever the hook takes it behind. Cut out,
             // a colour hook casts through its own shader too: what it leaves out is left out here.
             const effect = (surface.vertexGlsl !== null || (cuts && surface.fragmentGlsl !== null)) && mesh.geometry.detailBuffer !== null
-                ? meshes.materials.get(surface, bends, cull)
+                ? meshes.materials.get(surface, bends, cull, instances !== null)
                 : null;
-            const hooked = effect !== null && !effect.failed ? meshes.materials.shadow(surface, bends, cuts) : null;
+            const hooked = effect !== null && !effect.failed ? meshes.materials.shadow(surface, bends, cuts, instances !== null) : null;
             // Cut by its picture alone: a material with no hooks, or one whose shadow the card refused.
-            const cutters = cuts && hooked === null ? cutPrograms() : null;
-            const shader = hooked ?? (cutters !== null ? (bends ? cutters.bending : cutters.plain) : bends ? bending : plain);
+            const cutters = cuts && hooked === null && instances === null ? cutPrograms() : null;
+            const shader = hooked
+                ?? (instances !== null ? instancedProgram(cuts) : cutters !== null ? (bends ? cutters.bending : cutters.plain) : bends ? bending : plain);
             gl.useProgram(shader.program);
             gl.uniformMatrix4fv(shader.lightViewProj, false, lightClip);
             gl.uniformMatrix4fv(shader.model, false, model);
@@ -169,7 +186,11 @@ export const createShadowPipeline = (gl: WebGL2RenderingContext) => {
 
             gl.bindVertexArray(vao);
             const indexType = mesh.geometry.indexType === 'uint32' ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
-            gl.drawElements(gl.TRIANGLES, mesh.geometry.indexCount, indexType, 0);
+            if (instances !== null) {
+                gl.drawElementsInstanced(gl.TRIANGLES, mesh.geometry.indexCount, indexType, 0, instances.count);
+            } else {
+                gl.drawElements(gl.TRIANGLES, mesh.geometry.indexCount, indexType, 0);
+            }
             gl.bindVertexArray(null);
             return true;
         },
@@ -198,6 +219,8 @@ export const createShadowPipeline = (gl: WebGL2RenderingContext) => {
                 gl.deleteProgram(cutting.plain.program);
                 gl.deleteProgram(cutting.bending.program);
             }
+            if (many.plain !== null) gl.deleteProgram(many.plain.program);
+            if (many.cut !== null) gl.deleteProgram(many.cut.program);
         },
     };
 };

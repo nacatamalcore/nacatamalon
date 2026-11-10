@@ -128,7 +128,7 @@ export const createWebGPURenderer = async (
         deviceLost,
         createTexture: (image, mipmaps) => createWebGPUTexture(device, image, mipmaps),
         createBuffer: (data, usage) => createWebGPUBuffer(device, data, usage),
-        updateBuffer: (buffer, data) => updateWebGPUBuffer(device, buffer, data),
+        updateBuffer: (buffer, data, at) => updateWebGPUBuffer(device, buffer, data, at),
         destroyBuffer: (buffer) => { toGpuBuffer(buffer).destroy(); },
         createDataTexture: (data, width, height, mipmaps) => createWebGPUDataTexture(device, data, width, height, mipmaps),
         updateDataTexture: (texture, data, width, height, region) =>

@@ -1,4 +1,5 @@
 import { MAX_LIGHTS, MAX_SCENE_LIGHTS } from '../../../light';
+import { INSTANCE_LOCATION } from '../../shared/mesh_instances';
 import type { TCullMode } from '../../../materials/types/t_material';
 
 /**
@@ -356,6 +357,30 @@ void sampleLight(int index, vec3 worldPos, vec3 normal, vec3 viewDir, out vec3 d
 `;
 
 /**
+ * What a corner reads of the instance it belongs to, for a model drawn as many, and its placement put
+ * back together from its three rows. The twin of `INSTANCE_INPUTS` and `INSTANCE_PLACE` in
+ * webgpu/mesh/mesh_shader.ts; the same in every program that draws instances, the shadow's included.
+ *
+ * @internal
+ */
+export const INSTANCE_HEAD_GLSL = /* glsl */ `
+layout(location = ${INSTANCE_LOCATION}) in vec4 aInstanceRow0;
+layout(location = ${INSTANCE_LOCATION + 1}) in vec4 aInstanceRow1;
+layout(location = ${INSTANCE_LOCATION + 2}) in vec4 aInstanceRow2;
+layout(location = ${INSTANCE_LOCATION + 3}) in vec4 aInstanceColor;
+layout(location = ${INSTANCE_LOCATION + 4}) in vec4 aInstanceData;
+
+mat4 instancePlace() {
+    return mat4(
+        vec4(aInstanceRow0.x, aInstanceRow1.x, aInstanceRow2.x, 0.0),
+        vec4(aInstanceRow0.y, aInstanceRow1.y, aInstanceRow2.y, 0.0),
+        vec4(aInstanceRow0.z, aInstanceRow1.z, aInstanceRow2.z, 0.0),
+        vec4(aInstanceRow0.w, aInstanceRow1.w, aInstanceRow2.w, 1.0)
+    );
+}
+`;
+
+/**
  * The second picture coordinate, read from the corner's detail run and carried to the pixel, for a
  * model whose occlusion is laid out by it.
  */
@@ -384,12 +409,14 @@ export const MESH_VERTEX_HEAD_GLSL = meshVertexHeadGlsl('back');
  * The rest of a corner's journey once it is where it belongs: which lights reach it, and how much.
  *
  * Kept apart so the bending shader can put a corner somewhere else first and then say exactly this.
+ * `color` is the colour the corner carries on, which a model drawn as many multiplies by its
+ * instance's.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const meshVertexLightGlsl = (cull: TCullMode, secondUv = false): string => /* glsl */ `
+export const meshVertexLightGlsl = (cull: TCullMode, secondUv = false, color = 'aColor'): string => /* glsl */ `
     vec3 viewDir = viewDirOf(worldPos);
 
     vec3 diffuse = vec3(0.0);
@@ -419,7 +446,7 @@ export const meshVertexLightGlsl = (cull: TCullMode, secondUv = false): string =
     vCasterShine = casterShine;${cull === 'none' ? TWO_SIDED_WRITE_GLSL : ''}
     vShadowCoord = shadowCoordOf(worldPos);
     vUv = affineUv(aUv, gl_Position);
-    vColor = aColor;
+    vColor = ${color};
     vFog = fogAt(worldPos);${secondUv ? `
     vUv2 = affineUv(aUv2, gl_Position).xy;` : ''}
 }

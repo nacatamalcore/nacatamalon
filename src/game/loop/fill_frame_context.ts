@@ -35,6 +35,8 @@ import type { TRuntimeStore } from '../../store';
 import type { TRuntimeState } from '../../store/types/t_runtime_state';
 import { collectLighting, holdsLights, ownAmbientOf, viewLighting } from './helper/collect_lights';
 import { computeJointMatrices } from '../../math/skinning';
+import { syncMeshInstances } from '../../gameobjects/mesh/create_mesh_instances';
+import type { TMesh } from '../../gameobjects/mesh/types/t_mesh';
 import { buildPostChain } from '../../post/build_post_chain';
 import type { TCamera2d } from '../../camera';
 import { cameraAsDrawn, pixelsPerUnit } from '../../camera/camera_as_drawn';
@@ -314,8 +316,18 @@ let pass = 0;
 const poseSkeletons = (drawables: Array<TDrawable | TDrawSprite>, start: number): void => {
     for (let i = start; i < drawables.length; i++) {
         const item = drawables[i];
-        if (item.type === 'mesh' && item.skeleton !== null && item.skeleton !== undefined) {
+        if (item.type !== 'mesh') {
+            continue;
+        }
+        const many = item.instances !== null && item.instances !== undefined;
+        // One drawn as many never bends, so its bones, if it was handed any, are not worked out.
+        if (!many && item.skeleton !== null && item.skeleton !== undefined) {
             computeJointMatrices(item.skeleton, pass);
+        }
+        // One drawn as many sends up the instances that changed, here for the same reason: once,
+        // however many views and shadows draw it.
+        if (many && drawingWith !== null) {
+            syncMeshInstances(drawingWith, item as TMesh);
         }
     }
 };

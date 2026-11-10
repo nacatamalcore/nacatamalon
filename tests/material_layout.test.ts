@@ -120,7 +120,7 @@ describe('the two model material shaders', () => {
         expect(membersOf(wgsl, 'struct FragContext {'))
             .toEqual(['uv', 'normal', 'worldPos', 'light', 'shine', 'emissive', 'viewDir', 'color', 'screen', 'tangent', 'bitangent', 'uv2', 'frontFacing', 'carry', 'occlusion']);
         expect(membersOf(wgsl, 'struct VertContext {'))
-            .toEqual(['normal', 'uv', 'color', 'tangent', 'bitangent', 'uv2']);
+            .toEqual(['normal', 'uv', 'color', 'tangent', 'bitangent', 'uv2', 'instance', 'origin']);
     });
 
     it('stands in for a hook that was not written, and says what the engine would have said', () => {

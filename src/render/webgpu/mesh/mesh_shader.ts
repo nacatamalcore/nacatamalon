@@ -1,4 +1,5 @@
 import { MAX_LIGHTS, MAX_SCENE_LIGHTS } from '../../../light';
+import { INSTANCE_LOCATION } from '../../shared/mesh_instances';
 import type { TCullMode } from '../../../materials/types/t_material';
 
 /**
@@ -439,6 +440,34 @@ fn facingTurnOf(m: mat3x3<f32>) -> mat3x3<f32> {
     return flipped * sign(det);
 }
 `;
+
+/**
+ * What a corner reads of the instance it belongs to, for a model drawn as many: the three rows of its
+ * placement, its colour and its four numbers (see `MESH_INSTANCES`). The same in every shader that
+ * draws instances, the shadow's included.
+ *
+ * @internal
+ */
+export const INSTANCE_INPUTS = /* wgsl */ `
+    @location(${INSTANCE_LOCATION}) instanceRow0: vec4<f32>,
+    @location(${INSTANCE_LOCATION + 1}) instanceRow1: vec4<f32>,
+    @location(${INSTANCE_LOCATION + 2}) instanceRow2: vec4<f32>,
+    @location(${INSTANCE_LOCATION + 3}) instanceColor: vec4<f32>,
+    @location(${INSTANCE_LOCATION + 4}) instanceData: vec4<f32>,`;
+
+/**
+ * The instance's placement, put back together from its three rows: `instance`, which places a corner
+ * inside the model the way a bone mix does, before the model's own placement.
+ *
+ * @internal
+ */
+export const INSTANCE_PLACE = /* wgsl */ `
+    let instance = mat4x4<f32>(
+        vec4<f32>(instanceRow0.x, instanceRow1.x, instanceRow2.x, 0.0),
+        vec4<f32>(instanceRow0.y, instanceRow1.y, instanceRow2.y, 0.0),
+        vec4<f32>(instanceRow0.z, instanceRow1.z, instanceRow2.z, 0.0),
+        vec4<f32>(instanceRow0.w, instanceRow1.w, instanceRow2.w, 1.0),
+    );`;
 
 /**
  * The way a corner's surface faces in the world, for the side that is drawn: turned round when only

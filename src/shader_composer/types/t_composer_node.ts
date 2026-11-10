@@ -33,6 +33,8 @@ export type TInputKind =
     | 'worldBitangent'
     | 'vertexTangent'
     | 'vertexBitangent'
+    | 'instanceData'
+    | 'instanceOrigin'
     | 'frontFacing'
     | 'carry'
     | 'occlusion'

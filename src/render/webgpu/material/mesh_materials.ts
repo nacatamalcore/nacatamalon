@@ -4,7 +4,7 @@ import { buildUniformLayout, MAX_MATERIAL_FLOATS, writeUniformValues } from '../
 import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
 import { toGpuTexture } from '../texture';
-import { describeMeshPipeline, MESH_BONES, MESH_COLORS, MESH_CORNERS, MESH_DETAIL } from '../mesh/pipeline_state';
+import { describeMeshPipeline, MESH_BONES, MESH_COLORS, MESH_CORNERS, MESH_DETAIL, MESH_INSTANCES } from '../mesh/pipeline_state';
 import type { TDrawMaterial, TDrawShader } from '../../interface/draw/t_draw_material';
 import type { TMeshPipeline } from '../mesh/types/t_mesh_pipeline';
 import type { TUniformLayout } from '../../shared/material_uniforms';
@@ -134,7 +134,7 @@ export const createMeshMaterials = (
         capacity = size;
     };
 
-    const build = (material: TDrawShader, skinned: boolean, cull: TCullMode): TCompiled => {
+    const build = (material: TDrawShader, skinned: boolean, cull: TCullMode, instanced: boolean): TCompiled => {
         const layout = buildUniformLayout(material.uniformSig ?? {});
         // The corner hook's too, so a map only it reads has a slot and a reader.
         const mapNames = mapNamesOf(material.fragment, material.vertex);
@@ -167,17 +167,20 @@ export const createMeshMaterials = (
             );
         };
 
-        const kind = skinned ? 'skinned mesh material' : 'mesh material';
+        const kind = skinned ? 'skinned mesh material' : instanced ? 'instanced mesh material' : 'mesh material';
         // Caught here: what is wrong is said once below, in this engine's words and with its lines.
         device.pushErrorScope('validation');
         const module = device.createShaderModule({
             label: `${kind} ${material.name ?? material.id}`,
-            code: buildMeshMaterialShader(material.fragment, material.vertex, material.uniformSig ?? {}, mapNames, skinned, cull),
+            code: buildMeshMaterialShader(material.fragment, material.vertex, material.uniformSig ?? {}, mapNames, skinned, cull, instanced),
         });
         void device.popErrorScope();
         const wiring = skinned ? skinnedPipelineLayout : pipelineLayout;
-        // The detail run last, after the bones when there are any: slot 2 or 3 at draw time.
-        const buffers = skinned ? [MESH_CORNERS, MESH_COLORS, MESH_BONES, MESH_DETAIL] : [MESH_CORNERS, MESH_COLORS, MESH_DETAIL];
+        // The detail run last, after the bones when there are any: slot 2 or 3 at draw time. And the
+        // run of instances after that, for a model drawn as many.
+        const buffers = skinned
+            ? [MESH_CORNERS, MESH_COLORS, MESH_BONES, MESH_DETAIL]
+            : instanced ? [MESH_CORNERS, MESH_COLORS, MESH_DETAIL, MESH_INSTANCES] : [MESH_CORNERS, MESH_COLORS, MESH_DETAIL];
 
         // Compiled and checked apart from the frame, and only used once the card says both are good.
         void Promise.all([
@@ -214,14 +217,15 @@ export const createMeshMaterials = (
             }
         },
         /**
-         * The compiled effect, for a model that bends (`skinned`) or one that does not, and for the
-         * side of its triangles thrown away: each built the first time it is wanted.
+         * The compiled effect, for a model that bends (`skinned`), one drawn as many (`instanced`) or
+         * neither, and for the side of its triangles thrown away: each built the first time it is
+         * wanted.
          */
-        get: (material: TDrawShader, skinned = false, cull: TCullMode = 'back'): TCompiled => {
-            const key = `${skinned ? 'skinned ' : ''}${cull === 'back' ? '' : `cull ${cull} `}${JSON.stringify(material.uniformSig ?? {})} ${material.fragment ?? ''} ${material.vertex ?? ''}`;
+        get: (material: TDrawShader, skinned = false, cull: TCullMode = 'back', instanced = false): TCompiled => {
+            const key = `${skinned ? 'skinned ' : instanced ? 'instanced ' : ''}${cull === 'back' ? '' : `cull ${cull} `}${JSON.stringify(material.uniformSig ?? {})} ${material.fragment ?? ''} ${material.vertex ?? ''}`;
             let entry = compiled.get(key);
             if (entry === undefined) {
-                entry = build(material, skinned, cull);
+                entry = build(material, skinned, cull, instanced && !skinned);
                 compiled.set(key, entry);
             }
             return entry;
@@ -238,11 +242,11 @@ export const createMeshMaterials = (
          * it, every caster in the map and not just this one. A model whose shadow is pending casts
          * nothing, as a model whose look is pending is not drawn.
          */
-        shadow: (material: TDrawShader, skinned = false, cuts = false): { module: GPUShaderModule; layout: GPUBindGroupLayout } | 'pending' | null => {
+        shadow: (material: TDrawShader, skinned = false, cuts = false, instanced = false): { module: GPUShaderModule; layout: GPUBindGroupLayout } | 'pending' | null => {
             if (material.vertex === null && !(cuts && material.fragment !== null)) {
                 return null;
             }
-            const key = `${skinned ? 'skinned ' : ''}${cuts ? 'cut ' : ''}${JSON.stringify(material.uniformSig ?? {})} ${material.fragment ?? ''} ${material.vertex ?? ''}`;
+            const key = `${skinned ? 'skinned ' : instanced ? 'instanced ' : ''}${cuts ? 'cut ' : ''}${JSON.stringify(material.uniformSig ?? {})} ${material.fragment ?? ''} ${material.vertex ?? ''}`;
             let held = shadows.get(key);
             if (held === undefined) {
                 // In the drawn model's order, which is the order its group binds them in.
@@ -252,8 +256,8 @@ export const createMeshMaterials = (
                 // words, rather than the card printing it on its own as well.
                 device.pushErrorScope('validation');
                 const module = device.createShaderModule({
-                    label: `${skinned ? 'skinned ' : ''}${cuts ? 'cut ' : ''}mesh material shadow ${material.name ?? material.id}`,
-                    code: buildMeshMaterialShadowShader(material.vertex, material.uniformSig ?? {}, mapNames, skinned, cut),
+                    label: `${skinned ? 'skinned ' : instanced ? 'instanced ' : ''}${cuts ? 'cut ' : ''}mesh material shadow ${material.name ?? material.id}`,
+                    code: buildMeshMaterialShadowShader(material.vertex, material.uniformSig ?? {}, mapNames, skinned, cut, instanced && !skinned),
                 });
                 void device.popErrorScope();
                 const made = { module, layout: skinned ? skinnedMaterialLayout : materialLayout, ready: false };

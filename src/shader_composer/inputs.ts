@@ -310,7 +310,8 @@ export const composerUniform = (name: string, value: number | number[]): TCompos
 export const composerScreenPos = (): TComposerNode => newNode('input', 'vec2<f32>', [], { input: 'screenPos' });
 
 /**
- * A second picture coordinate (`vec2`): the file's own, or the first again when it had none. For a
+ * A second picture coordinate (`vec2`): the model file's own or `createGeometry`'s `uv2`, or the
+ * first again when it has none. For a
  * second picture laid over the first by coordinates of its own: baked light, a decal, a detail.
  * Models only, in either stage.
  * @returns The node, to use as the input of another.
@@ -425,3 +426,28 @@ export const composerVertexTangent = (): TComposerNode => newNode('input', 'vec3
  * @author Francisco Pereira Alvarado
  */
 export const composerVertexBitangent = (): TComposerNode => newNode('input', 'vec3<f32>', [], { input: 'vertexBitangent' });
+
+/**
+ * The four numbers of the instance a corner belongs to (`vec4`), for a model drawn as many
+ * (`createMeshInstances`): what `set` was given as `data`, a seed, a height, how far along it is.
+ * Zeros on a single model. Models only, vertex stage: hand what the colour stage needs of them on
+ * with `carry`.
+ * @returns The node, to use as the input of another.
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const composerInstanceData = (): TComposerNode => newNode('input', 'vec4<f32>', [], { input: 'instanceData' });
+
+/**
+ * Where the instance a corner belongs to stands (`vec3`), in the space the vertex position is in, for
+ * a model drawn as many (`createMeshInstances`): the foot of a blade of grass, whatever corner of it
+ * this is. Zeros on a single model. Models only, vertex stage.
+ * @returns The node, to use as the input of another.
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const composerInstanceOrigin = (): TComposerNode => newNode('input', 'vec3<f32>', [], { input: 'instanceOrigin' });

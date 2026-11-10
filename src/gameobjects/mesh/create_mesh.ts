@@ -20,7 +20,7 @@ const NOWHERE = { x: 0, y: 0, z: 0, rotation: 0, rotationX: 0, rotationY: 0, sca
  * under. A name that is not there throws, because a name is always deliberate and a plain surface
  * would hide the typo.
  */
-const resolveTexture = (options: TMeshOptions): TTexture | null => {
+const resolveTexture = (hook: string, options: TMeshOptions): TTexture | null => {
     if (options.texture !== undefined) {
         return options.texture;
     }
@@ -31,7 +31,7 @@ const resolveTexture = (options: TMeshOptions): TTexture | null => {
     const found = findAsset(getActiveGame()?.get('assets').textures, options.key);
     if (found === undefined) {
         throw new Error(
-            `[NacatamalOn] createMesh: no texture loaded under key '${options.key}'. ` +
+            `[NacatamalOn] ${hook}: no texture loaded under key '${options.key}'. ` +
             `Did you forget useLoadTexture({ src, key: '${options.key}' })?`,
         );
     }
@@ -71,18 +71,28 @@ const resolveTexture = (options: TMeshOptions): TTexture | null => {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const createMesh = (options: TMeshOptions): TMesh => {
+export const createMesh = (options: TMeshOptions): TMesh => makeMesh('createMesh', options);
+
+/**
+ * The model behind `createMesh` and `createMeshInstances`, which differ only in what is drawn of it:
+ * made, put in the scene and handed back. `hook` is the name a mistake is said under.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const makeMesh = (hook: string, options: TMeshOptions): TMesh => {
     const box = getActiveBox();
     const store = getActiveGame();
     if (box === null || store === null) {
-        throw outsideSceneBody('createMesh');
+        throw outsideSceneBody(hook);
     }
     if (options.material !== undefined) {
         const ignored = (['tint', 'emissive', 'emissiveTexture', 'occlusion', 'specular', 'cull', 'alphaCutoff', 'affine', 'vertexSnap'] as const).filter((key) => options[key] !== undefined);
         // Said once per game: a game that builds many models from one material would say it for
         // every one of them.
         if (ignored.length > 0 && firstTimeIn(store, 'createMesh: options beside a material')) {
-            console.warn(`[NacatamalOn] createMesh: given a material, its ${ignored.join(', ')} ${ignored.length === 1 ? 'is' : 'are'} not read: they go in the material (createMaterial({ ${ignored[0]}: … })), which every model wearing it shares.`);
+            console.warn(`[NacatamalOn] ${hook}: given a material, its ${ignored.join(', ')} ${ignored.length === 1 ? 'is' : 'are'} not read: they go in the material (createMaterial({ ${ignored[0]}: … })), which every model wearing it shares.`);
         }
     }
 
@@ -112,7 +122,7 @@ export const createMesh = (options: TMeshOptions): TMesh => {
                 smooth: options.smooth,
                 wrap: options.wrap,
             },
-            resolveTexture(options),
+            resolveTexture(hook, options),
             null,
         ) as TMeshMaterial,
         zIndex: options.zIndex,

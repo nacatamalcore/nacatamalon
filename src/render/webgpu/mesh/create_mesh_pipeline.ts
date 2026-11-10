@@ -4,8 +4,9 @@ import { SHADOW_FORMAT } from '../shadow/shadow_map';
 import { SKINNED_SHADER, skinnedShaderFor } from './skinned_shader';
 import { createJointPalette } from './joint_palette';
 import { createMeshMaterials } from '../material/mesh_materials';
-import { describeMeshPipeline, MESH_BONES, MESH_COLORS, MESH_CORNERS, MESH_DETAIL } from './pipeline_state';
-import type { TMeshPipeline, TSidedMeshPipelines } from './types/t_mesh_pipeline';
+import { instancedShaderFor } from './instanced_shader';
+import { describeMeshPipeline, MESH_BONES, MESH_COLORS, MESH_CORNERS, MESH_DETAIL, MESH_INSTANCES } from './pipeline_state';
+import type { TInstancedMeshPipelines, TMeshPipeline, TSidedMeshPipelines } from './types/t_mesh_pipeline';
 import { TEXTURE_WRAPS, wrapKey } from '../../shared/texture_wrap';
 import type { TTextureWrap } from '../../../materials/types/t_material';
 
@@ -165,6 +166,25 @@ export const createMeshPipeline = (
         return made;
     };
 
+    // And a pair for a model drawn as many instances of its shape, by the side thrown away and
+    // whether its occlusion is laid out by the second picture coordinate: the run of instances is
+    // the last they read. Made the first time one is drawn.
+    const instancedSets = new Map<string, TInstancedMeshPipelines>();
+    const instanced = (cull: 'back' | 'front' | 'none', bySecondUv: boolean): TInstancedMeshPipelines => {
+        const key = `${cull}${bySecondUv ? ' second uv' : ''}`;
+        let made = instancedSets.get(key);
+        if (made === undefined) {
+            const many = device.createShaderModule({ label: `instanced mesh shader, cull ${key}`, code: instancedShaderFor(cull, bySecondUv) });
+            const runs = bySecondUv ? [CORNERS, COLORS, MESH_DETAIL, MESH_INSTANCES] : [CORNERS, COLORS, MESH_INSTANCES];
+            made = {
+                pipeline: device.createRenderPipeline(describe(`instanced mesh pipeline, cull ${key}`, many, meshLayout, runs, true, cull)),
+                transparentPipeline: device.createRenderPipeline(describe(`see-through instanced mesh pipeline, cull ${key}`, many, meshLayout, runs, false, cull)),
+            };
+            instancedSets.set(key, made);
+        }
+        return made;
+    };
+
     // One step of depth, bound wherever a scene casts no shadow. Four bytes, and what they buy is
     // that there is one layout and one pipeline instead of two of each: the shader is told there is
     // nothing to read by the `-1` in its numbers and never looks at this at all.
@@ -242,6 +262,7 @@ export const createMeshPipeline = (
         transparentSkinnedPipeline,
         sided,
         secondUv,
+        instanced,
         layouts,
         materials: createMeshMaterials(device, format, samples, layouts, whiteTexture, wrapSamplers),
         joints: createJointPalette(device),

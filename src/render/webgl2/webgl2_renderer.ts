@@ -96,7 +96,7 @@ export const createWebGL2Renderer = async (
             state.buffers.add(buffer);
             return buffer;
         },
-        updateBuffer: (buffer, data) => updateWebGL2Buffer(gl, state.lost, buffer, data),
+        updateBuffer: (buffer, data, at) => updateWebGL2Buffer(gl, state.lost, buffer, data, at),
         destroyBuffer: (buffer) => {
             state.buffers.delete(buffer as TWebGL2Buffer);
             // A shape's bindings are kept by its corners' buffer, and go with it: a shape that grows
@@ -107,6 +107,12 @@ export const createWebGL2Renderer = async (
                     gl.deleteVertexArray(vao);
                     held.delete(buffer);
                 }
+            }
+            // And a run of instances keeps the bindings of the shape it is drawn with.
+            const many = state.meshes.instancedVertexArrays.get(buffer);
+            if (many !== undefined) {
+                gl.deleteVertexArray(many.vao);
+                state.meshes.instancedVertexArrays.delete(buffer);
             }
             gl.deleteBuffer(toGlBuffer(buffer));
         },

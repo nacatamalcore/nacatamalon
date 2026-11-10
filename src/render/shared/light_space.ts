@@ -1,5 +1,6 @@
 import * as mat from '../../math/mat4';
 import { transformForward } from './transform_basis';
+import { computeModelMatrix } from './compute_mvp_3d';
 import type { Mat4 } from '../../math/mat4';
 import type { TDrawCamera3d } from '../interface/draw/t_draw_camera_3d';
 import type { TDrawLight } from '../interface/draw/t_draw_light';
@@ -394,9 +395,21 @@ export const reportCastersOutside = (casters: readonly TDrawMesh[], light: TDraw
 
     for (const caster of casters) {
         const place = caster.worldMatrix;
-        const x = place !== undefined ? place[12] : caster.transform.x;
-        const y = place !== undefined ? place[13] : caster.transform.y;
-        const z = place !== undefined ? place[14] : caster.transform.z;
+        let x = place !== undefined ? place[12] : caster.transform.x;
+        let y = place !== undefined ? place[13] : caster.transform.y;
+        let z = place !== undefined ? place[14] : caster.transform.z;
+        // One drawn as many is judged by the middle of its instances, which may stand far from the
+        // place the group itself is at.
+        const many = caster.instances?.bounds ?? null;
+        if (many !== null) {
+            const mx = (many.min.x + many.max.x) / 2;
+            const my = (many.min.y + many.max.y) / 2;
+            const mz = (many.min.z + many.max.z) / 2;
+            const m = place ?? computeModelMatrix(caster.transform);
+            x = m[0] * mx + m[4] * my + m[8] * mz + m[12];
+            y = m[1] * mx + m[5] * my + m[9] * mz + m[13];
+            z = m[2] * mx + m[6] * my + m[10] * mz + m[14];
+        }
 
         // Where its middle lands in the light's picture. Its middle and not its corners, because
         // this is a warning and not a clipping test: something half out is still mostly working,

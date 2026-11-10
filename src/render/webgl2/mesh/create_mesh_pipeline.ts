@@ -3,6 +3,7 @@ import { createMeshMaterials } from '../material/mesh_materials';
 import { LIGHT_UNIFORM_FLOATS, MESH_UNIFORM_FLOATS } from '../../shared';
 import { MESH_FRAGMENT_GLSL, MESH_VERTEX_GLSL, meshFragmentGlsl, meshVertexGlsl } from './mesh_shader';
 import { SKINNED_VERTEX_GLSL, skinnedVertexGlsl } from './skinned_shader';
+import { instancedVertexGlsl } from './instanced_shader';
 import { createJointTextures } from './joint_texture';
 import { TEXTURE_WRAPS, wrapKey } from '../../shared/texture_wrap';
 import type { TMeshPipeline } from './types/t_mesh_pipeline';
@@ -104,6 +105,20 @@ export const createMeshPipeline = (gl: WebGL2RenderingContext, samplers: { neare
         return made;
     };
 
+    // And one for a model drawn as many instances of its shape, by the side thrown away and whether
+    // its occlusion is laid out by the second picture coordinate. Built the first time one is drawn.
+    const instancedPrograms = new Map<string, WebGLProgram>();
+    const instanced = (cull: 'back' | 'front' | 'none', bySecondUv: boolean): WebGLProgram => {
+        const key = `${cull}${bySecondUv ? ' second uv' : ''}`;
+        let made = instancedPrograms.get(key);
+        if (made === undefined) {
+            made = compileProgram(gl, instancedVertexGlsl(cull, bySecondUv), meshFragmentGlsl(cull, bySecondUv), `instanced mesh, cull ${key}`);
+            prepare(made, false);
+            instancedPrograms.set(key, made);
+        }
+        return made;
+    };
+
     const uniforms = gl.createBuffer();
     gl.bindBuffer(gl.UNIFORM_BUFFER, uniforms);
     gl.bufferData(gl.UNIFORM_BUFFER, MESH_UNIFORM_FLOATS * 4, gl.DYNAMIC_DRAW);
@@ -140,9 +155,11 @@ export const createMeshPipeline = (gl: WebGL2RenderingContext, samplers: { neare
         skinnedProgram,
         sided,
         secondUv,
+        instanced,
         joints: createJointTextures(gl),
         skinnedVertexArrays: new WeakMap(),
         vertexArrays: new WeakMap(),
+        instancedVertexArrays: new WeakMap(),
         uniforms,
         lights,
         uniformData: new Float32Array(MESH_UNIFORM_FLOATS),

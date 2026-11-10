@@ -1,6 +1,7 @@
 import { drawableKindOf } from '../gameobjects/custom';
 import { closeParticleState, unbindParticles } from '../gameobjects/particles/particle_state';
 import { releaseLayer } from '../gameobjects/tilemap/release_layer';
+import { releaseMeshInstances } from '../gameobjects/mesh/create_mesh_instances';
 import { releasePolygon } from '../gameobjects/polygon/polygon_state';
 import { releaseShapes } from '../gameobjects/shapes/shapes_state';
 import type { TDrawable } from '../gameobjects/types';
@@ -44,7 +45,9 @@ export const disposeDrawable = (store: TRuntimeStore, drawable: TDrawable): void
         }
         case 'mesh': {
             // Nothing of its own: its shape belongs to the cache and other models are drawing it,
-            // the same way a sprite does not own its picture.
+            // the same way a sprite does not own its picture. Unless it is drawn as many: the run of
+            // its instances on the card is its own.
+            releaseMeshInstances(store.get('screen').renderer, drawable);
             return;
         }
         case 'particles':

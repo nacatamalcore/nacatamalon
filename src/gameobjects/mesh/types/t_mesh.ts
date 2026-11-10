@@ -2,6 +2,7 @@ import type { TGeometry } from '../../../geometry';
 import type { TSkeleton } from '../../../animation';
 import type { TMeshMaterial } from '../../../materials';
 import type { TTransform3d } from '../../types/t_transform_3d';
+import type { TMeshInstanceRun } from './t_mesh_instances';
 
 /**
  * A model: a shape, put somewhere, with a surface.
@@ -77,6 +78,11 @@ export type TMesh = {
      * by a material that moves its corners in its shader, which is never skipped without it.
      */
     boundsMargin?: number;
+    /**
+     * The run of instances it is drawn as, for one made by `createMeshInstances`: the shape many
+     * times over in one draw. Absent for an ordinary model. Never authored.
+     */
+    instances?: TMeshInstanceRun | null;
     /**
      * Set by `destroy`, on it or on the object it belongs to, and never cleared.
      */

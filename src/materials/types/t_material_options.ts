@@ -29,11 +29,14 @@ export type TMaterialShaderOptions = {
      * light reaching it already worked out; `color`, the colour painted on the corners; `screen`,
      * where it is on the screen in the game's pixels, `(0, 0)` at the top left; `tangent` and
      * `bitangent`, the way across and down the surface the picture runs, in the world; `uv2`, a
-     * second picture coordinate (the file's own, or `uv` again; stretched as `uv` is when affine);
+     * second picture coordinate (the file's own or `createGeometry`'s `uv2`, or `uv` again; stretched
+     * as `uv` is when affine);
      * `frontFacing`; `carry`, what the corner hook carried here (see `vertex`); and `occlusion`, how
      * open the place is to the light from all around, 1 to 0 (see `occlusion`, already in `light`).
      * The corner hook's `VertContext` has `normal`, `uv`, `color`, `tangent`, `bitangent` and `uv2`,
-     * before anything is moved.
+     * before anything is moved, and, on a model drawn as many (`createMeshInstances`), `instance`,
+     * the four numbers of the instance the corner belongs to, and `origin`, where that instance
+     * stands; both are zeros on a single model.
      */
     fragment?: string;
     /**
@@ -45,6 +48,11 @@ export type TMaterialShaderOptions = {
     /**
      * The vertex hook, in WGSL: `fn vertex(pos: vec3<f32>, ctx: VertContext) -> vec3<f32>`, where the
      * corner ends up. 3D only: a sprite is a flat square and has nothing to move.
+     *
+     * On a model drawn as many (`createMeshInstances`) it runs after the instance has placed the
+     * corner: `pos`, `ctx.normal` and `ctx.tangent` are in the space the whole group stands in, so a
+     * wind crossing a meadow is one direction for every blade, and `pos.y - ctx.origin.y` is how far
+     * up its own instance a corner is.
      *
      * It can also hand four numbers on to the fragment hook by writing them into `carry`
      * (`carry = vec4<f32>(lift, 0.0, 0.0, 0.0);`, `carry = vec4(lift, 0.0, 0.0, 0.0);` in GLSL),

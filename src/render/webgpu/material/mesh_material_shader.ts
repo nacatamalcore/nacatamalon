@@ -1,4 +1,4 @@
-import { FACED_LIGHT, FACING_TURN, MESH_SHADER_TYPES, twoSidedOutput, TWO_SIDED_WRITE, worldNormalOf } from '../mesh/mesh_shader';
+import { FACED_LIGHT, FACING_TURN, INSTANCE_INPUTS, INSTANCE_PLACE, MESH_SHADER_TYPES, twoSidedOutput, TWO_SIDED_WRITE, worldNormalOf } from '../mesh/mesh_shader';
 import { buildUniformLayout } from '../../shared/material_uniforms';
 import { SHADOW_CUT_UNIFORMS_WGSL, SHADOW_UNIFORMS_WGSL } from '../shadow/shadow_shader';
 import { MAX_MATERIAL_MAPS } from '../../shared/material_maps';
@@ -42,6 +42,10 @@ struct VertContext {
     bitangent: vec3<f32>,
     // A second picture coordinate: the file's own, or the first again.
     uv2: vec2<f32>,
+    // For a model drawn as many (createMeshInstances): the four numbers of the instance this corner
+    // belongs to, and where that instance stands, in the space pos is in. Zeros for a single model.
+    instance: vec4<f32>,
+    origin: vec3<f32>,
 };
 
 // Four numbers the corner hook hands on to the colour hook, smeared across the triangle like
@@ -248,8 +252,8 @@ const DEFORMED_NORMAL = /* wgsl */ `
     let reference = select(vec3<f32>(0.0, 1.0, 0.0), vec3<f32>(1.0, 0.0, 0.0), abs(ctx.normal.y) > 0.9);
     let tangent = normalize(cross(ctx.normal, reference));
     let bitangent = cross(ctx.normal, tangent);
-    let moved1 = vertex(position + tangent * ${EPSILON}, ctx);
-    let moved2 = vertex(position + bitangent * ${EPSILON}, ctx);
+    let moved1 = vertex(rest + tangent * ${EPSILON}, ctx);
+    let moved2 = vertex(rest + bitangent * ${EPSILON}, ctx);
     let shaped = normalize(cross(moved1 - local, moved2 - local));
 `;
 
@@ -270,7 +274,7 @@ const SKIN = /* wgsl */ `
     // The facing by the inverse of the mix, so a bone stretched more one way than another leans it
     // the right way; what lies along the surface by the mix itself.
     let facing = facingTurnOf(turn) * shaped;
-    let across = turn * cornerTangent.xyz;
+    let across = turn * restTangent;
 `;
 
 /**
@@ -279,14 +283,14 @@ const SKIN = /* wgsl */ `
 const STILL = /* wgsl */ `
     let placed = vec4<f32>(local, 1.0);
     let facing = shaped;
-    let across = cornerTangent.xyz;
+    let across = restTangent;
 `;
 
 /**
  * What a corner reads, and what its hook is told about it: the same in the pass that draws the model
  * and in the one that draws its shadow, so the hook moves the corner the same way in both.
  */
-const cornerInputs = (skinned: boolean): string => /* wgsl */ `
+const cornerInputs = (skinned: boolean, instanced = false): string => /* wgsl */ `
     @location(0) position: vec3<f32>,
     @location(1) normal: vec3<f32>,
     @location(2) uv: vec2<f32>,
@@ -294,31 +298,62 @@ const cornerInputs = (skinned: boolean): string => /* wgsl */ `
     @location(6) cornerTangent: vec4<f32>,
     @location(7) cornerUv2: vec2<f32>,${skinned ? `
     @location(3) bones: vec4<f32>,
-    @location(4) weights: vec4<f32>,` : ''}
+    @location(4) weights: vec4<f32>,` : ''}${instanced ? INSTANCE_INPUTS : ''}
 `;
+
+/**
+ * The corner as the hook finds it, for a single model: as its shape has it.
+ */
+const REST = /* wgsl */ `
+    let rest = position;
+    let restNormal = normal;
+    let restTangent = cornerTangent.xyz;
+    let restColor = color;
+    let restInstance = vec4<f32>(0.0);
+    let restOrigin = vec3<f32>(0.0);
+`;
+
+/**
+ * The corner as the hook finds it, for a model drawn as many: already placed by its instance, so the
+ * hook moves it in the space the whole group stands in (wind crossing a meadow is one direction for
+ * every blade), with the instance's colour over the corner's own.
+ */
+const REST_INSTANCED = /* wgsl */ `${INSTANCE_PLACE}
+    let instanceTurn = mat3x3<f32>(instance[0].xyz, instance[1].xyz, instance[2].xyz);
+    let rest = (instance * vec4<f32>(position, 1.0)).xyz;
+    let restNormal = normalize(facingTurnOf(instanceTurn) * normal);
+    let restTangent = normalize(instanceTurn * cornerTangent.xyz);
+    let restColor = color * instanceColor;
+    let restInstance = instanceData;
+    let restOrigin = instance[3].xyz;
+`;
+
+const restOf = (instanced: boolean): string => instanced ? REST_INSTANCED : REST;
 
 const CORNER_CONTEXT = /* wgsl */ `
     var ctx: VertContext;
-    ctx.normal = normal;
+    ctx.normal = restNormal;
     ctx.uv = uv;
-    ctx.color = color;
-    ctx.tangent = cornerTangent.xyz;
-    ctx.bitangent = cross(normal, cornerTangent.xyz) * cornerTangent.w;
+    ctx.color = restColor;
+    ctx.tangent = restTangent;
+    ctx.bitangent = cross(restNormal, restTangent) * cornerTangent.w;
     ctx.uv2 = cornerUv2;
+    ctx.instance = restInstance;
+    ctx.origin = restOrigin;
 
-    let local = vertex(position, ctx);
+    let local = vertex(rest, ctx);
     // Kept now: a surface measured again calls the hook twice more, at corners beside this one.
     let carried = carry;
 `;
 
-const body = (normal: string, skinned: boolean, cull: TCullMode): string => {
+const body = (normal: string, skinned: boolean, cull: TCullMode, instanced: boolean): string => {
     // A model drawn on both sides reads the light of the side it is; any other has one.
     const lit = cull === 'none' ? 'side' : 'in';
     return /* wgsl */ `
-${skinned ? `@group(${MESH_MATERIAL_GROUP}) @binding(${MESH_MATERIAL_JOINTS_BINDING}) var<storage, read> joints: array<mat4x4<f32>>;${FACING_TURN}` : ''}
+${skinned ? `@group(${MESH_MATERIAL_GROUP}) @binding(${MESH_MATERIAL_JOINTS_BINDING}) var<storage, read> joints: array<mat4x4<f32>>;` : ''}${skinned || instanced ? FACING_TURN : ''}
 
 @vertex
-fn vs(${cornerInputs(skinned)}) -> VertexOutput {${CORNER_CONTEXT}${normal}${skinned ? SKIN : STILL}
+fn vs(${cornerInputs(skinned, instanced)}) -> VertexOutput {${restOf(instanced)}${CORNER_CONTEXT}${normal}${skinned ? SKIN : STILL}
     var out: VertexOutput;
     out.position = snapToPixels(uniforms.mvp * placed);
 
@@ -338,7 +373,7 @@ fn vs(${cornerInputs(skinned)}) -> VertexOutput {${CORNER_CONTEXT}${normal}${ski
     out.normal = vec4<f32>(worldNormal, stretched2.x);
     out.worldPos = vec4<f32>(worldPos, fogAt(worldPos));${cull === 'none' ? '' : `
     out.viewDir = viewDir;`}
-    out.color = color;
+    out.color = restColor;
     out.screen = vec4<f32>(out.position.xyw, stretched2.y);
     // A direction, so it is moved by the model's own turn and stretch rather than the facing's.
     out.tangent = vec4<f32>(normalize((uniforms.model * vec4<f32>(across, 0.0)).xyz), cornerTangent.w);
@@ -426,6 +461,10 @@ fn fs(in: VertexOutput, @builtin(front_facing) front: bool) -> @location(0) vec4
  * `cull` is the side of its triangles the material throws away, which decides how it is lit: from
  * inside for `'front'`, on both sides for `'none'`.
  *
+ * `instanced` is the same shader for a model drawn as many (`createMeshInstances`): each corner is
+ * placed by its instance before the corner hook runs, which is told the instance's numbers and where
+ * it stands. Never together with `skinned`.
+ *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -437,6 +476,7 @@ export const buildMeshMaterialShader = (
     mapNames: readonly string[] = [],
     skinned = false,
     cull: TCullMode = 'back',
+    instanced = false,
 ): string => {
     const { structText } = buildUniformLayout(sig);
 
@@ -453,7 +493,7 @@ export const buildMeshMaterialShader = (
         maps(mapNames),
         vertex ?? DEFAULT_VERTEX,
         fragment ?? DEFAULT_EFFECT,
-        body(vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL, skinned, cull),
+        body(vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL, skinned, cull, instanced),
     ].join('\n');
 };
 
@@ -488,6 +528,7 @@ export const buildMeshMaterialShadowShader = (
     mapNames: readonly string[] = [],
     skinned = false,
     cut: { fragment: string | null } | null = null,
+    instanced = false,
 ): string => {
     const { structText } = buildUniformLayout(sig);
     const bend = skinned ? `
@@ -510,14 +551,14 @@ export const buildMeshMaterialShadowShader = (
         FRAG_CONTEXT,
         UV_STEPS,
         cut === null ? '' : SAMPLE,
-        cut === null ? '' : FACING_TURN,
+        cut !== null || instanced ? FACING_TURN : '',
         maps(mapNames),
         vertex ?? DEFAULT_VERTEX,
         cut === null ? '' : cut.fragment ?? DEFAULT_EFFECT,
         skinned ? `@group(${MESH_MATERIAL_GROUP}) @binding(${MESH_MATERIAL_JOINTS_BINDING}) var<storage, read> joints: array<mat4x4<f32>>;` : '',
         cut === null ? /* wgsl */ `
 @vertex
-fn vs(${cornerInputs(skinned)}) -> @builtin(position) vec4<f32> {${CORNER_CONTEXT}${bend}
+fn vs(${cornerInputs(skinned, instanced)}) -> @builtin(position) vec4<f32> {${restOf(instanced)}${CORNER_CONTEXT}${bend}
     return shadow.lightViewProj * shadow.model * placed;
 }
 ` : /* wgsl */ `
@@ -533,7 +574,7 @@ struct CutOutput {
 };
 
 @vertex
-fn vs(${cornerInputs(skinned)}) -> CutOutput {${CORNER_CONTEXT}${vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL}${bend}
+fn vs(${cornerInputs(skinned, instanced)}) -> CutOutput {${restOf(instanced)}${CORNER_CONTEXT}${vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL}${bend}
     // Turned as the model is, and measured again where the hook moved it, as the drawn model's is:
     // what the colour hook reads of the surface. The facing by the inverse of the placement, as the
     // drawn model's normal matrix turns it, so a model stretched unevenly is cut by the same facing.
@@ -544,8 +585,8 @@ fn vs(${cornerInputs(skinned)}) -> CutOutput {${CORNER_CONTEXT}${vertex === null
     out.uv = uv;
     out.normal = normalize(facingTurnOf(place) * ${skinned ? '(facingTurnOf(turn) * shaped)' : 'shaped'});
     out.worldPos = (shadow.model * placed).xyz;
-    out.color = color;
-    out.tangent = vec4<f32>(normalize((shadow.model * vec4<f32>(turn * cornerTangent.xyz, 0.0)).xyz), cornerTangent.w);
+    out.color = restColor;
+    out.tangent = vec4<f32>(normalize((shadow.model * vec4<f32>(turn * restTangent, 0.0)).xyz), cornerTangent.w);
     out.uv2 = cornerUv2;
     out.carry = carried;
     return out;
