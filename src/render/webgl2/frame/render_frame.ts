@@ -235,7 +235,7 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
         }
         state.shadowPipeline ??= createShadowPipeline(gl);
         const lightMatrix = lightMatrices[s]!;
-        reportCastersOutside(source.casters, source.light, lightMatrix, state, source.camera);
+        reportCastersOutside(source.casters, source.light, lightMatrix, state, source.camera, gl.drawingBufferWidth, gl.drawingBufferHeight);
         state.shadowPipeline.begin(map, lightMatrix);
         for (const caster of source.casters) {
             // Judged by what the light sees, not the camera: one out of the picture can still

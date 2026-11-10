@@ -1,6 +1,7 @@
 import * as mat from '../../math/mat4';
 import { transformForward } from './transform_basis';
-import { computeModelMatrix } from './compute_mvp_3d';
+import { computeModelMatrix, fillCameraSpace, newCameraSpace } from './compute_mvp_3d';
+import { meshInView } from './mesh_in_view';
 import type { Mat4 } from '../../math/mat4';
 import type { TDrawCamera3d } from '../interface/draw/t_draw_camera_3d';
 import type { TDrawLight } from '../interface/draw/t_draw_light';
@@ -356,6 +357,11 @@ let warnedOutside = new WeakSet<object>();
 const PAGE = {};
 
 /**
+ * Where what the camera sees is worked out for the warning. Never handed out.
+ */
+const sightScratch = newCameraSpace();
+
+/**
  * Forgets that the warning below was already given.
  *
  * It exists for the tests and for nothing else. Said-once is the right behaviour for a game and the
@@ -382,22 +388,42 @@ export const resetShadowWarnings = (): void => { warnedOutside = new WeakSet(); 
  * Only a sun is checked. A torch's frustum is its own cone, and something outside it is not out of
  * range: it is simply not lit by that torch, which is a thing the scene already shows.
  *
- * Nor is anything behind the camera. The square starts at the camera and reaches `shadowArea` in
- * front of it, so what is behind is always outside it, however big the square, and its shadow could
- * not have landed in it anyway: raising the number would not help, and saying so would send whoever
- * reads it to raise it for nothing, frame after frame of a camera that follows a ball through trees.
+ * And only what the camera sees. A square is a poor fit for what a camera sees, narrow near it and
+ * wide far off, so there is always something in front of it, off to a side or past its far end, that
+ * no square of a sensible size reaches. Its shadow is nowhere on the screen either, and saying so
+ * would send whoever reads it to raise the number for nothing, with every shadow coarser for it.
+ * What is seen and casts nothing is the failure worth naming, and it is judged by the same test that
+ * decides what is drawn, so it is counted whenever that test cannot be sure.
+ *
+ * Nor anything whose middle is behind the camera: the square starts at the camera, so that middle is
+ * outside it however big it is, and raising the number would not help.
+ *
+ * What it misses is something out of sight whose shadow falls into it, which is rare, and which a
+ * bigger square does not always reach either.
  *
  * @param by The renderer drawing it, so each game says it once.
  * @param camera The camera the square follows; `null` checks every caster.
+ * @param viewportWidth The size the camera's picture is drawn at, whose shape is what it sees.
+ * @param viewportHeight
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const reportCastersOutside = (casters: readonly TDrawMesh[], light: TDrawLight, matrix: Mat4, by: object = PAGE, camera: TDrawCamera3d | null = null): void => {
+export const reportCastersOutside = (
+    casters: readonly TDrawMesh[],
+    light: TDrawLight,
+    matrix: Mat4,
+    by: object = PAGE,
+    camera: TDrawCamera3d | null = null,
+    viewportWidth = 1,
+    viewportHeight = 1,
+): void => {
     if (warnedOutside.has(by) || light.type !== 'directional') {
         return;
     }
+    // What the camera sees by, worked out only once something is found outside the square.
+    let seen: Mat4 | null = null;
 
     for (const caster of casters) {
         const place = caster.worldMatrix;
@@ -417,7 +443,7 @@ export const reportCastersOutside = (casters: readonly TDrawMesh[], light: TDraw
             z = m[2] * mx + m[6] * my + m[10] * mz + m[14];
         }
 
-        // Behind the camera: outside the square whatever its size (see above).
+        // Its middle behind the camera: outside the square whatever its size (see above).
         if (camera !== null) {
             const facing = transformForward({ ...camera.transform, quaternion: null });
             const ahead = (x - camera.transform.x) * facing.x + (y - camera.transform.y) * facing.y + (z - camera.transform.z) * facing.z;
@@ -434,6 +460,13 @@ export const reportCastersOutside = (casters: readonly TDrawMesh[], light: TDraw
         const cz = matrix[2] * x + matrix[6] * y + matrix[10] * z + matrix[14];
 
         if (Math.abs(cx) > 1 || Math.abs(cy) > 1 || cz < 0 || cz > 1) {
+            // Out of the camera's sight: its shadow is not on the screen either (see above).
+            if (camera !== null) {
+                seen ??= fillCameraSpace(sightScratch, camera, viewportWidth, viewportHeight).viewProjection;
+                if (!meshInView(caster, seen)) {
+                    continue;
+                }
+            }
             warnedOutside.add(by);
             console.warn(
                 '[NacatamalOn] useDirectionalLight: something that casts a shadow is outside the square the light covers, so it casts nothing. ' +

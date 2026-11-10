@@ -129,6 +129,27 @@ describe('something that casts but falls outside the square', () => {
         expect(warn).toHaveBeenCalledTimes(1);
     });
 
+    it('leaves out what the camera does not see, off to a side or past its far end', () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        const light = sun({ shadowArea: 12 });
+        // A pine a unit across, so it can be judged by its box as it is drawn.
+        const pine = (x: number, z: number): TDrawMesh => ({
+            ...caster(x, 0, z),
+            geometry: { bounds: { min: { x: -0.5, y: 0, z: -0.5 }, max: { x: 0.5, y: 3, z: 0.5 } } } as TDrawMesh['geometry'],
+            // No corner hook: one with a hook is counted whatever its box says.
+            material: { vertex: null, vertexGlsl: null } as TDrawMesh['material'],
+        });
+
+        // Ten in front of the camera and forty to its right, and a hundred and fifty in front of one
+        // that sees a hundred: outside the square, and out of sight with its shadow.
+        reportCastersOutside([pine(40, -4), pine(0, -150)], light, matrixFor(light), {}, camera, 480, 270);
+        expect(warn).not.toHaveBeenCalled();
+
+        // The same square, and one the camera sees forty in front of it: that is said.
+        reportCastersOutside([pine(40, -4), pine(0, -34)], light, matrixFor(light), {}, camera, 480, 270);
+        expect(warn).toHaveBeenCalledTimes(1);
+    });
+
     it('leaves a torch alone, because outside its cone is not out of range', () => {
         const warn = spyOn(console, 'warn').mockImplementation(() => {});
         const torch = sun({ type: 'spot', range: 8, angle: 0.4, transform: at({ y: 4, rotationX: -Math.PI / 2 }) });

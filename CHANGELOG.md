@@ -62,9 +62,11 @@ releases are in [changelog/](./changelog/), one file each.
   as if it faced up, a flat card lit as if it were round, with the engine's lamps and shadows. The
   composer writes it from `compileShader({ normal })`, and a graph file from its Normal Output node.
   Nothing written, nothing changes.
-- **The shadow warning leaves out what is behind the camera.** A sun's shadows reach from the camera
-  out to `shadowArea` in front of it, so a caster behind the camera is outside however big the
-  square: it no longer asks for a bigger `shadowArea` that would not help.
+- **The shadow warning only counts what the camera sees.** A sun's shadows reach from the camera
+  out to `shadowArea` in front of it, and a square is a poor fit for a view, so there was always
+  something behind the camera, off to a side or past its far end that no sensible size reaches. Its
+  shadow is not on the screen either: the warning no longer asks for a bigger `shadowArea`, which
+  would only have made every shadow coarser.
 - **`updateBuffer(buffer, data, at)`** on a renderer writes from `at` bytes in, for a long run of
   which only a stretch changed.
 - **Mipmaps.** `useLoadTexture({ src, mipmaps: true })` and `createPixelTexture(pixels, { mipmaps:
