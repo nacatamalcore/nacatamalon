@@ -1,5 +1,5 @@
 /**
- * The 2D half of physics for NacatamalOn, backed by Rapier2D.
+ * The 2D half of physics for NacatamalOn, on Box2D v3 compiled for the engine.
  *
  * **The engine keeps the format and this moves it.** A scene says what its objects are made of and
  * how hard things fall; registering this is what makes any of that happen. Nothing here is needed
@@ -12,13 +12,13 @@
  * bodies, colliding with nothing.
  *
  * It is the door `nacatamalon/physics2d`, apart from the front one so that a game with no physics
- * never bundles what it runs on, `@dimforge/rapier2d-compat`, which installs with the engine.
+ * never bundles what it runs on: some 120 KB gzip, its WebAssembly carried inside the engine.
  *
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
 export { installPhysics2d, physics2dProvider, getPhysicsWorld2d, getPhysicsBody2d } from './provider';
-export { loadPhysics2d } from './load_rapier';
+export { loadPhysics2d } from './load_box2d';
 export { useCharacterBody2d } from './use_character_body_2d';
 export { useJoint2d } from './use_joint_2d';
 export { useSoftBody2d } from './use_soft_body_2d';

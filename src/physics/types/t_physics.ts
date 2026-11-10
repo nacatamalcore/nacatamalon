@@ -1,3 +1,5 @@
+import type { TRetroBody2d, TRetroWorld2d } from './t_retro_physics';
+
 /**
  * How a body is driven, and what it lets happen to it.
  *
@@ -170,16 +172,16 @@ export type TPhysicsBody3d = {
 } & TPhysicsSurface;
 
 /**
- * Either kind of collider, told apart by `_type`.
+ * Any kind of collider, told apart by `_type`: flat, in space, or retro (see {@link TRetroBody2d}).
  *
- * Two types and not one with a flag, because their shapes do not overlap (a circle is not a sphere)
- * and everything reading them would otherwise have to unwrap one discriminant inside another.
+ * Separate types and not one with a flag, because their shapes do not overlap (a circle is not a
+ * sphere) and everything reading them would otherwise have to unwrap one discriminant inside another.
  *
  * @category Physics
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TPhysicsBody = TPhysicsBody2d | TPhysicsBody3d;
+export type TPhysicsBody = TPhysicsBody2d | TPhysicsBody3d | TRetroBody2d;
 
 /**
  * The flat simulation's settings for one scene.
@@ -220,7 +222,7 @@ export type TPhysicsWorld3d = {
 };
 
 /**
- * Either simulation's settings. A scene has at most one, and it lives on the **scene's root**:
+ * Any simulation's settings: flat, in space, or retro. A scene has at most one, and it lives on the **scene's root**:
  * gravity is a property of the scene and not of anything in it (a scene seen from above has none, a
  * platformer does), and the root is an object like any other, so it needs no new home.
  *
@@ -228,4 +230,4 @@ export type TPhysicsWorld3d = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TPhysicsWorld = TPhysicsWorld2d | TPhysicsWorld3d;
+export type TPhysicsWorld = TPhysicsWorld2d | TPhysicsWorld3d | TRetroWorld2d;

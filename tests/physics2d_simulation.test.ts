@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { registerPhysicsProvider } from '../src/physics';
-import { physics2dProvider, getPhysicsBody2d, getPhysicsWorld2d } from '../src/physics/rapier2d/provider';
-import { loadRapier2D } from '../src/physics/rapier2d/load_rapier';
+import { physics2dProvider, getPhysicsBody2d, getPhysicsWorld2d } from '../src/physics/box2d/provider';
+import { loadBox2D } from '../src/physics/box2d/load_box2d';
 // Internals by relative path, the way the engine's own tests reach them: a published game has no
 // use for a frame it drives by hand, so none of this belongs on the front door.
 import { createTestGame, startTestScene } from './helpers/test_game';
@@ -17,13 +17,13 @@ import { destroy } from '../src/destroy/destroy';
 import { flushDestroyed } from '../src/destroy/flush_destroyed';
 import type { TGameObject } from '../src/hooks/spawn/use_spawn';
 import type { TRuntimeStore } from '../src/store';
-import type { TPhysicsBodyHandle2d } from '../src/physics/rapier2d/types';
+import type { TPhysicsBodyHandle2d } from '../src/physics/box2d/types';
 
 /**
  * The half that only simulating proves, kept to what would break silently in this port.
  *
  * The provider's mapping is read next door without loading the WebAssembly. What is here needs
- * Rapier to have actually run.
+ * the simulation to have actually run.
  */
 
 const tint = { r: 1, g: 1, b: 1, a: 1 };
@@ -41,7 +41,7 @@ afterEach(() => {
  * Runs frames once the WebAssembly has landed, which is what the browser's first frames wait for.
  */
 const run = async (root: Parameters<typeof runHookUpdates>[0], frames: number): Promise<void> => {
-    await loadRapier2D();
+    await loadBox2D();
     await new Promise((resolve) => setTimeout(resolve, 0));
     for (let i = 0; i < frames; i++) {
         runHookUpdates(root, FRAME);
@@ -51,7 +51,7 @@ const run = async (root: Parameters<typeof runHookUpdates>[0], frames: number): 
 describe('a listener that ends the scene', () => {
     it('does not leave the world stepping memory it has just freed', async () => {
         // A door: the sensor's answer changes the room, which tears this scene down on the spot,
-        // while Rapier is still handing out the events of the step that reported the overlap.
+        // while the simulation is still handing out the events of the step that reported the overlap.
         const { store } = createTestGame();
         let heard = 0;
         const root = startTestScene(store, 'Level', () => {
@@ -103,7 +103,7 @@ describe('what the typing caught', () => {
             return createScene();
         });
 
-        // Long enough at rest for Rapier to put it to sleep.
+        // Long enough at rest for the simulation to put it to sleep.
         await run(root, 300);
         const before = crate.transform.x;
         push(200000, 0);
@@ -141,7 +141,7 @@ describe('what the typing caught', () => {
  * `run` above leaves the sweep out, because nothing it drives destroys anything.
  */
 const runFrames = async (store: TRuntimeStore, root: TGameObject, frames: number): Promise<void> => {
-    await loadRapier2D();
+    await loadBox2D();
     await new Promise((resolve) => setTimeout(resolve, 0));
     for (let i = 0; i < frames; i++) {
         runHookUpdates(root, FRAME);
@@ -355,7 +355,7 @@ describe('a force asked for every frame', () => {
             })();
             return createScene();
         });
-        await loadRapier2D();
+        await loadBox2D();
         await new Promise((resolve) => setTimeout(resolve, 0));
         const frames = Math.round(seconds / dt);
         for (let i = 0; i < frames; i++) runHookUpdates(root, dt);
@@ -412,7 +412,7 @@ describe('two games on one page', () => {
         } finally {
             console.warn = original;
         }
-        await loadRapier2D();
+        await loadBox2D();
 
         expect(theirs).not.toBeNull();
         expect(getPhysicsBody2d(crate)).toBeNull();

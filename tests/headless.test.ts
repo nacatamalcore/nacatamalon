@@ -14,7 +14,7 @@ import { useUpdate } from '../src/hooks/loop/use_update';
 import { createPixels } from '../src/pixels';
 import { encodePng } from '../src/pixels/encode_png';
 import { registerPhysicsProvider } from '../src/physics';
-import { physics2dProvider } from '../src/physics/rapier2d/provider';
+import { physics2dProvider } from '../src/physics/box2d/provider';
 import { physics3dProvider } from '../src/physics/box3d/provider';
 import { createMesh } from '../src/gameobjects/mesh';
 import { useCubeGeometry } from '../src/hooks/geometry';

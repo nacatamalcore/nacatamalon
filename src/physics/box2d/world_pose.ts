@@ -4,7 +4,7 @@ import type { TGameObject } from '../../hooks/spawn/use_spawn';
 /**
  * Where an object's body really is in the world, and how to write a simulated pose back onto it.
  *
- * Rapier simulates in one space while an object's placement is relative to whatever it hangs
+ * The simulation works in one space while an object's placement is relative to whatever it hangs
  * under, so a body under a group built from its local numbers simulates correctly **at the wrong
  * place**. That is especially easy to hit in two dimensions, because grouping is how a level is
  * organised: every platform under one `Level` object.
@@ -20,7 +20,7 @@ import type { TGameObject } from '../../hooks/spawn/use_spawn';
 export type TPose2d = { x: number; y: number; angle: number; scaleX: number; scaleY: number };
 
 /**
- * An object's placement in the world, in the flat terms Rapier is told about.
+ * An object's placement in the world, in the flat terms the simulation is told about.
  */
 export const worldPose2d = (box: TGameObject): TPose2d => {
     const place = worldPlacementOf(box);

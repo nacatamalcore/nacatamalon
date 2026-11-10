@@ -37,7 +37,7 @@ const OPTIONS: ts.CompilerOptions = {
         'nacatamalon/react': [join(ROOT, 'react', 'index.ts')],
         'nacatamalon/headless': [join(ROOT, 'headless', 'index.ts')],
         'nacatamalon/speech': [join(ROOT, 'speech', 'index.ts')],
-        'nacatamalon/physics2d': [join(ROOT, 'physics', 'rapier2d', 'index.ts')],
+        'nacatamalon/physics2d': [join(ROOT, 'physics', 'box2d', 'index.ts')],
         'nacatamalon/physics3d': [join(ROOT, 'physics', 'box3d', 'index.ts')],
     },
 };

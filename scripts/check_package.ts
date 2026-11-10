@@ -156,11 +156,8 @@ if (!offline) {
 // 3. The README's physics example, compiling against the physics engines installed beside it.
 check(physicsExample !== undefined, 'the README has a physics example');
 writeFileSync(join(work, 'src', 'physics.ts'), physicsExample ?? '');
-// Rapier's own declarations (0.21) name `Symbol.dispose`, which lives in `ESNext.Disposable`: a
-// requirement of the physics engine, not of ours, and one a project with `skipLibCheck` (every Vite
-// template) never sees. The game check above keeps the plain library, so it still proves that a
-// game without physics needs nothing extra.
-const PHYSICS_LIB = ['ES2022', 'DOM', 'ESNext.Disposable'];
+// The plain library, as the game check above: physics asks a project for nothing extra.
+const PHYSICS_LIB = ['ES2022', 'DOM'];
 writeFileSync(join(work, 'tsconfig.physics.json'), JSON.stringify({ extends: './tsconfig.json', compilerOptions: { lib: PHYSICS_LIB }, include: ['src/physics.ts'] }));
 const physics = run([tsc, '-p', 'tsconfig.physics.json'], work);
 check(physics.code === 0, 'the physics example compiles against it', physics.out);

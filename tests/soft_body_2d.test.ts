@@ -1,8 +1,8 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
 import { registerPhysicsProvider } from '../src/physics';
-import { physics2dProvider } from '../src/physics/rapier2d/provider';
-import { loadRapier2D } from '../src/physics/rapier2d/load_rapier';
-import { useSoftBody2d } from '../src/physics/rapier2d/use_soft_body_2d';
+import { physics2dProvider } from '../src/physics/box2d/provider';
+import { loadBox2D } from '../src/physics/box2d/load_box2d';
+import { useSoftBody2d } from '../src/physics/box2d/use_soft_body_2d';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { runHookUpdates } from '../src/game/loop/runHookUpdates';
 import { createScene } from '../src/scene/create_scene';
@@ -15,7 +15,7 @@ import { useTransform } from '../src/hooks/transform/use_transform';
 import { destroy } from '../src/destroy/destroy';
 import { flushDestroyed } from '../src/destroy/flush_destroyed';
 import type { TGameObject } from '../src/hooks/spawn/use_spawn';
-import type { TSoftBody2d, TSoftBodyOptions2d } from '../src/physics/rapier2d/t_soft_body_2d';
+import type { TSoftBody2d, TSoftBodyOptions2d } from '../src/physics/box2d/t_soft_body_2d';
 import type { TPolygon } from '../src/gameobjects/polygon';
 import type { TTransform3d } from '../src/gameobjects/types/t_transform_3d';
 import type { TBox } from '../src/box';
@@ -29,7 +29,7 @@ const FRAME = 1 / 60;
 const tint = { r: 1, g: 1, b: 1, a: 1 };
 
 beforeAll(async () => {
-    await loadRapier2D();
+    await loadBox2D();
 });
 beforeEach(() => {
     registerPhysicsProvider(physics2dProvider);

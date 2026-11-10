@@ -153,11 +153,12 @@
         "typecheck": "tsc --noEmit",
         "clean": "rm -rf dist",
         "build": "bun run clean && bun run build:js && bun run build:strip && bun run build:types && bun run build:llms",
-        "build:js": "esbuild src/index.ts src/authoring/index.ts src/extend/index.ts src/extend/gpu/index.ts src/react/index.ts src/headless/index.ts src/speech/index.ts math=src/doors/math.ts pixels=src/doors/pixels.ts shader=src/doors/shader.ts effects=src/doors/effects.ts transitions=src/doors/transitions.ts files=src/doors/files.ts physics2d=src/physics/rapier2d/index.ts physics3d=src/physics/box3d/index.ts --bundle --splitting --format=esm --outdir=dist --packages=external --sourcemap --log-level=warning",
+        "build:js": "esbuild src/index.ts src/authoring/index.ts src/extend/index.ts src/extend/gpu/index.ts src/react/index.ts src/headless/index.ts src/speech/index.ts math=src/doors/math.ts pixels=src/doors/pixels.ts shader=src/doors/shader.ts effects=src/doors/effects.ts transitions=src/doors/transitions.ts files=src/doors/files.ts physics2d=src/physics/box2d/index.ts physics3d=src/physics/box3d/index.ts --bundle --splitting --format=esm --outdir=dist --packages=external --sourcemap --log-level=warning",
         "build:strip": "bun scripts/strip_bare_imports.ts",
         "build:types": "bun scripts/build_types.ts",
         "build:llms": "bun scripts/build_llms.ts",
         "build:fonts": "bun scripts/build_fonts.ts",
+        "build:physics2d": "native/physics2d/build.sh",
         "check:package": "bun scripts/check_package.ts",
         "prepublishOnly": "bun run build && bun run check:package"
     },
@@ -173,7 +174,6 @@
         "typescript": "~6.0.2"
     },
     "dependencies": {
-        "@dimforge/rapier2d-compat": "^0.21.0",
         "box3d.js": "^0.1.1",
         "wgpu-matrix": "^3.4.2"
     },

@@ -2,7 +2,7 @@ import type { TLightingLook, TStepLook } from '../../../shader_composer/surface/
 import type { TScriptProps } from '../../../scripts';
 import type { TColor } from '../../../color';
 import type { TTransform2d } from '../../../gameobjects/types/t_transform_2d';
-import type { TPhysicsBody2d, TPhysicsBody3d, TPhysicsWorld2d, TPhysicsWorld3d } from '../../../physics';
+import type { TPhysicsBody2d, TPhysicsBody3d, TPhysicsWorld2d, TPhysicsWorld3d, TRetroBody2d, TRetroWorld2d } from '../../../physics';
 import type { TTransform3d } from '../../../gameobjects/types/t_transform_3d';
 import type { TTextStyle } from '../../../gameobjects/text/types/t_text_style';
 import type { TNineSliceBorders, TNineSliceMode } from '../../../gameobjects/nine_slice/types/t_nine_slice';
@@ -205,6 +205,8 @@ export type TComponentDoc =
     | TPhysicsBody3dComponent
     | TPhysicsWorld2dComponent
     | TPhysicsWorld3dComponent
+    | TRetroBody2dComponent
+    | TRetroWorld2dComponent
     | TParticleCollider2dComponent
     | TParticleCollider3dComponent
     | TSpriteTextureComponent;
@@ -1132,6 +1134,26 @@ export type TPhysicsWorld2dComponent = { type: 'physics-world-2d' } & Omit<TPhys
  * @author Francisco Pereira Alvarado
  */
 export type TPhysicsWorld3dComponent = { type: 'physics-world-3d' } & Omit<TPhysicsWorld3d, '_type'>;
+
+/**
+ * A retro collider, written down: a body that never turns, moved by the retro half of physics. It
+ * sits where a flat collider would, on the object it is part of, and an object has one or the other.
+ *
+ * @category Scenes
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TRetroBody2dComponent = { type: 'retro-body-2d' } & Omit<TRetroBody2d, '_type'>;
+
+/**
+ * The retro simulation's settings, written down. Lives on the scene's root like the other two
+ * worlds, and a scene has one world of any kind.
+ *
+ * @category Scenes
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TRetroWorld2dComponent = { type: 'retro-world-2d' } & Omit<TRetroWorld2d, '_type'>;
 
 export type { TTransform2d, TTransform3d };
 

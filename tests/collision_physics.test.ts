@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { registerPhysicsProvider } from '../src/physics';
-import { getPhysicsBody2d, physics2dProvider } from '../src/physics/rapier2d/provider';
-import { loadRapier2D } from '../src/physics/rapier2d/load_rapier';
+import { getPhysicsBody2d, physics2dProvider } from '../src/physics/box2d/provider';
+import { loadBox2D } from '../src/physics/box2d/load_box2d';
 import { physics3dProvider } from '../src/physics/box3d/provider';
 import { loadBox3D } from '../src/physics/box3d/load_box3d';
 import { createFrameContext } from '../src/game/loop/create_frame_context';
@@ -31,7 +31,7 @@ beforeEach(() => { registerPhysicsProvider(physics2dProvider); registerPhysicsPr
 afterEach(() => { registerPhysicsProvider(null); });
 
 const game = async (body: TSceneFn, physicsLayers: string[] = []) => {
-    await loadRapier2D();
+    await loadBox2D();
     await loadBox3D();
     const { store } = createTestGame({ step: 60, physicsLayers });
     const ctx = createFrameContext();

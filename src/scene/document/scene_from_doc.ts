@@ -21,7 +21,7 @@ import { offerSavedData, keepUnclaimedData } from '../../hooks/state/use_data';
 import { useScript } from '../../hooks/script';
 import { useAudioListener, useMusic, useSong, useSound } from '../../hooks/audio';
 import { useStoreLink } from '../../hooks/store';
-import { usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d } from '../../hooks/physics';
+import { usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d, useRetroBody2d, useRetroWorld2d } from '../../hooks/physics';
 import { useCamera3d } from '../../hooks/camera/use_camera_3d';
 import { useFog } from '../../hooks/fog/use_fog';
 import { useSpriteAnimation } from '../../hooks/animation/use_sprite_animation';
@@ -701,6 +701,15 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
         }
         case 'physics-world-3d': {
             usePhysicsWorld3d({ id: component.id, gravity: component.gravity });
+            break;
+        }
+        case 'retro-body-2d': {
+            const { type, ...rest } = component;
+            useRetroBody2d(rest);
+            break;
+        }
+        case 'retro-world-2d': {
+            useRetroWorld2d({ id: component.id, gravity: component.gravity });
             break;
         }
         case 'store': {

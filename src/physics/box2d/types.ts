@@ -20,9 +20,9 @@ export type TColliderSurface2d = {
     /**
      * How much approach speed survives as separation speed, 0..1.
      *
-     * Careful: a bounce belongs to the **pair**, not to this body. Rapier combines the two
-     * colliders' values, by default by averaging them, so a ball asking for `0.8` landing on a
-     * floor that never set one (and is therefore `0`) bounces at `0.4`. Set both sides.
+     * Careful: a bounce belongs to the **pair**, not to this body. The two colliders' values are
+     * averaged, so a ball asking for `0.8` landing on a floor that never set one (and is therefore
+     * `0`) bounces at `0.4`. Set both sides. Friction is averaged the same way.
      */
     bounce?: number;
     friction?: number;
@@ -31,10 +31,6 @@ export type TColliderSurface2d = {
      * Make this a **sensor**: it detects overlaps but never resolves them, so things pass
      * straight through. This is the trigger volume (a checkpoint, a pickup, a damage zone)
      * and it is the case `onEnter`/`onExit` exist for.
-     *
-     * A sensor enables collision events on creation without waiting to be asked, unlike a solid
-     * body: a sensor that reports nothing does nothing at all, so there is no configuration in
-     * which the opt-in would be the right default.
      */
     sensor?: boolean;
     /**
@@ -126,17 +122,15 @@ export type TPhysicsBodyHandle2d = {
      * box**. Set up in a scene or a piece, it leaves with it:
      *
      * ```ts
-     * const bullet = usePhysicsBody2d(self, { type: 'dynamic', shape: 'circle', radius: 3 });
-     * bullet.onEnter((other) => { if (other.name.startsWith('tank')) destroy(other); });
+     * usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'circle', radius: 3 } });
+     * getPhysicsBody2d(useSelf())?.onEnter((other) => { if (other.name.startsWith('tank')) destroy(other); });
      * ```
      *
-     * **Listening is the opt-in.** The simulation reports contacts only for colliders that asked
-     * for them, and asking has a cost the rest of a scene should not pay, so it is asked the first
-     * time `onEnter` or `onExit` is called, not when the body is made. Nothing to configure, and a
-     * pile of a thousand crates nobody listens to stays as cheap as it was.
-     *
-     * Only one of the two bodies needs to listen for the contact to be reported, which is why a
-     * bullet can hear its hits against walls that know nothing about it.
+     * Only one of the two bodies needs to listen, which is why a bullet can hear its hits against
+     * walls that know nothing about it. A contact is heard as it begins, so one that began before
+     * anybody listened (a crate resting on the floor from the start) is not heard until it ends and
+     * begins again; ask the engine's `useCollisionWith` with `when: 'touching'` for what is touching
+     * now.
      *
      * @returns What stops it sooner.
      */
@@ -144,7 +138,6 @@ export type TPhysicsBodyHandle2d = {
 
     /**
      * Runs `listener` each time another body stops touching this one, with the other body's box.
-     * Listening is the opt-in, as for `onEnter`.
      *
      * A body coming to rest **on** another never says this: it is still touching.
      *

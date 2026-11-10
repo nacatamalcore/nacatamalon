@@ -43,7 +43,7 @@ const sourceOfGame = ['index', ...SECTIONS.map((door) => `doors/${door}`)]
     .join('\n');
 const tools = valuesOf('../src/authoring/index.ts');
 const extend = valuesOf('../src/extend/index.ts');
-const physics2d = valuesOf('../src/physics/rapier2d/index.ts');
+const physics2d = valuesOf('../src/physics/box2d/index.ts');
 const physics3d = valuesOf('../src/physics/box3d/index.ts');
 
 describe('the front door', () => {
@@ -222,7 +222,7 @@ describe('the physics doors', () => {
 
     it('stay off the front door, which would make every game need a physics engine to compile', () => {
         const source = readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8');
-        expect(source).not.toMatch(/from '\.\/physics\/(rapier2d|box3d)/);
+        expect(source).not.toMatch(/from '\.\/physics\/(box2d|box3d)/);
     });
 });
 

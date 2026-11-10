@@ -26,7 +26,7 @@ const DOORS = {
     'nacatamalon/files': 'doors/files.ts',
     'nacatamalon/authoring': 'authoring/index.ts',
     'nacatamalon/extend': 'extend/index.ts',
-    'nacatamalon/physics2d': 'physics/rapier2d/index.ts',
+    'nacatamalon/physics2d': 'physics/box2d/index.ts',
     'nacatamalon/physics3d': 'physics/box3d/index.ts',
     'nacatamalon/speech': 'speech/index.ts',
 };

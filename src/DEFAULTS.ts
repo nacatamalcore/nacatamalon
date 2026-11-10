@@ -96,13 +96,10 @@ export const MAX_LIGHTS = 8;
 export const MAX_SCENE_LIGHTS = 32;
 
 /**
- * How many collision layers a scene has: **the smaller of the two backends**, not a number chosen
- * for taste.
- *
- * Rapier2D packs what a body is and what it hits into one 32-bit number, 16 bits each, so 16 is its
- * hard ceiling; the 3D side could carry far more. The format takes the smaller, because a scene
- * using layer 20 would simulate in three dimensions and collide wrongly in two without a word said,
- * which is the backend-dependent meaning `TPhysicsSurface` exists to prevent.
+ * How many collision layers a scene has. Both simulations could carry far more; sixteen is what the
+ * format was born with, when the first 2D one packed a body's layer and mask into one 32-bit number,
+ * and scenes and games are written to it. A layer means the same in two dimensions and in three,
+ * which is what `TPhysicsSurface` exists for.
  *
  * Sixteen is also more than a game of this era uses: most projects name fewer than eight.
  *

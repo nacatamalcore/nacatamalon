@@ -7,8 +7,8 @@ import type {
 /**
  * What a collider is made of when it says nothing.
  *
- * Rapier's own documented defaults, chosen so that filling them in explicitly changes nothing: a
- * body written before the record existed behaves the same once it has one.
+ * The defaults bodies always had, so that filling them in explicitly changes nothing: a body written
+ * before the record existed behaves the same once it has one.
  */
 const DEFAULT_SURFACE: TPhysicsSurface = {
     bounce: 0,

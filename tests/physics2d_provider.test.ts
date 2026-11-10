@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, spyOn } from 'bun:test';
-import { bodyIntoWorld, physics2dProvider, resetNoWorldWarning } from '../src/physics/rapier2d/provider';
+import { bodyIntoWorld, physics2dProvider, resetNoWorldWarning } from '../src/physics/box2d/provider';
 import type { TGameObject } from '../src/hooks/spawn/use_spawn';
 import type { TPhysicsBody, TPhysicsBody2d, TPhysicsWorld } from '../src/physics';
-import type { TPhysicsBodyHandle2d, TPhysicsWorldHandle2d } from '../src/physics/rapier2d/types';
+import type { TPhysicsBodyHandle2d, TPhysicsWorldHandle2d } from '../src/physics/box2d/types';
 
 /**
  * The provider's half: turning what a scene declared into calls on a world.
@@ -10,7 +10,7 @@ import type { TPhysicsBodyHandle2d, TPhysicsWorldHandle2d } from '../src/physics
  * Nothing here loads the WebAssembly, and it does not need to. What can go wrong at this seam is
  * the mapping, and a mapping is exactly what can be read without simulating anything: a shape that
  * reaches the world as the wrong one, a surface field quietly dropped, a body handed to a world
- * that belongs to another scene. The physics itself is Rapier's to get right.
+ * that belongs to another scene. The physics itself is the simulation's to get right.
  */
 
 let warn: ReturnType<typeof spyOn> | null = null;

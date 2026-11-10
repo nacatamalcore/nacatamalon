@@ -16,8 +16,8 @@ import { useTween } from '../src/hooks/tween/use_tween';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { usePhysicsBody2d, usePhysicsWorld2d } from '../src/hooks/physics';
 import { registerPhysicsProvider } from '../src/physics';
-import { physics2dProvider } from '../src/physics/rapier2d/provider';
-import { loadRapier2D } from '../src/physics/rapier2d/load_rapier';
+import { physics2dProvider } from '../src/physics/box2d/provider';
+import { loadBox2D } from '../src/physics/box2d/load_box2d';
 import { editorHandleOf, openHost } from '../src/game/handle/editor_handle_of';
 import { physics3dProvider } from '../src/physics/box3d/provider';
 import { loadBox3D } from '../src/physics/box3d/load_box3d';
@@ -263,7 +263,7 @@ describe('physics with a fixed step', () => {
     afterEach(() => { registerPhysicsProvider(null); });
 
     it('lands a falling body on the same pixel on a 144 Hz screen as on a 60 Hz one', async () => {
-        await loadRapier2D();
+        await loadBox2D();
         const fall = async (hz: number): Promise<number> => {
             let ball!: TSprite;
             const { picture } = onScreen(60, () => {
@@ -329,7 +329,7 @@ describe('physics stepped by a game at 50 (PAL)', () => {
 
     it('takes one step of 1/50 per step of the game in 2D, so a fall moves evenly', async () => {
         registerPhysicsProvider(physics2dProvider);
-        await loadRapier2D();
+        await loadBox2D();
         const { store } = createTestGame({ step: 50 });
         let ball!: TSprite;
         const root = startTestScene(store, 'Level', () => {

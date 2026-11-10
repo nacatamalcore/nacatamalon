@@ -10,7 +10,7 @@ export { useKeyboard, usePointer, useGamepad, useActions, useAction, useDirectio
 export { useRandom } from './random';
 export { useSignal } from './signal';
 export { useStore, useStoreLink } from './store';
-export { usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d } from './physics';
+export { usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d, useRetroBody2d, useRetroWorld2d } from './physics';
 export { useSound, useAudio, useMusic, useSong, useAudioListener } from './audio';
 export { useGame } from './game';
 export { useSpriteAnimation, getSpriteAnimation, useSkeletalAnimation } from './animation';

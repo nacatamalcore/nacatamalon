@@ -5,7 +5,6 @@
     "": {
       "name": "nacatamalon",
       "dependencies": {
-        "@dimforge/rapier2d-compat": "^0.21.0",
         "box3d.js": "^0.1.1",
         "wgpu-matrix": "^3.4.2",
       },
@@ -15,8 +14,8 @@
         "@webgpu/types": "^0.1.70",
         "esbuild": "^0.28.2",
         "react": "^19.2.6",
-        "rollup": "4.65.1",
-        "rollup-plugin-dts": "6.5.1",
+        "rollup": "^4.65.1",
+        "rollup-plugin-dts": "^6.5.1",
         "typedoc": "^0.28.19",
         "typescript": "~6.0.2",
       },
@@ -32,8 +31,6 @@
     "@babel/code-frame": ["@babel/code-frame@8.0.6", "", { "dependencies": { "@babel/helper-validator-identifier": "^8.0.6", "js-tokens": "^10.0.0" } }, "sha512-uMHhvmDmwFiLuiozaoRYTZHqMFuu3fem/X9JY78lohAuLoh8LSGGC8JqUzo2cVuBsBxkjMZNk56CE7ock8Xxkw=="],
 
     "@babel/helper-validator-identifier": ["@babel/helper-validator-identifier@8.0.6", "", {}, "sha512-HYx0YmuchRxRSpnjvcNffnPS8DCauKNmnumIuHG3jnQAVewRA7kfJGwF13ayEpSZs7s4R/oBH4eppuXcAQd5JQ=="],
-
-    "@dimforge/rapier2d-compat": ["@dimforge/rapier2d-compat@0.21.0", "", {}, "sha512-cMStLQZbY5D/ajAPjOwTwoYuAJAungTYB45MNFEa5B+LGaMiZfxLwjHsfpxH5B0sDa+gkmcQFJJKiHNKnlpMnA=="],
 
     "@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.28.2", "", { "os": "aix", "cpu": "ppc64" }, "sha512-XExcO+dvLKvVtNTibSTBej1NCAbaGhWn9Ww1ZPx80qsahhPFe/8jgWP0IchNe0F3HwkU7n8ejhH8bjonqht8mQ=="],
 

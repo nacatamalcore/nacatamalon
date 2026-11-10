@@ -12,11 +12,11 @@ import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useUpdate } from '../src/hooks/loop/use_update';
 import { usePhysicsBody2d, usePhysicsWorld2d } from '../src/hooks/physics';
 import { registerPhysicsProvider } from '../src/physics';
-import { getPhysicsBody2d, physics2dProvider } from '../src/physics/rapier2d/provider';
+import { getPhysicsBody2d, physics2dProvider } from '../src/physics/box2d/provider';
 import { useSelf } from '../src/hooks/spawn/use_self';
 import { destroy } from '../src/destroy/destroy';
-import { loadRapier2D } from '../src/physics/rapier2d/load_rapier';
-import { useCharacterBody2d } from '../src/physics/rapier2d/use_character_body_2d';
+import { loadBox2D } from '../src/physics/box2d/load_box2d';
+import { useCharacterBody2d } from '../src/physics/box2d/use_character_body_2d';
 import { useTileBody2d } from '../src/physics/character/use_tile_body_2d';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { serveTilemap } from './helpers/test_tilemap';
@@ -64,7 +64,7 @@ const docOf = (rows: string[]) => ({
 let served: ReturnType<typeof serveTilemap> | null = null;
 
 beforeAll(async () => {
-    await loadRapier2D();
+    await loadBox2D();
 });
 
 afterEach(() => {

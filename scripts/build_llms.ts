@@ -30,7 +30,7 @@ const DOORS: { spec: string; file: string; who: string }[] = [
     { spec: 'nacatamalon/effects', file: 'src/doors/effects.ts', who: 'Screen effects and filters: `usePostProcess`, `useFilter` and the effects they take.' },
     { spec: 'nacatamalon/transitions', file: 'src/doors/transitions.ts', who: 'How one scene gives way to another: `fade`, `wipe`, `iris`…' },
     { spec: 'nacatamalon/files', file: 'src/doors/files.ts', who: 'The engine\'s file formats, for a game that reads one itself.' },
-    { spec: 'nacatamalon/physics2d', file: 'src/physics/rapier2d/index.ts', who: '2D physics on Rapier2D, which comes with the package. Call `installPhysics2d()` once.' },
+    { spec: 'nacatamalon/physics2d', file: 'src/physics/box2d/index.ts', who: '2D physics on Box2D, which comes with the package. Call `installPhysics2d()` once.' },
     { spec: 'nacatamalon/physics3d', file: 'src/physics/box3d/index.ts', who: '3D physics on box3d, which comes with the package. Call `installPhysics3d()` once.' },
     { spec: 'nacatamalon/react', file: 'src/react/index.ts', who: 'A game inside a React page: `<Game>`, and hooks for the React components drawn over it. Needs `react`. Browser only: the native runtime does not show React components.' },
     { spec: 'nacatamalon/headless', file: 'src/headless/index.ts', who: 'A game run from Node or Bun with no browser, a frame at a time, the same every time: for tests and scripts that check what a game does. A game never needs it.' },

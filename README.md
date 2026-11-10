@@ -249,12 +249,10 @@ Spanish, `guides/music.es.md`.
 ## Physics
 
 Both physics adapters ship inside `nacatamalon`, and so do the engines they
-drive: Rapier2D for `nacatamalon/physics2d` and box3d for `nacatamalon/physics3d`.
-Each sits behind its own import, so a game that does not simulate never bundles
-one. Call the install function of the adapter you use once:
-
-- `nacatamalon/physics2d`: Rapier2D's types use `Symbol.dispose`, so with
-  `skipLibCheck` off, add `"ESNext.Disposable"` to `lib`.
+drive: Box2D, compiled into the engine, for `nacatamalon/physics2d`, and box3d
+for `nacatamalon/physics3d`. Each sits behind its own import, so a game that does
+not simulate never bundles one. Call the install function of the adapter you use
+once:
 
 ```ts
 import { installPhysics2d } from "nacatamalon/physics2d";

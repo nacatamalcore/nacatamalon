@@ -137,7 +137,7 @@ const worldOfBody = new WeakMap<TGameObject, TPhysicsWorldHandle2d>();
  * The surface half of a collider, which is identical in every shape, so it is read off the
  * record once rather than spelled out in each of the three branches below.
  */
-const surfaceOf = (record: TPhysicsBody): TColliderSurface2d => ({
+const surfaceOf = (record: TPhysicsBody2d): TColliderSurface2d => ({
     bounce: record.bounce,
     friction: record.friction,
     density: record.density,
@@ -147,7 +147,7 @@ const surfaceOf = (record: TPhysicsBody): TColliderSurface2d => ({
 });
 
 /**
- * Moves the physics a scene declares, using Rapier2D.
+ * Moves the physics a scene declares, on Box2D.
  *
  * This is the adapter's half of the split: the engine keeps colliders, writes them down and reads
  * them back while deliberately being unable to move them, and registering this is what makes a
@@ -218,7 +218,6 @@ export const physics2dProvider: TPhysicsProvider = {
     watchContacts: (box, told) => {
         const body = bodyOfObject2d.get(box as TGameObject);
         if (body === undefined) return false;
-        // Listening is what asks the simulation to report this body's contacts.
         body.onEnter((other) => told(other, true));
         body.onExit((other) => told(other, false));
         return true;
@@ -261,11 +260,11 @@ export const installPhysics2d = (): void => {
 /**
  * Puts one declared collider into a world.
  *
- * Its own function because this is the whole of what this adapter promises and none of what Rapier
- * does: a shape that arrives as the wrong one, or a field quietly dropped on the way, is a bug
+ * Its own function because this is the whole of what this adapter promises and none of what the
+ * simulation does: a shape that arrives as the wrong one, or a field quietly dropped on the way, is a bug
  * here, and it can be read without simulating anything.
  *
- * `record.body` is already Rapier's vocabulary ('static' | 'dynamic' | 'kinematic'), and that is
+ * `record.body` is already the simulation's vocabulary ('static' | 'dynamic' | 'kinematic'), and that is
  * no coincidence: the engine's type is the set every 2D and 3D engine agrees on, so neither side
  * needs a translation table that can drift.
  *

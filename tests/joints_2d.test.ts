@@ -1,9 +1,9 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
 import { registerPhysicsProvider } from '../src/physics';
-import { getPhysicsBody2d, physics2dProvider } from '../src/physics/rapier2d/provider';
-import { loadRapier2D } from '../src/physics/rapier2d/load_rapier';
-import { useJoint2d } from '../src/physics/rapier2d/use_joint_2d';
-import { useCharacterBody2d } from '../src/physics/rapier2d/use_character_body_2d';
+import { getPhysicsBody2d, physics2dProvider } from '../src/physics/box2d/provider';
+import { loadBox2D } from '../src/physics/box2d/load_box2d';
+import { useJoint2d } from '../src/physics/box2d/use_joint_2d';
+import { useCharacterBody2d } from '../src/physics/box2d/use_character_body_2d';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { runHookUpdates } from '../src/game/loop/runHookUpdates';
 import { runMoves } from '../src/game/loop/runHookUpdates';
@@ -17,21 +17,21 @@ import { destroy } from '../src/destroy/destroy';
 import { flushDestroyed } from '../src/destroy/flush_destroyed';
 import type { TGameObject } from '../src/hooks/spawn/use_spawn';
 import type { TSprite } from '../src/gameobjects/sprite/types/t_sprite';
-import type { TJointHandle2d } from '../src/physics/rapier2d/t_joint_2d';
+import type { TJointHandle2d } from '../src/physics/box2d/t_joint_2d';
 import type { TCharacterBody2d } from '../src/physics/character/t_character_body_2d';
 import type { TBox } from '../src/box';
 import type { TRuntimeStore } from '../src/store';
 
 /**
  * Bodies joined together, or to a point of the world: a pendulum, a bridge of planks, a rope, a
- * spring, a rail, a weld, a motor. Each needs Rapier to have run, so each runs it.
+ * spring, a rail, a weld, a motor. Each needs the simulation to have run, so each runs it.
  */
 
 const tint = { r: 1, g: 1, b: 1, a: 1 };
 const FRAME = 1 / 60;
 
 beforeAll(async () => {
-    await loadRapier2D();
+    await loadBox2D();
 });
 beforeEach(() => {
     registerPhysicsProvider(physics2dProvider);

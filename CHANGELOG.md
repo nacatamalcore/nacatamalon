@@ -153,6 +153,17 @@ releases are in [changelog/](./changelog/), one file each.
   and `loadBox3D()` is `loadPhysics3d()`, which now only wait until it is ready and hand nothing back.
   `TRapierModule` and `TBox3dModule` are no longer public. A game that calls `installPhysics2d()` or
   `installPhysics3d()` changes nothing, and what simulates can change later without touching a game.
+- **2D physics runs on Box2D.** `nacatamalon/physics2d` now simulates with Box2D v3, compiled for
+  the engine and carried inside it, instead of Rapier: the door weighs 120 KB gzip where Rapier alone
+  was 1.29 MB, it steps about twice as fast, and it gives the same numbers on every machine.
+  `@dimforge/rapier2d-compat` is no longer a dependency. Nothing in a game's code changes, and every
+  test of the 2D physics passes as it did. What feels different:
+  - A character walks up a step of up to 4 pixels on its own, where it used to stop at it.
+  - A character a little inside a wall, standing still, is put out of it.
+  - A soft body is built anew: each side a thin capsule hinged to the next at their corner, and its
+    shape and area drawn back as a whole. It touches all along its outline, so another one can no
+    longer slip in between two corners, and a heap of them squashes without folding.
+  - Friction and bounce of two surfaces are still their mean.
 - **`lookUniforms`, and no more "knobs".** `lookKnobs` from `nacatamalon/authoring` is
   `lookUniforms`. The guide, the docs and the messages called a uniform a knob; they say uniform now,
   as the API always did.

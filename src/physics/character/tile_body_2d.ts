@@ -1,6 +1,6 @@
 import { nameOfMap } from '../../gameobjects/tilemap/get_tilemap';
 import { tileInfoAt, tilemapPlacement } from '../../gameobjects/tilemap/tile_queries';
-import { worldPose2d, writeWorldPose2d } from '../rapier2d/world_pose';
+import { worldPose2d, writeWorldPose2d } from '../box2d/world_pose';
 import { readCharacterTiles, tilesUnder } from './character_tiles';
 import type { TBlock } from './still_colliders';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';

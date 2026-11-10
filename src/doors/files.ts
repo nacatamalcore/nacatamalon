@@ -31,7 +31,7 @@ export type {
 export { DOCUMENTS } from '../CONST';
 export type {
     TScriptComponent, TSoundComponent, TStoreComponent, TPhysicsBody2dComponent, TPhysicsBody3dComponent,
-    TPhysicsWorld2dComponent, TPhysicsWorld3dComponent,
+    TPhysicsWorld2dComponent, TPhysicsWorld3dComponent, TRetroBody2dComponent, TRetroWorld2dComponent,
 } from '../scene/document/types/t_component_doc';
 export type { TSceneFromDocOptions } from '../scene/document';
 export type { TEmissionDoc } from '../loaders/particles';

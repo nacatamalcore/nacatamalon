@@ -275,9 +275,9 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
             if (mat.sensor) shapeDef.isSensor = true;
         }
 
-        // Layers. box3d's filter is 64-bit (`bigint`), while the format caps at 16 layers
-        // because Rapier2D's `u32` packs membership and mask into one word, so the widening
-        // here is free and the narrowing lives in the format, deliberately.
+        // Layers. box3d's filter is 64-bit (`bigint`), while the format caps at 16 layers (see
+        // `PHYSICS_LAYERS`), so the widening here is free and the narrowing lives in the
+        // format, deliberately.
         // Untouched shapes keep box3d's all-ones default, which already includes the mover bit.
         if (entry.spec.hiddenFromMovers || (mat && (mat.layer !== undefined || mat.collidesWith !== undefined))) {
             shapeDef.filter = filterOf(entry.spec);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { tileShapes } from '../src/physics/rapier2d/tile_shapes';
+import { tileShapes } from '../src/physics/box2d/tile_shapes';
 import type { TTilemap } from '../src/gameobjects/tilemap/types/t_tilemap';
 
 /**

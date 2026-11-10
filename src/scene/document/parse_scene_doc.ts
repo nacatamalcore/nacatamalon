@@ -25,8 +25,8 @@ import type { TNineSliceBorders } from '../../gameobjects/nine_slice/types/t_nin
 import type { TTransform3d } from '../../gameobjects/types/t_transform_3d';
 import type { TUniformNumbers } from '../../materials/types/t_uniforms';
 import type { TScriptProps } from '../../scripts';
-import { createPhysicsBody2d, createPhysicsBody3d } from '../../physics';
-import type { TCollider2d, TCollider3d, TPhysicsSurface } from '../../physics';
+import { createPhysicsBody2d, createPhysicsBody3d, createRetroBody2d } from '../../physics';
+import type { TCollider2d, TCollider3d, TPhysicsSurface, TRetroBody2d, TRetroCollider2d } from '../../physics';
 import type { TParticleColliderShape2d, TParticleColliderShape3d } from '../../gameobjects/particles/colliders/t_particle_collider';
 import type { TSoundCone, TSoundDuck, TSoundZone } from '../../audio';
 import { SONG_VOICES } from '../../audio/synth';
@@ -530,6 +530,42 @@ const parseSurface = (raw: Record<string, unknown>): Partial<TPhysicsSurface> =>
     ...optionalNumber(raw, 'collidesWith'),
 });
 
+/**
+ * A retro collider's shape, or `null` for one it cannot have: a retro body has no polygons.
+ */
+const parseRetroCollider2d = (value: unknown): TRetroCollider2d | null => {
+    const raw = asRecord(value);
+    if (raw === null) {
+        return null;
+    }
+    if (raw.shape === 'rect') {
+        return { shape: 'rect', width: asNumber(raw.width, 0), height: asNumber(raw.height, 0) };
+    }
+    if (raw.shape === 'circle') {
+        return { shape: 'circle', radius: asNumber(raw.radius, 0) };
+    }
+    return null;
+};
+
+/**
+ * How a retro body moves and what it is made of, for the defaults to fill in what the file leaves
+ * out. `maxSpeed` is `null` written down for no limit, and anything else not a pair of numbers is
+ * read the same way.
+ */
+const parseRetroSurface = (raw: Record<string, unknown>): Partial<Omit<TRetroBody2d, '_type' | 'id' | 'name' | 'body' | 'collider'>> => {
+    const max = asRecord(raw.maxSpeed);
+    return {
+        ...optionalNumber(raw, 'bounce'),
+        ...optionalNumber(raw, 'drag'),
+        ...(max !== null ? { maxSpeed: { x: asNumber(max.x, 0), y: asNumber(max.y, 0) } } : {}),
+        ...optionalNumber(raw, 'gravityScale'),
+        ...optionalNumber(raw, 'mass'),
+        ...optionalBoolean(raw, 'sensor'),
+        ...optionalNumber(raw, 'layer'),
+        ...optionalNumber(raw, 'collidesWith'),
+    };
+};
+
 const NINE_SLICE_MODES = ['stretch', 'tile', 'tile-fit'] as const;
 
 /**
@@ -902,6 +938,29 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 ...parseSurface(raw),
             });
             return { type: 'physics-body-3d', ...rest };
+        }
+        case 'retro-body-2d': {
+            const collider = parseRetroCollider2d(raw.collider);
+            // Kept whole in the hole for what this version cannot read, like a flat collider's.
+            if (collider === null) {
+                return null;
+            }
+            const { _type, ...rest } = createRetroBody2d({
+                id,
+                name: asString(raw.name, 'Body'),
+                body: asOneOf(raw.body, ['static', 'dynamic', 'kinematic'] as const, 'static'),
+                collider,
+                ...parseRetroSurface(raw),
+            });
+            return { type: 'retro-body-2d', ...rest };
+        }
+        case 'retro-world-2d': {
+            const gravity = asRecord(raw.gravity) ?? {};
+            return {
+                type: 'retro-world-2d',
+                id,
+                gravity: { x: asNumber(gravity.x, 0), y: asNumber(gravity.y, 900) },
+            };
         }
         case 'physics-world-2d': {
             const gravity = asRecord(raw.gravity) ?? {};
