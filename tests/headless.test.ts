@@ -14,8 +14,8 @@ import { useUpdate } from '../src/hooks/loop/use_update';
 import { createPixels } from '../src/pixels';
 import { encodePng } from '../src/pixels/encode_png';
 import { registerPhysicsProvider } from '../src/physics';
-import { rapier2dProvider } from '../src/physics/rapier2d/provider';
-import { box3dProvider } from '../src/physics/box3d/provider';
+import { physics2dProvider } from '../src/physics/rapier2d/provider';
+import { physics3dProvider } from '../src/physics/box3d/provider';
 import { createMesh } from '../src/gameobjects/mesh';
 import { useCubeGeometry } from '../src/hooks/geometry';
 import { usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d } from '../src/hooks/physics';
@@ -172,7 +172,7 @@ describe('physics with no browser', () => {
     afterEach(() => registerPhysicsProvider(null));
 
     it('waits in loaded() for the 2D world, then a crate falls onto the ground and stays', async () => {
-        registerPhysicsProvider(rapier2dProvider);
+        registerPhysicsProvider(physics2dProvider);
         function Crate() {
             createSprite({ width: 20, height: 20, transform: { x: 100, y: 20 } });
             usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'rect', width: 20, height: 20 } });
@@ -202,7 +202,7 @@ describe('physics with no browser', () => {
     });
 
     it('waits in loaded() for the 3D world, then a box falls onto the floor', async () => {
-        registerPhysicsProvider(box3dProvider);
+        registerPhysicsProvider(physics3dProvider);
         function Box() {
             useTransform({ y: 5 });
             createMesh({ geometry: useCubeGeometry() });

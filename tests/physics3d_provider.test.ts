@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, spyOn } from 'bun:test';
-import { bodyIntoWorld, box3dProvider, resetNoWorldWarning } from '../src/physics/box3d/provider';
+import { bodyIntoWorld, physics3dProvider, resetNoWorldWarning } from '../src/physics/box3d/provider';
 import type { TGameObject } from '../src/hooks/spawn/use_spawn';
 import type { TPhysicsBody, TPhysicsBody3d, TPhysicsWorld } from '../src/physics';
 import type { TPhysicsBodyHandle3d, TPhysicsWorldHandle3d } from '../src/physics/box3d/types';
@@ -89,7 +89,7 @@ describe('what a declared collider becomes', () => {
     it('leaves a collider of the other dimension alone', () => {
         const { calls } = fakeWorld();
 
-        box3dProvider.createBody(box('Crate'), {
+        physics3dProvider.createBody(box('Crate'), {
             _type: 'physics-body-2d', id: 'b1', name: 'Crate', body: 'dynamic',
             collider: { shape: 'rect', width: 24, height: 16 }, ...surface,
         } as TPhysicsBody);
@@ -103,8 +103,8 @@ describe('what a declared collider becomes', () => {
         const said = silence();
 
         const record = body3d({ shape: 'box', size: [1, 1, 1] });
-        box3dProvider.createBody(box('One'), record);
-        box3dProvider.createBody(box('Two'), record);
+        physics3dProvider.createBody(box('One'), record);
+        physics3dProvider.createBody(box('Two'), record);
 
         // A level of two hundred crates with no world on its root would otherwise say it two
         // hundred times.
@@ -114,7 +114,7 @@ describe('what a declared collider becomes', () => {
 
     it('leaves a world of the other dimension alone', () => {
         const { calls } = fakeWorld();
-        box3dProvider.createWorld({ _type: 'physics-world-2d', id: 'w1', gravity: { x: 0, y: 900 } } as TPhysicsWorld);
+        physics3dProvider.createWorld({ _type: 'physics-world-2d', id: 'w1', gravity: { x: 0, y: 900 } } as TPhysicsWorld);
         expect(calls).toEqual([]);
     });
 });

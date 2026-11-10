@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { registerPhysicsProvider } from '../src/physics';
-import { rapier2dProvider, getPhysicsBody2d, getPhysicsWorld2d } from '../src/physics/rapier2d/provider';
+import { physics2dProvider, getPhysicsBody2d, getPhysicsWorld2d } from '../src/physics/rapier2d/provider';
 import { loadRapier2D } from '../src/physics/rapier2d/load_rapier';
 // Internals by relative path, the way the engine's own tests reach them: a published game has no
 // use for a frame it drives by hand, so none of this belongs on the front door.
@@ -30,7 +30,7 @@ const tint = { r: 1, g: 1, b: 1, a: 1 };
 const FRAME = 1 / 60;
 
 beforeEach(() => {
-    registerPhysicsProvider(rapier2dProvider);
+    registerPhysicsProvider(physics2dProvider);
 });
 
 afterEach(() => {

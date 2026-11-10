@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, spyOn } from 'bun:test';
-import { bodyIntoWorld, rapier2dProvider, resetNoWorldWarning } from '../src/physics/rapier2d/provider';
+import { bodyIntoWorld, physics2dProvider, resetNoWorldWarning } from '../src/physics/rapier2d/provider';
 import type { TGameObject } from '../src/hooks/spawn/use_spawn';
 import type { TPhysicsBody, TPhysicsBody2d, TPhysicsWorld } from '../src/physics';
 import type { TPhysicsBodyHandle2d, TPhysicsWorldHandle2d } from '../src/physics/rapier2d/types';
@@ -85,7 +85,7 @@ describe('what a declared collider becomes', () => {
     it('leaves a collider of the other dimension alone', () => {
         const { calls } = fakeWorld();
 
-        rapier2dProvider.createBody(box('Player'), {
+        physics2dProvider.createBody(box('Player'), {
             _type: 'physics-body-3d', id: 'b1', name: 'Player', body: 'dynamic',
             collider: { shape: 'capsule', radius: 0.3, height: 1.8 }, offset: [0, 0, 0], ...surface,
         } as TPhysicsBody);
@@ -102,8 +102,8 @@ describe('what a declared collider becomes', () => {
             _type: 'physics-body-2d', id: 'b1', name: 'Crate', body: 'dynamic',
             collider: { shape: 'rect', width: 8, height: 8 }, ...surface,
         } as TPhysicsBody;
-        rapier2dProvider.createBody(box('One'), body);
-        rapier2dProvider.createBody(box('Two'), body);
+        physics2dProvider.createBody(box('One'), body);
+        physics2dProvider.createBody(box('Two'), body);
 
         // A level of two hundred crates with no world on its root would otherwise say it two
         // hundred times.
@@ -113,7 +113,7 @@ describe('what a declared collider becomes', () => {
 
     it('leaves a world of the other dimension alone', () => {
         const { calls } = fakeWorld();
-        rapier2dProvider.createWorld({ _type: 'physics-world-3d', id: 'w1', gravity: { x: 0, y: -9.81, z: 0 } } as TPhysicsWorld);
+        physics2dProvider.createWorld({ _type: 'physics-world-3d', id: 'w1', gravity: { x: 0, y: -9.81, z: 0 } } as TPhysicsWorld);
         expect(calls).toEqual([]);
     });
 });

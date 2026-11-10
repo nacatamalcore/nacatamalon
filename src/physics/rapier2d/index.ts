@@ -17,8 +17,8 @@
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export { installPhysics2d, rapier2dProvider, getPhysicsWorld2d, getPhysicsBody2d } from './provider';
-export { loadRapier2D } from './load_rapier';
+export { installPhysics2d, physics2dProvider, getPhysicsWorld2d, getPhysicsBody2d } from './provider';
+export { loadPhysics2d } from './load_rapier';
 export { useCharacterBody2d } from './use_character_body_2d';
 export { useJoint2d } from './use_joint_2d';
 export { useSoftBody2d } from './use_soft_body_2d';
@@ -28,4 +28,3 @@ export type { TCharacterOptions2d } from './character_body_2d';
 export type { TCharacterBody2d, TCharacterShape2d } from '../character/t_character_body_2d';
 
 export type { TPhysicsWorldHandle2d, TPhysicsBodyHandle2d, TPhysicsWorldOptions2d, TColliderSurface2d } from './types';
-export type { TRapierModule } from './load_rapier';

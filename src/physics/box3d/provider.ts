@@ -175,16 +175,16 @@ const surfaceOf = (record: TPhysicsBody3d): TColliderOptions3d => ({
  *
  * ```ts
  * import { registerPhysicsProvider } from 'nacatamalon/extend';
- * import { box3dProvider } from 'nacatamalon/physics3d';
+ * import { physics3dProvider } from 'nacatamalon/physics3d';
  *
- * registerPhysicsProvider(box3dProvider);
+ * registerPhysicsProvider(physics3dProvider);
  * ```
  *
  * @category Physics
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const box3dProvider: TPhysicsProvider = {
+export const physics3dProvider: TPhysicsProvider = {
     createWorld: (record: TPhysicsWorld) => {
         // A 2D world in the document is not an error, it is simply not ours: a project can
         // register both adapters and let each answer for its own dimension.
@@ -269,7 +269,7 @@ export const box3dProvider: TPhysicsProvider = {
  * @author Francisco Pereira Alvarado
  */
 export const installPhysics3d = (): void => {
-    registerPhysicsProvider(box3dProvider);
+    registerPhysicsProvider(physics3dProvider);
 };
 
 /**

@@ -16,10 +16,10 @@ import { useTween } from '../src/hooks/tween/use_tween';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { usePhysicsBody2d, usePhysicsWorld2d } from '../src/hooks/physics';
 import { registerPhysicsProvider } from '../src/physics';
-import { rapier2dProvider } from '../src/physics/rapier2d/provider';
+import { physics2dProvider } from '../src/physics/rapier2d/provider';
 import { loadRapier2D } from '../src/physics/rapier2d/load_rapier';
 import { editorHandleOf, openHost } from '../src/game/handle/editor_handle_of';
-import { box3dProvider } from '../src/physics/box3d/provider';
+import { physics3dProvider } from '../src/physics/box3d/provider';
 import { loadBox3D } from '../src/physics/box3d/load_box3d';
 import { usePhysicsBody3d, usePhysicsWorld3d } from '../src/hooks/physics';
 import { useTransform } from '../src/hooks/transform/use_transform';
@@ -259,7 +259,7 @@ describe('useLateUpdate with a fixed step', () => {
 });
 
 describe('physics with a fixed step', () => {
-    beforeEach(() => { registerPhysicsProvider(rapier2dProvider); });
+    beforeEach(() => { registerPhysicsProvider(physics2dProvider); });
     afterEach(() => { registerPhysicsProvider(null); });
 
     it('lands a falling body on the same pixel on a 144 Hz screen as on a 60 Hz one', async () => {
@@ -328,7 +328,7 @@ describe('physics stepped by a game at 50 (PAL)', () => {
     afterEach(() => { registerPhysicsProvider(null); });
 
     it('takes one step of 1/50 per step of the game in 2D, so a fall moves evenly', async () => {
-        registerPhysicsProvider(rapier2dProvider);
+        registerPhysicsProvider(physics2dProvider);
         await loadRapier2D();
         const { store } = createTestGame({ step: 50 });
         let ball!: TSprite;
@@ -351,7 +351,7 @@ describe('physics stepped by a game at 50 (PAL)', () => {
     });
 
     it('does the same in 3D', async () => {
-        registerPhysicsProvider(box3dProvider);
+        registerPhysicsProvider(physics3dProvider);
         await loadBox3D();
         const { store } = createTestGame({ step: 50 });
         let place!: ReturnType<typeof useTransform>;

@@ -3,7 +3,7 @@ import RAPIER from '@dimforge/rapier2d-compat';
 /**
  * Type of the initialized Rapier2D module.
  *
- * @category Physics
+ * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
@@ -33,7 +33,7 @@ let modulePromise: Promise<TRapierModule> | null = null;
  *
  * The `await` this adds is free: every caller already went through this promise.
  *
- * @category Physics
+ * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
@@ -42,4 +42,27 @@ export const loadRapier2D = (): Promise<TRapierModule> => {
         modulePromise = RAPIER.init().then(() => RAPIER);
     }
     return modulePromise;
+};
+
+/**
+ * Loads what simulates the 2D physics, ahead of the first scene that needs it: once a page, however
+ * often it is called. A world loads it on its own the first time, and its bodies wait for it, so this
+ * is only for a game that would rather pay that wait on a loading screen than in its first level.
+ *
+ * @example
+ * ```ts
+ * import { installPhysics2d, loadPhysics2d } from 'nacatamalon/physics2d';
+ *
+ * installPhysics2d();
+ * await loadPhysics2d();
+ * ```
+ *
+ * @returns Done once it is ready.
+ *
+ * @category Physics
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const loadPhysics2d = async (): Promise<void> => {
+    await loadRapier2D();
 };

@@ -7,7 +7,7 @@ import type { Box3DModule } from 'box3d.js/inline';
  * runtime, reconstructed on load, never part of a save. Re-exported so the world
  * wrapper can type body/world ids off it without importing Embind internals.
  *
- * @category Physics
+ * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
@@ -45,11 +45,34 @@ let modulePromise: Promise<TBox3dModule> | null = null;
  * headless Node/Bun test with no separate file to resolve. The trade is a slightly
  * larger bundle, paid only by games that actually import the physics adapter.
  *
- * @category Physics
+ * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
 export const loadBox3D = (): Promise<TBox3dModule> => {
     if (!modulePromise) modulePromise = Box3D() as Promise<TBox3dModule>;
     return modulePromise;
+};
+
+/**
+ * Loads what simulates the 3D physics, ahead of the first scene that needs it: once a page, however
+ * often it is called. A world loads it on its own the first time, and its bodies wait for it, so this
+ * is only for a game that would rather pay that wait on a loading screen than in its first level.
+ *
+ * @example
+ * ```ts
+ * import { installPhysics3d, loadPhysics3d } from 'nacatamalon/physics3d';
+ *
+ * installPhysics3d();
+ * await loadPhysics3d();
+ * ```
+ *
+ * @returns Done once it is ready.
+ *
+ * @category Physics
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const loadPhysics3d = async (): Promise<void> => {
+    await loadBox3D();
 };

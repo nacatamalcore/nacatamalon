@@ -12,7 +12,7 @@ import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useUpdate } from '../src/hooks/loop/use_update';
 import { usePhysicsBody2d, usePhysicsWorld2d } from '../src/hooks/physics';
 import { registerPhysicsProvider } from '../src/physics';
-import { getPhysicsBody2d, rapier2dProvider } from '../src/physics/rapier2d/provider';
+import { getPhysicsBody2d, physics2dProvider } from '../src/physics/rapier2d/provider';
 import { useSelf } from '../src/hooks/spawn/use_self';
 import { destroy } from '../src/destroy/destroy';
 import { loadRapier2D } from '../src/physics/rapier2d/load_rapier';
@@ -88,7 +88,7 @@ let body: (typeof KINDS)[number] = KINDS[0];
  */
 const level = async (rows: string[], build: () => void) => {
     served = serveTilemap(docOf(rows));
-    if (body.physics) registerPhysicsProvider(rapier2dProvider);
+    if (body.physics) registerPhysicsProvider(physics2dProvider);
     const { store } = createTestGame({ step: 60 });
     const ctx = createFrameContext();
     let map!: TTilemap;
@@ -375,6 +375,15 @@ for (const kind of KINDS) {
                 expect(h.sprite.transform.y).toBeCloseTo(80 - 12, 0);
             });
 
+            it('holds what starts with its feet exactly on its top, as a level laid out on the grid puts it', async () => {
+                let h!: ReturnType<typeof hero>;
+                const { frames } = await level(LEDGE, () => { h = hero(40, 48 - 12); });
+
+                frames(60);
+                expect(h.body.isOnOneWay).toBe(true);
+                expect(h.sprite.transform.y).toBeCloseTo(48 - 12, 0);
+            });
+
             it('is jumped through from below, and landed on from above', async () => {
                 let h!: ReturnType<typeof hero>;
                 let jumped = false;
@@ -595,7 +604,7 @@ describe('the map and the character, placed and taken away', () => {
 
     it('builds the map where it is drawn, moved', async () => {
         served = serveTilemap(docOf(ROOM));
-        registerPhysicsProvider(rapier2dProvider);
+        registerPhysicsProvider(physics2dProvider);
         const { store } = createTestGame({ step: 60 });
         const ctx = createFrameContext();
         let map!: TTilemap;

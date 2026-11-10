@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
 import { registerPhysicsProvider } from '../src/physics';
-import { rapier2dProvider } from '../src/physics/rapier2d/provider';
+import { physics2dProvider } from '../src/physics/rapier2d/provider';
 import { loadRapier2D } from '../src/physics/rapier2d/load_rapier';
 import { useSoftBody2d } from '../src/physics/rapier2d/use_soft_body_2d';
 import { createTestGame, startTestScene } from './helpers/test_game';
@@ -32,7 +32,7 @@ beforeAll(async () => {
     await loadRapier2D();
 });
 beforeEach(() => {
-    registerPhysicsProvider(rapier2dProvider);
+    registerPhysicsProvider(physics2dProvider);
 });
 /**
  * Every game a test made, so its scene is stopped after it: the installed world is the last scene's

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { registerPhysicsProvider } from '../src/physics';
-import { getPhysicsBody2d, rapier2dProvider } from '../src/physics/rapier2d/provider';
+import { getPhysicsBody2d, physics2dProvider } from '../src/physics/rapier2d/provider';
 import { loadRapier2D } from '../src/physics/rapier2d/load_rapier';
-import { box3dProvider } from '../src/physics/box3d/provider';
+import { physics3dProvider } from '../src/physics/box3d/provider';
 import { loadBox3D } from '../src/physics/box3d/load_box3d';
 import { createFrameContext } from '../src/game/loop/create_frame_context';
 import { tick } from '../src/game/loop/tick';
@@ -27,7 +27,7 @@ import type { TGameObject } from '../src/hooks/spawn/use_spawn';
 
 (globalThis as { requestAnimationFrame?: (cb: FrameRequestCallback) => number }).requestAnimationFrame = () => 0;
 
-beforeEach(() => { registerPhysicsProvider(rapier2dProvider); registerPhysicsProvider(box3dProvider); });
+beforeEach(() => { registerPhysicsProvider(physics2dProvider); registerPhysicsProvider(physics3dProvider); });
 afterEach(() => { registerPhysicsProvider(null); });
 
 const game = async (body: TSceneFn, physicsLayers: string[] = []) => {

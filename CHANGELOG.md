@@ -148,6 +148,11 @@ releases are in [changelog/](./changelog/), one file each.
   while the game runs were `boxFromDoc` and `copyBox`: a box is what the editor and the files call
   it, and in the game it is an object. `useSpawn(boxFromDoc)(doc)` is now `useSpawn(objectFromDoc)(doc)`,
   and `useSpawn(copyBox)(enemy)` is `useSpawn(copyObject)(enemy)`. `.box` files do not change.
+- **The physics doors no longer name what runs underneath.** `rapier2dProvider` is
+  `physics2dProvider` and `box3dProvider` is `physics3dProvider`; `loadRapier2D()` is `loadPhysics2d()`
+  and `loadBox3D()` is `loadPhysics3d()`, which now only wait until it is ready and hand nothing back.
+  `TRapierModule` and `TBox3dModule` are no longer public. A game that calls `installPhysics2d()` or
+  `installPhysics3d()` changes nothing, and what simulates can change later without touching a game.
 - **`lookUniforms`, and no more "knobs".** `lookKnobs` from `nacatamalon/authoring` is
   `lookUniforms`. The guide, the docs and the messages called a uniform a knob; they say uniform now,
   as the API always did.

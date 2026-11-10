@@ -22,8 +22,8 @@
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export { installPhysics3d, box3dProvider, getPhysicsWorld3d, getPhysicsBody3d } from './provider';
-export { loadBox3D } from './load_box3d';
+export { installPhysics3d, physics3dProvider, getPhysicsWorld3d, getPhysicsBody3d } from './provider';
+export { loadPhysics3d } from './load_box3d';
 export { useCharacterBody3d } from './use_character_body_3d';
 
 export type {
@@ -32,4 +32,3 @@ export type {
 } from './types';
 export { DEFAULT_RAY_DISTANCE } from './types';
 export type { TCharacterBody3d, TCharacterOptions3d } from './character_body';
-export type { TBox3dModule } from './load_box3d';

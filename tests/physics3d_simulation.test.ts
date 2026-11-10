@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test';
 import { registerPhysicsProvider } from '../src/physics';
-import { box3dProvider, getPhysicsBody3d, getPhysicsWorld3d } from '../src/physics/box3d/provider';
+import { physics3dProvider, getPhysicsBody3d, getPhysicsWorld3d } from '../src/physics/box3d/provider';
 import { loadBox3D } from '../src/physics/box3d/load_box3d';
 import { useCharacterBody3d } from '../src/physics/box3d/use_character_body_3d';
 // Internals by relative path, the way the engine's own tests reach them: a published game has no
@@ -40,7 +40,7 @@ const FRAME = 1 / 60;
 let warn: ReturnType<typeof spyOn> | null = null;
 
 beforeEach(() => {
-    registerPhysicsProvider(box3dProvider);
+    registerPhysicsProvider(physics3dProvider);
 });
 
 afterEach(() => {
@@ -231,7 +231,7 @@ describe('a walking character', () => {
         warn = spyOn(console, 'warn').mockImplementation(() => {});
         const walk = (installed: boolean) => {
             registerPhysicsProvider(null);
-            if (installed) registerPhysicsProvider(box3dProvider);
+            if (installed) registerPhysicsProvider(physics3dProvider);
             const { store } = createTestGame();
             let player!: ReturnType<typeof useCharacterBody3d>;
             startTestScene(store, 'Level', () => {
