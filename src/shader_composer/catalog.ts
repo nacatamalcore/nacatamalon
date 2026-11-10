@@ -1,7 +1,7 @@
 import { composerFloat, composerSwizzle, composerVec2, composerVec3, composerVec4 } from './constructors';
 import {
     composerEmissive, composerEnvUv, composerLight, composerMapSample, composerShine, composerResolution, composerSurface, composerTextureSample, composerTime,
-    composerUniform, composerUv, composerVertexColor, composerVertexNormal, composerVertexPosition, composerViewDir, composerWorldNormal,
+    composerUniform, composerUv, composerVertexColor, composerVertexNormal, composerVertexPosition, composerViewDir, composerCameraPos, composerWorldNormal,
     composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent, composerInstanceData, composerInstanceOrigin, composerFrontFacing, composerCarry, composerOcclusion, composerLocalUv, composerLayerUv,
     composerWorldPos,
 } from './inputs';
@@ -199,6 +199,7 @@ const DEFS: TNodeDef[] = [
     inputNode('worldNormal', 'World Normal', V3, 'The surface normal in world space.', ['mesh3d']),
     inputNode('worldPos', 'World Position', V3, 'The fragment\'s position in world space.', ['mesh3d']),
     inputNode('viewDir', 'View Direction', V3, 'Unit vector from the fragment towards the camera.', ['mesh3d']),
+    inputNode('cameraPos', 'Camera Position', V3, 'Where the camera stands in world space: wire it with World Position into Distance for how far away this is.', ['mesh3d']),
     inputNode('light', 'Light', V3, 'The accumulated scene lighting for this fragment.', ['mesh3d']),
     inputNode('emissive', 'Emissive', V3, 'The material\'s emissive color, untouched by lighting.', ['mesh3d']),
     inputNode('shine', 'Shine', V3, 'The highlight the lamps put on the surface, already shadowed.', ['mesh3d']),
@@ -611,6 +612,7 @@ export const INPUT_BUILDERS: Record<string, () => TComposerNode> = {
     worldNormal: composerWorldNormal,
     worldPos: composerWorldPos,
     viewDir: composerViewDir,
+    cameraPos: composerCameraPos,
     light: composerLight,
     emissive: composerEmissive,
     shine: composerShine,

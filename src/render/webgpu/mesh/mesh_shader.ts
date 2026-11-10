@@ -536,7 +536,9 @@ fn fs(in: VertexOutput${cull === 'none' ? ', @builtin(front_facing) front: bool'
     // bouncing off the surface, not part of what is painted on it.
     let shine = litWithShadow(${lit}.shine, ${lit}.casterShine, in.shadowCoord);
     // The fog last, over everything, glow included: a lamp far off in the fog is lost in it too.
-    return vec4<f32>(mix(color.rgb + shine + glow, lights.fog.rgb, in.fog), color.a);
+    // One that adds its colour (normalMatrix[2].w) fades into the fog towards black, adding less:
+    // adding the fog's colour would brighten it.
+    return vec4<f32>(mix(color.rgb + shine + glow, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), in.fog), color.a);
 }
 `;
 };

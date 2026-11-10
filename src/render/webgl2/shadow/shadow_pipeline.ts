@@ -7,6 +7,7 @@ import {
     SHADOW_INSTANCED_VERTEX_GLSL, SHADOW_SKINNED_VERTEX_GLSL, SHADOW_VERTEX_GLSL,
 } from './shadow_shader';
 import { instancesOf } from '../../shared/mesh_instances';
+import { NO_EYE } from '../../shared/eye';
 import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
 import { toGlTexture } from '../texture';
 import { toGlClip } from '../mesh/depth_range';
@@ -14,6 +15,7 @@ import { bindMaterialMaps, vertexArrayFor } from '../mesh/draw_meshes';
 import type { TDrawMesh } from '../../interface';
 import type { TMeshPipeline } from '../mesh/types/t_mesh_pipeline';
 import type { TShadowMap } from './shadow_map';
+import type { TEye } from '../../shared/eye';
 
 /**
  * One compiled program and the three places numbers go into it.
@@ -112,7 +114,7 @@ export const createShadowPipeline = (gl: WebGL2RenderingContext) => {
          * `time`, `width` and `height` are what a material's corner hook is told, as in the pass that
          * lights the scene.
          */
-        draw: (meshes: TMeshPipeline, mesh: TDrawMesh, model: Float32Array, time = 0, width = 0, height = 0): boolean => {
+        draw: (meshes: TMeshPipeline, mesh: TDrawMesh, model: Float32Array, time = 0, width = 0, height = 0, eye: TEye = NO_EYE): boolean => {
             const vao = vertexArrayFor(gl, meshes, mesh);
             if (vao === null || mesh.geometry === null || mesh.geometry.indexCount === 0) {
                 return false;
@@ -172,6 +174,10 @@ export const createShadowPipeline = (gl: WebGL2RenderingContext) => {
                     gl.uniform1i((shader as TShadowProgram).texture, 0);
                 }
                 gl.uniform2f(shader.cut, surface.alphaCutoff!, surface.alpha * surface.tint.a);
+                // Where the camera stands, which a material's colour hook is told: the built-in cut has no hook.
+                if (hooked !== null) {
+                    gl.uniform3f(hooked.eye, eye.x, eye.y, eye.z);
+                }
             }
 
             if (bends) {

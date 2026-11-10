@@ -326,7 +326,13 @@ export const drawMesh = (
     // ellipse instead of a soft one. None of that looks like a missing state, which is why it
     // survived: it looks like the alpha being wrong.
     gl.enable(gl.BLEND);
-    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    // One that adds its colour (`blend: 'additive'`) adds it as far as its alpha says and leaves the
+    // alpha behind it alone, as additive sprites and particles do; it is already drawn see-through.
+    if (mesh.material.blend === 'additive') {
+        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ZERO, gl.ONE);
+    } else {
+        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    }
 
     gl.bindVertexArray(vao);
     // Wide triangle points are part of WebGL2 itself: it was WebGL1 that needed an extension asked
@@ -339,6 +345,10 @@ export const drawMesh = (
     }
     gl.bindVertexArray(null);
 
+    // Left as straight alpha, so a plugin's drawing after a model that adds does not add too.
+    if (mesh.material.blend === 'additive') {
+        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    }
     gl.disable(gl.CULL_FACE);
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);

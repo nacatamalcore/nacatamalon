@@ -198,6 +198,8 @@ export const newMaterial = (
             alpha: (options as TMeshMaterialOptions).alpha ?? 1,
             // Left as written: absent means "decided by the alpha", which is not the same as `false`.
             transparent: (options as TMeshMaterialOptions).transparent,
+            // Left out unless asked, so a material that never mentioned it saves as before.
+            ...((options as TMeshMaterialOptions).blend !== undefined ? { blend: (options as TMeshMaterialOptions).blend } : {}),
             smooth: (options as TMeshMaterialOptions).smooth,
             // Left out when not asked for: absent is repeat, and a default is not a decision.
             ...((options as TMeshMaterialOptions).wrap !== undefined ? { wrap: (options as TMeshMaterialOptions).wrap } : {}),

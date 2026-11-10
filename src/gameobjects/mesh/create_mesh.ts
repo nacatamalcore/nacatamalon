@@ -119,6 +119,7 @@ export const makeMesh = (hook: string, options: TMeshOptions): TMesh => {
                 alphaCutoff: options.alphaCutoff,
                 alpha: options.alpha,
                 transparent: options.transparent,
+                blend: options.blend,
                 smooth: options.smooth,
                 wrap: options.wrap,
             },

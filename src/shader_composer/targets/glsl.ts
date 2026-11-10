@@ -26,6 +26,7 @@ const INPUT_SOURCE: Record<TInputKind, Partial<Record<TStageCtx, string>>> = {
     worldNormal:    { 'mesh3d.frag': 'ctx.normal', 'preview.frag': 'sgPreviewNormal(uv)' },
     worldPos:       { 'mesh3d.frag': 'ctx.worldPos', 'preview.frag': 'sgPreviewPos(uv)' },
     viewDir:        { 'mesh3d.frag': 'ctx.viewDir', 'preview.frag': 'vec3(0.0, 0.0, 1.0)' },
+    cameraPos:      { 'mesh3d.frag': 'ctx.cameraPos', 'preview.frag': 'vec3(0.0, 0.0, 3.0)' },
     light:          { 'mesh3d.frag': 'ctx.light', 'preview.frag': 'sgPreviewLight(uv)' },
     emissive:       { 'mesh3d.frag': 'ctx.emissive', 'preview.frag': 'vec3(0.0, 0.0, 0.0)' },
     shine:          { 'mesh3d.frag': 'ctx.shine', 'preview.frag': 'vec3(0.0, 0.0, 0.0)' },

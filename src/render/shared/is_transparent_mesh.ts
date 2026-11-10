@@ -20,4 +20,6 @@ import type { TDrawMesh } from '../interface';
  * @author Francisco Pereira Alvarado
  */
 export const isTransparentMesh = (mesh: TDrawMesh): boolean =>
-    mesh.material.transparent ?? mesh.material.alpha * mesh.material.tint.a < 1;
+    // One that adds its colour is seen through whatever else it says: what it adds to has to be there
+    // first, and writing its distance would hide what is behind a glow.
+    mesh.material.blend === 'additive' || (mesh.material.transparent ?? mesh.material.alpha * mesh.material.tint.a < 1);

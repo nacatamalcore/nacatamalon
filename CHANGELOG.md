@@ -62,6 +62,17 @@ releases are in [changelog/](./changelog/), one file each.
   as if it faced up, a flat card lit as if it were round, with the engine's lamps and shadows. The
   composer writes it from `compileShader({ normal })`, and a graph file from its Normal Output node.
   Nothing written, nothing changes.
+- **Where the camera stands, in a model material's colour hook.** `ctx.cameraPos`, in the world, the
+  place the fog measures from, so `distance(ctx.cameraPos, ctx.worldPos)` is how far away a point is:
+  bands, a fade or detail by distance, without a uniform moved by hand every frame. In the composer,
+  `composerCameraPos()`, and a Camera Position node in a graph. In the shadow of a model cut out of
+  its picture it is the camera's too, so what a hook leaves out by distance is left out of its shadow.
+- **Models that add their colour.** `blend: 'additive'` on `createMaterial({ shader: 'mesh3d' })`,
+  `createMesh`, `createMeshInstances` and `createModel` adds the model's colour to what is behind it,
+  as far as its alpha says, rather than covering it: a flash, a hologram, a shield, a beam of light,
+  a magic circle. It is always drawn see-through (after the solid ones, hiding nothing), casts no
+  shadow, and fades into the fog by adding less. Kept in scene documents, and a Blend field in the
+  editor's inspector, as sprites have.
 - **The shadow warning only counts what the camera sees.** A sun's shadows reach from the camera
   out to `shadowArea` in front of it, and a square is a poor fit for a view, so there was always
   something behind the camera, off to a side or past its far end that no sensible size reaches. Its

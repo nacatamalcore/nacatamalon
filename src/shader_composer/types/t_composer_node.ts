@@ -20,6 +20,7 @@ export type TInputKind =
     | 'worldNormal'
     | 'worldPos'
     | 'viewDir'
+    | 'cameraPos'
     | 'light'
     | 'emissive'
     | 'shine'

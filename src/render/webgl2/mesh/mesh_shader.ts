@@ -581,7 +581,9 @@ void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     }
     vec3 shine = litWithShadow(${shine}, ${casterShine}, vShadowCoord);
     // The fog last, over everything, glow included.
-    fragColor = vec4(mix(color.rgb + shine + glow, lights.fog.rgb, vFog), color.a);
+    // One that adds its colour (normalMatrix[2].w) fades into the fog towards black, adding less:
+    // adding the fog's colour would brighten it.
+    fragColor = vec4(mix(color.rgb + shine + glow, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), vFog), color.a);
 }
 `;
 };

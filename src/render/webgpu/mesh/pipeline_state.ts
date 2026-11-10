@@ -1,4 +1,5 @@
 import { DEPTH_FORMAT, STENCIL_TEST } from '../frame/depth';
+import { ADDITIVE_BLEND } from '../frame/blend';
 import { INSTANCE_BYTES, INSTANCE_LOCATION } from '../../shared/mesh_instances';
 import type { TCullMode } from '../../../materials/types/t_material';
 
@@ -53,6 +54,71 @@ export const describeMeshPipeline = (
     depthStencil: { format: DEPTH_FORMAT, depthWriteEnabled: writesDepth, depthCompare: 'less', ...STENCIL_TEST },
     multisample: { count: samples },
 });
+
+/**
+ * What each see-through model pipeline was built from, so its twin that adds can be built from the
+ * same, and that twin once made.
+ *
+ * Kept beside the pipelines rather than as a third of every set (built-in, by side, by second
+ * picture coordinate, as many, a material's): a model that adds its colour is rare, and only the
+ * ones a game draws are ever made.
+ */
+const seeThrough = new WeakMap<GPURenderPipeline, GPURenderPipelineDescriptor>();
+const adding = new WeakMap<GPURenderPipeline, GPURenderPipeline>();
+
+/**
+ * Makes a model pipeline, and remembers how a see-through one was made so `addingTwinOf` can make
+ * its twin that adds.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const makeMeshPipeline = (device: GPUDevice, descriptor: GPURenderPipelineDescriptor): GPURenderPipeline =>
+    keepSeeThrough(device.createRenderPipeline(descriptor), descriptor);
+
+/**
+ * Remembers how a see-through pipeline was made, for one made apart (a material's, made while the
+ * frame goes on). A solid one is not kept: a model that adds is always drawn see-through.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const keepSeeThrough = (pipeline: GPURenderPipeline, descriptor: GPURenderPipelineDescriptor): GPURenderPipeline => {
+    if (descriptor.depthStencil?.depthWriteEnabled === false) {
+        seeThrough.set(pipeline, descriptor);
+    }
+    return pipeline;
+};
+
+/**
+ * The twin of a see-through model pipeline that adds its colour (`blend: 'additive'`): the same in
+ * everything but how it lands, made the first time a model asks for it. One not made here is handed
+ * back as it is, so a model is drawn covering rather than not at all.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const addingTwinOf = (device: GPUDevice, pipeline: GPURenderPipeline): GPURenderPipeline => {
+    let twin = adding.get(pipeline);
+    if (twin === undefined) {
+        const descriptor = seeThrough.get(pipeline);
+        const fragment = descriptor?.fragment;
+        const target = fragment?.targets[0];
+        if (descriptor === undefined || fragment === undefined || target === null || target === undefined) {
+            return pipeline;
+        }
+        twin = device.createRenderPipeline({
+            ...descriptor,
+            label: `${descriptor.label ?? 'mesh pipeline'}, adding`,
+            fragment: { ...fragment, targets: [{ ...target, blend: ADDITIVE_BLEND }] },
+        });
+        adding.set(pipeline, twin);
+    }
+    return twin;
+};
 
 /**
  * One corner: where it is, which way its surface faces, and what it shows.

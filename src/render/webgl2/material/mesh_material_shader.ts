@@ -49,6 +49,8 @@ struct FragContext {
     vec3 shine;
     vec3 emissive;
     vec3 viewDir;
+    // Where the camera stands, in the world, the place the fog measures from.
+    vec3 cameraPos;
     vec4 color;
     vec2 screen;
     vec3 tangent;
@@ -414,6 +416,7 @@ void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     // Drawn on both sides, worked out again at the pixel rather than carried, as its twin does to make
     // room for the light of the other side.
     ctx.viewDir = ${cull === 'none' ? 'viewDirOf(vWorldPos)' : 'vViewDir'};
+    ctx.cameraPos = uniforms.cameraPosition.xyz;
     ctx.color = vColor;
     ctx.screen = screenOf(vScreen.xyz);
     ctx.tangent = normalize(vTangent.xyz);
@@ -432,7 +435,9 @@ void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     if (shaded.a < uniforms.normalMatrix[3].z) {
         discard;
     }
-    fragColor = vec4(mix(shaded.rgb, lights.fog.rgb, vFog), shaded.a);
+    // One that adds its colour (normalMatrix[2].w) fades into the fog towards black, adding less:
+    // adding the fog's colour would brighten it.
+    fragColor = vec4(mix(shaded.rgb, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), vFog), shaded.a);
 }
 `;
 };
@@ -584,7 +589,7 @@ void main() {${restOf(instanced)}${CORNER_CONTEXT}${vertex === null ? PLAIN_NORM
         ].join('\n'),
         fragment: [
             '#version 300 es\nprecision highp float;',
-            'uniform sampler2D meshTexture;\nuniform vec2 uCut;',
+            'uniform sampler2D meshTexture;\nuniform vec2 uCut;\nuniform vec3 uEye;',
             glslUniformBlock(sig),
             'in vec2 vUv;\nin vec3 vNormal;\nin vec3 vWorldPos;\nin vec4 vColor;\nin vec4 vTangent;\nin vec2 vUv2;\nin vec4 vCarry;',
             FRAG_CONTEXT,
@@ -601,6 +606,8 @@ void main() {${MEASURE_UV('vUv')}
     ctx.shine = vec3(0.0);
     ctx.emissive = vec3(0.0);
     ctx.viewDir = ctx.normal;
+    // The camera the model is drawn for, as its twin says.
+    ctx.cameraPos = uEye;
     ctx.color = vColor;
     ctx.screen = vec2(0.0);
     ctx.tangent = vTangent.xyz;

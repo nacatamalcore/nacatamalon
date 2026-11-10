@@ -76,6 +76,10 @@ struct FragContext {
     shine: vec3<f32>,
     emissive: vec3<f32>,
     viewDir: vec3<f32>,
+    // Where the camera stands, in the world, the place the fog measures from: how far away this is
+    // is distance(ctx.cameraPos, ctx.worldPos), for bands, a fade or detail by distance. An
+    // orthographic camera's rays leave from no one point, so there it is only where the camera was put.
+    cameraPos: vec3<f32>,
     // The colour painted on the corners, smeared across the triangle. It is already in the surface
     // the hook is handed; this is it on its own, for a hook that uses it as something else, such as
     // how much of a second picture to show.
@@ -432,6 +436,7 @@ fn fs(in: VertexOutput, @builtin(front_facing) front: bool) -> @location(0) vec4
     // The glow through its picture, so a shader of your own adds it the way the built-in one does.
     ctx.emissive = uniforms.emissive.rgb * textureSampleGrad(meshEmissive, meshSampler, uv, meshUvDx, meshUvDy).rgb;
     ctx.viewDir = ${cull === 'none' ? 'viewDirOf(in.worldPos.xyz)' : 'in.viewDir'};
+    ctx.cameraPos = uniforms.cameraPosition.xyz;
     ctx.color = in.color;
     ctx.screen = screenOf(in.screen.xyz);
     ctx.tangent = normalize(in.tangent.xyz);
@@ -450,7 +455,9 @@ fn fs(in: VertexOutput, @builtin(front_facing) front: bool) -> @location(0) vec4
     if (shaded.a < uniforms.normalMatrix[3].z) {
         discard;
     }
-    return vec4<f32>(mix(shaded.rgb, lights.fog.rgb, in.worldPos.w), shaded.a);
+    // One that adds its colour (normalMatrix[2].w) fades into the fog towards black, adding less:
+    // adding the fog's colour would brighten it.
+    return vec4<f32>(mix(shaded.rgb, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), in.worldPos.w), shaded.a);
 }
 `;
 };
@@ -613,6 +620,9 @@ fn fs(in: CutOutput, @builtin(front_facing) front: bool) {${MEASURE_UV('in.uv')}
     ctx.shine = vec3<f32>(0.0);
     ctx.emissive = vec3<f32>(0.0);
     ctx.viewDir = ctx.normal;
+    // The camera the model is drawn for, so what a hook leaves out by distance is left out of its
+    // shadow too.
+    ctx.cameraPos = shadow.eye.xyz;
     ctx.color = in.color;
     ctx.screen = vec2<f32>(0.0);
     ctx.tangent = in.tangent.xyz;

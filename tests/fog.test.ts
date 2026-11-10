@@ -193,10 +193,10 @@ describe('the shaders', () => {
     });
 
     it('lay it over the finished colour in every ending, a material\'s own included', () => {
-        expect(MESH_SHADER).toContain('lights.fog.rgb, in.fog)');
-        expect(MESH_FRAGMENT_GLSL).toContain('lights.fog.rgb, vFog)');
+        expect(MESH_SHADER).toContain('lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), in.fog)');
+        expect(MESH_FRAGMENT_GLSL).toContain('lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), vFog)');
         const source = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
-        expect(source('../src/render/webgpu/material/mesh_material_shader.ts')).toContain('mix(shaded.rgb, lights.fog.rgb, in.worldPos.w)');
-        expect(source('../src/render/webgl2/material/mesh_material_shader.ts')).toContain('mix(shaded.rgb, lights.fog.rgb, vFog)');
+        expect(source('../src/render/webgpu/material/mesh_material_shader.ts')).toContain('mix(shaded.rgb, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), in.worldPos.w)');
+        expect(source('../src/render/webgl2/material/mesh_material_shader.ts')).toContain('mix(shaded.rgb, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), vFog)');
     });
 });

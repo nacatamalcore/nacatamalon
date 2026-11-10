@@ -1,6 +1,7 @@
 import { fillLightUniforms, fillMeshUniforms, LIGHT_UNIFORM_FLOATS, MESH_UNIFORM_FLOATS } from '../../shared';
 import { cullOf } from '../../shared/cull_of';
 import { isTransparentMesh } from '../../shared/is_transparent_mesh';
+import { addingTwinOf } from './pipeline_state';
 import { instancesOf } from '../../shared/mesh_instances';
 import { occlusionWrapOf, textureWrapOf, wrapKey } from '../../shared/texture_wrap';
 import { toGpuBuffer } from '../resources';
@@ -293,6 +294,10 @@ export const drawMesh = (
         pipeline = bends
             ? (glass ? set.transparentSkinnedPipeline : set.skinnedPipeline)
             : (glass ? set.transparentPipeline : set.pipeline);
+    }
+    // One that adds its colour takes the see-through one's twin that adds, made the first time.
+    if (surface.blend === 'additive') {
+        pipeline = addingTwinOf(device, pipeline);
     }
     pass.setPipeline(pipeline);
     // Its own scene's lights. A model always belongs to one: a scene with models had its lighting

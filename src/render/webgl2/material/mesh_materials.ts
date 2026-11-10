@@ -20,7 +20,7 @@ type TCompiled = {
 
 /**
  * A material's shadow program, and where its numbers go: the light's matrix, the model's, how it is
- * cut (only in one that cuts) and the maps it reads, in the order their units are bound, and
+ * cut and where the camera stands (only in one that cuts) and the maps it reads, in the order their units are bound, and
  * whether it reads any of them at all (`bindsMaps`): cut, or moved by a map.
  */
 type TMaterialShadow = {
@@ -28,6 +28,8 @@ type TMaterialShadow = {
     lightViewProj: WebGLUniformLocation | null;
     model: WebGLUniformLocation | null;
     cut: WebGLUniformLocation | null;
+    // Where the camera stands, for the colour hook of one that cuts.
+    eye: WebGLUniformLocation | null;
     mapNames: string[];
     bindsMaps: boolean;
 };
@@ -182,6 +184,7 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
                         lightViewProj: gl.getUniformLocation(program, 'uLightViewProj'),
                         model: gl.getUniformLocation(program, 'uModel'),
                         cut: gl.getUniformLocation(program, 'uCut'),
+                        eye: gl.getUniformLocation(program, 'uEye'),
                         mapNames,
                         bindsMaps: cuts || mapNamesOf(material.vertexGlsl).length > 0,
                     };

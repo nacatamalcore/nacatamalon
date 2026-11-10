@@ -25,6 +25,7 @@ import { createShadowPipeline } from '../shadow/shadow_pipeline';
 import { computeModelMatrix } from '../../shared/compute_mvp_3d';
 import { cullingMatricesFor, meshInView } from '../../shared/mesh_in_view';
 import { findShadowSources, lightSpaceMatrix, reportCastersOutside, SPARE_SHADOW_FRAMES } from '../../shared/light_space';
+import { NO_EYE } from '../../shared/eye';
 import { cameraSpacesFor, fillCameraSpace, newCameraSpace } from '../../shared/compute_mvp_3d';
 import { toGlClip } from '../mesh/depth_range';
 import type { TFrameContext, TRenderPass } from '../../interface';
@@ -236,6 +237,8 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
         state.shadowPipeline ??= createShadowPipeline(gl);
         const lightMatrix = lightMatrices[s]!;
         reportCastersOutside(source.casters, source.light, lightMatrix, state, source.camera, gl.drawingBufferWidth, gl.drawingBufferHeight);
+        // Where the camera stands, for a cut-out caster's colour hook, as the lit pass tells it.
+        const eye = source.camera?.transform ?? NO_EYE;
         state.shadowPipeline.begin(map, lightMatrix);
         for (const caster of source.casters) {
             // Judged by what the light sees, not the camera: one out of the picture can still
@@ -245,7 +248,7 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
             }
             state.shadowPipeline.draw(
                 state.meshes, caster, caster.worldMatrix ?? computeModelMatrix(caster.transform),
-                ctx.time, gl.drawingBufferWidth / screenRatio, gl.drawingBufferHeight / screenRatio,
+                ctx.time, gl.drawingBufferWidth / screenRatio, gl.drawingBufferHeight / screenRatio, eye,
             );
         }
         // And whatever a plugin's kind casts into it, into the map still bound.

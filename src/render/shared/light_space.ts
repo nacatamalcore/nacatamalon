@@ -335,7 +335,8 @@ export const findShadowSources = (ctx: TFrameContext): TShadowSource[] => {
                 }
                 // Its own view's, and only the ones that asked to be in it. A floor left out here
                 // still receives: being drawn into the map is about casting, never about receiving.
-                if (item.type === 'mesh' && (viewIndex[i] ?? -1) === view && item.castShadow !== false) {
+                // One that adds its colour is light, and light blocks none.
+                if (item.type === 'mesh' && (viewIndex[i] ?? -1) === view && item.castShadow !== false && item.material.blend !== 'additive') {
                     casters.push(item);
                 }
             }

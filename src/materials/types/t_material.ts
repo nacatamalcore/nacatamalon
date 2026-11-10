@@ -234,6 +234,11 @@ export type TMeshMaterial = TShaderHalf & {
      */
     transparent?: boolean;
     /**
+     * How it lands on what is behind it: `'alpha'` covers, `'additive'` adds its colour, and is always
+     * drawn see-through and casts no shadow. Omitted, `'alpha'`. Can be changed any frame.
+     */
+    blend?: 'alpha' | 'additive';
+    /**
      * How the picture is read between pixels. Omitted, the game decides.
      */
     smooth?: boolean;

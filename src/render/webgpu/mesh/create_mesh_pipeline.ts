@@ -5,7 +5,7 @@ import { SKINNED_SHADER, skinnedShaderFor } from './skinned_shader';
 import { createJointPalette } from './joint_palette';
 import { createMeshMaterials } from '../material/mesh_materials';
 import { instancedShaderFor } from './instanced_shader';
-import { describeMeshPipeline, MESH_BONES, MESH_COLORS, MESH_CORNERS, MESH_DETAIL, MESH_INSTANCES } from './pipeline_state';
+import { describeMeshPipeline, makeMeshPipeline, MESH_BONES, MESH_COLORS, MESH_CORNERS, MESH_DETAIL, MESH_INSTANCES } from './pipeline_state';
 import type { TInstancedMeshPipelines, TMeshPipeline, TSidedMeshPipelines } from './types/t_mesh_pipeline';
 import { TEXTURE_WRAPS, wrapKey } from '../../shared/texture_wrap';
 import type { TTextureWrap } from '../../../materials/types/t_material';
@@ -117,13 +117,13 @@ export const createMeshPipeline = (
     const layouts = { lights: lightsLayout, texture: textureLayout, uniforms: uniformsLayout, joints: jointsLayout };
 
     const meshLayout = device.createPipelineLayout({ bindGroupLayouts: [lightsLayout, textureLayout, uniformsLayout] });
-    const pipeline = device.createRenderPipeline(describe('mesh pipeline', module, meshLayout, [CORNERS, COLORS]));
-    const transparentPipeline = device.createRenderPipeline(describe('see-through mesh pipeline', module, meshLayout, [CORNERS, COLORS], false));
+    const pipeline = makeMeshPipeline(device, describe('mesh pipeline', module, meshLayout, [CORNERS, COLORS]));
+    const transparentPipeline = makeMeshPipeline(device, describe('see-through mesh pipeline', module, meshLayout, [CORNERS, COLORS], false));
 
     const skinnedModule = device.createShaderModule({ label: 'skinned mesh shader', code: SKINNED_SHADER });
     const skinnedLayout = device.createPipelineLayout({ bindGroupLayouts: [lightsLayout, textureLayout, uniformsLayout, jointsLayout] });
-    const skinnedPipeline = device.createRenderPipeline(describe('skinned mesh pipeline', skinnedModule, skinnedLayout, [CORNERS, COLORS, BONES]));
-    const transparentSkinnedPipeline = device.createRenderPipeline(describe('see-through skinned mesh pipeline', skinnedModule, skinnedLayout, [CORNERS, COLORS, BONES], false));
+    const skinnedPipeline = makeMeshPipeline(device, describe('skinned mesh pipeline', skinnedModule, skinnedLayout, [CORNERS, COLORS, BONES]));
+    const transparentSkinnedPipeline = makeMeshPipeline(device, describe('see-through skinned mesh pipeline', skinnedModule, skinnedLayout, [CORNERS, COLORS, BONES], false));
 
     // The other sides, made the first time a model asks for one. Their shaders differ too: one seen
     // from inside is lit from inside, and one seen from both sides is lit on both.
@@ -134,10 +134,10 @@ export const createMeshPipeline = (
             const still = device.createShaderModule({ label: `mesh shader, cull ${cull}`, code: meshShaderFor(cull) });
             const bending = device.createShaderModule({ label: `skinned mesh shader, cull ${cull}`, code: skinnedShaderFor(cull) });
             made = {
-                pipeline: device.createRenderPipeline(describe(`mesh pipeline, cull ${cull}`, still, meshLayout, [CORNERS, COLORS], true, cull)),
-                transparentPipeline: device.createRenderPipeline(describe(`see-through mesh pipeline, cull ${cull}`, still, meshLayout, [CORNERS, COLORS], false, cull)),
-                skinnedPipeline: device.createRenderPipeline(describe(`skinned mesh pipeline, cull ${cull}`, bending, skinnedLayout, [CORNERS, COLORS, BONES], true, cull)),
-                transparentSkinnedPipeline: device.createRenderPipeline(describe(`see-through skinned mesh pipeline, cull ${cull}`, bending, skinnedLayout, [CORNERS, COLORS, BONES], false, cull)),
+                pipeline: makeMeshPipeline(device, describe(`mesh pipeline, cull ${cull}`, still, meshLayout, [CORNERS, COLORS], true, cull)),
+                transparentPipeline: makeMeshPipeline(device, describe(`see-through mesh pipeline, cull ${cull}`, still, meshLayout, [CORNERS, COLORS], false, cull)),
+                skinnedPipeline: makeMeshPipeline(device, describe(`skinned mesh pipeline, cull ${cull}`, bending, skinnedLayout, [CORNERS, COLORS, BONES], true, cull)),
+                transparentSkinnedPipeline: makeMeshPipeline(device, describe(`see-through skinned mesh pipeline, cull ${cull}`, bending, skinnedLayout, [CORNERS, COLORS, BONES], false, cull)),
             };
             sides.set(cull, made);
         }
@@ -156,10 +156,10 @@ export const createMeshPipeline = (
             const plain = [CORNERS, COLORS, MESH_DETAIL];
             const bent = [CORNERS, COLORS, BONES, MESH_DETAIL];
             made = {
-                pipeline: device.createRenderPipeline(describe(`mesh pipeline, cull ${cull}, second uv`, still, meshLayout, plain, true, cull)),
-                transparentPipeline: device.createRenderPipeline(describe(`see-through mesh pipeline, cull ${cull}, second uv`, still, meshLayout, plain, false, cull)),
-                skinnedPipeline: device.createRenderPipeline(describe(`skinned mesh pipeline, cull ${cull}, second uv`, bending, skinnedLayout, bent, true, cull)),
-                transparentSkinnedPipeline: device.createRenderPipeline(describe(`see-through skinned mesh pipeline, cull ${cull}, second uv`, bending, skinnedLayout, bent, false, cull)),
+                pipeline: makeMeshPipeline(device, describe(`mesh pipeline, cull ${cull}, second uv`, still, meshLayout, plain, true, cull)),
+                transparentPipeline: makeMeshPipeline(device, describe(`see-through mesh pipeline, cull ${cull}, second uv`, still, meshLayout, plain, false, cull)),
+                skinnedPipeline: makeMeshPipeline(device, describe(`skinned mesh pipeline, cull ${cull}, second uv`, bending, skinnedLayout, bent, true, cull)),
+                transparentSkinnedPipeline: makeMeshPipeline(device, describe(`see-through skinned mesh pipeline, cull ${cull}, second uv`, bending, skinnedLayout, bent, false, cull)),
             };
             secondUvSides.set(cull, made);
         }
@@ -177,8 +177,8 @@ export const createMeshPipeline = (
             const many = device.createShaderModule({ label: `instanced mesh shader, cull ${key}`, code: instancedShaderFor(cull, bySecondUv) });
             const runs = bySecondUv ? [CORNERS, COLORS, MESH_DETAIL, MESH_INSTANCES] : [CORNERS, COLORS, MESH_INSTANCES];
             made = {
-                pipeline: device.createRenderPipeline(describe(`instanced mesh pipeline, cull ${key}`, many, meshLayout, runs, true, cull)),
-                transparentPipeline: device.createRenderPipeline(describe(`see-through instanced mesh pipeline, cull ${key}`, many, meshLayout, runs, false, cull)),
+                pipeline: makeMeshPipeline(device, describe(`instanced mesh pipeline, cull ${key}`, many, meshLayout, runs, true, cull)),
+                transparentPipeline: makeMeshPipeline(device, describe(`see-through instanced mesh pipeline, cull ${key}`, many, meshLayout, runs, false, cull)),
             };
             instancedSets.set(key, made);
         }

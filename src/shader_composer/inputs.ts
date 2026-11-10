@@ -93,6 +93,27 @@ export const composerWorldPos = (): TComposerNode => newNode('input', 'vec3<f32>
 export const composerViewDir = (): TComposerNode => newNode('input', 'vec3<f32>', [], { input: 'viewDir' });
 
 /**
+ * Where the camera stands, in the world (`vec3`): the place the fog measures from. How far away a
+ * point is, `composerDistance(composerCameraPos(), composerWorldPos())`, is what bands, a fade or
+ * detail by distance are worked out from. With an orthographic camera it is only where the camera
+ * was put, since its rays leave from no one point. Models only, colour stage.
+ * @returns The node, to use as the input of another.
+ *
+ * @example
+ * ```ts
+ * // Darker bands the further away: three steps across twenty units.
+ * const far = composerDistance(composerCameraPos(), composerWorldPos());
+ * const band = composerFloor(composerMul(composerClamp(composerDiv(far, 20), 0, 1), 3));
+ * compileShader({ shader: 'mesh3d', color: composerMul(composerSurface(), composerSub(1, composerMul(band, 0.25))) });
+ * ```
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const composerCameraPos = (): TComposerNode => newNode('input', 'vec3<f32>', [], { input: 'cameraPos' });
+
+/**
  * How much light reaches this point, and of what colour (`vec3`).
  *
  * It is handed over **on its own** so a graph can light things its own way, in hard bands or with

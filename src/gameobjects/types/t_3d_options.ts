@@ -28,6 +28,15 @@ export type TMeshSurfaceOptions = {
      */
     transparent?: boolean;
     /**
+     * How it lands on what is behind it. `'alpha'` (the default) covers it as far as its alpha says.
+     * `'additive'` adds its colour instead, so it can only brighten: a flash, a hologram, a shield,
+     * a beam of light, a magic circle. Its alpha says how much of it is added. An additive model is
+     * always drawn as see-through (after the solid ones, hiding nothing, whatever `transparent`
+     * says), casts no shadow, since light added blocks none, and fades into the fog by adding less
+     * rather than by turning the fog's colour.
+     */
+    blend?: 'alpha' | 'additive';
+    /**
      * The colour of its shine. Default none, which is a matt surface: a shine is the thing that
      * makes something read as wet, polished or metal, and everything else looks better without it.
      */

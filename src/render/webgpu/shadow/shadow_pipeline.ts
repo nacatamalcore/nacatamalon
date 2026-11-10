@@ -3,11 +3,13 @@ import { instancesOf } from '../../shared/mesh_instances';
 import { cullOf } from '../../shared/cull_of';
 import { SHADOW_DEPTH_BIAS, SHADOW_SLOPE_BIAS } from '../../shared/light_space';
 import { SHADOW_FORMAT } from './shadow_map';
+import { NO_EYE } from '../../shared/eye';
 import { SHADOW_CUT_INSTANCED_WGSL, SHADOW_CUT_SKINNED_WGSL, SHADOW_CUT_WGSL, SHADOW_INSTANCED_WGSL, SHADOW_SKINNED_WGSL, SHADOW_WGSL } from './shadow_shader';
 import { textureBindGroup } from '../mesh/draw_meshes';
 import { toGpuBuffer } from '../resources';
 import type { TDrawMaterial, TDrawMesh } from '../../interface';
 import type { TMeshPipeline } from '../mesh/types/t_mesh_pipeline';
+import type { TEye } from '../../shared/eye';
 
 /**
  * One caster's slot: the light's matrix and the model's, which is the smallest a card will take.
@@ -227,10 +229,10 @@ export const createShadowPipeline = (device: GPUDevice) => {
     });
     let groups: GPUBindGroup[] = [];
     let cutGroups: GPUBindGroup[] = [];
-    // One place for the 36 numbers a caster needs (the last four only read when it is cut out),
-    // written and sent one caster at a time. A frame with two hundred casters holds this and nothing
-    // else.
-    const slotData = new Float32Array(36);
+    // One place for the 40 numbers a caster needs (the last eight only read when it is cut out:
+    // how, and where the camera stands for a colour hook), written and sent one caster at a time. A
+    // frame with two hundred casters holds this and nothing else.
+    const slotData = new Float32Array(40);
     const jointGroups = new Map<string, { group: GPUBindGroup; buffer: GPUBuffer }>();
 
     const groupFor = (slot: number): GPUBindGroup => {
@@ -245,7 +247,7 @@ export const createShadowPipeline = (device: GPUDevice) => {
         cutGroups[slot] ??= device.createBindGroup({
             label: `shadow cut uniforms ${slot}`,
             layout: cutUniformsLayout,
-            entries: [{ binding: 0, resource: { buffer, offset: slot * SLOT, size: 144 } }],
+            entries: [{ binding: 0, resource: { buffer, offset: slot * SLOT, size: 160 } }],
         });
         return cutGroups[slot];
     };
@@ -278,7 +280,8 @@ export const createShadowPipeline = (device: GPUDevice) => {
          * A shape with nothing on the card is skipped rather than drawn as something else, exactly
          * as it is in the pass that lights the scene.
          *
-         * `time`, `width` and `height` are what a material's corner hook is told, as in that pass.
+         * `time`, `width` and `height` are what a material's corner hook is told, as in that pass, and
+         * `eye` where the camera stands, which its colour hook is told when it cuts.
          */
         draw: (
             pass: GPURenderPassEncoder,
@@ -290,6 +293,7 @@ export const createShadowPipeline = (device: GPUDevice) => {
             time = 0,
             width = 0,
             height = 0,
+            eye: TEye = NO_EYE,
         ): boolean => {
             const geometry = mesh.geometry;
             if (geometry === null || geometry.vertexBuffer === null || geometry.indexBuffer === null || geometry.indexCount === 0) {
@@ -309,6 +313,9 @@ export const createShadowPipeline = (device: GPUDevice) => {
             const surface = mesh.material;
             slotData[32] = surface.alphaCutoff ?? 0;
             slotData[33] = surface.alpha * surface.tint.a;
+            slotData[36] = eye.x;
+            slotData[37] = eye.y;
+            slotData[38] = eye.z;
             device.queue.writeBuffer(buffer, slot * SLOT, slotData);
 
             const bends = many === null && mesh.skeleton !== null && geometry.skinBuffer !== null;

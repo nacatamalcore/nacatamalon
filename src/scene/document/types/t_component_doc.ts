@@ -139,6 +139,11 @@ export type TMeshMaterialDoc = TMaterialDoc & {
      */
     transparent?: boolean;
     /**
+     * `'additive'` when it adds its colour rather than covering: a glow, a hologram, a beam. Written
+     * only then; `'alpha'`, covering, is the default and reads the same as leaving it out.
+     */
+    blend?: 'alpha' | 'additive';
+    /**
      * How it is lit, as the look is written down (`{ look: 'toon', bands: 2, ... }`). When a material
      * has looks, its `fragment` is left out: the looks are the recipe, and the shader they make is
      * made again when the scene is opened. Its knobs, as turned, are in `uniforms`.

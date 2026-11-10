@@ -4,7 +4,7 @@ import { buildUniformLayout, MAX_MATERIAL_FLOATS, writeUniformValues } from '../
 import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
 import { toGpuTexture } from '../texture';
-import { describeMeshPipeline, MESH_BONES, MESH_COLORS, MESH_CORNERS, MESH_DETAIL, MESH_INSTANCES } from '../mesh/pipeline_state';
+import { describeMeshPipeline, keepSeeThrough, MESH_BONES, MESH_COLORS, MESH_CORNERS, MESH_DETAIL, MESH_INSTANCES } from '../mesh/pipeline_state';
 import type { TDrawMaterial, TDrawShader } from '../../interface/draw/t_draw_material';
 import type { TMeshPipeline } from '../mesh/types/t_mesh_pipeline';
 import type { TUniformLayout } from '../../shared/material_uniforms';
@@ -183,15 +183,17 @@ export const createMeshMaterials = (
             : instanced ? [MESH_CORNERS, MESH_COLORS, MESH_DETAIL, MESH_INSTANCES] : [MESH_CORNERS, MESH_COLORS, MESH_DETAIL];
 
         // Compiled and checked apart from the frame, and only used once the card says both are good.
+        const glassDescriptor = describeMeshPipeline(`see-through ${kind} pipeline ${material.name ?? material.id}`, module, wiring, buffers, format, samples, false, cull);
         void Promise.all([
             device.createRenderPipelineAsync(describeMeshPipeline(`${kind} pipeline ${material.name ?? material.id}`, module, wiring, buffers, format, samples, true, cull)),
-            device.createRenderPipelineAsync(describeMeshPipeline(`see-through ${kind} pipeline ${material.name ?? material.id}`, module, wiring, buffers, format, samples, false, cull)),
+            device.createRenderPipelineAsync(glassDescriptor),
         ]).then(([solid, glass]) => {
             if (entry.failed) {
                 return;
             }
             entry.pipeline = solid;
-            entry.transparentPipeline = glass;
+            // Remembered, so a model that adds its colour can have its twin made from the same.
+            entry.transparentPipeline = keepSeeThrough(glass, glassDescriptor);
             entry.pending = false;
         }, (error: unknown) => failWithLines(module, error, fail));
 

@@ -3,7 +3,7 @@ export {
 } from './constructors';
 export {
     composerUv, composerTime, composerResolution, composerSurface, composerWorldNormal, composerWorldPos,
-    composerViewDir, composerLight, composerEmissive, composerShine, composerEnvUv, composerVertexPosition, composerVertexNormal, composerVertexColor,
+    composerViewDir, composerCameraPos, composerLight, composerEmissive, composerShine, composerEnvUv, composerVertexPosition, composerVertexNormal, composerVertexColor,
     composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent, composerInstanceData, composerInstanceOrigin, composerFrontFacing, composerCarry, composerOcclusion, composerLocalUv, composerLayerUv,
     composerTextureSample, composerMapSample, composerUniform,
 } from './inputs';

@@ -22,6 +22,7 @@ import { createShadowMap } from '../shadow/shadow_map';
 import { castsThroughHook, createShadowPipeline } from '../shadow/shadow_pipeline';
 import { computeModelMatrix } from '../../shared/compute_mvp_3d';
 import { findShadowSources, lightSpaceMatrix, reportCastersOutside, SPARE_SHADOW_FRAMES } from '../../shared/light_space';
+import { NO_EYE } from '../../shared/eye';
 import { cameraSpacesFor, fillCameraSpace, newCameraSpace } from '../../shared/compute_mvp_3d';
 import { cullingMatricesFor, meshInView } from '../../shared/mesh_in_view';
 import { drawMesh, reserveMeshSlots, writeMeshLights } from '../mesh/draw_meshes';
@@ -170,6 +171,8 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
             const map = gpu.shadows[s] ??= createShadowMap(gpu.device);
             const lightMatrix = lightMatrices[s]!;
             reportCastersOutside(source.casters, source.light, lightMatrix, gpu, source.camera, screen.width, screen.height);
+            // Where the camera stands, for a cut-out caster's colour hook, as the lit pass tells it.
+            const eye = source.camera?.transform ?? NO_EYE;
 
             const shadowPass = encoder.beginRenderPass({
                 label: 'shadow',
@@ -188,7 +191,7 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
                     continue;
                 }
                 const model = caster.worldMatrix ?? computeModelMatrix(caster.transform);
-                if (pipeline.draw(shadowPass, gpu.meshes, caster, lightMatrix, model, casterSlot, ctx.time, screen.width / screenRatio, screen.height / screenRatio)) {
+                if (pipeline.draw(shadowPass, gpu.meshes, caster, lightMatrix, model, casterSlot, ctx.time, screen.width / screenRatio, screen.height / screenRatio, eye)) {
                     casterSlot++;
                 }
             }

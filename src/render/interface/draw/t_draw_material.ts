@@ -89,6 +89,11 @@ export type TDrawMaterial = TDrawShader & {
      * Drawn as see-through whatever its alpha. Omitted, the alpha decides.
      */
     readonly transparent?: boolean;
+    /**
+     * Adds its colour rather than covering: drawn see-through whatever `transparent` says, and cast
+     * by nothing. Omitted, it covers.
+     */
+    readonly blend?: 'alpha' | 'additive';
     readonly smooth?: boolean;
     /**
      * What the picture does past its edge. Omitted, it repeats.

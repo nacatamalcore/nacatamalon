@@ -90,7 +90,9 @@ export const fillMeshUniforms = (out: Float32Array, at: number, mesh: TDrawMesh,
     const strength = occlusion?.strength ?? 1;
     out[at + 35] = occlusion === null || occlusion === undefined ? 0 : Number.isFinite(strength) ? Math.min(Math.max(strength, 0), 1) : 1;
     out[at + 39] = occlusion?.uv === 'uv2' ? 1 : 0;
-    out[at + 43] = 0;
+    // And the third whether it adds its colour, which the fog needs: one that adds fades into the fog
+    // by adding less, since adding the fog's colour would brighten it.
+    out[at + 43] = surface.blend === 'additive' ? 1 : 0;
     // Its fourth column is never read as a matrix (every shader turns a direction with it, w = 0),
     // so its last number carries whether the picture is stretched straight across the screen, the
     // PlayStation's swimming textures: one for `affine`, zero for held true to the surface.

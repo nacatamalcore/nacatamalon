@@ -10,7 +10,7 @@ export type { TShader, TParsedShader } from '../loaders/shader';
 export {
     compileShader, composerFloat, composerVec2, composerVec3, composerVec4, composerSwizzle, composerX,
     composerY, composerZ, composerW, composerUv, composerTime, composerResolution, composerSurface,
-    composerWorldNormal, composerWorldPos, composerViewDir, composerLight, composerEmissive,
+    composerWorldNormal, composerWorldPos, composerViewDir, composerCameraPos, composerLight, composerEmissive,
     composerShine, composerEnvUv, composerVertexPosition, composerVertexNormal, composerVertexColor,
     composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent,
     composerVertexBitangent, composerInstanceData, composerInstanceOrigin, composerFrontFacing, composerCarry, composerOcclusion, composerLocalUv,

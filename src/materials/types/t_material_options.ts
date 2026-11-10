@@ -25,7 +25,8 @@ export type TMaterialShaderOptions = {
      * The fragment hook, in WGSL.
      *
      * For a model, `fn effect(surface: vec4<f32>, ctx: FragContext) -> vec4<f32>`, where `ctx` has:
-     * `uv`; `normal`, `worldPos` and `viewDir` in the world; `light`, `shine` and `emissive`, the
+     * `uv`; `normal`, `worldPos` and `viewDir` in the world; `cameraPos`, where the camera stands
+     * in the world, so `distance(ctx.cameraPos, ctx.worldPos)` is how far away this is; `light`, `shine` and `emissive`, the
      * light reaching it already worked out; `color`, the colour painted on the corners; `screen`,
      * where it is on the screen in the game's pixels, `(0, 0)` at the top left; `tangent` and
      * `bitangent`, the way across and down the surface the picture runs, in the world; `uv2`, a
@@ -165,6 +166,15 @@ export type TMeshMaterialOptions = TMaterialShaderOptions & {
      * below `1`. A see-through model is drawn after the solid ones, furthest first, and hides nothing.
      */
     transparent?: boolean;
+    /**
+     * How it lands on what is behind it. `'alpha'` (the default) covers it as far as its alpha says.
+     * `'additive'` adds its colour instead, so it can only brighten: a flash, a hologram, a shield,
+     * a beam of light, a magic circle. Its alpha says how much of it is added. An additive model is
+     * always drawn as see-through (after the solid ones, hiding nothing, whatever `transparent`
+     * says), casts no shadow, since light added blocks none, and fades into the fog by adding less
+     * rather than by turning the fog's colour.
+     */
+    blend?: 'alpha' | 'additive';
     /**
      * Overrides the game's `smooth` for anything drawn with this.
      */

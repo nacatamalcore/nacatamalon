@@ -64,7 +64,7 @@ describe('what a vertex hook carries to the colour hook, on WebGPU', () => {
     it('takes the fog into the world position\'s fourth number to make its room', () => {
         const wgsl = buildMeshMaterialShader(EFFECT, HOOK, {}, [], false, 'none');
         expect(wgsl).toContain('out.worldPos = vec4<f32>(worldPos, fogAt(worldPos));');
-        expect(wgsl).toContain('mix(shaded.rgb, lights.fog.rgb, in.worldPos.w)');
+        expect(wgsl).toContain('mix(shaded.rgb, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), in.worldPos.w)');
         expect(placesOf(wgsl, 'VertexOutput').has('fog')).toBe(false);
     });
 

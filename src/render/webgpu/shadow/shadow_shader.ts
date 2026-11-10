@@ -95,7 +95,8 @@ fn vs(
 
 /**
  * Where a cut-out caster's corners are seen from, and how it is cut: the same two matrices, then
- * `cut` (x = the alpha below which a pixel is cut out, y = the material's own alpha times its tint's).
+ * `cut` (x = the alpha below which a pixel is cut out, y = the material's own alpha times its tint's),
+ * and `eye`, where the camera the model is drawn for stands, which a material's colour hook is told.
  * The same block in every cut-out shadow shader, a material's included.
  *
  * @internal
@@ -104,6 +105,7 @@ export const SHADOW_CUT_UNIFORMS_WGSL = /* wgsl */ `struct ShadowUniforms {
     lightViewProj: mat4x4<f32>,
     model: mat4x4<f32>,
     cut: vec4<f32>,
+    eye: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> shadow: ShadowUniforms;

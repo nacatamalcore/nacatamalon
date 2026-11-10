@@ -302,6 +302,7 @@ const buildModelMesh = (
             ...(surface.cull !== undefined ? { cull: surface.cull } : {}),
             ...(surface.alphaCutoff !== undefined ? { alphaCutoff: surface.alphaCutoff } : {}),
             ...(surface.transparent !== undefined ? { transparent: surface.transparent } : {}),
+            ...(surface.blend === 'additive' ? { blend: 'additive' as const } : {}),
             // The looks as written, which make the colour again: a document keeps the recipe, not the shader.
             ...(surface.lighting !== undefined ? { lighting: surface.lighting } : {}),
             ...(surface.steps !== undefined ? { steps: surface.steps } : {}),
@@ -575,6 +576,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                     ...(surface.cull !== undefined ? { cull: surface.cull } : {}),
                     ...(surface.alphaCutoff !== undefined ? { alphaCutoff: surface.alphaCutoff } : {}),
                     ...(surface.transparent !== undefined ? { transparent: surface.transparent } : {}),
+                    ...(surface.blend === 'additive' ? { blend: 'additive' as const } : {}),
                     // The looks as written, which make the colour again: a document keeps the recipe, not the shader.
                     ...(surface.lighting !== undefined ? { lighting: surface.lighting } : {}),
                     ...(surface.steps !== undefined ? { steps: surface.steps } : {}),

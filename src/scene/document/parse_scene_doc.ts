@@ -192,6 +192,8 @@ const parseMeshMaterial = (value: unknown): TMeshMaterialDoc => {
             : {}),
         // Either word, or left to its alpha.
         ...(typeof raw.transparent === 'boolean' ? { transparent: raw.transparent } : {}),
+        // Only the word that changes something; covering is the default.
+        ...(raw.blend === 'additive' ? { blend: 'additive' as const } : {}),
         ...parseLooks(raw.lighting, raw.steps),
     };
 };

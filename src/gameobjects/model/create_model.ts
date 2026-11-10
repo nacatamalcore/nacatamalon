@@ -110,6 +110,8 @@ const buildPart = (
                 // The file's word unless the game says otherwise. A piece the file does not call
                 // see-through is left to its alpha, rather than written down as solid.
                 transparent: options.transparent ?? (part.transparent ? true : undefined),
+                // The game's alone: a model file has no word for adding light.
+                blend: options.blend,
                 smooth: options.smooth,
                 // The game's word over the file's, the same as for see-through.
                 wrap: options.wrap ?? part.wrap,
