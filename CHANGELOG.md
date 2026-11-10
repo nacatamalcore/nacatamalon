@@ -83,6 +83,12 @@ releases are in [changelog/](./changelog/), one file each.
   than played) is still kept. What comes back is a copy, so changing it in place leaves the document
   as it was saved. Files written before have no `by`: their entries are kept as the object's own and
   are not handed to its behaviours, which start fresh, as they did before.
+- **`setSmooth` reaches the models too.** Changing it while the game runs changed sprites and
+  tilemaps and left every model with the filtering it had when the game started, on both renderers.
+  On WebGL2 a lost context then rebuilt them with the new one, so the same game looked different
+  before and after.
+- **A failed capture on WebGPU gives its buffer back.** The buffer that brings the pixels from the
+  graphics card was destroyed only when the capture worked; now it is destroyed either way.
 
 ## 0.7.0 — 2026-11-09
 

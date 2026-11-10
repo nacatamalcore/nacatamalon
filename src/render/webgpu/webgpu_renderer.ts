@@ -144,6 +144,7 @@ export const createWebGPURenderer = async (
         setSmooth: (smooth) => {
             gpu.sprites.defaultSmooth = smooth;
             gpu.tilemaps.defaultSmooth = smooth;
+            gpu.meshes.defaultSmooth = smooth;
         },
         destroy: () => {
             gpu.gpuPasses?.destroy();

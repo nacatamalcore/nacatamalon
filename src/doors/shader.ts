@@ -23,7 +23,7 @@ export {
     composerCelShade, parseShaderGraph, compileShaderGraph, toonLighting, unlitLighting, mangaDots, rim,
 } from '../shader_composer';
 export type {
-    TComposerNode, TComposerInput, TComposerStep, TInputKind, THelperDef, TShaderGraph, TCompiledShader,
+    TComposerNode, TComposerInput, TComposerSampleOptions, TComposerStep, TInputKind, THelperDef, TShaderGraph, TCompiledShader,
     TShaderGraphDoc, TGraphNodeDoc, TGraphEdgeDoc, TGraphCommentDoc, TParamValue, TGraphTarget, TLook,
     TToonLook, TUnlitLook, TMangaDotsLook, TRimLook,
 } from '../shader_composer';

@@ -134,6 +134,7 @@ export const createWebGL2Renderer = async (
         setSmooth: (smooth) => {
             state.sprites.defaultSmooth = smooth;
             state.tilemaps.defaultSmooth = smooth;
+            state.meshes.defaultSmooth = smooth;
         },
         destroy: () => {
             state.gpuPasses?.destroy();

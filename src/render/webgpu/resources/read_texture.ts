@@ -28,26 +28,29 @@ export const readWebGPUTexture = async (device: GPUDevice, texture: ITexture): P
         usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
     });
 
-    const encoder = device.createCommandEncoder();
-    encoder.copyTextureToBuffer({ texture: gpuTexture }, { buffer: staging, bytesPerRow, rowsPerImage: height }, [width, height]);
-    device.queue.submit([encoder.finish()]);
+    // A capture that fails half way (the device lost while it waits) still gives the buffer back.
+    try {
+        const encoder = device.createCommandEncoder();
+        encoder.copyTextureToBuffer({ texture: gpuTexture }, { buffer: staging, bytesPerRow, rowsPerImage: height }, [width, height]);
+        device.queue.submit([encoder.finish()]);
 
-    await staging.mapAsync(GPUMapMode.READ);
-    const padded = new Uint8Array(staging.getMappedRange());
+        await staging.mapAsync(GPUMapMode.READ);
+        const padded = new Uint8Array(staging.getMappedRange());
 
-    const data = new Uint8Array(width * height * 4);
-    for (let row = 0; row < height; row++) {
-        data.set(padded.subarray(row * bytesPerRow, row * bytesPerRow + width * 4), row * width * 4);
-    }
-    if (gpuTexture.format.startsWith('bgra')) {
-        for (let at = 0; at < data.length; at += 4) {
-            const blue = data[at];
-            data[at] = data[at + 2];
-            data[at + 2] = blue;
+        const data = new Uint8Array(width * height * 4);
+        for (let row = 0; row < height; row++) {
+            data.set(padded.subarray(row * bytesPerRow, row * bytesPerRow + width * 4), row * width * 4);
         }
+        if (gpuTexture.format.startsWith('bgra')) {
+            for (let at = 0; at < data.length; at += 4) {
+                const blue = data[at];
+                data[at] = data[at + 2];
+                data[at + 2] = blue;
+            }
+        }
+        return { width, height, data };
+    } finally {
+        // Destroying a mapped buffer unmaps it too, so this is the one call either way.
+        staging.destroy();
     }
-    staging.unmap();
-    staging.destroy();
-
-    return { width, height, data };
 };
