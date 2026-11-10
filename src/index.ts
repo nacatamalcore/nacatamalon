@@ -87,7 +87,7 @@ export type { TPhysicsLayer, TPhysicsLayerOptions } from './physics';
 export type {
     TPhysicsBody, TPhysicsBody2d, TPhysicsBody3d, TPhysicsBodyType,
     TPhysicsSurface, TPhysicsWorld, TPhysicsWorld2d, TPhysicsWorld3d, TCollider2d, TCollider3d,
-    TRetroBody2d, TRetroCollider2d, TRetroMaxSpeed, TRetroWorld2d,
+    TRetroBody2d, TRetroCollider2d, TRetroMaxSpeed, TRetroWorld2d, TRetroBounce, TRetroSides, TRetroBounds,
 } from './physics';
 // Reaching a named part of something, the turret of a tank or the wheels of a car, from a behaviour.
 export { findObject, findObjects, ownerOf, sceneOf } from './box';

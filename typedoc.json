@@ -1,6 +1,6 @@
 {
     "$schema": "https://typedoc.org/schema.json",
-    "entryPoints": ["src/index.ts", "src/doors/math.ts", "src/doors/pixels.ts", "src/doors/shader.ts", "src/doors/effects.ts", "src/doors/transitions.ts", "src/doors/files.ts", "src/authoring/index.ts", "src/extend/index.ts", "src/physics/box2d/index.ts", "src/physics/box3d/index.ts", "src/headless/index.ts"],
+    "entryPoints": ["src/index.ts", "src/doors/math.ts", "src/doors/pixels.ts", "src/doors/shader.ts", "src/doors/effects.ts", "src/doors/transitions.ts", "src/doors/files.ts", "src/authoring/index.ts", "src/extend/index.ts", "src/physics/box2d/index.ts", "src/physics/box3d/index.ts", "src/physics/retro2d/index.ts", "src/headless/index.ts"],
     "out": "docs/api",
     "name": "nacatamalon",
     "readme": "none",

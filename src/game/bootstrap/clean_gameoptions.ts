@@ -65,6 +65,7 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
     // A game that names no layers says them by number.
     const physicsLayers = cleanLayerNames(game_options.physicsLayers);
     const contextMenu = game_options.contextMenu ?? DEFAULT_GAME_OPTIONS.contextMenu!;
+    const debug = game_options.debug ?? DEFAULT_GAME_OPTIONS.debug!;
     // No screen effects is none.
     const post = game_options.post;
     const banner = game_options.banner ?? DEFAULT_GAME_OPTIONS.banner!;
@@ -94,6 +95,7 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
         actionsPersist,
         physicsLayers,
         contextMenu,
+        debug,
         post,
         banner,
         splash,

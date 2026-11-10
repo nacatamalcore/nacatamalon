@@ -272,6 +272,12 @@ export type TGameOptions = {
      */
     contextMenu?: boolean;
     /**
+     * Draws over the game what it is made of and does not show: colliders of every kind, hitboxes,
+     * the tiles that stop things, rays. `false` (default). Changed while it runs with
+     * `useGame().setDebugEnabled()`, which is how a key that shows it is written.
+     */
+    debug?: boolean;
+    /**
      * Names for the physics layers, in order: the first is layer 0. With them a body says
      * `layer: 'enemy'` and `collidesWith: ['world', 'player']` rather than numbers. Sixteen at most.
      */

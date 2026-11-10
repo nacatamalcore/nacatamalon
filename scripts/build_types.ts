@@ -53,6 +53,7 @@ const ENTRIES: Record<string, string> = {
     './speech': 'speech/index.d.ts',
     './physics2d': 'physics/box2d/index.d.ts',
     './physics3d': 'physics/box3d/index.d.ts',
+    './retro-physics2d': 'physics/retro2d/index.d.ts',
 };
 
 const fail = (message: string): never => {

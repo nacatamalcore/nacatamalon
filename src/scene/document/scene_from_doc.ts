@@ -709,7 +709,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
             break;
         }
         case 'retro-world-2d': {
-            useRetroWorld2d({ id: component.id, gravity: component.gravity });
+            useRetroWorld2d({ id: component.id, gravity: component.gravity, bounds: component.bounds, timeScale: component.timeScale });
             break;
         }
         case 'store': {

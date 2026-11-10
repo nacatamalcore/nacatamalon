@@ -6,6 +6,7 @@ import { createTileBody2d } from './tile_body_2d';
 import { stillColliders2d } from './still_colliders';
 import type { TCharacterBody2d, TCharacterShape2d } from './t_character_body_2d';
 import { outsideSceneBody } from '../../utils/outside_scene_body';
+import { getPhysicsProviders } from '../physics_provider';
 
 /**
  * Makes this object a platformer's character that walks on the scene's maps, with no physics engine:
@@ -61,6 +62,12 @@ export const useTileBody2d = (options: TCharacterShape2d): TCharacterBody2d => {
     }
     if (placementOf(box) === null) {
         throw new Error(`[NacatamalOn] useTileBody2d: '${box.name}' is nowhere: give it a placement, or something to draw, so the character has somewhere to be.`);
+    }
+    // In a scene something installed moves (a retro world), the character is one of its bodies, and
+    // pushes and is pushed by the rest.
+    for (const provider of getPhysicsProviders()) {
+        const made = provider.createCharacter2d?.(box, options);
+        if (made !== undefined) return made;
     }
     const character = createTileBody2d({
         box,

@@ -1,3 +1,4 @@
+import { debugMarks } from '../debug/debug_marks';
 import type { TBox } from './types/t_box';
 import type { TTransform2d } from '../gameobjects/types/t_transform_2d';
 
@@ -28,5 +29,7 @@ export const placementOf = (box: TBox): TTransform2d | null => {
         return box.transform;
     }
     const drawable = box.drawables[0];
-    return drawable === undefined ? null : drawable.transform;
+    // The debug mode's drawing is added last, so it is first only on an object that draws nothing
+    // else, which is nowhere.
+    return drawable === undefined || debugMarks.has(drawable) ? null : drawable.transform;
 };

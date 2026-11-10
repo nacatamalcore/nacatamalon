@@ -162,6 +162,28 @@ export type TGameHandle = {
     setContextMenu(open: boolean): void;
 
     /**
+     * Whether the game draws what it is made of over itself: `false` unless the game said
+     * `debug: true` or turned it on.
+     */
+    isDebugEnabled(): boolean;
+    /**
+     * Draws over every scene what it is made of and does not show, or stops: the colliders of each
+     * physics (a colour for each way a body moves), the hitboxes, the tiles that stop things, and
+     * what a physics adds of its own (the rays cast in the frame, the edges of a retro world). Drawn
+     * on top of everything, in the world, so it moves with the camera. Never written into a scene.
+     *
+     * @example
+     * ```ts
+     * const game = useGame();
+     * const keys = useKeyboard();
+     * useUpdate(() => {
+     *     if (keys.justPressed('F1')) game.setDebugEnabled(!game.isDebugEnabled());
+     * });
+     * ```
+     */
+    setDebugEnabled(enabled: boolean): void;
+
+    /**
      * Whether the screen effects run: `true` unless something turned them off.
      */
     isPostProcessEnabled(): boolean;

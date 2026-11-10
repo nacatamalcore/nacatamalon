@@ -36,6 +36,8 @@ export const DEFAULT_GAME_OPTIONS: TGameOptions = {
     actions: [],
     // The right button is the game's unless it says otherwise.
     contextMenu: false,
+    // Nothing drawn over the game unless it asks to see what it is made of.
+    debug: false,
     // The startup line is on unless the game says otherwise.
     banner: true,
     // The splash is off unless the game asks for it.

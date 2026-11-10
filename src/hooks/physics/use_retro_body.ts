@@ -22,7 +22,8 @@ export type TRetroBody2dOptions = {
     name?: string;
     body: TPhysicsBodyType;
     collider: TRetroCollider2d;
-} & Partial<Omit<TRetroBody2d, '_type' | 'id' | 'name' | 'body' | 'collider' | 'layer' | 'collidesWith'>> & TPhysicsLayerOptions;
+} & Partial<Omit<TRetroBody2d, '_type' | 'id' | 'name' | 'body' | 'collider' | 'layer' | 'collidesWith' | 'solidSides'>>
+    & { solidSides?: Partial<TRetroBody2d['solidSides']> } & TPhysicsLayerOptions;
 
 /** The names the game gave its physics layers, for a body that says its layers by name. */
 const layerNames = (): readonly string[] => getActiveGame()?.get('config').physicsLayers ?? [];
@@ -105,14 +106,15 @@ export const useRetroBody2d = (options: TRetroBody2dOptions): TRetroBody2d => {
  * };
  * ```
  *
- * @param options - How hard things fall (`gravity`), and an `id` to keep a document's.
+ * @param options - How hard things fall (`gravity`), where its edges are (`bounds`, the screen when
+ *   left out), how fast its time goes (`timeScale`), and an `id` to keep a document's.
  * @returns The world's settings as the scene keeps them.
  *
  * @category Physics
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const useRetroWorld2d = (options: { id?: string; gravity?: { x: number; y: number } } = {}): TRetroWorld2d => {
+export const useRetroWorld2d = (options: Partial<Omit<TRetroWorld2d, '_type'>> = {}): TRetroWorld2d => {
     const box = getActiveBox();
     if (box === null) {
         throw outsideSceneBody('useRetroWorld2d');
@@ -125,6 +127,8 @@ export const useRetroWorld2d = (options: { id?: string; gravity?: { x: number; y
         _type: 'retro-world-2d',
         id: options.id ?? nanoId(),
         gravity: options.gravity ?? { x: 0, y: 900 },
+        bounds: options.bounds === undefined || options.bounds === null ? null : { ...options.bounds },
+        timeScale: options.timeScale ?? 1,
     };
     box.physicsWorld = world;
 

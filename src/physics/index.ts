@@ -9,4 +9,4 @@ export type {
     TCollider2d, TCollider3d, TPhysicsBody, TPhysicsBody2d, TPhysicsBody3d, TPhysicsBodyType,
     TPhysicsSurface, TPhysicsWorld, TPhysicsWorld2d, TPhysicsWorld3d,
 } from './types/t_physics';
-export type { TRetroBody2d, TRetroCollider2d, TRetroMaxSpeed, TRetroWorld2d } from './types/t_retro_physics';
+export type { TRetroBody2d, TRetroCollider2d, TRetroMaxSpeed, TRetroWorld2d, TRetroBounce, TRetroSides, TRetroBounds } from './types/t_retro_physics';

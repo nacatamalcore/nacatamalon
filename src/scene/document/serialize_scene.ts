@@ -1,4 +1,5 @@
 import { dataOwnerOf } from '../../hooks/state/use_data';
+import { isDebugDrawable } from '../../debug/draw_debug';
 import { SCENE_FORMAT, SCENE_VERSION } from './types/t_scene_doc';
 import { builtinKeyOf, entryExtrasOf } from '../../post/install_post_chain';
 import type { TPostEffect } from '../../post/types/t_post_effect';
@@ -731,6 +732,8 @@ const writeLight = (light: TLight): TComponentDoc => {
  * state a scene can be in, and neither should make a whole level unwritable.
  */
 const writeDrawable = (drawable: TDrawable, writing: TWriting): TComponentDoc | null => {
+    // What the debug mode draws over a scene is no part of it.
+    if (isDebugDrawable(drawable)) return null;
     switch (drawable.type) {
         case 'sprite': return writeSprite(drawable, writing);
         case 'text': return writeText(drawable, writing);

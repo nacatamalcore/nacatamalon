@@ -552,14 +552,29 @@ const parseRetroCollider2d = (value: unknown): TRetroCollider2d | null => {
  * out. `maxSpeed` is `null` written down for no limit, and anything else not a pair of numbers is
  * read the same way.
  */
-const parseRetroSurface = (raw: Record<string, unknown>): Partial<Omit<TRetroBody2d, '_type' | 'id' | 'name' | 'body' | 'collider'>> => {
-    const max = asRecord(raw.maxSpeed);
+const parseRetroSurface = (raw: Record<string, unknown>): Partial<Omit<TRetroBody2d, '_type' | 'id' | 'name' | 'body' | 'collider' | 'solidSides'>> & { solidSides?: Partial<TRetroBody2d['solidSides']> } => {
+    // A number, or a pair for each axis.
+    const numberOrPair = (value: unknown): number | { x: number; y: number } | undefined => {
+        if (typeof value === 'number' && Number.isFinite(value)) return value;
+        const pair = asRecord(value);
+        return pair === null ? undefined : { x: asNumber(pair.x, 0), y: asNumber(pair.y, 0) };
+    };
+    const bounce = numberOrPair(raw.bounce);
+    const max = numberOrPair(raw.maxSpeed);
+    const sides = asRecord(raw.solidSides);
     return {
-        ...optionalNumber(raw, 'bounce'),
+        ...optionalBoolean(raw, 'enabled'),
+        ...(bounce !== undefined ? { bounce } : {}),
         ...optionalNumber(raw, 'drag'),
-        ...(max !== null ? { maxSpeed: { x: asNumber(max.x, 0), y: asNumber(max.y, 0) } } : {}),
+        ...(max !== undefined ? { maxSpeed: max } : {}),
         ...optionalNumber(raw, 'gravityScale'),
         ...optionalNumber(raw, 'mass'),
+        ...optionalBoolean(raw, 'pushable'),
+        ...(sides !== null
+            ? { solidSides: { ...optionalBoolean(sides, 'up'), ...optionalBoolean(sides, 'down'), ...optionalBoolean(sides, 'left'), ...optionalBoolean(sides, 'right') } }
+            : {}),
+        ...(raw.bounds !== undefined ? { bounds: asOneOf(raw.bounds, ['pass', 'stop', 'wrap'] as const, 'pass') } : {}),
+        ...optionalNumber(raw, 'carries'),
         ...optionalBoolean(raw, 'sensor'),
         ...optionalNumber(raw, 'layer'),
         ...optionalNumber(raw, 'collidesWith'),
@@ -956,10 +971,15 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
         }
         case 'retro-world-2d': {
             const gravity = asRecord(raw.gravity) ?? {};
+            const bounds = asRecord(raw.bounds);
             return {
                 type: 'retro-world-2d',
                 id,
                 gravity: { x: asNumber(gravity.x, 0), y: asNumber(gravity.y, 900) },
+                bounds: bounds === null
+                    ? null
+                    : { x: asNumber(bounds.x, 0), y: asNumber(bounds.y, 0), width: asNumber(bounds.width, 0), height: asNumber(bounds.height, 0) },
+                timeScale: asNumber(raw.timeScale, 1),
             };
         }
         case 'physics-world-2d': {

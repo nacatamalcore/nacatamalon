@@ -2,6 +2,8 @@ import type { TBox } from '../box';
 import { getActiveGame } from '../store/active_game';
 import { firstTimeIn } from '../utils/first_time_in';
 import type { TPhysicsBody, TPhysicsWorld } from './types/t_physics';
+import type { TCharacterBody2d, TCharacterShape2d } from './character/t_character_body_2d';
+import type { TDebugDraw } from '../debug/t_debug_draw';
 
 /**
  * What something has to supply for a scene's colliders to actually move.
@@ -42,6 +44,19 @@ export type TPhysicsProvider = {
      * nothing any more. Optional, like `watchContacts`.
      */
     hasBody?: (box: TBox) => boolean | undefined;
+    /**
+     * A platformer's character for `useTileBody2d` on `box`, when this provider moves the scene the
+     * object is in and has a character of its own, which then walks among its bodies as well as on
+     * the maps. `undefined` leaves it to the character that walks on the maps alone. Optional.
+     */
+    createCharacter2d?: (box: TBox, shape: TCharacterShape2d) => TCharacterBody2d | undefined;
+    /**
+     * Draws what this provider moves in `scene` for the debug mode (`useGame().setDebugEnabled`),
+     * once a frame while it is on. The engine already draws the colliders of the full simulation
+     * from what each object keeps, the hitboxes and the maps' tiles; this is for what only the
+     * provider knows. Optional.
+     */
+    drawDebug?: (scene: TBox, draw: TDebugDraw) => void;
 };
 
 /**

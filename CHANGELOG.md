@@ -102,6 +102,41 @@ releases are in [changelog/](./changelog/), one file each.
   numbers gives its `r, g, b`, and one with nothing else to go by is four. A file still keeps the
   numbers, whatever form the game used. Types `TUniformValue`, `TUniformPoint`, `TUniformPointValue`,
   `TUniformColorValue` and `TUniformNumbers` (the numbers a file keeps).
+- **Retro physics, `nacatamalon/retro-physics2d`.** A second 2D physics, for the games of the old
+  consoles: bodies that never turn (boxes square to the screen, balls), moved in pixels a fixed step
+  at a time and stopped axis by axis, nothing to load (5 KB gzip, no WebAssembly) and the same result
+  on every machine. `installRetroPhysics2d()` beside or instead of `installPhysics2d()`: a scene
+  declares `useRetroWorld2d` and its objects `useRetroBody2d` (`retro-world-2d` and `retro-body-2d`
+  in a scene file), and each scene is moved by the kind of world it declares.
+  - A body can change size at any moment (a new `collider`, or its object scaled): standing, it
+    keeps its feet where they were, so a hero that grows or shrinks stays on the floor.
+  - A body is `static`, `dynamic` or `kinematic`, a `rect` or a `circle`, with `bounce` (its own,
+    whole or by axis), `drag`, `maxSpeed` (whole or by axis), `gravityScale`, `mass` (how a push is
+    shared), `pushable`, `solidSides` (a platform solid only on top is jumped through from below),
+    `bounds` (what it does at the world's edges: `pass`, `stop`, `wrap`), `carries` (how much a
+    platform carries what stands on it), `enabled`, `sensor` and the layers. All of it is read every
+    step, so changing the record changes the body. The world has `gravity`, `bounds` and `timeScale`.
+  - `getRetroBody2d(object)` gives what drives it: what a body of the full physics offers, plus
+    `velocity`, `acceleration`, `speed`, `blocked` and `touching`/`wasTouching` by side, a picture
+    that turns (`angularVelocity`) while the collider does not, `onEnter`/`onExit` told with the side
+    and speed of the impact, `onTileEnter`/`onTileExit`, `onBounds`, `collidesIf`, `moveTowards`,
+    `accelerateTowards` and `setVelocityFromAngle`.
+  - Bodies collide with the scene's tilemaps: walls, ledges from above, slopes (a crate stands, a
+    ball rolls down), belts. Pushes pass along a row of up to eight bodies; past that the last ones
+    may stay a pixel into each other.
+  - Things land on what is driven and ride it; what is driven pushes everything in its way.
+  - `castRetroRay2d`, `findRetroBodies2d` and `isRetroAreaFree2d` ask the world about a line or a
+    part of it, bodies and tiles.
+  - `useTileBody2d` in a retro scene is one of its bodies: it pushes crates, rides lifts and is
+    pushed, and keeps everything it does on the maps alone. Anywhere else it is as it was.
+- **The debug mode.** `createGame({ debug: true })`, or `useGame().setDebugEnabled(true)` while the
+  game runs, draws over every scene what it is made of: each collider of either 2D physics and of the
+  3D one, in the colour of how it moves, the hitboxes, the tiles that stop things, and what a physics
+  adds (a retro world's rays of the frame, its edges, where each body is going). It is never written
+  into a scene.
+- **For a package that adds a physics.** `TPhysicsProvider` may offer `createCharacter2d` (the
+  character `useTileBody2d` gives in its scenes) and `drawDebug`, which draws its bodies with the
+  `TDebugDraw` it is handed, in `DEBUG_COLORS`, both from `nacatamalon/extend`.
 
 ### Fixed
 

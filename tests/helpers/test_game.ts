@@ -141,6 +141,7 @@ const TEST_CONFIG: TGameConfig = {
     actions: [],
     physicsLayers: [],
     contextMenu: false,
+    debug: false,
     banner: false,
     splash: false,
     step: 'display',

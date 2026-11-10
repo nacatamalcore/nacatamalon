@@ -13,5 +13,10 @@
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export { installRetroPhysics2d, retroPhysics2dProvider, getRetroBody2d } from './provider';
-export type { TRetroBodyHandle2d, TRetroBlocked } from './types';
+export {
+    installRetroPhysics2d, retroPhysics2dProvider, getRetroBody2d, castRetroRay2d, findRetroBodies2d, isRetroAreaFree2d,
+} from './provider';
+export type {
+    TRetroBodyHandle2d, TRetroBlocked, TRetroTouching, TRetroSide, TRetroContact2d, TRetroTileTouch2d, TRetroArea2d,
+    TRetroAreaOptions2d, TRetroTarget, TRetroRayHit2d, TRetroRayOptions2d,
+} from './types';

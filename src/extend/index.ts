@@ -25,6 +25,9 @@ export { requireEngine } from './require_engine';
 // Installing what simulates physics, and the shape of one. `null` uninstalls it.
 export { registerPhysicsProvider } from '../physics';
 export type { TPhysicsProvider } from '../physics';
+// What a provider draws its bodies with for the debug mode, in the colours every physics shares.
+export { DEBUG_COLORS } from '../debug/t_debug_draw';
+export type { TDebugDraw } from '../debug/t_debug_draw';
 
 // Which game is being built right now, and which of its objects: what an extension asks while a
 // scene is put together, so its own work belongs to the right one.

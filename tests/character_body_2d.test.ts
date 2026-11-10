@@ -18,6 +18,8 @@ import { destroy } from '../src/destroy/destroy';
 import { loadBox2D } from '../src/physics/box2d/load_box2d';
 import { useCharacterBody2d } from '../src/physics/box2d/use_character_body_2d';
 import { useTileBody2d } from '../src/physics/character/use_tile_body_2d';
+import { useRetroWorld2d } from '../src/hooks/physics';
+import { retroPhysics2dProvider } from '../src/physics/retro2d/provider';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { serveTilemap } from './helpers/test_tilemap';
 import type { TSprite } from '../src/gameobjects/sprite/types/t_sprite';
@@ -78,8 +80,10 @@ afterEach(() => {
  * one on the maps alone.
  */
 const KINDS = [
-    { name: 'useCharacterBody2d', make: useCharacterBody2d, physics: true },
-    { name: 'useTileBody2d', make: useTileBody2d, physics: false },
+    { name: 'useCharacterBody2d', make: useCharacterBody2d, physics: true, retro: false },
+    { name: 'useTileBody2d', make: useTileBody2d, physics: false, retro: false },
+    // The same character in a retro scene, where it is one of the retro world's bodies.
+    { name: 'useTileBody2d in a retro world', make: useTileBody2d, physics: false, retro: true },
 ];
 let body: (typeof KINDS)[number] = KINDS[0];
 
@@ -89,11 +93,13 @@ let body: (typeof KINDS)[number] = KINDS[0];
 const level = async (rows: string[], build: () => void) => {
     served = serveTilemap(docOf(rows));
     if (body.physics) registerPhysicsProvider(physics2dProvider);
+    if (body.retro) registerPhysicsProvider(retroPhysics2dProvider);
     const { store } = createTestGame({ step: 60 });
     const ctx = createFrameContext();
     let map!: TTilemap;
     registerScene(store, 'Level', () => {
         if (body.physics) usePhysicsWorld2d();
+        if (body.retro) useRetroWorld2d();
         map = createTilemap({ src: '/maps/level.tilemap' });
         build();
         return createScene();

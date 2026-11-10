@@ -1,7 +1,8 @@
 import { nameOfMap } from '../../gameobjects/tilemap/get_tilemap';
-import { tileInfoAt, tilemapPlacement } from '../../gameobjects/tilemap/tile_queries';
 import { worldPose2d, writeWorldPose2d } from '../box2d/world_pose';
 import { readCharacterTiles, tilesUnder } from './character_tiles';
+import { cellOf, eachCell, gridsOf as gridsOfMaps, slopeSurfaceAt } from './tile_cells';
+import type { TGrid } from './tile_cells';
 import type { TBlock } from './still_colliders';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
 import type { TTilemap } from '../../gameobjects/tilemap/types/t_tilemap';
@@ -20,50 +21,6 @@ const SNAP = 4;
  */
 const EPS = 0.01;
 const INSET = 0.5;
-
-/**
- * One map as the body reads it: where its cells are in the world, and how big.
- */
-type TGrid = { map: TTilemap; x: number; y: number; w: number; h: number };
-
-type TCell = { solid: boolean; oneWay: boolean; slope: [number, number] | undefined };
-
-/**
- * What a cell is, across every layer: a wall on any layer is a wall.
- */
-const cellOf = (map: TTilemap, column: number, row: number): TCell => {
-    const cell: TCell = { solid: false, oneWay: false, slope: undefined };
-    for (let layer = 0; layer < map.layers.length; layer++) {
-        const tile = tileInfoAt(map, layer, column, row);
-        if (tile === undefined) continue;
-        if (tile.solid === true) cell.solid = true;
-        if (tile.oneWay === true) cell.oneWay = true;
-        if (tile.slope !== undefined && cell.slope === undefined) cell.slope = tile.slope;
-    }
-    return cell;
-};
-
-/**
- * Calls `visit` for every cell of every map that a rectangle of the world overlaps, edges that only
- * meet left out.
- */
-const eachCell = (
-    grids: readonly TGrid[],
-    left: number, top: number, right: number, bottom: number,
-    visit: (grid: TGrid, column: number, row: number, cellLeft: number, cellTop: number) => void,
-): void => {
-    for (const grid of grids) {
-        const c0 = Math.max(0, Math.floor((left - grid.x) / grid.w));
-        const c1 = Math.min(grid.map.width - 1, Math.ceil((right - grid.x) / grid.w) - 1);
-        const r0 = Math.max(0, Math.floor((top - grid.y) / grid.h));
-        const r1 = Math.min(grid.map.height - 1, Math.ceil((bottom - grid.y) / grid.h) - 1);
-        for (let row = r0; row <= r1; row++) {
-            for (let column = c0; column <= c1; column++) {
-                visit(grid, column, row, grid.x + column * grid.w, grid.y + row * grid.h);
-            }
-        }
-    }
-};
 
 /**
  * Builds one character that walks on the maps, and on the still colliders laid out as objects: what
@@ -107,21 +64,12 @@ export const createTileBody2d = (deps: {
     let removed = false;
     let warnedTurned = false;
 
-    const gridsOf = (): TGrid[] => {
-        const grids: TGrid[] = [];
-        for (const map of deps.tilemaps()) {
-            const place = tilemapPlacement(map);
-            if (place.rotation !== 0) {
-                if (!warnedTurned) {
-                    warnedTurned = true;
-                    console.warn(`[NacatamalOn] useTileBody2d: ${nameOfMap(map)} is turned, so it is walked through: a map can be moved and scaled, not turned.`);
-                }
-                continue;
-            }
-            grids.push({ map, x: place.x, y: place.y, w: map.cell * Math.abs(place.scaleX), h: map.cell * Math.abs(place.scaleY) });
+    const gridsOf = (): TGrid[] => gridsOfMaps(deps.tilemaps(), (map) => {
+        if (!warnedTurned) {
+            warnedTurned = true;
+            console.warn(`[NacatamalOn] useTileBody2d: ${nameOfMap(map)} is turned, so it is walked through: a map can be moved and scaled, not turned.`);
         }
-        return grids;
-    };
+    });
 
     const isDropping = (top: number): boolean => dropping.some((at) => Math.abs(at - top) < EPS * 10);
 
@@ -136,8 +84,7 @@ export const createTileBody2d = (deps: {
         eachCell(grids, centre.x, feet - up, centre.x + EPS, feet + down + EPS, (grid, column, row, cellLeft, cellTop) => {
             const cell = cellOf(grid.map, column, row);
             if (cell.solid || cell.slope === undefined) return;
-            const along = Math.min(1, Math.max(0, (centre.x - cellLeft) / grid.w));
-            const y = cellTop + grid.h * (1 - (cell.slope[0] + (cell.slope[1] - cell.slope[0]) * along));
+            const y = slopeSurfaceAt(cell.slope, cellLeft, cellTop, grid.w, grid.h, centre.x);
             if (y >= feet - up - EPS && y <= feet + down + EPS && (slope === null || y < slope)) slope = y;
         });
         if (slope !== null) return { y: slope, kind: 'slope' };

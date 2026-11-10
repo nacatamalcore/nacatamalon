@@ -14,6 +14,7 @@ import { updateAudio } from "../../audio";
 import { settleCapture } from "../capture";
 import { reportFrameError } from "./report_frame_error";
 import { windowOf } from "../../DOM/window_of";
+import { updateDebug } from "../../debug/draw_debug";
 
 /**
  * Tick one frame of the game loop.
@@ -138,6 +139,10 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
     if (store.get('loop').destroyed) {
         return;
     }
+
+    // What the game is made of, drawn over it when it asks to see it, from where everything ended
+    // up this frame. Paused or not: a paused game is exactly when one looks.
+    updateDebug(store);
 
     // The listener and the sounds placed in the world follow what is on screen, paused or not:
     // moving them is not simulating anything. Returns at once in a game with no sound. The frame's

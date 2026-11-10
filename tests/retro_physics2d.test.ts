@@ -241,6 +241,144 @@ describe('retro bodies', () => {
     });
 });
 
+describe('retro bodies, what review found', () => {
+    it('move under a force asked for every frame', () => {
+        registerPhysicsProvider(retroPhysics2dProvider);
+        const game = make(() => {
+            useRetroWorld2d({ gravity: { x: 0, y: 0 } });
+            thing('Ship', 50, 90, 10, 10, { body: 'dynamic', mass: 2 });
+            return createScene();
+        });
+        const ship = body(game, 'Ship');
+        useHeld(game, () => ship.applyForce(120, 0));
+        game.run(60);
+        // 60 px/s² for a second.
+        expect(ship.velocity.x).toBeCloseTo(60, 6);
+        expect(place(game, 'Ship').x).toBeGreaterThan(70);
+    });
+
+    it('come out of what they were put a little inside by the shorter way', () => {
+        registerPhysicsProvider(retroPhysics2dProvider);
+        const game = make(() => {
+            useRetroWorld2d({ gravity: { x: 0, y: 900 } });
+            thing('Ground', 160, 170, 300, 20, { body: 'static' });
+            // Its bottom a pixel into the ground's top (160).
+            thing('Walker', 100, 151, 20, 20, { body: 'dynamic' });
+            return createScene();
+        });
+        useHeld(game, () => { body(game, 'Walker').velocity.x = 30; });
+        game.run(1);
+        expect(place(game, 'Walker').x).toBeGreaterThan(99);
+        expect(place(game, 'Walker').y).toBeCloseTo(150, 6);
+    });
+
+    it('stay on a lift the game raises by hand while they walk on it', () => {
+        registerPhysicsProvider(retroPhysics2dProvider);
+        const game = make(() => {
+            useRetroWorld2d({ gravity: { x: 0, y: 900 } });
+            thing('Lift', 160, 150, 100, 10, { body: 'kinematic' });
+            thing('Rider', 160, 140, 10, 10, { body: 'dynamic' });
+            return createScene();
+        });
+        game.run(30);
+        useHeld(game, () => {
+            place(game, 'Lift').y -= 1;
+            body(game, 'Rider').velocity.x = 20;
+        });
+        game.run(40);
+        expect(place(game, 'Rider').x).toBeLessThan(200);
+        expect(place(game, 'Rider').y).toBeCloseTo(place(game, 'Lift').y - 10, 0);
+    });
+
+    it('pushed by something driven push the crate beyond them, and none climbs on another', () => {
+        registerPhysicsProvider(retroPhysics2dProvider);
+        const game = make(() => {
+            useRetroWorld2d({ gravity: { x: 0, y: 900 } });
+            thing('Ground', 160, 170, 400, 20, { body: 'static' });
+            thing('Pusher', 60, 140, 20, 40, { body: 'kinematic' });
+            thing('C1', 80, 150, 20, 20, { body: 'dynamic' });
+            thing('C2', 100, 150, 20, 20, { body: 'dynamic' });
+            return createScene();
+        });
+        game.run(10);
+        body(game, 'Pusher').velocity.x = 40;
+        game.run(60);
+        expect(place(game, 'C1').y).toBeCloseTo(150, 3);
+        expect(place(game, 'C2').y).toBeCloseTo(150, 3);
+        expect(place(game, 'C2').x - place(game, 'C1').x).toBeGreaterThanOrEqual(20 - 1e-3);
+        expect(place(game, 'C1').x).toBeGreaterThan(110);
+    });
+
+    it('taken out by the game touch nothing any more, and a collision hears it end', () => {
+        registerPhysicsProvider(retroPhysics2dProvider);
+        const said: string[] = [];
+        const game = make(() => {
+            useRetroWorld2d({ gravity: { x: 0, y: 900 } });
+            useSpawn(function Ground() {
+                useTransform({ x: 160, y: 170 });
+                useRetroBody2d({ body: 'static', collider: { shape: 'rect', width: 300, height: 20 } });
+            }, { name: 'Ground', tags: ['floor'] })();
+            useSpawn(function Crate() {
+                useTransform({ x: 100, y: 140 });
+                useRetroBody2d({ body: 'dynamic', collider: { shape: 'rect', width: 20, height: 20 } });
+                useCollisionWith('floor', () => said.push('end'), { when: 'end' });
+            }, 'Crate')();
+            return createScene();
+        });
+        game.run(30);
+        const crate = game.find('Crate')!;
+        getRetroBody2d(crate)!.destroy();
+        game.run(2);
+        expect(getRetroBody2d(crate)).toBeNull();
+        expect(said).toEqual(['end']);
+    });
+
+    it('found deep in each other, push apart without throwing either through a wall', () => {
+        registerPhysicsProvider(retroPhysics2dProvider);
+        const game = make(() => {
+            useRetroWorld2d({ gravity: { x: 0, y: 0 } });
+            thing('Wall', 100, 120, 200, 4, { body: 'static' });
+            // The ship 18 pixels into the enemy, its bottom just above the wall's top (118).
+            thing('Ship', 50, 110, 14, 14, { body: 'dynamic' });
+            thing('Enemy', 50, 92, 16, 16, { body: 'dynamic', mass: 4 });
+            return createScene();
+        });
+        body(game, 'Enemy').velocity.y = 30;
+        game.run(10);
+        expect(place(game, 'Ship').y).toBeLessThanOrEqual(118 - 7 + 1e-6);
+        expect(place(game, 'Enemy').y).toBeLessThanOrEqual(place(game, 'Ship').y - 15 + 1e-3);
+    });
+
+    it('weighing nothing still stack', () => {
+        registerPhysicsProvider(retroPhysics2dProvider);
+        const game = make(() => {
+            useRetroWorld2d({ gravity: { x: 0, y: 900 } });
+            thing('Ground', 160, 170, 300, 20, { body: 'static' });
+            thing('Low', 100, 140, 20, 20, { body: 'dynamic', mass: 0 });
+            thing('High', 100, 110, 20, 20, { body: 'dynamic', mass: 0 });
+            return createScene();
+        });
+        game.run(120);
+        expect(place(game, 'Low').y).toBeCloseTo(150, 3);
+        expect(place(game, 'High').y).toBeCloseTo(130, 3);
+    });
+
+    it('do not step over a small post however wide they are', () => {
+        registerPhysicsProvider(retroPhysics2dProvider);
+        const game = make(() => {
+            useRetroWorld2d({ gravity: { x: 0, y: 0 } });
+            thing('Post', 200, 85, 4, 4, { body: 'static', round: true });
+            thing('Slab', 100, 90, 100, 20, { body: 'dynamic' });
+            return createScene();
+        });
+        useHeld(game, () => { body(game, 'Slab').velocity.x = 600; });
+        game.run(30);
+        // Its right edge stopped at the post's left side (198).
+        expect(place(game, 'Slab').x + 50).toBeLessThanOrEqual(198 + 1e-3);
+        expect(place(game, 'Slab').y).toBeCloseTo(90, 3);
+    });
+});
+
 describe('the retro half beside the full simulation', () => {
     it('each moves only its own scene, and neither takes the other one\'s bodies', async () => {
         registerPhysicsProvider(physics2dProvider);
@@ -331,10 +469,12 @@ describe('a scene with retro physics, written and read', () => {
         expect(doc.root.components[0]).toEqual({
             type: 'retro-body-2d', id: 'b1', name: 'Body', body: 'static',
             collider: { shape: 'rect', width: 10, height: 10 },
-            bounce: 0, drag: 0, maxSpeed: null, gravityScale: 1, mass: 1, sensor: false, layer: 0, collidesWith: ALL_LAYERS,
+            enabled: true, bounce: 0, drag: 0, maxSpeed: null, gravityScale: 1, mass: 1, pushable: true,
+            solidSides: { up: true, down: true, left: true, right: true }, bounds: 'pass', carries: 1,
+            sensor: false, layer: 0, collidesWith: ALL_LAYERS,
         });
         const world = parseSceneDoc(level({ type: 'retro-world-2d', id: 'w1' }), 'test');
-        expect(world.root.components[0]).toEqual({ type: 'retro-world-2d', id: 'w1', gravity: { x: 0, y: 900 } });
+        expect(world.root.components[0]).toEqual({ type: 'retro-world-2d', id: 'w1', gravity: { x: 0, y: 900 }, bounds: null, timeScale: 1 });
     });
 
     it('keeps a polygon it cannot make in the hole for what it cannot read', () => {

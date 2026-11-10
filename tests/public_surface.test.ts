@@ -45,6 +45,7 @@ const tools = valuesOf('../src/authoring/index.ts');
 const extend = valuesOf('../src/extend/index.ts');
 const physics2d = valuesOf('../src/physics/box2d/index.ts');
 const physics3d = valuesOf('../src/physics/box3d/index.ts');
+const retroPhysics2d = valuesOf('../src/physics/retro2d/index.ts');
 
 describe('the front door', () => {
     it('hands out nothing that only a tool calls', () => {
@@ -195,6 +196,8 @@ describe('the extension door', () => {
             // Where an object really is, flat and in space, and the way back to its parent.
             'placementOf', 'worldPlacementOf', 'localPositionFrom',
             'placement3dOf', 'worldPlacement3dOf', 'localPosition3dFrom', 'localQuaternionFrom',
+            // The colours a physics draws its bodies in for the debug mode, shared by every one.
+            'DEBUG_COLORS',
         ].sort());
     });
 
@@ -209,6 +212,7 @@ describe('the physics doors', () => {
         expect(physics3d.sort()).toEqual([
             'getPhysicsBody3d', 'getPhysicsWorld3d', 'installPhysics3d', 'loadPhysics3d', 'physics3dProvider', 'useCharacterBody3d', 'DEFAULT_RAY_DISTANCE',
         ].sort());
+        expect(retroPhysics2d.sort()).toEqual(['castRetroRay2d', 'findRetroBodies2d', 'getRetroBody2d', 'installRetroPhysics2d', 'isRetroAreaFree2d', 'retroPhysics2dProvider'].sort());
     });
 
     it('hand out nothing another door does, not even each other', () => {
@@ -218,11 +222,12 @@ describe('the physics doors', () => {
         const others = [...front, ...tools, ...extend];
         expect(physics2d.filter((name) => others.includes(name) || physics3d.includes(name))).toEqual([]);
         expect(physics3d.filter((name) => others.includes(name))).toEqual([]);
+        expect(retroPhysics2d.filter((name) => others.includes(name) || physics2d.includes(name) || physics3d.includes(name))).toEqual([]);
     });
 
     it('stay off the front door, which would make every game need a physics engine to compile', () => {
         const source = readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8');
-        expect(source).not.toMatch(/from '\.\/physics\/(box2d|box3d)/);
+        expect(source).not.toMatch(/from '\.\/physics\/(box2d|box3d|retro2d)/);
     });
 });
 

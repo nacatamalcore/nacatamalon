@@ -88,6 +88,9 @@ export const createGameHandle = (store: TRuntimeStore, box: TBox | null = null):
     hasContextMenu: () => store.get('config').contextMenu,
     setContextMenu: (open: boolean) => store.setState('config', { contextMenu: open }),
 
+    isDebugEnabled: () => store.get('config').debug,
+    setDebugEnabled: (enabled: boolean) => store.setState('config', { debug: enabled }),
+
     isPostProcessEnabled: () => store.get('post').enabled,
     setPostProcessEnabled: (enabled: boolean) => store.setState('post', { enabled }),
 
