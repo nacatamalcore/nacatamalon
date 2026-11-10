@@ -36,6 +36,19 @@ releases are in [changelog/](./changelog/), one file each.
   and give a height map `smooth: true`, or it rises in flat terraces.
   Until now a vertex hook that read a map did not compile, and the model drew with the built-in
   shader.
+- **Mipmaps.** `useLoadTexture({ src, mipmaps: true })` and `createPixelTexture(pixels, { mipmaps:
+  true })` give a picture smaller and smaller copies of itself, made on the graphics card, and a
+  model reads far away the copy its size on the screen asks for, so a floor, a road or a wall running
+  into the distance no longer shimmers or crawls. With `smooth: true` it blends between two copies.
+  `updatePixelTexture` works them out again. Only models read them; a picture without them is read
+  as before.
+- **Material readers that pick a mipmap.** In a model's colour hook `sampleTexture` and
+  `sampleMap_<name>` read a picture with mipmaps from the copy that suits how the model's `uv` runs
+  across the screen, inside an `if` too. `sampleTextureScaled(uv, scale)` and
+  `sampleMapScaled_<name>(uv, scale)` are for a place that runs faster (`ctx.uv * 8.0` is
+  `vec2(8.0)`), and `vec2(0.0)` reads the picture itself (a reflection's `envUv`). In the shader
+  composer, `composerTextureSample(uv, { scale })` and `composerMapSample(name, uv, { scale })`, and
+  a Scale on both nodes. Sprites, map layers and vertex hooks read the picture itself, as before.
 
 ### Fixed
 

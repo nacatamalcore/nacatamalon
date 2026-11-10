@@ -41,16 +41,21 @@ const emitExpr = (n: TComposerNode, refs: string[], stage: TStageCtx, target: TS
             return inputSource(n.input!, stage, target);
         case 'texture': {
             const map = n.params?.[0];
+            // Given a scale, the reader that picks a mipmap by it. Every material has both readers,
+            // and where nothing reads mipmaps the scaled one reads as the other does.
+            const scaled = refs.length > 1;
             if (typeof map !== 'string') {
                 if (stage === 'mesh3d.vert') {
                     throw new Error('[NacatamalOn] shader composer: textureSample is not available in a vertex graph. Give the material the picture as a map too, and read it with Map Sample.');
                 }
-                return `sampleTexture(${refs[0]})`;
+                // A node's own thumbnail reads the plain one: it has nothing to pick a mipmap from.
+                return scaled && stage !== 'preview.frag' ? `sampleTextureScaled(${refs[0]}, ${refs[1]})` : `sampleTexture(${refs[0]})`;
             }
+            const read = scaled ? `sampleMapScaled_${map}(${refs[0]}, ${refs[1]})` : `sampleMap_${map}(${refs[0]})`;
             // A model's corner hook reads its maps as its colour hook does: snow pressed down where
             // a picture of the footprints says.
             if (stage === 'mesh3d.vert') {
-                return `sampleMap_${map}(${refs[0]})`;
+                return read;
             }
             // A map belongs to the material. A node's own thumbnail has none, so it shows white,
             // which is what a map the material does not carry reads as anyway.
@@ -60,7 +65,7 @@ const emitExpr = (n: TComposerNode, refs: string[], stage: TStageCtx, target: TS
             if (stage !== 'mesh3d.frag' && stage !== 'sprite2d.frag') {
                 throw new Error(`[NacatamalOn] shader composer: the map '${map}' can only be read in a colour graph or a model's vertex graph.`);
             }
-            return `sampleMap_${map}(${refs[0]})`;
+            return read;
         }
         case 'construct':
             return `${target.type(n.type)}(${refs.join(', ')})`;

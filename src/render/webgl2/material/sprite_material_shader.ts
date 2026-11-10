@@ -14,6 +14,11 @@ vec4 sampleTexture(vec2 uv) {
     return textureLod(spriteTexture, uv, 0.0);
 }
 
+// A model's reader, here for a hook written for one: a sprite never reads a mipmap.
+vec4 sampleTextureScaled(vec2 uv, vec2 scale) {
+    return sampleTexture(uv);
+}
+
 in vec2 vAcross;
 
 vec2 localUv() {

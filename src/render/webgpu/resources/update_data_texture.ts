@@ -1,11 +1,13 @@
-import { toGpuTexture } from '../texture';
+import { generateWebGPUMipmaps, toGpuTexture } from '../texture';
 import type { ITexture, TTextureRegion } from '../../interface';
 
 /**
  * Sends a rectangle of a picture's bytes to the texture made from it.
  *
  * The bytes are the whole picture and the copy starts at the rectangle's first byte, a full picture
- * row apart, so nothing is copied out on this side first.
+ * row apart, so nothing is copied out on this side first. A texture with mipmaps has its whole
+ * chain worked out again afterwards, however little changed: each copy is an average of all of the
+ * picture under it.
  *
  * @internal
  * @since 1.0.0
@@ -28,4 +30,5 @@ export const updateWebGPUDataTexture = (
         { offset: (region.y * width + region.x) * 4, bytesPerRow: width * 4, rowsPerImage: height },
         [region.width, region.height],
     );
+    generateWebGPUMipmaps(device, toGpuTexture(texture));
 };

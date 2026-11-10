@@ -13,7 +13,8 @@ import type { TTextureWrap } from '../../../materials';
  * its units, so a sampler it declared and never read must not be there to see what was left on them.
  *
  * Not turned over, like a model's: a map is a picture loaded or painted, stored top row first, so it
- * is already the way up its `uv` is.
+ * is already the way up its `uv` is. `sampleMapScaled_<name>` is there for a hook written for a
+ * model, and reads the picture itself like the other: what is flat never reads a mipmap.
  *
  * @internal
  * @since 1.0.0
@@ -22,7 +23,8 @@ import type { TTextureWrap } from '../../../materials';
 export const flatMapsGlsl = (names: readonly string[]): string => {
     const slots = names.slice(0, MAX_MATERIAL_MAPS).map((_, i) => `uniform sampler2D flatMap${i};`).join('\n');
     const readers = names.map((name, i) =>
-        `vec4 sampleMap_${name}(vec2 uv) {\n    return textureLod(flatMap${i}, uv, 0.0);\n}`).join('\n');
+        `vec4 sampleMap_${name}(vec2 uv) {\n    return textureLod(flatMap${i}, uv, 0.0);\n}\n` +
+        `vec4 sampleMapScaled_${name}(vec2 uv, vec2 scale) {\n    return sampleMap_${name}(uv);\n}`).join('\n');
     return `${slots}\n${readers}`;
 };
 

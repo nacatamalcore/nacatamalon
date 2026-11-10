@@ -31,7 +31,7 @@ export { compileShaderGraph, inferGraphTypes, compileNodePreviews } from './comp
 // it from `./preview_harness` directly.
 
 export type {
-    TComposerNode, TComposerInput, TComposerStep, TInputKind, THelperDef,
+    TComposerNode, TComposerInput, TComposerSampleOptions, TComposerStep, TInputKind, THelperDef,
 } from './types/t_composer_node';
 export type { TShaderGraph, TCompiledShader } from './types/t_shader_graph';
 export type {

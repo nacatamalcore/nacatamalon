@@ -431,6 +431,12 @@ export const createGlGuard = (gl: WebGL2RenderingContext): TGlGuard => {
                 gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             }
             gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, null);
+            // Nor are its samplers, which a pass that reads a texture by its own settings would
+            // otherwise read through: a model's read mipmaps, and a texture without them is
+            // incomplete to them, black. Set back with everything else.
+            for (let unit = 0; unit < units; unit++) {
+                if (samplers[unit] !== null) gl.bindSampler(unit, null);
+            }
             if (!inPass && (drawFramebuffer !== null || readFramebuffer !== null)) {
                 screenDraw = gl.getParameter(gl.DRAW_BUFFER0);
                 screenRead = gl.getParameter(gl.READ_BUFFER);

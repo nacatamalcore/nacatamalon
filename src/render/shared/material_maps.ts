@@ -25,7 +25,7 @@ export const MAP_NAME = /^[a-z][A-Za-z0-9]*$/;
 
 /**
  * The maps a shader reads, in the order it first reads them: that order is which slot each one is
- * given.
+ * given. Read by either of its readers, `sampleMap_<name>` or `sampleMapScaled_<name>`.
  *
  * Read from the code itself rather than declared, so a hand-written file, a graph and a hook typed
  * at the call site all work the same with nothing new to write, and the shader's text alone decides
@@ -41,7 +41,7 @@ export const mapNamesOf = (...sources: readonly (string | null | undefined)[]): 
         if (source === null || source === undefined) {
             continue;
         }
-        for (const found of source.matchAll(/\bsampleMap_([a-z][A-Za-z0-9]*)\s*\(/g)) {
+        for (const found of source.matchAll(/\bsampleMap(?:Scaled)?_([a-z][A-Za-z0-9]*)\s*\(/g)) {
             const name = found[1]!;
             if (!names.includes(name)) {
                 names.push(name);

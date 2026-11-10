@@ -72,7 +72,7 @@ import type { TScene } from '../types/t_scene';
 export const loadAssets = (assets: readonly TAssetEntry[], src: string): void => {
     for (const asset of assets) {
         switch (asset.type) {
-            case 'texture': useLoadTexture({ src: asset.src, key: asset.key }); break;
+            case 'texture': useLoadTexture({ src: asset.src, key: asset.key, mipmaps: asset.mipmaps === true }); break;
             case 'atlas': useLoadAtlas({ src: asset.src, key: asset.key }); break;
             case 'shader': useLoadShader({ src: asset.src, key: asset.key }); break;
             case 'particles': useLoadParticles({ src: asset.src, key: asset.key }); break;

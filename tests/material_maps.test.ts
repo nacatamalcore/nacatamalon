@@ -77,10 +77,10 @@ describe('the maps a shader reads', () => {
         expect(wgsl.match(/var mapTexture\d: texture_2d<f32>;/g)).toHaveLength(MAX_MATERIAL_MAPS);
         expect(glsl.match(/uniform sampler2D meshMap\d;/g)).toHaveLength(MAX_MATERIAL_MAPS);
         // Slot by order of first reading: noise is 0, env is 1.
-        expect(wgsl).toContain('fn sampleMap_noise(uv: vec2<f32>) -> vec4<f32> {\n    return textureSampleLevel(mapTexture0, mapSampler0, uv, 0.0);');
-        expect(wgsl).toContain('fn sampleMap_env(uv: vec2<f32>) -> vec4<f32> {\n    return textureSampleLevel(mapTexture1, mapSampler1, uv, 0.0);');
-        expect(glsl).toContain('vec4 sampleMap_noise(vec2 uv) {\n    return textureLod(meshMap0, uv, 0.0);');
-        expect(glsl).toContain('vec4 sampleMap_env(vec2 uv) {\n    return textureLod(meshMap1, uv, 0.0);');
+        expect(wgsl).toContain('fn sampleMap_noise(uv: vec2<f32>) -> vec4<f32> {\n    return textureSampleGrad(mapTexture0, mapSampler0, uv, meshUvDx, meshUvDy);');
+        expect(wgsl).toContain('fn sampleMap_env(uv: vec2<f32>) -> vec4<f32> {\n    return textureSampleGrad(mapTexture1, mapSampler1, uv, meshUvDx, meshUvDy);');
+        expect(glsl).toContain('vec4 sampleMap_noise(vec2 uv) {\n    return textureGrad(meshMap0, uv, meshUvDx, meshUvDy);');
+        expect(glsl).toContain('vec4 sampleMap_env(vec2 uv) {\n    return textureGrad(meshMap1, uv, meshUvDx, meshUvDy);');
         expect(wgsl).toContain('fn envUv(ctx: FragContext) -> vec2<f32>');
         expect(glsl).toContain('vec2 envUv(FragContext ctx)');
     });

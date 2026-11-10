@@ -137,11 +137,38 @@ ${cull === 'none' ? '' : `    @location(5) viewDir: vec3<f32>,
 `;
 
 /**
- * Reading the picture, in a form a hook may call from inside a branch.
+ * How fast the model's own picture coordinate changes from one pixel on the screen to the next,
+ * across and down: what picks which of a picture's mipmaps to read. Measured once at the start of
+ * the colour stage (see `MEASURE_UV`), where every pixel is still running, and read by every
+ * reader after, so a hook may call them from inside a branch, which the reads that measure for
+ * themselves cannot be. Zero in the corner stage, which has no neighbours on the screen to measure
+ * by: there the readers read the picture itself.
+ */
+const UV_STEPS = /* wgsl */ `
+var<private> meshUvDx: vec2<f32>;
+var<private> meshUvDy: vec2<f32>;
+`;
+
+/**
+ * Measures the picture coordinate's steps, before anything can branch.
+ */
+const MEASURE_UV = (uv: string): string => `
+    meshUvDx = dpdx(${uv});
+    meshUvDy = dpdy(${uv});`;
+
+/**
+ * Reading the picture, in a form a hook may call from inside a branch. A picture with mipmaps is
+ * read from the copy the model's own picture coordinate asks for; `sampleTextureScaled` is for a
+ * place that runs faster than it (`uv * 4.0` runs four times as fast, so `vec2(4.0)`), and `0.0`
+ * reads the picture itself, for a place that does not follow the surface at all.
  */
 const SAMPLE = /* wgsl */ `
 fn sampleTexture(uv: vec2<f32>) -> vec4<f32> {
-    return textureSampleLevel(meshTexture, meshSampler, uv, 0.0);
+    return textureSampleGrad(meshTexture, meshSampler, uv, meshUvDx, meshUvDy);
+}
+
+fn sampleTextureScaled(uv: vec2<f32>, scale: vec2<f32>) -> vec4<f32> {
+    return textureSampleGrad(meshTexture, meshSampler, uv, meshUvDx * scale, meshUvDy * scale);
 }
 `;
 
@@ -154,14 +181,20 @@ fn sampleTexture(uv: vec2<f32>) -> vec4<f32> {
  * in, which the caller works out once and binds by.
  *
  * `envUv` is where a reflection of the world lands on a round picture of its surroundings: the chrome
- * of the era, read as `sampleMap_env(envUv(ctx))`.
+ * of the era, read as `sampleMap_env(envUv(ctx))`. It does not follow the surface, so a picture there
+ * with mipmaps is read as `sampleMapScaled_env(envUv(ctx), vec2(0.0))`, the picture itself.
+ *
+ * Each name has two readers: `sampleMap_<name>(uv)`, which picks a picture's mipmap by how the
+ * model's own picture coordinate runs, and `sampleMapScaled_<name>(uv, scale)` for a place that runs
+ * `scale` times as fast (see `SAMPLE`).
  */
 const maps = (names: readonly string[]): string => {
     const slots = Array.from({ length: MAX_MATERIAL_MAPS }, (_, i) =>
         `@group(${MESH_MATERIAL_GROUP}) @binding(${1 + i * 2}) var mapSampler${i}: sampler;\n` +
         `@group(${MESH_MATERIAL_GROUP}) @binding(${2 + i * 2}) var mapTexture${i}: texture_2d<f32>;`).join('\n');
     const readers = names.map((name, i) =>
-        `fn sampleMap_${name}(uv: vec2<f32>) -> vec4<f32> {\n    return textureSampleLevel(mapTexture${i}, mapSampler${i}, uv, 0.0);\n}`).join('\n');
+        `fn sampleMap_${name}(uv: vec2<f32>) -> vec4<f32> {\n    return textureSampleGrad(mapTexture${i}, mapSampler${i}, uv, meshUvDx, meshUvDy);\n}\n` +
+        `fn sampleMapScaled_${name}(uv: vec2<f32>, scale: vec2<f32>) -> vec4<f32> {\n    return textureSampleGrad(mapTexture${i}, mapSampler${i}, uv, meshUvDx * scale, meshUvDy * scale);\n}`).join('\n');
     return `${slots}
 
 fn envUv(ctx: FragContext) -> vec2<f32> {
@@ -336,7 +369,7 @@ fn fs(in: VertexOutput, @builtin(front_facing) front: bool) -> @location(0) vec4
     // Divided here, once: a shader of your own receives the picture already stretched when the
     // material is affine, and the corrected one when it is not (see affineUv).
     let uv = in.uv.xy / in.uv.z;
-    let uv2 = vec2<f32>(in.normal.w, in.screen.w) / in.uv.z;
+    let uv2 = vec2<f32>(in.normal.w, in.screen.w) / in.uv.z;${MEASURE_UV('uv')}
     // Laid out by the coordinate the material says, which rides beside its amount (see
     // fill_mesh_uniforms.ts).
     let occlusion = occlusionAt(select(uv, uv2, uniforms.normalMatrix[1].w > 0.5));
@@ -351,7 +384,7 @@ fn fs(in: VertexOutput, @builtin(front_facing) front: bool) -> @location(0) vec4
     ctx.light = lit;
     ctx.shine = litWithShadow(${lit}.shine, ${lit}.casterShine, coord);
     // The glow through its picture, so a shader of your own adds it the way the built-in one does.
-    ctx.emissive = uniforms.emissive.rgb * textureSampleLevel(meshEmissive, meshSampler, uv, 0.0).rgb;
+    ctx.emissive = uniforms.emissive.rgb * textureSampleGrad(meshEmissive, meshSampler, uv, meshUvDx, meshUvDy).rgb;
     ctx.viewDir = ${cull === 'none' ? 'viewDirOf(in.worldPos.xyz)' : 'in.viewDir'};
     ctx.color = in.color;
     ctx.screen = screenOf(in.screen.xyz);
@@ -415,6 +448,7 @@ export const buildMeshMaterialShader = (
         FRAG_CONTEXT,
         vertexOutput(cull),
         ...(cull === 'none' ? [FACED_LIGHT] : []),
+        UV_STEPS,
         SAMPLE,
         maps(mapNames),
         vertex ?? DEFAULT_VERTEX,
@@ -474,6 +508,7 @@ export const buildMeshMaterialShadowShader = (
         VERT_CONTEXT,
         // Declared because the map readers bring a helper that names it; filled only when cut.
         FRAG_CONTEXT,
+        UV_STEPS,
         cut === null ? '' : SAMPLE,
         cut === null ? '' : FACING_TURN,
         maps(mapNames),
@@ -517,7 +552,7 @@ fn vs(${cornerInputs(skinned)}) -> CutOutput {${CORNER_CONTEXT}${vertex === null
 }
 
 @fragment
-fn fs(in: CutOutput, @builtin(front_facing) front: bool) {
+fn fs(in: CutOutput, @builtin(front_facing) front: bool) {${MEASURE_UV('in.uv')}
     var ctx: FragContext;
     ctx.uv = in.uv;
     ctx.normal = select(-in.normal, in.normal, front);

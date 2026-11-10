@@ -32,8 +32,12 @@ export type IRenderer = {
      * The image passes to the renderer: whoever hands it over must not close it. A backend that
      * only needs the upload closes it straight away; one that can lose its textures (WebGL2, when
      * the browser takes the context) keeps it to upload it again.
+     *
+     * With `mipmaps`, the texture also gets its chain of smaller copies, each half the one before,
+     * worked out from the image. A model's surface far away reads the copy its size on the screen
+     * asks for, so it does not shimmer. Sprites, map layers and particles never read them.
      */
-    createTexture(image: ImageBitmap): ITexture;
+    createTexture(image: ImageBitmap, mipmaps?: boolean): ITexture;
     /**
      * Changes how textures are read from now on, for everything that has not chosen for itself.
      *
@@ -71,8 +75,10 @@ export type IRenderer = {
      * colours somebody typed, and turning it into a PNG in memory just to decode it again would be
      * silly. Throws when the bytes do not match the size, because reading past them would show
      * colours that look plausible and are wrong.
+     *
+     * `mipmaps` as in `createTexture`. `updateDataTexture` works the chain out again.
      */
-    createDataTexture(data: Uint8Array, width: number, height: number): ITexture;
+    createDataTexture(data: Uint8Array, width: number, height: number, mipmaps?: boolean): ITexture;
     /**
      * Uploads again what is in `data` to a texture `createDataTexture` made, all of it or only the
      * rectangle `region`. `data` is the whole picture, `width * height * 4` bytes laid out as it was

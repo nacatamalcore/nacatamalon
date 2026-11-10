@@ -135,8 +135,9 @@ describe('the two model material shaders', () => {
         // picture in both.
         expect(MESH_SHADER_FRAGMENT).toContain('color.rgb + shine + glow');
         expect(MESH_SHADER_FRAGMENT).toContain('uniforms.emissive.rgb * textureSample(meshEmissive');
-        expect(wgsl).toContain('ctx.emissive = uniforms.emissive.rgb * textureSampleLevel(meshEmissive');
-        expect(glsl).toContain('ctx.emissive = uniforms.emissive.rgb * textureLod(meshEmissive');
+        // Read from the mipmap the built-in ending's own read would pick, as every reader is.
+        expect(wgsl).toContain('ctx.emissive = uniforms.emissive.rgb * textureSampleGrad(meshEmissive, meshSampler, uv, meshUvDx, meshUvDy)');
+        expect(glsl).toContain('ctx.emissive = uniforms.emissive.rgb * textureGrad(meshEmissive, uv, meshUvDx, meshUvDy)');
     });
 
     it('only measures the surface again when a corner hook actually moved it', () => {

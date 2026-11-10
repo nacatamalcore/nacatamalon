@@ -68,7 +68,7 @@ describe('the maps a material reads', () => {
 describe('a corner hook that reads a map, in WGSL', () => {
     it('has its reader in the one module both stages share', () => {
         const wgsl = buildMeshMaterialShader(null, PRESS, SIG, ['height']);
-        expect(wgsl).toContain('fn sampleMap_height(uv: vec2<f32>) -> vec4<f32> {\n    return textureSampleLevel(mapTexture0, mapSampler0, uv, 0.0);');
+        expect(wgsl).toContain('fn sampleMap_height(uv: vec2<f32>) -> vec4<f32> {\n    return textureSampleGrad(mapTexture0, mapSampler0, uv, meshUvDx, meshUvDy);');
         // Declared before the hook that calls it.
         expect(wgsl.indexOf('fn sampleMap_height')).toBeLessThan(wgsl.indexOf('fn vertex('));
     });
@@ -114,11 +114,11 @@ describe('a corner hook that reads a map, in WGSL', () => {
 
         const entry = materials.get(drawShader({ vertex: PRESS, fragment: TINT }));
         expect(entry.mapNames).toEqual(['tint', 'height']);
-        expect(modules[0]).toContain('fn sampleMap_height(uv: vec2<f32>) -> vec4<f32> {\n    return textureSampleLevel(mapTexture1, mapSampler1, uv, 0.0);');
+        expect(modules[0]).toContain('fn sampleMap_height(uv: vec2<f32>) -> vec4<f32> {\n    return textureSampleGrad(mapTexture1, mapSampler1, uv, meshUvDx, meshUvDy);');
 
         materials.shadow(drawShader({ vertex: PRESS, fragment: TINT }));
         // The shadow reads the same map from the same slot as the model.
-        expect(modules[1]).toContain('fn sampleMap_height(uv: vec2<f32>) -> vec4<f32> {\n    return textureSampleLevel(mapTexture1, mapSampler1, uv, 0.0);');
+        expect(modules[1]).toContain('fn sampleMap_height(uv: vec2<f32>) -> vec4<f32> {\n    return textureSampleGrad(mapTexture1, mapSampler1, uv, meshUvDx, meshUvDy);');
     });
 });
 
@@ -130,7 +130,7 @@ describe('a corner hook that reads a map, in GLSL', () => {
         expect(vertex.indexOf('vec4 sampleMap_height')).toBeLessThan(vertex.indexOf('vec3 vertex('));
         expect(vertex).not.toContain('envUv');
         // The colour half keeps its readers and envUv, by the same names on the same samplers.
-        expect(fragment).toContain('vec4 sampleMap_height(vec2 uv) {\n    return textureLod(meshMap1, uv, 0.0);');
+        expect(fragment).toContain('vec4 sampleMap_height(vec2 uv) {\n    return textureGrad(meshMap1, uv, meshUvDx, meshUvDy);');
         expect(fragment).toContain('vec2 envUv(FragContext ctx)');
     });
 
@@ -151,7 +151,7 @@ describe('a corner hook that reads a map, in GLSL', () => {
         const cut = buildMeshMaterialShadowShaderGlsl(PRESS_GLSL, SIG, ['tint', 'height'], false, { fragment: TINT_GLSL });
         expect(cut.vertex).toContain('vec4 sampleMap_height(vec2 uv) {\n    return textureLod(meshMap1, uv, 0.0);');
         expect(cut.vertex).not.toContain('envUv');
-        expect(cut.fragment).toContain('vec4 sampleMap_tint(vec2 uv) {\n    return textureLod(meshMap0, uv, 0.0);');
+        expect(cut.fragment).toContain('vec4 sampleMap_tint(vec2 uv) {\n    return textureGrad(meshMap0, uv, meshUvDx, meshUvDy);');
     });
 
     it('gives a map only the corner hook reads a unit, in the model and in a shadow that does not cut', () => {

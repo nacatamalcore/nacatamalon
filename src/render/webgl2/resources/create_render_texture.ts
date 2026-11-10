@@ -18,6 +18,7 @@ export const createWebGL2RenderTexture = (gl: WebGL2RenderingContext, width: num
         resourceType: 'texture',
         source: { kind: 'render', ...size },
         glTexture: uploadPixels(gl, null, size.width, size.height),
+        mipmaps: false,
     };
     return texture;
 };

@@ -6,7 +6,7 @@ import type { TPostChainEntry } from '../../post/types/t_post_chain';
 import { isEffectFromCode } from '../../loaders/particles/file_from_effect';
 import { isBuiltinFont } from '../../gameobjects/text/default_font';
 import { UNSUPPORTED_COMPONENTS } from './parse_scene_doc';
-import { DEFAULT_FONT_ATLAS_SIZE, isMadeTexture } from '../../loaders';
+import { DEFAULT_FONT_ATLAS_SIZE, isMadeTexture, isMipmapped } from '../../loaders';
 import type { TFog } from '../../fog/types/t_fog';
 import type { TTexture } from '../../loaders';
 import type { TColor } from '../../color';
@@ -150,10 +150,13 @@ const writeMaterial = (material: TMaterial, writing: TWriting): TMaterialDoc => 
  * into by a component (written by its own object) or one painted in code (which the game makes again
  * before loading the document). Neither has a file to fetch. Listed, the scene would try to load it
  * from nowhere when opened, and take its name before the picture is made.
+ *
+ * One loaded with mipmaps says so: the manifest is loaded before anything else, so a script asking
+ * for it with mipmaps would otherwise be handed the one the scene loaded without.
  */
 const listTexture = (texture: TTexture, writing: TWriting): void => {
     if (!isMadeTexture(texture)) {
-        writing.assets.set(texture.key, { type: 'texture', key: texture.key, src: texture.src });
+        writing.assets.set(texture.key, { type: 'texture', key: texture.key, src: texture.src, ...(isMipmapped(texture) ? { mipmaps: true as const } : {}) });
     }
 };
 

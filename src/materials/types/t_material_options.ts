@@ -103,7 +103,8 @@ export type TMeshMaterialOptions = TMaterialShaderOptions & {
      */
     shader: 'mesh3d';
     /**
-     * A picture for the surface, from `useLoadTexture`.
+     * A picture for the surface, from `useLoadTexture`. One loaded with `mipmaps: true` is read far
+     * away from a smaller copy of itself, so a floor running into the distance does not shimmer.
      */
     texture?: TTexture;
     /**
@@ -164,6 +165,15 @@ export type TMeshMaterialOptions = TMaterialShaderOptions & {
      * Extra pictures for the shader to read by name, up to four, each a texture or a texture with its
      * own `wrap` and `smooth`. In the shader, `sampleMap_<name>(uv)` reads the one under that name,
      * in the fragment hook and in the vertex hook alike (see `vertex`).
+     *
+     * A picture made with mipmaps (`useLoadTexture({ mipmaps: true })`) is read in the fragment hook
+     * from the copy its size on the screen asks for, judged by how the model's own `ctx.uv` runs
+     * across the screen, inside a branch too. Read at a place that runs faster, say how much faster
+     * with `sampleMapScaled_<name>(uv, scale)`: `sampleMapScaled_detail(ctx.uv * 8.0, vec2(8.0))`.
+     * Otherwise a picture repeated eight times is read eight times too sharp far away and shimmers.
+     * A scale of `vec2(0.0)` reads the picture itself, for a place that does not follow the surface
+     * (`envUv(ctx)`). `sampleTexture` and `sampleTextureScaled` do the same for `texture`. The vertex
+     * hook always reads the picture itself.
      *
      * @example
      * ```ts

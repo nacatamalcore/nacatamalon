@@ -16,7 +16,7 @@ import { composerCelShade, composerFresnel } from './effects';
 import type { TUniformType } from '../materials/types/t_uniforms';
 import type { TComposerNode } from './types/t_composer_node';
 import type { TGraphTarget, TParamValue } from './types/t_shader_graph_doc';
-import type { TInputPort, TNodeCategory, TNodeDef, TOutputPort, TPortDefault } from './types/t_node_def';
+import type { TInputPort, TNodeCategory, TNodeDef, TOutputPort, TParamDef, TPortDefault } from './types/t_node_def';
 
 // The node catalogue: one entry per kind of node, and the only place a kind of node is described.
 // Two readers depend on it and must never disagree: `compile_shader_graph.ts`, which calls
@@ -69,6 +69,17 @@ const OUT: TOutputPort[] = [{ name: 'value', label: 'Out' }];
 const num = (params: Record<string, TParamValue>, name: string, fallback: number): number => {
     const raw = params[name];
     return typeof raw === 'number' && Number.isFinite(raw) ? raw : fallback;
+};
+
+/**
+ * A read's scale, which picks the mipmap a picture is read from: the plain read at `1`, which is
+ * what a graph saved before it had one reads as.
+ */
+const SCALE_PARAM: TParamDef = { name: 'scale', label: 'Scale', kind: 'number', default: 1, step: 0.5 };
+
+const scaleOf = (params: Record<string, TParamValue>): { scale: number } | undefined => {
+    const scale = num(params, 'scale', 1);
+    return scale === 1 ? undefined : { scale };
 };
 
 /**
@@ -211,23 +222,23 @@ const DEFS: TNodeDef[] = [
         type: 'textureSample',
         label: 'Texture Sample',
         category: 'input',
-        summary: 'Samples the material\'s texture at any coordinate: the basis for warps, blurs and splits.',
+        summary: 'Samples the material\'s texture at any coordinate: the basis for warps, blurs and splits. Scale: how many times as fast the coordinate runs as UV (8 for UV × 8), so a texture with mipmaps does not shimmer far away; 0 for one that does not follow the surface.',
         inputs: [port('uv', V2, () => composerUv())],
         outputs: OUT,
-        params: [],
+        params: [SCALE_PARAM],
         outputType: V4,
-        build: (i) => composerTextureSample(i.uv),
+        build: (i, p) => composerTextureSample(i.uv, scaleOf(p)),
     },
     {
         type: 'mapSample',
         label: 'Map Sample',
         category: 'input',
-        summary: 'Samples one of the material\'s extra maps by name: a reflection, a mask, a detail, a ripple. In a model\'s vertex graph it moves the corners by a picture: read it there at a place worked out from Vertex Position, not at UV.',
+        summary: 'Samples one of the material\'s extra maps by name: a reflection, a mask, a detail, a ripple. In a model\'s vertex graph it moves the corners by a picture: read it there at a place worked out from Vertex Position, not at UV. Scale: how many times as fast the coordinate runs as UV (8 for UV × 8), so a map with mipmaps does not shimmer far away; 0 for one that does not follow the surface, like Env UV.',
         inputs: [port('uv', V2, () => composerUv())],
         outputs: OUT,
-        params: [{ name: 'name', label: 'Map', kind: 'text', default: 'noise' }],
+        params: [{ name: 'name', label: 'Map', kind: 'text', default: 'noise' }, SCALE_PARAM],
         outputType: V4,
-        build: (i, p) => composerMapSample(text(p, 'name', 'noise'), i.uv),
+        build: (i, p) => composerMapSample(text(p, 'name', 'noise'), i.uv, scaleOf(p)),
     },
     {
         type: 'uniform',

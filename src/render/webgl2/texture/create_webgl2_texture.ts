@@ -26,32 +26,63 @@ export type TWebGL2Texture = ITexture & {
      * `null` while the context is lost, until the restore uploads it again.
      */
     glTexture: WebGLTexture | null;
+    /**
+     * Whether it has its chain of mipmaps, worked out again on every upload and every restore.
+     */
+    readonly mipmaps: boolean;
 };
 
 /**
- * Uploads a decoded image as an RGBA8 texture.
+ * What every upload ends with: the filtering and wrapping a texture falls back on, and its mipmaps.
  *
- * Nothing is flipped and nothing is premultiplied, so row 0 of the image is `v = 0` and the alpha
- * stays straight, like `copyExternalImageToTexture` in the WebGPU backend. Both are set on every
- * upload because they are global state, and anything else could have changed them.
- *
- * The filtering and wrapping set here are only a fallback: the sampler bound when drawing wins.
- * They are set anyway so the texture is complete (the default minification expects mipmaps).
+ * The filtering and wrapping are only a fallback: the sampler bound when drawing wins. The levels
+ * are not. A model's samplers read mipmaps (see `createMeshPipeline`), and a texture with only its
+ * first picture would be incomplete to them, read as black, unless it says that picture is its
+ * last level: so one without mipmaps ends at level 0, and one with them has them worked out.
+ */
+const finishTexture = (gl: WebGL2RenderingContext, mipmaps: boolean): void => {
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    if (mipmaps) {
+        gl.generateMipmap(gl.TEXTURE_2D);
+    } else {
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, 0);
+    }
+};
+
+/**
+ * Works a texture's chain of mipmaps out again after its first picture changed. Each is an average
+ * of all of the picture under it, so the whole chain, however little changed.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const uploadTexture = (gl: WebGL2RenderingContext, image: TexImageSource): WebGLTexture => {
+export const regenerateMipmaps = (gl: WebGL2RenderingContext, glTexture: WebGLTexture): void => {
+    gl.bindTexture(gl.TEXTURE_2D, glTexture);
+    gl.generateMipmap(gl.TEXTURE_2D);
+};
+
+/**
+ * Uploads a decoded image as an RGBA8 texture, with its chain of mipmaps when asked.
+ *
+ * Nothing is flipped and nothing is premultiplied, so row 0 of the image is `v = 0` and the alpha
+ * stays straight, like `copyExternalImageToTexture` in the WebGPU backend. Both are set on every
+ * upload because they are global state, and anything else could have changed them.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const uploadTexture = (gl: WebGL2RenderingContext, image: TexImageSource, mipmaps = false): WebGLTexture => {
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, image);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    finishTexture(gl, mipmaps);
     return texture;
 };
 
@@ -71,7 +102,7 @@ export const toGlTexture = (texture: ITexture): WebGLTexture | null => (texture 
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const uploadPixels = (gl: WebGL2RenderingContext, data: Uint8Array | null, width: number, height: number): WebGLTexture => {
+export const uploadPixels = (gl: WebGL2RenderingContext, data: Uint8Array | null, width: number, height: number, mipmaps = false): WebGLTexture => {
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     // Rows of any width, not only multiples of four: a three pixel wide palette would otherwise be
@@ -80,10 +111,7 @@ export const uploadPixels = (gl: WebGL2RenderingContext, data: Uint8Array | null
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    finishTexture(gl, mipmaps);
     return texture;
 };
 
@@ -96,10 +124,10 @@ export const uploadPixels = (gl: WebGL2RenderingContext, data: Uint8Array | null
  */
 export const restoreTexture = (gl: WebGL2RenderingContext, texture: TWebGL2Texture): WebGLTexture => {
     if (texture.source.kind === 'image') {
-        return uploadTexture(gl, texture.source.image);
+        return uploadTexture(gl, texture.source.image, texture.mipmaps);
     }
     if (texture.source.kind === 'data') {
-        return uploadPixels(gl, texture.source.data, texture.source.width, texture.source.height);
+        return uploadPixels(gl, texture.source.data, texture.source.width, texture.source.height, texture.mipmaps);
     }
     // Drawn into, so there is nothing to bring back: it comes back empty and whatever filled it
     // fills it again on the next frame.

@@ -2,6 +2,7 @@ export { loadTexture } from './texture/load_texture';
 export { newTexture } from './texture/new_texture';
 export { uploadTexture } from './texture/upload_texture';
 export { markMadeTexture, isMadeTexture } from './texture/made_texture';
+export { markMipmapped, isMipmapped } from './texture/mipmapped_texture';
 export { isAway } from './texture/is_away';
 export { releaseAsset } from './release_asset';
 export { loadGltf } from './gltf/load_gltf';

@@ -14,7 +14,7 @@ import type { TWebGL2Texture } from '../texture';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const createWebGL2DataTexture = (gl: WebGL2RenderingContext, data: Uint8Array, width: number, height: number): ITexture => {
+export const createWebGL2DataTexture = (gl: WebGL2RenderingContext, data: Uint8Array, width: number, height: number, mipmaps = false): ITexture => {
     const expected = width * height * 4;
     if (data.length !== expected) {
         throw new Error(`[NacatamalOn] createDataTexture: ${width} by ${height} needs ${expected} bytes and ${data.length} were given.`);
@@ -23,7 +23,8 @@ export const createWebGL2DataTexture = (gl: WebGL2RenderingContext, data: Uint8A
     const texture: TWebGL2Texture = {
         resourceType: 'texture',
         source: { kind: 'data', data, width, height },
-        glTexture: uploadPixels(gl, data, width, height),
+        glTexture: uploadPixels(gl, data, width, height, mipmaps),
+        mipmaps,
     };
     return texture;
 };

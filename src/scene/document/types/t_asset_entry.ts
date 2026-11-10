@@ -25,7 +25,11 @@ export type { TGeometrySource };
  */
 export type TAssetEntry =
     | { type: 'geometry'; key: string; source: TGeometrySource }
-    | { type: 'texture'; key: string; src: string }
+    /**
+     * An image. `mipmaps` when it was loaded with them (`useLoadTexture({ mipmaps: true })`), so the
+     * scene loads it the same way; left out when it was not.
+     */
+    | { type: 'texture'; key: string; src: string; mipmaps?: true }
     /**
      * A bitmap font, which is **two** files and not one: the metrics and the sheet. Two fields
      * rather than one guessed from the other, because the loader takes both and guessing which

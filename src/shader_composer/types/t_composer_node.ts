@@ -115,6 +115,25 @@ export type TComposerNode = {
 export type TComposerInput = TComposerNode | number;
 
 /**
+ * How `composerTextureSample` and `composerMapSample` read a picture that has mipmaps.
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TComposerSampleOptions = {
+    /**
+     * How many times as fast the place read runs as the model's own picture coordinate: `8` for
+     * `uv * 8`, `[4, 2]` for one that runs faster across than down, or a value worked out in the
+     * graph (a parameter, say). It picks the mipmap that place asks for; without it a picture
+     * repeated eight times is read eight times too sharp far away, and shimmers. `0` reads the picture
+     * itself, for a place that does not follow the surface (`composerEnvUv()`). Only a model's colour
+     * graph reads mipmaps; anywhere else it changes nothing. Left out, `1`.
+     */
+    scale?: TComposerInput | readonly [number, number];
+};
+
+/**
  * One stage of `composerPipe`: it takes the value flowing through and returns the next.
  *
  * Every one-operand function already is one, and the two-operand ones become one when given a

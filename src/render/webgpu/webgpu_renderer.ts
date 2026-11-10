@@ -74,8 +74,10 @@ export const createWebGPURenderer = async (
     // Both are made at boot rather than on demand: a sampler is cheap, and a sprite asking for
     // the other one mid-game must not have to build anything in the middle of a frame.
     const samplers = {
-        nearest: device.createSampler({ label: 'nearest', magFilter: 'nearest', minFilter: 'nearest' }),
-        linear: device.createSampler({ label: 'linear', magFilter: 'linear', minFilter: 'linear' }),
+        // Only ever the picture itself, never one of its mipmaps: sprites, map layers and particles
+        // are drawn at the size they are, and the WebGL2 backend reads them the same way.
+        nearest: device.createSampler({ label: 'nearest', magFilter: 'nearest', minFilter: 'nearest', lodMaxClamp: 0 }),
+        linear: device.createSampler({ label: 'linear', magFilter: 'linear', minFilter: 'linear', lodMaxClamp: 0 }),
     };
     const defaultSmooth = options.smooth === true;
 
@@ -124,11 +126,11 @@ export const createWebGPURenderer = async (
             }
         },
         deviceLost,
-        createTexture: (image) => createWebGPUTexture(device, image),
+        createTexture: (image, mipmaps) => createWebGPUTexture(device, image, mipmaps),
         createBuffer: (data, usage) => createWebGPUBuffer(device, data, usage),
         updateBuffer: (buffer, data) => updateWebGPUBuffer(device, buffer, data),
         destroyBuffer: (buffer) => { toGpuBuffer(buffer).destroy(); },
-        createDataTexture: (data, width, height) => createWebGPUDataTexture(device, data, width, height),
+        createDataTexture: (data, width, height, mipmaps) => createWebGPUDataTexture(device, data, width, height, mipmaps),
         updateDataTexture: (texture, data, width, height, region) =>
             updateWebGPUDataTexture(device, texture, data, width, height, region),
         createRenderTexture: (width, height) => createWebGPURenderTexture(device, format, width, height),

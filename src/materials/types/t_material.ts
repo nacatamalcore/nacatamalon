@@ -114,7 +114,9 @@ export type TCullMode = 'back' | 'front' | 'none';
  * with: a reflection, a mask, a fine detail, a ripple.
  *
  * The shader reads it by name, `sampleMap_<name>(uv)`, with the same wrap and filtering choices the
- * main picture has.
+ * main picture has. A picture with mipmaps is read by a model's colour hook from the copy its size
+ * on the screen asks for; `sampleMapScaled_<name>(uv, scale)` reads it at a place that runs `scale`
+ * times as fast as the model's picture coordinate (see `TMaterialOptions.maps`).
  *
  * @category Materials
  * @since 1.0.0

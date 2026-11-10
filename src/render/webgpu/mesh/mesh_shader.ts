@@ -110,10 +110,11 @@ ${LIGHTS_WGSL}
 // How open a place is to the light from all around: 1 wide open, 0 shut in, from the occlusion
 // picture's red and how much of it the material asks for. The amount rides in a spare number of the
 // turning matrix (see fill_mesh_uniforms.ts), and a model with none has zero there, so whatever its
-// white picture says it is wide open. At level 0, as every picture here is: a material calls this
-// before its hook and the hook may branch.
+// white picture says it is wide open. Read from the mipmap its size on the screen asks for, as the
+// colour picture is: only ever called where every pixel is still running, at the top of the built-in
+// ending and of a material's before its hook, so the read that measures for itself is allowed.
 fn occlusionAt(uv: vec2<f32>) -> f32 {
-    return 1.0 + uniforms.normalMatrix[0].w * (textureSampleLevel(meshOcclusion, occlusionSampler, uv, 0.0).r - 1.0);
+    return 1.0 + uniforms.normalMatrix[0].w * (textureSample(meshOcclusion, occlusionSampler, uv).r - 1.0);
 }
 
 // The way from a point towards whoever is looking, which the shine and the fresnel need. An

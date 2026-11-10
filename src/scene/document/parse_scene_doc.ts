@@ -1164,7 +1164,10 @@ const parseAsset = (value: unknown): TAssetEntry | null => {
     if (raw.type === 'bitmap-font') {
         return { type: 'bitmap-font', key, json: asString(raw.json, ''), atlas: asString(raw.atlas, '') };
     }
-    if (raw.type === 'texture' || raw.type === 'atlas' || raw.type === 'shader' || raw.type === 'particles' || raw.type === 'tilemap' || raw.type === 'audio' || raw.type === 'song' || raw.type === 'motion') {
+    if (raw.type === 'texture') {
+        return { type: 'texture', key, src: asString(raw.src, key), ...(raw.mipmaps === true ? { mipmaps: true as const } : {}) };
+    }
+    if (raw.type === 'atlas' || raw.type === 'shader' || raw.type === 'particles' || raw.type === 'tilemap' || raw.type === 'audio' || raw.type === 'song' || raw.type === 'motion') {
         // `src` defaults to the key, because for most of these they are the same string and a file
         // that only said it once meant both.
         return { type: raw.type, key, src: asString(raw.src, key) };

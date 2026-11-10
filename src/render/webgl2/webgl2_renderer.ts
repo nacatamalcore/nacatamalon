@@ -78,13 +78,14 @@ export const createWebGL2Renderer = async (
             msaa: state.samples,
         },
         frame: (ctx) => renderFrame(state, ctx),
-        createTexture: (image) => {
+        createTexture: (image, mipmaps = false) => {
             // The image stays with the handle: it is what a restore uploads again. A texture made
             // while the context is lost is uploaded by that restore, like every other.
             const texture: TWebGL2Texture = {
                 resourceType: 'texture',
                 source: { kind: 'image', image },
-                glTexture: state.lost ? null : uploadTexture(gl, image),
+                glTexture: state.lost ? null : uploadTexture(gl, image, mipmaps),
+                mipmaps,
             };
             state.textures.add(texture);
             return texture;
@@ -109,8 +110,8 @@ export const createWebGL2Renderer = async (
             }
             gl.deleteBuffer(toGlBuffer(buffer));
         },
-        createDataTexture: (data, width, height) => {
-            const texture = createWebGL2DataTexture(gl, data, width, height) as TWebGL2Texture;
+        createDataTexture: (data, width, height, mipmaps) => {
+            const texture = createWebGL2DataTexture(gl, data, width, height, mipmaps) as TWebGL2Texture;
             state.textures.add(texture);
             return texture;
         },

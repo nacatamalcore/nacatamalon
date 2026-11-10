@@ -508,9 +508,9 @@ uniform sampler2D meshOcclusion;
 ${MESH_SHADOW_GLSL}
 // How open a place is to the light from all around, 1 wide open to 0 shut in. The twin of
 // occlusionAt in webgpu/mesh/mesh_shader.ts: the amount rides in a spare number of the turning
-// matrix, zero for a model with none.
+// matrix, zero for a model with none. From the mipmap its size on the screen asks for, as its twin.
 float occlusionAt(vec2 uv) {
-    return 1.0 + uniforms.normalMatrix[0].w * (textureLod(meshOcclusion, uv, 0.0).r - 1.0);
+    return 1.0 + uniforms.normalMatrix[0].w * (texture(meshOcclusion, uv).r - 1.0);
 }
 `;
 

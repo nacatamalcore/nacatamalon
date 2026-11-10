@@ -2,7 +2,19 @@ import { MAP_NAME } from '../render/shared/material_maps';
 import { newNode } from './new_node';
 import { valueType } from './value_type';
 import { MATERIAL_RULES } from '../materials/derive_signature';
-import type { TComposerNode } from './types/t_composer_node';
+import { composerVec2 } from './constructors';
+import type { TComposerNode, TComposerSampleOptions } from './types/t_composer_node';
+
+/**
+ * A read's place and, when it was given one, its scale as a `vec2`: what a read's node depends on.
+ */
+const sampleDeps = (coord: TComposerNode, options: TComposerSampleOptions | undefined): TComposerNode[] => {
+    const scale = options?.scale;
+    if (scale === undefined) {
+        return [coord];
+    }
+    return [coord, Array.isArray(scale) ? composerVec2(scale[0], scale[1]) : composerVec2(scale as TComposerNode | number)];
+};
 
 /**
  * The texture coordinate (`vec2`). There in every stage; in a model's vertex graph it is the
@@ -206,14 +218,25 @@ export const composerLayerUv = (): TComposerNode => newNode('input', 'vec2<f32>'
  * Reads the material's own picture, tinted, at any coordinate (`vec4`). What waves, pixelation, a
  * colour split or a blur are made of: `composerSurface()` is this read at the fragment's own
  * coordinate. Colour stage only.
+ *
+ * A picture with mipmaps on a model is read from the copy its size on the screen asks for, judged
+ * by how the model's own picture coordinate runs. Read at one that runs faster (`uv * 4`), say so
+ * with `scale`.
  * @param coord - Where to read the picture, in `0`-`1`.
+ * @param options - `scale`, for a place that runs faster than the model's picture coordinate.
  * @returns The node, to use as the input of another.
+ *
+ * @example
+ * ```ts
+ * const tiled = composerTextureSample(composerMul(composerUv(), 4), { scale: 4 });
+ * ```
  *
  * @category Shader composer
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const composerTextureSample = (coord: TComposerNode): TComposerNode => newNode('texture', 'vec4<f32>', [coord]);
+export const composerTextureSample = (coord: TComposerNode, options?: TComposerSampleOptions): TComposerNode =>
+    newNode('texture', 'vec4<f32>', sampleDeps(coord, options));
 
 /**
  * Reads one of the material's extra maps by name, at any coordinate (`vec4`): a reflection, a mask, a
@@ -223,19 +246,29 @@ export const composerTextureSample = (coord: TComposerNode): TComposerNode => ne
  * from `composerVertexPosition()` rather than `composerUv()`, so the surface is lit by the shape the
  * map gives it (see `TMaterialOptions.vertex`). On a sprite or a map's layer, colour graph only:
  * read it at `composerLocalUv()` for a mask that stays put while the frames change.
+ *
+ * A map with mipmaps (`useLoadTexture({ mipmaps: true })`) is read in a model's colour graph from
+ * the copy its size on the screen asks for, judged by how the model's own picture coordinate runs:
+ * read it at one that runs faster, say so with `scale`.
  * @param name - The map's name, as the material's `maps` gives it: lowercase first, letters and digits.
  * @param coord - Where to read it, in `0`-`1`.
+ * @param options - `scale`, for a place that runs faster than the model's picture coordinate.
  * @returns The node, to use as the input of another.
+ *
+ * @example
+ * ```ts
+ * const detail = composerMapSample('detail', composerMul(composerUv(), 8), { scale: 8 });
+ * ```
  *
  * @category Shader composer
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const composerMapSample = (name: string, coord: TComposerNode): TComposerNode => {
+export const composerMapSample = (name: string, coord: TComposerNode, options?: TComposerSampleOptions): TComposerNode => {
     if (!MAP_NAME.test(name)) {
         throw new Error(`[NacatamalOn] shader composer: '${name}' cannot name a map. It has to be a letter-first lowercase name of letters and digits, such as 'noise'.`);
     }
-    return newNode('texture', 'vec4<f32>', [coord], { params: [name] });
+    return newNode('texture', 'vec4<f32>', sampleDeps(coord, options), { params: [name] });
 };
 
 /**

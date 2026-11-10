@@ -5,6 +5,7 @@ import { getActiveBox, getActiveGame } from '../../store';
 import { loadTexture, newTexture, trackLoad } from '../../loaders';
 import type { TTexture } from '../../loaders';
 import { assetKey } from '../../loaders/asset_key';
+import { isMipmapped, markMipmapped } from '../../loaders/texture/mipmapped_texture';
 import { outsideSceneBody } from '../../utils/outside_scene_body';
 
 /**
@@ -28,7 +29,24 @@ export type TUseLoadTextureOptions = {
      * back, and it is said.
      */
     key?: string;
+    /**
+     * Also make its mipmaps: smaller and smaller copies of it, each half the one before, so a
+     * model's surface far away or seen edge on reads the copy its size on the screen asks for and
+     * does not shimmer or crawl. For a model's picture or a material's map, a floor or a wall that
+     * runs into the distance. Sprites, map layers and particles never read them, so they are not
+     * worth it there. They cost a third more memory on the graphics card. Default `false`.
+     *
+     * Each texture is made once, by whoever asks for its key first: asked for again the other way,
+     * it is handed back as it was made, and it is said.
+     */
+    mipmaps?: boolean;
 };
+
+/**
+ * The textures already said to be asked for the other way about their mipmaps: once each, not once
+ * for every object that asks.
+ */
+const warnedMipmaps = new WeakSet<TTexture>();
 
 /**
  * Loads an image to draw with, and hands it back at once, still loading: a sprite made with it
@@ -53,7 +71,7 @@ export type TUseLoadTextureOptions = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const useLoadTexture = ({ src, key }: TUseLoadTextureOptions): TTexture => {
+export const useLoadTexture = ({ src, key, mipmaps = false }: TUseLoadTextureOptions): TTexture => {
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
@@ -64,9 +82,18 @@ export const useLoadTexture = ({ src, key }: TUseLoadTextureOptions): TTexture =
     const { textures } = store.get('assets');
 
     let texture = textures.get(cacheKey);
-    if (texture !== undefined) warnIfKeyTaken('useLoadTexture', cacheKey, texture.src, src);
+    if (texture !== undefined) {
+        warnIfKeyTaken('useLoadTexture', cacheKey, texture.src, src);
+        if (isMipmapped(texture) !== mipmaps && !warnedMipmaps.has(texture)) {
+            warnedMipmaps.add(texture);
+            console.warn(`[NacatamalOn] useLoadTexture: '${cacheKey}' was already loaded ${mipmaps ? 'without' : 'with'} mipmaps, and is handed back as it is. Load it under another key to have it both ways.`);
+        }
+    }
     if (texture === undefined) {
         texture = newTexture(src, cacheKey);
+        if (mipmaps) {
+            markMipmapped(texture);
+        }
         textures.set(cacheKey, texture);
         trackLoad(texture, loadTexture(store, texture));
     }

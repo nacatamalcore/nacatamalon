@@ -10,6 +10,7 @@ import type { TRuntimeStore } from '../../store';
 import type { TTexture } from '../../loaders';
 import { outsideSceneBody } from '../../utils/outside_scene_body';
 import { freeTexture } from '../../loaders/texture/free_texture';
+import { isMipmapped, markMipmapped } from '../../loaders/texture/mipmapped_texture';
 
 /**
  * Where each painted texture reads its bytes from, and the game it lives in.
@@ -76,6 +77,13 @@ export type TPixelTextureOptions = {
      * when that goes.
      */
     key?: string;
+    /**
+     * Also make its mipmaps, smaller and smaller copies of it, for a model's surface that runs into
+     * the distance (see `useLoadTexture`). `updatePixelTexture` works them out again every time,
+     * all of them however little changed, so a picture painted every frame is cheaper without.
+     * Default `false`.
+     */
+    mipmaps?: boolean;
 };
 
 /**
@@ -106,7 +114,7 @@ export type TPixelTextureOptions = {
  *
  * @param source - The picture: one from `createPixels`, or one from `useLoadPixels`.
  * @param paint - Changes the picture before it is uploaded. With a loaded picture it gets a copy.
- * @param options - `key` to keep it by name.
+ * @param options - `key` to keep it by name, `mipmaps` to make its mipmaps.
  * @returns The texture, for `createSprite({ texture })`, `createMaterial({ texture })` or
  * `createMesh({ texture })`.
  *
@@ -135,7 +143,7 @@ export function createPixelTexture(source: TPixels | TLoadedPixels, paint: TPixe
  * The picture as it is, with nothing painted on it first.
  *
  * @param source - The picture: one from `createPixels`, or one from `useLoadPixels`.
- * @param options - `key` to keep it by name.
+ * @param options - `key` to keep it by name, `mipmaps` to make its mipmaps.
  * @returns The texture.
  *
  * @category Pixels
@@ -155,6 +163,7 @@ export function createPixelTexture(
     }
     const paint = typeof paintOrOptions === 'function' ? paintOrOptions : undefined;
     const options = (typeof paintOrOptions === 'function' ? maybeOptions : paintOrOptions) ?? {};
+    const mipmaps = options.mipmaps ?? false;
 
     const renderer = store.get('screen').renderer;
     const textures = store.get('assets').textures;
@@ -178,7 +187,7 @@ export function createPixelTexture(
     if (source.type === 'pixels') {
         const pixels = finish(source, false);
         const { width, height, data } = pixels;
-        if (existing !== undefined && existing.width === width && existing.height === height && existing.gpu !== null) {
+        if (existing !== undefined && existing.width === width && existing.height === height && existing.gpu !== null && isMipmapped(existing) === mipmaps) {
             painted.set(existing, { pixels, store });
             renderer.updateDataTexture(existing.gpu, data, width, height);
             return existing;
@@ -194,8 +203,11 @@ export function createPixelTexture(
             height,
             // Ready at once: there is nothing to fetch, and whatever shows it can draw from the first frame.
             status: 'ready',
-            gpu: renderer.createDataTexture(data, width, height),
+            gpu: renderer.createDataTexture(data, width, height, mipmaps),
         });
+        if (mipmaps) {
+            markMipmapped(texture);
+        }
         adopt(store, texture, pixels, key, options.key === undefined ? box : null);
         return texture;
     }
@@ -213,6 +225,9 @@ export function createPixelTexture(
         status: 'loading',
         gpu: null,
     });
+    if (mipmaps) {
+        markMipmapped(texture);
+    }
     adopt(store, texture, null, key, options.key === undefined ? box : null);
 
     const fill = (): void => {
@@ -227,7 +242,7 @@ export function createPixelTexture(
         const pixels = finish(source.pixels, true);
         texture.width = pixels.width;
         texture.height = pixels.height;
-        texture.gpu = renderer.createDataTexture(pixels.data, pixels.width, pixels.height);
+        texture.gpu = renderer.createDataTexture(pixels.data, pixels.width, pixels.height, mipmaps);
         texture.status = 'ready';
         painted.set(texture, { pixels, store });
         bumpVersion(texture);

@@ -1,4 +1,4 @@
-import { toGlTexture } from '../texture';
+import { regenerateMipmaps, toGlTexture } from '../texture';
 import type { ITexture, TTextureRegion } from '../../interface';
 import type { TWebGL2Texture } from '../texture';
 
@@ -46,4 +46,7 @@ export const updateWebGL2DataTexture = (
     gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
     gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, 0);
     gl.pixelStorei(gl.UNPACK_SKIP_ROWS, 0);
+    if (own.mipmaps) {
+        regenerateMipmaps(gl, glTexture);
+    }
 };

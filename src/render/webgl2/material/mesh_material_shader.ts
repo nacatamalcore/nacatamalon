@@ -85,27 +85,55 @@ ${direction} vec4 vCarry;
 ${cull === 'none' ? TWO_SIDED_VARYINGS_GLSL(direction) : ''}`;
 
 /**
- * Reading the picture, in a form a hook may call from inside a branch.
+ * How fast the model's own picture coordinate changes from one pixel on the screen to the next:
+ * what picks which of a picture's mipmaps to read. Measured once at the start of the colour half
+ * (see `MEASURE_UV`) and read by every reader after, so a hook may call them inside a branch. The
+ * same as its WGSL twin.
  */
-const SAMPLE = /* glsl */ `
+const UV_STEPS = /* glsl */ `
+vec2 meshUvDx;
+vec2 meshUvDy;
+`;
+
+/**
+ * Measures the picture coordinate's steps, before anything can branch.
+ */
+const MEASURE_UV = (uv: string): string => `
+    meshUvDx = dFdx(${uv});
+    meshUvDy = dFdy(${uv});`;
+
+/**
+ * Reading the picture, in a form a hook may call from inside a branch, from the mipmap the model's
+ * own picture coordinate asks for; `sampleTextureScaled` for a place that runs `scale` times as
+ * fast, and `0.0` for the picture itself. Colour half only.
+ */
+const SAMPLE = /* glsl */ `${UV_STEPS}
 vec4 sampleTexture(vec2 uv) {
-    return textureLod(meshTexture, uv, 0.0);
+    return textureGrad(meshTexture, uv, meshUvDx, meshUvDy);
+}
+
+vec4 sampleTextureScaled(vec2 uv, vec2 scale) {
+    return textureGrad(meshTexture, uv, meshUvDx * scale, meshUvDy * scale);
 }
 `;
 
 /**
- * The material's extra maps: always all four samplers, and one reader per name the shader uses, in
+ * The material's extra maps: always all four samplers, and two readers per name the shader uses, in
  * the order it first reads them. The same readers by the same names as its WGSL twin.
  *
- * Read at a level given, never one worked out from how fast the place changes across the screen,
- * so the corner hook reads them as the colour hook does: a corner has no neighbours on the screen to
- * work it out from. Declared in both halves of a material with a corner hook, under the same names,
- * which the card links into one sampler on one unit.
+ * In the colour half they pick a picture's mipmap by the steps `SAMPLE` measured, never by working
+ * them out where they are called, so a hook may read them inside a branch. The corner half has no
+ * neighbours on the screen to measure by, and reads the picture itself, scale or no scale. Declared
+ * in both halves of a material with a corner hook, under the same names, which the card links into
+ * one sampler on one unit.
  */
-const mapReaders = (names: readonly string[]): string => {
+const mapReaders = (names: readonly string[], half: 'corner' | 'colour'): string => {
     const slots = Array.from({ length: MAX_MATERIAL_MAPS }, (_, i) => `uniform sampler2D meshMap${i};`).join('\n');
-    const readers = names.map((name, i) =>
-        `vec4 sampleMap_${name}(vec2 uv) {\n    return textureLod(meshMap${i}, uv, 0.0);\n}`).join('\n');
+    const readers = names.map((name, i) => half === 'corner'
+        ? `vec4 sampleMap_${name}(vec2 uv) {\n    return textureLod(meshMap${i}, uv, 0.0);\n}\n` +
+          `vec4 sampleMapScaled_${name}(vec2 uv, vec2 scale) {\n    return textureLod(meshMap${i}, uv, 0.0);\n}`
+        : `vec4 sampleMap_${name}(vec2 uv) {\n    return textureGrad(meshMap${i}, uv, meshUvDx, meshUvDy);\n}\n` +
+          `vec4 sampleMapScaled_${name}(vec2 uv, vec2 scale) {\n    return textureGrad(meshMap${i}, uv, meshUvDx * scale, meshUvDy * scale);\n}`).join('\n');
     return `${slots}
 ${readers}
 `;
@@ -116,7 +144,7 @@ ${readers}
  * round picture of its surroundings. Only there, because it reads a `FragContext`, which the corner
  * half does not have.
  */
-const maps = (names: readonly string[]): string => `${mapReaders(names)}
+const maps = (names: readonly string[]): string => `${mapReaders(names, 'colour')}
 vec2 envUv(FragContext ctx) {
     vec3 r = reflect(-ctx.viewDir, normalize(ctx.normal));
     float m = max(2.0 * sqrt(r.x * r.x + r.y * r.y + (r.z + 1.0) * (r.z + 1.0)), 0.0001);
@@ -130,7 +158,7 @@ vec2 envUv(FragContext ctx) {
  * detail map in its colour hook) declares none, and its corners are left as they were.
  */
 const cornerMaps = (vertex: string | null, names: readonly string[]): string =>
-    mapNamesOf(vertex).length === 0 ? '' : mapReaders(names);
+    mapNamesOf(vertex).length === 0 ? '' : mapReaders(names, 'corner');
 
 /**
  * A corner hook that moves nothing.
@@ -320,7 +348,7 @@ void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     // Divided here, once: a shader of your own receives the picture already stretched when the
     // material is affine, and the corrected one when it is not (see affineUv).
     vec2 uv = vUv.xy / vUv.z;
-    vec2 uv2 = vec2(vNormal.w, vScreen.w) / vUv.z;
+    vec2 uv2 = vec2(vNormal.w, vScreen.w) / vUv.z;${MEASURE_UV('uv')}
     // Laid out by the coordinate the material says, which rides beside its amount.
     float occlusion = occlusionAt(uniforms.normalMatrix[1].w > 0.5 ? uv2 : uv);
     // A crease lowers the floor and nothing else, as in the built-in ending.
@@ -332,7 +360,7 @@ void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     ctx.light = lit;
     ctx.shine = litWithShadow(${shine}, ${casterShine}, coord);
     // The glow through its picture, so a shader of your own adds it the way the built-in one does.
-    ctx.emissive = uniforms.emissive.rgb * textureLod(meshEmissive, uv, 0.0).rgb;
+    ctx.emissive = uniforms.emissive.rgb * textureGrad(meshEmissive, uv, meshUvDx, meshUvDy).rgb;
     // Drawn on both sides, worked out again at the pixel rather than carried, as its twin does to make
     // room for the light of the other side.
     ctx.viewDir = ${cull === 'none' ? 'viewDirOf(vWorldPos)' : 'vViewDir'};
@@ -511,7 +539,7 @@ void main() {${CORNER_CONTEXT}${vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL
             maps(mapNames),
             cut.fragment ?? DEFAULT_EFFECT,
             /* glsl */ `
-void main() {
+void main() {${MEASURE_UV('vUv')}
     FragContext ctx;
     ctx.uv = vUv;
     ctx.normal = gl_FrontFacing ? vNormal : -vNormal;

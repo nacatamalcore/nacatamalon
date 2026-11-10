@@ -23,6 +23,11 @@ const SAMPLE = /* wgsl */ `
 fn sampleTexture(uv: vec2f) -> vec4f {
     return textureSampleLevel(spriteTexture, spriteSampler, uv, 0.0);
 }
+
+// A model's reader, here for a hook written for one: a sprite never reads a mipmap.
+fn sampleTextureScaled(uv: vec2f, scale: vec2f) -> vec4f {
+    return sampleTexture(uv);
+}
 `;
 
 /**

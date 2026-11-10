@@ -113,15 +113,19 @@ export const createMeshPipeline = (gl: WebGL2RenderingContext, samplers: { neare
     gl.bufferData(gl.UNIFORM_BUFFER, LIGHT_UNIFORM_FLOATS * 4, gl.DYNAMIC_DRAW);
     gl.bindBuffer(gl.UNIFORM_BUFFER, null);
 
-    // Every way a model's picture can be read, made now rather than in the middle of a frame.
+    // Every way a model's picture can be read, made now rather than in the middle of a frame. A
+    // picture with mipmaps is read from the copy its size on the screen asks for, blended between
+    // two when smooth, as the WebGPU backend's are; one without ends at its first level (see
+    // uploadTexture), so it reads only itself.
     const wrapSamplers = new Map<string, WebGLSampler>();
     const address = { repeat: gl.REPEAT, clamp: gl.CLAMP_TO_EDGE, mirror: gl.MIRRORED_REPEAT };
     for (const filter of ['nearest', 'linear'] as const) {
         const mode = filter === 'linear' ? gl.LINEAR : gl.NEAREST;
+        const shrink = filter === 'linear' ? gl.LINEAR_MIPMAP_LINEAR : gl.NEAREST_MIPMAP_NEAREST;
         for (const u of TEXTURE_WRAPS) {
             for (const v of TEXTURE_WRAPS) {
                 const sampler = gl.createSampler();
-                gl.samplerParameteri(sampler, gl.TEXTURE_MIN_FILTER, mode);
+                gl.samplerParameteri(sampler, gl.TEXTURE_MIN_FILTER, shrink);
                 gl.samplerParameteri(sampler, gl.TEXTURE_MAG_FILTER, mode);
                 gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_S, address[u]);
                 gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_T, address[v]);

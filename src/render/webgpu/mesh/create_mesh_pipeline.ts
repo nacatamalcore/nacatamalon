@@ -213,7 +213,9 @@ export const createMeshPipeline = (
 
     // Every way a model's picture can be read, made now: two filters, and three things the picture
     // can do past its edge each way. The sprites' two samplers stretch the edge, which is right for
-    // a sheet and wrong for a hillside of repeated grass.
+    // a sheet and wrong for a hillside of repeated grass. A picture with mipmaps is read from the
+    // copy its size on the screen asks for, blended between two when smooth; one without has only
+    // itself to read.
     const wrapSamplers = new Map<string, GPUSampler>();
     for (const filter of ['nearest', 'linear'] as const) {
         for (const u of TEXTURE_WRAPS) {
@@ -222,6 +224,7 @@ export const createMeshPipeline = (
                     label: `mesh ${wrapKey(filter, u, v)}`,
                     magFilter: filter,
                     minFilter: filter,
+                    mipmapFilter: filter,
                     addressModeU: ADDRESS_MODE[u],
                     addressModeV: ADDRESS_MODE[v],
                 }));

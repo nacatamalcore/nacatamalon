@@ -1,4 +1,5 @@
 import { bumpVersion } from '../../store/record_version';
+import { isMipmapped } from './mipmapped_texture';
 import type { TRuntimeStore } from '../../store';
 import type { TTexture } from './types/t_texture';
 
@@ -28,7 +29,7 @@ export const uploadTexture = async (store: TRuntimeStore, texture: TTexture, blo
     texture.height = bitmap.height;
     // The renderer takes the bitmap and decides when to close it: WebGL2 keeps it to upload
     // it again if its context is lost.
-    texture.gpu = store.get('screen').renderer.createTexture(bitmap);
+    texture.gpu = store.get('screen').renderer.createTexture(bitmap, isMipmapped(texture));
     texture.status = 'ready';
     bumpVersion(texture);
 };

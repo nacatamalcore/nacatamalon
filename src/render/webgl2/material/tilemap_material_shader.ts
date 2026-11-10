@@ -11,6 +11,11 @@ vec4 sampleTexture(vec2 uv) {
     return textureLod(tilesTexture, uv, 0.0);
 }
 
+// A model's reader, here for a hook written for one: a map layer never reads a mipmap.
+vec4 sampleTextureScaled(vec2 uv, vec2 scale) {
+    return sampleTexture(uv);
+}
+
 in vec2 vAcrossLayer;
 
 // Across its tile, from its window put back out by the half texel it sits in: see its twin.

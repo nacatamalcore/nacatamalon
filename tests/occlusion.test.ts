@@ -313,10 +313,10 @@ describe('the built-in drawing', () => {
 
     it('reads it as wide open where a model has none: one minus nothing', () => {
         const wgsl = meshShaderFor('back');
-        expect(wgsl).toContain('return 1.0 + uniforms.normalMatrix[0].w * (textureSampleLevel(meshOcclusion, occlusionSampler, uv, 0.0).r - 1.0);');
+        expect(wgsl).toContain('return 1.0 + uniforms.normalMatrix[0].w * (textureSample(meshOcclusion, occlusionSampler, uv).r - 1.0);');
         // Its own sampler, beside its picture, so its edges are its own.
         expect(wgsl).toContain('@group(1) @binding(4) var occlusionSampler: sampler;');
-        expect(meshFragmentGlsl('back')).toContain('return 1.0 + uniforms.normalMatrix[0].w * (textureLod(meshOcclusion, uv, 0.0).r - 1.0);');
+        expect(meshFragmentGlsl('back')).toContain('return 1.0 + uniforms.normalMatrix[0].w * (texture(meshOcclusion, uv).r - 1.0);');
     });
 
     it('reads the second picture coordinate only in the set made for it, at a place nothing else takes', () => {
