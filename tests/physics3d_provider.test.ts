@@ -44,7 +44,6 @@ const fakeWorld = () => {
         addMesh: record('mesh'),
         addCharacter: () => ({} as TCharacterBody),
         raycast: () => null,
-        bodyOf: () => null,
     } as unknown as TPhysicsWorldHandle3d;
     return { calls, world };
 };

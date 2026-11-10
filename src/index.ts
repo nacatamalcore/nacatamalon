@@ -44,10 +44,10 @@ export {
 } from './hooks';
 export { createMaterial } from './gameobjects/material';
 // Lines in space: the debug helpers (an axis gizmo, a floor grid) and any lines a game wants to draw.
-export { useLines, useHelperAxis, useHelperGrid } from './hooks';
-export type { TUseLinesOptions, TLinesHandle, TUseHelperAxisOptions, THelperAxisColors, TUseHelperGridOptions } from './hooks';
+export { setLines, useLines, useHelperAxis, useHelperGrid } from './hooks';
+export type { TUseLinesOptions, TUseHelperAxisOptions, THelperAxisColors, TUseHelperGridOptions } from './hooks';
 export type { TLines } from './gameobjects/lines';
-export type { TNewLinesOptions } from './gameobjects/lines';
+export type { TLine, TLinesOptions } from './gameobjects/lines';
 export { createParticles, createParticles3d, playParticles, stopParticles, pauseParticles, clearParticles, particleCount, emitParticles } from './gameobjects/particles';
 export type { TParticles, TParticlesOptions, TParticleOverrides, TParticles3d, TParticles3dOptions } from './gameobjects/particles';
 export type { TParticleCollider2d, TParticleCollider3d, TParticleColliderShape2d, TParticleColliderShape3d } from './gameobjects/particles/colliders/t_particle_collider';

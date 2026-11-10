@@ -33,6 +33,16 @@ import type { TTilemap } from '../../gameobjects/tilemap/types/t_tilemap';
 import type { Collider, ImpulseJoint, PhysicsHooks, RevoluteImpulseJoint, PrismaticImpulseJoint, RigidBody } from '@dimforge/rapier2d-compat';
 import type { TJoint2d, TJointHandle2d } from './t_joint_2d';
 
+/**
+ * Each object's body, in whichever world it was put: what `getPhysicsBody2d` reads. An object does
+ * not know its world, and a game reaching for its body should not have to name one, so the body is
+ * found by the object alone, while the scene is built or in any frame after. Weak, so an object
+ * gone is forgotten.
+ *
+ * @internal
+ */
+export const bodyOfObject2d = new WeakMap<TGameObject, TPhysicsBodyHandle2d>();
+
 type TBodyEntry = {
     box: TGameObject;
     rapierBodyHandle: number;
@@ -62,7 +72,7 @@ type TBodyEntry = {
     onEnter: TGameSignal<TGameObject> | null;
     onExit: TGameSignal<TGameObject> | null;
     /**
-     * The public handle `createBody` returned, kept so `bodyOf` can hand back **the same
+     * The public handle `createBody` returned, kept so `getPhysicsBody2d` can hand back **the same
      * object**, not a second one wrapping the same entry. It matters because `onEnter`/`onExit`
      * are lazily-created-on-read: two handles would each believe they owned the signal, and a
      * listener connected through one would never hear a contact reported through the other.
@@ -775,6 +785,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
             if (bodyEntry.removed) return;
             bodyEntry.removed = true;
             if (bodies.get(box.id) === bodyEntry) bodies.delete(box.id);
+            if (bodyOfObject2d.get(box) === bodyEntry.handle) bodyOfObject2d.delete(box);
             byCollider.delete(bodyEntry.rapierColliderHandle);
             if (!world) return;
             const body = world.getRigidBody(bodyEntry.rapierBodyHandle);
@@ -856,6 +867,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         };
 
         bodyEntry.handle = handle;
+        bodyOfObject2d.set(box, handle);
         return handle;
     };
 
@@ -898,6 +910,9 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         joints.clear();
         softBodies.clear();
         standing.clear();
+        for (const entry of bodies.values()) {
+            if (bodyOfObject2d.get(entry.box) === entry.handle) bodyOfObject2d.delete(entry.box);
+        }
         bodies.clear();
         byCollider.clear();
         // The event queue holds WASM memory of its own and is not owned by the world, so
@@ -916,7 +931,6 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         addCircle: (box, opts) => createBody(box, { ...opts, shape: 'circle' }),
         addRect: (box, opts) => createBody(box, { ...opts, shape: 'rect' }),
         addPolygon: (box, opts) => createBody(box, { ...opts, shape: 'polygon' }),
-        bodyOf: (box) => bodies.get(box.id)?.handle ?? null,
         addCharacter,
         addJoint,
         addSoftBody: softBodies.add,

@@ -1,7 +1,7 @@
 import { getColor } from '../../color';
 import { newLines } from '../../gameobjects/lines';
 import type { TColor, TColorOption } from '../../color';
-import type { TNewLinesOptions } from '../../gameobjects/lines';
+import type { TLinesOptions } from '../../gameobjects/lines';
 import type { TLines } from '../../gameobjects/lines';
 
 /**
@@ -11,7 +11,7 @@ import type { TLines } from '../../gameobjects/lines';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TUseHelperGridOptions = TNewLinesOptions & {
+export type TUseHelperGridOptions = TLinesOptions & {
     /**
      * How far the grid reaches from its middle, in world units, on both sides. Default `10`.
      */

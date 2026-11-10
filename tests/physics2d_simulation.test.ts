@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { registerPhysicsProvider } from '../src/physics';
-import { rapier2dProvider, getPhysicsWorld2d } from '../src/physics/rapier2d/provider';
+import { rapier2dProvider, getPhysicsBody2d, getPhysicsWorld2d } from '../src/physics/rapier2d/provider';
 import { loadRapier2D } from '../src/physics/rapier2d/load_rapier';
 // Internals by relative path, the way the engine's own tests reach them: a published game has no
 // use for a frame it drives by hand, so none of this belongs on the front door.
@@ -59,7 +59,7 @@ describe('a listener that ends the scene', () => {
             useSpawn(function Door() {
                 createSprite({ width: 200, height: 20, tint, transform: { x: 0, y: 100, rotation: 0, scaleX: 1, scaleY: 1 } });
                 usePhysicsBody2d({ body: 'static', collider: { shape: 'rect', width: 200, height: 20 }, sensor: true });
-                const body = getPhysicsWorld2d()?.bodyOf(useSelf());
+                const body = getPhysicsBody2d(useSelf());
                 if (body) {
                     body.onEnter(() => {
                         heard++;
@@ -97,7 +97,7 @@ describe('what the typing caught', () => {
             useSpawn(function Crate() {
                 crate = createSprite({ width: 20, height: 20, tint, transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 } });
                 usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'rect', width: 20, height: 20 } });
-                const body = getPhysicsWorld2d()?.bodyOf(useSelf());
+                const body = getPhysicsBody2d(useSelf());
                 push = (x, y) => body?.applyForce(x, y);
             })();
             return createScene();
@@ -158,10 +158,8 @@ describe('a destroyed object', () => {
         const { store } = createTestGame();
         let floor!: TGameObject;
         let ball!: ReturnType<typeof createSprite>;
-        let world!: ReturnType<typeof getPhysicsWorld2d>;
         const root = startTestScene(store, 'Level', () => {
             usePhysicsWorld2d();
-            world = getPhysicsWorld2d();
             useSpawn(function Floor() {
                 createSprite({ width: 200, height: 20, tint, transform: { x: 0, y: 100, rotation: 0, scaleX: 1, scaleY: 1 } });
                 usePhysicsBody2d({ body: 'static', collider: { shape: 'rect', width: 200, height: 20 } });
@@ -182,7 +180,7 @@ describe('a destroyed object', () => {
         await runFrames(store, root, 60);
 
         expect(ball.transform.y).toBeGreaterThan(200);
-        expect(world?.bodyOf(floor)).toBeNull();
+        expect(getPhysicsBody2d(floor)).toBeNull();
     });
 
     it('can destroy itself from the contact that hit it, and is heard only once', async () => {
@@ -195,7 +193,7 @@ describe('a destroyed object', () => {
                 createSprite({ width: 20, height: 20, tint, transform: { x: 0, y: 100, rotation: 0, scaleX: 1, scaleY: 1 } });
                 usePhysicsBody2d({ body: 'static', collider: { shape: 'circle', radius: 10 } });
                 const self = useSelf();
-                const body = getPhysicsWorld2d()?.bodyOf(self);
+                const body = getPhysicsBody2d(self);
                 if (body) {
                     body.onEnter(() => {
                         heard++;
@@ -220,14 +218,14 @@ describe('a destroyed object', () => {
     it('ignores a push from a handle kept after it was destroyed', async () => {
         const { store } = createTestGame();
         let crate!: TGameObject;
-        let kept!: NonNullable<ReturnType<NonNullable<ReturnType<typeof getPhysicsWorld2d>>['bodyOf']>>;
+        let kept!: NonNullable<ReturnType<typeof getPhysicsBody2d>>;
         const root = startTestScene(store, 'Level', () => {
             usePhysicsWorld2d();
             useSpawn(function Crate() {
                 createSprite({ width: 20, height: 20, tint, transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 } });
                 usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'rect', width: 20, height: 20 } });
                 crate = useSelf();
-                kept = getPhysicsWorld2d()!.bodyOf(crate)!;
+                kept = getPhysicsBody2d(crate)!;
             })();
             return createScene();
         });
@@ -260,13 +258,13 @@ describe('a body changed at runtime', () => {
             useSpawn(function Floor() {
                 createSprite({ width: 200, height: 20, tint, transform: { x: 0, y: 100, rotation: 0, scaleX: 1, scaleY: 1 } });
                 usePhysicsBody2d({ body: 'static', collider: { shape: 'rect', width: 200, height: 20 } });
-                found.floor = getPhysicsWorld2d()!.bodyOf(useSelf())!;
+                found.floor = getPhysicsBody2d(useSelf())!;
             })();
             useSpawn(function Ball() {
                 found.ballSprite = createSprite({ width: 20, height: 20, tint, transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 } });
                 usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'circle', radius: 10 } });
                 found.ballObject = useSelf();
-                found.ball = getPhysicsWorld2d()!.bodyOf(found.ballObject)!;
+                found.ball = getPhysicsBody2d(found.ballObject)!;
                 onBuilt?.(found.ball);
             })();
             return createScene();
@@ -323,7 +321,7 @@ describe('a kinematic body', () => {
             useSpawn(function Platform() {
                 platform = createSprite({ width: 60, height: 10, tint, transform: { x: 0, y: 100, rotation: 0, scaleX: 1, scaleY: 1 } });
                 usePhysicsBody2d({ body: 'kinematic', collider: { shape: 'rect', width: 60, height: 10 } });
-                getPhysicsWorld2d()?.bodyOf(useSelf())?.setLinearVelocity(60, 0);
+                getPhysicsBody2d(useSelf())?.setLinearVelocity(60, 0);
             })();
             return createScene();
         });
@@ -347,13 +345,12 @@ describe('a force asked for every frame', () => {
         let pushing = true;
         const root = startTestScene(store, 'Level', () => {
             usePhysicsWorld2d({ gravity: { x: 0, y: 0 } });
-            const world = getPhysicsWorld2d();
             useSpawn(function Puck() {
                 sprite = createSprite({ width: 10, height: 10, tint, transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 } });
                 usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'rect', width: 10, height: 10 }, density: 1 });
                 const self = useSelf();
                 useUpdate(() => {
-                    if (pushing) world?.bodyOf(self)?.applyForce(100, 0);
+                    if (pushing) getPhysicsBody2d(self)?.applyForce(100, 0);
                 });
             })();
             return createScene();
@@ -418,7 +415,7 @@ describe('two games on one page', () => {
         await loadRapier2D();
 
         expect(theirs).not.toBeNull();
-        expect(theirs!.bodyOf(crate)).toBeNull();
+        expect(getPhysicsBody2d(crate)).toBeNull();
         expect(warned.join('\n')).toContain('no physics world');
     });
 });

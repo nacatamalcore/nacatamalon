@@ -22,7 +22,7 @@
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export { installPhysics3d, box3dProvider, getPhysicsWorld3d } from './provider';
+export { installPhysics3d, box3dProvider, getPhysicsWorld3d, getPhysicsBody3d } from './provider';
 export { loadBox3D } from './load_box3d';
 export { useCharacterBody } from './use_character_body';
 

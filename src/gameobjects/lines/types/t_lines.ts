@@ -5,9 +5,9 @@ import type { TTransform3d } from '../../types/t_transform_3d';
  * axis gizmo, a floor grid, an outline), and anything else that is best said with a line.
  *
  * **The corners are not here.** A record is plain data and a run of numbers the card reads is not,
- * so they live beside it: `useLines` hands back the function that writes them. What is here is
- * what an ordinary drawable has, where it is and whether it is drawn, and changing those is all it
- * takes for the next frame to show it.
+ * so they live beside it, and `setLines` is what writes them. What is here is what an ordinary
+ * drawable has, where it is and whether it is drawn, and changing those is all it takes for the
+ * next frame to show it.
  *
  * Lines are hidden by the models in front of them, and hide what is behind them, the same as a
  * model: a line that ignored the scene would read as a wireframe floating over it. They are one

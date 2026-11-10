@@ -17,7 +17,7 @@
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export { installPhysics2d, rapier2dProvider, getPhysicsWorld2d } from './provider';
+export { installPhysics2d, rapier2dProvider, getPhysicsWorld2d, getPhysicsBody2d } from './provider';
 export { loadRapier2D } from './load_rapier';
 export { useCharacterBody2d } from './use_character_body_2d';
 export { useJoint2d } from './use_joint_2d';

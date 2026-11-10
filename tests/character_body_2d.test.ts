@@ -12,7 +12,7 @@ import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useUpdate } from '../src/hooks/loop/use_update';
 import { usePhysicsBody2d, usePhysicsWorld2d } from '../src/hooks/physics';
 import { registerPhysicsProvider } from '../src/physics';
-import { getPhysicsWorld2d, rapier2dProvider } from '../src/physics/rapier2d/provider';
+import { getPhysicsBody2d, rapier2dProvider } from '../src/physics/rapier2d/provider';
 import { useSelf } from '../src/hooks/spawn/use_self';
 import { destroy } from '../src/destroy/destroy';
 import { loadRapier2D } from '../src/physics/rapier2d/load_rapier';
@@ -130,7 +130,7 @@ const crate = (x: number, y: number, vy = 0) => {
     useSpawn(function Crate() {
         out.sprite = createSprite({ width: 16, height: 16, tint, transform: at(x, y) });
         usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'rect', width: 16, height: 16 } });
-        if (vy !== 0) getPhysicsWorld2d()?.bodyOf(useSelf())?.setLinearVelocity(0, vy);
+        if (vy !== 0) getPhysicsBody2d(useSelf())?.setLinearVelocity(0, vy);
     })();
     return out;
 };

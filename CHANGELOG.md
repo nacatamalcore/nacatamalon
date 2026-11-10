@@ -112,6 +112,24 @@ releases are in [changelog/](./changelog/), one file each.
 - **A failed capture on WebGPU gives its buffer back.** The buffer that brings the pixels from the
   graphics card was destroyed only when the capture worked; now it is destroyed either way.
 
+### Changed
+
+- **An object's body is reached by the object.** `getPhysicsBody2d(object)` from
+  `nacatamalon/physics2d` and `getPhysicsBody3d(object)` from `nacatamalon/physics3d` give the body
+  the simulation made of it, the one to push, stop and listen to: `getPhysicsBody2d(self)?.setLinearVelocity(80, 0)`.
+  They work while the scene is built and in any frame after, from code or from a script on a box of
+  a scene file, and give `null` while it has none, as in the editor while a scene is being built.
+  The world's `bodyOf` is gone: `getPhysicsWorld2d()?.bodyOf(object)` is now
+  `getPhysicsBody2d(object)`, and the same in 3D. `getPhysicsWorld2d` and `getPhysicsWorld3d` stay,
+  for what only a world does: joints and characters added at any moment, and rays.
+- **`useLines` gives the lines, and `setLines` changes them.** `useLines()` returned a pair, the
+  lines and a function, and took only numbers: seven a corner with the colour from 0 to 1. Now it
+  gives the lines, which are shown, hidden and moved like any drawing, and `setLines(lines, next)`
+  takes either a list, `[{ from, to, color: '#ffcc00' }]`, or the `Float32Array` as before, for
+  thousands rewritten every frame. `const [lines, set] = useLines({ vertices })` is now
+  `const lines = useLines({ lines })` and `set(v)` is `setLines(lines, v)`. `TLinesHandle` is gone,
+  `TNewLinesOptions` is `TLinesOptions`, and `TLine` is one line of the list.
+
 ## 0.7.0 — 2026-11-09
 
 ### Added

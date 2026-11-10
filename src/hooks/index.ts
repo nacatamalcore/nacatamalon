@@ -46,6 +46,6 @@ export type { TGameObject, TSpawnOptions } from './spawn';
 export type { TSpriteAnimation, TSpriteAnimationOptions, TAnimationClip, TSkeletalAnimation, TSkeletalAnimationOptions, TSkeletalClipOptions, TAnimatable } from './animation';
 export type { TTweenOptions, TTweenTargetOptions, TTweenFields, TTweenHandle, TTweenStarter } from './tween';
 export type { TTimer, TTimerHandle } from './timer';
-export { useLines, useHelperAxis, useHelperGrid } from './helpers';
-export type { TUseLinesOptions, TLinesHandle, TUseHelperAxisOptions, THelperAxisColors, TUseHelperGridOptions } from './helpers';
+export { setLines, useLines, useHelperAxis, useHelperGrid } from './helpers';
+export type { TUseLinesOptions, TUseHelperAxisOptions, THelperAxisColors, TUseHelperGridOptions } from './helpers';
 export type { TUseLoadPixelsOptions } from './loaders';

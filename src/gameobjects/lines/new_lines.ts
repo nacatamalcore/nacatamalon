@@ -18,7 +18,7 @@ const HERE = { x: 0, y: 0, z: 0, rotation: 0, rotationX: 0, rotationY: 0, scaleX
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TNewLinesOptions = {
+export type TLinesOptions = {
     /**
      * What to call it when you look at it. The engine never looks it up: to find it, name its box.
      */
@@ -44,7 +44,7 @@ export type TNewLinesOptions = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const newLines = (caller: string, options: TNewLinesOptions, vertices: Float32Array): TLines => {
+export const newLines = (caller: string, options: TLinesOptions, vertices: Float32Array): TLines => {
     const box = getActiveBox();
     const store = getActiveGame();
     if (box === null || store === null) {
@@ -58,7 +58,7 @@ export const newLines = (caller: string, options: TNewLinesOptions, vertices: Fl
         visible: options.visible,
         destroyed: false,
     });
-    writeLines(lines, vertices);
+    writeLines(lines, vertices, caller);
 
     box.drawables.push(lines);
     trackDrawableOwner(lines, box, store);

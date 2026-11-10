@@ -220,24 +220,6 @@ export type TPhysicsWorldHandle2d = {
     addPolygon: (box: TGameObject, options: { type: TPhysicsBodyType } & TColliderSurface2d & { vertices: Array<[number, number]> }) => TPhysicsBodyHandle2d;
 
     /**
-     * The body already registered for `box`, or `null` if it has none.
-     *
-     * **This is how a game reaches a body, whichever way the scene was written**, and the reason
-     * it exists at all: a collider is declared with the engine's `usePhysicsBody2d`, which hands
-     * back the record and never the simulated handle, because the record is what the scene keeps
-     * and the handle is this adapter's. Something holding the object and nothing else gets from
-     * there to `setLinearVelocity` or `onEnter` through here.
-     *
-     * Returns **the same handle** the body was created with, so a listener connected here and one
-     * connected at creation share the one signal (see `TBodyEntry.handle`).
-     *
-     * `null` is a normal answer during the first frames of a scene: bodies are registered as their
-     * objects are built, so a behaviour running before its own collider would ask too early.
-     * Look it up in `useUpdate` rather than caching it at init.
-     */
-    bodyOf: (box: TGameObject) => TPhysicsBodyHandle2d | null;
-
-    /**
      * Makes `box` a platformer's character in this world: what `useCharacterBody2d` does for the
      * object being built.
      */

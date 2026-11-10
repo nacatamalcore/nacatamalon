@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { registerPhysicsProvider } from '../src/physics';
-import { getPhysicsWorld2d, rapier2dProvider } from '../src/physics/rapier2d/provider';
+import { getPhysicsBody2d, rapier2dProvider } from '../src/physics/rapier2d/provider';
 import { loadRapier2D } from '../src/physics/rapier2d/load_rapier';
 import { box3dProvider } from '../src/physics/box3d/provider';
 import { loadBox3D } from '../src/physics/box3d/load_box3d';
@@ -128,7 +128,7 @@ describe('a collision met by physics', () => {
             crate = useSpawn(() => {
                 const place = useTransform({ x: 0, y: 0 });
                 usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'rect', width: 20, height: 20 }, layer: 'crates', collidesWith: ['world'] });
-                const body = getPhysicsWorld2d()?.bodyOf(useSelf());
+                const body = getPhysicsBody2d(useSelf());
                 // A ghost from the start: on its own layer, meeting nothing.
                 body?.setLayers('ghost', []);
                 return { below: () => place.y > 140 };
@@ -211,11 +211,9 @@ describe('what a body touches, whenever it is asked', () => {
         const said: string[] = [];
         let ground!: TGameObject;
         let kept!: TGameObject;
-        let world: ReturnType<typeof getPhysicsWorld2d> = null;
         const gone: TGameObject[] = [];
         const { frames } = await game(() => {
             usePhysicsWorld2d();
-            world = getPhysicsWorld2d();
             ground = useSpawn(Ground, 'Ground')();
             for (const x of [-60, -30, 30]) {
                 gone.push(useSpawn(() => {
@@ -239,7 +237,7 @@ describe('what a body touches, whenever it is asked', () => {
         expect(contactsOf(ground).size).toBe(1);
 
         // Its body only: the crate itself stays.
-        world!.bodyOf(kept)!.destroy();
+        getPhysicsBody2d(kept)!.destroy();
         said.length = 0;
         frames(20);
         // No body, no touch: it ends once and is not met again.

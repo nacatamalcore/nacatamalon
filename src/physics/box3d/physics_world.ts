@@ -129,6 +129,17 @@ const bodyTypeOf = (b3: TBox3dModule, type: TPhysicsBodyType) =>
 const shapeKey = (id: { index1: number; generation: number }): string => `${id.index1}:${id.generation}`;
 
 /**
+ * Each object's body, in whichever world it was put: what `getPhysicsBody3d` reads. Holds the
+ * **handle** the body was created with, the one object for it: `onEnter`/`onExit` are created on
+ * first read, so a second handle over the same body would each believe it owned the signal and a
+ * listener connected through one would never hear the other's contacts. Weak, so an object gone
+ * is forgotten.
+ *
+ * @internal
+ */
+export const bodyOfObject3d = new WeakMap<TGameObject, TPhysicsBodyHandle3d>();
+
+/**
  * Creates a physics world for the running scene and steps it every frame, syncing each
  * body's simulated pose back onto the object it belongs to. This is the whole integration
  * seam: it runs entirely on the engine's public hooks (`useUpdate` to advance the
@@ -179,12 +190,11 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
      */
     const byBody = new Map<string, TBodyEntry>();
     /**
-     * Box id → its public handle, for `bodyOf`. Holds the **handle**, not the entry, and
-     * deliberately the same object the body was created with: `onEnter`/`onExit` are created
-     * lazily on first read, so a second handle over the same entry would each believe it owned
-     * the signal and a listener attached through one would never hear the other's contacts.
+     * Each object with a body in this world, and that body, so it is forgotten in `bodyOfObject3d`
+     * when the world ends. A body destroyed before then leaves it at once, so a scene that keeps
+     * spawning and destroying does not keep the objects it destroyed.
      */
-    const byBoxId = new Map<string, TPhysicsBodyHandle3d>();
+    const placed = new Map<TGameObject, TPhysicsBodyHandle3d>();
 
     /**
      * Whether any sensor exists in this world yet.
@@ -449,6 +459,12 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
 
     useCleanup(() => {
         disposed = true;
+        // Before anything else, so a world ended before its WebAssembly arrived forgets them too, and
+        // only the body this world gave: the object may have one in another world by now.
+        for (const [box, body] of placed) {
+            if (bodyOfObject3d.get(box) === body) bodyOfObject3d.delete(box);
+        }
+        placed.clear();
         if (!b3 || world === null) return;
         for (const entry of entries) {
             if (entry.id !== null && !entry.destroyed) b3.b3DestroyBody(entry.id);
@@ -464,7 +480,6 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
         entries.length = 0;
         byShape.clear();
         byBody.clear();
-        byBoxId.clear();
     });
 
     /**
@@ -558,16 +573,22 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
                 entry.shape = null;
                 const at = entries.indexOf(entry);
                 if (at >= 0) entries.splice(at, 1);
-                if (byBoxId.get(spec.box.id) === body) {
-                    byBoxId.delete(spec.box.id);
+                if (bodyOfObject3d.get(spec.box) === body) {
+                    bodyOfObject3d.delete(spec.box);
+                }
+                if (placed.get(spec.box) === body) {
+                    placed.delete(spec.box);
                 }
             },
         };
 
         // The proxy shares its box with the character it follows, so it must not take over that
-        // box's entry: `bodyOf` on a character's box should find the character's collider if it
+        // box's entry: `getPhysicsBody3d` on a character's box should find the character's collider if it
         // has one, never the invisible capsule standing in for it.
-        if (!spec.driven) byBoxId.set(spec.box.id, body);
+        if (!spec.driven) {
+            bodyOfObject3d.set(spec.box, body);
+            placed.set(spec.box, body);
+        }
 
         // Destroying the object takes its body out of the world. `destroy` runs an object's
         // cleanups, children first, for it and everything under it; before this hook a destroyed
@@ -753,7 +774,6 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
             };
         },
 
-        bodyOf: (box) => byBoxId.get(box.id) ?? null,
         addMesh: (box, opts) => {
             // A triangle mesh is a surface, not a solid: it has no inside for the solver to push
             // a body out of, so every engine restricts it to non-dynamic bodies. Clamping with a

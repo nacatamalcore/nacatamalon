@@ -287,6 +287,11 @@ import says which name it does not have, and `llms-full.txt` lists each door.
   already; a `vertexSnap` grid is allowed for). `alwaysDrawn: true` never skips it. To see what a
   camera skips, a camera looking from outside takes `above.cullingCamera = eye` and draws only what
   `eye` sees; both follow the 2D camera (`follow2d`) or neither does.
+- **Lines in 3D** (a path, an outline, a collider being tuned, rain): `const path = useLines()`, then
+  `setLines(path, [{ from: { x: 0, y: 0, z: 0 }, to: target, color: '#ffcc00' }])` at any moment, or,
+  for thousands rewritten every frame, `setLines(path, floats)` with a reused `Float32Array` of seven
+  numbers a corner (`x, y, z, r, g, b, a`, colour 0 to 1), two corners a line. `path` is drawn like a
+  model (`visible`, `transform`); one pixel wide. `useHelperAxis()` and `useHelperGrid()` are ready-made.
 - **Particle effects that depend on the game** (dust the colour of the ground, a tint per level):
   write the effect in code, `createParticles({ effect: { kind: 'particles-2d', emission: { rate: 30 },
   colorOverLife: [{ t: 0, color: lerpColor(a, b, t) }], texture: createPixelTexture(puff) } })`, with
@@ -452,8 +457,8 @@ import says which name it does not have, and `llms-full.txt` lists each door.
   `nacatamalon/physics2d`, or `installPhysics3d()` from `nacatamalon/physics3d`. The physics engines
   are included in the package: there is nothing else to install.
 - A `'static'` body never moves. Something that moves and pushes others (a platform, a moving peg) is
-  `body: 'kinematic'`, moved with `setLinearVelocity` on its handle, which is
-  `getPhysicsWorld2d()?.bodyOf(useSelf())` (or `getPhysicsWorld3d`) taken while the object is built.
+  `body: 'kinematic'`, moved with `setLinearVelocity` on its body: `getPhysicsBody2d(self)?.setLinearVelocity(80, 0)`
+  (`getPhysicsBody3d` in 3D), from the physics import, at any moment; `null` while it has none, as in the editor.
   The handle's `setLayers(layer, collidesWith)` changes what it collides with, and its `destroy()`
   removes the body and keeps the object. `destroy(object)` removes the object's body too.
 - What a body is made of goes with its collider: `usePhysicsBody2d({ body: 'dynamic', collider, bounce: 0.8, friction: 0.2 })`. `bounce` (0 a dead thud, 1 gives back everything) belongs to the pair: the two bodies' values are mixed, so set the floor's too.

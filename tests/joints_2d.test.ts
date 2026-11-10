@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
 import { registerPhysicsProvider } from '../src/physics';
-import { getPhysicsWorld2d, rapier2dProvider } from '../src/physics/rapier2d/provider';
+import { getPhysicsBody2d, rapier2dProvider } from '../src/physics/rapier2d/provider';
 import { loadRapier2D } from '../src/physics/rapier2d/load_rapier';
 import { useJoint2d } from '../src/physics/rapier2d/use_joint_2d';
 import { useCharacterBody2d } from '../src/physics/rapier2d/use_character_body_2d';
@@ -46,7 +46,7 @@ afterEach(() => {
 const Block = (x: number, y: number, width = 16, height = 16, vx = 0, vy = 0) => {
     const sprite = createSprite({ width, height, tint, transform: { x, y, rotation: 0, scaleX: 1, scaleY: 1 } });
     usePhysicsBody2d({ body: 'dynamic', collider: { shape: 'rect', width, height } });
-    if (vx !== 0 || vy !== 0) getPhysicsWorld2d()?.bodyOf(useSelf())?.setLinearVelocity(vx, vy);
+    if (vx !== 0 || vy !== 0) getPhysicsBody2d(useSelf())?.setLinearVelocity(vx, vy);
     return sprite;
 };
 

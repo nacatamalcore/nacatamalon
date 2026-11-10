@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test';
 import { registerPhysicsProvider } from '../src/physics';
-import { box3dProvider, getPhysicsWorld3d } from '../src/physics/box3d/provider';
+import { box3dProvider, getPhysicsBody3d, getPhysicsWorld3d } from '../src/physics/box3d/provider';
 import { loadBox3D } from '../src/physics/box3d/load_box3d';
 import { useCharacterBody } from '../src/physics/box3d/use_character_body';
 // Internals by relative path, the way the engine's own tests reach them: a published game has no
@@ -165,8 +165,8 @@ describe('a collider that only notices', () => {
                 createMesh({ geometry: useCubeGeometry(), tint });
                 usePhysicsBody3d({ body: 'static', collider: { shape: 'box', size: [4, 1, 4] }, sensor: true });
                 // The engine built the body and handed it here, so the handle never went to the
-                // scene: this is the way back to it, and it is the whole point of `bodyOf`.
-                const body = getPhysicsWorld3d()?.bodyOf(useSelf());
+                // scene: this is the way back to it, and it is the whole point of `getPhysicsBody3d`.
+                const body = getPhysicsBody3d(useSelf());
                 if (body) {
                     body.onEnter((other: TGameObject) => { seen.push(other.name); });
                 }
@@ -201,7 +201,7 @@ describe('a listener that ends the scene', () => {
                 useTransform({ y: 2 });
                 createMesh({ geometry: useCubeGeometry(), tint });
                 usePhysicsBody3d({ body: 'static', collider: { shape: 'box', size: [4, 1, 4] }, sensor: true });
-                const body = getPhysicsWorld3d()?.bodyOf(useSelf());
+                const body = getPhysicsBody3d(useSelf());
                 if (body) {
                     body.onEnter(() => {
                         heard++;
@@ -414,7 +414,7 @@ describe('a body changed at runtime', () => {
                 createMesh({ geometry: useCubeGeometry(), tint });
                 usePhysicsBody3d({ body: 'dynamic', collider: { shape: 'box', size: [1, 1, 1] } });
                 crate = useSelf();
-                body = getPhysicsWorld3d()!.bodyOf(crate)!;
+                body = getPhysicsBody3d(crate)!;
             })();
             return createScene();
         });
@@ -428,5 +428,38 @@ describe('a body changed at runtime', () => {
 
         expect(crate.transform!.y).toBeLessThan(-2);
         expect(crate.physics).toMatchObject({ layer: 1, collidesWith: 1 << 1 });
+    });
+});
+
+/**
+ * `getPhysicsBody3d` finds a body by its object alone, so it has to let go of it with the body.
+ */
+describe('an object\'s body, found by the object', () => {
+    it('is there while the scene is built and in later frames, and gone once destroyed or the scene ends', async () => {
+        const { store } = createTestGame();
+        const crates: TGameObject[] = [];
+        const root = startTestScene(store, 'Level', () => {
+            usePhysicsWorld3d();
+            for (const x of [-1, 1]) {
+                crates.push(useSpawn(function Crate() {
+                    useTransform({ x, y: 3 });
+                    createMesh({ geometry: useCubeGeometry(), tint });
+                    usePhysicsBody3d({ body: 'dynamic', collider: { shape: 'box', size: [1, 1, 1] } });
+                    expect(getPhysicsBody3d(useSelf())).not.toBeNull();
+                })());
+            }
+            return createScene();
+        });
+        await runFrames(store, root, 2);
+        const [gone, kept] = crates;
+        expect(getPhysicsBody3d(kept!)).not.toBeNull();
+
+        destroy(gone!);
+        flushDestroyed(store);
+        expect(getPhysicsBody3d(gone!)).toBeNull();
+        expect(getPhysicsBody3d(kept!)).not.toBeNull();
+
+        stopScene(store, 'Level');
+        expect(getPhysicsBody3d(kept!)).toBeNull();
     });
 });

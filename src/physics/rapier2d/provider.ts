@@ -7,8 +7,8 @@ import type { TGameObject } from '../../hooks/spawn/use_spawn';
 import type { TPhysicsBody, TPhysicsBody2d, TPhysicsWorld } from '../types/t_physics';
 import type { TRuntimeStore } from '../../store';
 import type { TPhysicsProvider } from '../physics_provider';
-import { usePhysicsWorld } from './physics_world';
-import type { TPhysicsWorldHandle2d, TColliderSurface2d } from './types';
+import { bodyOfObject2d, usePhysicsWorld } from './physics_world';
+import type { TPhysicsBodyHandle2d, TPhysicsWorldHandle2d, TColliderSurface2d } from './types';
 
 /**
  * The world the current scene's document declared, if any. Module state because the provider
@@ -39,8 +39,7 @@ let owner: TRuntimeStore | null = null;
  * document. Without this the only reachable world is one the script opens itself, which is a
  * *second* world with its own gravity and its own bodies, colliding with nothing in the scene.
  *
- * Pair it with `world.bodyOf(box)` to reach the box's own collider: the document built the
- * body, so the handle `addRect` returned went to this provider and never to the game.
+ * To move or listen to one object's body, `getPhysicsBody2d(object)` is the way: it needs no world.
  *
  * `null` is the ordinary answer, not an error, and scripts must handle it: the editor's edit
  * viewport deserializes the same document with **no provider registered** (see `play.ts`), so a
@@ -48,13 +47,12 @@ let owner: TRuntimeStore | null = null;
  * from simulating while you author in it.
  *
  * ```ts
- * registerScript('walker', (self) => {
+ * registerScript('grapple', (self) => {
  *     const world = getPhysicsWorld2d();
  *     if (!world) return;                          // editing, not playing
- *     useUpdate(() => {
- *         // Looked up per frame: the body is registered as the box is built, so at init it may
- *         // not exist yet.
- *         world.bodyOf(self)?.setLinearVelocity(120, 0);
+ *     // A rope to the ceiling, thrown at any moment: something only the world itself is asked for.
+ *     usePointer().onDown(() => {
+ *         world.addJoint(self, null, { type: 'rope', atB: { x: 160, y: 0 } });
  *     });
  * });
  * ```
@@ -71,6 +69,56 @@ export const getPhysicsWorld2d = (): TPhysicsWorldHandle2d | null =>
 
 
 /**
+ * The body of `object` as the simulation moves it, or `null` if it has none.
+ *
+ * `usePhysicsBody2d` says what an object is made of, and this gives the body it became: the one to
+ * push, stop, spin and listen to. It is the same pair as `usePhysicsWorld2d` and `getPhysicsWorld2d`.
+ * It finds the body by the object alone, wherever and whenever it is asked: while the scene is
+ * built, from a script on a box of a scene file, or in any frame after.
+ *
+ * Each object has **one handle**, so a listener connected through one call and one connected
+ * through another hear the same contacts.
+ *
+ * `null` is an ordinary answer and the game must allow for it: in the editor, while a scene is being
+ * built rather than played, nothing simulates; an object with no collider has no body; and a script
+ * that runs before its own collider is declared asks too early. Asked in `useUpdate`, it is found
+ * as soon as there is one.
+ *
+ * @example
+ * ```ts
+ * import { createScene, createSprite, useSpawn, usePhysicsBody2d, usePhysicsWorld2d, useSelf, useUpdate } from 'nacatamalon';
+ * import { getPhysicsBody2d } from 'nacatamalon/physics2d';
+ *
+ * const Platform = () => {
+ *     createSprite({ tint: '#7a5a3a', width: 64, height: 12, transform: { x: 100, y: 120 } });
+ *     usePhysicsBody2d({ body: 'kinematic', collider: { shape: 'rect', width: 64, height: 12 } });
+ *     const self = useSelf();
+ *
+ *     useUpdate((_delta, time) => {
+ *         // Back and forth, at a speed the simulation keeps until it is told another.
+ *         getPhysicsBody2d(self)?.setLinearVelocity(Math.sin(time) * 80, 0);
+ *     });
+ * };
+ *
+ * const Level = () => {
+ *     usePhysicsWorld2d();
+ *     useSpawn(Platform)();
+ *     return createScene();
+ * };
+ * ```
+ *
+ * @param object - The object whose body is wanted: `self` in a script, `useSelf()` while one is
+ *   built, or any object found or spawned.
+ * @returns Its body, or `null` while it has none.
+ *
+ * @category Physics
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const getPhysicsBody2d = (object: TGameObject): TPhysicsBodyHandle2d | null =>
+    bodyOfObject2d.get(object) ?? null;
+
+/**
  * Forgets that a collider with no world was already reported. For the tests, like
  * `resetShadowWarnings`: said once for the page, the first file to trip it would silence the rest.
  *
@@ -81,7 +129,7 @@ export const getPhysicsWorld2d = (): TPhysicsWorldHandle2d | null =>
 export const resetNoWorldWarning = (): void => forgetOnPage('physics 2d: collider with no world');
 
 /**
- * The world each box's body was put in, for `watchContacts`. Weak, so a box gone is forgotten.
+ * The world each box's body was put in, for `hasBody`. Weak, so a box gone is forgotten.
  */
 const worldOfBody = new WeakMap<TGameObject, TPhysicsWorldHandle2d>();
 
@@ -168,10 +216,8 @@ export const rapier2dProvider: TPhysicsProvider = {
     },
 
     watchContacts: (box, told) => {
-        // The world the body was put in, not the current one: another scene's may be current by now.
-        const world = worldOfBody.get(box);
-        const body = world?.bodyOf(box as TGameObject);
-        if (body === null || body === undefined) return false;
+        const body = bodyOfObject2d.get(box as TGameObject);
+        if (body === undefined) return false;
         // Listening is what asks the simulation to report this body's contacts.
         body.onEnter((other) => told(other, true));
         body.onExit((other) => told(other, false));
@@ -180,7 +226,7 @@ export const rapier2dProvider: TPhysicsProvider = {
 
     hasBody: (box) => {
         const world = worldOfBody.get(box as TGameObject);
-        return world === undefined ? undefined : world.bodyOf(box as TGameObject) !== null;
+        return world === undefined ? undefined : bodyOfObject2d.has(box as TGameObject);
     },
 };
 

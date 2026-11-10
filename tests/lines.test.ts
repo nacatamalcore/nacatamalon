@@ -6,8 +6,7 @@ import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useCamera3d } from '../src/hooks';
 import { createMesh } from '../src/gameobjects/mesh';
 import { useCubeGeometry } from '../src/hooks/geometry/use_cube_geometry';
-import { useHelperAxis, useHelperGrid, useLines } from '../src/hooks/helpers';
-import { writeLines } from '../src/gameobjects/lines';
+import { setLines, useHelperAxis, useHelperGrid, useLines } from '../src/hooks/helpers';
 import { LINE_VERTEX_FLOATS } from '../src/render/shared/line_vertex';
 import { serializeScene } from '../src/scene';
 import { createTestGame, startTestScene } from './helpers/test_game';
@@ -44,7 +43,7 @@ describe('writing lines', () => {
         const { store } = createTestGame();
         let made!: TLines;
         startTestScene(store, 'Level', () => {
-            [made] = useLines({ vertices: RED_LINE });
+            made = useLines({ lines: RED_LINE });
             return createScene();
         });
 
@@ -56,19 +55,19 @@ describe('writing lines', () => {
         const { store } = createTestGame();
         let made!: TLines;
         startTestScene(store, 'Level', () => {
-            [made] = useLines();
+            made = useLines();
             return createScene();
         });
 
-        expect(() => writeLines(made, new Float32Array(LINE_VERTEX_FLOATS))).toThrow(/not a whole number of lines/);
+        expect(() => setLines(made, new Float32Array(LINE_VERTEX_FLOATS))).toThrow(/setLines: 7 numbers is not a whole number of lines/);
     });
 
     it('draws what was written last, shorter or longer than before', () => {
         const { store } = createTestGame();
-        let set!: (vertices: Float32Array) => void;
+        let made!: TLines;
         startTestScene(store, 'Level', () => {
             useCamera3d({ projection: 'perspective', transform: { z: 5 } });
-            [, set] = useLines({ vertices: RED_LINE });
+            made = useLines({ lines: RED_LINE });
             return createScene();
         });
         expect(linesIn(frame(store))[0].count).toBe(2);
@@ -77,26 +76,67 @@ describe('writing lines', () => {
         three.set(RED_LINE, 0);
         three.set(RED_LINE, RED_LINE.length);
         three.set(RED_LINE, RED_LINE.length * 2);
-        set(three);
+        setLines(made, three);
         expect(linesIn(frame(store))[0].count).toBe(6);
 
-        set(RED_LINE);
+        setLines(made, RED_LINE);
         expect(linesIn(frame(store))[0].count).toBe(2);
     });
 
     it('copies what it is given, so the caller can reuse its array', () => {
         const { store } = createTestGame();
-        let set!: (vertices: Float32Array) => void;
+        let made!: TLines;
         startTestScene(store, 'Level', () => {
             useCamera3d({ projection: 'perspective', transform: { z: 5 } });
-            [, set] = useLines();
+            made = useLines();
             return createScene();
         });
         const mine = new Float32Array(RED_LINE);
-        set(mine);
+        setLines(made, mine);
         mine[7] = 99;
 
         expect(corner(linesIn(frame(store))[0], 1)[0]).toBe(1);
+    });
+});
+
+describe('writing lines as a list', () => {
+    it('draws each from where it starts to where it ends, in its colour as text, white when left out', () => {
+        const { store } = createTestGame();
+        startTestScene(store, 'Level', () => {
+            useCamera3d({ projection: 'perspective', transform: { z: 5 } });
+            useLines({ lines: [
+                { from: { x: 0, y: 0, z: 0 }, to: { x: 1, y: 2, z: 3 }, color: '#ff0000' },
+                { from: { x: -1, y: 0, z: 0 }, to: { x: 0, y: -1, z: 0 } },
+            ] });
+            return createScene();
+        });
+
+        const drawn = linesIn(frame(store))[0];
+        expect(drawn.count).toBe(4);
+        expect(corner(drawn, 0)).toEqual([0, 0, 0, 1, 0, 0, 1]);
+        expect(corner(drawn, 1)).toEqual([1, 2, 3, 1, 0, 0, 1]);
+        expect(corner(drawn, 3)).toEqual([0, -1, 0, 1, 1, 1, 1]);
+    });
+
+    it('can follow numbers and be followed by them, shorter or longer', () => {
+        const { store } = createTestGame();
+        let made!: TLines;
+        startTestScene(store, 'Level', () => {
+            useCamera3d({ projection: 'perspective', transform: { z: 5 } });
+            made = useLines({ lines: RED_LINE });
+            return createScene();
+        });
+
+        const line = { from: { x: 0, y: 0, z: 0 }, to: { x: 0, y: 1, z: 0 }, color: '#00ff00' };
+        setLines(made, [line, line, line]);
+        expect(linesIn(frame(store))[0].count).toBe(6);
+        expect(corner(linesIn(frame(store))[0], 5)).toEqual([0, 1, 0, 0, 1, 0, 1]);
+
+        setLines(made, []);
+        expect(linesIn(frame(store))[0]?.count ?? 0).toBe(0);
+
+        setLines(made, RED_LINE);
+        expect(corner(linesIn(frame(store))[0], 1)).toEqual([1, 0, 0, 1, 0, 0, 1]);
     });
 });
 
@@ -105,7 +145,7 @@ describe('where the lines are drawn', () => {
         const { store } = createTestGame();
         startTestScene(store, 'Level', () => {
             useCamera3d({ projection: 'perspective', transform: { z: 5 } });
-            useLines({ vertices: RED_LINE, transform: { x: 10, rotationY: Math.PI / 2, scaleX: 2 } });
+            useLines({ lines: RED_LINE, transform: { x: 10, rotationY: Math.PI / 2, scaleX: 2 } });
             return createScene();
         });
 
@@ -126,7 +166,7 @@ describe('where the lines are drawn', () => {
             useCamera3d({ projection: 'perspective', transform: { z: 5 } });
             useSpawn(() => {
                 place = useTransform({ x: 3 });
-                useLines({ vertices: RED_LINE });
+                useLines({ lines: RED_LINE });
             })();
             return createScene();
         });

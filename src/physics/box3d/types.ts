@@ -10,7 +10,7 @@ export type { TPhysicsBodyType };
  * What this adapter promises, said once and apart from the machinery that keeps it.
  *
  * The unit throughout is **the object**, never a bare placement: a body belongs to something in the
- * scene, `bodyOf` finds it by that something, and a contact hands over the other one. That is the
+ * scene, `getPhysicsBody3d` finds it by that something, and a contact hands over the other one. That is the
  * difference from the same adapter written against the other engine, where a body could be hung on
  * a transform with nothing around it, and a trigger could then only say where the thing it touched
  * was and not what it was.
@@ -193,21 +193,6 @@ export type TPhysicsWorldHandle3d = {
         direction: { x: number; y: number; z: number },
         opts?: TRaycastOptions,
     ) => TRaycastHit | null;
-
-    /**
-     * The body already registered for the box with this `id`, or `null` if it has none.
-     *
-     * The lookup a **document-driven** scene needs, and the reason it exists: when a collider
-     * comes from a `SceneDoc` the provider builds it, so the handle `addBox` returned went there
-     * and the game never saw it. A script attached to that same box has the box and nothing else
-     * and this is how it gets from there to `onEnter`. Pass the script's `self` straight in; a
-     * code-authored scene keeps its handle and never needs this.
-     *
-     * `null` is a normal answer during a scene's first frames: bodies are registered as their
-     * boxes are built, so a script listed above its own collider asks too early. Look it up in
-     * `useUpdate` rather than caching it at init.
-     */
-    bodyOf: (box: TGameObject) => TPhysicsBodyHandle3d | null;
 };
 
 /**

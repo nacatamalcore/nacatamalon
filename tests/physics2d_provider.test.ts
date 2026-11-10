@@ -34,7 +34,6 @@ const fakeWorld = () => {
         addCircle: (box, options) => { calls.push({ kind: 'circle', box, options }); return body; },
         addRect: (box, options) => { calls.push({ kind: 'rect', box, options }); return body; },
         addPolygon: (box, options) => { calls.push({ kind: 'polygon', box, options }); return body; },
-        bodyOf: () => null,
         addCharacter: () => { throw new Error('not asked of a provider'); },
         addJoint: () => { throw new Error('not asked of a provider'); },
         addSoftBody: () => { throw new Error('not asked of a provider'); },

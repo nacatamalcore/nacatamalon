@@ -1,7 +1,7 @@
 import { getColor } from '../../color';
 import { newLines } from '../../gameobjects/lines';
 import type { TColor, TColorOption } from '../../color';
-import type { TNewLinesOptions } from '../../gameobjects/lines';
+import type { TLinesOptions } from '../../gameobjects/lines';
 import type { TLines } from '../../gameobjects/lines';
 
 /**
@@ -24,7 +24,7 @@ export type THelperAxisColors = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TUseHelperAxisOptions = TNewLinesOptions & {
+export type TUseHelperAxisOptions = TLinesOptions & {
     /**
      * How long each arm is, in world units. Default `1`.
      */
