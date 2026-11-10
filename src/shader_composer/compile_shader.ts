@@ -46,7 +46,7 @@ const asCarry = (n: TComposerNode): TComposerNode => {
  * Writes the graph out in one language.
  */
 const emitShader = (graph: TShaderGraph, target: TShaderTarget): TEmitted => {
-    const { color, carry } = graph;
+    const { color, carry, normal } = graph;
     // Read as the wider family on purpose: the type already keeps `'post'` out, and this is for
     // whoever calls it from plain JavaScript.
     const shader: string = graph.shader;
@@ -61,15 +61,22 @@ const emitShader = (graph: TShaderGraph, target: TShaderTarget): TEmitted => {
         if (carry !== undefined) {
             throw new Error('[NacatamalOn] shader composer: a sprite2d shader has no vertex stage, so it carries nothing: it takes no "carry".');
         }
+        if (normal !== undefined) {
+            throw new Error('[NacatamalOn] shader composer: a sprite2d shader has no vertex stage, so it takes no "normal".');
+        }
         if (color === undefined) {
             throw new Error('[NacatamalOn] shader composer: a sprite2d shader needs a "color".');
         }
-    } else if (color === undefined && graph.position === undefined) {
-        throw new Error('[NacatamalOn] shader composer: a mesh3d shader needs a "color", a "position" or both.');
+    } else if (color === undefined && graph.position === undefined && normal === undefined) {
+        throw new Error('[NacatamalOn] shader composer: a mesh3d shader needs a "color", a "position" or a "normal", or more than one.');
     }
 
-    // Carried with no corner moved, the corner stays where it is: the hook is there to carry.
-    const position = graph.position ?? (carry === undefined ? undefined : composerVertexPosition());
+    // Carried, or given a facing, with no corner moved, the corner stays where it is: the hook is
+    // there for the rest.
+    const position = graph.position ?? (carry === undefined && normal === undefined ? undefined : composerVertexPosition());
+    if (normal !== undefined && normal.type !== 'vec3<f32>') {
+        throw new Error(`[NacatamalOn] shader composer: "normal" must be a vec3, got a ${normal.type}.`);
+    }
     if (position !== undefined && position.type !== 'vec3<f32>') {
         throw new Error(`[NacatamalOn] shader composer: "position" must be a vec3, got a ${position.type}.`);
     }
@@ -81,17 +88,20 @@ const emitShader = (graph: TShaderGraph, target: TShaderTarget): TEmitted => {
     // The corner and what it carries, written together so a wave they both come from is worked out
     // once; what it carries is put in the shader's carry before the corner is handed back.
     const carried = carry === undefined ? undefined : asCarry(carry);
-    const vertexRoots = [position, carried].filter((root): root is TComposerNode => root !== undefined);
+    const vertexRoots = [position, carried, normal].filter((root): root is TComposerNode => root !== undefined);
     const vertexBody = position === undefined ? null : emitBodies(vertexRoots, 'mesh3d.vert', target);
-    let vertex = vertexBody === null
-        ? null
-        : target.fn(
-            'mesh3d.vert',
-            carried === undefined ? vertexBody.lines : [...vertexBody.lines, `    carry = ${vertexBody.results[1]};`],
-            vertexBody.results[0],
-        );
+    let vertex = null as string | null;
+    if (vertexBody !== null) {
+        // The results come back in the order of the roots: the corner, then what is carried, then the
+        // facing, each only when given.
+        const lines = [...vertexBody.lines];
+        let next = 1;
+        if (carried !== undefined) lines.push(`    carry = ${vertexBody.results[next++]};`);
+        if (normal !== undefined) lines.push(`    surfaceNormal = ${vertexBody.results[next++]};`);
+        vertex = target.fn('mesh3d.vert', lines, vertexBody.results[0]);
+    }
 
-    const roots = [color, position, carried].filter((root): root is TComposerNode => root !== undefined);
+    const roots = [color, position, carried, normal].filter((root): root is TComposerNode => root !== undefined);
 
     // In GLSL the two hooks are two programs, compiled apart, and the vertex cannot see a function
     // written in the fragment: each hook takes the helpers its own half of the graph calls.

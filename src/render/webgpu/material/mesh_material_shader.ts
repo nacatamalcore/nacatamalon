@@ -53,6 +53,11 @@ struct VertContext {
 // corner, its place before it was moved. Written by the hook as carry = vec4<f32>(...), read as
 // ctx.carry. Nothing written, it is nothing.
 var<private> carry: vec4<f32>;
+
+// Which way the surface faces at this corner, for the light, if the hook says so, in the space pos
+// is in: a blade of grass lit as if it faced up, a flat card lit as round. Written by the hook as
+// surfaceNormal = vec3<f32>(...). Nothing written, the surface is measured where the hook moved it.
+var<private> surfaceNormal: vec3<f32>;
 `;
 
 /**
@@ -230,11 +235,17 @@ fn effect(surface: vec4<f32>, ctx: FragContext) -> vec4<f32> {
 `;
 
 /**
+ * The facing the hook wrote into `surfaceNormal`, when it wrote one, in place of the measured one.
+ */
+const GIVEN_NORMAL = /* wgsl */ `
+    let shaped = select(measured, normalize(given), dot(given, given) > 0.0);
+`;
+
+/**
  * The surface kept as it was, for a material that never moves a corner.
  */
 const PLAIN_NORMAL = /* wgsl */ `
-    let shaped = ctx.normal;
-`;
+    let measured = ctx.normal;${GIVEN_NORMAL}`;
 
 /**
  * The surface measured again after the corners moved.
@@ -254,8 +265,7 @@ const DEFORMED_NORMAL = /* wgsl */ `
     let bitangent = cross(ctx.normal, tangent);
     let moved1 = vertex(rest + tangent * ${EPSILON}, ctx);
     let moved2 = vertex(rest + bitangent * ${EPSILON}, ctx);
-    let shaped = normalize(cross(moved1 - local, moved2 - local));
-`;
+    let measured = normalize(cross(moved1 - local, moved2 - local));${GIVEN_NORMAL}`;
 
 /**
  * The bones, mixed by how much of the corner each one owns, applied after the corner hook: the hook
@@ -344,6 +354,7 @@ const CORNER_CONTEXT = /* wgsl */ `
     let local = vertex(rest, ctx);
     // Kept now: a surface measured again calls the hook twice more, at corners beside this one.
     let carried = carry;
+    let given = surfaceNormal;
 `;
 
 const body = (normal: string, skinned: boolean, cull: TCullMode, instanced: boolean): string => {

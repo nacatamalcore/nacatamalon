@@ -182,7 +182,7 @@ describe('what it refuses', () => {
         expect(() => compileShader({ shader: 'sprite2d', color: gradient(), position: composerVec3(0, 0, 0) }))
             .toThrow(/no vertex stage/);
         expect(() => compileShader({ shader: 'sprite2d' })).toThrow(/needs a "color"/);
-        expect(() => compileShader({ shader: 'mesh3d' })).toThrow(/needs a "color", a "position" or both/);
+        expect(() => compileShader({ shader: 'mesh3d' })).toThrow(/needs a "color", a "position" or a "normal"/);
     });
 
     it('a screen-wide effect, which no node can write yet', () => {

@@ -169,7 +169,7 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         sources.forEach((source, s) => {
             const map = gpu.shadows[s] ??= createShadowMap(gpu.device);
             const lightMatrix = lightMatrices[s]!;
-            reportCastersOutside(source.casters, source.light, lightMatrix, gpu);
+            reportCastersOutside(source.casters, source.light, lightMatrix, gpu, source.camera);
 
             const shadowPass = encoder.beginRenderPass({
                 label: 'shadow',

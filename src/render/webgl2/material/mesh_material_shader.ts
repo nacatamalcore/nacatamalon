@@ -32,6 +32,9 @@ struct VertContext {
 
 // Four numbers the corner hook hands on to the colour hook, as its twin keeps them.
 vec4 carry = vec4(0.0);
+
+// The facing the corner hook gives the light, as its twin keeps it. Nothing written, the measured one.
+vec3 surfaceNormal = vec3(0.0);
 `;
 
 /**
@@ -183,11 +186,17 @@ vec4 effect(vec4 surface, FragContext ctx) {
 `;
 
 /**
+ * The facing the hook wrote into `surfaceNormal`, when it wrote one, in place of the measured one.
+ */
+const GIVEN_NORMAL = /* glsl */ `
+    vec3 shaped = dot(given, given) > 0.0 ? normalize(given) : measured;
+`;
+
+/**
  * The surface kept as it was.
  */
 const PLAIN_NORMAL = /* glsl */ `
-    vec3 shaped = ctx.normal;
-`;
+    vec3 measured = ctx.normal;${GIVEN_NORMAL}`;
 
 /**
  * The surface measured again after the corners moved.
@@ -203,8 +212,7 @@ const DEFORMED_NORMAL = /* glsl */ `
     vec3 bitangent = cross(ctx.normal, tangent);
     vec3 moved1 = vertex(rest + tangent * ${EPSILON}, ctx);
     vec3 moved2 = vertex(rest + bitangent * ${EPSILON}, ctx);
-    vec3 shaped = normalize(cross(moved1 - local, moved2 - local));
-`;
+    vec3 measured = normalize(cross(moved1 - local, moved2 - local));${GIVEN_NORMAL}`;
 
 /**
  * Each corner's detail, from a run of its own: the tangent and its hand, and a second picture
@@ -315,6 +323,7 @@ const CORNER_CONTEXT = /* glsl */ `
     vec3 local = vertex(rest, ctx);
     // Kept now: a surface measured again calls the hook twice more, at corners beside this one.
     vec4 carried = carry;
+    vec3 given = surfaceNormal;
 `;
 
 const vertexBody = (normal: string, skinned: boolean, cull: TCullMode, instanced: boolean): string => /* glsl */ `

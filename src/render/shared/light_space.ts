@@ -382,13 +382,19 @@ export const resetShadowWarnings = (): void => { warnedOutside = new WeakSet(); 
  * Only a sun is checked. A torch's frustum is its own cone, and something outside it is not out of
  * range: it is simply not lit by that torch, which is a thing the scene already shows.
  *
+ * Nor is anything behind the camera. The square starts at the camera and reaches `shadowArea` in
+ * front of it, so what is behind is always outside it, however big the square, and its shadow could
+ * not have landed in it anyway: raising the number would not help, and saying so would send whoever
+ * reads it to raise it for nothing, frame after frame of a camera that follows a ball through trees.
+ *
  * @param by The renderer drawing it, so each game says it once.
+ * @param camera The camera the square follows; `null` checks every caster.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const reportCastersOutside = (casters: readonly TDrawMesh[], light: TDrawLight, matrix: Mat4, by: object = PAGE): void => {
+export const reportCastersOutside = (casters: readonly TDrawMesh[], light: TDrawLight, matrix: Mat4, by: object = PAGE, camera: TDrawCamera3d | null = null): void => {
     if (warnedOutside.has(by) || light.type !== 'directional') {
         return;
     }
@@ -409,6 +415,15 @@ export const reportCastersOutside = (casters: readonly TDrawMesh[], light: TDraw
             x = m[0] * mx + m[4] * my + m[8] * mz + m[12];
             y = m[1] * mx + m[5] * my + m[9] * mz + m[13];
             z = m[2] * mx + m[6] * my + m[10] * mz + m[14];
+        }
+
+        // Behind the camera: outside the square whatever its size (see above).
+        if (camera !== null) {
+            const facing = transformForward({ ...camera.transform, quaternion: null });
+            const ahead = (x - camera.transform.x) * facing.x + (y - camera.transform.y) * facing.y + (z - camera.transform.z) * facing.z;
+            if (ahead < 0) {
+                continue;
+            }
         }
 
         // Where its middle lands in the light's picture. Its middle and not its corners, because

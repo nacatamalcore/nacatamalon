@@ -56,6 +56,15 @@ releases are in [changelog/](./changelog/), one file each.
   serves both. On a group the vertex hook runs after the instance has placed the corner, in the
   group's space, so wind crossing a field is written once for every blade. What the colour hook
   needs is handed on through `carry`.
+- **A vertex hook can say which way the surface faces.** Writing `surfaceNormal = vec3<f32>(...)`
+  (`vec3(...)` in GLSL) in a model material's vertex hook lights the corner by that facing, in the
+  space `pos` is in, instead of the surface measured where the hook moved it: a blade of grass lit
+  as if it faced up, a flat card lit as if it were round, with the engine's lamps and shadows. The
+  composer writes it from `compileShader({ normal })`, and a graph file from its Normal Output node.
+  Nothing written, nothing changes.
+- **The shadow warning leaves out what is behind the camera.** A sun's shadows reach from the camera
+  out to `shadowArea` in front of it, so a caster behind the camera is outside however big the
+  square: it no longer asks for a bigger `shadowArea` that would not help.
 - **`updateBuffer(buffer, data, at)`** on a renderer writes from `at` bytes in, for a long run of
   which only a stretch changed.
 - **Mipmaps.** `useLoadTexture({ src, mipmaps: true })` and `createPixelTexture(pixels, { mipmaps:

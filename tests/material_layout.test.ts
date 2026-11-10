@@ -148,7 +148,7 @@ describe('the two model material shaders', () => {
         expect(without).not.toContain('let moved1 = vertex(');
         expect(with_).toContain('let moved1 = vertex(');
         // Without one, the surface is left exactly as the model gave it.
-        expect(without).toContain('let shaped = ctx.normal;');
+        expect(without).toContain('let measured = ctx.normal;');
     });
 
     it('swaps the branches between select and a ternary, which is the easy one to get wrong', () => {

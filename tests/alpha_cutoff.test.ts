@@ -261,9 +261,9 @@ describe('the surface a cut shadow tells its colour hook', () => {
 
     it('is the file\'s own when nothing moves the corners', () => {
         const wgsl = buildMeshMaterialShadowShader(null, {}, [], false, { fragment: FACING });
-        expect(wgsl).toContain('let shaped = ctx.normal;');
+        expect(wgsl).toContain('let measured = ctx.normal;');
         expect(wgsl).not.toContain('moved1');
         const glsl = buildMeshMaterialShadowShaderGlsl(null, {}, [], false, { fragment: FACING_GLSL }).vertex;
-        expect(glsl).toContain('vec3 shaped = ctx.normal;');
+        expect(glsl).toContain('vec3 measured = ctx.normal;');
     });
 });

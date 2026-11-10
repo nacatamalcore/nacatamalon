@@ -616,6 +616,9 @@ the built-in look on both cards (a screen effect is skipped), and the console sa
   (on a plane, `pos.xz / vec2<f32>(width, depth) + 0.5`), not at `ctx.uv`: the surface is measured
   again with the same `ctx`, so read at `ctx.uv` it is lit as if still flat. Give a height map
   `smooth: true` (`maps: { height: { texture, smooth: true } }`), or it rises in flat terraces.
+  It may also write `surfaceNormal = vec3<f32>(...)`, which way the surface faces for the light,
+  in the space `pos` is in (a blade of grass lit as if it faced up); left unwritten, the moved
+  surface is measured. `compileShader({ normal })` in the composer.
   On a `createMeshInstances` group it runs after the instance has placed the corner: `pos`,
   `ctx.normal` and `ctx.tangent` are in the group's space, so a wind is one direction for every
   blade, and `pos.y - ctx.origin.y` is how far up its own instance a corner is.

@@ -31,6 +31,13 @@ export type TShaderGraph<S extends TGraphTarget = TGraphTarget> = {
      */
     carry?: TComposerNode;
     /**
+     * Which way the surface faces at each corner, for the light, in the space `position` is in (a
+     * `vec3`, brought back to length one): a blade of grass lit as if it faced up, a flat card lit as
+     * if it were round. Left out, the surface is measured where `position` moved it. Written with
+     * `position`, as `carry` is. Models only.
+     */
+    normal?: TComposerNode;
+    /**
      * How a model's surface is lit, in place of the engine's light: `toonLighting()` or `unlitLighting()`. With
      * `steps`, it makes the colour, so it is never given with `color`. Models only.
      */

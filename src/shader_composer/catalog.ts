@@ -579,6 +579,20 @@ const DEFS: TNodeDef[] = [
         throw new Error('unreachable');
     },
     },
+    {
+        type: 'output.normal',
+        label: 'Normal Output',
+        category: 'output',
+        summary: 'Which way the surface faces at each vertex, for the light, in the space Vertex Position is in. Leave it unwired to light the surface as it is moved.',
+        inputs: [port('normal', V3)],
+        outputs: [],
+        params: [],
+        role: 'output',
+        targets: ['mesh3d'],
+        build: () => {
+        throw new Error('unreachable');
+    },
+    },
 ];
 
 /**

@@ -62,6 +62,12 @@ export type TMaterialShaderOptions = {
      * moves and turns.
      * Nothing written is zeros.
      *
+     * It can also say which way the surface faces at the corner, for the light, by writing it into
+     * `surfaceNormal` (`surfaceNormal = vec3<f32>(0.0, 1.0, 0.0);`), in the space `pos` is in: a blade
+     * of grass lit as if it faced up rather than sideways, a flat card lit as if it were round. It is
+     * brought back to length one. Nothing written, the surface is measured where the hook moved it
+     * (below). The composer's `compileShader({ normal })` writes it.
+     *
      * It reads the material's knobs (`mu`) and its `maps` (`sampleMap_<name>(uv)`), so a picture can
      * move the corners: a height map, footprints pressed into snow, ripples drawn into a texture. The
      * surface is measured again where the hook moved it, by calling it at two places beside each

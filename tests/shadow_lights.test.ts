@@ -116,6 +116,19 @@ describe('something that casts but falls outside the square', () => {
         expect(warn).not.toHaveBeenCalled();
     });
 
+    it('leaves out what is behind the camera, which no size of square reaches', () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        const light = sun({ shadowArea: 12 });
+
+        // The camera is at z = 6 looking down -Z: this is forty units behind it.
+        reportCastersOutside([caster(0, 0, 46)], light, matrixFor(light), {}, camera);
+        expect(warn).not.toHaveBeenCalled();
+
+        // The same distance in front of it is still said.
+        reportCastersOutside([caster(0, 0, -34)], light, matrixFor(light), {}, camera);
+        expect(warn).toHaveBeenCalledTimes(1);
+    });
+
     it('leaves a torch alone, because outside its cone is not out of range', () => {
         const warn = spyOn(console, 'warn').mockImplementation(() => {});
         const torch = sun({ type: 'spot', range: 8, angle: 0.4, transform: at({ y: 4, rotationX: -Math.PI / 2 }) });
