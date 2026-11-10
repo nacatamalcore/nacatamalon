@@ -115,7 +115,7 @@ export type TDrawSprite = {
      */
     readonly material?: TDrawShader;
     /**
-     * This sprite's own values for that material's knobs.
+     * This sprite's own values for that material's uniforms.
      *
      * Written per batch, so a sprite that has any is a batch of one. That is the cost of the
      * feature and it is worth stating: the alternative was a compiled shader per sprite.

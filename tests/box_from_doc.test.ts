@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'bun:test';
 import { createScene } from '../src/scene/create_scene';
-import { boxFromDoc, copyBox, parseSceneDoc, sceneFromDoc, SCENE_FORMAT } from '../src/scene/document';
+import { objectFromDoc, copyObject, parseSceneDoc, sceneFromDoc, SCENE_FORMAT } from '../src/scene/document';
 import { getScriptFields } from '../src/scripts';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { useSpawn } from '../src/hooks/spawn';
@@ -34,14 +34,14 @@ const coin = () => parseSceneDoc({
     },
 }, 'boxes/Coin.box');
 
-describe('boxFromDoc', () => {
-    it('makes the box of a document while the game runs, copy after copy, each its own', () => {
+describe('objectFromDoc', () => {
+    it('makes the object of a document while the game runs, copy after copy, each its own', () => {
         const shone: string[] = [];
         registerScript('test-shiny', (self) => { shone.push(self.id); });
         const { store } = createTestGame();
         let spawn!: (doc: ReturnType<typeof coin>, place?: { x?: number; y?: number }) => TGameObject;
         const scene = startTestScene(store, 'Level', () => {
-            spawn = useSpawn(boxFromDoc, { parent: 'scene' });
+            spawn = useSpawn(objectFromDoc, { parent: 'scene' });
             return createScene();
         });
 
@@ -66,12 +66,12 @@ describe('boxFromDoc', () => {
     });
 
     it('says how it is meant to be used when called by itself', () => {
-        expect(() => boxFromDoc(coin())).toThrow('useSpawn(boxFromDoc)(doc)');
+        expect(() => objectFromDoc(coin())).toThrow('useSpawn(objectFromDoc)(doc)');
     });
 });
 
-describe('copyBox', () => {
-    it('makes another of a box a scene document built, as the document wrote it', () => {
+describe('copyObject', () => {
+    it('makes another of an object a scene document built, as the document wrote it', () => {
         const shone: string[] = [];
         registerScript('test-shiny', (self) => { shone.push(self.id); });
         const { store } = createTestGame();
@@ -80,7 +80,7 @@ describe('copyBox', () => {
         let spawn!: (box: TGameObject, place?: { x?: number; y?: number }) => TGameObject;
         const scene = startTestScene(store, 'Level', () => {
             sceneFromDoc(level, 'scenes/level.scene')();
-            spawn = useSpawn(copyBox, { parent: 'scene' });
+            spawn = useSpawn(copyObject, { parent: 'scene' });
             return createScene();
         });
         const first = scene.children.flatMap((c) => [c, ...c.children]).find((b) => b.name === 'Coin' && b.drawables.length > 0)!;
@@ -103,7 +103,7 @@ describe('copyBox', () => {
         let spawn!: (box: TGameObject) => TGameObject;
         const scene = startTestScene(store, 'Level', () => {
             createSprite({ width: 4, height: 4 });
-            spawn = useSpawn(copyBox);
+            spawn = useSpawn(copyObject);
             return createScene();
         });
         expect(() => spawn(scene)).toThrow('was not built from a scene document');

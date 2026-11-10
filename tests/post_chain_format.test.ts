@@ -83,7 +83,7 @@ describe('reading a chain out of a file', () => {
     });
 });
 
-describe('reading a chain written before a knob was renamed', () => {
+describe('reading a chain written before a uniform was renamed', () => {
     it('reads the old name as the new one, and says so once for the entry', () => {
         const warn = spyOn(console, 'warn').mockImplementation(() => {});
         const [entry] = normalizePostChain([{ builtin: 'dither', uniforms: { strength: 0.5 } }]);
@@ -103,7 +103,7 @@ describe('reading a chain written before a knob was renamed', () => {
         warn.mockRestore();
     });
 
-    it('moves every renamed knob of an entry with a single warning', () => {
+    it('moves every renamed uniform of an entry with a single warning', () => {
         const warn = spyOn(console, 'warn').mockImplementation(() => {});
         const [entry] = normalizePostChain([{ builtin: 'halftone', uniforms: { scale: 6, color: 1, angle: 30 } }]);
 
@@ -113,7 +113,7 @@ describe('reading a chain written before a knob was renamed', () => {
         warn.mockRestore();
     });
 
-    it('leaves a file\'s effect and a knob already under its new name alone, and says nothing', () => {
+    it('leaves a file\'s effect and a uniform already under its new name alone, and says nothing', () => {
         const warn = spyOn(console, 'warn').mockImplementation(() => {});
         const [file, current] = normalizePostChain([
             { shader: 'shaders/mine.wgsl', uniforms: { strength: 0.5 } },

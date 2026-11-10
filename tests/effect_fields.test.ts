@@ -8,7 +8,7 @@ import type { TEffectField } from '../src/post/builtin/types/t_builtin';
 
 /**
  * What each effect and each look says can be set on it, for a form to be made of it. A form shows
- * these and writes them back, so a field must be exactly a knob the effect has (or an option it is
+ * these and writes them back, so a field must be exactly a uniform the effect has (or an option it is
  * made with), starting exactly where the effect starts.
  */
 
@@ -24,12 +24,12 @@ const holds = (field: TEffectField, value: unknown): boolean => {
 };
 
 describe('an effect\'s fields', () => {
-    it('are its knobs, every one, with the values it starts at, and what it is made with', () => {
+    it('are its uniforms, every one, with the values it starts at, and what it is made with', () => {
         for (const info of POST_BUILTINS) {
             const built = info.build();
-            const knobs = info.fields.filter((field) => field.rebuild !== true);
-            expect(knobs.map((field) => field.key).sort()).toEqual(Object.keys(built.uniforms).sort());
-            for (const field of knobs) {
+            const uniforms = info.fields.filter((field) => field.rebuild !== true);
+            expect(uniforms.map((field) => field.key).sort()).toEqual(Object.keys(built.uniforms).sort());
+            for (const field of uniforms) {
                 expect(holds(field, field.default)).toBe(true);
                 expect(field.default).toEqual(built.uniforms[field.key] as never);
                 if (field.min !== undefined && typeof field.default === 'number') {
@@ -73,7 +73,7 @@ describe('a chain entry\'s options', () => {
         warn.mockRestore();
     });
 
-    it('make the effect with them, and its knobs are laid over', () => {
+    it('make the effect with them, and its uniforms are laid over', () => {
         const { store } = createTestGame();
         installPostChain(store, normalizePostChain([{ builtin: 'ascii', options: { glyphs: ' ░▒▓█' }, uniforms: { size: 12 } }]));
         const [effect] = store.get('post').effects;
@@ -82,7 +82,7 @@ describe('a chain entry\'s options', () => {
     });
 });
 
-describe('turning a project effect\'s knobs from outside', () => {
+describe('turning a project effect\'s uniforms from outside', () => {
     it('turns the effect its entry made, past an entry that made none', () => {
         const warn = spyOn(console, 'warn').mockImplementation(() => {});
         const { store } = createTestGame();
@@ -98,7 +98,7 @@ describe('turning a project effect\'s knobs from outside', () => {
 });
 
 describe('a look\'s fields', () => {
-    it('are its knobs, every one, with the values it starts at', () => {
+    it('are its uniforms, every one, with the values it starts at', () => {
         for (const info of MATERIAL_LOOKS) {
             const look = info.build() as unknown as Record<string, unknown>;
             expect(info.fields.map((field) => field.key).sort()).toEqual(Object.keys(look).filter((key) => key !== 'look').sort());

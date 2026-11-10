@@ -886,7 +886,7 @@ const makePictures = (node: TBoxNode, store: TRuntimeStore): void => {
  */
 /**
  * The node of the document each box was built from, and where that document came from: what
- * `copyBox` makes another of. Weak, so a box that goes away takes its entry with it.
+ * `copyObject` makes another of. Weak, so a box that goes away takes its entry with it.
  */
 const builtFrom = new WeakMap<TBox, { node: TBoxNode; src: string }>();
 
@@ -1086,18 +1086,19 @@ const withNewIds = (node: TBoxNode): TBoxNode => {
 };
 
 /**
- * Builds the box a document describes, while the game runs: a reusable box (a `.box` file, whose
- * document holds the one box) made again and again, a coin a level drops, an enemy a door lets out.
- * Give it to `useSpawn`, which says where it goes and builds it at the moment it is called.
+ * Builds the object a document describes, while the game runs: one saved to be used again (a `.box`
+ * file, whose document holds the one object) made again and again, a coin a level drops, an enemy a
+ * door lets out. Give it to `useSpawn`, which says where it goes and builds it at the moment it is
+ * called.
  *
- * Built exactly as a scene builds its boxes: its pictures and sounds loaded, its components and its
- * children made, and its behaviours running. Each copy gets ids of its own, and `place` puts it
+ * Built exactly as a scene builds what is in it: its pictures and sounds loaded, its components and
+ * its children made, and its behaviours running. Each copy gets ids of its own, and `place` puts it
  * somewhere other than where the document says.
  *
  * @example
  * ```ts
  * registerScript('coin-shower', () => {
- *     const spawn = useSpawn(boxFromDoc, { parent: 'scene' });
+ *     const spawn = useSpawn(objectFromDoc, { parent: 'scene' });
  *     const timer = useTimer();
  *     void fetch('boxes/Coin.box').then(async (response) => {
  *         const coin = parseSceneDoc(await response.json(), 'boxes/Coin.box');
@@ -1106,8 +1107,8 @@ const withNewIds = (node: TBoxNode): TBoxNode => {
  * });
  * ```
  *
- * @param doc The document, as `parseSceneDoc` gave it back: of a reusable box (its root holding
- * the one box), or any whose root is the box to make.
+ * @param doc The document, as `parseSceneDoc` gave it back: of a `.box` file (its root holding the
+ * one object), or any whose root is the object to make.
  * @param place Where it goes instead (`x`, `y`, `z`), each one left out staying as the document says.
  * @param src Where the document came from, named in any warning it causes.
  *
@@ -1115,10 +1116,10 @@ const withNewIds = (node: TBoxNode): TBoxNode => {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const boxFromDoc = (doc: TSceneDoc, place: { x?: number; y?: number; z?: number } = {}, src = doc.name): void => {
+export const objectFromDoc = (doc: TSceneDoc, place: { x?: number; y?: number; z?: number } = {}, src = doc.name): void => {
     const store = getActiveGame();
     if (store === null || getActiveBox() === null) {
-        throw new Error('[NacatamalOn] boxFromDoc: hand it to useSpawn, which builds what it describes: useSpawn(boxFromDoc)(doc).');
+        throw new Error('[NacatamalOn] objectFromDoc: hand it to useSpawn, which builds what it describes: useSpawn(objectFromDoc)(doc).');
     }
     // A reusable box's document holds the box as the only thing in its root.
     const node = withNewIds(doc.root.children.length === 1 ? doc.root.children[0]! : doc.root);
@@ -1135,38 +1136,38 @@ export const boxFromDoc = (doc: TSceneDoc, place: { x?: number; y?: number; z?: 
 };
 
 /**
- * Builds another of a box of the scene while the game runs, as the document described it: the same
- * components, children and behaviours, with ids of its own, where `place` says (or where the
- * document put the first). Give it to `useSpawn`, as `boxFromDoc`: `useSpawn(copyBox)(enemy)`. What
- * the first has done since (moved, been hit) is not copied: the copy starts as it was written.
+ * Makes a copy of an object of the scene while the game runs, as the document described it: the
+ * same components, children and behaviours, with ids of its own, where `place` says (or where the
+ * document put the first). Give it to `useSpawn`, as `objectFromDoc`: `useSpawn(copyObject)(enemy)`.
+ * What the first has done since (moved, been hit) is not copied: the copy starts as it was written.
  *
- * Only a box a scene document built can be copied this way; a box made in code is made again by
+ * Only an object a scene document built can be copied this way; one made in code is made again by
  * calling what made it.
  *
  * @example
  * ```ts
  * registerScript('door', (self) => {
- *     const spawn = useSpawn(copyBox, { parent: 'scene' });
+ *     const spawn = useSpawn(copyObject, { parent: 'scene' });
  *     const enemy = findObject(self.parent!, 'Enemy');
  *     useTimer().every(3, () => { if (enemy !== null) spawn(enemy, { x: self.transform!.x }); });
  * });
  * ```
  *
- * @param box The box to make another of.
+ * @param object The object to copy.
  * @param place Where it goes instead (`x`, `y`, `z`), each one left out staying as the document says.
  *
  * @category Scenes
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const copyBox = (box: TBox, place: { x?: number; y?: number; z?: number } = {}): void => {
-    const from = builtFrom.get(box);
+export const copyObject = (object: TBox, place: { x?: number; y?: number; z?: number } = {}): void => {
+    const from = builtFrom.get(object);
     if (from === undefined) {
-        throw new Error(`[NacatamalOn] copyBox: '${box.name}' was not built from a scene document, so there is nothing to make another of. Call again what made it.`);
+        throw new Error(`[NacatamalOn] copyObject: '${object.name}' was not built from a scene document, so there is nothing to make another of. Call again what made it.`);
     }
     const store = getActiveGame();
     if (store === null || getActiveBox() === null) {
-        throw new Error('[NacatamalOn] copyBox: hand it to useSpawn, which builds the copy: useSpawn(copyBox)(box).');
+        throw new Error('[NacatamalOn] copyObject: hand it to useSpawn, which builds the copy: useSpawn(copyObject)(object).');
     }
     const node = withNewIds(from.node);
     placeNode(node, place);

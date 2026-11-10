@@ -73,7 +73,7 @@ describe('a sprite material with maps', () => {
 });
 
 describe('its shader, on WebGPU', () => {
-    it('declares four map slots after the knobs, and a reader for each map it reads', () => {
+    it('declares four map slots after the uniforms, and a reader for each map it reads', () => {
         const names = mapNamesOf(CRUMBLE);
         expect(names).toEqual(['grain', 'shine']);
         for (const [code, group] of [[buildSpriteMaterialShader(CRUMBLE, { gone: 'f32' }, names), 2], [buildTilemapMaterialShader(CRUMBLE, { gone: 'f32' }, names), 3]] as const) {

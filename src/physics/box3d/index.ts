@@ -24,12 +24,12 @@
  */
 export { installPhysics3d, box3dProvider, getPhysicsWorld3d, getPhysicsBody3d } from './provider';
 export { loadBox3D } from './load_box3d';
-export { useCharacterBody } from './use_character_body';
+export { useCharacterBody3d } from './use_character_body_3d';
 
 export type {
     TPhysicsWorldHandle3d, TPhysicsBodyHandle3d, TPhysicsWorldOptions3d, TColliderSurface3d, TColliderOptions3d,
     TRaycastOptions, TRaycastHit,
 } from './types';
 export { DEFAULT_RAY_DISTANCE } from './types';
-export type { TCharacterBody, TCharacterOptions } from './character_body';
+export type { TCharacterBody3d, TCharacterOptions3d } from './character_body';
 export type { TBox3dModule } from './load_box3d';

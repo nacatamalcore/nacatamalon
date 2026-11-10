@@ -4,7 +4,7 @@ import { collectHelpers, collectUniforms, emitBodies, emitBody } from './emit';
 import { WGSL_TARGET } from './targets/wgsl';
 import { GLSL_TARGET } from './targets/glsl';
 import { composeSurface } from './surface/compose_surface';
-import type { TUniformValues } from '../materials/types/t_uniforms';
+import type { TUniformNumbers } from '../materials/types/t_uniforms';
 import type { TComposerNode } from './types/t_composer_node';
 import type { TShaderTarget, TStageCtx } from './types/t_shader_target';
 import type { TCompiledShader, TShaderGraph } from './types/t_shader_graph';
@@ -13,7 +13,7 @@ import type { TGraphTarget } from './types/t_shader_graph_doc';
 /**
  * One language's worth of output, before the two are put together.
  */
-type TEmitted = { fragment: string | null; vertex: string | null; uniforms: TUniformValues };
+type TEmitted = { fragment: string | null; vertex: string | null; uniforms: TUniformNumbers };
 
 /**
  * A colour result as a `vec4`: a `vec3` gains an alpha of 1, anything else is refused.

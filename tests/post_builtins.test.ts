@@ -23,8 +23,8 @@ describe('every built-in has both halves, and they agree', () => {
                 expect(step.fragment).toContain('fn effect(');
                 expect(step.fragmentGlsl).toContain('vec4 effect(');
             }
-            // The only thing that stops the two halves drifting: they share one set of knobs, and a
-            // half that read a knob the other does not declare would fail on one card alone. A knob
+            // The only thing that stops the two halves drifting: they share one set of uniforms, and a
+            // half that read a uniform the other does not declare would fail on one card alone. A uniform
             // may be read by a pass rather than the hook, so all the steps are read together.
             const wgsl = steps.map((step) => step.fragment).join('\n');
             const glsl = steps.map((step) => step.fragmentGlsl).join('\n');

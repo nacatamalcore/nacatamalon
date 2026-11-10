@@ -102,7 +102,7 @@ export type TTilemapLayer = {
      */
     material?: TSpriteMaterial;
     /**
-     * This layer's own values for that material's knobs, laid over the material's own.
+     * This layer's own values for that material's uniforms, laid over the material's own.
      */
     uniforms?: TUniformValues;
 };

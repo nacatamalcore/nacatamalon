@@ -97,7 +97,7 @@ const twoRooms = () => {
 };
 
 describe('the transitions that cross', () => {
-    it('all cross, carry both halves and a kind for every knob', () => {
+    it('all cross, carry both halves and a kind for every uniform', () => {
         for (const [name, transition] of CROSSING) {
             expect(transition.cross, name).toBe(true);
             expect(transition.fragment, name).toContain('sampleOutgoing(');

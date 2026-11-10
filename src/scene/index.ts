@@ -8,7 +8,7 @@ export { setScenePaused, isScenePaused } from './pause_scene';
 export type { TScene } from './types/t_scene';
 export type { TSceneFn } from './types/t_scene_fn';
 
-export { boxFromDoc, copyBox, parseSceneDoc, sceneFromDoc, serializeScene, SCENE_FORMAT, SCENE_VERSION } from './document';
+export { objectFromDoc, copyObject, parseSceneDoc, sceneFromDoc, serializeScene, SCENE_FORMAT, SCENE_VERSION } from './document';
 export type {
     TSceneDoc, TBoxNode, TDataEntry, TAssetEntry, TGeometrySource, TComponentDoc, TMaterialDoc, TMeshMaterialDoc, TMaterialMapDoc,
     TSpriteComponent, TNineSliceComponent, TTextComponent, TMeshComponent, TTilemapComponent, TTilemapLayerOverride, TParticlesComponent, TParticles3dComponent, TParticleCollider2dComponent, TParticleCollider3dComponent, TSpriteTextureComponent, TMusicComponent, TSongComponent, TMotionComponent, TAudioListenerComponent, TMaskComponent, TFilterComponent, TShapesComponent, TCamera2dComponent,

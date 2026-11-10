@@ -55,16 +55,16 @@ export const createMeshMaterials = (
 ) => {
     const mapEntries: GPUBindGroupLayoutEntry[] = [];
     for (let i = 0; i < MAX_MATERIAL_MAPS; i++) {
-        // Both stages, like the knobs: a corner hook moves the corners by a map (snow pressed down
+        // Both stages, like the uniforms: a corner hook moves the corners by a map (snow pressed down
         // where a picture of the footprints says) as readily as a colour hook paints with one.
         mapEntries.push(
             { binding: 1 + i * 2, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, sampler: {} },
             { binding: 2 + i * 2, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, texture: {} },
         );
     }
-    const knobsEntry: GPUBindGroupLayoutEntry = {
+    const uniformsEntry: GPUBindGroupLayoutEntry = {
         binding: 0,
-        // Both stages, because a corner hook turns knobs as readily as a colour hook does.
+        // Both stages, because a corner hook turns uniforms as readily as a colour hook does.
         visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
         // Where this model's numbers start is given at draw time, so a group depends only on the
         // maps it binds and not on which slot of the buffer this model landed in.
@@ -72,12 +72,12 @@ export const createMeshMaterials = (
     };
     const materialLayout = device.createBindGroupLayout({
         label: 'mesh material layout',
-        entries: [knobsEntry, ...mapEntries],
+        entries: [uniformsEntry, ...mapEntries],
     });
     // The same group with the bones in it too, for a model that bends.
     const skinnedMaterialLayout = device.createBindGroupLayout({
         label: 'skinned mesh material layout',
-        entries: [knobsEntry, ...mapEntries, {
+        entries: [uniformsEntry, ...mapEntries, {
             binding: MESH_MATERIAL_JOINTS_BINDING,
             visibility: GPUShaderStage.VERTEX,
             buffer: { type: 'read-only-storage' },

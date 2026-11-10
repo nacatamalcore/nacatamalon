@@ -218,7 +218,7 @@ export const useSong = (song: TSongFile | TSongDoc | TSongAccompaniment, options
         stop: (fading) => player.stop(fading?.fade ?? 0),
         pause: () => player.pause(),
         resume: () => player.resume(),
-        // Every knob writes through to what the object carries, so a scene saved after the song
+        // Every uniform writes through to what the object carries, so a scene saved after the song
         // changed comes back changed.
         setVolume: (volume, fade = 0) => {
             attachment.volume = volume;

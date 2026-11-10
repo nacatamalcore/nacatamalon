@@ -61,7 +61,7 @@ export type TDrawTilemapLayer = {
      */
     readonly material?: TDrawShader;
     /**
-     * This layer's own values for that material's knobs.
+     * This layer's own values for that material's uniforms.
      */
     readonly uniforms?: TUniformValues;
     /**

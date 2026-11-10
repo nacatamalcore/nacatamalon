@@ -1,4 +1,4 @@
-export { boxFromDoc, copyBox, sceneFromDoc } from './scene_from_doc';
+export { objectFromDoc, copyObject, sceneFromDoc } from './scene_from_doc';
 export type { TSceneFromDocOptions } from './scene_from_doc';
 export { serializeScene, rememberBoxExtra } from './serialize_scene';
 export { parseSceneDoc, UNSUPPORTED_COMPONENTS } from './parse_scene_doc';

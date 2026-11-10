@@ -273,7 +273,7 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
     };
 
     /**
-     * One step of an effect, compiled. A pass is compiled exactly like a hook, with the same knobs.
+     * One step of an effect, compiled. A pass is compiled exactly like a hook, with the same uniforms.
      */
     const compiledFor = (effect: TPostEffect, fragmentGlsl: string | null, filtered = false): TCompiled => {
         if (fragmentGlsl === null) {

@@ -20,7 +20,7 @@ export type TParsedShader = {
     fragmentGlsl: string | null;
     vertexGlsl: string | null;
     /**
-     * The knobs it declared, with the values it gave them.
+     * The uniforms it declared, with the values it gave them.
      */
     uniforms: TUniformValues;
     /**

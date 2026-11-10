@@ -1,3 +1,4 @@
+import type { TUniformColorValue } from '../../materials/types/t_uniforms';
 import type { TColorOption } from '../../color/get_color';
 import { colorUniform } from './color_uniform';
 import type { TBuiltinPostEffect } from './types/t_builtin';
@@ -25,7 +26,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @author Francisco Pereira Alvarado
  */
 export const outline = (options: { color?: TColorOption | [number, number, number]; thickness?: number } = {}): TBuiltinPostEffect<{
-    color: number[]; thickness: number;
+    color: TUniformColorValue; thickness: number;
 }> => ({
     name: 'outline',
     fragment: /* wgsl */ `

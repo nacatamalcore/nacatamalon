@@ -20,9 +20,9 @@ import type { TShader } from '../src/loaders/shader/types/t_shader';
  * fifteen fill a material exactly and sixteen are one too many.
  */
 const colours = (count: number): Record<string, number[]> => {
-    const knobs: Record<string, number[]> = {};
-    for (let i = 0; i < count; i++) knobs[`c${i}`] = [1, 0, 1, 1];
-    return knobs;
+    const uniforms: Record<string, number[]> = {};
+    for (let i = 0; i < count; i++) uniforms[`c${i}`] = [1, 0, 1, 1];
+    return uniforms;
 };
 
 const MESH = 'fn effect(surface: vec4<f32>, ctx: FragContext) -> vec4<f32> { return surface; }';

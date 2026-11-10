@@ -1,7 +1,19 @@
-import { getActiveBox as getActiveGameObject } from '../../store';
+import { getActiveBox as getActiveGameObject, getActiveGame } from '../../store';
+import { firstTimeIn } from '../../utils/first_time_in';
+import { getPhysicsProviders } from '../physics_provider';
 import { getPhysicsWorld3d } from './provider';
-import type { TCharacterBody, TCharacterOptions } from './character_body';
+import type { TCharacterBody3d, TCharacterOptions3d } from './character_body';
 import { outsideSceneBody } from '../../utils/outside_scene_body';
+
+/**
+ * A character that is not simulated: what a scene opened in a tool gets, where nothing is.
+ */
+const inert = (): TCharacterBody3d => ({
+    velocity: { x: 0, y: 0, z: 0 },
+    isOnGround: false,
+    setPosition: () => {},
+    destroy: () => {},
+});
 
 /**
  * Makes this object a **walking character**: a capsule moved by asking the world what is in the
@@ -17,19 +29,18 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  * Set `velocity` and it walks. Falling is applied for you, and `isOnGround` is the answer to
  * whether it may jump.
  *
- * `null` when the scene has no physics world, which is what a tool opening a scene to edit it
- * looks like. Handle it the way you would handle `getPhysicsWorld3d()` coming back empty: do
- * nothing, because nothing is running.
+ * With no world to walk in, as in a tool opening the scene to edit it, it is a character that never
+ * moves, so the game's code runs the same and nothing happens. When physics is installed and the
+ * scene forgot its world, it says so once.
  *
  * ```ts
  * const Player = () => {
  *     useTransform({ x: 0, y: 1, z: 0 });
  *     createMesh({ geometry: useSphereGeometry({ radius: 0.35 }), tint: BLUE });
  *
- *     const player = useCharacterBody({ radius: 0.35, height: 1.8 });
+ *     const player = useCharacterBody3d({ radius: 0.35, height: 1.8 });
  *     const keys = useKeyboard();
  *     useUpdate(() => {
- *         if (!player) return;
  *         player.velocity.x = keys.isDown('d') ? 4 : keys.isDown('a') ? -4 : 0;
  *         if (keys.isDown('Space') && player.isOnGround) player.velocity.y = 5;
  *     });
@@ -40,14 +51,22 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const useCharacterBody = (options: TCharacterOptions): TCharacterBody | null => {
+export const useCharacterBody3d = (options: TCharacterOptions3d): TCharacterBody3d => {
     const box = getActiveGameObject();
     if (box === null) {
-        throw outsideSceneBody('useCharacterBody');
+        throw outsideSceneBody('useCharacterBody3d');
     }
 
     // Asked for while the scene is being built, which is the only time it can be answered, and
     // kept: unlike a body, a character is not registered anywhere to be looked up again later.
     const world = getPhysicsWorld3d();
-    return world === null ? null : world.addCharacter(box, options);
+    if (world === null) {
+        // Nothing installed is a tool showing the scene, and is said by nobody. Installed and still no
+        // world is a scene that forgot to declare one.
+        if (getPhysicsProviders().length > 0 && firstTimeIn(getActiveGame(), 'useCharacterBody3d: no world')) {
+            console.warn('[NacatamalOn] useCharacterBody3d: the scene has no 3D world, so the character never moves. Call usePhysicsWorld3d() in the scene\'s body, before what is in it.');
+        }
+        return inert();
+    }
+    return world.addCharacter(box, options);
 };

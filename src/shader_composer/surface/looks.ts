@@ -133,7 +133,7 @@ export type TMaterialLookInfo = {
      */
     slot: 'lighting' | 'step';
     /**
-     * Its knobs, for a form to be made of them: every field of the look but `look`, with its range.
+     * Its uniforms, for a form to be made of them: every field of the look but `look`, with its range.
      */
     fields: readonly TEffectField[];
     /**

@@ -1,6 +1,6 @@
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
 import type { TGeometry } from '../../geometry';
-import type { TCharacterBody, TCharacterOptions } from './character_body';
+import type { TCharacterBody3d, TCharacterOptions3d } from './character_body';
 // How a body moves is the engine's own word for it, the same one a scene writes down.
 import type { TPhysicsBodyType } from '../types/t_physics';
 import type { TPhysicsLayer } from '../layer_names';
@@ -166,12 +166,12 @@ export type TPhysicsWorldHandle3d = {
     addMesh: (box: TGameObject, opts: { type: TPhysicsBodyType; geometry: TGeometry } & TColliderOptions3d) => TPhysicsBodyHandle3d;
     /**
      * Adds a **kinematic character**: a capsule moved by queries rather than by forces, and the
-     * thing that makes a world walkable. See {@link TCharacterBody} for why it is not a body.
+     * thing that makes a world walkable. See {@link TCharacterBody3d} for why it is not a body.
      *
      * It is advanced by this world's own fixed step, like everything else here, so nothing has to
      * be called per frame: write into `velocity` whenever, and the character walks.
      */
-    addCharacter: (box: TGameObject, opts: TCharacterOptions) => TCharacterBody;
+    addCharacter: (box: TGameObject, opts: TCharacterOptions3d) => TCharacterBody3d;
     /**
      * Fires a ray and returns the **closest** thing it hits, or `null` for a clean miss, and the
      * first query on this surface that is not about creating something.

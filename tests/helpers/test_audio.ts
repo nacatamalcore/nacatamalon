@@ -7,7 +7,7 @@
  */
 
 /**
- * A knob that can be moved over time. What was scheduled on it is kept in order, and a ramp lands
+ * A uniform that can be moved over time. What was scheduled on it is kept in order, and a ramp lands
  * at once on its target: these tests check what was asked for, not how it sounds on the way.
  */
 export type TFakeParam = {

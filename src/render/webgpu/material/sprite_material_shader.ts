@@ -7,7 +7,7 @@ import type { TUniformSignature } from '../../../materials';
  * Where a material's own parameters are bound.
  *
  * Group 0 is the frame and group 1 is the sheet, both already spoken for by the built-in shader this
- * one begins with, so the knobs take the next one along.
+ * one begins with, so the uniforms take the next one along.
  */
 export const SPRITE_MATERIAL_GROUP = 2;
 
@@ -105,7 +105,7 @@ const buildWith = (tail: string, fragment: string, sig: TUniformSignature, mapNa
 };
 
 /**
- * Builds the whole shader for a sprite material: the engine's own preamble, the knobs the author
+ * Builds the whole shader for a sprite material: the engine's own preamble, the uniforms the author
  * declared, the author's hook, and the ending that calls it.
  *
  * The preamble is the **same value** the built-in shader is built from, not a copy of it, so the two

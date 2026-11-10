@@ -1,3 +1,5 @@
+import { uniformNumbers } from '../../materials/uniform_numbers';
+import type { TUniformColorValue, TUniformPointValue } from '../../materials/types/t_uniforms';
 import type { TColorOption } from '../../color/get_color';
 import type { TVec2 } from '../../math/vec2';
 import { colorUniform } from './color_uniform';
@@ -27,7 +29,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @author Francisco Pereira Alvarado
  */
 export const dropShadow = (options: { offset?: TVec2; radius?: number; color?: TColorOption | [number, number, number]; amount?: number } = {}): TBuiltinPostEffect<{
-    offset: number[]; radius: number; color: number[]; amount: number;
+    offset: TUniformPointValue; radius: number; color: TUniformColorValue; amount: number;
 }> => ({
     name: 'dropShadow',
     passes: [gaussPass('x', 1), gaussPass('y', 1)],
@@ -54,5 +56,9 @@ vec4 effect(vec4 color, vec2 uv) {
         amount: options.amount ?? 0.6,
     },
     uniformSig: { offset: 'vec2<f32>', radius: 'f32', color: 'vec3<f32>', amount: 'f32' },
-    reach: (uniforms) => Math.max(Math.abs(uniforms.offset[0] ?? 0), Math.abs(uniforms.offset[1] ?? 0)) + Math.max(0, uniforms.radius),
+    reach: (uniforms) => {
+        // The offset in whichever form the game gave it, `{ x, y }` or `[x, y]`.
+        const [x = 0, y = 0] = uniformNumbers(uniforms.offset, 2) as number[];
+        return Math.max(Math.abs(x), Math.abs(y)) + Math.max(0, uniforms.radius);
+    },
 });

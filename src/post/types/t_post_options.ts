@@ -20,7 +20,7 @@ import type { TPostPass } from './t_post_effect';
  * usePostProcess({ ...dither({ levels: POST_EFFECTS.COLOR_LEVELS.genesis }) });
  * ```
  *
- * @typeParam U The knobs by name, worked out from `uniforms`: the effect `usePostProcess` returns
+ * @typeParam U The uniforms by name, worked out from `uniforms`: the effect `usePostProcess` returns
  *     keeps them, so `effect.uniforms.curve` is read back as a number.
  *
  * @category Post-processing
@@ -45,11 +45,11 @@ export type TPostProcessOptions<U extends TUniformValues = TUniformValues> = {
      */
     effect?: TShader | string;
     /**
-     * The knobs, and what they start at. Laid **over** whatever a file or a built-in says.
+     * The uniforms, and what they start at. Laid **over** whatever a file or a built-in says.
      */
     uniforms?: U;
     /**
-     * What kind each knob is, when it is already known.
+     * What kind each uniform is, when it is already known.
      *
      * Left out, it is worked out from the values, which is what a hand-written effect wants. The
      * engine's own effects pass it because they already know, and because spreading one of them in is
@@ -74,7 +74,7 @@ export type TPostProcessOptions<U extends TUniformValues = TUniformValues> = {
      */
     lut?: TLut | null;
     /**
-     * How many pixels beyond what it is handed it draws, for its knobs as they are: a glow its radius,
+     * How many pixels beyond what it is handed it draws, for its uniforms as they are: a glow its radius,
      * a shadow how far it falls. Only a filter reads it (`useFilter`), to leave that much room around
      * the object; the engine's own effects say it themselves.
      */

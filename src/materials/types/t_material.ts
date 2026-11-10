@@ -5,7 +5,7 @@ import type { TShader } from '../../loaders/shader/types/t_shader';
 import type { TMaterialShader, TUniformType, TUniformSignature, TUniformValues } from './t_uniforms';
 
 /**
- * What both kinds of material have: a shader of your own, and the knobs on it.
+ * What both kinds of material have: a shader of your own, and the uniforms on it.
  *
  * All four sources are `null` on a material that only describes a surface, which is every material
  * a game has until it asks for an effect.
@@ -38,11 +38,11 @@ export type TShaderHalf = {
      */
     vertexGlsl: string | null;
     /**
-     * The knobs, or `null` when there is no shader of your own to turn.
+     * The uniforms, or `null` when there is no shader of your own to turn.
      */
     uniforms: TUniformValues | null;
     /**
-     * What kind each knob is. Fixed once, because the compiled shader was built against it.
+     * What kind each uniform is. Fixed once, because the compiled shader was built against it.
      */
     uniformSig: TUniformSignature | null;
     /**

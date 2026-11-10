@@ -45,7 +45,7 @@ import type { TPostBuiltinInfo } from './types/t_builtin';
  * cell, a block or a dot, in game pixels; `scale` a multiplier with no unit; `radius` a reach in
  * game pixels; `center` a point from `{ x: 0, y: 0 }`, the top left, to `{ x: 1, y: 1 }`. A name never changes its
  * kind from one effect to the next; one that says more is its own word (`crt`'s `cornerRadius` is a
- * part of the screen, `maskScale` a multiplier of the screen's real pixels). A knob renamed to keep
+ * part of the screen, `maskScale` a multiplier of the screen's real pixels). A uniform renamed to keep
  * to that is in its effect's `renamed`, so a chain written before still reads.
  *
  * **The call is for people, `effect.uniforms` for the shader.** What an effect is made with says a

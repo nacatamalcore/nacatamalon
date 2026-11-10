@@ -136,7 +136,7 @@ export type { TLoadProgress, TLoadStatus, TAsset, TTexture, TLoadedAtlas, TBitma
 export type { TSkeleton, TSkeletalClip, TJointPose, TClipEvent } from './animation';
 export type {
     TMaterial, TSpriteMaterial, TMeshMaterial, TMaterialMap, TMaterialOcclusion, TTextureWrap, TCullMode, TMaterialShader, TMaterialOptions,
-    TSpriteMaterialOptions, TMeshMaterialOptions, TUniformType, TUniformValues, TUniformSignature,
+    TSpriteMaterialOptions, TMeshMaterialOptions, TUniformType, TUniformValues, TUniformValue, TUniformPoint, TUniformPointValue, TUniformColorValue, TUniformNumbers, TUniformSignature,
 } from './materials';
 export type { TLightingLook, TStepLook } from './shader_composer';
 export type { TSprite, TSpriteOptions } from './gameobjects/sprite/types';
@@ -158,7 +158,7 @@ export { gamepadAxisDirectionLabel, normalizeActionMap, bindingKey, describeBind
 
 // A box a scene built, made again while the game runs. Reading a scene's file is in
 // `nacatamalon/files`; writing one down is `serializeScene`, in `nacatamalon/authoring`.
-export { copyBox } from './scene';
+export { copyObject } from './scene';
 export type { TGeometrySource, TSpriteAnimationDoc } from './scene';
 // Sound made from text rather than recorded: a song's tracks and an effect's samples, the same in a
 // game, in an editor and on the desktop runtime.

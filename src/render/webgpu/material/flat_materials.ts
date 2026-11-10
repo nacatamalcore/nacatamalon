@@ -30,7 +30,7 @@ export type TFlatMaterialKind = {
      */
     samples: number;
     /**
-     * The groups the built-in pipeline already binds. The knobs go in the one after them.
+     * The groups the built-in pipeline already binds. The uniforms go in the one after them.
      */
     shared: GPUBindGroupLayout[];
     vertexBuffers: GPUVertexBufferLayout[];
@@ -51,7 +51,7 @@ const ADDRESS_MODE: Record<TTextureWrap, GPUAddressMode> = {
  * Bytes between one batch's parameters and the next.
  *
  * Not chosen: the card will only point at an offset that is a multiple of this. Sixty-four numbers
- * fit exactly, which is far more knobs than an effect has, and the same number the models already
+ * fit exactly, which is far more uniforms than an effect has, and the same number the models already
  * use for theirs.
  */
 export const FLAT_MATERIAL_STRIDE = 256;
@@ -90,7 +90,7 @@ type TCompiled = {
  * @author Francisco Pereira Alvarado
  */
 export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) => {
-    // The knobs, then a sampler and a picture for each of the four maps, used or not, so every flat
+    // The uniforms, then a sampler and a picture for each of the four maps, used or not, so every flat
     // material has one layout.
     const mapEntries: GPUBindGroupLayoutEntry[] = [];
     for (let i = 0; i < MAX_MATERIAL_MAPS; i++) {
@@ -105,7 +105,7 @@ export const createFlatMaterials = (device: GPUDevice, kind: TFlatMaterialKind) 
     });
     const pipelineLayout = device.createPipelineLayout({
         label: `${kind.label} material pipeline layout`,
-        // The shared ones first, exactly as the built-in pipeline binds them, and the knobs last.
+        // The shared ones first, exactly as the built-in pipeline binds them, and the uniforms last.
         bindGroupLayouts: [...kind.shared, materialLayout],
     });
 

@@ -1,4 +1,4 @@
-import type { TUniformValues } from '../../materials/types/t_uniforms';
+import type { TUniformNumbers } from '../../materials/types/t_uniforms';
 
 /**
  * One effect as a project writes it down.
@@ -27,11 +27,11 @@ export type TPostChainEntry = {
      */
     builtin?: string;
     /**
-     * Values laid **over** whatever the file or the built-in starts its knobs at.
+     * Values laid **over** whatever the file or the built-in starts its uniforms at.
      */
-    uniforms?: TUniformValues;
+    uniforms?: TUniformNumbers;
     /**
-     * A built-in's settings that are written into it when it is made, rather than knobs (its fields
+     * A built-in's settings that are written into it when it is made, rather than uniforms (its fields
      * marked `rebuild`, such as `ascii`'s `glyphs`). Left out when there are none.
      */
     options?: Record<string, string | number | boolean>;

@@ -1,3 +1,4 @@
+import type { TUniformColorValue } from '../../materials/types/t_uniforms';
 import { colorUniform } from './color_uniform';
 import type { TColorOption } from '../../color/get_color';
 import type { TBuiltinPostEffect } from './types/t_builtin';
@@ -5,7 +6,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
 /**
  * Brightness, contrast, saturation, gamma, a turn of the hue and a tint, in one pass.
  *
- * Every knob starts where it changes nothing, so it is safe to put in a chain and drive one number
+ * Every uniform starts where it changes nothing, so it is safe to put in a chain and drive one number
  * at a time: `saturation: 0` is black and white, `tint: [1, 0.8, 0.6]` is an old photograph, a `hue`
  * of `180` swaps every colour for its opposite. They are applied in that order: gamma, contrast,
  * brightness, saturation, hue, tint.
@@ -31,7 +32,7 @@ export const colorAdjust = (options: {
     hue?: number;
     tint?: TColorOption | [number, number, number];
 } = {}): TBuiltinPostEffect<{
-    brightness: number; contrast: number; saturation: number; gamma: number; hue: number; tint: number[];
+    brightness: number; contrast: number; saturation: number; gamma: number; hue: number; tint: TUniformColorValue;
 }> => ({
     name: 'colorAdjust',
     fragment: /* wgsl */ `

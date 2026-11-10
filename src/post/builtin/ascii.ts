@@ -1,3 +1,4 @@
+import type { TUniformColorValue } from '../../materials/types/t_uniforms';
 import { ASCII_GLYPHS } from './ascii_glyphs';
 import type { TColorOption } from '../../color/get_color';
 import { colorUniform } from './color_uniform';
@@ -39,7 +40,7 @@ const glyphList = (glyphs: string): string => {
  * `glyphs` says which letters, from the darkest to the brightest: `' .oO0@'`, `' ░▒▓█'`, or as many
  * as wanted. Any printable ASCII character, `' '` to `'~'`, and the blocks `░ ▒ ▓ █`; one it cannot
  * draw is left out with a warning. They are written into the shader when the effect is made, so
- * they are an option and not a knob: other letters are another `ascii()`.
+ * they are an option and not a uniform: other letters are another `ascii()`.
  *
  * @param options `size` is the side of a cell in game pixels, rounded to a multiple of `6` so every
  * pixel of a letter is the same size (`6` is the smallest, `12` letters twice as big); `ownColor` from
@@ -64,7 +65,7 @@ export const ascii = (options: {
     size?: number; ownColor?: number; ink?: TColorOption | [number, number, number]; background?: number; brightness?: number;
     glyphs?: string;
 } = {}): TBuiltinPostEffect<{
-    size: number; ownColor: number; ink: number[]; background: number; brightness: number;
+    size: number; ownColor: number; ink: TUniformColorValue; background: number; brightness: number;
 }> => {
     const list = glyphList(options.glyphs ?? DEFAULT_GLYPHS);
     const count = list.split(',').length;

@@ -9,7 +9,7 @@ import type { TParsedShader } from './types/t_parsed_shader';
  * knows which it was.
  *
  * It is the loader's own reader, open to tools: an editor that lets a material pick a shader needs
- * the knobs it declares, whichever of the two ways it was written.
+ * the uniforms it declares, whichever of the two ways it was written.
  * @param source - The file's text.
  * @param src - Its path: the extension decides how it is read, and warnings name it.
  * @returns What the file declares, and its code in both languages.

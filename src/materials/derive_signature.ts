@@ -1,3 +1,4 @@
+import { uniformLength } from './uniform_numbers';
 import type { TUniformSignature, TUniformType, TUniformValues } from './types/t_uniforms';
 
 /**
@@ -54,7 +55,7 @@ const VECTOR: Record<number, TUniformType> = {
 };
 
 /**
- * Works out what kind each of a material's knobs is by looking at what it was first set to.
+ * Works out what kind each of a material's uniforms is by looking at what it was first set to.
  *
  * Asking for the kinds separately would be saying the same thing twice, and two statements of one
  * fact are two statements that can disagree. A number is a number; a list of two, three or four is
@@ -81,15 +82,34 @@ export const deriveSignature = (values: TUniformValues, rules: TSignatureRules =
             continue;
         }
 
-        const vector = Array.isArray(value) ? VECTOR[value.length] : undefined;
+        // A point is as long as the numbers it has, and a colour four: `r, g, b, a`.
+        const length = uniformLength(value);
+        const vector = length === undefined ? undefined : VECTOR[length];
         if (vector === undefined) {
             throw new Error(
-                `[NacatamalOn] ${rules.caller}: parameter '${name}' has to be a number, or a list of ` +
-                'two, three or four of them.',
+                `[NacatamalOn] ${rules.caller}: the uniform '${name}' has to be a number, a list of ` +
+                'two, three or four, a point ({ x, y }) or a colour (\'#ffcc00\').',
             );
         }
         sig[name] = vector;
     }
 
+    return sig;
+};
+
+/**
+ * The kinds of a file's uniforms and of those a call site gave it: the file's for the names it
+ * declares, the call site's for the ones it added. A colour given to a uniform the file declares as
+ * `vec3` stays three numbers, where on its own it would be four.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const withFileKinds = (file: TUniformSignature, asked: TUniformSignature): TUniformSignature => {
+    const sig: TUniformSignature = { ...file };
+    for (const [name, type] of Object.entries(asked)) {
+        if (!(name in sig)) sig[name] = type;
+    }
     return sig;
 };

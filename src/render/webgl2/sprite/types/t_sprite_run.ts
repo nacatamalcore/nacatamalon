@@ -35,7 +35,7 @@ export type TSpriteRun = {
      */
     additive: boolean;
     /**
-     * The knobs of the one sprite in this run, when it brought its own.
+     * The uniforms of the one sprite in this run, when it brought its own.
      */
     uniforms: TUniformValues | null;
     /**

@@ -19,7 +19,7 @@ const fetchText = async (src: string): Promise<string> => {
  *
  * The second file is read by the same reader, so it carries its own header, and then that header is
  * thrown away: the WGSL file owns the contract. It is read rather than trusted because the two would
- * otherwise be free to disagree about what the knobs are, and the card that noticed would be the one
+ * otherwise be free to disagree about what the uniforms are, and the card that noticed would be the one
  * nobody tested on.
  */
 const mergeGlsl = (wgsl: TParsedShader, glsl: TParsedShader, src: string, glslSrc: string): TParsedShader => {

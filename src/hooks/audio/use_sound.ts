@@ -170,7 +170,7 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
 
     /**
      * Wires one voice and starts it: sound, then the placing if it has one, then its own volume, then
-     * the channel's, then the master. Every step is a knob something else can turn later.
+     * the channel's, then the master. Every step is a uniform something else can turn later.
      */
     const start = (offset: number, fade = 0): void => {
         if (clip.status !== 'ready' || clip.buffer === null) {
@@ -341,7 +341,7 @@ export const useSound = (source: TSoundSource, options: TSoundOptions = {}): TSo
                 start(entry.offset);
             }
         },
-        // The three knobs write through to what the object carries, so a scene saved after the
+        // The three uniforms write through to what the object carries, so a scene saved after the
         // options screen turned the music down comes back turned down. Where a voice had got to
         // does not, because that is a fact about this run and not about the level.
         setVolume: (next, fade = 0) => {

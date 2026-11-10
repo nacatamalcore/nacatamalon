@@ -1,3 +1,4 @@
+import type { TUniformPointValue } from '../../materials/types/t_uniforms';
 import type { TVec2 } from '../../math/vec2';
 import { pointUniform } from './point_uniform';
 import type { TBuiltinPostEffect } from './types/t_builtin';
@@ -29,7 +30,7 @@ export const shockwave = (options: {
     wavelength?: number;
     brightness?: number;
 } = {}): TBuiltinPostEffect<{
-    center: number[]; radius: number; amplitude: number; wavelength: number; brightness: number;
+    center: TUniformPointValue; radius: number; amplitude: number; wavelength: number; brightness: number;
 }> => ({
     name: 'shockwave',
     fragment: /* wgsl */ `

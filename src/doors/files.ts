@@ -14,7 +14,7 @@ export type { TTerrainDoc, TTilemapDoc, TTilemapLayerDoc } from '../loaders';
 export { parseTilemapDoc } from '../loaders';
 export { parseProject, gameOptionsFromProject } from '../project';
 export type { TProjectSettings } from '../project';
-export { boxFromDoc, parseSceneDoc, sceneFromDoc } from '../scene';
+export { objectFromDoc, parseSceneDoc, sceneFromDoc } from '../scene';
 export type {
     TSceneDoc, TBoxNode, TDataEntry, TAssetEntry, TComponentDoc, TMaterialDoc, TMeshMaterialDoc,
     TMaterialMapDoc, TSpriteComponent, TNineSliceComponent, TTextComponent, TMeshComponent,

@@ -1,8 +1,8 @@
 import { MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 
 /**
- * The extra maps of a sprite's or a map layer's material, in the group its knobs are in: always all
- * four slots after the knobs, so every flat material shader has the same layout, and one reader per
+ * The extra maps of a sprite's or a map layer's material, in the group its uniforms are in: always all
+ * four slots after the uniforms, so every flat material shader has the same layout, and one reader per
  * name the shader uses, in the order it first reads them, which is the order they are bound in.
  *
  * The same `sampleMap_<name>` and `sampleMapScaled_<name>` a model's material reads, so a hook

@@ -8,7 +8,7 @@ import type { TCullMode, TUniformSignature } from '../../../materials';
  * Where a model material's own parameters are bound.
  *
  * Groups 0, 1 and 2 are the lights, the picture and the model's own numbers, all three shared with
- * the built-in pipeline. Group 3 is the material's: its knobs, its maps, and, for a model that bends,
+ * the built-in pipeline. Group 3 is the material's: its uniforms, its maps, and, for a model that bends,
  * its bones too. The built-in pipeline keeps a model's bones in group 3 as well, and WebGPU promises
  * no more than four groups, so a material on a model that bends carries them in its own group rather
  * than in a fifth.
@@ -16,7 +16,7 @@ import type { TCullMode, TUniformSignature } from '../../../materials';
 export const MESH_MATERIAL_GROUP = 3;
 
 /**
- * Where a bending model's bones are bound inside the material's group: after the knobs (0) and the
+ * Where a bending model's bones are bound inside the material's group: after the uniforms (0) and the
  * maps (1 to 8).
  */
 export const MESH_MATERIAL_JOINTS_BINDING = 1 + MAX_MATERIAL_MAPS * 2;
@@ -463,7 +463,7 @@ fn fs(in: VertexOutput, @builtin(front_facing) front: bool) -> @location(0) vec4
 };
 
 /**
- * Builds the whole shader for a model material: the engine's own declarations, the knobs the author
+ * Builds the whole shader for a model material: the engine's own declarations, the uniforms the author
  * declared, whichever hooks they wrote, and the body that calls them.
  *
  * Either hook may be left out and the engine's own stands in, so a material that only recolours does
@@ -532,7 +532,7 @@ export const buildMeshMaterialShader = (
  * which a hook deciding its alpha by them would see. Its picture is then read in group 1, where the
  * drawn model reads it, and its block carries how it is cut.
  *
- * The material's own group is kept where it is (group 3), with its knobs, its maps and, for a model
+ * The material's own group is kept where it is (group 3), with its uniforms, its maps and, for a model
  * that bends, its bones, so a hook reads `mu` and `sampleMap_<name>` here as it does there. The
  * groups between are left empty.
  *

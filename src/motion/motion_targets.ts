@@ -117,7 +117,7 @@ export const resolveMotionTrack = (roots: readonly TBox[], track: TMotionTrack, 
     const parts = track.path.split('.');
     const field = parts.pop()!;
     let holder: Record<string, unknown> = record;
-    // A picture's own knob that it has not been given yet is its material's: given its own, from the
+    // A picture's own uniform that it has not been given yet is its material's: given its own, from the
     // material's value, the moment a track moves it.
     if (track.component !== undefined && parts.length === 1 && parts[0] === 'uniforms' && record.uniforms === undefined) {
         const material = isObject(record.material) && isObject(record.material.uniforms) ? record.material.uniforms : null;
@@ -153,7 +153,7 @@ const resolvePostTrack = (effects: readonly TPostEffect[], track: TMotionTrack):
     }
     const parts = track.path.split('.');
     let field = parts.pop()!;
-    // A knob an engine effect has renamed, on an effect a project named itself, so the file could not
+    // A uniform an engine effect has renamed, on an effect a project named itself, so the file could not
     // tell which effect it is when it was read: the effect lacking the old name and having the new
     // one is enough to know.
     if (parts.length === 1 && parts[0] === 'uniforms' && !(field in effect.uniforms)) {

@@ -1,3 +1,4 @@
+import type { TUniformPointValue } from '../../materials/types/t_uniforms';
 import type { TVec2 } from '../../math/vec2';
 import { pointUniform } from './point_uniform';
 import type { TBuiltinPostEffect } from './types/t_builtin';
@@ -20,7 +21,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @author Francisco Pereira Alvarado
  */
 export const motionBlur = (options: { velocity?: TVec2; samples?: number } = {}): TBuiltinPostEffect<{
-    velocity: number[]; samples: number;
+    velocity: TUniformPointValue; samples: number;
 }> => ({
     name: 'motionBlur',
     fragment: /* wgsl */ `

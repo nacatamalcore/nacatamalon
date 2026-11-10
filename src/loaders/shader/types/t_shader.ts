@@ -5,7 +5,7 @@ import type { TLoadStatus } from '../../types/t_load_status';
 /**
  * A shader written in a file, on its way in or already here.
  *
- * The file holds the hooks and the knobs and says which family it is for, so the scene that uses it
+ * The file holds the hooks and the uniforms and says which family it is for, so the scene that uses it
  * repeats none of that. One file can be shared by any number of materials, and is fetched once.
  *
  * **It keeps a list of who is following it**, which is the one thing that makes it unlike a texture.
@@ -53,7 +53,7 @@ export type TShader = {
      */
     vertexGlsl: string | null;
     /**
-     * The knobs the file declared, with the values it gave them.
+     * The uniforms the file declared, with the values it gave them.
      */
     uniforms: TUniformValues;
     /**

@@ -2,7 +2,7 @@ import { composerFloat, composerVec3, composerVec4 } from './constructors';
 import { collectHelpers, collectUniforms, emitBody } from './emit';
 import { WGSL_TARGET } from './targets/wgsl';
 import { GLSL_TARGET } from './targets/glsl';
-import type { TMaterialShader, TUniformValues } from '../materials/types/t_uniforms';
+import type { TMaterialShader, TUniformNumbers } from '../materials/types/t_uniforms';
 import type { TComposerNode } from './types/t_composer_node';
 
 /**
@@ -48,7 +48,7 @@ const asPreviewColor = (n: TComposerNode): TComposerNode => {
 export const compilePreviewShader = (
     value: TComposerNode,
     language: 'wgsl' | 'glsl' = 'wgsl',
-): { shader: TMaterialShader; fragment: string; vertex: null; uniforms: TUniformValues } => {
+): { shader: TMaterialShader; fragment: string; vertex: null; uniforms: TUniformNumbers } => {
     // The language by name: the table that writes each one is the compiler's own business.
     const target = language === 'glsl' ? GLSL_TARGET : WGSL_TARGET;
     const body = emitBody(asPreviewColor(value), 'preview.frag', target);

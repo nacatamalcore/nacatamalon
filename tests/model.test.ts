@@ -200,7 +200,7 @@ describe('createModel', () => {
         }
         // Still the file's own colours underneath.
         expect(placed!.parts[1].material.tint.b).toBeCloseTo(1, 3);
-        // Each piece turns its own knobs.
+        // Each piece turns its own uniforms.
         expect(placed!.parts[0].material.uniforms).not.toBe(placed!.parts[1].material.uniforms);
         fake.restore();
     });

@@ -123,7 +123,7 @@ const growInstances = (device: GPUDevice, sprites: TSpritePipeline, count: numbe
 /**
  * Joins the last consecutive run when its state matches and the picture already has a slot, or
  * fits in a spare one. Custom materials and stencil shapes keep their single-picture contract.
- * A sprite carrying its own knobs opens and closes a run, since a run writes one set of them.
+ * A sprite carrying its own uniforms opens and closes a run, since a run writes one set of them.
  * Run records and picture lists are reused after the first frame.
  */
 const addToRun = (

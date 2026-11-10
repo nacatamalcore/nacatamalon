@@ -14,7 +14,7 @@ import type { TUniformLayout } from '../../shared/material_uniforms';
 const SLOT = 256;
 
 /**
- * How many numbers fit in one, which is also the cap on how many knobs one effect may have.
+ * How many numbers fit in one, which is also the cap on how many uniforms one effect may have.
  */
 const SLOT_FLOATS = MAX_MATERIAL_FLOATS;
 
@@ -343,7 +343,7 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
     };
 
     /**
-     * One step of an effect, compiled. A pass is compiled exactly like a hook, with the same knobs.
+     * One step of an effect, compiled. A pass is compiled exactly like a hook, with the same uniforms.
      */
     const compiledFor = (effect: TPostEffect, fragment: string | null, filtered = false): TCompiled => {
         if (fragment === null) {

@@ -4,14 +4,14 @@ import {
 } from '../src/render/shared/material_uniforms';
 
 /**
- * Where a material's knobs sit in the block of numbers the card reads.
+ * Where a material's uniforms sit in the block of numbers the card reads.
  *
  * This is the one piece of arithmetic both backends depend on being told the same, and the one that
- * fails invisibly: a knob read from four bytes too far along is not an error anywhere, it is an
+ * fails invisibly: a uniform read from four bytes too far along is not an error anywhere, it is an
  * effect tuned by whatever happened to be next to it.
  */
 
-describe('where the knobs go', () => {
+describe('where the uniforms go', () => {
     it('puts the engine fields first, so their place never moves', () => {
         const { offsets } = buildUniformLayout({ strength: 'f32' });
 

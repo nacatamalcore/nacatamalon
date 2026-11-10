@@ -1,4 +1,4 @@
-import type { TUniformValues } from '../../materials/types/t_uniforms';
+import type { TUniformNumbers } from '../../materials/types/t_uniforms';
 import type { TComposerNode } from './t_composer_node';
 import type { TGraphTarget } from './t_shader_graph_doc';
 import type { TLook } from '../surface/types';
@@ -78,5 +78,5 @@ export type TCompiledShader<S extends TGraphTarget = TGraphTarget> = {
      */
     fragmentGlsl?: string;
     vertexGlsl?: string;
-    uniforms: TUniformValues;
+    uniforms: TUniformNumbers;
 };

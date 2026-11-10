@@ -1,3 +1,4 @@
+import type { TUniformColorValue } from '../../materials/types/t_uniforms';
 import { NOISE_GLSL, NOISE_WGSL } from './noise';
 import type { TColorOption } from '../../color/get_color';
 import { colorUniform } from './color_uniform';
@@ -87,7 +88,7 @@ export type TCrtOptions = {
 };
 
 /**
- * The knobs of the effect `crt()` returns, as `effect.uniforms` holds them: the same names as
+ * The uniforms of the effect `crt()` returns, as `effect.uniforms` holds them: the same names as
  * {@link TCrtOptions}, each a plain number. `maskType` is `0` aperture, `1` slot, `2` shadow;
  * `linearBlend` and `interlace` are `1` for `true` and `0` for `false`.
  *
@@ -112,7 +113,7 @@ export type TCrtUniforms = {
     flicker: number;
     interlace: number;
     cornerRadius: number;
-    bezel: number[];
+    bezel: TUniformColorValue;
 };
 
 /**

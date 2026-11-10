@@ -1,3 +1,4 @@
+import type { TUniformPointValue } from '../../materials/types/t_uniforms';
 import type { TVec2 } from '../../math/vec2';
 import { pointUniform } from './point_uniform';
 import type { TBuiltinPostEffect } from './types/t_builtin';
@@ -24,7 +25,7 @@ export const rgbSplit = (options: {
     red?: TVec2;
     green?: TVec2;
     blue?: TVec2;
-} = {}): TBuiltinPostEffect<{ red: number[]; green: number[]; blue: number[] }> => ({
+} = {}): TBuiltinPostEffect<{ red: TUniformPointValue; green: TUniformPointValue; blue: TUniformPointValue }> => ({
     name: 'rgbSplit',
     fragment: /* wgsl */ `
 fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {

@@ -69,7 +69,7 @@ export type TMaterialShaderOptions = {
      * brought back to length one. Nothing written, the surface is measured where the hook moved it
      * (below). The composer's `compileShader({ normal })` writes it.
      *
-     * It reads the material's knobs (`mu`) and its `maps` (`sampleMap_<name>(uv)`), so a picture can
+     * It reads the material's uniforms (`mu`) and its `maps` (`sampleMap_<name>(uv)`), so a picture can
      * move the corners: a height map, footprints pressed into snow, ripples drawn into a texture. The
      * surface is measured again where the hook moved it, by calling it at two places beside each
      * corner with the same `ctx`, and lit by that. So read a map at a place worked out from `pos`,
@@ -86,7 +86,7 @@ export type TMaterialShaderOptions = {
      */
     vertexGlsl?: string;
     /**
-     * The knobs, with the values they start at. Their kinds are read off these, and fixed from then
+     * The uniforms, with the values they start at. Their kinds are read off these, and fixed from then
      * on, because how they are packed for the card depends on them.
      *
      * Kept as given, not copied: the object you pass in is the one the renderer reads, so writing a
@@ -242,7 +242,7 @@ export type TMeshMaterialOptions = TMaterialShaderOptions & {
     alphaCutoff?: number;
     /**
      * How the surface is lit, in place of the engine's light: `toonLighting()` (flat bands) or `unlitLighting()` (no
-     * light at all). One only. Its numbers become knobs of the material (`toonShadow`...), so they can
+     * light at all). One only. Its numbers become uniforms of the material (`toonShadow`...), so they can
      * be turned while the game runs. It makes the colour, so it is not given with `fragment` or
      * `effect`; a `vertex` hook may go with it.
      */
@@ -250,7 +250,7 @@ export type TMeshMaterialOptions = TMaterialShaderOptions & {
     /**
      * What is done to the surface once it is lit, in order: `mangaDots()` (ink in the shadow),
      * `rim()` (a lit edge). On `lighting` when there is one, on the engine's light when not. Their
-     * numbers become knobs too (`mangaDotsSize`, `rimColor`; a second of one kind is `rim2Color`).
+     * numbers become uniforms too (`mangaDotsSize`, `rimColor`; a second of one kind is `rim2Color`).
      */
     steps?: readonly TStepLook[];
 };
@@ -259,7 +259,7 @@ export type TMeshMaterialOptions = TMaterialShaderOptions & {
  * What `createMaterial` is asked for when the material is for flat things.
  *
  * There is nothing here about a picture or a colour, because those belong to the sprite. This is the
- * effect and its knobs, and nothing else.
+ * effect and its uniforms, and nothing else.
  *
  * @category Materials
  * @since 1.0.0

@@ -13,7 +13,7 @@ import { flushDestroyed } from '../src/destroy/flush_destroyed';
 import { setShapePixels } from '../src/mask/masked_pick';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { createTestFont } from './helpers/test_font';
-import { boxFromDoc, parseSceneDoc, sceneFromDoc, serializeScene } from '../src/scene/document';
+import { objectFromDoc, parseSceneDoc, sceneFromDoc, serializeScene } from '../src/scene/document';
 import { registerScene } from '../src/scene/register_scene';
 import { setCameraPreview } from '../src/game/preview';
 import { createCamera2d } from '../src/camera/create_camera_2d';
@@ -516,7 +516,7 @@ describe('a mask written down', () => {
         const { store: again } = createTestGame();
         let copy!: TGameObject;
         startTestScene(again, 'Room', () => {
-            copy = useSpawn(() => { boxFromDoc(doc); })();
+            copy = useSpawn(() => { objectFromDoc(doc); })();
             return createScene();
         });
         // The document's one box is built into the box spawned for it.

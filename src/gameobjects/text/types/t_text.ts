@@ -87,7 +87,7 @@ export type TText = {
      */
     material?: TSpriteMaterial;
     /**
-     * This text's own values for that material's knobs, laid over the material's own.
+     * This text's own values for that material's uniforms, laid over the material's own.
      */
     uniforms?: TUniformValues;
     /**

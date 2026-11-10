@@ -145,7 +145,7 @@ describe('grouping sprites once effects exist', () => {
     it('gives a sprite with its own settings a draw to itself, which is what they cost', () => {
         const crt = effect('crt');
 
-        // Three sprites, one effect, but each turning its own knob: three draws and one compile.
+        // Three sprites, one effect, but each turning its own uniform: three draws and one compile.
         expect(runsFor([
             sprite({ material: crt, uniforms: { strength: 0.1 } }),
             sprite({ material: crt, uniforms: { strength: 0.5 } }),

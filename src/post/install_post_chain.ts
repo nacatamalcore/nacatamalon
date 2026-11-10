@@ -55,7 +55,7 @@ const lutFor = (store: TRuntimeStore, src: string) => {
 const builtinKeys = new WeakMap<TPostEffect, string>();
 
 /**
- * What an entry said of its effect beyond its knobs, the name it gave it and the options it was made
+ * What an entry said of its effect beyond its uniforms, the name it gave it and the options it was made
  * with, so a document written back from the effect says them again.
  */
 const entryExtras = new WeakMap<TPostEffect, Pick<TPostChainEntry, 'name' | 'options'>>();
@@ -206,7 +206,7 @@ export const installPostChain = (store: TRuntimeStore, chain: TPostChain): void 
 const entryOf = new WeakMap<TPostEffect, number>();
 
 /**
- * Lays values over the knobs of the effect the project's chain made from entry `index`, in place:
+ * Lays values over the uniforms of the effect the project's chain made from entry `index`, in place:
  * read by the next frame, with nothing made again. Says whether there was such an effect.
  *
  * @internal
@@ -220,7 +220,7 @@ export const tuneProjectPostEffect = (store: TRuntimeStore, index: number, value
     }
     const uniforms = effect.uniforms as Record<string, unknown>;
     for (const [name, value] of Object.entries(values)) {
-        // Only knobs it has: its shape was fixed when it was made.
+        // Only uniforms it has: its shape was fixed when it was made.
         if (uniforms[name] !== undefined) {
             uniforms[name] = Array.isArray(value) ? [...value] : value;
         }

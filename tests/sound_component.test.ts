@@ -134,7 +134,7 @@ describe('a sound an object carries', () => {
         expect(doc.root.children).toHaveLength(2);
     });
 
-    it('writes the knobs as they are now, so an options screen survives the save', () => {
+    it('writes the uniforms as they are now, so an options screen survives the save', () => {
         const { doc } = written(() => {
             const music = useSound({ src: '/audio/theme.mp3' }, { id: 'music', volume: 1 });
             // The pause menu turned it down, and that is a fact about the level, not about the run.

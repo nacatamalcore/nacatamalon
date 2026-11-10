@@ -33,7 +33,7 @@ describe('the header', () => {
         expect(file.uniformSig).toEqual({ strength: 'f32', rim: 'vec4<f32>' });
     });
 
-    it('is happy with a file that declares no knobs at all', () => {
+    it('is happy with a file that declares no uniforms at all', () => {
         const file = parseShaderFile('fn effect(a: f32) -> f32 { return a; }', 'x.wgsl');
 
         expect(file.uniforms).toEqual({});

@@ -230,7 +230,7 @@ describe('effects in a capture', () => {
         expect(pixelAt(game.capture(), 5, 5)).toEqual([0, 255, 0]);
     });
 
-    it('reads a list knob shorter than its kind as the card does, the rest 0', () => {
+    it('reads a list uniform shorter than its kind as the card does, the rest 0', () => {
         const game = make(() => {
             useSpawn(() => {
                 createSprite({ width: 2, height: 2, tint: getColor('#ffffff'), anchor: { x: 0, y: 0 }, transform: { x: 10, y: 6 } });

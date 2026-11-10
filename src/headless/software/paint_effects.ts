@@ -4,7 +4,8 @@ import { sample } from './raster';
 import type { TPicture, TRgba } from './raster';
 import type { ITexture } from '../../render/interface/i_texture';
 import type { TPostEffect } from '../../post/types/t_post_effect';
-import type { TUniformValues } from '../../materials/types/t_uniforms';
+import { uniformsAsNumbers } from '../../materials/uniform_numbers';
+import type { TUniformNumbers } from '../../materials/types/t_uniforms';
 
 /**
  * The engine's own effects, worked out without a graphics card, for a picture of a game run with no
@@ -25,8 +26,8 @@ import type { TUniformValues } from '../../materials/types/t_uniforms';
  * What a step reads while it works out one pixel, as its shader's helpers read it.
  */
 type TStepReads = {
-    /** `mu`: the effect's knobs, and the size of what it writes. */
-    knobs: TUniformValues;
+    /** `mu`: the effect's uniforms, and the size of what it writes. */
+    uniforms: TUniformNumbers;
     resolution: readonly [number, number];
     /** `sampleTexture`, `sampleTextureSmooth`: the step before, or the effect's input for the first. */
     texture: TPicture;
@@ -34,7 +35,7 @@ type TStepReads = {
     input: TPicture;
     /** The palette's colours or the table's texels, when the effect carries one. */
     data: TPicture | null;
-    /** Knobs that are lists, read once for the whole step rather than for every pixel. */
+    /** Uniforms that are lists, read once for the whole step rather than for every pixel. */
     vectors: Map<string, number[]>;
 };
 
@@ -60,12 +61,12 @@ const scratch: TRgba = [0, 0, 0, 0];
 const scratch2: TRgba = [0, 0, 0, 0];
 
 /**
- * A knob as the card is handed it: one the effect does not set is 0, the block being cleared before
- * each draw; a list shorter than the knob leaves the rest 0 for the same reason, and a list with a
+ * A uniform as the card is handed it: one the effect does not set is 0, the block being cleared before
+ * each draw; a list shorter than the uniform leaves the rest 0 for the same reason, and a list with a
  * gap in it has no number there at all (NaN), as writing it into the card's numbers gives.
  */
-const number = (knobs: TUniformValues, name: string): number => {
-    const value = knobs[name];
+const number = (uniforms: TUniformNumbers, name: string): number => {
+    const value = uniforms[name];
     return value === undefined ? 0 : typeof value === 'number' ? value : Number.NaN;
 };
 
@@ -74,7 +75,7 @@ const vector = (reads: TStepReads, name: string, size: number): number[] => {
     if (known !== undefined) {
         return known;
     }
-    const value = reads.knobs[name];
+    const value = reads.uniforms[name];
     const read: number[] = [];
     for (let i = 0; i < size; i++) {
         read.push(Array.isArray(value)
@@ -87,7 +88,7 @@ const vector = (reads: TStepReads, name: string, size: number): number[] => {
 
 /**
  * `max` and `min` as a card works them out when one side is no number: the other side, which is
- * what a broken knob gives there, rather than no number at all.
+ * what a broken uniform gives there, rather than no number at all.
  */
 const most = (a: number, b: number): number => (Number.isNaN(a) ? b : Number.isNaN(b) ? a : Math.max(a, b));
 const least = (a: number, b: number): number => (Number.isNaN(a) ? b : Number.isNaN(b) ? a : Math.min(a, b));
@@ -107,26 +108,26 @@ const roundEven = (value: number): number => {
 /** `floor(x + 0.5)`, which the shaders use instead of a rounding that sends halves to the even step. */
 const halfUp = (value: number): number => Math.floor(value + 0.5);
 
-const dither: TStep = (color, u, v, { knobs, resolution }, out) => {
-    const levels = most(2, roundEven(number(knobs, 'levels')));
+const dither: TStep = (color, u, v, { uniforms, resolution }, out) => {
+    const levels = most(2, roundEven(number(uniforms, 'levels')));
     const top = levels - 1;
-    const shake = bayer(u * resolution[0], v * resolution[1]) * (1 / top) * number(knobs, 'amount');
+    const shake = bayer(u * resolution[0], v * resolution[1]) * (1 / top) * number(uniforms, 'amount');
     for (let c = 0; c < 3; c++) {
         out[c] = halfUp(clamp01(color[c]! + 0.5 / 255 + shake) * top) / top;
     }
     out[3] = color[3];
 };
 
-const posterize: TStep = (color, _u, _v, { knobs }, out) => {
-    const top = most(2, roundEven(number(knobs, 'levels'))) - 1;
+const posterize: TStep = (color, _u, _v, { uniforms }, out) => {
+    const top = most(2, roundEven(number(uniforms, 'levels'))) - 1;
     for (let c = 0; c < 3; c++) {
         out[c] = halfUp(clamp01(color[c]!) * top) / top;
     }
     out[3] = color[3];
 };
 
-const mosaic: TStep = (_color, u, v, { knobs, resolution, texture }, out) => {
-    const size = most(1, Math.floor(number(knobs, 'size')));
+const mosaic: TStep = (_color, u, v, { uniforms, resolution, texture }, out) => {
+    const size = most(1, Math.floor(number(uniforms, 'size')));
     const x = Math.min((Math.floor((u * resolution[0]) / size) + 0.5) * size, resolution[0] - 0.5);
     const y = Math.min((Math.floor((v * resolution[1]) / size) + 0.5) * size, resolution[1] - 0.5);
     // The middle of a block lands exactly between two texels for an even size; the card reads it as
@@ -134,7 +135,7 @@ const mosaic: TStep = (_color, u, v, { knobs, resolution, texture }, out) => {
     sample(texture, (Math.floor(x) + 0.5) / resolution[0], (Math.floor(y) + 0.5) / resolution[1], false, out);
 };
 
-const paletteMatch: TStep = (color, u, v, { knobs, resolution, data }, out) => {
+const paletteMatch: TStep = (color, u, v, { uniforms, resolution, data }, out) => {
     const count = data === null ? 0 : data.width;
     out[0] = color[0]; out[1] = color[1]; out[2] = color[2]; out[3] = color[3];
     if (data === null || count <= 1) {
@@ -143,7 +144,7 @@ const paletteMatch: TStep = (color, u, v, { knobs, resolution, data }, out) => {
     // In the card's 32-bit numbers: a colour half way between two of the palette's is decided by
     // the last bit of its distances, and in 64 bits that bit can fall the other way.
     const f = Math.fround;
-    const shake = f(f(bayer(u * resolution[0], v * resolution[1])) * f(number(knobs, 'dither')));
+    const shake = f(f(bayer(u * resolution[0], v * resolution[1])) * f(number(uniforms, 'dither')));
     const r = f(f(color[0]) + shake), g = f(f(color[1]) + shake), b = f(f(color[2]) + shake);
     let nearest = 0;
     let nearestDistance = 1000;
@@ -190,8 +191,8 @@ const lutColor = (rgb: readonly [number, number, number], table: TPicture, out: 
     }
 };
 
-const lutGrade: TStep = (color, _u, _v, { knobs, data }, out) => {
-    const amount = number(knobs, 'amount');
+const lutGrade: TStep = (color, _u, _v, { uniforms, data }, out) => {
+    const amount = number(uniforms, 'amount');
     out[3] = color[3];
     if (data === null) {
         out[0] = color[0]; out[1] = color[1]; out[2] = color[2];
@@ -204,11 +205,11 @@ const lutGrade: TStep = (color, _u, _v, { knobs, data }, out) => {
 };
 
 const colorAdjust: TStep = (color, _u, _v, reads, out) => {
-    const { knobs } = reads;
-    const gamma = 1 / most(number(knobs, 'gamma'), 0.0001);
-    const contrast = number(knobs, 'contrast');
-    const brightness = number(knobs, 'brightness');
-    const saturation = number(knobs, 'saturation');
+    const { uniforms } = reads;
+    const gamma = 1 / most(number(uniforms, 'gamma'), 0.0001);
+    const contrast = number(uniforms, 'contrast');
+    const brightness = number(uniforms, 'brightness');
+    const saturation = number(uniforms, 'saturation');
     const tint = vector(reads, 'tint', 3);
     let r = Math.pow(Math.max(color[0], 0), gamma);
     let g = Math.pow(Math.max(color[1], 0), gamma);
@@ -222,7 +223,7 @@ const colorAdjust: TStep = (color, _u, _v, reads, out) => {
     g = grey + (g - grey) * saturation;
     b = grey + (b - grey) * saturation;
     // A turn about the grey axis.
-    const angle = (number(knobs, 'hue') * Math.PI) / 180;
+    const angle = (number(uniforms, 'hue') * Math.PI) / 180;
     const k = 0.57735027;
     const c = Math.cos(angle);
     const s = Math.sin(angle);
@@ -239,14 +240,14 @@ const colorAdjust: TStep = (color, _u, _v, reads, out) => {
 
 const outline: TStep = (color, u, v, reads, out) => {
     // Over a pixel already opaque the line adds nothing, whatever is near: a screen, which is all
-    // opaque, is handed back as it is without looking round every pixel of it. (Only a colour knob
+    // opaque, is handed back as it is without looking round every pixel of it. (Only a colour uniform
     // with no number in it would make the card write that pixel black instead.)
     if (color[3] >= 1) {
         out[0] = color[0]; out[1] = color[1]; out[2] = color[2]; out[3] = color[3];
         return;
     }
-    const { knobs, resolution, input } = reads;
-    const reach = least(8, most(0, halfUp(number(knobs, 'thickness'))));
+    const { uniforms, resolution, input } = reads;
+    const reach = least(8, most(0, halfUp(number(uniforms, 'thickness'))));
     const tint = vector(reads, 'color', 3);
     let near = 0;
     for (let y = -8; y <= 8; y++) {
@@ -263,12 +264,12 @@ const outline: TStep = (color, u, v, reads, out) => {
 };
 
 const dropShadow: TStep = (_color, u, v, reads, out) => {
-    const { knobs, resolution, texture, input } = reads;
+    const { uniforms, resolution, texture, input } = reads;
     const offset = vector(reads, 'offset', 2);
     const tint = vector(reads, 'color', 3);
     const sharp = sample(input, u, v, false, scratch2);
     const fallen = sample(texture, u - offset[0]! / resolution[0], v - offset[1]! / resolution[1], true, scratch)[3];
-    const shade = clamp01(fallen * number(knobs, 'amount')) * (1 - sharp[3]);
+    const shade = clamp01(fallen * number(uniforms, 'amount')) * (1 - sharp[3]);
     out[0] = sharp[0] + tint[0]! * shade;
     out[1] = sharp[1] + tint[1]! * shade;
     out[2] = sharp[2] + tint[2]! * shade;
@@ -276,10 +277,10 @@ const dropShadow: TStep = (_color, u, v, reads, out) => {
 };
 
 const glow: TStep = (_color, u, v, reads, out) => {
-    const { knobs, texture, input } = reads;
+    const { uniforms, texture, input } = reads;
     const tint = vector(reads, 'color', 3);
     const sharp = sample(input, u, v, false, scratch2);
-    const light = clamp01(sample(texture, u, v, true, scratch)[3] * number(knobs, 'intensity')) * (1 - sharp[3]);
+    const light = clamp01(sample(texture, u, v, true, scratch)[3] * number(uniforms, 'intensity')) * (1 - sharp[3]);
     out[0] = sharp[0] + tint[0]! * light;
     out[1] = sharp[1] + tint[1]! * light;
     out[2] = sharp[2] + tint[2]! * light;
@@ -289,9 +290,9 @@ const glow: TStep = (_color, u, v, reads, out) => {
 /** Where a blur reads, and how much each read counts, as `gaussPass` has them. */
 const GAUSS_TAPS: ReadonlyArray<readonly [number, number]> = [[0, 0.2270270], [1.3846154, 0.3162162], [-1.3846154, 0.3162162], [3.2307692, 0.0702703], [-3.2307692, 0.0702703]];
 
-/** One way of a blur in five reads, as `gaussPass` writes it, at `scale` and by the knob `knob`. */
-const gauss = (axis: 'x' | 'y', scale: number, knob: string): TStep => (_color, u, v, { knobs, resolution, texture }, out) => {
-    const spread = (scale * most(number(knobs, knob), 0)) / 3.2307692;
+/** One way of a blur in five reads, as `gaussPass` writes it, at `scale` and by the uniform `uniform`. */
+const gauss = (axis: 'x' | 'y', scale: number, uniform: string): TStep => (_color, u, v, { uniforms, resolution, texture }, out) => {
+    const spread = (scale * most(number(uniforms, uniform), 0)) / 3.2307692;
     const du = axis === 'x' ? spread / resolution[0] : 0;
     const dv = axis === 'y' ? spread / resolution[1] : 0;
     out[0] = 0; out[1] = 0; out[2] = 0; out[3] = 0;
@@ -376,7 +377,7 @@ export const paintEffects = (
             const own = j === steps.length - 1;
             const [w, h] = own ? [width, height] : passSize(one.scale!, width, height);
             const out: TPicture = { width: w, height: h, data: new Uint8Array(w * h * 4) };
-            const reads: TStepReads = { knobs: effect.uniforms, resolution: [w, h], texture: source, input, data, vectors: new Map() };
+            const reads: TStepReads = { uniforms: uniformsAsNumbers(effect.uniforms, effect.uniformSig), resolution: [w, h], texture: source, input, data, vectors: new Map() };
             const color: TRgba = [0, 0, 0, 0];
             const shown: TRgba = [0, 0, 0, 0];
             for (let y = 0; y < h; y++) {

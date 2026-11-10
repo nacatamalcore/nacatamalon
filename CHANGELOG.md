@@ -94,6 +94,15 @@ releases are in [changelog/](./changelog/), one file each.
   composer, `composerTextureSample(uv, { scale })` and `composerMapSample(name, uv, { scale })`, and
   a Scale on both nodes. Sprites, map layers and vertex hooks read the picture itself, as before.
 
+- **A uniform takes what its option takes.** A point as `{ x, y }` and a colour as text or
+  `{ r, g, b, a }`, as well as the card's own list, both when the effect or material is made and when
+  it is changed afterwards: `zoom.uniforms.center = { x: 0.2, y: 0.8 }`,
+  `glow.uniforms.color = '#ffcc00'`. The option was `{ x, y }` and the uniform had to be `[x, y]`; the
+  colour was text when made and three numbers when changed. A colour given to a uniform of three
+  numbers gives its `r, g, b`, and one with nothing else to go by is four. A file still keeps the
+  numbers, whatever form the game used. Types `TUniformValue`, `TUniformPoint`, `TUniformPointValue`,
+  `TUniformColorValue` and `TUniformNumbers` (the numbers a file keeps).
+
 ### Fixed
 
 - **`useData` in a behaviour gets back what it was saved with.** A scene saved while running and
@@ -129,6 +138,19 @@ releases are in [changelog/](./changelog/), one file each.
   thousands rewritten every frame. `const [lines, set] = useLines({ vertices })` is now
   `const lines = useLines({ lines })` and `set(v)` is `setLines(lines, v)`. `TLinesHandle` is gone,
   `TNewLinesOptions` is `TLinesOptions`, and `TLine` is one line of the list.
+- **`useCharacterBody3d`, and it is never `null`.** The 3D character was `useCharacterBody`, the one
+  of its kind without its dimension, and gave `null` with no world to walk in, so every frame began
+  with `if (!player) return`. Now it is `useCharacterBody3d`, like `useCharacterBody2d`, and as that
+  one does it gives a character that never moves where nothing simulates (an editor building the
+  scene), and says once when physics is installed and the scene has no 3D world. Its types are
+  `TCharacterBody3d` and `TCharacterOptions3d`.
+- **`objectFromDoc` and `copyObject`.** What `useSpawn` is given to build an object from a document
+  while the game runs were `boxFromDoc` and `copyBox`: a box is what the editor and the files call
+  it, and in the game it is an object. `useSpawn(boxFromDoc)(doc)` is now `useSpawn(objectFromDoc)(doc)`,
+  and `useSpawn(copyBox)(enemy)` is `useSpawn(copyObject)(enemy)`. `.box` files do not change.
+- **`lookUniforms`, and no more "knobs".** `lookKnobs` from `nacatamalon/authoring` is
+  `lookUniforms`. The guide, the docs and the messages called a uniform a knob; they say uniform now,
+  as the API always did.
 
 ## 0.7.0 — 2026-11-09
 

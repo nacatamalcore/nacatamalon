@@ -27,7 +27,7 @@ export type TPostSource = 'project' | 'scene' | 'transition' | 'filter';
  * One step an effect takes before its own hook, for an effect that cannot be done in one read of
  * the frame: a blur, a glow, a halo.
  *
- * A pass is written exactly like an effect, `fn effect(color, uv)`, and shares the effect's knobs.
+ * A pass is written exactly like an effect, `fn effect(color, uv)`, and shares the effect's uniforms.
  * What changes is what it reads and where it writes: `sampleTexture` gives the pass before it (the
  * first one gets the effect's input), and it writes a picture of its own at `scale` times **the
  * game's** size. The effect's own hook runs last, at full size, and reads the last pass the same way,
@@ -64,15 +64,15 @@ export type TPostPass = {
  * frame would mean compiling each frame and never once finding the cache.
  *
  * Everything except `enabled` is read every frame, so changing a number in `uniforms` animates the
- * effect with nothing reinstalled: the same rule a material's knobs follow.
+ * effect with nothing reinstalled: the same rule a material's uniforms follow.
  *
  * It holds the palette or the table **as the asset**, not as an uploaded picture, because a file
  * lands after the effect was installed. Keeping the picture here would mean keeping the `null` it
  * was at the moment the effect was made.
  *
- * @typeParam U The knobs by name, so a game reads `effect.uniforms.levels` as the number it is.
+ * @typeParam U The uniforms by name, so a game reads `effect.uniforms.levels` as the number it is.
  *     An engine effect such as `dither()` fills it in; one made from a file keeps the general shape,
- *     because its knobs are only known once the file arrives.
+ *     because its uniforms are only known once the file arrives.
  *
  * @category Post-processing
  * @since 1.0.0
@@ -94,7 +94,7 @@ export type TPostEffect<U extends TUniformValues = TUniformValues> = {
      */
     fragmentGlsl: string | null;
     /**
-     * The knobs. Read every frame, so writing into this is how a game drives an effect.
+     * The uniforms. Read every frame, so writing into this is how a game drives an effect.
      */
     uniforms: U;
     /**
@@ -142,7 +142,7 @@ export type TPostEffect<U extends TUniformValues = TUniformValues> = {
     outgoing?: 'take' | 'taken' | 'keep';
     source: TPostSource;
     /**
-     * How many pixels beyond what it is handed it draws, for its knobs as they are now. Read by a
+     * How many pixels beyond what it is handed it draws, for its uniforms as they are now. Read by a
      * filter to leave room around its object; a screen-wide effect has the whole screen and no use for
      * it. Absent says nothing beyond.
      */

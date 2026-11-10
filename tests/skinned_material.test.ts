@@ -25,7 +25,7 @@ describe('a material on a model that bends, WGSL', () => {
     const skinned = buildMeshMaterialShader(HOOK, VERTEX, {}, [], true);
     const still = buildMeshMaterialShader(HOOK, VERTEX, {}, []);
 
-    it('binds the bones inside the material group, after the knobs and the maps', () => {
+    it('binds the bones inside the material group, after the uniforms and the maps', () => {
         expect(MESH_MATERIAL_JOINTS_BINDING).toBe(1 + MAX_MATERIAL_MAPS * 2);
         expect(skinned).toContain(
             `@group(${MESH_MATERIAL_GROUP}) @binding(${MESH_MATERIAL_JOINTS_BINDING}) var<storage, read> joints: array<mat4x4<f32>>;`,

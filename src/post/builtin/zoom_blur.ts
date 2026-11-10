@@ -1,3 +1,4 @@
+import type { TUniformPointValue } from '../../materials/types/t_uniforms';
 import type { TVec2 } from '../../math/vec2';
 import { pointUniform } from './point_uniform';
 import type { TBuiltinPostEffect } from './types/t_builtin';
@@ -19,7 +20,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @author Francisco Pereira Alvarado
  */
 export const zoomBlur = (options: { center?: TVec2; reach?: number; samples?: number } = {}): TBuiltinPostEffect<{
-    center: number[]; reach: number; samples: number;
+    center: TUniformPointValue; reach: number; samples: number;
 }> => ({
     name: 'zoomBlur',
     fragment: /* wgsl */ `

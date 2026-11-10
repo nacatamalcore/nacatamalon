@@ -1,6 +1,6 @@
 import type { TPostChain, TPostChainEntry } from './types/t_post_chain';
 import { findPostBuiltin, POST_BUILTINS } from './builtin/catalog';
-import type { TUniformValues } from '../materials/types/t_uniforms';
+import type { TUniformNumbers } from '../materials/types/t_uniforms';
 
 /**
  * A string that says something, or nothing at all. Blank and absent mean the same thing here.
@@ -14,18 +14,18 @@ const asPath = (value: unknown): string | undefined => {
 };
 
 /**
- * The knobs, keeping only what can actually be written into the block the card reads.
+ * The uniforms, keeping only what can actually be written into the block the card reads.
  *
  * A number, or a list of two to four of them. Anything else (a string somebody typed into a field, a
  * `NaN` from a failed parse, a list of nine) is dropped rather than carried: it has no place in the
  * layout, so keeping it would only postpone the problem to the moment of drawing.
  */
-const asUniforms = (value: unknown): TUniformValues | undefined => {
+const asUniforms = (value: unknown): TUniformNumbers | undefined => {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
         return undefined;
     }
 
-    const kept: TUniformValues = {};
+    const kept: TUniformNumbers = {};
     for (const [name, raw] of Object.entries(value as Record<string, unknown>)) {
         if (typeof raw === 'number' && Number.isFinite(raw)) {
             kept[name] = raw;
@@ -43,18 +43,18 @@ const asUniforms = (value: unknown): TUniformValues | undefined => {
 };
 
 /**
- * A built-in's knobs under the names they have now. A project written before a knob was renamed
+ * A built-in's uniforms under the names they have now. A project written before a uniform was renamed
  * keeps its value, read under the new name; where the file already has the new one too, that wins,
- * since it is the later of the two. Said once for the entry, naming every knob it moved.
+ * since it is the later of the two. Said once for the entry, naming every uniform it moved.
  */
-const asCurrentNames = (builtin: string, uniforms: TUniformValues): TUniformValues => {
+const asCurrentNames = (builtin: string, uniforms: TUniformNumbers): TUniformNumbers => {
     const info = findPostBuiltin(builtin);
     const renamed = info?.renamed;
     if (renamed === undefined) {
         return uniforms;
     }
     const moved: { old: string; now: string; taken: boolean }[] = [];
-    const kept: TUniformValues = {};
+    const kept: TUniformNumbers = {};
     for (const [name, value] of Object.entries(uniforms)) {
         const now = Object.prototype.hasOwnProperty.call(renamed, name) ? renamed[name] : undefined;
         if (now === undefined) {
@@ -132,7 +132,7 @@ const asCurrentKey = (key: string): string => {
  * a built-in beats a file, and a palette beats a table. Both of those are cases the editor cannot
  * produce and a hand-edited file can.
  *
- * A built-in, or one of its knobs, saved under a name it has since changed is read under the new one,
+ * A built-in, or one of its uniforms, saved under a name it has since changed is read under the new one,
  * and said.
  *
  * @param value Whatever was under `post` in the file.

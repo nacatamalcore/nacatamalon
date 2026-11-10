@@ -43,7 +43,7 @@ export type TUseLoadShaderOptions = {
  * on it draws with the built-in shader until it lands: a scene is never held up waiting for an
  * effect, it simply gets the effect a moment late.
  *
- * The file says which family it is for and what knobs it has, so the scene repeats neither.
+ * The file says which family it is for and what uniforms it has, so the scene repeats neither.
  *
  * A file ending in `.shader` is a shader drawn as nodes rather than written, and it is loaded the
  * same way: it brings both languages with it, so it never takes a `glslSrc`.

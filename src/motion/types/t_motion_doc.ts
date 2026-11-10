@@ -200,7 +200,7 @@ export const MOTION_FORMAT = 'nacatamalon-motion';
 /**
  * The version of the format written today. A file with a higher one is read anyway, and warned about.
  *
- * `2` is the first written after knobs of the screen effects and the material looks were renamed
+ * `2` is the first written after uniforms of the screen effects and the material looks were renamed
  * (`dither`'s `strength` is `amount`, `rimStrength` is `rimAmount`…): a file of `1` has its tracks
  * read with the names they have now. A version is what tells them apart where a name was given to
  * something else (`mangaDotsSize` was the dot's fill and is its spacing now).

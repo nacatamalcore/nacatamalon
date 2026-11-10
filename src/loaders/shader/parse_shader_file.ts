@@ -141,7 +141,7 @@ const readHeader = (source: string, src: string): { shader: TMaterialShader; uni
  * Reads a shader file: comments that say what it is, and plain shader code that says what it does.
  *
  * The header is **read from the whole file**, deliberately outside the language halves. What the
- * file is for and what knobs it has are one fact about the file, and a fact written twice is two
+ * file is for and what uniforms it has are one fact about the file, and a fact written twice is two
  * facts that can drift apart.
  *
  * A file stays valid code in its own language, so an editor colours it and a card could compile it

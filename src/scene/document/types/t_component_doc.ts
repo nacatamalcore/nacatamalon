@@ -6,7 +6,7 @@ import type { TPhysicsBody2d, TPhysicsBody3d, TPhysicsWorld2d, TPhysicsWorld3d }
 import type { TTransform3d } from '../../../gameobjects/types/t_transform_3d';
 import type { TTextStyle } from '../../../gameobjects/text/types/t_text_style';
 import type { TNineSliceBorders, TNineSliceMode } from '../../../gameobjects/nine_slice/types/t_nine_slice';
-import type { TUniformValues } from '../../../materials/types/t_uniforms';
+import type { TUniformNumbers } from '../../../materials/types/t_uniforms';
 import type { TCullMode, TTextureWrap } from '../../../materials/types/t_material';
 import type { TParticleOverrides } from '../../../gameobjects/particles/types/t_particles';
 import type { TParticleColliderShape2d, TParticleColliderShape3d } from '../../../gameobjects/particles/colliders/t_particle_collider';
@@ -26,7 +26,7 @@ import type { TShape } from '../../../gameobjects/shapes/types/t_shapes';
  * living in a scene is a copy that goes stale the moment somebody edits the file. A document that
  * carried compiled shader source would be as wrong as one carrying a compiled script.
  *
- * There is no signature here. Which kind each knob is, is worked out from the values themselves on
+ * There is no signature here. Which kind each uniform is, is worked out from the values themselves on
  * the way back in, so writing it down would be saying the same thing twice, and two statements of
  * one fact are two statements that can disagree.
  *
@@ -45,9 +45,9 @@ export type TMaterialDoc = {
     vertex: string | null;
     vertexGlsl: string | null;
     /**
-     * What its knobs are set to. `null` when it has none.
+     * What its uniforms are set to. `null` when it has none.
      */
-    uniforms: TUniformValues | null;
+    uniforms: TUniformNumbers | null;
     /**
      * Extra pictures its shader reads by name, each by asset key. Left out when there are none.
      */
@@ -146,7 +146,7 @@ export type TMeshMaterialDoc = TMaterialDoc & {
     /**
      * How it is lit, as the look is written down (`{ look: 'toon', bands: 2, ... }`). When a material
      * has looks, its `fragment` is left out: the looks are the recipe, and the shader they make is
-     * made again when the scene is opened. Its knobs, as turned, are in `uniforms`.
+     * made again when the scene is opened. Its uniforms, as turned, are in `uniforms`.
      */
     lighting?: TLightingLook;
     /**
@@ -285,9 +285,9 @@ export type TSpriteComponent = {
     zIndex?: number;
     material?: TMaterialDoc;
     /**
-     * This sprite's own values for that material's knobs, laid over the material's own.
+     * This sprite's own values for that material's uniforms, laid over the material's own.
      */
-    uniforms?: TUniformValues;
+    uniforms?: TUniformNumbers;
 };
 
 /**
@@ -348,7 +348,7 @@ export type TNineSliceComponent = {
     visible?: boolean;
     zIndex?: number;
     material?: TMaterialDoc;
-    uniforms?: TUniformValues;
+    uniforms?: TUniformNumbers;
 };
 
 /**
@@ -408,7 +408,7 @@ export type TTextComponent = {
     visible?: boolean;
     zIndex?: number;
     material?: TMaterialDoc;
-    uniforms?: TUniformValues;
+    uniforms?: TUniformNumbers;
 };
 
 /**
@@ -434,7 +434,7 @@ export type TMeshComponent = {
      */
     geometry: string;
     material: TMeshMaterialDoc;
-    uniforms?: TUniformValues;
+    uniforms?: TUniformNumbers;
     visible?: boolean;
     zIndex?: number;
     /**
@@ -519,7 +519,7 @@ export type TTilemapLayerOverride = {
     visible?: boolean;
     zIndex?: number;
     material?: TMaterialDoc;
-    uniforms?: TUniformValues;
+    uniforms?: TUniformNumbers;
 };
 
 /**
@@ -773,7 +773,7 @@ export type TScriptComponent = {
  *
  * **What is written is how it was asked to play, never what it is playing.** A scene saved while
  * the music was halfway through opens ready to start it, because where a voice had got to is a
- * fact about one run and a level is not. The knobs go the other way: a volume an options screen
+ * fact about one run and a level is not. The uniforms go the other way: a volume an options screen
  * turned down is written down turned down, the same as a sprite is written with the tint it has
  * rather than the one it was made with.
  *
@@ -1013,7 +1013,7 @@ export type TShapesComponent = {
  *
  * Written on the object it filters. A filter the game adds to several objects is written on each of
  * them, with the same `id`. Its `effects` are written as a project's `post` list is: an engine
- * effect by its key (`builtin`) or a file by its path (`effect`), with its knobs. One written in code
+ * effect by its key (`builtin`) or a file by its path (`effect`), with its uniforms. One written in code
  * has nothing to be written as and is left out. What is left out is the default: `rect` and `padding`
  * only when given, `enabled` only when off.
  *

@@ -120,8 +120,8 @@ export type TEditorHandle = TGameHandle & {
      */
     setPostChain(chain: TPostChain): void;
     /**
-     * Turns knobs of the effect that entry `index` of the project's chain made, in place, without
-     * making the chain again: what a slider in an editor does while it is dragged. Only knobs the
+     * Turns uniforms of the effect that entry `index` of the project's chain made, in place, without
+     * making the chain again: what a slider in an editor does while it is dragged. Only uniforms the
      * effect has; says whether there was such an effect (an entry naming a built-in this version does
      * not have makes none).
      */

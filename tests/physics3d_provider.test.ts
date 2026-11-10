@@ -3,7 +3,7 @@ import { bodyIntoWorld, box3dProvider, resetNoWorldWarning } from '../src/physic
 import type { TGameObject } from '../src/hooks/spawn/use_spawn';
 import type { TPhysicsBody, TPhysicsBody3d, TPhysicsWorld } from '../src/physics';
 import type { TPhysicsBodyHandle3d, TPhysicsWorldHandle3d } from '../src/physics/box3d/types';
-import type { TCharacterBody } from '../src/physics/box3d/character_body';
+import type { TCharacterBody3d } from '../src/physics/box3d/character_body';
 
 /**
  * The provider's half: turning what a scene declared into calls on a world.
@@ -42,7 +42,7 @@ const fakeWorld = () => {
         addCapsule: record('capsule'),
         addHull: record('hull'),
         addMesh: record('mesh'),
-        addCharacter: () => ({} as TCharacterBody),
+        addCharacter: () => ({} as TCharacterBody3d),
         raycast: () => null,
     } as unknown as TPhysicsWorldHandle3d;
     return { calls, world };

@@ -22,9 +22,9 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  * Everything but whether it is switched on is read every frame, so writing a number into the
  * `uniforms` of what this gives back animates the effect with nothing reinstalled.
  *
- * @param options What the effect is, and what to set its knobs to.
+ * @param options What the effect is, and what to set its uniforms to.
  * @returns The effect, to read and to change.
- * @typeParam U Its knobs by name. Spreading in `dither()` or writing `uniforms: { curve: 0.3 }` fills it in,
+ * @typeParam U Its uniforms by name. Spreading in `dither()` or writing `uniforms: { curve: 0.3 }` fills it in,
  *     so `effect.uniforms.levels` comes back as a number rather than a number or a list.
  *
  * @example
@@ -60,7 +60,7 @@ export const usePostProcess = <U extends TUniformValues = TUniformValues>(option
         }
         unbind();
     });
-    // The knobs are the ones it was given, laid over a file's or a built-in's; their type is the one
+    // The uniforms are the ones it was given, laid over a file's or a built-in's; their type is the one
     // the caller wrote, which is all the generic says.
     return effect as TPostEffect<U>;
 };

@@ -57,7 +57,7 @@ export type TTransition = {
      */
     fragmentGlsl?: string;
     /**
-     * The knobs, and what they start at.
+     * The uniforms, and what they start at.
      */
     uniforms?: TUniformValues;
     /**

@@ -1,3 +1,4 @@
+import { writeUniform } from '../../materials/uniform_numbers';
 import type { TUniformSignature, TUniformType, TUniformValues } from '../../materials';
 
 /**
@@ -84,6 +85,10 @@ export type TUniformLayout = {
      * Which number each parameter starts at, engine ones included, by name.
      */
     offsets: Record<string, number>;
+    /**
+     * How many numbers each parameter has, by name: what a point or a colour given to it becomes.
+     */
+    counts: Record<string, number>;
 };
 
 const roundUp = (value: number, align: number): number => Math.ceil(value / align) * align;
@@ -114,11 +119,13 @@ export const buildUniformLayout = (
     const fields: [string, TUniformType][] = [...engineFields, ...Object.entries(sig)];
 
     const offsets: Record<string, number> = {};
+    const counts: Record<string, number> = {};
     let offsetBytes = 0;
     for (const [name, type] of fields) {
         const { align, size } = LAYOUT[type];
         offsetBytes = roundUp(offsetBytes, align);
         offsets[name] = offsetBytes / 4;
+        counts[name] = size / 4;
         // By its size and not by its aligned size, which is what lets a single number tuck into the
         // four bytes a `vec3` leaves behind.
         offsetBytes += size;
@@ -131,7 +138,7 @@ export const buildUniformLayout = (
     const members = fields.map(([name, type]) => `    ${name}: ${type},`).join('\n');
     const structText = `struct MaterialUniforms {\n${members}\n};`;
 
-    return { structText, floatCount, offsets };
+    return { structText, floatCount, offsets, counts };
 };
 
 /**
@@ -145,11 +152,8 @@ const writeValues = (out: Float32Array, layout: TUniformLayout, values: TUniform
         if (offset === undefined) {
             continue;
         }
-        if (typeof value === 'number') {
-            out[offset] = value;
-        } else {
-            out.set(value, offset);
-        }
+        // A point or a colour as the rest of the engine takes one, made the card's numbers here.
+        writeUniform(out, offset, layout.counts[name] ?? 1, value);
     }
 };
 

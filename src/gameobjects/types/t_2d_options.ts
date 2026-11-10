@@ -86,7 +86,7 @@ export type T2dOptions = {
      */
     material?: TSpriteMaterial;
     /**
-     * Its own values for that material's knobs, laid over the material's own.
+     * Its own values for that material's uniforms, laid over the material's own.
      */
     uniforms?: TUniformValues;
 } & TSpriteEvents;

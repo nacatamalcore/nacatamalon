@@ -23,7 +23,7 @@ import type {
 import type { TTransform2d } from '../../gameobjects/types/t_transform_2d';
 import type { TNineSliceBorders } from '../../gameobjects/nine_slice/types/t_nine_slice';
 import type { TTransform3d } from '../../gameobjects/types/t_transform_3d';
-import type { TUniformValues } from '../../materials/types/t_uniforms';
+import type { TUniformNumbers } from '../../materials/types/t_uniforms';
 import type { TScriptProps } from '../../scripts';
 import { createPhysicsBody2d, createPhysicsBody3d } from '../../physics';
 import type { TCollider2d, TCollider3d, TPhysicsSurface } from '../../physics';
@@ -100,22 +100,22 @@ const parsePoint = (value: unknown): { x: number; y: number } | undefined => {
 };
 
 /**
- * The knobs, kept only where each one is a number or a short list of them.
+ * The uniforms, kept only where each one is a number or a short list of them.
  *
- * Anything else is dropped rather than carried: a knob holding a string or an object would reach the
+ * Anything else is dropped rather than carried: a uniform holding a string or an object would reach the
  * place where the block the card reads is packed, and land there as a hole.
  */
-const parseUniforms = (value: unknown): TUniformValues | undefined => {
+const parseUniforms = (value: unknown): TUniformNumbers | undefined => {
     const raw = asRecord(value);
     if (raw === null) {
         return undefined;
     }
-    const out: TUniformValues = {};
-    for (const [name, knob] of Object.entries(raw)) {
-        if (typeof knob === 'number' && Number.isFinite(knob)) {
-            out[name] = knob;
-        } else if (Array.isArray(knob) && knob.length >= 2 && knob.length <= 4 && knob.every((part) => typeof part === 'number' && Number.isFinite(part))) {
-            out[name] = knob as number[];
+    const out: TUniformNumbers = {};
+    for (const [name, given] of Object.entries(raw)) {
+        if (typeof given === 'number' && Number.isFinite(given)) {
+            out[name] = given;
+        } else if (Array.isArray(given) && given.length >= 2 && given.length <= 4 && given.every((part) => typeof part === 'number' && Number.isFinite(part))) {
+            out[name] = given as number[];
         }
     }
     return out;

@@ -84,7 +84,7 @@ export type TSoundLogger = {
 type TLine = { points: TSoundLogPoint[]; now: () => number; log: TSoundLogger };
 
 /**
- * The volume knobs being followed, each with the lines of points it adds to (one per sound it is
+ * The volume uniforms being followed, each with the lines of points it adds to (one per sound it is
  * in: a piece's volume is in every one of its layers) and the clock they read.
  */
 const followed = new WeakMap<AudioParam, TLine[]>();
@@ -110,7 +110,7 @@ const valueAt = (points: TSoundLogPoint[], at: number): number => {
 };
 
 /**
- * Keeps a volume change in the log, if the knob is being followed: what `rampTo` tells it of.
+ * Keeps a volume change in the log, if the uniform is being followed: what `rampTo` tells it of.
  *
  * @internal
  * @since 1.0.0

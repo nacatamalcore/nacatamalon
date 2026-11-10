@@ -159,11 +159,11 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
                     const cut = cuts ? { fragment: material.fragmentGlsl } : null;
                     const sources = buildMeshMaterialShadowShaderGlsl(material.vertexGlsl, material.uniformSig ?? {}, mapNames, skinned, cut, instanced && !skinned);
                     const program = compileProgram(gl, sources.vertex, sources.fragment, `${skinned ? 'skinned ' : instanced ? 'instanced ' : ''}${cuts ? 'cut ' : ''}mesh material shadow ${material.name ?? material.id}`);
-                    // Only if the hook reads its knobs: asking for a block the card left out is an
+                    // Only if the hook reads its uniforms: asking for a block the card left out is an
                     // error of its own.
-                    const knobs = gl.getUniformBlockIndex(program, 'MaterialUniforms');
-                    if (knobs !== gl.INVALID_INDEX) {
-                        gl.uniformBlockBinding(program, knobs, MATERIAL_UNIFORMS_BINDING);
+                    const uniformBlock = gl.getUniformBlockIndex(program, 'MaterialUniforms');
+                    if (uniformBlock !== gl.INVALID_INDEX) {
+                        gl.uniformBlockBinding(program, uniformBlock, MATERIAL_UNIFORMS_BINDING);
                     }
                     gl.useProgram(program);
                     if (skinned) {

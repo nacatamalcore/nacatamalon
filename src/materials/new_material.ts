@@ -141,13 +141,13 @@ export const newMaterial = (
 ): TMaterial => {
     const looks = looksOf(options, effect);
     if (looks !== null) {
-        // The looks' knobs are added to the bag the caller handed in (or a new one) without
-        // overwriting what was asked: the call site says what a knob is here.
-        const knobs = options.uniforms ?? {};
+        // The looks' uniforms are added to the bag the caller handed in (or a new one) without
+        // overwriting what was asked: the call site says what a uniform is here.
+        const given = options.uniforms ?? {};
         for (const [name, value] of Object.entries(looks.uniforms)) {
-            if (!(name in knobs)) knobs[name] = value;
+            if (!(name in given)) given[name] = value;
         }
-        options = { ...options, fragment: looks.fragment, fragmentGlsl: looks.fragmentGlsl, uniforms: knobs };
+        options = { ...options, fragment: looks.fragment, fragmentGlsl: looks.fragmentGlsl, uniforms: given };
     }
     const asked = options.uniforms ?? {};
     // Written inline, the source is what it is from the start. From a file, everything stays empty
@@ -155,7 +155,7 @@ export const newMaterial = (
     const written = effect === null;
     const inline = options.fragment ?? options.vertex ?? options.fragmentGlsl ?? options.vertexGlsl;
     // Whether this material has a shader of its own at all, now or later. Without one there are no
-    // knobs either, and `null` says that outright rather than leaving an empty bag that reads as
+    // uniforms either, and `null` says that outright rather than leaving an empty bag that reads as
     // "an effect with no parameters".
     const shaded = effect !== null || inline !== undefined;
 

@@ -35,7 +35,7 @@ export const MOVER_CATEGORY = 1n << 62n;
  * (`b3World_CollideMover` + `b3SolvePlanes`, Box2D v3's mover primitives), resolved to a position
  * that does not overlap anything, then written onto the box's transform.
  *
- * Set {@link TCharacterBody.velocity}, and the world advances it on its own fixed step. Gravity is applied for you (set `gravity: 0` for a
+ * Set {@link TCharacterBody3d.velocity}, and the world advances it on its own fixed step. Gravity is applied for you (set `gravity: 0` for a
  * flyer), because a controller that falls is what "character" means to nearly everyone asking
  * for one.
  *
@@ -43,7 +43,7 @@ export const MOVER_CATEGORY = 1n << 62n;
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TCharacterBody = {
+export type TCharacterBody3d = {
     /**
      * Metres per second, **mutable in place**: write into it from a `useUpdate` and the next
      * step uses it. This is the whole steering surface: horizontal components walk, a positive
@@ -64,7 +64,7 @@ export type TCharacterBody = {
     readonly isOnGround: boolean;
     /**
      * Places the character without consulting the world: spawning, respawning, a cutscene. The
-     * ordinary way to move is {@link TCharacterBody.velocity}; this is the escape hatch, and it
+     * ordinary way to move is {@link TCharacterBody3d.velocity}; this is the escape hatch, and it
      * *can* put you inside a wall, which is why it is not the ordinary way.
      */
     setPosition: (x: number, y: number, z: number) => void;
@@ -85,11 +85,11 @@ export type TCharacterBody = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TCharacterOptions = {
+export type TCharacterOptions3d = {
     radius: number;
     height: number;
     /**
-     * The steepest surface that still counts as ground, in radians. Default ~50°. Anything steeper is a wall as far as {@link TCharacterBody.isOnGround} is
+     * The steepest surface that still counts as ground, in radians. Default ~50°. Anything steeper is a wall as far as {@link TCharacterBody3d.isOnGround} is
      * concerned, so you slide down it rather than stand on it.
      */
     slopeLimit?: number;
@@ -241,10 +241,10 @@ export const createCharacter = (deps: {
     b3: () => TBox3dModule | null;
     world: () => Parameters<TBox3dModule['b3World_CollideMover']>[0] | null;
     box: TGameObject;
-    options: TCharacterOptions;
+    options: TCharacterOptions3d;
     worldGravity: number;
 }): {
-    body: TCharacterBody;
+    body: TCharacterBody3d;
     step: (dt: number) => void;
     /**
      * The capsule's solved **centre**, live and mutated in place, and not the box's origin, which is
@@ -356,7 +356,7 @@ export const createCharacter = (deps: {
         writeBack();
     };
 
-    const body: TCharacterBody = {
+    const body: TCharacterBody3d = {
         velocity,
         get isOnGround() { return grounded; },
         setPosition: (x, y, z) => {

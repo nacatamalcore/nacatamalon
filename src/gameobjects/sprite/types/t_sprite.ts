@@ -140,7 +140,7 @@ export type TSprite = {
      */
     material?: TSpriteMaterial;
     /**
-     * This sprite's own values for its material's knobs, laid over the material's every frame.
+     * This sprite's own values for its material's uniforms, laid over the material's every frame.
      *
      * What it buys: fifteen sprites, one compiled effect, fifteen different settings of it. Without
      * it, varying one number would mean a material apiece, and a material apiece is a compile of the

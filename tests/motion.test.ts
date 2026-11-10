@@ -504,14 +504,14 @@ describe('a motion shown at a moment by an editor', () => {
         expect(endMotionPreview(store)).toBe(0);
     });
 
-    it('moves a screen effect by its name, and a picture\'s knob that only its material had', () => {
+    it('moves a screen effect by its name, and a picture\'s uniform that only its material had', () => {
         const { store } = createTestGame();
         const vignette = newPostEffect({ name: 'vignette', uniforms: { strength: 0.2 } }, null, 'project');
         store.get('post').effects.push(vignette);
         const root = startTestScene(store, 'Level', () => {
             const art = createSprite({ width: 8, height: 8 });
             art.id = 'art';
-            // A material that has the knob; the picture has no value of its own for it yet.
+            // A material that has the uniform; the picture has no value of its own for it yet.
             art.material = { uniforms: { amount: 0.5 } } as never;
             return createScene();
         });
@@ -538,10 +538,10 @@ describe('a motion shown at a moment by an editor', () => {
     });
 });
 
-describe('a motion written before knobs were renamed', () => {
+describe('a motion written before uniforms were renamed', () => {
     const track = (rest: Record<string, unknown>) => ({ keys: [{ t: 0, v: 0 }], ...rest });
 
-    it('reads a file of version 1 with the names the knobs have now, and says so once', () => {
+    it('reads a file of version 1 with the names the uniforms have now, and says so once', () => {
         const said = quiet();
         const doc = motion({
             version: 1,
@@ -584,7 +584,7 @@ describe('a motion written before knobs were renamed', () => {
         expect(doc.version).toBe(MOTION_VERSION);
     });
 
-    it('finds an engine effect\'s renamed knob on an effect a project named itself', () => {
+    it('finds an engine effect\'s renamed uniform on an effect a project named itself', () => {
         const { store } = createTestGame();
         const grainy = newPostEffect({ name: 'grainy', uniforms: { levels: 8, amount: 1 } }, null, 'project');
         store.get('post').effects.push(grainy);

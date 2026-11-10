@@ -78,7 +78,7 @@ export const getPhysicsWorld3d = (): TPhysicsWorldHandle3d | null =>
  *
  * Each object has **one handle**, so a listener connected through one call and one connected
  * through another hear the same contacts. A character's object gives its own collider if it has
- * one, never the capsule that moves it: that is `useCharacterBody`'s.
+ * one, never the capsule that moves it: that is `useCharacterBody3d`'s.
  *
  * `null` is an ordinary answer and the game must allow for it: in the editor, while a scene is being
  * built rather than played, nothing simulates; an object with no collider has no body; and a script

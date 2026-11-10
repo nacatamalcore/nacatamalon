@@ -153,7 +153,7 @@ describe('what the reader fills in', () => {
         expect(read.root.children[1].transform).toBeNull();
     });
 
-    it('drops a knob that is not a number or a short list of them', () => {
+    it('drops a uniform that is not a number or a short list of them', () => {
         const read = parseSceneDoc(doc({
             root: {
                 id: 'root', name: 'Level', transform: null, children: [],

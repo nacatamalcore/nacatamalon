@@ -318,7 +318,7 @@ export const drawMesh = (
         // The detail run, which only a material's pipeline reads: after the bones when it bends.
         pass.setVertexBuffer(bends ? 3 : 2, toGpuBuffer(geometry.detailBuffer!));
         // The same group number the built-in pipeline keeps the bones in. A material on a model
-        // that bends carries the bones in this group of its own, beside its knobs and maps.
+        // that bends carries the bones in this group of its own, beside its uniforms and maps.
         const joints = bends ? meshes.joints.upload(mesh.skeleton!) : null;
         const bound = meshes.materials.bind(effect, surface, meshes.defaultSmooth, null, time, width, height, joints);
         pass.setBindGroup(meshes.materials.group, bound.group, [bound.offset]);

@@ -100,10 +100,10 @@ export type { TCameraPreview } from '../game/preview';
 export { POST_BUILTINS, findPostBuiltin, normalizePostChain } from '../post';
 export type { TPostBuiltinInfo, TEffectField } from '../post';
 
-// The material looks the same way: the list a tool offers with their knobs, finding one by the name a
-// document gives it, and which of a material's uniforms each knob is. The makers (`rim()`, `toonLighting()`)
+// The material looks the same way: the list a tool offers with their uniforms, finding one by the name a
+// document gives it, and which of a material's uniforms each uniform is. The makers (`rim()`, `toonLighting()`)
 // and the looks' types are the format and stay in a game's doors.
-export { MATERIAL_LOOKS, findMaterialLook, lookKnobs } from '../shader_composer';
+export { MATERIAL_LOOKS, findMaterialLook, lookUniforms } from '../shader_composer';
 export type { TMaterialLookInfo } from '../shader_composer';
 
 // A new project's window settings, which is what a project starts from.

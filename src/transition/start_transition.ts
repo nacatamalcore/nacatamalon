@@ -48,7 +48,7 @@ const LONG_TRANSITION = 10;
  *
  * The effect is made **here and once**, and the record is then kept for the life of the transition:
  * a compiled shader is cached against that object's identity, so building a fresh one each frame
- * would compile each frame and never once find the cache. Its knobs are copied out of the recipe
+ * would compile each frame and never once find the cache. Its uniforms are copied out of the recipe
  * rather than shared with it, so two changes made from the same `fade(0.3)` cannot write over each
  * other.
  *

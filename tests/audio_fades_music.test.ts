@@ -45,7 +45,7 @@ const loaded = async (store: TRuntimeStore): Promise<void> => {
 const started = (context: TFakeContext): TFakeSource[] => context.sources.filter((source) => source.started);
 
 /**
- * The last ramp asked of a knob: where to, and by when.
+ * The last ramp asked of a uniform: where to, and by when.
  */
 const lastRamp = (param: TFakeParam) => param.events.filter((event) => event.kind === 'ramp').at(-1);
 
@@ -143,7 +143,7 @@ const withMusic = async (options: Partial<Parameters<typeof useMusic>[0]> = {}) 
 };
 
 /**
- * A layer's own volume knob: the one straight after its sound.
+ * A layer's own volume uniform: the one straight after its sound.
  */
 const layerGain = (source: TFakeSource): TFakeParam => (source.connectedTo as unknown as TFakeGain).gain;
 

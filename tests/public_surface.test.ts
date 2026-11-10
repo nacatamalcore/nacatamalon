@@ -66,7 +66,7 @@ describe('the front door', () => {
 
     it('keeps what a game itself runs, including reading a document', () => {
         for (const name of [
-            'createGame', 'registerScript', 'useScript', 'parseSceneDoc', 'sceneFromDoc', 'boxFromDoc', 'copyBox',
+            'createGame', 'registerScript', 'useScript', 'parseSceneDoc', 'sceneFromDoc', 'objectFromDoc', 'copyObject',
             // A behaviour plays a sound laid out in the scene.
             'soundOf',
             // A published game resolves the store an object was given, and lays what its files
@@ -148,8 +148,8 @@ describe('the tools door', () => {
             // and the angles a tool aims a light with.
             'resolveLayerOrder', 'TILE_LAYER_BANDS', 'POST_BUILTINS', 'findPostBuiltin', 'normalizePostChain',
             'DEFAULT_PROJECT_SETTINGS', 'eulerAim',
-            // The material looks a tool offers, finding one by name, and which uniform each knob is.
-            'MATERIAL_LOOKS', 'findMaterialLook', 'lookKnobs',
+            // The material looks a tool offers, finding one by name, and which uniform each uniform is.
+            'MATERIAL_LOOKS', 'findMaterialLook', 'lookUniforms',
             // Saving a picture painted in code as a file, and reading one: a build script's, never a running game's.
             'encodePng', 'decodePng',
             // The same for sound made from text: saving a song, mixing it and writing it as a file, and
@@ -207,7 +207,7 @@ describe('the physics doors', () => {
     it('are where a game installs what moves its colliders, and reaches the world', () => {
         expect(physics2d.sort()).toEqual(['getPhysicsBody2d', 'getPhysicsWorld2d', 'installPhysics2d', 'loadRapier2D', 'rapier2dProvider', 'useCharacterBody2d', 'useJoint2d', 'useSoftBody2d'].sort());
         expect(physics3d.sort()).toEqual([
-            'getPhysicsBody3d', 'getPhysicsWorld3d', 'installPhysics3d', 'loadBox3D', 'box3dProvider', 'useCharacterBody', 'DEFAULT_RAY_DISTANCE',
+            'getPhysicsBody3d', 'getPhysicsWorld3d', 'installPhysics3d', 'loadBox3D', 'box3dProvider', 'useCharacterBody3d', 'DEFAULT_RAY_DISTANCE',
         ].sort());
     });
 

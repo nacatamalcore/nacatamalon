@@ -1,3 +1,5 @@
+import type { TColor } from '../../color/color';
+
 /**
  * Which family of built-in shader a material plugs into, and so what its hooks are handed.
  *
@@ -29,7 +31,31 @@ export type TMaterialShader = 'sprite2d' | 'mesh3d' | 'post';
 export type TUniformType = 'f32' | 'vec2<f32>' | 'vec3<f32>' | 'vec4<f32>';
 
 /**
- * A material's own parameters, by name. One number, or a list of two to four.
+ * A point given to a uniform as the rest of the engine takes one: `{ x, y }`, with `z` and `w` for a
+ * uniform of three or four numbers.
+ *
+ * @category Materials
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TUniformPoint = { x: number; y: number; z?: number; w?: number };
+
+/**
+ * One uniform's value, in any of the forms the engine takes elsewhere for the same thing: a number;
+ * a list of two to four numbers, as the card reads it; a point, `{ x, y }`; or a colour, as text
+ * (`'#ffcc00'`, `'orange'`) or `{ r, g, b, a }`. A point or a colour becomes the card's list when the
+ * uniform is sent, as many of its numbers as the uniform has (a colour to a three-number uniform
+ * gives its `r, g, b`).
+ *
+ * @category Materials
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TUniformValue = number | number[] | TUniformPoint | string | TColor;
+
+/**
+ * A material's own parameters, by name: its uniforms. Each is a number, a list of two to four, a
+ * point or a colour (see `TUniformValue`).
  *
  * Change one and the next frame shows it: the card is handed these again every draw, so animating a
  * strength is an assignment and nothing else.
@@ -38,7 +64,35 @@ export type TUniformType = 'f32' | 'vec2<f32>' | 'vec3<f32>' | 'vec4<f32>';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TUniformValues = Record<string, number | number[]>;
+export type TUniformValues = Record<string, TUniformValue>;
+
+/**
+ * A uniform that is a place or a direction: `{ x, y }` or the card's `[x, y]`.
+ *
+ * @category Materials
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TUniformPointValue = number[] | TUniformPoint;
+
+/**
+ * A uniform that is a colour: as text (`'#ffcc00'`), `{ r, g, b, a }`, or the card's `[r, g, b]`.
+ *
+ * @category Materials
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TUniformColorValue = number[] | string | TColor;
+
+/**
+ * Uniforms as a file keeps them: each a number or a list, the card's own form, whatever form the
+ * game gave them in.
+ *
+ * @category Materials
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TUniformNumbers = Record<string, number | number[]>;
 
 /**
  * What kind each of those parameters is.

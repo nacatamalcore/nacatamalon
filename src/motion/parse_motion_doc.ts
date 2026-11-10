@@ -98,21 +98,21 @@ const readTrack = (raw: unknown, src: string, index: number): TMotionTrack => {
 };
 
 /**
- * The engine effect a knob belongs to when the track names an effect the project named itself
+ * The engine effect a uniform belongs to when the track names an effect the project named itself
  * (`'comic'` for a halftone), so the file cannot say which it is: the one effect that changed that
- * knob's unit, when no effect has a knob of that name now. Only halftone's `angle` is such a knob, and
+ * uniform's unit, when no effect has a uniform of that name now. Only halftone's `angle` is such a uniform, and
  * a game's own effect with an `angle` in a file of before version 3 would be read as one too.
  */
-const onlyConverting = (knob: string): TPostBuiltinInfo | undefined => {
-    const converting = POST_BUILTINS.filter((builtin) => builtin.converted?.[knob] !== undefined);
-    const current = POST_BUILTINS.some((builtin) => builtin.fields.some((field) => field.key === knob));
+const onlyConverting = (uniform: string): TPostBuiltinInfo | undefined => {
+    const converting = POST_BUILTINS.filter((builtin) => builtin.converted?.[uniform] !== undefined);
+    const current = POST_BUILTINS.some((builtin) => builtin.fields.some((field) => field.key === uniform));
     return converting.length === 1 && !current ? converting[0] : undefined;
 };
 
 /**
- * The path a track of a file written before the knobs were renamed (version `1`) has now: a screen
- * effect's knob by the effect's own `renamed` (a track names the effect, which is called after its
- * key unless a project named it otherwise), and a look's knob on a model's material by the look's
+ * The path a track of a file written before the uniforms were renamed (version `1`) has now: a screen
+ * effect's uniform by the effect's own `renamed` (a track names the effect, which is called after its
+ * key unless a project named it otherwise), and a look's uniform on a model's material by the look's
  * (`rimStrength`, `rim2Strength`, `mangaDotsSpacing`). `null` when nothing in it was renamed.
  */
 const renamedPath = (track: TMotionTrack): string | null => {
@@ -120,15 +120,15 @@ const renamedPath = (track: TMotionTrack): string | null => {
     if (parts.length !== 2 || parts[0] !== 'uniforms') {
         return null;
     }
-    const knob = parts[1]!;
+    const uniform = parts[1]!;
     if (track.post !== undefined) {
-        const now = findPostBuiltin(track.post)?.renamed?.[knob];
+        const now = findPostBuiltin(track.post)?.renamed?.[uniform];
         return now === undefined ? null : `uniforms.${now}`;
     }
     const cap = (word: string): string => word[0]!.toUpperCase() + word.slice(1);
     for (const info of MATERIAL_LOOKS) {
         for (const [old, now] of Object.entries(info.renamed ?? {})) {
-            const found = new RegExp(`^${info.key}(\\d*)${cap(old)}$`).exec(knob);
+            const found = new RegExp(`^${info.key}(\\d*)${cap(old)}$`).exec(uniform);
             if (found !== null) {
                 return `uniforms.${info.key}${found[1]}${cap(now)}`;
             }
@@ -287,18 +287,18 @@ export const parseMotionDoc = (raw: unknown, src = 'motion'): TMotionDoc => {
         fail(src, '"events" has to be a list.');
     }
     let tracks = ((file.tracks ?? []) as unknown[]).map((track, i) => readTrack(track, src, i));
-    // Written before the knobs were renamed: read with the names they have now, and said once.
+    // Written before the uniforms were renamed: read with the names they have now, and said once.
     const moved: string[] = [];
-    // A knob whose unit changed with its name, before version 3: renamed, and every key's value
+    // A uniform whose unit changed with its name, before version 3: renamed, and every key's value
     // turned into the new unit. First, so the renaming below finds nothing of it left.
     if (version < 3) {
         tracks = tracks.map((track) => {
-            const knob = track.path.startsWith('uniforms.') ? track.path.slice('uniforms.'.length) : null;
-            const info = track.post === undefined || knob === null
+            const uniform = track.path.startsWith('uniforms.') ? track.path.slice('uniforms.'.length) : null;
+            const info = track.post === undefined || uniform === null
                 ? undefined
-                : findPostBuiltin(track.post) ?? onlyConverting(knob);
-            const convert = knob === null ? undefined : info?.converted?.[knob];
-            const now = knob === null ? undefined : info?.renamed?.[knob];
+                : findPostBuiltin(track.post) ?? onlyConverting(uniform);
+            const convert = uniform === null ? undefined : info?.converted?.[uniform];
+            const now = uniform === null ? undefined : info?.renamed?.[uniform];
             if (convert === undefined || now === undefined) {
                 return track;
             }
@@ -318,7 +318,7 @@ export const parseMotionDoc = (raw: unknown, src = 'motion'): TMotionDoc => {
     }
     if (moved.length > 0) {
         console.warn(
-            `[NacatamalOn] motion "${src}": it was written before some knobs were renamed, so it reads ${moved.join(', ')}. ` +
+            `[NacatamalOn] motion "${src}": it was written before some uniforms were renamed, so it reads ${moved.join(', ')}. ` +
             'Saving it writes the new names.',
         );
     }

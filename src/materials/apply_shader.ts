@@ -1,6 +1,7 @@
-import { deriveSignature, MATERIAL_RULES } from './derive_signature';
+import { deriveSignature, MATERIAL_RULES, withFileKinds } from './derive_signature';
 import { checkParameterRoom } from './check_parameter_room';
 import type { TMaterial } from './types/t_material';
+import type { TUniformValues } from './types/t_uniforms';
 import type { TShader } from '../loaders/shader/types/t_shader';
 
 /**
@@ -12,7 +13,7 @@ import type { TShader } from '../loaders/shader/types/t_shader';
  *
  * A `WeakMap` because a material that nothing holds any more should not be kept alive by this.
  */
-const overrides = new WeakMap<TMaterial, Record<string, number | number[]>>();
+const overrides = new WeakMap<TMaterial, TUniformValues>();
 
 /**
  * Remembers what a material was asked for, so a file landing later cannot wash it away.
@@ -21,7 +22,7 @@ const overrides = new WeakMap<TMaterial, Record<string, number | number[]>>();
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const rememberOverrides = (material: TMaterial, values: Record<string, number | number[]>): void => {
+export const rememberOverrides = (material: TMaterial, values: TUniformValues): void => {
     overrides.set(material, values);
 };
 
@@ -32,10 +33,10 @@ export const rememberOverrides = (material: TMaterial, values: Record<string, nu
 const misfits = new WeakMap<TShader, Set<TMaterial['shader']>>();
 
 /**
- * Pours a loaded file into one material: its hooks, its knobs, and the kinds of those knobs.
+ * Pours a loaded file into one material: its hooks, its uniforms, and the kinds of those uniforms.
  *
  * The file's own values go underneath and the call site's go on top, which is the rule a reader
- * expects: the file says what a knob usually is, the scene says what it is here.
+ * expects: the file says what a uniform usually is, the scene says what it is here.
  *
  * A file for the other family is not poured in at all. Its hooks are written against the other
  * family's shader, so the card would refuse them with an error about a type the author never
@@ -68,8 +69,9 @@ export const applyShader = (material: TMaterial, shader: TShader): void => {
 
     const asked = overrides.get(material) ?? {};
     material.uniforms = { ...shader.uniforms, ...asked };
-    // Derived from the merged values rather than copied from the file, because a knob the call site
-    // introduced is real and has to have somewhere to live in the block the card reads.
-    material.uniformSig = { ...shader.uniformSig, ...deriveSignature(asked) };
+    // A uniform the call site introduced is real and has to have somewhere to live in the block the
+    // card reads. One the file declares keeps the file's kind: a colour given to its `vec3` is three
+    // numbers, not the four a colour is when nothing says.
+    material.uniformSig = withFileKinds(shader.uniformSig, deriveSignature(asked));
     checkParameterRoom(material.uniformSig, MATERIAL_RULES, material.name);
 };

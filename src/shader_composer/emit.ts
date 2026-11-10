@@ -1,6 +1,6 @@
 import { f32Literal } from './f32_literal';
 import { valueType } from './value_type';
-import type { TUniformValues } from '../materials/types/t_uniforms';
+import type { TUniformNumbers } from '../materials/types/t_uniforms';
 import type { TComposerNode, TInputKind } from './types/t_composer_node';
 import type { TShaderTarget, TStageCtx } from './types/t_shader_target';
 
@@ -166,8 +166,8 @@ export const emitBodies = (
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const collectUniforms = (roots: TComposerNode[]): TUniformValues => {
-    const values: TUniformValues = {};
+export const collectUniforms = (roots: TComposerNode[]): TUniformNumbers => {
+    const values: TUniformNumbers = {};
     const seen = new Set<TComposerNode>();
     const visit = (n: TComposerNode): void => {
         if (seen.has(n)) {

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test';
 import { registerPhysicsProvider } from '../src/physics';
 import { box3dProvider, getPhysicsBody3d, getPhysicsWorld3d } from '../src/physics/box3d/provider';
 import { loadBox3D } from '../src/physics/box3d/load_box3d';
-import { useCharacterBody } from '../src/physics/box3d/use_character_body';
+import { useCharacterBody3d } from '../src/physics/box3d/use_character_body_3d';
 // Internals by relative path, the way the engine's own tests reach them: a published game has no
 // use for a frame it drives by hand, so none of this belongs on the front door.
 import { createTestGame, startTestScene } from './helpers/test_game';
@@ -227,16 +227,42 @@ describe('a listener that ends the scene', () => {
 });
 
 describe('a walking character', () => {
+    it('never moves and says nothing where nothing simulates, and says once that the world is missing', () => {
+        warn = spyOn(console, 'warn').mockImplementation(() => {});
+        const walk = (installed: boolean) => {
+            registerPhysicsProvider(null);
+            if (installed) registerPhysicsProvider(box3dProvider);
+            const { store } = createTestGame();
+            let player!: ReturnType<typeof useCharacterBody3d>;
+            startTestScene(store, 'Level', () => {
+                useSpawn(function Player() {
+                    useTransform({ y: 1 });
+                    player = useCharacterBody3d({ radius: 0.35, height: 1.8 });
+                    player.velocity.x = 4;
+                })();
+                return createScene();
+            });
+            return player;
+        };
+
+        expect(walk(false).isOnGround).toBe(false);
+        expect(warn).not.toHaveBeenCalled();
+
+        walk(true);
+        expect(String(warn.mock.calls[0]?.[0])).toContain('useCharacterBody3d: the scene has no 3D world');
+        expect(warn).toHaveBeenCalledTimes(1);
+    });
+
     it('stands on the ground instead of falling through it', async () => {
         const { store } = createTestGame();
-        let player: ReturnType<typeof useCharacterBody> = null;
+        let player!: ReturnType<typeof useCharacterBody3d>;
         const root = startTestScene(store, 'Level', () => {
             usePhysicsWorld3d();
             useSpawn(Floor)();
             useSpawn(function Player() {
                 useTransform({ y: 3 });
                 createMesh({ geometry: useSphereGeometry({ radius: 0.35 }), tint });
-                player = useCharacterBody({ radius: 0.35, height: 1.8, offset: [0, 0.9, 0] });
+                player = useCharacterBody3d({ radius: 0.35, height: 1.8, offset: [0, 0.9, 0] });
             })();
             return createScene();
         });
@@ -253,7 +279,7 @@ describe('a walking character', () => {
 
     it('walks where it is told, every frame, and is stopped by a wall', async () => {
         const { store } = createTestGame();
-        let player: ReturnType<typeof useCharacterBody> = null;
+        let player!: ReturnType<typeof useCharacterBody3d>;
         const root = startTestScene(store, 'Level', () => {
             usePhysicsWorld3d();
             useSpawn(Floor)();
@@ -265,7 +291,7 @@ describe('a walking character', () => {
             useSpawn(function Player() {
                 useTransform({ y: 1 });
                 createMesh({ geometry: useSphereGeometry({ radius: 0.35 }), tint });
-                player = useCharacterBody({ radius: 0.35, height: 1.8, offset: [0, 0.9, 0] });
+                player = useCharacterBody3d({ radius: 0.35, height: 1.8, offset: [0, 0.9, 0] });
             })();
             return createScene();
         });

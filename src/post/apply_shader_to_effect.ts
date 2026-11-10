@@ -1,4 +1,4 @@
-import { deriveSignature, POST_RULES } from '../materials/derive_signature';
+import { deriveSignature, POST_RULES, withFileKinds } from '../materials/derive_signature';
 import { checkParameterRoom } from '../materials/check_parameter_room';
 import type { TPostEffect } from './types/t_post_effect';
 import type { TShader } from '../loaders/shader/types/t_shader';
@@ -54,8 +54,8 @@ export const applyShaderToEffect = (effect: TPostEffect, shader: TShader): void 
 
     const asked = overrides.get(effect) ?? {};
     effect.uniforms = { ...shader.uniforms, ...asked };
-    // Worked out from the two together, not copied from the file: a knob the scene introduced is
-    // real and has to have somewhere to live in the block the card reads.
-    effect.uniformSig = { ...shader.uniformSig, ...deriveSignature(asked, POST_RULES) };
+    // A uniform the scene introduced is real and has to have somewhere to live in the block the card
+    // reads. One the file declares keeps the file's kind.
+    effect.uniformSig = withFileKinds(shader.uniformSig, deriveSignature(asked, POST_RULES));
     checkParameterRoom(effect.uniformSig, POST_RULES, effect.name);
 };

@@ -27,7 +27,7 @@ export type TDrawShader = {
     readonly vertex: string | null;
     readonly vertexGlsl: string | null;
     /**
-     * Read afresh every draw, so turning a knob shows up on the next frame with no re-anything.
+     * Read afresh every draw, so turning a uniform shows up on the next frame with no re-anything.
      */
     readonly uniforms: TUniformValues | null;
     /**

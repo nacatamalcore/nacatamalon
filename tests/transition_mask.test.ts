@@ -69,7 +69,7 @@ const twoRooms = () => {
 const loadingMask = (): TTexture => ({ type: 'texture', key: 'mask', src: 'mask.png', width: 0, height: 0, status: 'loading', gpu: null });
 
 describe('dissolve', () => {
-    it('carries both halves, its mask, and a kind for every knob', () => {
+    it('carries both halves, its mask, and a kind for every uniform', () => {
         const mask = loadingMask();
         const transition = dissolve(0.6, mask);
 

@@ -1,3 +1,4 @@
+import type { TUniformColorValue } from '../../materials/types/t_uniforms';
 import { colorUniform } from './color_uniform';
 import type { TColorOption } from '../../color/get_color';
 import type { TBuiltinPostEffect } from './types/t_builtin';
@@ -28,7 +29,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @author Francisco Pereira Alvarado
  */
 export const lcd = (options: { grid?: number; ghosting?: number; tint?: TColorOption | [number, number, number] } = {}): TBuiltinPostEffect<{
-    grid: number; ghosting: number; tint: number[];
+    grid: number; ghosting: number; tint: TUniformColorValue;
 }> => ({
     name: 'lcd',
     history: true,

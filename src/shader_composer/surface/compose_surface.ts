@@ -36,11 +36,11 @@ const litColor = (s: TSurfaceState): TComposerNode =>
     composerAdd(composerAdd(composerMul(s.base, s.light), s.shine), s.emissive);
 
 /**
- * A knob's name: the look's, then the knob's, so `toon` + `shadow` is `toonShadow`. A step used twice
+ * A uniform's name: the look's, then the uniform's, so `toon` + `shadow` is `toonShadow`. A step used twice
  * gets a number from the second on (`rim2Color`), so the two can be turned apart.
  */
-type TNamer = (knob: string) => string;
-const namer = (prefix: string): TNamer => (knob) => `${prefix}${knob[0]!.toUpperCase()}${knob.slice(1)}`;
+type TNamer = (field: string) => string;
+const namer = (prefix: string): TNamer => (field) => `${prefix}${field[0]!.toUpperCase()}${field.slice(1)}`;
 
 const lightWith = (look: TLightingLook, s: TSurfaceState, name: TNamer): TSurfaceState => {
     switch (look.look) {
@@ -48,7 +48,7 @@ const lightWith = (look: TLightingLook, s: TSurfaceState, name: TNamer): TSurfac
             const amount = composerClamp(brightness(s.light), 0, 1);
             const bands = composerUniform(name('bands'), look.bands);
             // Which band, from 0 (the darkest) to 1 (full light). One band less than asked to divide
-            // by, so the brightest is exactly 1; never by nothing, whatever the knob is turned to.
+            // by, so the brightest is exactly 1; never by nothing, whatever the uniform is turned to.
             const band = composerClamp(composerDiv(composerFloor(composerMul(amount, bands)), composerMax(composerSub(bands, 1), 1)), 0, 1);
             const level = composerMix(composerUniform(name('shadow'), look.shadow), 1, band);
             const spot = composerMul(composerStep(composerUniform(name('spot'), look.spot), brightness(s.shine)), 0.6);
@@ -82,21 +82,21 @@ const stepWith = (look: TStepLook, s: TSurfaceState, name: TNamer): TSurfaceStat
 };
 
 /**
- * The name each look's numbers take as knobs (`toonShadow`, `rim2Color`), with where the number
+ * The name each look's numbers take as uniforms (`toonShadow`, `rim2Color`), with where the number
  * lives in the look: `'lighting'`, or the step's place in the list. Every field of a look but `look`
- * is a knob, named the way the material names it, so a tool that edits a look while the game runs
+ * is a uniform, named the way the material names it, so a tool that edits a look while the game runs
  * knows which of the material's `uniforms` to turn.
  *
  * @param lighting The material's lighting look, if any.
  * @param steps Its steps, in order.
- * @returns One entry per knob.
+ * @returns One entry per uniform.
  *
  * @example
  * ```ts
  * import { rim, toonLighting } from 'nacatamalon/shader';
- * import { lookKnobs } from 'nacatamalon/authoring';
+ * import { lookUniforms } from 'nacatamalon/authoring';
  *
- * lookKnobs(toonLighting(), [rim(), rim()]);
+ * lookUniforms(toonLighting(), [rim(), rim()]);
  * // [{ uniform: 'toonBands', slot: 'lighting', field: 'bands' }, ..., { uniform: 'rim2Color', slot: 1, field: 'color' }, ...]
  * ```
  *
@@ -104,16 +104,16 @@ const stepWith = (look: TStepLook, s: TSurfaceState, name: TNamer): TSurfaceStat
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const lookKnobs = (
+export const lookUniforms = (
     lighting: TLook | null | undefined,
     steps: readonly TLook[] | undefined,
 ): { uniform: string; slot: 'lighting' | number; field: string }[] => {
-    const knobs: { uniform: string; slot: 'lighting' | number; field: string }[] = [];
+    const found: { uniform: string; slot: 'lighting' | number; field: string }[] = [];
     const add = (look: TLook, prefix: string, slot: 'lighting' | number): void => {
         const name = namer(prefix);
         for (const field of Object.keys(look)) {
             if (field !== 'look') {
-                knobs.push({ uniform: name(field), slot, field });
+                found.push({ uniform: name(field), slot, field });
             }
         }
     };
@@ -126,7 +126,7 @@ export const lookKnobs = (
         seen.set(step.look, count);
         add(step, count === 1 ? step.look : `${step.look}${count}`, index);
     });
-    return knobs;
+    return found;
 };
 
 /**

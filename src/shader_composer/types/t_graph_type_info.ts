@@ -1,4 +1,4 @@
-import type { TUniformSignature, TUniformType, TUniformValues } from '../../materials/types/t_uniforms';
+import type { TUniformSignature, TUniformType, TUniformNumbers } from '../../materials/types/t_uniforms';
 
 /**
  * What an editor needs to draw a graph: what every output carries, and what went wrong, node by
@@ -35,6 +35,6 @@ export type TNodePreview = {
      * A sprite's colour hook, in WGSL.
      */
     fragment: string;
-    uniforms: TUniformValues;
+    uniforms: TUniformNumbers;
     uniformSig: TUniformSignature;
 };

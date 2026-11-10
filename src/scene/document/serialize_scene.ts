@@ -10,9 +10,9 @@ import { DEFAULT_FONT_ATLAS_SIZE, isMadeTexture, isMipmapped } from '../../loade
 import type { TFog } from '../../fog/types/t_fog';
 import type { TTexture } from '../../loaders';
 import type { TColor } from '../../color';
-import type { TUniformValues } from '../../materials/types/t_uniforms';
+import { uniformsAsNumbers } from '../../materials/uniform_numbers';
 import { DEFAULT_CHANNEL } from '../../audio';
-import { lookKnobs } from '../../shader_composer/surface/compose_surface';
+import { lookUniforms } from '../../shader_composer/surface/compose_surface';
 import type { TAssetEntry } from './types/t_asset_entry';
 import type { TMusicAttachment, TSongAttachment, TSoundAttachment } from '../../audio';
 import type { TBox } from '../../box';
@@ -139,7 +139,7 @@ const writeMaterial = (material: TMaterial, writing: TWriting): TMaterialDoc => 
         fragmentGlsl: file === null ? material.fragmentGlsl : null,
         vertex: file === null ? material.vertex : null,
         vertexGlsl: file === null ? material.vertexGlsl : null,
-        uniforms: material.uniforms === null || Object.keys(material.uniforms).length === 0 ? null : { ...material.uniforms },
+        uniforms: material.uniforms === null || Object.keys(material.uniforms).length === 0 ? null : uniformsAsNumbers(material.uniforms, material.uniformSig),
         // A model's are written with its surface, further down its own document.
         ...(material.shader === 'sprite2d' ? writeMaps(material.maps, writing) : {}),
     };
@@ -219,19 +219,19 @@ const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting, fromFile:
     const steps = material.steps?.map((step) => ({ ...step }) as Record<string, unknown>);
     let uniforms = written.uniforms;
     if (looked && uniforms !== null) {
-        // A look's knobs are written in the look, as they are turned now, and not again among the
+        // A look's uniforms are written in the look, as they are turned now, and not again among the
         // uniforms: one place for each number, so whoever edits the document edits the look.
         const rest = { ...uniforms };
-        for (const knob of lookKnobs(material.lighting, material.steps)) {
-            if (rest[knob.uniform] === undefined) {
+        for (const named of lookUniforms(material.lighting, material.steps)) {
+            if (rest[named.uniform] === undefined) {
                 continue;
             }
-            const value = rest[knob.uniform];
-            const holder = knob.slot === 'lighting' ? lighting : steps?.[knob.slot];
+            const value = rest[named.uniform];
+            const holder = named.slot === 'lighting' ? lighting : steps?.[named.slot];
             if (holder !== undefined) {
-                holder[knob.field] = Array.isArray(value) ? [...value] : value;
+                holder[named.field] = Array.isArray(value) ? [...value] : value;
             }
-            delete rest[knob.uniform];
+            delete rest[named.uniform];
         }
         uniforms = Object.keys(rest).length === 0 ? null : rest;
     }
@@ -280,7 +280,7 @@ const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting, fromFile:
 
 /**
  * One of a filter's effects as a document writes it, the way a project's chain does: the engine's by
- * its key, a file's by its path, each with its knobs as they are now. `null` for one written in code,
+ * its key, a file's by its path, each with its uniforms as they are now. `null` for one written in code,
  * which has nothing to be written as.
  */
 const entryOfEffect = (effect: TPostEffect): TPostChainEntry | null => {
@@ -290,10 +290,8 @@ const entryOfEffect = (effect: TPostEffect): TPostChainEntry | null => {
     if (key === null && src === '') {
         return null;
     }
-    const uniforms: TUniformValues = {};
-    for (const [name, value] of Object.entries(effect.uniforms)) {
-        uniforms[name] = Array.isArray(value) ? [...value] : value;
-    }
+    // In the card's own form, whatever form the game gave them in: a file keeps numbers.
+    const uniforms = uniformsAsNumbers(effect.uniforms, effect.uniformSig);
     const palette = effect.palette?.src ?? '';
     const lut = effect.lut?.src ?? '';
     return {
@@ -354,7 +352,7 @@ const writeSprite = (sprite: TSprite, writing: TWriting): TComponentDoc => {
         ...unless('visible', sprite.visible, true),
         ...unless('zIndex', sprite.zIndex, undefined),
         ...(sprite.material !== undefined ? { material: writeMaterial(sprite.material as TSpriteMaterial, writing) } : {}),
-        ...(sprite.uniforms !== undefined ? { uniforms: { ...sprite.uniforms } } : {}),
+        ...(sprite.uniforms !== undefined ? { uniforms: uniformsAsNumbers(sprite.uniforms, sprite.material?.uniformSig ?? null) } : {}),
     };
 };
 
@@ -397,7 +395,7 @@ const writeNineSlice = (panel: TNineSlice, writing: TWriting): TComponentDoc => 
         ...unless('visible', panel.visible, true),
         ...unless('zIndex', panel.zIndex, undefined),
         ...(panel.material !== undefined ? { material: writeMaterial(panel.material as TSpriteMaterial, writing) } : {}),
-        ...(panel.uniforms !== undefined ? { uniforms: { ...panel.uniforms } } : {}),
+        ...(panel.uniforms !== undefined ? { uniforms: uniformsAsNumbers(panel.uniforms, panel.material?.uniformSig ?? null) } : {}),
     };
 };
 
@@ -442,7 +440,7 @@ const writeText = (text: TText, writing: TWriting): TComponentDoc => {
         ...unless('visible', text.visible, true),
         ...unless('zIndex', text.zIndex, undefined),
         ...(text.material !== undefined ? { material: writeMaterial(text.material as TSpriteMaterial, writing) } : {}),
-        ...(text.uniforms !== undefined ? { uniforms: { ...text.uniforms } } : {}),
+        ...(text.uniforms !== undefined ? { uniforms: uniformsAsNumbers(text.uniforms, text.material?.uniformSig ?? null) } : {}),
     };
 };
 
@@ -509,7 +507,7 @@ const writeTilemap = (layers: TTilemapLayer[], writing: TWriting): TComponentDoc
             // record the map's answer as if the layer had made it.
             ...unless('visible', layer.visible, true),
             ...(layer.material !== undefined ? { material: writeMaterial(layer.material as TSpriteMaterial, writing) } : {}),
-            ...(layer.uniforms !== undefined ? { uniforms: { ...layer.uniforms } } : {}),
+            ...(layer.uniforms !== undefined ? { uniforms: uniformsAsNumbers(layer.uniforms, layer.material?.uniformSig ?? null) } : {}),
         };
         if (Object.keys(entry).length > 1) {
             changed.push(entry);

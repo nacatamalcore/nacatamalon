@@ -7,7 +7,7 @@ import { createTestGame, startTestScene } from './helpers/test_game';
 import type { TMeshMaterialDoc } from '../src/scene/document/types/t_component_doc';
 import { compileShader } from '../src/shader_composer/compile_shader';
 import { composerSurface } from '../src/shader_composer/inputs';
-import { lookKnobs } from '../src/shader_composer/surface/compose_surface';
+import { lookUniforms } from '../src/shader_composer/surface/compose_surface';
 import { MATERIAL_LOOKS, mangaDots, rim, toonLighting, unlitLighting } from '../src/shader_composer/surface/looks';
 import { createMaterial } from '../src/gameobjects/material/create_material';
 import type { TLook } from '../src/shader_composer/surface/types';
@@ -59,7 +59,7 @@ describe('each look', () => {
         }
     });
 
-    it('turns its numbers into knobs named after it, with its values', () => {
+    it('turns its numbers into uniforms named after it, with its values', () => {
         expect(looked(toonLighting({ shadow: 0.8 })).uniforms).toEqual({ toonBands: 2, toonShadow: 0.8, toonSpot: 0.75 });
         expect(looked(undefined, [mangaDots(), rim()]).uniforms).toMatchObject({
             mangaDotsSize: 5, mangaDotsFill: 0.3, mangaDotsInk: [0.16, 0.1, 0.26],
@@ -68,9 +68,9 @@ describe('each look', () => {
     });
 
     it('numbers a step used twice from the second on, so the two can be turned apart', () => {
-        const knobs = Object.keys(looked(undefined, [rim(), rim({ color: '#00ff00' })]).uniforms);
-        expect(knobs).toContain('rimColor');
-        expect(knobs).toContain('rim2Color');
+        const uniforms = Object.keys(looked(undefined, [rim(), rim({ color: '#00ff00' })]).uniforms);
+        expect(uniforms).toContain('rimColor');
+        expect(uniforms).toContain('rim2Color');
         expect(looked(undefined, [rim(), rim({ color: '#00ff00' })]).uniforms.rim2Color).toEqual([0, 1, 0]);
     });
 });
@@ -131,9 +131,9 @@ describe('what is refused', () => {
     });
 });
 
-describe('the knobs, by name', () => {
-    it('says where each knob lives in the looks, a second step of a kind numbered', () => {
-        expect(lookKnobs(toonLighting(), [rim(), rim()])).toEqual([
+describe('the uniforms, by name', () => {
+    it('says where each uniform lives in the looks, a second step of a kind numbered', () => {
+        expect(lookUniforms(toonLighting(), [rim(), rim()])).toEqual([
             { uniform: 'toonBands', slot: 'lighting', field: 'bands' },
             { uniform: 'toonShadow', slot: 'lighting', field: 'shadow' },
             { uniform: 'toonSpot', slot: 'lighting', field: 'spot' },
@@ -147,8 +147,8 @@ describe('the knobs, by name', () => {
     });
 
     it('names them as the shader does', () => {
-        const knobs = lookKnobs(toonLighting(), [mangaDots(), rim(), rim()]).map((k) => k.uniform).sort();
-        expect(Object.keys(looked(toonLighting(), [mangaDots(), rim(), rim()]).uniforms).sort()).toEqual(knobs);
+        const uniforms = lookUniforms(toonLighting(), [mangaDots(), rim(), rim()]).map((k) => k.uniform).sort();
+        expect(Object.keys(looked(toonLighting(), [mangaDots(), rim(), rim()]).uniforms).sort()).toEqual(uniforms);
     });
 });
 
@@ -164,7 +164,7 @@ describe('the catalogue', () => {
 });
 
 describe('a material made with looks', () => {
-    it('carries their shader in both languages, their knobs, and the looks themselves', () => {
+    it('carries their shader in both languages, their uniforms, and the looks themselves', () => {
         const material = createMaterial({ shader: 'mesh3d', lighting: toonLighting(), steps: [mangaDots()] }) as TMeshMaterial;
         expect(material.fragment).toContain('ctx.screen');
         expect(material.fragmentGlsl).toContain('ctx.screen');
@@ -174,10 +174,10 @@ describe('a material made with looks', () => {
         expect(material.steps).toEqual([mangaDots()]);
     });
 
-    it('keeps the knobs it was handed over the looks\' own, in the same bag', () => {
-        const knobs = { toonShadow: 0.9 };
-        const material = createMaterial({ shader: 'mesh3d', lighting: toonLighting(), uniforms: knobs });
-        expect(material.uniforms).toBe(knobs);
+    it('keeps the uniforms it was handed over the looks\' own, in the same bag', () => {
+        const uniforms = { toonShadow: 0.9 };
+        const material = createMaterial({ shader: 'mesh3d', lighting: toonLighting(), uniforms: uniforms });
+        expect(material.uniforms).toBe(uniforms);
         expect(material.uniforms.toonShadow).toBe(0.9);
         expect(material.uniforms.toonBands).toBe(2);
     });
@@ -224,12 +224,12 @@ describe('a scene with looks, written down', () => {
         expect(surface.steps).toEqual([mangaDots(), rim()]);
         expect(surface.fragment).toBeNull();
         expect(surface.fragmentGlsl).toBeNull();
-        // Their knobs are written in the looks, once, and not again among the uniforms.
+        // Their uniforms are written in the looks, once, and not again among the uniforms.
         expect(surface.uniforms).toBeNull();
         expect(parseSceneDoc(doc, '/scenes/level.scene')).toEqual(doc);
     });
 
-    it('writes a knob as it is turned now into its look, and keeps the material\'s own knobs apart', () => {
+    it('writes a uniform as it is turned now into its look, and keeps the material\'s own uniforms apart', () => {
         const { store } = createTestGame();
         const root = startTestScene(store, 'Level', () => {
             const material = createMaterial({ shader: 'mesh3d', lighting: toonLighting(), steps: [rim(), rim()], uniforms: { wobble: 2 } }) as TMeshMaterial;
@@ -244,7 +244,7 @@ describe('a scene with looks, written down', () => {
         expect(surface.uniforms).toEqual({ wobble: 2 });
     });
 
-    it('makes the same material again when the scene is opened, knobs as they were turned', () => {
+    it('makes the same material again when the scene is opened, uniforms as they were turned', () => {
         const doc = written({ shader: 'mesh3d', lighting: toonLighting(), steps: [mangaDots()], uniforms: { toonShadow: 0.7 } });
         const { store } = createTestGame();
         const opened = startTestScene(store, 'Level', () => {
@@ -255,7 +255,7 @@ describe('a scene with looks, written down', () => {
             .filter((d) => (d as { type: string }).type === 'mesh') as unknown as { material: TMeshMaterial }[];
         expect(meshes).toHaveLength(1);
         const material = meshes[0]!.material;
-        // The knob turned before saving comes back in its look.
+        // The uniform turned before saving comes back in its look.
         expect(material.lighting).toEqual(toonLighting({ shadow: 0.7 }));
         expect(material.fragment).toContain('ctx.screen');
         expect(material.uniforms!.toonShadow).toBe(0.7);

@@ -58,7 +58,7 @@ describe('what a material carries', () => {
         expect('texture' in material).toBe(false);
     });
 
-    it('leaves the knobs null when there is no shader of its own to turn', () => {
+    it('leaves the uniforms null when there is no shader of its own to turn', () => {
         const material = createMaterial({ shader: 'mesh3d' });
 
         expect(material.fragment).toBeNull();
@@ -66,7 +66,7 @@ describe('what a material carries', () => {
         expect(material.uniformSig).toBeNull();
     });
 
-    it('reads what kind each knob is off the value it was given', () => {
+    it('reads what kind each uniform is off the value it was given', () => {
         const material = createMaterial({
             fragment: 'fn effect(c: vec4<f32>, uv: vec2<f32>) -> vec4<f32> { return c; }',
             uniforms: { strength: 0.5, rim: [1, 0, 0, 1] },
@@ -75,14 +75,14 @@ describe('what a material carries', () => {
         expect(material.uniformSig).toEqual({ strength: 'f32', rim: 'vec4<f32>' });
     });
 
-    it('refuses a knob named after one the engine fills in itself', () => {
+    it('refuses a uniform named after one the engine fills in itself', () => {
         expect(() => createMaterial({
             fragment: 'fn effect(c: vec4<f32>, uv: vec2<f32>) -> vec4<f32> { return c; }',
             uniforms: { time: 1 },
         })).toThrow(/the engine fills in itself/);
     });
 
-    it('refuses a knob that is not a number or a list of two to four', () => {
+    it('refuses a uniform that is not a number or a list of two to four', () => {
         expect(() => createMaterial({
             fragment: 'fn effect(c: vec4<f32>, uv: vec2<f32>) -> vec4<f32> { return c; }',
             uniforms: { weird: [1, 2, 3, 4, 5] },

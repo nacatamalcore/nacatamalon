@@ -1,7 +1,7 @@
 import type { TEffectField } from './types/t_builtin';
 
 /**
- * What can be set on each of the engine's effects, for a form to be made of it: every knob of its
+ * What can be set on each of the engine's effects, for a form to be made of it: every uniform of its
  * `uniforms` with its range, and the options written into it when it is made. A test holds each list
  * to the effect it describes, key for key and default for default, so the two cannot drift apart.
  */

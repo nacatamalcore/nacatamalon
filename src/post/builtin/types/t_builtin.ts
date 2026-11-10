@@ -8,7 +8,7 @@ import type { TPostPass } from '../../types/t_post_effect';
  * engine effect that ran on one card and not the other would be a hole in the promise that the two
  * backends draw the same thing, rather than the honest degradation a hand-written WGSL file gets.
  *
- * @typeParam U Its knobs by name and kind, which `usePostProcess` hands on to the effect it installs.
+ * @typeParam U Its uniforms by name and kind, which `usePostProcess` hands on to the effect it installs.
  *
  * @category Post-processing
  * @since 1.0.0
@@ -29,7 +29,7 @@ export type TBuiltinPostEffect<U extends TUniformValues = TUniformValues> = {
      */
     history?: boolean;
     /**
-     * How many pixels beyond what it is handed it draws, for these knobs: what a filter leaves room
+     * How many pixels beyond what it is handed it draws, for these uniforms: what a filter leaves room
      * for around its object.
      */
     reach?(uniforms: U): number;
@@ -45,7 +45,7 @@ export type TBuiltinPostEffect<U extends TUniformValues = TUniformValues> = {
  */
 export type TEffectField = {
     /**
-     * Its name: the knob's (a key of the effect's `uniforms`), or, for one marked `rebuild`, the option
+     * Its name: the uniform's (a key of the effect's `uniforms`), or, for one marked `rebuild`, the option
      * the effect is made with.
      */
     key: string;
@@ -83,7 +83,7 @@ export type TEffectField = {
      */
     angle?: true;
     /**
-     * Written into the effect when it is made, not a knob: changing it makes the effect again, so it
+     * Written into the effect when it is made, not a uniform: changing it makes the effect again, so it
      * cannot be tweened. A project file keeps it in the entry's `options`, not its `uniforms`.
      */
     rebuild?: true;
@@ -124,11 +124,11 @@ export type TPostBuiltinInfo = {
     forObjects?: true;
     fields: readonly TEffectField[];
     /**
-     * Old knob name → the name it has now, so a project written before a rename keeps its value.
+     * Old uniform name → the name it has now, so a project written before a rename keeps its value.
      */
     renamed?: Readonly<Record<string, string>>;
     /**
-     * Old knob name → how its value becomes the new one's, where the unit changed with the name
+     * Old uniform name → how its value becomes the new one's, where the unit changed with the name
      * (`angle` in degrees → `rotation` in radians).
      */
     converted?: Readonly<Record<string, (value: number) => number>>;

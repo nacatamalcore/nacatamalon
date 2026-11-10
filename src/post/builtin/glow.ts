@@ -1,3 +1,4 @@
+import type { TUniformColorValue } from '../../materials/types/t_uniforms';
 import type { TColorOption } from '../../color/get_color';
 import { colorUniform } from './color_uniform';
 import { gaussPass } from './gauss';
@@ -28,7 +29,7 @@ import type { TBuiltinPostEffect } from './types/t_builtin';
  * @author Francisco Pereira Alvarado
  */
 export const glow = (options: { color?: TColorOption | [number, number, number]; radius?: number; intensity?: number } = {}): TBuiltinPostEffect<{
-    color: number[]; radius: number; intensity: number;
+    color: TUniformColorValue; radius: number; intensity: number;
 }> => ({
     name: 'glow',
     passes: [gaussPass('x', 0.5), gaussPass('y', 0.5)],

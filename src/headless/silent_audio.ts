@@ -1,5 +1,5 @@
 /**
- * A WebAudio with nothing behind it, for a game with no browser: every node connects, every knob
+ * A WebAudio with nothing behind it, for a game with no browser: every node connects, every uniform
  * moves and every sound starts and ends, and nothing is heard. Only what the engine asks of WebAudio
  * is here; its sounds run their course by the game's own clock, so a sound waited on still ends.
  */

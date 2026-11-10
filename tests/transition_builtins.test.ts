@@ -53,7 +53,7 @@ describe('the transitions the engine ships', () => {
         }
     });
 
-    it('declare a kind for every knob they set, and no knob they do not', () => {
+    it('declare a kind for every uniform they set, and no uniform they do not', () => {
         for (const [name, transition] of ALL) {
             const values = Object.keys(transition.uniforms ?? {}).sort();
             const kinds = Object.keys(transition.uniformSig ?? {}).sort();
