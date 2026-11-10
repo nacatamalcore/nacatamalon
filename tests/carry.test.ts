@@ -93,8 +93,8 @@ describe('what a vertex hook carries to the colour hook, on WebGL2', () => {
     });
 
     it('is there in the shadow, and carried in one cut out', () => {
-        expect(buildMeshMaterialShadowShaderGlsl(HOOK_GLSL, {}, true).vertex).toContain('vec4 carry = vec4(0.0);');
-        const cut = buildMeshMaterialShadowShaderGlsl(HOOK_GLSL, {}, false, { fragment: EFFECT_GLSL, mapNames: [] });
+        expect(buildMeshMaterialShadowShaderGlsl(HOOK_GLSL, {}, [], true).vertex).toContain('vec4 carry = vec4(0.0);');
+        const cut = buildMeshMaterialShadowShaderGlsl(HOOK_GLSL, {}, [], false, { fragment: EFFECT_GLSL });
         expect(cut.vertex).toContain('vCarry = carried;');
         expect(cut.fragment).toContain('ctx.carry = vCarry;');
     });

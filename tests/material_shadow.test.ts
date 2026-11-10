@@ -57,14 +57,14 @@ describe('the shadow of a material that moves its corners', () => {
     it('says the same on the other card', () => {
         for (const skinned of [false, true]) {
             const drawn = buildMeshMaterialShaderGlsl(null, HOOK_GLSL, SIG, [], skinned).vertex;
-            const shadow = buildMeshMaterialShadowShaderGlsl(HOOK_GLSL, SIG, skinned);
+            const shadow = buildMeshMaterialShadowShaderGlsl(HOOK_GLSL, SIG, [], skinned);
             expect(shadow.vertex).toContain(HOOK_GLSL);
             expect(between(shadow.vertex, 'VertContext ctx;', 'vec3 local')).toBe(between(drawn, 'VertContext ctx;', 'vec3 local'));
             expect(between(shadow.vertex, 'uniform MaterialUniforms', '} mu;')).toBe(between(drawn, 'uniform MaterialUniforms', '} mu;'));
             expect(shadow.vertex).toContain('gl_Position = uLightViewProj * uModel * placed;');
             expect(shadow.fragment).toBe(SHADOW_FRAGMENT_GLSL);
         }
-        expect(buildMeshMaterialShadowShaderGlsl(HOOK_GLSL, SIG, true).vertex).toContain('vec4 placed = skin * vec4(local, 1.0);');
+        expect(buildMeshMaterialShadowShaderGlsl(HOOK_GLSL, SIG, [], true).vertex).toContain('vec4 placed = skin * vec4(local, 1.0);');
     });
 });
 
@@ -77,13 +77,13 @@ describe('a composed shader\'s shadow', () => {
         });
         const shadow = buildMeshMaterialShadowShader(compiled.vertex!, {}, [], false);
         expect(shadow).toContain('fn sgNoise3(');
-        expect(buildMeshMaterialShadowShaderGlsl(compiled.vertexGlsl!, {}, false).vertex).toContain('float sgNoise3(');
+        expect(buildMeshMaterialShadowShaderGlsl(compiled.vertexGlsl!, {}, [], false).vertex).toContain('float sgNoise3(');
     });
 });
 
 describe('the shadow on the other card', () => {
     it('declares none of the drawn model\'s blocks, so a hook cannot read another model\'s numbers', () => {
-        const shadow = buildMeshMaterialShadowShaderGlsl(HOOK_GLSL, SIG, false).vertex;
+        const shadow = buildMeshMaterialShadowShaderGlsl(HOOK_GLSL, SIG, [], false).vertex;
         expect(shadow).not.toContain('uniform Uniforms');
         expect(shadow).not.toContain('uniform Lights');
     });
@@ -133,7 +133,7 @@ describe('the shadow of a material cut out of its picture', () => {
             expect(shadow).toContain(skinned
                 ? 'out.normal = normalize(facingTurnOf(place) * (facingTurnOf(turn) * shaped));'
                 : 'out.normal = normalize(facingTurnOf(place) * shaped);');
-            const glsl = buildMeshMaterialShadowShaderGlsl(null, SIG, skinned, { fragment: EFFECT_GLSL, mapNames: [] });
+            const glsl = buildMeshMaterialShadowShaderGlsl(null, SIG, [], skinned, { fragment: EFFECT_GLSL });
             expect(glsl.vertex).toContain('mat3 facingTurnOf(mat3 m) {');
             expect(glsl.vertex).toContain(skinned
                 ? 'vNormal = normalize(facingTurnOf(mat3(uModel)) * (facingTurnOf(turn) * shaped));'
@@ -144,7 +144,7 @@ describe('the shadow of a material cut out of its picture', () => {
         }
         // A shadow that cuts nothing has no facing to work out.
         expect(buildMeshMaterialShadowShader(null, SIG, [], false)).not.toContain('facingTurnOf');
-        expect(buildMeshMaterialShadowShaderGlsl(null, SIG, false).vertex).not.toContain('facingTurnOf');
+        expect(buildMeshMaterialShadowShaderGlsl(null, SIG, [], false).vertex).not.toContain('facingTurnOf');
     });
 
     it('reads the maps its colour hook reads', () => {
@@ -153,7 +153,7 @@ describe('the shadow of a material cut out of its picture', () => {
 
     it('says the same on the other card', () => {
         for (const skinned of [false, true]) {
-            const shadow = buildMeshMaterialShadowShaderGlsl(null, SIG, skinned, { fragment: EFFECT_GLSL, mapNames: ['noise'] });
+            const shadow = buildMeshMaterialShadowShaderGlsl(null, SIG, ['noise'], skinned, { fragment: EFFECT_GLSL });
             expect(shadow.vertex).toContain('vec3 vertex(vec3 pos, VertContext ctx) {\n    return pos;');
             expect(shadow.fragment).toContain(EFFECT_GLSL);
             expect(shadow.fragment).toContain('vec4 shaded = effect(sampleTexture(vUv) * vec4(1.0, 1.0, 1.0, uCut.y) * vColor, ctx);');
@@ -161,7 +161,7 @@ describe('the shadow of a material cut out of its picture', () => {
             expect(shadow.fragment).toContain('vec4 sampleMap_noise(vec2 uv)');
             expect(shadow.vertex).toContain(skinned ? 'mat3 turn = mat3(skin);' : 'mat3 turn = mat3(1.0);');
         }
-        expect(buildMeshMaterialShadowShaderGlsl(HOOK_GLSL, SIG, false).fragment).toBe(SHADOW_FRAGMENT_GLSL);
+        expect(buildMeshMaterialShadowShaderGlsl(HOOK_GLSL, SIG, [], false).fragment).toBe(SHADOW_FRAGMENT_GLSL);
     });
 });
 

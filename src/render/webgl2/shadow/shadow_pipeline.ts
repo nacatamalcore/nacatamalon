@@ -136,7 +136,9 @@ export const createShadowPipeline = (gl: WebGL2RenderingContext) => {
             gl.uniformMatrix4fv(shader.model, false, model);
             if (hooked !== null) {
                 meshes.materials.bind(effect!, surface.uniforms ?? {}, null, time, width, height);
-                if (cuts) {
+                // Read by the cut, or by a corner hook that moves the corners by a map. A shadow that
+                // only moves its corners by numbers binds none, as before.
+                if (hooked.bindsMaps) {
                     bindMaterialMaps(gl, meshes, surface, hooked.mapNames);
                 }
             }

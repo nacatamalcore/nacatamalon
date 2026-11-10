@@ -253,7 +253,7 @@ describe('the surface a cut shadow tells its colour hook', () => {
             const wgsl = buildMeshMaterialShadowShader(WAVE, {}, [], skinned, { fragment: FACING });
             expect(wgsl).toContain('let moved1 = vertex(position + tangent');
             expect(wgsl).toContain(skinned ? 'facingTurnOf(turn) * shaped' : 'facingTurnOf(place) * shaped');
-            const glsl = buildMeshMaterialShadowShaderGlsl(WAVE_GLSL, {}, skinned, { fragment: FACING_GLSL, mapNames: [] }).vertex;
+            const glsl = buildMeshMaterialShadowShaderGlsl(WAVE_GLSL, {}, [], skinned, { fragment: FACING_GLSL }).vertex;
             expect(glsl).toContain('vec3 moved1 = vertex(aPosition + tangent');
             expect(glsl).toContain(skinned ? 'facingTurnOf(turn) * shaped' : 'facingTurnOf(mat3(uModel)) * shaped');
         }
@@ -263,7 +263,7 @@ describe('the surface a cut shadow tells its colour hook', () => {
         const wgsl = buildMeshMaterialShadowShader(null, {}, [], false, { fragment: FACING });
         expect(wgsl).toContain('let shaped = ctx.normal;');
         expect(wgsl).not.toContain('moved1');
-        const glsl = buildMeshMaterialShadowShaderGlsl(null, {}, false, { fragment: FACING_GLSL, mapNames: [] }).vertex;
+        const glsl = buildMeshMaterialShadowShaderGlsl(null, {}, [], false, { fragment: FACING_GLSL }).vertex;
         expect(glsl).toContain('vec3 shaped = ctx.normal;');
     });
 });

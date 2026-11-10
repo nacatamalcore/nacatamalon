@@ -242,7 +242,8 @@ export type TMeshMaterial = TShaderHalf & {
     wrap?: TTextureWrap | { u: TTextureWrap; v: TTextureWrap };
     /**
      * Extra pictures for its shader to read, by name, up to four: `sampleMap_<name>(uv)` in the
-     * shader reads the one under that name. Read every frame, so swapping one shows at once.
+     * shader reads the one under that name, in the fragment hook or the vertex hook. Read every
+     * frame, so swapping one shows at once.
      */
     maps?: Record<string, TMaterialMap>;
     /**

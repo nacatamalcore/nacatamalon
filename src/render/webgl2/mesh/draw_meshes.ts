@@ -108,7 +108,8 @@ export const writeMeshLights = (
 /**
  * A material's extra maps, on their own units, in the order its shader reads them. A map the
  * material does not carry, or one still loading, reads as white and the model is drawn anyway. The
- * shadow pass binds them the same way, for a shadow cut by what a hook reads of them.
+ * shadow pass binds them the same way, for a shadow cut by what a hook reads of them or moved by a
+ * map its corner hook reads.
  *
  * @internal
  * @since 1.0.0

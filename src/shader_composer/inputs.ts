@@ -218,8 +218,11 @@ export const composerTextureSample = (coord: TComposerNode): TComposerNode => ne
 /**
  * Reads one of the material's extra maps by name, at any coordinate (`vec4`): a reflection, a mask, a
  * detail, a ripple. The material carries the picture under the same name in its `maps`; one it does
- * not carry reads white. Colour stage only. On a sprite or a map's layer, read it at
- * `composerLocalUv()` for a mask that stays put while the frames change.
+ * not carry reads white. On a model it reads in the colour graph and in the vertex graph too, to move
+ * the corners by a picture (a height map, footprints in snow); read it there at a place worked out
+ * from `composerVertexPosition()` rather than `composerUv()`, so the surface is lit by the shape the
+ * map gives it (see `TMaterialOptions.vertex`). On a sprite or a map's layer, colour graph only:
+ * read it at `composerLocalUv()` for a mask that stays put while the frames change.
  * @param name - The map's name, as the material's `maps` gives it: lowercase first, letters and digits.
  * @param coord - Where to read it, in `0`-`1`.
  * @returns The node, to use as the input of another.

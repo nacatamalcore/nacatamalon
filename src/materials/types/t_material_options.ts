@@ -53,6 +53,16 @@ export type TMaterialShaderOptions = {
      * the corner is in the model's own space, for bands or a fill line that stay on the model as it
      * moves and turns.
      * Nothing written is zeros.
+     *
+     * It reads the material's knobs (`mu`) and its `maps` (`sampleMap_<name>(uv)`), so a picture can
+     * move the corners: a height map, footprints pressed into snow, ripples drawn into a texture. The
+     * surface is measured again where the hook moved it, by calling it at two places beside each
+     * corner with the same `ctx`, and lit by that. So read a map at a place worked out from `pos`,
+     * not at `ctx.uv`: read at `ctx.uv`, the places beside it rise just as much, and the moved surface
+     * is lit as if it were still flat. On a plane `width` by `depth`,
+     * `pos.xz / vec2<f32>(width, depth) + 0.5` is its `uv`. Give a height map `smooth: true` in
+     * `maps`: read pixel by pixel (the game's default), each pixel is a flat step, and the surface
+     * comes out in terraces lit flat, with walls where one step meets the next.
      */
     vertex?: string;
     /**
@@ -152,7 +162,8 @@ export type TMeshMaterialOptions = TMaterialShaderOptions & {
     wrap?: TTextureWrap | { u: TTextureWrap; v: TTextureWrap };
     /**
      * Extra pictures for the shader to read by name, up to four, each a texture or a texture with its
-     * own `wrap` and `smooth`. In the shader, `sampleMap_<name>(uv)` reads the one under that name.
+     * own `wrap` and `smooth`. In the shader, `sampleMap_<name>(uv)` reads the one under that name,
+     * in the fragment hook and in the vertex hook alike (see `vertex`).
      *
      * @example
      * ```ts

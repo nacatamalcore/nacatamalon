@@ -73,8 +73,8 @@ const stages = (): Array<[string, string]> => {
     }
     for (const skinned of [false, true]) {
         const bones = skinned ? ' with bones' : '';
-        all.push([`material shadow${bones}`, buildMeshMaterialShadowShaderGlsl(null, {}, skinned).vertex]);
-        all.push([`material shadow cut out${bones}`, buildMeshMaterialShadowShaderGlsl(null, {}, skinned, { fragment: null, mapNames: [] }).vertex]);
+        all.push([`material shadow${bones}`, buildMeshMaterialShadowShaderGlsl(null, {}, [], skinned).vertex]);
+        all.push([`material shadow cut out${bones}`, buildMeshMaterialShadowShaderGlsl(null, {}, [], skinned, { fragment: null }).vertex]);
     }
     return all;
 };

@@ -1,4 +1,4 @@
-import { MAX_MATERIAL_MAPS } from '../../shared/material_maps';
+import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import {
     FACED_LIGHT_GLSL, FACING_TURN_GLSL, LIT_BY_GLSL, MESH_FRAGMENT_HEAD_GLSL, MESH_SAMPLE_LIGHT_GLSL, MESH_VERTEX_ATTRIBUTES_GLSL,
     TWO_SIDED_VARYINGS_GLSL, TWO_SIDED_WRITE_GLSL, worldNormalOfGlsl,
@@ -97,22 +97,40 @@ vec4 sampleTexture(vec2 uv) {
  * The material's extra maps: always all four samplers, and one reader per name the shader uses, in
  * the order it first reads them. The same readers by the same names as its WGSL twin.
  *
- * `envUv` is where a reflection of the world lands on a round picture of its surroundings.
+ * Read at a level given, never one worked out from how fast the place changes across the screen,
+ * so the corner hook reads them as the colour hook does: a corner has no neighbours on the screen to
+ * work it out from. Declared in both halves of a material with a corner hook, under the same names,
+ * which the card links into one sampler on one unit.
  */
-const maps = (names: readonly string[]): string => {
+const mapReaders = (names: readonly string[]): string => {
     const slots = Array.from({ length: MAX_MATERIAL_MAPS }, (_, i) => `uniform sampler2D meshMap${i};`).join('\n');
     const readers = names.map((name, i) =>
         `vec4 sampleMap_${name}(vec2 uv) {\n    return textureLod(meshMap${i}, uv, 0.0);\n}`).join('\n');
     return `${slots}
+${readers}
+`;
+};
 
+/**
+ * The maps for the colour half: the readers, and `envUv`, where a reflection of the world lands on a
+ * round picture of its surroundings. Only there, because it reads a `FragContext`, which the corner
+ * half does not have.
+ */
+const maps = (names: readonly string[]): string => `${mapReaders(names)}
 vec2 envUv(FragContext ctx) {
     vec3 r = reflect(-ctx.viewDir, normalize(ctx.normal));
     float m = max(2.0 * sqrt(r.x * r.x + r.y * r.y + (r.z + 1.0) * (r.z + 1.0)), 0.0001);
     return vec2(r.x / m + 0.5, 0.5 - r.y / m);
 }
-${readers}
 `;
-};
+
+/**
+ * The maps for the corner half, when its corner hook reads one: then all of the material's readers,
+ * on the same samplers as the colour half's. A corner hook that reads none (a flag waving, with a
+ * detail map in its colour hook) declares none, and its corners are left as they were.
+ */
+const cornerMaps = (vertex: string | null, names: readonly string[]): string =>
+    mapNamesOf(vertex).length === 0 ? '' : mapReaders(names);
 
 /**
  * A corner hook that moves nothing.
@@ -372,6 +390,7 @@ export const buildMeshMaterialShaderGlsl = (
         MESH_SAMPLE_LIGHT_GLSL,
         ...(cull === 'none' ? [LIT_BY_GLSL] : []),
         VERT_CONTEXT,
+        cornerMaps(vertex, mapNames),
         vertex ?? DEFAULT_VERTEX,
         vertexBody(vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL, skinned, cull),
     ].join('\n'),
@@ -408,6 +427,9 @@ layout(location = 5) in vec4 aColor;
  * in webgpu/material/mesh_material_shader.ts; its colour stage colours nothing, as the built-in
  * shadow's does, and with `cut` throws away what the picture and the colour hook leave out.
  *
+ * `mapNames` are the material's maps in the order the drawn model binds them, so a corner hook that
+ * moves its corners by a map moves them here by the same one, on the same units.
+ *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -415,8 +437,9 @@ layout(location = 5) in vec4 aColor;
 export const buildMeshMaterialShadowShaderGlsl = (
     vertex: string | null,
     sig: TUniformSignature,
+    mapNames: readonly string[] = [],
     skinned = false,
-    cut: { fragment: string | null; mapNames: readonly string[] } | null = null,
+    cut: { fragment: string | null } | null = null,
 ): { vertex: string; fragment: string } => {
     const bend = skinned ? `
     mat4 skin =
@@ -435,6 +458,7 @@ export const buildMeshMaterialShadowShaderGlsl = (
                 glslUniformBlock(sig),
                 'uniform mat4 uLightViewProj;\nuniform mat4 uModel;',
                 VERT_CONTEXT,
+                cornerMaps(vertex, mapNames),
                 vertex ?? DEFAULT_VERTEX,
                 /* glsl */ `
 void main() {${CORNER_CONTEXT}${bend}
@@ -458,6 +482,7 @@ void main() {${CORNER_CONTEXT}${bend}
             // Already among the bones' helpers when it bends.
             skinned ? '' : FACING_TURN_GLSL,
             VERT_CONTEXT,
+            cornerMaps(vertex, mapNames),
             vertex ?? DEFAULT_VERTEX,
             /* glsl */ `
 void main() {${CORNER_CONTEXT}${vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL}${bend}
@@ -483,7 +508,7 @@ void main() {${CORNER_CONTEXT}${vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL
             'in vec2 vUv;\nin vec3 vNormal;\nin vec3 vWorldPos;\nin vec4 vColor;\nin vec4 vTangent;\nin vec2 vUv2;\nin vec4 vCarry;',
             FRAG_CONTEXT,
             SAMPLE,
-            maps(cut.mapNames),
+            maps(mapNames),
             cut.fragment ?? DEFAULT_EFFECT,
             /* glsl */ `
 void main() {

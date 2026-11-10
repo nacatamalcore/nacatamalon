@@ -40,12 +40,17 @@ const emitExpr = (n: TComposerNode, refs: string[], stage: TStageCtx, target: TS
         case 'input':
             return inputSource(n.input!, stage, target);
         case 'texture': {
-            if (stage === 'mesh3d.vert') {
-                throw new Error('[NacatamalOn] shader composer: textureSample is not available in a vertex graph.');
-            }
             const map = n.params?.[0];
             if (typeof map !== 'string') {
+                if (stage === 'mesh3d.vert') {
+                    throw new Error('[NacatamalOn] shader composer: textureSample is not available in a vertex graph. Give the material the picture as a map too, and read it with Map Sample.');
+                }
                 return `sampleTexture(${refs[0]})`;
+            }
+            // A model's corner hook reads its maps as its colour hook does: snow pressed down where
+            // a picture of the footprints says.
+            if (stage === 'mesh3d.vert') {
+                return `sampleMap_${map}(${refs[0]})`;
             }
             // A map belongs to the material. A node's own thumbnail has none, so it shows white,
             // which is what a map the material does not carry reads as anyway.
@@ -53,7 +58,7 @@ const emitExpr = (n: TComposerNode, refs: string[], stage: TStageCtx, target: TS
                 return `${target.type('vec4<f32>')}(1.0)`;
             }
             if (stage !== 'mesh3d.frag' && stage !== 'sprite2d.frag') {
-                throw new Error(`[NacatamalOn] shader composer: the map '${map}' can only be read in a colour graph. Read it in the graph given as "color".`);
+                throw new Error(`[NacatamalOn] shader composer: the map '${map}' can only be read in a colour graph or a model's vertex graph.`);
             }
             return `sampleMap_${map}(${refs[0]})`;
         }

@@ -28,6 +28,14 @@ releases are in [changelog/](./changelog/), one file each.
   calm). Each has its own names, `time`, `onChange` and `active`, and a change asked for from inside
   a change of any of them waits for it. It can live in the same object or in a piece of its own, as
   deep as needed, and each one's state is saved and comes back.
+- **A model material's maps, read by its vertex hook.** `sampleMap_<name>(uv)` works in `vertex` and
+  `vertexGlsl` as it does in `fragment`, on both cards, and in the model's shadow too, so a picture
+  can move the corners: a height map, footprints pressed into snow, ripples drawn into a texture. The
+  shader composer reads a map in a model's vertex graph (`composerMapSample` in `position`). Read the
+  map at a place worked out from `pos` rather than at `ctx.uv`, so the moved surface is lit as moved,
+  and give a height map `smooth: true`, or it rises in flat terraces.
+  Until now a vertex hook that read a map did not compile, and the model drew with the built-in
+  shader.
 
 ### Fixed
 

@@ -382,7 +382,7 @@ describe('a material of its own', () => {
 
     it('is told nothing is shut in when its shadow is cut, since no light has reached anything yet', () => {
         expect(buildMeshMaterialShadowShader(null, {}, [], false, { fragment: null })).toContain('ctx.occlusion = 1.0;');
-        expect(buildMeshMaterialShadowShaderGlsl(null, {}, false, { fragment: null, mapNames: [] }).fragment).toContain('ctx.occlusion = 1.0;');
+        expect(buildMeshMaterialShadowShaderGlsl(null, {}, [], false, { fragment: null }).fragment).toContain('ctx.occlusion = 1.0;');
     });
 
     it('reads it in the shader composer', () => {

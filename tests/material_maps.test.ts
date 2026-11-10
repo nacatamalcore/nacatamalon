@@ -190,9 +190,9 @@ describe('the shader composer', () => {
         expect(() => compileShader({ shader: 'sprite2d', color: composerSwizzle(composerEnvUv(), 'xyx') })).toThrow(/envUv is not available/);
     });
 
-    it('refuses one in a vertex graph, and a bad name', () => {
-        expect(() => compileShader({ shader: 'mesh3d', position: composerSwizzle(composerMapSample('noise', composerUv()), 'xyz') }))
-            .toThrow(/not available in a vertex graph/);
+    it('reads one in a model\'s vertex graph too (see material_maps_vertex.test.ts), and refuses a bad name', () => {
+        const compiled = compileShader({ shader: 'mesh3d', position: composerSwizzle(composerMapSample('noise', composerUv()), 'xyz') });
+        expect(compiled.vertex).toContain('sampleMap_noise(ctx.uv)');
         expect(() => composerMapSample('Bad Name', composerUv())).toThrow(/cannot name a map/);
     });
 });

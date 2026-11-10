@@ -20,7 +20,8 @@ type TCompiled = {
 
 /**
  * A material's shadow program, and where its numbers go: the light's matrix, the model's, how it is
- * cut (only in one that cuts) and the maps it reads, in the order their units are bound.
+ * cut (only in one that cuts) and the maps it reads, in the order their units are bound, and
+ * whether it reads any of them at all (`bindsMaps`): cut, or moved by a map.
  */
 type TMaterialShadow = {
     program: WebGLProgram;
@@ -28,6 +29,7 @@ type TMaterialShadow = {
     model: WebGLUniformLocation | null;
     cut: WebGLUniformLocation | null;
     mapNames: string[];
+    bindsMaps: boolean;
 };
 
 /**
@@ -61,7 +63,8 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
 
     const build = (material: TDrawShader, skinned: boolean, cull: TCullMode): TCompiled => {
         const layout = buildUniformLayout(material.uniformSig ?? {});
-        const mapNames = mapNamesOf(material.fragmentGlsl);
+        // The corner hook's too, so a map only it reads has a unit and a reader.
+        const mapNames = mapNamesOf(material.fragmentGlsl, material.vertexGlsl);
         // Too many numbers for its slot. Said once where it was made (`checkParameterRoom`).
         if (layout.floatCount > MAX_MATERIAL_FLOATS) {
             return { program: null, layout, failed: true, mapNames };
@@ -148,9 +151,10 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
             let held = shadows.get(key);
             if (held === undefined) {
                 try {
-                    const mapNames = mapNamesOf(material.fragmentGlsl);
-                    const cut = cuts ? { fragment: material.fragmentGlsl, mapNames } : null;
-                    const sources = buildMeshMaterialShadowShaderGlsl(material.vertexGlsl, material.uniformSig ?? {}, skinned, cut);
+                    // In the drawn model's order, which is the order its units are bound in.
+                    const mapNames = mapNamesOf(material.fragmentGlsl, material.vertexGlsl);
+                    const cut = cuts ? { fragment: material.fragmentGlsl } : null;
+                    const sources = buildMeshMaterialShadowShaderGlsl(material.vertexGlsl, material.uniformSig ?? {}, mapNames, skinned, cut);
                     const program = compileProgram(gl, sources.vertex, sources.fragment, `${skinned ? 'skinned ' : ''}${cuts ? 'cut ' : ''}mesh material shadow ${material.name ?? material.id}`);
                     // Only if the hook reads its knobs: asking for a block the card left out is an
                     // error of its own.
@@ -163,12 +167,14 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
                         gl.uniform1i(gl.getUniformLocation(program, 'uJoints'), MESH_JOINTS_UNIT);
                     }
                     if (cuts) {
-                        // The picture and the maps on the units the drawn model reads them from.
+                        // The picture on the unit the drawn model reads it from.
                         gl.uniform1i(gl.getUniformLocation(program, 'meshTexture'), MESH_TEXTURE_UNIT);
-                        MESH_MAP_UNITS.forEach((unit, i) => {
-                            gl.uniform1i(gl.getUniformLocation(program, `meshMap${i}`), unit);
-                        });
                     }
+                    // And the maps, read by a cut or by a corner hook. One the program does not
+                    // declare has no place, and setting nothing is no error.
+                    MESH_MAP_UNITS.forEach((unit, i) => {
+                        gl.uniform1i(gl.getUniformLocation(program, `meshMap${i}`), unit);
+                    });
                     gl.useProgram(null);
                     held = {
                         program,
@@ -176,6 +182,7 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
                         model: gl.getUniformLocation(program, 'uModel'),
                         cut: gl.getUniformLocation(program, 'uCut'),
                         mapNames,
+                        bindsMaps: cuts || mapNamesOf(material.vertexGlsl).length > 0,
                     };
                 } catch (error) {
                     console.warn(

@@ -222,7 +222,7 @@ const DEFS: TNodeDef[] = [
         type: 'mapSample',
         label: 'Map Sample',
         category: 'input',
-        summary: 'Samples one of the material\'s extra maps by name: a reflection, a mask, a detail, a ripple.',
+        summary: 'Samples one of the material\'s extra maps by name: a reflection, a mask, a detail, a ripple. In a model\'s vertex graph it moves the corners by a picture: read it there at a place worked out from Vertex Position, not at UV.',
         inputs: [port('uv', V2, () => composerUv())],
         outputs: OUT,
         params: [{ name: 'name', label: 'Map', kind: 'text', default: 'noise' }],

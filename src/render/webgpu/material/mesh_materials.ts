@@ -55,9 +55,11 @@ export const createMeshMaterials = (
 ) => {
     const mapEntries: GPUBindGroupLayoutEntry[] = [];
     for (let i = 0; i < MAX_MATERIAL_MAPS; i++) {
+        // Both stages, like the knobs: a corner hook moves the corners by a map (snow pressed down
+        // where a picture of the footprints says) as readily as a colour hook paints with one.
         mapEntries.push(
-            { binding: 1 + i * 2, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
-            { binding: 2 + i * 2, visibility: GPUShaderStage.FRAGMENT, texture: {} },
+            { binding: 1 + i * 2, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, sampler: {} },
+            { binding: 2 + i * 2, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, texture: {} },
         );
     }
     const knobsEntry: GPUBindGroupLayoutEntry = {
@@ -134,7 +136,8 @@ export const createMeshMaterials = (
 
     const build = (material: TDrawShader, skinned: boolean, cull: TCullMode): TCompiled => {
         const layout = buildUniformLayout(material.uniformSig ?? {});
-        const mapNames = mapNamesOf(material.fragment);
+        // The corner hook's too, so a map only it reads has a slot and a reader.
+        const mapNames = mapNamesOf(material.fragment, material.vertex);
 
         // Too many numbers for its slot. Said once where it was made (`checkParameterRoom`).
         if (layout.floatCount > MAX_MATERIAL_FLOATS) {
@@ -242,7 +245,8 @@ export const createMeshMaterials = (
             const key = `${skinned ? 'skinned ' : ''}${cuts ? 'cut ' : ''}${JSON.stringify(material.uniformSig ?? {})} ${material.fragment ?? ''} ${material.vertex ?? ''}`;
             let held = shadows.get(key);
             if (held === undefined) {
-                const mapNames = mapNamesOf(material.fragment);
+                // In the drawn model's order, which is the order its group binds them in.
+                const mapNames = mapNamesOf(material.fragment, material.vertex);
                 const cut = cuts ? { fragment: material.fragment } : null;
                 // Caught here, as the effect's is: the warning below says it once, in this engine's
                 // words, rather than the card printing it on its own as well.
