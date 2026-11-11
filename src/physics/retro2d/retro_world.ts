@@ -608,7 +608,7 @@ export const createRetroWorld = (options: {
             return;
         }
         // Its size as the last step left it, to notice the game changing it.
-        const before = entry.placed && !Number.isNaN(entry.lastY) ? { hw: entry.hw, hh: entry.hh } : null;
+        const before = entry.placed && !Number.isNaN(entry.lastY) ? { hw: entry.hw, hh: entry.hh, shiftY: entry.shiftY } : null;
         entry.placed = true;
         entry.round = now.round;
         entry.hw = now.hw;
@@ -617,7 +617,7 @@ export const createRetroWorld = (options: {
         entry.shiftY = now.shiftY;
         entry.x = entry.readX = now.x;
         entry.y = entry.readY = now.y;
-        if (before !== null && (Math.abs(now.hw - before.hw) > EPS || Math.abs(now.hh - before.hh) > EPS)) resized(entry, before.hh);
+        if (before !== null && (Math.abs(now.hw - before.hw) > EPS || Math.abs(now.hh - before.hh) > EPS)) resized(entry, before.hh, before.shiftY);
     };
 
     /**
@@ -625,10 +625,13 @@ export const createRetroWorld = (options: {
      * was standing keeps its feet where they were, so it grows up from the floor and shrinks down to
      * it instead of round its middle, which would sink it into the floor or leave it in the air. Then
      * it comes out of any solid tile it ended up in, a wall it grew into among them.
+     *
+     * Where its feet were is counted from the object: a collider set off from the object (a
+     * character whose object stands at its feet) grows about the object, and may need no help.
      */
-    const resized = (entry: TEntry, hhBefore: number): void => {
+    const resized = (entry: TEntry, hhBefore: number, shiftYBefore: number): void => {
         if (!isMoving(entry)) return;
-        if (entry.onGround) entry.y -= entry.hh - hhBefore;
+        if (entry.onGround) entry.y += (shiftYBefore + hhBefore) - (entry.shiftY + entry.hh);
         if (grids.length === 0) return;
         if (entry.round) roundOutOfCells(entry);
         else boxOutOfCells(entry);
@@ -1012,8 +1015,10 @@ export const createRetroWorld = (options: {
 
     /**
      * How far a body can go along `axis` towards `sign` before anything that might stop it is in its
-     * way, looking no further than `reach`: a body it could collide with, or for a dynamic body any
-     * tile that is not empty. Errs short, never long: what it counts may well let it through.
+     * way, looking no further than `reach`: a body that could stop or be pushed by it, from a side
+     * that stops, or for a dynamic body a tile that is not empty (a ledge only falling onto it).
+     * What it is already inside is left out: that is not in its way, and is settled as always.
+     * Errs short, never long. Looks only through the part of the grid it would cross.
      */
     const clearAhead = (entry: TEntry, axis: 'x' | 'y', sign: number, reach: number): number => {
         let clear = reach;
@@ -1021,28 +1026,46 @@ export const createRetroWorld = (options: {
         const half = axis === 'x' ? entry.hw : entry.hh;
         const halfAcross = axis === 'x' ? entry.hh : entry.hw;
         const front = entry[axis] + sign * half;
-        for (const other of entries) {
-            if (other === entry || out(other) || !other.placed || !solid(entry, other)) continue;
-            const otherHalf = axis === 'x' ? other.hw : other.hh;
-            const otherAcross = axis === 'x' ? other.hh : other.hw;
-            if (Math.abs(other[across] - entry[across]) >= halfAcross + otherAcross - EPS) continue;
-            // Behind it, or already beside it where its front is: nothing in its way from here.
-            if (sign * (other[axis] + sign * otherHalf - (entry[axis] - sign * half)) <= 0) continue;
-            clear = Math.min(clear, Math.max(0, sign * (other[axis] - sign * otherHalf - front)));
-        }
-        if (grids.length === 0 || !isMoving(entry)) return clear;
-        const far = front + sign * clear;
+        const far = front + sign * reach;
+        const driven = isPushing(entry);
+        // The side of what it meets that faces it, and its own side facing that.
+        const facing: TRetroSide = axis === 'x' ? (sign > 0 ? 'left' : 'right') : (sign > 0 ? 'up' : 'down');
         const lowAcross = entry[across] - halfAcross + EPS;
         const highAcross = entry[across] + halfAcross - EPS;
         const [left, right] = axis === 'x' ? [Math.min(front, far), Math.max(front, far)] : [lowAcross, highAcross];
         const [top, bottom] = axis === 'x' ? [lowAcross, highAcross] : [Math.min(front, far), Math.max(front, far)];
+
+        stamp++;
+        for (let cy = Math.floor(top / CELL); cy <= Math.floor(bottom / CELL); cy++) {
+            for (let cx = Math.floor(left / CELL); cx <= Math.floor(right / CELL); cx++) {
+                const cell = grid.get(cellKey(cx, cy));
+                if (cell === undefined) continue;
+                for (const other of cell) {
+                    if (other.stamp === stamp || other === entry || !other.placed || out(other)) continue;
+                    other.stamp = stamp;
+                    if (!solid(entry, other) || (driven && !isMoving(other))) continue;
+                    if (!other.record.solidSides[facing] || !entry.record.solidSides[OPPOSITE[facing]]) continue;
+                    const otherHalf = axis === 'x' ? other.hw : other.hh;
+                    const otherAcross = axis === 'x' ? other.hh : other.hw;
+                    if (Math.abs(other[across] - entry[across]) >= halfAcross + otherAcross - EPS) continue;
+                    const gap = sign * (other[axis] - sign * otherHalf - front);
+                    if (gap < -EPS) continue;
+                    clear = Math.min(clear, Math.max(0, gap));
+                }
+            }
+        }
+        if (grids.length === 0 || !isMoving(entry)) return clear;
+        const falling = axis === 'y' && sign > 0;
         eachCell(grids, left, top, right, bottom, (grid, column, row, cellLeft, cellTop) => {
             const cell = cellOf(grid.map, column, row);
-            if (!cell.solid && !cell.oneWay && cell.slope === undefined) return;
+            if (!cell.solid && !(cell.oneWay && falling) && cell.slope === undefined) return;
             const near = axis === 'x'
                 ? (sign > 0 ? cellLeft : cellLeft + grid.w)
                 : (sign > 0 ? cellTop : cellTop + grid.h);
-            clear = Math.min(clear, Math.max(0, sign * (near - front)));
+            const gap = sign * (near - front);
+            // A ledge or a slope it is already in is not ahead of it.
+            if (gap < -EPS && !cell.solid) return;
+            clear = Math.min(clear, Math.max(0, gap));
         });
         return clear;
     };
@@ -1053,15 +1076,28 @@ export const createRetroWorld = (options: {
      *
      * A move too long to walk in a bounded number of pieces leaps over the empty part of the way in
      * one go, to a piece short of the first thing that might stop it, and walks from there: a bullet
-     * stops at a thin wall at any speed.
+     * stops at a thin wall at any speed. Whatever is left when even that has taken too many pieces
+     * (a long push through a row of crates) goes in even pieces, as a short move does: it is never
+     * dropped.
      */
     const moveAlong = (entry: TEntry, axis: 'x' | 'y', delta: number): void => {
         if (delta === 0) return;
         const sign = Math.sign(delta);
         // Half its own size that way, or of the smallest solid body, so neither steps over the other.
         const size = Math.max(0.5, Math.min(axis === 'x' ? entry.hw : entry.hh, smallest));
+        /** Moves one piece and settles it; whether that stopped it. */
+        const go = (piece: number, dir: number): boolean => {
+            if (axis === 'x') entry.x += sign * piece;
+            else entry.y += sign * piece;
+            insert(entry);
+            settle(entry, axis, sign * dir);
+            const stopped = axis === 'x'
+                ? (sign > 0 ? entry.blocked.right : entry.blocked.left)
+                : (sign > 0 ? entry.blocked.down : entry.blocked.up);
+            return stopped && !isPushing(entry);
+        };
         let left = Math.abs(delta);
-        for (let walked = 0; left > EPS && walked < MAX_PIECES * 4; walked++) {
+        for (let walked = 0; left > EPS && walked < MAX_PIECES; walked++) {
             let piece = Math.min(left, size);
             if (left / size <= MAX_PIECES) {
                 // Short enough to walk: even pieces, as always.
@@ -1070,15 +1106,13 @@ export const createRetroWorld = (options: {
                 const clear = clearAhead(entry, axis, sign, left);
                 if (clear > size * 2) piece = clear - size;
             }
-            if (axis === 'x') entry.x += sign * piece;
-            else entry.y += sign * piece;
             left -= piece;
-            insert(entry);
-            settle(entry, axis, sign * Math.min(piece, size));
-            const stopped = axis === 'x'
-                ? (sign > 0 ? entry.blocked.right : entry.blocked.left)
-                : (sign > 0 ? entry.blocked.down : entry.blocked.up);
-            if (stopped && !isPushing(entry)) return;
+            if (go(piece, Math.min(piece, size))) return;
+        }
+        if (left <= EPS) return;
+        const pieces = Math.min(MAX_PIECES, Math.max(1, Math.ceil(left / size - EPS)));
+        for (let i = 0; i < pieces; i++) {
+            if (go(left / pieces, left / pieces)) return;
         }
     };
 
@@ -1209,6 +1243,9 @@ export const createRetroWorld = (options: {
             return { a, b, started, forA: { side: sideTowards(a, b), speed: speed(a, b) }, forB: { side: sideTowards(b, a), speed: speed(b, a) } };
         });
         for (const entry of entries) entry.impacts.clear();
+        // Who left the world goes first: a body put in another's place is told after the old one left.
+        tellLost();
+        if (closed) return;
         for (const { a, b, started, forA, forB } of contacts) {
             for (const [one, other, contact] of [[a, b, forA], [b, a, forB]] as const) {
                 // What was destroyed meanwhile is told to the one left when it leaves the world.
@@ -1498,8 +1535,8 @@ export const createRetroWorld = (options: {
         // What it touched is forgotten with it, and each body told it touched it is told it stopped:
         // a zone it was in, a sensor it set off, the floor it stood on.
         for (const other of entry.touching) other.touching.delete(entry);
-        for (const other of entries) {
-            if (!other.told.delete(entry) || closed) continue;
+        for (const other of closed ? [] : entries) {
+            if (!other.told.delete(entry)) continue;
             lost.push({ one: other, other: entry, contact: lostContact(other, entry) });
         }
         entry.touching.clear();

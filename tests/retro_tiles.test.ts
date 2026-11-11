@@ -179,6 +179,44 @@ describe('retro bodies on a map', () => {
         expect(there.y + 12).toBeCloseTo(144, 6);
     });
 
+    it('let a character stood by its feet change size on a ledge, and on a floor, without moving', async () => {
+        const rows = [
+            '                    ',
+            '                    ',
+            '                    ',
+            '                    ',
+            '                    ',
+            '     ----------     ',
+            '                    ',
+            '                    ',
+            '                    ',
+            '####################',
+        ];
+        let onLedge!: TSprite;
+        let onFloor!: TSprite;
+        const { frames } = await level(rows, () => {
+            // Its object stands at its feet: the collider is set up from it by half its height.
+            useSpawn(function High() {
+                onLedge = createSprite({ width: 12, height: 24, tint, transform: at(150, 40) });
+                useTileBody2d({ width: 12, height: 24, offset: [0, -12] });
+            })();
+            useSpawn(function Low() {
+                onFloor = createSprite({ width: 12, height: 24, tint, transform: at(20, 100) });
+                useTileBody2d({ width: 12, height: 24, offset: [0, -12] });
+            })();
+        });
+        frames(90);
+        expect(onLedge.transform.y).toBeCloseTo(80, 6);
+        expect(onFloor.transform.y).toBeCloseTo(144, 6);
+        for (let i = 0; i < 60; i++) {
+            onLedge.transform.scaleY = 1 + 0.3 * Math.sin(i * 0.4);
+            onFloor.transform.scaleY = 1 + 0.5 * Math.sin(i * 0.4);
+            frames(1);
+            expect(onLedge.transform.y).toBeCloseTo(80, 6);
+            expect(onFloor.transform.y).toBeCloseTo(144, 6);
+        }
+    });
+
     it('stop a bullet at their walls at any speed', async () => {
         let shot!: ReturnType<typeof thing>;
         let back!: ReturnType<typeof thing>;

@@ -5,6 +5,7 @@ import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { registerPhysicsProvider } from '../src/physics';
 import { retroPhysics2dProvider, getRetroBody2d, findRetroBodies2d, isRetroAreaFree2d } from '../src/physics/retro2d/provider';
+import { createRetroBody2d } from '../src/physics/new_retro_body';
 import { useRetroBody2d, useRetroWorld2d } from '../src/hooks/physics';
 import type { THeadlessGame } from '../src/headless';
 import type { TSceneFn } from '../src/scene';
@@ -444,5 +445,42 @@ describe('a body that changes size', () => {
         blob.transform.scaleY = 2;
         game.run(30);
         expect(place(game, 'Blob').y + 12).toBeCloseTo(170, 6);
+    });
+});
+
+describe('what a second review found', () => {
+    it('a long move goes all the way through what does not stop it, however thin the thinnest body', () => {
+        const game = make(() => {
+            useRetroWorld2d({ gravity: { x: 0, y: 0 } });
+            // One pixel thick: every move is cut into half-pixel pieces.
+            thing('Thread', 100, 5, 100, 1, { body: 'static' });
+            // A driven body passes through what is still; a platform open on its sides lets through.
+            thing('Ground', 2000, 60, 4000, 40, { body: 'static' });
+            thing('Shelf', 2000, 140, 4000, 40, { body: 'static', solidSides: { up: true, down: false, left: false, right: false } });
+            thing('Lift', 40, 60, 16, 16, { body: 'kinematic' });
+            thing('Ghost', 40, 140, 16, 16, { body: 'dynamic', gravityScale: 0 });
+            return createScene();
+        }, { width: 4000, height: 180 });
+        body(game, 'Lift').velocity.x = 12_000;
+        body(game, 'Ghost').velocity.x = 12_000;
+        game.run(1);
+        expect(place(game, 'Lift').x).toBeCloseTo(240, 3);
+        expect(place(game, 'Ghost').x).toBeCloseTo(240, 3);
+    });
+
+    it('a body put in another\'s place is told after the old one left', () => {
+        const told: string[] = [];
+        const game = make(() => {
+            useRetroWorld2d({ gravity: { x: 0, y: 0 } });
+            thing('Zone', 100, 90, 40, 40, { body: 'static', sensor: true });
+            thing('Hero', 100, 90, 10, 10, { body: 'dynamic' });
+            return createScene();
+        });
+        body(game, 'Zone').onEnter((other) => told.push(`in ${other.name}`));
+        body(game, 'Zone').onExit((other) => told.push(`out ${other.name}`));
+        game.run(2);
+        retroPhysics2dProvider.createBody!(game.find('Hero')!, createRetroBody2d({ name: 'Hero', body: 'dynamic', collider: { shape: 'rect', width: 10, height: 10 } }));
+        game.run(2);
+        expect(told).toEqual(['in Hero', 'out Hero', 'in Hero']);
     });
 });
