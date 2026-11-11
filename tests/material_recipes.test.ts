@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { createMaterial } from '../src/gameobjects/material/create_material';
-import { anodized, brass, carPaint, ceramic, chrome, copper, glass, gold, hologram, neon, pearl, plastic, rubber } from '../src/materials';
+import { anodized, brass, carPaint, ceramic, chrome, copper, glass, gold, hologram, matcap, neon, pearl, plastic, rubber } from '../src/materials';
+import { groundBounce } from '../src/shader_composer/surface/looks';
 import type { TTexture } from '../src/loaders';
 import type { TMeshMaterial } from '../src/materials';
 
@@ -74,5 +75,29 @@ describe('the recipes', () => {
         const tube = createMaterial(neon({ tint: '#3cf0ff' })) as TMeshMaterial;
         expect(tube.emissive).toEqual(tube.tint);
         expect(pearl().steps?.map((step) => step.look)).toEqual(['rim']);
+    });
+});
+
+describe('the matcap', () => {
+    const clay: TTexture = { type: 'texture', key: 'clay', src: '', width: 1, height: 1, status: 'ready', gpu: null };
+
+    it('is the picture at full over no light, multiplied by the tint and the model\'s own picture', () => {
+        const options = matcap(clay);
+        expect(options.shader).toBe('mesh3d');
+        expect(options.lighting).toEqual({ look: 'unlit' });
+        expect(options).not.toHaveProperty('tint');
+        const material = createMaterial(options) as TMeshMaterial;
+        expect(material.reflection).toEqual({ texture: clay, front: 1, edge: 1, metal: 1 });
+        expect(material.lighting).toEqual({ look: 'unlit' });
+    });
+
+    it('takes a colour to multiply it by', () => {
+        expect(matcap(clay, { tint: '#3fb3b0' }).tint).toBe('#3fb3b0');
+    });
+
+    it('takes steps on top, the ground\'s bounce among them', () => {
+        const material = createMaterial({ ...matcap(clay), steps: [groundBounce({ reach: 1.4 })] }) as TMeshMaterial;
+        expect(material.steps?.map((step) => step.look)).toEqual(['groundBounce']);
+        expect(material.uniforms).toMatchObject({ reflectionFront: 1, reflectionEdge: 1, reflectionMetal: 1, groundBounceReach: 1.4 });
     });
 });

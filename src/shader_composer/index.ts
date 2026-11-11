@@ -16,10 +16,10 @@ export {
 export { composerPipe } from './pipe';
 export { composerSimplexNoise, composerFbm, composerCellularNoise } from './noise';
 export { composerFresnel, composerCelShade } from './effects';
-export { toonLighting, unlitLighting, mangaDots, rim, MATERIAL_LOOKS, findMaterialLook } from './surface/looks';
+export { toonLighting, unlitLighting, mangaDots, rim, groundBounce, MATERIAL_LOOKS, findMaterialLook } from './surface/looks';
 export type { TMaterialLookInfo } from './surface/looks';
 export { lookUniforms } from './surface/compose_surface';
-export type { TLook, TLightingLook, TStepLook, TToonLook, TUnlitLook, TMangaDotsLook, TRimLook } from './surface/types';
+export type { TLook, TLightingLook, TStepLook, TToonLook, TUnlitLook, TMangaDotsLook, TRimLook, TGroundBounceLook } from './surface/types';
 export { compileShader } from './compile_shader';
 export { compilePreviewShader } from './compile_preview_shader';
 export { SHADER_GRAPH_FORMAT, emptyShaderGraph, parseShaderGraph } from './document';

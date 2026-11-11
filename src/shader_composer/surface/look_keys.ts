@@ -8,4 +8,4 @@
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const LOOK_KEYS: readonly string[] = ['toon', 'unlit', 'mangaDots', 'rim'];
+export const LOOK_KEYS: readonly string[] = ['toon', 'unlit', 'mangaDots', 'rim', 'groundBounce'];

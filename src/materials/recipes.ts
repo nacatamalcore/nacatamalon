@@ -1,6 +1,6 @@
 import type { TColorOption } from '../color';
 import type { TTexture } from '../loaders';
-import { rim } from '../shader_composer/surface/looks';
+import { rim, unlitLighting } from '../shader_composer/surface/looks';
 import type { TMeshMaterialOptions } from './types/t_material_options';
 
 /**
@@ -410,3 +410,64 @@ export const brass = (options: TMaterialRecipeOptions = {}): TMaterialRecipe =>
  */
 export const anodized = (options: TMaterialRecipeOptions = {}): TMaterialRecipe =>
     recipe(options, { tint: '#3a6ad8', specular: 'tint', shininess: 120, front: 0.8, edge: 1, metal: 1 });
+
+/**
+ * What `matcap` is asked for besides its picture.
+ *
+ * @category Materials
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TMatcapOptions = {
+    /**
+     * A colour the matcap is multiplied by, so one white matcap colours many things. Left out, the
+     * matcap's own colours.
+     */
+    tint?: TColorOption;
+};
+
+/**
+ * A matcap: a picture of a ball already lit (its colour, its shadow and its shine) that colours the
+ * whole model by which way each part of it faces the camera. No lamp is needed, nor read: the light
+ * is the painted one, so it always comes from the same side of the screen as the model turns, and a
+ * scene of them is as cheap as it gets. The soft, toy-like look of a clay model or a product shot.
+ *
+ * The picture is the ball seen from in front, round in its square, as a 3D program renders one or
+ * `paintMatcap` paints one; any such picture loaded with `useLoadTexture` works.
+ *
+ * Nothing but options of a model's material: `lighting: unlitLighting()` and a `reflection` of the
+ * picture at full, `front: 1`, `edge: 1`, `metal: 1`, so the tint and the model's own picture
+ * multiply it, and its `alpha` fades it as any surface's. A scene document keeps it when the picture
+ * is a file. Steps go on top: `groundBounce()` for the floor's colour coming up, `rim()` for a lit
+ * edge.
+ *
+ * @param texture The matcap.
+ * @param options A colour to multiply it by.
+ * @returns The options, for `createMaterial`.
+ *
+ * @example
+ * ```ts
+ * import { createMaterial, createMesh, matcap, useSphereGeometry } from 'nacatamalon';
+ * import { createPixelTexture, paintMatcap } from 'nacatamalon/pixels';
+ * import { groundBounce } from 'nacatamalon/shader';
+ *
+ * const clay = createPixelTexture(paintMatcap({ base: '#e2414b' }));
+ * createMesh({ geometry: useSphereGeometry(), material: createMaterial(matcap(clay)) });
+ * createMaterial({ ...matcap(clay), steps: [groundBounce({ color: '#ff7a33' })] });
+ * ```
+ *
+ * @category Materials
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const matcap = (texture: TTexture, options: TMatcapOptions = {}): TMaterialRecipe => ({
+    shader: 'mesh3d',
+    ...(options.tint !== undefined ? { tint: options.tint } : {}),
+    lighting: unlitLighting(),
+    reflection: {
+        texture,
+        front: 1,
+        edge: 1,
+        metal: 1,
+    },
+});

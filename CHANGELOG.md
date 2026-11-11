@@ -3,6 +3,32 @@
 What changed in the current release of `nacatamalon`, and what is waiting for the next one. Earlier
 releases are in [changelog/](./changelog/), one file each.
 
+## Unreleased
+
+### Added
+
+- **Matcaps, `matcap(texture, { tint })`.** A material recipe that colours a model with a picture of
+  a ball already lit, its colour, shadow and shine, read by which way each part faces the camera: no
+  lamp needed nor read, the light always from the same side of the screen, the soft look of a clay
+  model or a product shot. Only options of a material (`lighting: unlitLighting()` and a
+  `reflection` of the picture at full, `metal: 1`), so the tint and the model's own picture multiply
+  it, its `alpha` fades it as any surface's, and steps go on top. A scene document keeps it when its
+  picture is a file.
+- **`paintMatcap({ base, shade, shine, gloss, from, size })`** in `nacatamalon/pixels` paints one: a
+  ball lit by one light, where it comes from as the camera sees it, with a highlight as glossy as
+  asked. A matcap from a 3D program or a picture loads just the same.
+- **The ground's bounce, `groundBounce({ color, reach, amount, groundY })`.** A material step that
+  brings the ground's colour up onto what stands on it: more the closer a part is to the ground and
+  the more it looks down, none `reach` above the ground nor on a face looking up. It goes on a matcap as well as on the engine's light;
+  its numbers are uniforms (`groundBounceAmount`…), and a scene document keeps it.
+
+### Changed
+
+- **What a metal reflects no longer covers a see-through surface.** A reflection made a see-through
+  surface more solid where it reflected, so a glass shows its edges; with `metal` that part now
+  stays as see-through as the surface, since what it reflects is in the surface's own colour. Only a
+  material with both `metal` and `alpha` under 1 looks different; the metal recipes are solid.
+
 ## 0.8.5 — 2026-11-11
 
 ### Added

@@ -1,9 +1,9 @@
 import { composerSwizzle, composerVec2, composerVec3, composerVec4 } from '../constructors';
 import { composerFresnel } from '../effects';
-import { composerCubeUv, composerEmissive, composerEnvUv, composerLight, composerMapSample, composerResolution, composerScreenPos, composerShine, composerSurface, composerUniform } from '../inputs';
+import { composerCubeUv, composerEmissive, composerEnvUv, composerLight, composerMapSample, composerResolution, composerScreenPos, composerShine, composerSurface, composerUniform, composerWorldNormal, composerWorldPos } from '../inputs';
 import {
     composerAdd, composerClamp, composerDiv, composerDot, composerFloor, composerFract, composerLength, composerMax,
-    composerMix, composerMul, composerOneMinus, composerSmoothstep, composerStep, composerSub,
+    composerMix, composerMul, composerOneMinus, composerSaturate, composerSmoothstep, composerStep, composerSub,
 } from '../math';
 import type { TComposerNode } from '../types/t_composer_node';
 import type { TLightingLook, TLook, TStepLook, TSurfaceState } from './types';
@@ -12,7 +12,13 @@ import type { TLightingLook, TLook, TStepLook, TSurfaceState } from './types';
  * Which slot each look goes in, so a step handed as lighting (or the other way) is caught.
  */
 const LIGHTING_KEYS: readonly string[] = ['toon', 'unlit'];
-const STEP_KEYS: readonly string[] = ['mangaDots', 'rim'];
+const STEP_KEYS: readonly string[] = ['mangaDots', 'rim', 'groundBounce'];
+
+/**
+ * How much of the ground's colour a face that looks sideways takes, against one that looks down: the
+ * side of a box on the floor takes some, its underside all, its top none.
+ */
+const BOUNCE_SIDEWAYS = 0.35;
 
 const brightness = (v: TComposerNode): TComposerNode => composerDot(v, composerVec3(0.299, 0.587, 0.114));
 
@@ -77,6 +83,17 @@ const stepWith = (look: TStepLook, s: TSurfaceState, name: TNamer): TSurfaceStat
         case 'rim': {
             const edge = composerMul(composerFresnel(composerUniform(name('power'), look.power)), composerUniform(name('amount'), look.amount));
             return { ...s, color: composerMix(before, composerUniform(name('color'), look.color), edge) };
+        }
+        case 'groundBounce': {
+            // How close to the ground, 1 on it to 0 at its reach, eased so it gathers at the bottom;
+            // never divided by nothing, whatever the reach is turned to.
+            const reach = composerMax(composerUniform(name('reach'), look.reach), 0.0001);
+            const above = composerSub(composerSwizzle(composerWorldPos(), 'y'), composerUniform(name('groundY'), look.groundY));
+            const close = composerOneMinus(composerSaturate(composerDiv(above, reach)));
+            // A face looking down takes it all, one looking sideways some, one looking up none.
+            const facing = composerSaturate(composerSub(BOUNCE_SIDEWAYS, composerMul(composerSwizzle(composerWorldNormal(), 'y'), 1 - BOUNCE_SIDEWAYS)));
+            const amount = composerMul(composerMul(composerMul(close, close), facing), composerUniform(name('amount'), look.amount));
+            return { ...s, color: composerMix(before, composerUniform(name('color'), look.color), amount) };
         }
     }
 };
@@ -196,7 +213,7 @@ export const lookUniforms = (
 /**
  * The call that makes a look, by its key, as an error names it: the one a person writes.
  */
-const MAKERS: Record<string, string> = { toon: 'toonLighting()', unlit: 'unlitLighting()', mangaDots: 'mangaDots()', rim: 'rim()' };
+const MAKERS: Record<string, string> = { toon: 'toonLighting()', unlit: 'unlitLighting()', mangaDots: 'mangaDots()', rim: 'rim()', groundBounce: 'groundBounce()' };
 const maker = (key: string): string => MAKERS[key] ?? `'${key}'`;
 
 /**
@@ -266,10 +283,16 @@ export const composeSurface = (
     }
     // What is reflected is light coming off the surface, so a see-through one is less so where it
     // reflects: a glass shows its edges. A solid one stays solid. Not one that is cut out by its
-    // alpha (`cut`): its holes are holes, and the reflection would fill them along its outline.
+    // alpha (`cut`): its holes are holes, and the reflection would fill them along its outline. Nor
+    // what a metal reflects, which is in the surface's own colour and so as see-through as it is: a
+    // matcap (all metal, all reflected) fades with its alpha like any surface.
     const alpha = composerSwizzle(surface, 'a');
+    const covered = reflection === null ? null : composerMul(
+        reflectionAmount(reflection.front, reflection.edge),
+        composerOneMinus(composerUniform(REFLECTION_METAL, reflection.metal ?? 0)),
+    );
     return composerVec4(
         state.color ?? litColor(state),
-        reflection === null || reflection.cut === true ? alpha : composerMix(alpha, 1, reflectionAmount(reflection.front, reflection.edge)),
+        covered === null || reflection?.cut === true ? alpha : composerMix(alpha, 1, covered),
     );
 };

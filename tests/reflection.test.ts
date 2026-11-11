@@ -127,10 +127,22 @@ describe('what it reflects of a see-through surface', () => {
     it('makes it less see-through where it reflects, so a glass shows its edges', () => {
         const glass = mesh3d({ alpha: 0.2, transparent: true, reflection: texture('studio') });
         const plain = mesh3d({ alpha: 0.2, transparent: true, lighting: toonLighting() });
-        // The alpha is mixed towards one by the reflection's amount; without a reflection it is the surface's.
-        expect(glass.fragment).toContain('mix((surface).a, 1.0, mix(mu.reflectionFront, mu.reflectionEdge,');
+        // The alpha is mixed towards one by the reflection's amount, less what of it is a metal's;
+        // without a reflection it is the surface's.
+        expect(glass.fragment).toContain('mix((surface).a, 1.0, (mix(mu.reflectionFront, mu.reflectionEdge,');
+        expect(glass.fragment).toContain('* (1.0 - mu.reflectionMetal))');
         expect(glass.fragmentGlsl).toContain('reflectionEdge');
         expect(plain.fragment).not.toContain('mix((surface).a, 1.0');
+    });
+
+    it('leaves a metal as see-through as it is, since what it reflects is its own colour', () => {
+        // A matcap is all reflection and all metal: what covers the alpha is the amount times
+        // (1 - metal), nothing, so its alpha fades it.
+        const ghost = mesh3d({ alpha: 0.5, transparent: true, reflection: { texture: texture('clay'), front: 1, edge: 1, metal: 1 } });
+        expect(ghost.uniforms).toMatchObject({ reflectionFront: 1, reflectionEdge: 1, reflectionMetal: 1 });
+        for (const code of [ghost.fragment!, ghost.fragmentGlsl!]) {
+            expect(code).toMatch(/1\.0 - mu\.reflectionMetal|1\.0 - reflectionMetal/);
+        }
     });
 
     it('leaves one cut out by its alpha with its holes, so its outline is not filled in', () => {

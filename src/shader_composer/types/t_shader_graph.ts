@@ -43,7 +43,7 @@ export type TShaderGraph<S extends TGraphTarget = TGraphTarget> = {
      */
     lighting?: TLook;
     /**
-     * What is done to a model's surface once it is lit, in order: `mangaDots()`, `rim()`. Models only.
+     * What is done to a model's surface once it is lit, in order: `mangaDots()`, `rim()`, `groundBounce()`. Models only.
      */
     steps?: readonly TLook[];
 };

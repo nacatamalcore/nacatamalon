@@ -47,7 +47,7 @@ export {
     useParticleCollider3d,
 } from './hooks';
 export { createMaterial } from './gameobjects/material';
-export { plastic, ceramic, chrome, rubber, carPaint, glass, neon, pearl, hologram, gold, copper, brass, anodized } from './materials';
+export { plastic, ceramic, chrome, rubber, carPaint, glass, neon, pearl, hologram, gold, copper, brass, anodized, matcap } from './materials';
 // Lines in space: the debug helpers (an axis gizmo, a floor grid) and any lines a game wants to draw.
 export { setLines, useLines, useHelperAxis, useHelperGrid } from './hooks';
 export type { TUseLinesOptions, TUseHelperAxisOptions, THelperAxisColors, TUseHelperGridOptions } from './hooks';
@@ -144,7 +144,7 @@ export type { TLoadProgress, TLoadStatus, TAsset, TTexture, TLoadedAtlas, TBitma
 export type { TSkeleton, TSkeletalClip, TJointPose, TClipEvent } from './animation';
 export type {
     TMaterial, TSpriteMaterial, TMeshMaterial, TMaterialMap, TMaterialOcclusion, TMaterialReflection, TMaterialReflectionRecord, TMaterialNormalMap, TTextureWrap, TCullMode, TMaterialShader, TMaterialOptions,
-    TSpriteMaterialOptions, TMeshMaterialOptions, TMaterialRecipe, TMaterialRecipeOptions, TUniformType, TUniformValues, TUniformValue, TUniformPoint, TUniformPointValue, TUniformColorValue, TUniformNumbers, TUniformSignature,
+    TSpriteMaterialOptions, TMeshMaterialOptions, TMaterialRecipe, TMaterialRecipeOptions, TMatcapOptions, TUniformType, TUniformValues, TUniformValue, TUniformPoint, TUniformPointValue, TUniformColorValue, TUniformNumbers, TUniformSignature,
 } from './materials';
 export type { TLightingLook, TStepLook } from './shader_composer';
 export type { TSprite, TSpriteOptions } from './gameobjects/sprite/types';

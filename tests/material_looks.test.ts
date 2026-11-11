@@ -8,7 +8,7 @@ import type { TMeshMaterialDoc } from '../src/scene/document/types/t_component_d
 import { compileShader } from '../src/shader_composer/compile_shader';
 import { composerSurface } from '../src/shader_composer/inputs';
 import { lookUniforms } from '../src/shader_composer/surface/compose_surface';
-import { MATERIAL_LOOKS, mangaDots, rim, toonLighting, unlitLighting } from '../src/shader_composer/surface/looks';
+import { MATERIAL_LOOKS, groundBounce, mangaDots, rim, toonLighting, unlitLighting } from '../src/shader_composer/surface/looks';
 import { createMaterial } from '../src/gameobjects/material/create_material';
 import type { TLook } from '../src/shader_composer/surface/types';
 import type { TMeshMaterial, TMeshMaterialOptions } from '../src/materials';
@@ -27,6 +27,7 @@ describe('each look', () => {
         expect(unlitLighting()).toEqual({ look: 'unlit' });
         expect(mangaDots()).toEqual({ look: 'mangaDots', size: 5, fill: 0.3, ink: [0.16, 0.1, 0.26] });
         expect(rim({ color: '#ff0000' })).toMatchObject({ look: 'rim', color: [1, 0, 0], power: 4, amount: 0.7 });
+        expect(groundBounce()).toEqual({ look: 'groundBounce', color: [1, 0.48, 0.2], reach: 1, amount: 0.5, groundY: 0 });
     });
 
     it('is refused by the types in the wrong slot, and again when the game runs', () => {
@@ -51,6 +52,8 @@ describe('each look', () => {
             [undefined, [rim()]],
             [toonLighting(), [mangaDots(), rim()]],
             [unlitLighting(), [rim()]],
+            [undefined, [groundBounce()]],
+            [unlitLighting(), [groundBounce(), rim()]],
         ];
         for (const [lighting, steps] of combos) {
             const out = looked(lighting, steps);
@@ -64,6 +67,9 @@ describe('each look', () => {
         expect(looked(undefined, [mangaDots(), rim()]).uniforms).toMatchObject({
             mangaDotsSize: 5, mangaDotsFill: 0.3, mangaDotsInk: [0.16, 0.1, 0.26],
             rimColor: [1, 1, 1], rimPower: 4, rimAmount: 0.7,
+        });
+        expect(looked(undefined, [groundBounce({ groundY: -2 })]).uniforms).toEqual({
+            groundBounceColor: [1, 0.48, 0.2], groundBounceReach: 1, groundBounceAmount: 0.5, groundBounceGroundY: -2,
         });
     });
 
@@ -106,6 +112,21 @@ describe('how they go together', () => {
         expect(after).not.toContain('smoothstep(');
         const alone = looked(undefined, [mangaDots()]).fragment!;
         expect(alone).toContain('smoothstep(');
+    });
+
+    it('reads the ground\'s bounce from where each pixel is in the world and which way it faces', () => {
+        const out = looked(unlitLighting(), [groundBounce()]);
+        for (const code of [out.fragment!, out.fragmentGlsl!]) {
+            expect(code).toContain('ctx.worldPos');
+            expect(code).toContain('ctx.normal');
+            expect(code).toContain('groundBounceReach');
+            expect(code).toContain('groundBounceGroundY');
+        }
+    });
+
+    it('keeps a ground under the hundred units a slider shows when a document is read back', () => {
+        const info = MATERIAL_LOOKS.find((look) => look.key === 'groundBounce')!;
+        expect(info.fields.find((field) => field.key === 'groundY')?.min).toBeUndefined();
     });
 
     it('lights nothing when unlit', () => {
@@ -155,7 +176,7 @@ describe('the uniforms, by name', () => {
 describe('the catalogue', () => {
     it('lists every look once, in its slot, built with its defaults', () => {
         expect(MATERIAL_LOOKS.map((info) => [info.key, info.slot])).toEqual([
-            ['toon', 'lighting'], ['unlit', 'lighting'], ['mangaDots', 'step'], ['rim', 'step'],
+            ['toon', 'lighting'], ['unlit', 'lighting'], ['mangaDots', 'step'], ['rim', 'step'], ['groundBounce', 'step'],
         ]);
         for (const info of MATERIAL_LOOKS) {
             expect(info.build().look).toBe(info.key);
@@ -226,6 +247,19 @@ describe('a scene with looks, written down', () => {
         expect(surface.fragmentGlsl).toBeNull();
         // Their uniforms are written in the looks, once, and not again among the uniforms.
         expect(surface.uniforms).toBeNull();
+        expect(parseSceneDoc(doc, '/scenes/level.scene')).toEqual(doc);
+    });
+
+    it('keeps the ground\'s bounce as data, as it is turned now, and reads it back the same', () => {
+        const { store } = createTestGame();
+        const root = startTestScene(store, 'Level', () => {
+            const material = createMaterial({ shader: 'mesh3d', lighting: unlitLighting(), steps: [groundBounce({ reach: 1.4 })] }) as TMeshMaterial;
+            material.uniforms!.groundBounceAmount = 0;
+            createMesh({ geometry: useCubeGeometry(), material });
+            return createScene();
+        });
+        const doc = serializeScene(root);
+        expect(materialOf(doc)!.steps).toEqual([{ ...groundBounce({ reach: 1.4 }), amount: 0 }]);
         expect(parseSceneDoc(doc, '/scenes/level.scene')).toEqual(doc);
     });
 

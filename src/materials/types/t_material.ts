@@ -209,7 +209,9 @@ export type TMaterialReflection = {
     edge?: number;
     /**
      * How much what is reflected takes the surface's own colour, `0` to `1`, as a metal's does: gold
-     * reflects a white sky gold. Default `0`, the plain mirror of plastic, glass and chrome.
+     * reflects a white sky gold. Default `0`, the plain mirror of plastic, glass and chrome. What a
+     * metal reflects is the surface's own colour, so it leaves a see-through surface as see-through
+     * as it is, where a plain mirror's makes it more solid.
      */
     metal?: number;
     /**

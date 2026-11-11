@@ -299,8 +299,9 @@ export type TMeshMaterialOptions = TMaterialShaderOptions & {
     lighting?: TLightingLook;
     /**
      * What is done to the surface once it is lit, in order: `mangaDots()` (ink in the shadow),
-     * `rim()` (a lit edge). On `lighting` when there is one, on the engine's light when not. Their
-     * numbers become uniforms too (`mangaDotsSize`, `rimColor`; a second of one kind is `rim2Color`).
+     * `rim()` (a lit edge), `groundBounce()` (the ground's colour coming up). On `lighting` when
+     * there is one, on the engine's light when not. Their numbers become uniforms too
+     * (`mangaDotsSize`, `rimColor`; a second of one kind is `rim2Color`).
      */
     steps?: readonly TStepLook[];
 };

@@ -4,12 +4,12 @@ export {
     createPixels, setPixel, getPixel, fillRect, drawLine, fillCircle, drawCircle, fillEllipse,
     drawEllipse, fillPolygon, blitPixels, mapPixels, fillGradient, fillNoise, fillChecker, fillDither,
     clonePixels, swapColors, outlinePixels, mirrorPixels, snapToPalette, checkColorLimit, shadeWithRamp,
-    drawText, pixelsFromRows, sheetFromRows, studioEnvironment, sphereFromPanorama, normalsFromHeight,
+    drawText, pixelsFromRows, sheetFromRows, studioEnvironment, sphereFromPanorama, normalsFromHeight, paintMatcap,
 } from '../pixels';
 export type {
     TPixels, TPixelRegion, TFillGradientOptions, TFillNoiseOptions, TDrawTextOptions, TPixelPalette,
     TPixelRowsOptions, TPixelSheet, TOutlinePixelsOptions, TMirrorPixelsOptions, TSnapToPaletteOptions,
-    TColorLimitOptions, TColorLimitCell, TShadeWithRampOptions, TStudioEnvironmentOptions, TSphereFromPanoramaOptions, TNormalsFromHeightOptions,
+    TColorLimitOptions, TColorLimitCell, TShadeWithRampOptions, TStudioEnvironmentOptions, TSphereFromPanoramaOptions, TNormalsFromHeightOptions, TPaintMatcapOptions,
 } from '../pixels';
 export { createPixelTexture, updatePixelTexture } from '../gameobjects/pixel_texture';
 export type { TPixelTextureOptions, TPixelPaint } from '../gameobjects/pixel_texture';

@@ -81,6 +81,34 @@ export type TRimLook = {
 };
 
 /**
+ * The colour of the ground coming up onto what stands on it, as `groundBounce()` writes it down.
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TGroundBounceLook = {
+    look: 'groundBounce';
+    /**
+     * The ground's colour, `[r, g, b]` from `0` to `1`.
+     */
+    color: number[];
+    /**
+     * How high above the ground it reaches, in the world's units: none of it from there up.
+     */
+    reach: number;
+    /**
+     * How far a face right on the ground and looking down goes towards the colour, `0` none to `1`
+     * all the way.
+     */
+    amount: number;
+    /**
+     * Where the ground is: its height in the world.
+     */
+    groundY: number;
+};
+
+/**
  * How a material's surface is lit: one of these, in place of the engine's own light.
  *
  * @category Shader composer
@@ -96,7 +124,7 @@ export type TLightingLook = TToonLook | TUnlitLook;
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TStepLook = TMangaDotsLook | TRimLook;
+export type TStepLook = TMangaDotsLook | TRimLook | TGroundBounceLook;
 
 /**
  * Any look, as it is written down: plain data, so a scene document can keep it and a material can

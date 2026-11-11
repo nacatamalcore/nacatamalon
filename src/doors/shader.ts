@@ -20,12 +20,12 @@ export {
     composerCross, composerPow, composerMin, composerMax, composerClamp, composerMix, composerStep,
     composerSmoothstep, composerReflect, composerMod, composerAtan2, composerOneMinus, composerSaturate,
     composerPipe, composerSimplexNoise, composerFbm, composerCellularNoise, composerFresnel,
-    composerCelShade, parseShaderGraph, compileShaderGraph, toonLighting, unlitLighting, mangaDots, rim,
+    composerCelShade, parseShaderGraph, compileShaderGraph, toonLighting, unlitLighting, mangaDots, rim, groundBounce,
 } from '../shader_composer';
 export type {
     TComposerNode, TComposerInput, TComposerSampleOptions, TComposerStep, TInputKind, THelperDef, TShaderGraph, TCompiledShader,
     TShaderGraphDoc, TGraphNodeDoc, TGraphEdgeDoc, TGraphCommentDoc, TParamValue, TGraphTarget, TLook,
-    TToonLook, TUnlitLook, TMangaDotsLook, TRimLook,
+    TToonLook, TUnlitLook, TMangaDotsLook, TRimLook, TGroundBounceLook,
 } from '../shader_composer';
 export type { TComposerBinaryOp } from '../shader_composer/math';
 export type { TShaderTarget } from '../loaders/shader/types/t_shader_target';

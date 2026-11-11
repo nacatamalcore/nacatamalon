@@ -20,7 +20,7 @@ export type TModelOptions = T3dOptions & {
      */
     lighting?: TLightingLook;
     /**
-     * What is done to every piece once it is lit, in order: `mangaDots()`, `rim()`.
+     * What is done to every piece once it is lit, in order: `mangaDots()`, `rim()`, `groundBounce()`.
      */
     steps?: readonly TStepLook[];
 };

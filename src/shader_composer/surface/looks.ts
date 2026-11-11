@@ -1,7 +1,7 @@
 import type { TColorOption } from '../../color';
 import { colorUniform } from '../../post/builtin/color_uniform';
 import type { TEffectField } from '../../post/builtin/types/t_builtin';
-import type { TLook, TMangaDotsLook, TRimLook, TToonLook, TUnlitLook } from './types';
+import type { TGroundBounceLook, TLook, TMangaDotsLook, TRimLook, TToonLook, TUnlitLook } from './types';
 
 /**
  * A colour as a look takes it: what `getColor` takes, a `TColor`, or `[r, g, b]` from `0` to `1`.
@@ -111,6 +111,41 @@ export const rim = (options: { color?: TLookColor; power?: number; amount?: numb
 });
 
 /**
+ * The colour of the ground coming up onto what stands on it, as light bounces off a bright floor:
+ * the closer a part is to the ground and the more it looks down, the more it goes towards the
+ * ground's colour; nothing of it `reach` above the ground, nor on a face looking up. A lamp's light
+ * that bounces, without a lamp, so it goes as well on a matcap as on the engine's light. For a
+ * material's `steps`.
+ *
+ * It works from where each pixel is in the world, so a model that jumps loses it on the way up and
+ * gets it back as it lands.
+ *
+ * @param options `color`, the ground's, what `getColor` takes, a `TColor` or `[r, g, b]` (default an
+ * orange); `reach` how high it reaches, in the world's units (default `1`); `amount` how far a face on
+ * the ground and looking down goes towards the colour, `0` to `1` (default `0.5`); `groundY` where the
+ * ground is (default `0`).
+ * @returns The look, for `createMaterial({ steps })` or `createModel({ steps })`.
+ *
+ * @example
+ * ```ts
+ * declare const red: TTexture;
+ *
+ * createMaterial({ ...matcap(red), steps: [groundBounce({ color: '#ff7a33', reach: 1.4 })] });
+ * ```
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const groundBounce = (options: { color?: TLookColor; reach?: number; amount?: number; groundY?: number } = {}): TGroundBounceLook => ({
+    look: 'groundBounce',
+    color: colorUniform(options.color, [1, 0.48, 0.2]),
+    reach: options.reach ?? 1,
+    amount: options.amount ?? 0.5,
+    groundY: options.groundY ?? 0,
+});
+
+/**
  * What a tool needs to offer one of the looks: its key, a name and a line about it, which slot it
  * goes in, and the look with its defaults.
  *
@@ -187,6 +222,16 @@ export const MATERIAL_LOOKS: readonly TMaterialLookInfo[] = [
         ],
         renamed: { strength: 'amount' },
         build: () => rim(),
+    },
+    {
+        key: 'groundBounce', label: 'Ground bounce', description: 'The ground\'s colour coming up onto what stands near it, more where it looks down.', slot: 'step',
+        fields: [
+            { key: 'color', label: 'Colour', type: 'color', default: [1, 0.48, 0.2] },
+            { key: 'reach', type: 'number', default: 1, min: 0.05, max: 10, step: 0.05, description: 'How high above the ground it reaches.' },
+            { key: 'amount', type: 'number', default: 0.5, min: 0, max: 1, step: 0.01 },
+            { key: 'groundY', label: 'Ground Y', type: 'number', default: 0, step: 0.1, description: 'Where the ground is.' },
+        ],
+        build: () => groundBounce(),
     },
 ];
 
