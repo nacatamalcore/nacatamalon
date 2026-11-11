@@ -63,9 +63,9 @@ var<private> surfaceNormal: vec3<f32>;
 /**
  * What the colour hook is told about the place it is colouring.
  *
- * `light` and `shine` arrived from the corners, because this engine works the light out there and
- * lets the card smear it in between. That is the look of the era and it is why these are here rather
- * than worked out afresh per pixel.
+ * `light` and `shine` arrive from the corners, because this engine works the light out there and
+ * lets the card smear it in between, the look of the era's consoles; or worked out at this pixel when
+ * the material asks for it (`perPixel`). Either way the hook receives them the same.
  */
 const FRAG_CONTEXT = /* wgsl */ `
 struct FragContext {
@@ -200,8 +200,12 @@ fn sampleTextureScaled(uv: vec2<f32>, scale: vec2<f32>) -> vec4<f32> {
  * Each name has two readers: `sampleMap_<name>(uv)`, which picks a picture's mipmap by how the
  * model's own picture coordinate runs, and `sampleMapScaled_<name>(uv, scale)` for a place that runs
  * `scale` times as fast (see `SAMPLE`).
+ *
+ * `lit` is whether the shader has the lights block, which `envUv` turns the reflection by. A shadow's
+ * has not, and there `envUv` keeps the world's axes: what a shadow takes from the colour hook is
+ * where it is cut, never where a reflection lands, and a name it does not declare would not compile.
  */
-const maps = (names: readonly string[]): string => {
+const maps = (names: readonly string[], lit = true): string => {
     const slots = Array.from({ length: MAX_MATERIAL_MAPS }, (_, i) =>
         `@group(${MESH_MATERIAL_GROUP}) @binding(${1 + i * 2}) var mapSampler${i}: sampler;\n` +
         `@group(${MESH_MATERIAL_GROUP}) @binding(${2 + i * 2}) var mapTexture${i}: texture_2d<f32>;`).join('\n');
@@ -210,14 +214,79 @@ const maps = (names: readonly string[]): string => {
         `fn sampleMapScaled_${name}(uv: vec2<f32>, scale: vec2<f32>) -> vec4<f32> {\n    return textureSampleGrad(mapTexture${i}, mapSampler${i}, uv, meshUvDx * scale, meshUvDy * scale);\n}`).join('\n');
     return `${slots}
 
-fn envUv(ctx: FragContext) -> vec2<f32> {
-    let r = reflect(-ctx.viewDir, normalize(ctx.normal));
-    let m = max(2.0 * sqrt(r.x * r.x + r.y * r.y + (r.z + 1.0) * (r.z + 1.0)), 0.0001);
-    return vec2<f32>(r.x / m + 0.5, 0.5 - r.y / m);
-}
+// Where the reflection lands on a round picture of the surroundings, the way the consoles laid
+// chrome on: the reflection turned to the camera's own axes first, so the middle of the picture is
+// what is behind the camera whichever way it looks, and the rim, where the picture pinches to a
+// point, is always behind the model. The camera's back is the scene's look (see fill_light_uniforms.ts);
+// its up is the world's, so the sky stays up in the picture; looking straight up or down, the world's
+// x stands in. The twin of envUv in webgl2/material/mesh_material_shader.ts.
+${lit ? ENV_UV : ENV_UV_UNLIT}
+${ENV_CUBE_UV}
 ${readers}
 `;
 };
+
+const ENV_UV = /* wgsl */ `fn envUv(ctx: FragContext) -> vec2<f32> {
+    let r = reflect(-normalize(ctx.viewDir), normalize(ctx.normal));
+    let back = select(vec3<f32>(0.0, 0.0, 1.0), lights.look.xyz, dot(lights.look.xyz, lights.look.xyz) > 0.5);
+    let across = cross(vec3<f32>(0.0, 1.0, 0.0), back);
+    let right = select(vec3<f32>(1.0, 0.0, 0.0), normalize(across), dot(across, across) > 0.000001);
+    let up = cross(back, right);
+    // Through the 2D camera the world's y runs down: what shows above is the other way.
+    let v = vec3<f32>(dot(r, right), dot(r, up) * select(1.0, -1.0, lights.ground.w > 1.5), dot(r, back));
+    let m = max(2.0 * sqrt(v.x * v.x + v.y * v.y + (v.z + 1.0) * (v.z + 1.0)), 0.0001);
+    return vec2<f32>(v.x / m + 0.5, 0.5 - v.y / m);
+}`;
+
+// Where the reflection lands on a picture of the surroundings drawn as the six faces of a cube, three
+// across and two down (+x, -x, +y; -y, +z, -z), each seen from its middle by a camera of 90 degrees as
+// useEnvironment draws them: in the world's own axes, so the same from wherever it is seen. Kept a
+// hair inside each face, so a read never takes the next face's edge. The twin of envCubeUv in
+// webgl2/material/mesh_material_shader.ts.
+const ENV_CUBE_UV = /* wgsl */ `fn envCubeUv(ctx: FragContext) -> vec2<f32> {
+    let r = reflect(-normalize(ctx.viewDir), normalize(ctx.normal));
+    let a = abs(r);
+    var cell = vec2<f32>(0.0, 0.0);
+    var forward = vec3<f32>(1.0, 0.0, 0.0);
+    var right = vec3<f32>(0.0, 0.0, 1.0);
+    var up = vec3<f32>(0.0, 1.0, 0.0);
+    if (a.x >= a.y && a.x >= a.z) {
+        if (r.x < 0.0) {
+            cell = vec2<f32>(1.0, 0.0);
+            forward = vec3<f32>(-1.0, 0.0, 0.0);
+            right = vec3<f32>(0.0, 0.0, -1.0);
+        }
+    } else if (a.y >= a.z) {
+        right = vec3<f32>(1.0, 0.0, 0.0);
+        if (r.y > 0.0) {
+            cell = vec2<f32>(2.0, 0.0);
+            forward = vec3<f32>(0.0, 1.0, 0.0);
+            up = vec3<f32>(0.0, 0.0, 1.0);
+        } else {
+            cell = vec2<f32>(0.0, 1.0);
+            forward = vec3<f32>(0.0, -1.0, 0.0);
+            up = vec3<f32>(0.0, 0.0, -1.0);
+        }
+    } else if (r.z > 0.0) {
+        cell = vec2<f32>(1.0, 1.0);
+        forward = vec3<f32>(0.0, 0.0, 1.0);
+        right = vec3<f32>(-1.0, 0.0, 0.0);
+    } else {
+        cell = vec2<f32>(2.0, 1.0);
+        forward = vec3<f32>(0.0, 0.0, -1.0);
+        right = vec3<f32>(1.0, 0.0, 0.0);
+    }
+    let depth = max(dot(r, forward), 0.0001);
+    let face = clamp(vec2<f32>(0.5 + 0.5 * dot(r, right) / depth, 0.5 - 0.5 * dot(r, up) / depth), vec2<f32>(0.002), vec2<f32>(0.998));
+    return (cell + face) / vec2<f32>(3.0, 2.0);
+}`;
+
+// The same with the world's axes, for a shader with no lights block (a shadow's).
+const ENV_UV_UNLIT = /* wgsl */ `fn envUv(ctx: FragContext) -> vec2<f32> {
+    let r = reflect(-normalize(ctx.viewDir), normalize(ctx.normal));
+    let m = max(2.0 * sqrt(r.x * r.x + r.y * r.y + (r.z + 1.0) * (r.z + 1.0)), 0.0001);
+    return vec2<f32>(r.x / m + 0.5, 0.5 - r.y / m);
+}`;
 
 const DEFAULT_VERTEX = /* wgsl */ `
 fn vertex(pos: vec3<f32>, ctx: VertContext) -> vec3<f32> {
@@ -361,9 +430,13 @@ const CORNER_CONTEXT = /* wgsl */ `
     let given = surfaceNormal;
 `;
 
-const body = (normal: string, skinned: boolean, cull: TCullMode, instanced: boolean): string => {
+const body = (normal: string, skinned: boolean, cull: TCullMode, instanced: boolean, bumped = false): string => {
     // A model drawn on both sides reads the light of the side it is; any other has one.
     const lit = cull === 'none' ? 'side' : 'in';
+    // The facing at the pixel: the corners' smeared across the triangle, or bent by the material's
+    // normal map (see BENT_BY). Written as it always was when there is none.
+    const smeared = cull === 'none' ? 'normal' : 'in.normal.xyz';
+    const facing = bumped ? 'facing' : `normalize(${smeared})`;
     return /* wgsl */ `
 ${skinned ? `@group(${MESH_MATERIAL_GROUP}) @binding(${MESH_MATERIAL_JOINTS_BINDING}) var<storage, read> joints: array<mat4x4<f32>>;` : ''}${skinned || instanced ? FACING_TURN : ''}
 
@@ -420,22 +493,40 @@ fn fs(in: VertexOutput, @builtin(front_facing) front: bool) -> @location(0) vec4
     // material is affine, and the corrected one when it is not (see affineUv).
     let uv = in.uv.xy / in.uv.z;
     let uv2 = vec2<f32>(in.normal.w, in.screen.w) / in.uv.z;${MEASURE_UV('uv')}
-    // Laid out by the coordinate the material says, which rides beside its amount (see
-    // fill_mesh_uniforms.ts).
-    let occlusion = occlusionAt(select(uv, uv2, uniforms.normalMatrix[1].w > 0.5));
+    // Laid out by the coordinate the material says, which rides beside its amount, as the odd half
+    // of that number (see fill_mesh_uniforms.ts).
+    let occlusion = occlusionAt(select(uv, uv2, uniforms.normalMatrix[1].w % 2.0 > 0.5));${bumped ? `
+    // Bent by the material's normal map, before anything is lit by it: the relief of stone, the
+    // grain of wood, catching the light at every pixel.
+    let facing = bentBy(normalize(${smeared}), in.tangent, sampleMap_normalMap(uv).xyz, mu.normalStrength);` : ''}
+    // The light the corners worked out, smeared across the triangle; or, when the material asks for
+    // it (perPixel, two more in that same number), worked out again here from this pixel's own
+    // facing and place, so a shine falls where it should rather than where a corner happened to be.
+    // Every pixel of the model takes the same side of this, so it costs only the work it does.
+    var here: LitSurface;
+    if (uniforms.normalMatrix[1].w > 1.5) {
+        here = litBy(in.worldPos.xyz, ${facing}, viewDirOf(in.worldPos.xyz));
+    } else {
+        here.diffuse = ${lit}.light;
+        here.shine = ${lit}.shine;
+        here.casterDiffuse = ${lit}.casterLight;
+        here.casterShine = ${lit}.casterShine;
+    }
     // The floor is a floor and not an addition, and a crease lowers it, exactly as the built-in
     // ending has it.
-    let lit = max(litWithShadow(${lit}.light, ${lit}.casterLight, coord), lights.ambient.rgb * occlusion);
+    let lit = max(litWithShadow(here.diffuse, here.casterDiffuse, coord), ambientAt(skyward(${facing})) * occlusion);
 
     var ctx: FragContext;
     ctx.uv = uv;
-    ctx.normal = ${cull === 'none' ? 'normal' : 'in.normal.xyz'};
+    ctx.normal = ${bumped ? 'facing' : smeared};
     ctx.worldPos = in.worldPos.xyz;
     ctx.light = lit;
-    ctx.shine = litWithShadow(${lit}.shine, ${lit}.casterShine, coord);
+    ctx.shine = litWithShadow(here.shine, here.casterShine, coord);
     // The glow through its picture, so a shader of your own adds it the way the built-in one does.
     ctx.emissive = uniforms.emissive.rgb * textureSampleGrad(meshEmissive, meshSampler, uv, meshUvDx, meshUvDy).rgb;
-    ctx.viewDir = ${cull === 'none' ? 'viewDirOf(in.worldPos.xyz)' : 'in.viewDir'};
+    // Worked out again here when the light is (perPixel), so a reflection or a fresnel the hook reads
+    // from it lines up with the shine; smeared from the corners otherwise, as always.
+    ctx.viewDir = ${cull === 'none' ? 'viewDirOf(in.worldPos.xyz)' : 'select(in.viewDir, viewDirOf(in.worldPos.xyz), uniforms.normalMatrix[1].w > 1.5)'};
     ctx.cameraPos = uniforms.cameraPosition.xyz;
     ctx.color = in.color;
     ctx.screen = screenOf(in.screen.xyz);
@@ -461,6 +552,27 @@ fn fs(in: VertexOutput, @builtin(front_facing) front: bool) -> @location(0) vec4
 }
 `;
 };
+
+/**
+ * Whether a material bends its facing by a normal map: it reads the map `normalMap` and has the
+ * number `normalStrength`, as one made with `normalMap` does (see new_material.ts). Both, so a map of
+ * that name a hook reads for something else does not ask for a number it does not have.
+ */
+const bumpedBy = (mapNames: readonly string[], sig: TUniformSignature): boolean =>
+    mapNames.includes('normalMap') && Object.hasOwn(sig, 'normalStrength');
+
+/**
+ * A facing bent by a normal map: the map's colour read as a direction in the surface's own frame
+ * (across, down the picture, and out of it, green up), and laid on the surface by its tangent. How far
+ * it leans is `strength`: `0` flat, `1` as the map says. The twin of bentBy in
+ * webgl2/material/mesh_material_shader.ts.
+ */
+const BENT_BY = /* wgsl */ `fn bentBy(normal: vec3<f32>, tangent: vec4<f32>, texel: vec3<f32>, strength: f32) -> vec3<f32> {
+    let t = normalize(tangent.xyz - normal * dot(normal, tangent.xyz));
+    let b = cross(normal, t) * tangent.w;
+    let n = texel * 2.0 - 1.0;
+    return normalize(t * (n.x * strength) + b * (n.y * strength) + normal * n.z);
+}`;
 
 /**
  * Builds the whole shader for a model material: the engine's own declarations, the uniforms the author
@@ -509,9 +621,10 @@ export const buildMeshMaterialShader = (
         UV_STEPS,
         SAMPLE,
         maps(mapNames),
+        bumpedBy(mapNames, sig) ? BENT_BY : '',
         vertex ?? DEFAULT_VERTEX,
         fragment ?? DEFAULT_EFFECT,
-        body(vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL, skinned, cull, instanced),
+        body(vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL, skinned, cull, instanced, bumpedBy(mapNames, sig)),
     ].join('\n');
 };
 
@@ -570,7 +683,8 @@ export const buildMeshMaterialShadowShader = (
         UV_STEPS,
         cut === null ? '' : SAMPLE,
         cut !== null || instanced ? FACING_TURN : '',
-        maps(mapNames),
+        // No lights block here: its envUv keeps the world's axes.
+        maps(mapNames, false),
         vertex ?? DEFAULT_VERTEX,
         cut === null ? '' : cut.fragment ?? DEFAULT_EFFECT,
         skinned ? `@group(${MESH_MATERIAL_GROUP}) @binding(${MESH_MATERIAL_JOINTS_BINDING}) var<storage, read> joints: array<mat4x4<f32>>;` : '',

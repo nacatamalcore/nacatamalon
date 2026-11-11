@@ -120,6 +120,23 @@ describe('a mesh whose shape comes from a model file', () => {
         expect(built.material.fragment).toContain('fn effect');
     });
 
+    it('keeps what it reflects from the document, which the file cannot say, saved and opened again', async () => {
+        serveCar();
+        const { store } = createTestGame();
+        const doc = carScene([{ key: 'car' }], [mesh('body-mesh', 'car', { reflection: { texture: 'studio', front: 0.9 } })]);
+        doc.assets.push({ type: 'texture', key: 'studio', src: '/studio.png' } as TSceneDoc['assets'][number]);
+        startTestScene(store, 'Garage', sceneFromDoc(parseSceneDoc(doc, '/scenes/garage.scene')));
+        await arrive();
+
+        const built = meshesOf(store).get('body-mesh')!;
+        const studio = store.get('assets').textures.get('studio')!;
+        expect(built.material.reflection).toEqual({ texture: studio, front: 0.9, edge: 1, metal: 0 });
+        // Written back as it was read.
+        const again = serializeScene(store.get('world').scenes[0]!);
+        const written = again.root.components.find((c) => c.type === 'mesh');
+        expect(written?.type === 'mesh' ? written.material.reflection : undefined).toEqual({ texture: 'studio', front: 0.9 });
+    });
+
     it('shares one fetch between two meshes naming the same file', async () => {
         serveCar();
         const { store } = createTestGame();
@@ -197,6 +214,22 @@ describe('a model piece the file cuts out of its picture', () => {
         await arrive();
 
         expect(meshesOf(store).get('fence-mesh')!.material.alphaCutoff).toBe(0.3);
+    });
+
+    it('keeps its holes when it also reflects, though it was made before the file said it was cut', async () => {
+        serveFence();
+        const { store } = createTestGame();
+        const doc = carScene([{ key: 'fence' }], [mesh('fence-mesh', 'fence', { reflection: { texture: 'studio' } })]);
+        doc.assets.push({ type: 'texture', key: 'studio', src: '/studio.png' } as TSceneDoc['assets'][number]);
+        startTestScene(store, 'Garage', sceneFromDoc(parseSceneDoc(doc, '/scenes/garage.scene')));
+        const before = meshesOf(store).get('fence-mesh')!.material.fragment;
+        expect(before).toContain('mix((surface).a, 1.0');
+        await arrive();
+
+        const fence = meshesOf(store).get('fence-mesh')!.material;
+        expect(fence.alphaCutoff).toBe(0.3);
+        expect(fence.fragment).not.toContain('mix((surface).a, 1.0');
+        expect(fence.fragmentGlsl).not.toBeNull();
     });
 
     it('is cut as much as the document asks', async () => {

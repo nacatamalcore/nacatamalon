@@ -7,7 +7,7 @@ import { useCamera3d } from '../src/hooks/camera/use_camera_3d';
 import { parseSceneDoc, serializeScene } from '../src/scene/document';
 import { fillFrameContext } from '../src/game/loop/fill_frame_context';
 import { fillLightUniforms, LIGHT_UNIFORM_FLOATS } from '../src/render/shared';
-import { VIEW_FLOATS } from '../src/render/shared/fill_light_uniforms';
+import { VIEW_FLOATS, GROUND_FLOATS } from '../src/render/shared/fill_light_uniforms';
 import { MESH_SHADER } from '../src/render/webgpu/mesh/mesh_shader';
 import { SKINNED_SHADER } from '../src/render/webgpu/mesh/skinned_shader';
 import { MESH_VERTEX_GLSL, MESH_FRAGMENT_GLSL } from '../src/render/webgl2/mesh/mesh_shader';
@@ -34,7 +34,7 @@ afterEach(() => {
  * Where the fog's eight numbers start in the lights block: past the ambient, the lights and the
  * shadow, and before the way the view looks.
  */
-const FOG_AT = LIGHT_UNIFORM_FLOATS - VIEW_FLOATS - 8;
+const FOG_AT = LIGHT_UNIFORM_FLOATS - GROUND_FLOATS - VIEW_FLOATS - 8;
 
 describe('useFog', () => {
     it('refuses to be called outside a scene body', () => {
@@ -179,13 +179,13 @@ describe('a scene written down', () => {
 
 describe('the shaders', () => {
     it('work out the fog per corner, in every vertex shader of both backends', () => {
-        expect(MESH_SHADER).toContain('out.fog = fogAt(worldPos);');
+        expect(MESH_SHADER).toContain('out.fog = vec2<f32>(fogAt(worldPos), skyward(worldNormal));');
         // Both kinds, the denser winning, on both cards.
         expect(MESH_SHADER).toContain('amount = max(amount, clamp(low, 0.0, 1.0));');
         expect(MESH_VERTEX_GLSL).toContain('amount = max(amount, clamp(low, 0.0, 1.0));');
-        expect(SKINNED_SHADER).toContain('out.fog = fogAt(worldPos);');
-        expect(MESH_VERTEX_GLSL).toContain('vFog = fogAt(worldPos);');
-        expect(SKINNED_VERTEX_GLSL).toContain('vFog = fogAt(worldPos);');
+        expect(SKINNED_SHADER).toContain('out.fog = vec2<f32>(fogAt(worldPos), skyward(worldNormal));');
+        expect(MESH_VERTEX_GLSL).toContain('vFog = vec2(fogAt(worldPos), skyward(worldNormal));');
+        expect(SKINNED_VERTEX_GLSL).toContain('vFog = vec2(fogAt(worldPos), skyward(worldNormal));');
         const source = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
         // A material's rides in the world position's fourth number, to leave a place for carry.
         expect(source('../src/render/webgpu/material/mesh_material_shader.ts')).toContain('out.worldPos = vec4<f32>(worldPos, fogAt(worldPos));');
@@ -193,8 +193,8 @@ describe('the shaders', () => {
     });
 
     it('lay it over the finished colour in every ending, a material\'s own included', () => {
-        expect(MESH_SHADER).toContain('lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), in.fog)');
-        expect(MESH_FRAGMENT_GLSL).toContain('lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), vFog)');
+        expect(MESH_SHADER).toContain('lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), in.fog.x)');
+        expect(MESH_FRAGMENT_GLSL).toContain('lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), vFog.x)');
         const source = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
         expect(source('../src/render/webgpu/material/mesh_material_shader.ts')).toContain('mix(shaded.rgb, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), in.worldPos.w)');
         expect(source('../src/render/webgl2/material/mesh_material_shader.ts')).toContain('mix(shaded.rgb, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), vFog)');

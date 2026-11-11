@@ -47,6 +47,24 @@ export type TGameHandle = {
      */
     getHeight(): number;
     /**
+     * Draws the game at another resolution from now on, as `createGame({ width, height })` asked: an
+     * options screen's 320 x 240 or 640 x 480. With `scaling` `'contain'` or `'integer'` the canvas
+     * keeps its size on the page and only its pixels change; with the default `'none'` it is shown at
+     * its new size, smaller or bigger. Everything placed in pixels stays where it was in pixels, so a
+     * HUD is placed again on `onResized`, which hears it on the next frame. A scene's style that
+     * brings its own resolution sets it again when it comes in, and the game's comes back when it
+     * goes; one set here while such a style is on stays after it, unless it is the style's own.
+     *
+     * @example
+     * ```ts
+     * const game = useGame();
+     * useUpdate(() => {
+     *     if (keys.justPressed('h')) game.setResolution(640, 480);
+     * });
+     * ```
+     */
+    setResolution(width: number, height: number): void;
+    /**
      * Runs `listener` each time the game changes size, told the new one: the window or the
      * container it sits in resized, the game going full screen or coming back. Only with a `keep`
      * other than `'both'`: with `'both'`, the default, the picture is scaled and the game stays as

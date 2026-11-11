@@ -134,7 +134,7 @@ export const writeMeshLights = (
         // Each view is told about its own shadow and no other's. Another scene stacked over it has
         // its own lights and its own numbering, so the index would point at a different lamp.
         const its = shadowOf(shadows, view);
-        fillLightUniforms(floats.subarray(at, at + LIGHT_UNIFORM_FLOATS), view.lights, view.ambient, its?.uniforms ?? null, view.fog ?? null, view.camera);
+        fillLightUniforms(floats.subarray(at, at + LIGHT_UNIFORM_FLOATS), view.lights, view.ambient, its?.uniforms ?? null, view.fog ?? null, view.camera, view.ground ?? null);
 
         // The group for this slot and this map, made the first time the two meet and kept: the
         // same slot reads one half's map in one pass and the other's in the next.
@@ -262,14 +262,20 @@ export const drawMesh = (
     // corner after the corner hook has moved it. One drawn as many, the twin that places each
     // instance before the corner hook runs.
     const surface = mesh.material;
-    const custom = surface.fragment !== null || surface.vertex !== null
+    // One that works its light out at every pixel takes this way too, with no shader of its own: the
+    // engine's hooks stand in for the ones it does not have, and this way carries the facing and the
+    // place to every pixel, which the built-in one leaves out on purpose.
+    const hooked = surface.fragment !== null || surface.vertex !== null;
+    const custom = hooked || (surface.perPixel ?? space.style?.perPixel) === true
         ? meshes.materials.get(surface, bends, cullOf(mesh), many !== null)
         : null;
     // A shape with no detail run cannot feed a material's pipeline, which reads one: it is drawn
     // the built-in way instead.
     // One still being compiled is not drawn yet: with the built-in shader it would show a frame of
-    // the wrong look, and the shader it is waiting for is not known to be good.
-    if (custom !== null && custom.pending && geometry.detailBuffer !== null) {
+    // the wrong look, and the shader it is waiting for is not known to be good. One that only works
+    // its light out at every pixel has no look of its own to get wrong, only where the light is
+    // worked out, so it is drawn the built-in way meanwhile rather than vanishing the first time.
+    if (custom !== null && custom.pending && hooked && geometry.detailBuffer !== null) {
         return false;
     }
     const effect = custom !== null && !custom.failed && custom.pipeline !== null && geometry.detailBuffer !== null ? custom : null;

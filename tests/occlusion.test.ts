@@ -304,10 +304,10 @@ describe('the built-in drawing', () => {
         for (const cull of CULLS) {
             for (const wgsl of [meshShaderFor(cull), skinnedShaderFor(cull)]) {
                 expect(wgsl).toContain('@group(1) @binding(3) var meshOcclusion: texture_2d<f32>;');
-                expect(wgsl).toContain('lights.ambient.rgb * occlusionAt(uv)');
+                expect(wgsl).toMatch(/ambientAt\((in\.fog\.y|select\(1\.0 - in\.fog\.y, in\.fog\.y, front\))\) \* occlusionAt\(uv\)/);
             }
             expect(meshFragmentGlsl(cull)).toContain('uniform sampler2D meshOcclusion;');
-            expect(meshFragmentGlsl(cull)).toContain('lights.ambient.rgb * occlusionAt(uv)');
+            expect(meshFragmentGlsl(cull)).toMatch(/ambientAt\((vFog\.y|\(gl_FrontFacing \? vFog\.y : 1\.0 - vFog\.y\))\) \* occlusionAt\(uv\)/);
         }
     });
 
@@ -327,7 +327,7 @@ describe('the built-in drawing', () => {
                 // Stretched as the first coordinate is, and divided by the same depth at the pixel, so
                 // with affine the occlusion swims with the colour rather than sliding across it.
                 expect(wgsl).toContain('out.uv2 = affineUv(uv2, out.position).xy;');
-                expect(wgsl).toContain('lights.ambient.rgb * occlusionAt(in.uv2 / in.uv.z)');
+                expect(wgsl).toMatch(/ambientAt\([^;]*\) \* occlusionAt\(in\.uv2 \/ in\.uv\.z\)/);
                 const places = locationsOf(wgsl);
                 expect(new Set(places).size).toBe(places.length);
                 expect(Math.max(...places)).toBeLessThan(16);
@@ -340,7 +340,7 @@ describe('the built-in drawing', () => {
                 expect(varyingsOf(vertex)).toBeLessThanOrEqual(15);
             }
             expect(meshFragmentGlsl(cull, true)).toContain('in vec2 vUv2;');
-            expect(meshFragmentGlsl(cull, true)).toContain('lights.ambient.rgb * occlusionAt(vUv2 / vUv.z)');
+            expect(meshFragmentGlsl(cull, true)).toMatch(/ambientAt\([^;]*\) \* occlusionAt\(vUv2 \/ vUv\.z\)/);
         }
     });
 });
@@ -350,11 +350,11 @@ describe('a material of its own', () => {
         for (const cull of CULLS) {
             for (const skinned of [false, true]) {
                 const wgsl = buildMeshMaterialShader(null, null, {}, [], skinned, cull);
-                expect(wgsl).toContain('let occlusion = occlusionAt(select(uv, uv2, uniforms.normalMatrix[1].w > 0.5));');
+                expect(wgsl).toContain('let occlusion = occlusionAt(select(uv, uv2, uniforms.normalMatrix[1].w % 2.0 > 0.5));');
                 expect(wgsl).toContain('ctx.occlusion = occlusion;');
 
                 const glsl = buildMeshMaterialShaderGlsl(null, null, {}, [], skinned, cull).fragment;
-                expect(glsl).toContain('float occlusion = occlusionAt(uniforms.normalMatrix[1].w > 0.5 ? uv2 : uv);');
+                expect(glsl).toContain('float occlusion = occlusionAt(mod(uniforms.normalMatrix[1].w, 2.0) > 0.5 ? uv2 : uv);');
                 expect(glsl).toContain('ctx.occlusion = occlusion;');
             }
         }

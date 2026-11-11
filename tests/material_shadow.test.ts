@@ -175,16 +175,41 @@ describe('the shadow a material receives', () => {
             for (const skinned of [false, true]) {
                 const wgsl = buildMeshMaterialShader(null, null, {}, [], skinned, cull);
                 expect(wgsl).toContain('let coord = shadowCoordOf(in.worldPos.xyz);');
-                expect(wgsl).toMatch(/let lit = max\(litWithShadow\([^)]*, coord\), lights\.ambient\.rgb \* occlusion\);/);
+                expect(wgsl).toMatch(/let lit = max\(litWithShadow\([^)]*, coord\), ambientAt\(skyward\(normalize\([^;]*\)\)\) \* occlusion\);/);
                 expect(wgsl).toContain('ctx.light = lit;');
                 expect(wgsl).toMatch(/ctx\.shine = litWithShadow\([^)]*, coord\);/);
 
                 const glsl = buildMeshMaterialShaderGlsl(null, null, {}, [], skinned, cull).fragment;
                 expect(glsl).toContain('vec4 coord = shadowCoordOf(vWorldPos);');
-                expect(glsl).toMatch(/vec3 lit = max\(litWithShadow\([^)]*, coord\), lights\.ambient\.rgb \* occlusion\);/);
+                expect(glsl).toMatch(/vec3 lit = max\(litWithShadow\([^)]*, coord\), ambientAt\(skyward\(normalize\([^;]*\)\)\) \* occlusion\);/);
                 expect(glsl).toContain('ctx.light = lit;');
                 expect(glsl).toMatch(/ctx\.shine = litWithShadow\([^)]*, coord\);/);
             }
         }
+    });
+});
+
+describe('a shadow\'s shader, which has no lights block', () => {
+    // WGSL and GLSL refuse a name they were never given, even in a function nobody calls: the map
+    // readers bring envUv, which turns the reflection by the lights everywhere but here.
+    it('names no light, cut or not, on both cards', () => {
+        for (const cut of [null, { fragment: null }]) {
+            for (const skinned of [false, true]) {
+                const wgsl = buildMeshMaterialShadowShader(null, {}, ['reflection'], skinned, cut);
+                expect(wgsl).toContain('fn envUv(ctx: FragContext) -> vec2<f32>');
+                expect(wgsl).not.toContain('lights.');
+            }
+            if (cut !== null) {
+                const glsl = buildMeshMaterialShadowShaderGlsl(null, {}, ['reflection'], false, cut);
+                expect(glsl.fragment).toContain('vec2 envUv(FragContext ctx)');
+                expect(glsl.fragment).not.toContain('lights.');
+                expect(glsl.vertex).not.toContain('lights.');
+            }
+        }
+    });
+
+    it('while the drawn material\'s turns the reflection by the camera', () => {
+        expect(buildMeshMaterialShader(null, null, {}, ['reflection'])).toContain('lights.look.xyz');
+        expect(buildMeshMaterialShaderGlsl(null, null, {}, ['reflection']).fragment).toContain('lights.look.xyz');
     });
 });

@@ -142,7 +142,7 @@ export const writeMeshLights = (
 ): void => {
     // Only the scene the shadow was drawn for is told about it. Another scene stacked over it has
     // its own lights and its own numbering, so the index would point at a different lamp.
-    fillLightUniforms(meshes.lightData, view.lights, view.ambient, shadow !== null && shadow.view === view ? shadow : null, view.fog ?? null, view.camera);
+    fillLightUniforms(meshes.lightData, view.lights, view.ambient, shadow !== null && shadow.view === view ? shadow : null, view.fog ?? null, view.camera, view.ground ?? null);
     gl.bindBuffer(gl.UNIFORM_BUFFER, meshes.lights);
     gl.bufferSubData(gl.UNIFORM_BUFFER, 0, meshes.lightData);
     gl.bindBuffer(gl.UNIFORM_BUFFER, null);
@@ -231,10 +231,15 @@ export const drawMesh = (
     // Which side of its triangles is thrown away. The usual one is the pair built at the start.
     const cull = cullOf(mesh);
     let effect: ReturnType<TMeshPipeline['materials']['get']> | null = null;
-    if (surface.fragment !== null || surface.vertex !== null) {
+    // One that works its light out at every pixel takes this way with no shader of its own, as on the
+    // other card: the engine's hooks stand in, and this way carries the facing and the place to every
+    // pixel. One that has a shader written for the other card only still draws the built-in way.
+    const hooked = surface.fragment !== null || surface.vertex !== null;
+    const perPixelOnly = !hooked && (surface.perPixel ?? space.style?.perPixel) === true;
+    if (hooked || perPixelOnly) {
         meshes.materials.warnIfWgpuOnly(surface);
         // A shape with no detail run cannot feed a material's program, which reads one.
-        if ((surface.fragmentGlsl !== null || surface.vertexGlsl !== null) && mesh.geometry.detailBuffer !== null) {
+        if ((perPixelOnly || surface.fragmentGlsl !== null || surface.vertexGlsl !== null) && mesh.geometry.detailBuffer !== null) {
             const compiled = meshes.materials.get(surface, bends, cull, many !== null);
             if (!compiled.failed && compiled.program !== null) {
                 effect = compiled;

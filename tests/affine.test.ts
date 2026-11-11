@@ -83,11 +83,11 @@ describe('the option', () => {
         expect(swimming.material.affine).toBe(true);
     });
 
-    it('is written down only when on, and read back the same', () => {
-        const written = (affine: boolean) => {
+    it('is written down when said, a false included (a no to the scene\'s style), never when not, and read back the same', () => {
+        const written = (affine?: boolean) => {
             const { store } = createTestGame();
             const root = startTestScene(store, 'Level', () => {
-                createMesh({ geometry: useCubeGeometry(), affine });
+                createMesh({ geometry: useCubeGeometry(), ...(affine !== undefined ? { affine } : {}) });
                 return createScene();
             });
             return serializeScene(root);
@@ -97,7 +97,10 @@ describe('the option', () => {
             return mesh?.type === 'mesh' ? mesh.material : undefined;
         };
 
-        expect(materialOf(written(false))).not.toHaveProperty('affine');
+        expect(materialOf(written())).not.toHaveProperty('affine');
+        const off = written(false);
+        expect(materialOf(off)?.affine).toBe(false);
+        expect(parseSceneDoc(off, '/scenes/level.scene')).toEqual(off);
         const on = written(true);
         expect(materialOf(on)?.affine).toBe(true);
         expect(parseSceneDoc(on, '/scenes/level.scene')).toEqual(on);

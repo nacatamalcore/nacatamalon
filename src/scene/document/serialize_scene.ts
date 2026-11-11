@@ -12,8 +12,9 @@ import type { TFog } from '../../fog/types/t_fog';
 import type { TTexture } from '../../loaders';
 import type { TColor } from '../../color';
 import { uniformsAsNumbers } from '../../materials/uniform_numbers';
+import { hookWithoutNormalMap, NORMAL_MAP, NORMAL_STRENGTH } from '../../materials/new_material';
 import { DEFAULT_CHANNEL } from '../../audio';
-import { lookUniforms } from '../../shader_composer/surface/compose_surface';
+import { lookUniforms, REFLECTION_BLUR, REFLECTION_EDGE, REFLECTION_FRONT, REFLECTION_MAP, REFLECTION_METAL } from '../../shader_composer/surface/compose_surface';
 import type { TAssetEntry } from './types/t_asset_entry';
 import type { TMusicAttachment, TSongAttachment, TSoundAttachment } from '../../audio';
 import type { TBox } from '../../box';
@@ -191,6 +192,17 @@ const writeMaps = (maps: TMeshMaterial['maps'], writing: TWriting): Pick<TMateri
 };
 
 /**
+ * The maps with one left out, or none at all when that was the only one.
+ */
+const withoutMap = (maps: TMeshMaterial['maps'], name: string | null): TMeshMaterial['maps'] => {
+    if (maps === undefined || name === null || !(name in maps)) {
+        return maps;
+    }
+    const { [name]: _left, ...rest } = maps;
+    return rest;
+};
+
+/**
  * A model's surface, as the document keeps it.
  *
  * `fromFile` is a piece of a model file. **Its picture is not written**: the file brings it back
@@ -214,8 +226,29 @@ const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting, fromFile:
     }
     // A material made by looks writes the looks and not the colour hook they made: the recipe is
     // the truth, and the shader is made again from it, by whatever version opens the scene.
-    const looked = material.lighting !== undefined || material.steps !== undefined;
-    const written = writeMaterial(material, writing);
+    // The picture its map holds now, which a game may have swapped while it ran; the recipe's when the
+    // map is gone. Its numbers are read the same way further down, from the uniforms.
+    // A mirror's (`useMirror`) or a captured surroundings' (`useEnvironment`) is a picture drawn by
+    // code, which no file holds: it is left out, with what it made, and the surface saved without it.
+    const reflects = material.reflection !== undefined;
+    const reflection = material.reflection === undefined || (material.reflection.read ?? 'round') !== 'round'
+        ? null
+        : { ...material.reflection, texture: material.maps?.[REFLECTION_MAP]?.texture ?? material.reflection.texture };
+    if (reflection !== null) {
+        listTexture(reflection.texture, writing);
+    }
+    // A normal map is written as the map and its strength. The line it adds to the hook is not written,
+    // and a hook that is only the engine's own ending, made for it, not at all.
+    const bump = material.normalMap ?? null;
+    if (bump !== null) {
+        listTexture(material.maps?.[NORMAL_MAP]?.texture ?? bump.texture, writing);
+    }
+    const ownHook = bump === null ? null : hookWithoutNormalMap(material.fragment);
+    const ownHookGlsl = bump === null ? null : hookWithoutNormalMap(material.fragmentGlsl);
+    const looked = material.lighting !== undefined || material.steps !== undefined || reflects || ownHook?.plain === true;
+    const written = bump === null
+        ? writeMaterial(material, writing)
+        : { ...writeMaterial(material, writing), fragment: ownHook!.code, fragmentGlsl: ownHookGlsl!.code };
     const lighting = material.lighting === undefined ? undefined : { ...material.lighting } as Record<string, unknown>;
     const steps = material.steps?.map((step) => ({ ...step }) as Record<string, unknown>);
     let uniforms = written.uniforms;
@@ -234,6 +267,29 @@ const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting, fromFile:
             }
             delete rest[named.uniform];
         }
+        uniforms = Object.keys(rest).length === 0 ? null : rest;
+    }
+    // The reflection's two numbers the same way: written in it, as they are turned now.
+    let front = reflection?.front ?? 0.04;
+    let edge = reflection?.edge ?? 1;
+    let metal = reflection?.metal ?? 0;
+    if (reflects && uniforms !== null) {
+        const rest = { ...uniforms };
+        if (typeof rest[REFLECTION_FRONT] === 'number') front = rest[REFLECTION_FRONT];
+        if (typeof rest[REFLECTION_EDGE] === 'number') edge = rest[REFLECTION_EDGE];
+        if (typeof rest[REFLECTION_METAL] === 'number') metal = rest[REFLECTION_METAL];
+        delete rest[REFLECTION_FRONT];
+        delete rest[REFLECTION_EDGE];
+        delete rest[REFLECTION_METAL];
+        delete rest[REFLECTION_BLUR];
+        uniforms = Object.keys(rest).length === 0 ? null : rest;
+    }
+    // Its strength the same way, as it is turned now.
+    let strength = bump?.strength ?? 1;
+    if (bump !== null && uniforms !== null) {
+        const rest = { ...uniforms };
+        if (typeof rest[NORMAL_STRENGTH] === 'number') strength = rest[NORMAL_STRENGTH];
+        delete rest[NORMAL_STRENGTH];
         uniforms = Object.keys(rest).length === 0 ? null : rest;
     }
     return {
@@ -265,11 +321,33 @@ const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting, fromFile:
         ...unless('smooth', material.smooth, undefined),
         // Repeating is the default, however it is spelled, so it is never written down.
         ...writtenWrap(material.wrap),
-        ...writeMaps(material.maps, writing),
-        ...(material.vertexSnap === true || (typeof material.vertexSnap === 'number' && material.vertexSnap > 0)
+        // Its picture is written in the reflection, so not again among the maps.
+        ...writeMaps(withoutMap(withoutMap(material.maps, reflects ? REFLECTION_MAP : null), bump !== null ? NORMAL_MAP : null), writing),
+        // Each written when said, a `false` included: that is a material saying no to its scene's style.
+        // A grid of no rows, as a script may set it, is that same no.
+        ...(typeof material.vertexSnap === 'boolean' || (typeof material.vertexSnap === 'number' && material.vertexSnap > 0)
             ? { vertexSnap: material.vertexSnap }
+            : typeof material.vertexSnap === 'number' ? { vertexSnap: false } : {}),
+        ...(typeof material.affine === 'boolean' ? { affine: material.affine } : {}),
+        ...(typeof material.perPixel === 'boolean' ? { perPixel: material.perPixel } : {}),
+        ...(reflection !== null
+            ? {
+                reflection: {
+                    texture: reflection.texture.key,
+                    ...(front !== 0.04 ? { front } : {}),
+                    ...(edge !== 1 ? { edge } : {}),
+                    ...(metal !== 0 ? { metal } : {}),
+                },
+            }
             : {}),
-        ...(material.affine === true ? { affine: true } : {}),
+        ...(bump !== null
+            ? {
+                normalMap: {
+                    texture: (material.maps?.[NORMAL_MAP]?.texture ?? bump.texture).key,
+                    ...(strength !== 1 ? { strength } : {}),
+                },
+            }
+            : {}),
         ...(material.cull === 'back' || material.cull === 'front' || material.cull === 'none' ? { cull: material.cull } : {}),
         ...(material.alphaCutoff !== undefined ? { alphaCutoff: material.alphaCutoff } : {}),
         ...(material.transparent !== undefined ? { transparent: material.transparent } : {}),
@@ -708,6 +786,7 @@ const writeLight = (light: TLight): TComponentDoc => {
             },
         } : {}),
         ...(light.type !== 'ambient' ? { ambient: light.ambient } : {}),
+        ...(light.type === 'ambient' && (light.ground ?? null) !== null ? { ground: { ...light.ground! } } : {}),
         ...(light.type === 'point' || light.type === 'spot' || light.type === 'rect' ? { range: light.range } : {}),
         ...(light.type === 'rect' ? { width: light.width, height: light.height } : {}),
         ...(light.type === 'spot' ? { angle: light.angle, penumbra: light.penumbra } : {}),

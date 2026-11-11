@@ -176,6 +176,91 @@ export type TMaterialOcclusion = {
 };
 
 /**
+ * What a model's surface reflects, and how much: a picture of its surroundings laid on it by which
+ * way it faces from the camera, the chrome of the era's consoles and the glossy plastic of its
+ * computer graphics.
+ *
+ * The picture is round, the surroundings as a ball of chrome would show them seen from in front: the
+ * middle is what is behind the camera, and the rim what is behind the model. The reflection follows
+ * the camera, as it did then.
+ *
+ * How much is reflected changes with the angle: `front` where the surface faces the camera, `edge`
+ * where it turns away, and in between the way light does (more and more towards the edge, and fast
+ * near it). Glossy plastic or paint reflects little in front and much at the edge (`front: 0.04`,
+ * `edge: 1`); chrome reflects nearly everything everywhere (`front: 0.9`).
+ *
+ * @category Materials
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TMaterialReflection = {
+    /**
+     * The surroundings, as one round picture. One still loading reads as white until it lands.
+     */
+    texture: TTexture;
+    /**
+     * How much is reflected where the surface faces the camera, `0` to `1`. Default `0.04`, a glossy
+     * plastic.
+     */
+    front?: number;
+    /**
+     * How much is reflected where the surface turns away from the camera, `0` to `1`. Default `1`.
+     */
+    edge?: number;
+    /**
+     * How much what is reflected takes the surface's own colour, `0` to `1`, as a metal's does: gold
+     * reflects a white sky gold. Default `0`, the plain mirror of plastic, glass and chrome.
+     */
+    metal?: number;
+    /**
+     * How its picture is read: `'round'` (the default), a round picture of the surroundings, read at
+     * where the reflection lands on it; `'cube'`, the six faces of a cube of them, three across and
+     * two down, as `useEnvironment` draws them; `'screen'`, a picture of the world seen in a mirror,
+     * read at the pixel's own place on the screen, as `useMirror` draws it. The last two are drawn by
+     * code, so a scene document does not keep them: a scene saved while the game runs comes back with
+     * the surface plain, and the code that gave it them gives them again.
+     */
+    read?: 'round' | 'cube' | 'screen';
+    /**
+     * How soft a mirror's picture is, in pixels (`read: 'screen'` only): `0`, the default, sharp; a
+     * few for polished stone or a wet floor. A uniform, `reflectionBlur`, so it changes while it runs.
+     */
+    blur?: number;
+};
+
+/**
+ * A normal map: a picture whose colours are the directions a surface faces at each of its pixels, so a
+ * flat wall catches the light as if it were carved, stone, brick, wood grain, rivets.
+ *
+ * @category Materials
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TMaterialNormalMap = {
+    /**
+     * The map: each pixel's colour a direction in the surface's own frame, red across the picture,
+     * green up it, blue out of the surface (the usual lilac ones; `normalsFromHeight` makes one from a
+     * picture of heights).
+     */
+    texture: TTexture;
+    /**
+     * How far it bends the surface: `0` flat, `1` as the map says, more to deepen it. Default `1`. A
+     * uniform, `normalStrength`, so it changes while the game runs.
+     */
+    strength?: number;
+};
+
+/**
+ * A material's reflection as it keeps it: every number filled in, and how it is read and softened
+ * only when it is a mirror's.
+ *
+ * @category Materials
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TMaterialReflectionRecord = Required<Omit<TMaterialReflection, 'read' | 'blur'>> & Pick<TMaterialReflection, 'read' | 'blur'>;
+
+/**
  * A material for models: a surface, and optionally a shader over it.
  *
  * Here the surface **is** the material's, because that is what a hundred crates want to share. They
@@ -263,7 +348,8 @@ export type TMeshMaterial = TShaderHalf & {
      * game's own rows, which is honest but subtle, because the picture is already drawn on that grid
      * and a corner moves less than half a pixel. The real console shivered more than that: its maths
      * ran on low-precision numbers, which is why a coarser grid is what reads as "PlayStation".
-     * Default `false`, no snapping.
+     * Left out, the scene's render style decides (`useRenderStyle`), and with none there is no
+     * snapping; `false`, or `0`, says no to that style.
      */
     vertexSnap?: boolean | number;
     /**
@@ -271,10 +357,40 @@ export type TMeshMaterial = TShaderHalf & {
      * PlayStation drew it: a floor or a wall bends and swims as the camera comes close.
      *
      * The warp grows with the size of a triangle on screen, so a big flat plane shows it most and a
-     * finely cut one hides it, which is what the games of the time did to keep it down. Default
-     * `false`, the picture held true to the surface.
+     * finely cut one hides it, which is what the games of the time did to keep it down. Left out,
+     * the scene's render style decides (`useRenderStyle`), and with none the picture is held true to
+     * the surface; `false` says no to that style.
      */
     affine?: boolean;
+    /**
+     * Its light is worked out at every pixel rather than at its corners: a shine is a round, clean
+     * spot that slides across the surface however few triangles the model has, where the engine's
+     * own light, worked out at the corners and smeared across each triangle, loses it between them.
+     * The look of the computer graphics of the era (glossy plastic, chrome) rather than of its
+     * consoles.
+     *
+     * Drawn the way a material with a shader of its own is, whether it has one or not: that way
+     * already carries which way the surface faces and where it is to every pixel, which the light
+     * needs. A shader of your own receives it in `ctx.light` and `ctx.shine` without changing; one
+     * written in WGSL only is drawn the built-in way on WebGL2, as always, and there the light is
+     * worked out at the corners. Read every frame, so it can change while the game runs. Left out,
+     * the scene's render style decides (`useRenderStyle`), and with none it is off; `false` says no
+     * to that style.
+     */
+    perPixel?: boolean;
+    /**
+     * What its surface reflects, and how much in front and at the edge, as it was asked for (see
+     * {@link TMaterialReflection}). Kept so it can be written down and made again, like `lighting`:
+     * the picture is the material's map `reflection`, and the two numbers are its uniforms
+     * `reflectionFront` and `reflectionEdge`, which are what change while the game runs. Left out
+     * when it has none.
+     */
+    reflection?: TMaterialReflectionRecord;
+    /**
+     * The normal map that bends its surface, as it was made with, its strength filled in. Kept so it
+     * can be written down and made again. Left out when it has none.
+     */
+    normalMap?: Required<TMaterialNormalMap>;
     /**
      * Which side of its triangles is thrown away: `'back'`, `'front'` or `'none'` (see
      * {@link TCullMode}). Omitted, `'back'`. Read every frame, so it can change while the game runs.

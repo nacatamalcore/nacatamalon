@@ -99,11 +99,21 @@ export type TDrawMaterial = TDrawShader & {
      * What the picture does past its edge. Omitted, it repeats.
      */
     readonly wrap?: TTextureWrap | { readonly u: TTextureWrap; readonly v: TTextureWrap };
+    /**
+     * Its corners on a coarse grid of the screen. Omitted, the view's style's (`TCameraSpace.style`),
+     * and with none, not snapped.
+     */
     readonly vertexSnap?: boolean | number;
     /**
-     * Its picture stretched across the screen without correcting for depth. Omitted, it is held true.
+     * Its picture stretched across the screen without correcting for depth. Omitted, the view's
+     * style's, and with none it is held true.
      */
     readonly affine?: boolean;
+    /**
+     * Its light worked out at every pixel rather than at its corners, which takes the material's way
+     * even with no shader of its own. Omitted, the view's style's, and with none at the corners.
+     */
+    readonly perPixel?: boolean;
     /**
      * Which side of its triangles is thrown away. Omitted, `'back'`.
      */

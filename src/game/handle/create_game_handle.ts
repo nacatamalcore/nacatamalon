@@ -59,11 +59,21 @@ export const createGameHandle = (store: TRuntimeStore, box: TBox | null = null):
     getWidth: () => screenSizeOf(store.get('screen').canvas).width,
     getHeight: () => screenSizeOf(store.get('screen').canvas).height,
     onResized: (listener) => onGameMoment<TGameResizeEvent>(store, 'resized', box, listener),
+    setResolution: (width: number, height: number) => {
+        for (const [name, value] of [['width', width], ['height', height]] as const) {
+            if (!(typeof value === 'number' && Number.isInteger(value) && value > 0)) {
+                throw new Error(`[NacatamalOn] setResolution: the ${name} must be a whole number of pixels above 0, got ${String(value)}.`);
+            }
+        }
+        // The canvas follows the game's settings (see createGame), so it is only written down here.
+        store.setState('config', { width, height });
+    },
 
     getBackground: () => store.get('config').background,
     setBackground: (color: TColorOption) => store.setState('config', { background: getColor(color) }),
 
     isSmooth: () => store.get('config').smooth,
+    // The screen's scaling goes with it while nobody said otherwise (`smoothScaling` left out).
     setSmooth: (smooth: boolean) => store.setState('config', { smooth }),
 
     getPixelSnap: () => store.get('config').pixelSnap,

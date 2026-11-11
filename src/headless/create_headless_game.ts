@@ -111,11 +111,23 @@ export const createHeadlessGame = (options: THeadlessGameOptions): THeadlessGame
         height,
         style: {},
         ownerDocument: { defaultView: view },
-        getBoundingClientRect: () => ({ left: 0, top: 0, width, height, x: 0, y: 0, right: width, bottom: height }),
+        // Read as it is now: the game can change its resolution while it runs (below).
+        getBoundingClientRect: () => ({ left: 0, top: 0, width: canvas.width, height: canvas.height, x: 0, y: 0, right: canvas.width, bottom: canvas.height }),
     }) as unknown as HTMLCanvasElement;
 
     const renderer = createCpuRenderer({ background: config.background, smooth: config.smooth });
     const store = createRuntimeStore({ canvas, renderer, config });
+    // The canvas and the renderer follow the game's settings as a page's do (see createGame): a
+    // scene's style or `setResolution` changes the size pictures are taken at, and the smoothing.
+    store.subscribe(
+        'config',
+        (now) => `${now.width}x${now.height}`,
+        () => {
+            canvas.width = store.get('config').width;
+            canvas.height = store.get('config').height;
+        },
+    );
+    store.subscribe('config', (now) => now.smooth, (smooth) => renderer.setSmooth(smooth));
     if (config.post !== undefined && config.post.length > 0) {
         installPostChain(store, normalizePostChain(config.post));
     }
@@ -162,6 +174,8 @@ export const createHeadlessGame = (options: THeadlessGameOptions): THeadlessGame
             throw new Error(`[NacatamalOn] headless game: capture's scale is ${said}, and it is how many pixels across each of the game's becomes. Give a whole number of 1 or more.`);
         }
         redraw();
+        // The size now: a scene's style or `setResolution` may have changed it since the start.
+        const { width, height } = canvas;
         const { screen, notDrawn } = renderer.paint(ctx, width, height);
         const fresh = [...notDrawn].filter((what) => !toldNotDrawn.has(what));
         if (fresh.length > 0) {
@@ -242,7 +256,7 @@ export const createHeadlessGame = (options: THeadlessGameOptions): THeadlessGame
         },
         find: (name) => every(name)[0],
         findAll: every,
-        drawn: () => boxesIn(store.get('world').scenes, { x: 0, y: 0, width, height }, width, height, () => true)
+        drawn: () => boxesIn(store.get('world').scenes, { x: 0, y: 0, width: canvas.width, height: canvas.height }, canvas.width, canvas.height, () => true)
             .map(({ name, picture, seen, x, y }): THeadlessPicture => {
                 const region = boxRegion(picture) ?? { x: Math.round(x), y: Math.round(y), width: 0, height: 0 };
                 return {

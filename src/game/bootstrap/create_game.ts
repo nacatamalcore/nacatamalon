@@ -94,6 +94,7 @@ export const createGame = (target: TGameTarget, game_options: TGameOptions) => {
         renderer,
         seed: _seed,
         smooth,
+        smoothScaling,
         msaa,
         scaling,
         keep,
@@ -105,7 +106,8 @@ export const createGame = (target: TGameTarget, game_options: TGameOptions) => {
         banner,
         splash
     } = cleanedOptions;
-    const screen = createCanvas(target, { width, height, smooth, scaling, keep, pixelRatio, pixelAspect, fullscreenScaling, align });
+    // The canvas is scaled up by `smoothScaling`; `smooth` is how the renderer reads the pictures.
+    const screen = createCanvas(target, { width, height, smooth: smoothScaling ?? smooth, scaling, keep, pixelRatio, pixelAspect, fullscreenScaling, align });
     // Null until half 2: the store cannot exist without a renderer, and the renderer is the
     // await. Everything in half 1 that touches it, `destroy` above all, has to cope with that.
     let store: TRuntimeStore | null = null;
@@ -225,6 +227,28 @@ export const createGame = (target: TGameTarget, game_options: TGameOptions) => {
                 (config) => config.smooth,
                 (smooth) => rendererInstance.setSmooth(smooth),
             );
+            // The canvas, scaled up to the page smoothly or by whole pixels, follows its own setting.
+            const unwatchScaling = runtime.subscribe(
+                'config',
+                (config) => config.smoothScaling ?? config.smooth,
+                (smoothScaling) => screen.setCanvasOptions({ smooth: smoothScaling }),
+            );
+            // And the shape of its pixels, which a scene's style can bring (the 8:7 of a NES).
+            const unwatchAspect = runtime.subscribe(
+                'config',
+                (config) => config.pixelAspect,
+                (pixelAspect) => screen.setCanvasOptions({ pixelAspect }),
+            );
+            // The canvas follows the resolution the same way (`setResolution`, a scene's style). The
+            // selector is text so the two numbers are one value, and a frame sees the new size.
+            const unwatchSize = runtime.subscribe(
+                'config',
+                (config) => `${config.width}x${config.height}`,
+                () => {
+                    const { width, height } = runtime.get('config');
+                    screen.setCanvasOptions({ width, height });
+                },
+            );
             // The first error a scene's update throws goes out to the page as well, since whoever
             // holds the game may not be reading the console. `emit` says each event once, which is
             // what `TRuntimeState.loop.failure` promises too.
@@ -258,6 +282,9 @@ export const createGame = (target: TGameTarget, game_options: TGameOptions) => {
             const unwatchPage = watchPage(runtime, page, page.defaultView ?? undefined);
             unwatchConfig = () => {
                 unwatchSmooth();
+                unwatchScaling();
+                unwatchAspect();
+                unwatchSize();
                 unwatchFailure();
                 unwatchVisibility();
                 unwatchPage();

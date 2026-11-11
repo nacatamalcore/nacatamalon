@@ -160,6 +160,43 @@ const parseOcclusion = (value: unknown): Pick<TMeshMaterialDoc, 'occlusion'> => 
     };
 };
 
+/**
+ * The reflection as a document wrote it: a picture by key, and its numbers where they differ from
+ * the defaults, each kept from 0 to 1. One with no picture is none.
+ */
+const parseReflection = (value: unknown): Pick<TMeshMaterialDoc, 'reflection'> => {
+    const raw = asRecord(value);
+    if (raw === null || typeof raw.texture !== 'string' || raw.texture === '') {
+        return {};
+    }
+    const amount = (field: unknown, fallback: number): number =>
+        typeof field === 'number' && Number.isFinite(field) ? Math.min(Math.max(field, 0), 1) : fallback;
+    const front = amount(raw.front, 0.04);
+    const edge = amount(raw.edge, 1);
+    const metal = amount(raw.metal, 0);
+    return {
+        reflection: {
+            texture: raw.texture,
+            ...(front !== 0.04 ? { front } : {}),
+            ...(edge !== 1 ? { edge } : {}),
+            ...(metal !== 0 ? { metal } : {}),
+        },
+    };
+};
+
+/**
+ * The normal map as a document wrote it: a picture by key, and its strength from 0 up where it is not
+ * `1`. One with no picture is none.
+ */
+const parseNormalMap = (value: unknown): Pick<TMeshMaterialDoc, 'normalMap'> => {
+    const raw = asRecord(value);
+    if (raw === null || typeof raw.texture !== 'string' || raw.texture === '') {
+        return {};
+    }
+    const strength = typeof raw.strength === 'number' && Number.isFinite(raw.strength) ? Math.max(raw.strength, 0) : 1;
+    return { normalMap: { texture: raw.texture, ...(strength !== 1 ? { strength } : {}) } };
+};
+
 const parseMeshMaterial = (value: unknown): TMeshMaterialDoc => {
     const raw = asRecord(value) ?? {};
     // Its maps are read further down, with the rest of its surface, where a model's document has them.
@@ -180,10 +217,13 @@ const parseMeshMaterial = (value: unknown): TMeshMaterialDoc => {
         ...parseWrap(raw.wrap),
         ...parseMaps(raw.maps),
         // `true`, or a row count above zero; anything else is off, which is the default.
-        ...(raw.vertexSnap === true || (typeof raw.vertexSnap === 'number' && Number.isFinite(raw.vertexSnap) && raw.vertexSnap > 0)
+        ...(raw.vertexSnap === true || raw.vertexSnap === false || (typeof raw.vertexSnap === 'number' && Number.isFinite(raw.vertexSnap) && raw.vertexSnap > 0)
             ? { vertexSnap: raw.vertexSnap }
             : {}),
-        ...(raw.affine === true ? { affine: true } : {}),
+        ...(typeof raw.affine === 'boolean' ? { affine: raw.affine } : {}),
+        ...(typeof raw.perPixel === 'boolean' ? { perPixel: raw.perPixel } : {}),
+        ...parseReflection(raw.reflection),
+        ...parseNormalMap(raw.normalMap),
         // Written only when asked for; anything unknown draws as the default.
         ...(raw.cull === 'back' || raw.cull === 'front' || raw.cull === 'none' ? { cull: raw.cull } : {}),
         // The same: a number from 0 to 1, or nothing cut.
@@ -871,6 +911,7 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                     },
                 } : {}),
                 ...(kind !== 'ambient' && kind !== 'ambient-2d' && kind !== 'point-2d' ? { ambient: asNumber(raw.ambient, 0) } : {}),
+                ...(kind === 'ambient' && asRecord(raw.ground) !== null ? { ground: asColor(raw.ground, WHITE) } : {}),
                 ...(kind === 'point' || kind === 'spot' || kind === 'rect' ? { range: asNumber(raw.range, 10) } : {}),
                 ...(kind === 'point-2d' ? { radius: asNumber(raw.radius, 128), falloff: asNumber(raw.falloff, 1) } : {}),
                 ...(kind === 'rect' ? { width: asNumber(raw.width, 1), height: asNumber(raw.height, 1) } : {}),

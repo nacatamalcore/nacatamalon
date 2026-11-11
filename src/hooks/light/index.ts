@@ -7,5 +7,7 @@ export { useSpotLight } from './use_spot_light';
 export { useRectLight } from './use_rect_light';
 export { useAmbientLight } from './use_ambient_light';
 export { useBlobShadow } from './use_blob_shadow';
+export { useStudio } from './use_studio';
+export type { TStudio, TStudioOptions } from './use_studio';
 
 export type { TBlobShadowOptions } from './use_blob_shadow';

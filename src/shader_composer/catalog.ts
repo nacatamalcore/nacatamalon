@@ -1,6 +1,6 @@
 import { composerFloat, composerSwizzle, composerVec2, composerVec3, composerVec4 } from './constructors';
 import {
-    composerEmissive, composerEnvUv, composerLight, composerMapSample, composerShine, composerResolution, composerSurface, composerTextureSample, composerTime,
+    composerCubeUv, composerEmissive, composerEnvUv, composerLight, composerMapSample, composerShine, composerResolution, composerSurface, composerTextureSample, composerTime,
     composerUniform, composerUv, composerVertexColor, composerVertexNormal, composerVertexPosition, composerViewDir, composerCameraPos, composerWorldNormal,
     composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent, composerVertexBitangent, composerInstanceData, composerInstanceOrigin, composerFrontFacing, composerCarry, composerOcclusion, composerLocalUv, composerLayerUv,
     composerWorldPos,
@@ -204,6 +204,7 @@ const DEFS: TNodeDef[] = [
     inputNode('emissive', 'Emissive', V3, 'The material\'s emissive color, untouched by lighting.', ['mesh3d']),
     inputNode('shine', 'Shine', V3, 'The highlight the lamps put on the surface, already shadowed.', ['mesh3d']),
     inputNode('envUv', 'Reflection UV', V2, 'Where the surface reflects the world on a round map of its surroundings: feed it to Map Sample for chrome.', ['mesh3d']),
+    inputNode('cubeUv', 'Cube Reflection UV', V2, 'Where the surface reflects the world on the six faces of a cube of its surroundings (useEnvironment): feed it to Map Sample.', ['mesh3d']),
     inputNode('vertexPosition', 'Vertex Position', V3, 'The vertex\'s local-space position. Vertex stage only.', ['mesh3d']),
     inputNode('vertexNormal', 'Vertex Normal', V3, 'The vertex\'s normal. Vertex stage only.', ['mesh3d']),
     inputNode('vertexColor', 'Vertex Color', V4, 'The color painted on the model\'s vertices. Already part of Surface.', ['mesh3d']),
@@ -617,6 +618,7 @@ export const INPUT_BUILDERS: Record<string, () => TComposerNode> = {
     emissive: composerEmissive,
     shine: composerShine,
     envUv: composerEnvUv,
+    cubeUv: composerCubeUv,
     vertexPosition: composerVertexPosition,
     vertexNormal: composerVertexNormal,
     vertexColor: composerVertexColor,

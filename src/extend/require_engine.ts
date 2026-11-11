@@ -246,6 +246,7 @@ export const versionInRange = (version: string, range: string): boolean | null =
  * @returns `true` when the running engine is in the range.
  * @throws When the range cannot be read: that is the plugin's mistake, not the game's.
  *
+ * @category Extending
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */

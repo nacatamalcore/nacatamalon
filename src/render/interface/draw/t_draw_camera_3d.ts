@@ -35,4 +35,8 @@ export type TDrawCamera3d = {
      * its own.
      */
     readonly flat?: { readonly x: number; readonly y: number; readonly rotation: number; readonly zoom: number } | null;
+    /**
+     * The plane the world is seen reflected in (`TCamera3d.mirror`), or `null` or absent for none.
+     */
+    readonly mirror?: { readonly x: number; readonly y: number; readonly z: number; readonly d: number } | null;
 };

@@ -43,9 +43,13 @@ struct Lights {
     // both.
     fog: vec4<f32>,
     fogRange: vec4<f32>,
-    // xyz = the way back towards the viewer, w = 1 when the view is orthographic and that way is
-    // the same everywhere; 0 for a perspective one, whose way is from the point to its eye.
+    // xyz = the way back towards the viewer, along the camera's own axis; w = 1 when the view is
+    // orthographic and that way is the same everywhere, 0 for a perspective one, whose way to light
+    // a point by is from the point to its eye (xyz then only turns a reflection to the camera).
     look: vec4<f32>,
+    // rgb = the light from all around that comes up from below, for an ambient with a ground; w = 1
+    // when there is one (2 when the world's y goes down), 0 when the ambient is one colour.
+    ground: vec4<f32>,
 };
 `;
 
@@ -125,6 +129,23 @@ fn viewDirOf(worldPos: vec3<f32>) -> vec3<f32> {
         return lights.look.xyz;
     }
     return normalize(uniforms.cameraPosition.xyz - worldPos);
+}
+
+// How much a surface faces the sky, 0 straight down to 1 straight up, from its facing in the world:
+// what an ambient with a ground is shared out by. Worked out at the corner on the built-in way and
+// smeared, as the light is; at the pixel on a material's.
+fn skyward(normal: vec3<f32>) -> f32 {
+    let up = normal.y * 0.5 + 0.5;
+    return select(up, 1.0 - up, lights.ground.w > 1.5);
+}
+
+// The light from all around at a surface that faces the sky this much: the ambient alone when it has
+// no ground, exactly as before, and between the ground's colour and its own when it has one.
+fn ambientAt(sky: f32) -> vec3<f32> {
+    if (lights.ground.w % 2.0 < 0.5) {
+        return lights.ambient.rgb;
+    }
+    return mix(lights.ground.rgb, lights.ambient.rgb, sky);
 }
 
 // A corner put on a coarse grid of the screen, the way the PlayStation drew: models shivered as
@@ -295,7 +316,7 @@ fn shadowCoordOf(worldPos: vec3<f32>) -> vec4<f32> {
 // Whether the light can see this point: 1 lit, 0 hidden, and in between along a rim, because the
 // card compares four steps at once and hands back how many said yes.
 //
-// This is the **one thing in this engine worked out per pixel rather than per corner**, and it is
+// This is the **one thing the built-in drawing works out per pixel rather than per corner**, and it is
 // deliberate: a shadow's edge is a hard line across a surface, and smeared between corners it would
 // land on triangle boundaries instead of where the wall is.
 fn shadowFactor(coord: vec4<f32>) -> f32 {
@@ -348,8 +369,10 @@ const meshVertexOutput = (cull: TCullMode, secondUv: boolean): string => /* wgsl
     @location(5) casterShine: vec3<f32>,
     // The colour painted on the corner, smeared across the triangle like the light is.
     @location(6) color: vec4<f32>,
-    // How much of the corner the fog has taken, smeared like the light.
-    @location(7) fog: f32,${cull === 'none' ? twoSidedOutput(8) : ''}${secondUv ? `
+    // How much of the corner the fog has taken, smeared like the light; and in y how much it faces the
+    // sky, for an ambient with a ground (see skyward), carried beside it rather than in a place of
+    // its own.
+    @location(7) fog: vec2<f32>,${cull === 'none' ? twoSidedOutput(8) : ''}${secondUv ? `
     // The second picture coordinate, for an occlusion laid out by it, times the same depth as the
     // first (see affineUv), so it stretches as the colour does. Only a model whose occlusion asks for
     // it carries it.
@@ -522,7 +545,8 @@ fn fs(in: VertexOutput${cull === 'none' ? ', @builtin(front_facing) front: bool'
     let shaded = litWithShadow(${lit}.light, ${lit}.casterLight, in.shadowCoord);
     // A crease lowers the floor and nothing else: a lamp reaching into it lights it as it would
     // anywhere.
-    let lit = max(shaded, lights.ambient.rgb * occlusionAt(${secondUv ? 'in.uv2 / in.uv.z' : 'uv'}));
+    // The side facing away faces the sky the other way round.
+    let lit = max(shaded, ambientAt(${cull === 'none' ? 'select(1.0 - in.fog.y, in.fog.y, front)' : 'in.fog.y'}) * occlusionAt(${secondUv ? 'in.uv2 / in.uv.z' : 'uv'}));
     // The colour painted on the corners multiplies in with the picture, the way the era's hardware
     // combined them: a green corner over a dirt picture is grass. Unpainted corners are white.
     let color = texColor * uniforms.tint * in.color * vec4<f32>(lit, 1.0);
@@ -538,7 +562,7 @@ fn fs(in: VertexOutput${cull === 'none' ? ', @builtin(front_facing) front: bool'
     // The fog last, over everything, glow included: a lamp far off in the fog is lost in it too.
     // One that adds its colour (normalMatrix[2].w) fades into the fog towards black, adding less:
     // adding the fog's colour would brighten it.
-    return vec4<f32>(mix(color.rgb + shine + glow, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), in.fog), color.a);
+    return vec4<f32>(mix(color.rgb + shine + glow, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), in.fog.x), color.a);
 }
 `;
 };
@@ -577,7 +601,7 @@ fn vs(
     out.shadowCoord = shadowCoordOf(worldPos);
     out.uv = affineUv(uv, out.position);
     out.color = color;
-    out.fog = fogAt(worldPos);${secondUv ? `
+    out.fog = vec2<f32>(fogAt(worldPos), skyward(worldNormal));${secondUv ? `
     out.uv2 = affineUv(uv2, out.position).xy;` : ''}
     return out;
 }

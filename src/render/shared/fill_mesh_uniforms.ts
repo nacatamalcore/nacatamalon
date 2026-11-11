@@ -83,20 +83,27 @@ export const fillMeshUniforms = (out: Float32Array, at: number, mesh: TDrawMesh,
     // with w = 0 and only x, y and z of the answer are read. The first carries how much of its
     // occlusion is applied, zero for a model with none, and the second whether that occlusion is laid
     // out by the second picture coordinate, which a material reads; the built-in drawing has a
-    // pipeline of its own for it.
+    // pipeline of its own for it. That second one also carries, plus two, whether the material works
+    // its light out at every pixel (`perPixel`): both are yes-or-no, only a material reads either,
+    // and no number was left for a flag of its own. 0 neither, 1 the coordinate, 2 the light, 3 both.
     const occlusion = surface.occlusion;
+    // What it says, or what the view's style says for a material that does not.
+    const style = space.style;
+    const perPixel = surface.perPixel ?? style?.perPixel ?? false;
+    const affine = surface.affine ?? style?.affine ?? false;
+    const vertexSnap = surface.vertexSnap ?? style?.vertexSnap;
     // Kept from 0 to 1 here too, for one changed after the material was made; one that is not a
     // number is all of it, as a file's is, rather than a value the card does as it likes with.
     const strength = occlusion?.strength ?? 1;
     out[at + 35] = occlusion === null || occlusion === undefined ? 0 : Number.isFinite(strength) ? Math.min(Math.max(strength, 0), 1) : 1;
-    out[at + 39] = occlusion?.uv === 'uv2' ? 1 : 0;
+    out[at + 39] = (occlusion?.uv === 'uv2' ? 1 : 0) + (perPixel ? 2 : 0);
     // And the third whether it adds its colour, which the fog needs: one that adds fades into the fog
     // by adding less, since adding the fog's colour would brighten it.
     out[at + 43] = surface.blend === 'additive' ? 1 : 0;
     // Its fourth column is never read as a matrix (every shader turns a direction with it, w = 0),
     // so its last number carries whether the picture is stretched straight across the screen, the
     // PlayStation's swimming textures: one for `affine`, zero for held true to the surface.
-    out[at + 47] = surface.affine === true ? 1 : 0;
+    out[at + 47] = affine ? 1 : 0;
     // The other three of that column are free the same way, and two of them carry which of the
     // scene's lights reach this model: eight places in its block, four to a number.
     const [first, second] = pickMeshLights(lights, model, meshBoundsOf(mesh));
@@ -114,7 +121,7 @@ export const fillMeshUniforms = (out: Float32Array, at: number, mesh: TDrawMesh,
     // The two spare fourth numbers carry the grid a `vertexSnap` material puts its corners on, its
     // columns in one and its rows in the other; zero is no snapping. They ride here rather than in a
     // block of their own because they were free, and the layout stays the same.
-    const [columns, rows] = snapGridOf(surface.vertexSnap, space);
+    const [columns, rows] = snapGridOf(vertexSnap, space);
     const snap = rows > 0;
 
     // A glow picture that is not on the card yet, or never will be, reads as white there: the glow

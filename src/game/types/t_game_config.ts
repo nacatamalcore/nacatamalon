@@ -16,7 +16,12 @@ import type { TGameOptions } from './t_game_options';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TGameConfig = Required<Omit<TGameOptions, 'seed' | 'actionsPersist' | 'post' | 'background' | 'align'>> & Pick<TGameOptions, 'seed' | 'actionsPersist' | 'post' | 'align'> & {
+export type TGameConfig = Required<Omit<TGameOptions, 'seed' | 'actionsPersist' | 'post' | 'style' | 'background' | 'align' | 'smoothScaling'>> & Pick<TGameOptions, 'seed' | 'actionsPersist' | 'post' | 'style' | 'align'> & {
     /** Read as a colour once, whatever form it was given in. */
     background: TColor;
+    /**
+     * How the screen is scaled up to the page: `null` while nobody said, which follows `smooth` as it
+     * changes, so `setSmooth` turns both.
+     */
+    smoothScaling: boolean | null;
 };

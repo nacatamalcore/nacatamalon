@@ -22,7 +22,7 @@ import type { TComposerInput, TComposerNode } from './types/t_composer_node';
  * @author Francisco Pereira Alvarado
  */
 export const composerFresnel = (power: TComposerInput = 3): TComposerNode =>
-    composerPow(composerSub(1, composerClamp(composerDot(composerNormalize(composerWorldNormal()), composerViewDir()), 0, 1)), power);
+    composerPow(composerSub(1, composerClamp(composerDot(composerNormalize(composerWorldNormal()), composerNormalize(composerViewDir())), 0, 1)), power);
 
 /**
  * Cuts a gradient into `steps` flat bands, the cartoon look. Put the light through it for hard

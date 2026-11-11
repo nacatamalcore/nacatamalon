@@ -50,9 +50,13 @@ layout(std140) uniform Lights {
     // height it is complete at.
     vec4 fog;
     vec4 fogRange;
-    // xyz = the way back towards the viewer, w = 1 when the view is orthographic and that way is
-    // the same everywhere; 0 for a perspective one, whose way is from the point to its eye.
+    // xyz = the way back towards the viewer, along the camera's own axis; w = 1 when the view is
+    // orthographic and that way is the same everywhere, 0 for a perspective one, whose way to light
+    // a point by is from the point to its eye (xyz then only turns a reflection to the camera).
     vec4 look;
+    // rgb = the light from all around that comes up from below, for an ambient with a ground; w = 1
+    // when there is one (2 when the world's y goes down), 0 when the ambient is one colour.
+    vec4 ground;
 } lights;
 `;
 
@@ -85,6 +89,19 @@ vec3 viewDirOf(vec3 worldPos) {
         return lights.look.xyz;
     }
     return normalize(uniforms.cameraPosition.xyz - worldPos);
+}
+
+// The twins of skyward and ambientAt in webgpu/mesh/mesh_shader.ts, which say why.
+float skyward(vec3 normal) {
+    float up = normal.y * 0.5 + 0.5;
+    return lights.ground.w > 1.5 ? 1.0 - up : up;
+}
+
+vec3 ambientAt(float sky) {
+    if (mod(lights.ground.w, 2.0) < 0.5) {
+        return lights.ambient.rgb;
+    }
+    return mix(lights.ground.rgb, lights.ambient.rgb, sky);
 }
 `;
 
@@ -168,8 +185,8 @@ out vec3 vCasterLight;
 out vec3 vCasterShine;
 // The colour painted on the corner, smeared across the triangle like the light is.
 out vec4 vColor;
-// How much of the corner the fog has taken.
-out float vFog;
+// How much of the corner the fog has taken; and in y how much it faces the sky (see skyward).
+out vec2 vFog;
 ${cull === 'none' ? TWO_SIDED_VARYINGS_GLSL('out') : ''}`;
 
 export const MESH_VERTEX_VARYINGS_GLSL = meshVertexVaryingsGlsl('back');
@@ -187,7 +204,8 @@ ${direction} vec4 vBack2;
 `;
 
 /**
- * Every light on a surface in one call, for the side facing away of a model drawn on both sides. The
+ * Every light on a surface in one call: for the side facing away of a model drawn on both sides, and
+ * for a material's fragment that works its light out at every pixel (perPixel). The corner of the
  * side facing the camera keeps its loop written out where it is, as it always was.
  *
  * @internal
@@ -295,16 +313,15 @@ vec4 shadowCoordOf(vec3 worldPos) {
 `;
 
 /**
- * Where a light is from a point, and how much of it survives getting there.
- *
- * Its own value so a material's vertex says the very same thing without repeating it.
+ * Which lights reach this model, and how much of each survives getting to a point: the half of
+ * `MESH_SAMPLE_LIGHT_GLSL` without where a point falls in the shadow map, for a material's fragment,
+ * which already has that from its own head and lights a pixel with it when the material asks.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const MESH_SAMPLE_LIGHT_GLSL = /* glsl */ `
-${SHADOW_COORD_GLSL}
+export const MESH_LIGHT_GLSL = /* glsl */ `
 // The k-th of the lights this model is lit by, as its place in the scene's block plus one, 0 once
 // the list has ended. Two spare numbers of its block carry the list, four lights of six bits each.
 int meshLight(int k) {
@@ -355,6 +372,18 @@ void sampleLight(int index, vec3 worldPos, vec3 normal, vec3 viewDir, out vec3 d
 }
 
 `;
+
+/**
+ * Where a light is from a point, and how much of it survives getting there, with where a point falls
+ * in the shadow map.
+ *
+ * Its own value so a material's vertex says the very same thing without repeating it.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const MESH_SAMPLE_LIGHT_GLSL = SHADOW_COORD_GLSL + MESH_LIGHT_GLSL;
 
 /**
  * What a corner reads of the instance it belongs to, for a model drawn as many, and its placement put
@@ -447,7 +476,7 @@ export const meshVertexLightGlsl = (cull: TCullMode, secondUv = false, color = '
     vShadowCoord = shadowCoordOf(worldPos);
     vUv = affineUv(aUv, gl_Position);
     vColor = ${color};
-    vFog = fogAt(worldPos);${secondUv ? `
+    vFog = vec2(fogAt(worldPos), skyward(worldNormal));${secondUv ? `
     vUv2 = affineUv(aUv2, gl_Position).xy;` : ''}
 }
 `;
@@ -497,7 +526,7 @@ ${SHADOW_COORD_GLSL}
 
 // Whether the light can see this point: 1 lit, 0 hidden, and in between along a rim.
 //
-// This is the one thing in this engine worked out per pixel rather than per corner, and it is
+// This is the one thing the built-in drawing works out per pixel rather than per corner, and it is
 // deliberate: a shadow's edge is a hard line across a surface, and smeared between corners it would
 // land on triangle boundaries instead of where the wall is.
 float shadowFactor(vec4 coord) {
@@ -561,7 +590,7 @@ in vec4 vShadowCoord;
 in vec3 vCasterLight;
 in vec3 vCasterShine;
 in vec4 vColor;
-in float vFog;
+in vec2 vFog;
 ${cull === 'none' ? TWO_SIDED_VARYINGS_GLSL('in') : ''}${secondUv ? 'in vec2 vUv2;\n' : ''}out vec4 fragColor;
 
 void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
@@ -571,7 +600,7 @@ void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     vec3 glow = uniforms.emissive.rgb * texture(meshEmissive, uv).rgb;
     // Only the casting light's share is taken away, so a thing in the sun's shadow is still lit by
     // the lamp beside it. A crease lowers the floor and nothing else.
-    vec3 lit = max(litWithShadow(${light}, ${casterLight}, vShadowCoord), lights.ambient.rgb * occlusionAt(${secondUv ? 'vUv2 / vUv.z' : 'uv'}));
+    vec3 lit = max(litWithShadow(${light}, ${casterLight}, vShadowCoord), ambientAt(${cull === 'none' ? '(gl_FrontFacing ? vFog.y : 1.0 - vFog.y)' : 'vFog.y'}) * occlusionAt(${secondUv ? 'vUv2 / vUv.z' : 'uv'}));
     // The colour painted on the corners multiplies in with the picture. Unpainted corners are white.
     vec4 color = texColor * uniforms.tint * vColor * vec4(lit, 1.0);
     // Cut out rather than blended: below the material's cutoff the pixel is not there at all, and
@@ -583,7 +612,7 @@ void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     // The fog last, over everything, glow included.
     // One that adds its colour (normalMatrix[2].w) fades into the fog towards black, adding less:
     // adding the fog's colour would brighten it.
-    fragColor = vec4(mix(color.rgb + shine + glow, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), vFog), color.a);
+    fragColor = vec4(mix(color.rgb + shine + glow, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), vFog.x), color.a);
 }
 `;
 };

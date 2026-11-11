@@ -1,3 +1,4 @@
+import { RENDER_STYLES } from './style/styles';
 import { DEFAULT_ACTION_PRESS, DEFAULT_DEADZONE, MAX_LIGHTS, MAX_PALETTE_COLORS, MAX_SCENE_LIGHTS, PHYSICS_LAYERS } from './DEFAULTS';
 import { GAMEPAD_AXES, GAMEPAD_AXIS_LABELS, GAMEPAD_BUTTONS, GAMEPAD_BUTTON_LABELS } from './input/gamepad/gamepad_standard';
 import { POINTER_BUTTONS } from './input/pointer_buttons';
@@ -61,7 +62,13 @@ const frozen = <T>(value: T): T => {
  * How the engine draws: the renderers `createGame` can be asked for, which pixels it draws on, and
  * how many numbers one corner of a line takes.
  *
- * `TYPE.WEBGL2` is the same as writing `'WEBGL2'` in `createGame({ renderer })`. `PIXEL_SNAP.SCREEN`,
+ * `TYPE.WEBGL2` is the same as writing `'WEBGL2'` in `createGame({ renderer })`. `STYLES` are the
+ * engine's ways of drawing a whole game or scene, for `createGame({ style })` and `useRenderStyle`,
+ * each with its screen (resolution, pixel shape, smoothing) and its colours: `nes` and `gameBoy`
+ * (their fixed palettes), `snes`, `genesis` and `gba` (their colours dithered), `ps1` (swimming
+ * pictures, shivering corners), `saturn` (swimming pictures), `n64` (smooth pictures and its blur),
+ * `dreamcast` (smooth at 640 x 480) and `cgi` (every material lit at every pixel, a soft bloom, at
+ * 640 x 480). `PIXEL_SNAP.SCREEN`,
  * `GAME` and `OFF` are what `createGame({ pixelSnap })` and `useGame().setPixelSnap` take.
  * `LINE_VERTEX_FLOATS` is seven, where a corner is (`x`, `y`, `z`) and its colour (`r`, `g`, `b`,
  * `a`), for a game that writes the corners of its lines itself.
@@ -85,6 +92,7 @@ export const RENDER = /* @__PURE__ */ frozen({
         OFF: 'off',
     } as const satisfies Record<string, TPixelSnap>,
     LINE_VERTEX_FLOATS,
+    STYLES: RENDER_STYLES,
 });
 
 /**

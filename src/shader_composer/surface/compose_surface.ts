@@ -1,6 +1,6 @@
-import { composerSwizzle, composerVec3, composerVec4 } from '../constructors';
+import { composerSwizzle, composerVec2, composerVec3, composerVec4 } from '../constructors';
 import { composerFresnel } from '../effects';
-import { composerEmissive, composerLight, composerScreenPos, composerShine, composerSurface, composerUniform } from '../inputs';
+import { composerCubeUv, composerEmissive, composerEnvUv, composerLight, composerMapSample, composerResolution, composerScreenPos, composerShine, composerSurface, composerUniform } from '../inputs';
 import {
     composerAdd, composerClamp, composerDiv, composerDot, composerFloor, composerFract, composerLength, composerMax,
     composerMix, composerMul, composerOneMinus, composerSmoothstep, composerStep, composerSub,
@@ -79,6 +79,70 @@ const stepWith = (look: TStepLook, s: TSurfaceState, name: TNamer): TSurfaceStat
             return { ...s, color: composerMix(before, composerUniform(name('color'), look.color), edge) };
         }
     }
+};
+
+/**
+ * The map a material's reflection is read from, and the uniforms its two numbers are: what
+ * `reflection` on a material becomes, kept in one place so the material, the shader and the document
+ * name them the same.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const REFLECTION_MAP = 'reflection';
+export const REFLECTION_FRONT = 'reflectionFront';
+export const REFLECTION_EDGE = 'reflectionEdge';
+export const REFLECTION_METAL = 'reflectionMetal';
+export const REFLECTION_BLUR = 'reflectionBlur';
+
+/**
+ * How a reflection reads its picture: `'round'` at the place the surroundings land on a round
+ * picture of them (`envUv`), `'cube'` on the six faces of a cube of them (`cubeUv`, `useEnvironment`),
+ * `'screen'` at the pixel's own place on the screen, turned left to right, for a picture of the world
+ * seen in a mirror (`useMirror`).
+ */
+export type TReflectionRead = 'round' | 'cube' | 'screen';
+
+/**
+ * A mirror's picture at this pixel: where it is on the screen, turned left to right as the mirror's
+ * camera drew it, and softened by `reflectionBlur` pixels, four reads around it with the middle.
+ */
+const mirrorSample = (blur: number): TComposerNode => {
+    const resolution = composerResolution();
+    const at = composerDiv(composerScreenPos(), resolution);
+    const uv = composerVec2(composerOneMinus(composerSwizzle(at, 'x')), composerSwizzle(at, 'y'));
+    const step = composerDiv(composerVec2(composerUniform(REFLECTION_BLUR, blur), composerUniform(REFLECTION_BLUR, blur)), resolution);
+    const read = (dx: number, dy: number): TComposerNode =>
+        composerSwizzle(composerMapSample(REFLECTION_MAP, composerAdd(uv, composerMul(step, composerVec2(dx, dy))), { scale: 0 }), 'rgb');
+    const around = composerAdd(composerAdd(read(-1, -1), read(1, -1)), composerAdd(read(-1, 1), read(1, 1)));
+    return composerMul(composerAdd(composerMul(read(0, 0), 2), around), 1 / 6);
+};
+
+/**
+ * The surroundings laid over the lit surface, by how much the angle says: `front` where it faces the
+ * camera, `edge` where it turns away, and in between the way light does, rising fast near the edge
+ * (Schlick's curve, a power of five). Over the diffuse light and under the shine and the glow, which
+ * a mirror still shows: chrome is mostly what it reflects, and the spot of the lamp is still on it.
+ * After a lighting look, so a toon model reflects too; before the steps, which work on the result.
+ *
+ * Read at the place the surroundings land (`envUv`), from the picture itself rather than a mipmap:
+ * that place does not follow the surface, so how fast it runs across the screen says nothing.
+ *
+ * `metal` tints what is reflected with the surface's own colour, as a metal does: gold reflects a
+ * white sky gold, where a plastic or a glass reflects it white. `0`, the default, is the plain mirror.
+ */
+const reflectionAmount = (front: number, edge: number): TComposerNode =>
+    composerMix(composerUniform(REFLECTION_FRONT, front), composerUniform(REFLECTION_EDGE, edge), composerFresnel(5));
+
+const reflectWith = (s: TSurfaceState, front: number, edge: number, metal: number, read: TReflectionRead, blur: number): TSurfaceState => {
+    const amount = reflectionAmount(front, edge);
+    const plain = read === 'screen'
+        ? mirrorSample(blur)
+        : composerSwizzle(composerMapSample(REFLECTION_MAP, read === 'cube' ? composerCubeUv() : composerEnvUv(), { scale: 0 }), 'rgb');
+    const seen = composerMix(plain, composerMul(plain, s.base), composerUniform(REFLECTION_METAL, metal));
+    const diffuse = composerMix(composerMul(s.base, s.light), seen, amount);
+    return { ...s, color: composerAdd(composerAdd(diffuse, s.shine), s.emissive) };
 };
 
 /**
@@ -165,14 +229,19 @@ export const checkLooks = (lighting: TLook | null | undefined, steps: readonly T
  *
  * The surface starts as the engine has it (the picture times the tint and the painted corners, the
  * light that reaches it, the shine and what it gives off); the lighting look, if there is one,
- * replaces how it is lit; then each step works on the colour so far, in order. With neither, it is
+ * replaces how it is lit; the reflection, if there is one, lays the surroundings over it; then each
+ * step works on the colour so far, in order. With neither, it is
  * the engine's own ending, word for word.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const composeSurface = (lighting: TLook | null | undefined, steps: readonly TLook[] | undefined): TComposerNode => {
+export const composeSurface = (
+    lighting: TLook | null | undefined,
+    steps: readonly TLook[] | undefined,
+    reflection: { front: number; edge: number; metal?: number; cut?: boolean; read?: TReflectionRead; blur?: number } | null = null,
+): TComposerNode => {
     checkLooks(lighting, steps);
     const surface = composerSurface();
     let state: TSurfaceState = {
@@ -186,11 +255,21 @@ export const composeSurface = (lighting: TLook | null | undefined, steps: readon
     if (lighting !== null && lighting !== undefined) {
         state = lightWith(lighting as TLightingLook, state, namer(lighting.look));
     }
+    if (reflection !== null) {
+        state = reflectWith(state, reflection.front, reflection.edge, reflection.metal ?? 0, reflection.read ?? 'round', reflection.blur ?? 0);
+    }
     const seen = new Map<string, number>();
     for (const step of steps ?? []) {
         const count = (seen.get(step.look) ?? 0) + 1;
         seen.set(step.look, count);
         state = stepWith(step as TStepLook, state, namer(count === 1 ? step.look : `${step.look}${count}`));
     }
-    return composerVec4(state.color ?? litColor(state), composerSwizzle(surface, 'a'));
+    // What is reflected is light coming off the surface, so a see-through one is less so where it
+    // reflects: a glass shows its edges. A solid one stays solid. Not one that is cut out by its
+    // alpha (`cut`): its holes are holes, and the reflection would fill them along its outline.
+    const alpha = composerSwizzle(surface, 'a');
+    return composerVec4(
+        state.color ?? litColor(state),
+        reflection === null || reflection.cut === true ? alpha : composerMix(alpha, 1, reflectionAmount(reflection.front, reflection.edge)),
+    );
 };

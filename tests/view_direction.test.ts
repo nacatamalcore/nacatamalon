@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { fillLightUniforms, LIGHT_UNIFORM_FLOATS } from '../src/render/shared';
-import { VIEW_FLOATS } from '../src/render/shared/fill_light_uniforms';
+import { VIEW_FLOATS, GROUND_FLOATS } from '../src/render/shared/fill_light_uniforms';
 import { MESH_SHADER, MESH_SHADER_TYPES } from '../src/render/webgpu/mesh/mesh_shader';
 import { SKINNED_SHADER } from '../src/render/webgpu/mesh/skinned_shader';
 import { buildMeshMaterialShader } from '../src/render/webgpu/material/mesh_material_shader';
@@ -16,7 +16,7 @@ import type { TDrawCamera3d } from '../src/render/interface/draw/t_draw_camera_3
  * parallel, so the way is the same for every point: the block carries it, and the shaders take it.
  */
 
-const LOOK_AT = LIGHT_UNIFORM_FLOATS - VIEW_FLOATS;
+const LOOK_AT = LIGHT_UNIFORM_FLOATS - GROUND_FLOATS - VIEW_FLOATS;
 const ambient = { r: 0, g: 0, b: 0, a: 1 };
 
 const camera = (fields: Partial<TDrawCamera3d> = {}): TDrawCamera3d => ({
@@ -47,15 +47,21 @@ describe('the way the view looks, in the lights block', () => {
         expect(ortho).toBe(1);
     });
 
-    it('is left at zero for a perspective camera, whose way is from each point to its eye', () => {
-        expect(lookOf(camera({ projection: 'perspective' }))).toEqual([0, 0, 0, 0]);
+    it('says perspective with a zero, whose way is from each point to its eye, and still carries the way back for a reflection', () => {
+        expect(lookOf(camera({ projection: 'perspective' }))).toEqual([0, 0, 1, 0]);
+
+        const still = camera().transform;
+        const [x, y, z, ortho] = lookOf(camera({ projection: 'perspective', transform: { ...still, rotationY: Math.PI / 2 } }));
+        expect(Math.hypot(x, y, z)).toBeCloseTo(1, 3);
+        expect(Math.abs(z)).toBeLessThan(0.001);
+        expect(ortho).toBe(0);
     });
 });
 
 describe('the shaders take it', () => {
-    it('declares it in both backends, at the end of the block one packer fills', () => {
-        expect(MESH_SHADER_TYPES).toMatch(/fogRange: vec4<f32>,\s*(\/\/.*\s*)*look: vec4<f32>,\s*};/);
-        expect(MESH_UNIFORMS_GLSL).toMatch(/vec4 fogRange;\s*(\/\/.*\s*)*vec4 look;\s*} lights;/);
+    it('declares it in both backends, after the fog and before the ground, where one packer fills it', () => {
+        expect(MESH_SHADER_TYPES).toMatch(/fogRange: vec4<f32>,\s*(\/\/.*\s*)*look: vec4<f32>,\s*(\/\/.*\s*)*ground: vec4<f32>,\s*};/);
+        expect(MESH_UNIFORMS_GLSL).toMatch(/vec4 fogRange;\s*(\/\/.*\s*)*vec4 look;\s*(\/\/.*\s*)*vec4 ground;\s*} lights;/);
     });
 
     it('reads the way through viewDirOf everywhere a surface is lit, and nowhere from the place alone', () => {

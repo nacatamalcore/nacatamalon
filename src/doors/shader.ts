@@ -11,7 +11,7 @@ export {
     compileShader, composerFloat, composerVec2, composerVec3, composerVec4, composerSwizzle, composerX,
     composerY, composerZ, composerW, composerUv, composerTime, composerResolution, composerSurface,
     composerWorldNormal, composerWorldPos, composerViewDir, composerCameraPos, composerLight, composerEmissive,
-    composerShine, composerEnvUv, composerVertexPosition, composerVertexNormal, composerVertexColor,
+    composerShine, composerEnvUv, composerCubeUv, composerVertexPosition, composerVertexNormal, composerVertexColor,
     composerScreenPos, composerUv2, composerWorldTangent, composerWorldBitangent, composerVertexTangent,
     composerVertexBitangent, composerInstanceData, composerInstanceOrigin, composerFrontFacing, composerCarry, composerOcclusion, composerLocalUv,
     composerLayerUv, composerTextureSample, composerMapSample, composerUniform, composerAdd, composerSub,

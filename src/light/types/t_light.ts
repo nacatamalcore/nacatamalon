@@ -122,7 +122,22 @@ export type TRectLight = TLightBase & { readonly type: 'rect'; range: number; wi
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TAmbientLight = { readonly type: 'ambient'; id: string; color: TColor; intensity: number };
+export type TAmbientLight = {
+    readonly type: 'ambient';
+    id: string;
+    /**
+     * Its colour, which is the colour that comes down from above when it has a `ground`.
+     */
+    color: TColor;
+    intensity: number;
+    /**
+     * The colour that comes up from below, for a light from all around in two colours: a bright sky
+     * above and a warm floor below, as in a photographer's studio. A surface facing up takes `color`,
+     * one facing down takes this, and one facing sideways half of each, at the same `intensity`.
+     * `null` or left out, it is one colour everywhere. It can change while the game runs.
+     */
+    ground?: TColor | null;
+};
 
 /**
  * Any light. A box holds one, and a scene holds as many as it has boxes with one.

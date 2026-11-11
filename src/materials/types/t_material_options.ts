@@ -3,7 +3,7 @@ import type { TColorOption } from '../../color';
 import type { TTexture } from '../../loaders';
 import type { TShader } from '../../loaders/shader/types/t_shader';
 import type { TUniformValues } from './t_uniforms';
-import type { TCullMode, TMaterialMap, TMaterialOcclusion, TTextureWrap } from './t_material';
+import type { TCullMode, TMaterialMap, TMaterialNormalMap, TMaterialOcclusion, TMaterialReflection, TTextureWrap } from './t_material';
 
 /**
  * The shader half of what a material can be asked for, which both kinds share.
@@ -218,14 +218,64 @@ export type TMeshMaterialOptions = TMaterialShaderOptions & {
      * Its corners land on a coarse grid of the screen, the way the PlayStation drew them: a model
      * shivers as it moves and its edges crawl as the camera turns. A number is how many rows the grid
      * has (`120` is the classic look, smaller is wilder); `true` uses the game's own rows, which is
-     * subtle. Default `false`.
+     * subtle. Left out, the scene's render style decides (`useRenderStyle`), and with none it is off;
+     * `false`, or `0`, says no to that style.
      */
     vertexSnap?: boolean | number;
     /**
      * Its picture is stretched straight across the screen without correcting for depth, the way the
-     * PlayStation drew it: big flat surfaces bend and swim as the camera comes close. Default `false`.
+     * PlayStation drew it: big flat surfaces bend and swim as the camera comes close. Left out, the
+     * scene's render style decides (`useRenderStyle`), and with none it is off; `false` says no to it.
      */
     affine?: boolean;
+    /**
+     * Its light is worked out at every pixel rather than at its corners. The engine's own light is
+     * worked out at the corners and smeared across each triangle, the way the consoles of the era
+     * did it; a shine that falls between corners is lost, or comes out shaped like the triangles.
+     * Worked out at every pixel, a shine is a round, clean spot that slides across the surface
+     * however few triangles the model has: the look of the computer graphics of the time, glossy
+     * plastic and chrome. It costs more per pixel, and a shader of your own receives that light in
+     * `ctx.light` and `ctx.shine` without changing. It can be changed while the game runs. Left out,
+     * the scene's render style decides (`useRenderStyle`), and with none it is off; `false` says no
+     * to that style.
+     */
+    perPixel?: boolean;
+    /**
+     * What its surface reflects: a round picture of its surroundings, and how much it reflects in
+     * front and at the edge (see {@link TMaterialReflection}). The picture alone is a glossy plastic
+     * (`front: 0.04`, `edge: 1`); `front: 0.9` is chrome. It goes over the light, under the shine and
+     * the glow, and with `lighting` and `steps` too. It makes part of the colour, so it is not given
+     * with `fragment` or `effect`: a shader of your own reads a map at `envUv(ctx)` instead. The
+     * picture takes the map `reflection`, one of the four, and the two numbers are the uniforms
+     * `reflectionFront` and `reflectionEdge`. Default none.
+     *
+     * @example
+     * ```ts
+     * declare const studio: TTexture;
+     *
+     * createMaterial({ shader: 'mesh3d', tint: '#d8322a', specular: '#ffffff', shininess: 60, reflection: studio });
+     * createMaterial({ shader: 'mesh3d', tint: '#c0c4cc', reflection: { texture: studio, front: 0.9 } });
+     * ```
+     */
+    reflection?: TTexture | TMaterialReflection;
+    /**
+     * A normal map that bends its surface at every pixel, so a flat wall catches the light as carved
+     * stone or brick would: the picture alone, or `{ texture, strength }` (`0` flat, `1` as the map
+     * says, the default). It needs the model's tangents, which every built-in shape and model file has.
+     * The material is lit at every pixel unless it says `perPixel: false`. The picture takes the map
+     * `normalMap`, one of the four, and the strength is the uniform `normalStrength`. Not with an
+     * `effect` from a file. Default none.
+     *
+     * @example
+     * ```ts
+     * import { normalsFromHeight, createPixelTexture } from 'nacatamalon/pixels';
+     * import type { TPixels } from 'nacatamalon/pixels';
+     * declare const stone: TPixels;
+     *
+     * createMaterial({ shader: 'mesh3d', texture: createPixelTexture(stone), normalMap: createPixelTexture(normalsFromHeight(stone, { depth: 4 })) });
+     * ```
+     */
+    normalMap?: TTexture | TMaterialNormalMap;
     /**
      * Which side of its triangles is thrown away. `'back'` (the default) is a shape seen from
      * outside; `'front'` one seen from inside, such as a dome of sky; `'none'` draws both sides, each

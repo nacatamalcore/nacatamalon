@@ -1,5 +1,6 @@
 import type { TColorOption } from '../../color';
-import type { TCullMode, TTextureWrap } from '../../materials';
+import type { TCullMode, TMaterialNormalMap, TMaterialReflection, TTextureWrap } from '../../materials';
+import type { TTexture } from '../../loaders';
 import type { TTransform3d } from './t_transform_3d';
 
 /**
@@ -49,14 +50,34 @@ export type TMeshSurfaceOptions = {
      * Its corners land on a coarse grid of the screen, the way the PlayStation drew them: a model
      * shivers as it moves and its edges crawl as the camera turns. A number is how many rows the grid
      * has (`120` is the classic look, smaller is wilder); `true` uses the game's own rows, which is
-     * subtle. Default `false`.
+     * subtle. Left out, the scene's render style decides (`useRenderStyle`), and with none it is off;
+     * `false`, or `0`, says no to that style.
      */
     vertexSnap?: boolean | number;
     /**
      * Its picture is stretched straight across the screen without correcting for depth, the way the
-     * PlayStation drew it: big flat surfaces bend and swim as the camera comes close. Default `false`.
+     * PlayStation drew it: big flat surfaces bend and swim as the camera comes close. Left out, the
+     * scene's render style decides (`useRenderStyle`), and with none it is off; `false` says no to it.
      */
     affine?: boolean;
+    /**
+     * Its light is worked out at every pixel rather than at its corners: a shine is a round, clean
+     * spot that slides across the surface however few triangles the model has, the look of the
+     * computer graphics of the era (glossy plastic, chrome). It costs more per pixel. Left out, the
+     * scene's render style decides (`useRenderStyle`), and with none it is off; `false` says no to it.
+     */
+    perPixel?: boolean;
+    /**
+     * What its surface reflects: a round picture of its surroundings, and how much in front and at
+     * the edge (see `TMaterialReflection`). The picture alone is a glossy plastic; `front: 0.9` is
+     * chrome. Default none.
+     */
+    reflection?: TTexture | TMaterialReflection;
+    /**
+     * A normal map that bends its surface at every pixel: the picture, or `{ texture, strength }`. See
+     * the material's `normalMap`.
+     */
+    normalMap?: TTexture | TMaterialNormalMap;
     /**
      * Which side of its triangles is thrown away. `'back'` (the default) is a shape seen from
      * outside; `'front'` one seen from inside, such as a dome of sky; `'none'` draws both sides, each

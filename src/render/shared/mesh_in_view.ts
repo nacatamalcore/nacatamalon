@@ -145,7 +145,7 @@ export const meshInView = (mesh: TDrawMesh, viewProjection: Mat4, space: TCamera
 
     // How far past each side edge a corner can be and still be pulled onto the screen: half a cell
     // of its grid, which is a cell's whole width in the -1 to 1 the screen spans.
-    const [columns, rows] = space !== null ? snapGridOf(material.vertexSnap, space) : [0, 0];
+    const [columns, rows] = space !== null ? snapGridOf(material.vertexSnap ?? space.style?.vertexSnap, space) : [0, 0];
     const sx = rows > 0 ? 1 + 1 / columns : 1;
     const sy = rows > 0 ? 1 + 1 / rows : 1;
 

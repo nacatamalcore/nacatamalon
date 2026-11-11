@@ -107,7 +107,9 @@ export const FOG_FLOATS = 8;
 
 /**
  * The way the view looks, for the shine and the fresnel: the way back towards the viewer, then `1`
- * for a view that is orthographic, where that way is the same for every point.
+ * for a view that is orthographic, where that way is the same for every point. A perspective view
+ * has its way back too, with a `0`: the shine does not read it, and a reflection turns by it to land
+ * on its round picture the same whichever way the camera looks.
  *
  * From the camera's place to the point is right for a perspective camera, whose rays all leave one
  * eye. An orthographic one has no such eye, its rays are parallel, and measuring from its place
@@ -118,7 +120,17 @@ export const FOG_FLOATS = 8;
  */
 export const VIEW_FLOATS = 4;
 
-export const LIGHT_UNIFORM_FLOATS = 4 + MAX_SCENE_LIGHTS * LIGHT_FLOATS_PER_ITEM + SHADOW_FLOATS + FOG_FLOATS + VIEW_FLOATS;
+/**
+ * The colour of the light from all around that comes up from below, for a scene whose ambient has a
+ * `ground`: its colour times the ambient's strength, then `1` when there is one (`2` when the world's
+ * `y` goes down, seen through the 2D camera, so up is still up) and `0` when there is none, which
+ * leaves the ambient one colour, as always.
+ *
+ * @internal
+ */
+export const GROUND_FLOATS = 4;
+
+export const LIGHT_UNIFORM_FLOATS = 4 + MAX_SCENE_LIGHTS * LIGHT_FLOATS_PER_ITEM + SHADOW_FLOATS + FOG_FLOATS + VIEW_FLOATS + GROUND_FLOATS;
 
 /**
  * Where the shadow's share starts, just past the lights.
@@ -134,6 +146,11 @@ const FOG_AT = SHADOW_AT + SHADOW_FLOATS;
  * Where the way the view looks starts, just past the fog's.
  */
 const VIEW_AT = FOG_AT + FOG_FLOATS;
+
+/**
+ * Where the ground's colour starts, at the very end.
+ */
+const GROUND_AT = VIEW_AT + VIEW_FLOATS;
 
 /**
  * What `castShadow` on a light is worth when it does not say how far off the surface to test.
@@ -198,6 +215,19 @@ const rectHalfSides = (
 };
 
 /**
+ * Which way a camera seeing the world in a mirror looks in the reflected world: its look turned
+ * across the mirror's plane, as everything it sees is (see `TCamera3d.mirror`).
+ */
+const mirroredBy = (camera: TDrawCamera3d, forward: { x: number; y: number; z: number }): { x: number; y: number; z: number } => {
+    const mirror = camera.mirror ?? null;
+    if (mirror === null || (camera.flat ?? null) !== null) {
+        return forward;
+    }
+    const along = 2 * (forward.x * mirror.x + forward.y * mirror.y + forward.z * mirror.z);
+    return { x: forward.x - along * mirror.x, y: forward.y - along * mirror.y, z: forward.z - along * mirror.z };
+};
+
+/**
  * Writes a frame's lights into the block every model reads: all of the scene's, up to
  * `MAX_SCENE_LIGHTS`, from which each model reads the eight it was given (`fillMeshUniforms`).
  *
@@ -222,6 +252,7 @@ export const fillLightUniforms = (
     shadow: TShadowUniforms | null = null,
     fog: TDrawFog | null = null,
     camera: TDrawCamera3d | null = null,
+    ground: TColor | null = null,
 ): number => {
     out.fill(0);
     out[0] = ambient.r;
@@ -314,18 +345,38 @@ export const fillLightUniforms = (
         out[FOG_AT + 7] = fog.height.bottom === fog.height.top ? fog.height.top - 0.0001 : fog.height.bottom;
     }
 
-    // Zero, which `fill(0)` already left, is a perspective view. No camera at all is drawn
-    // orthographic, looking down -Z like a camera that never turned.
+    // A perspective view says so with a zero in the fourth number, which `fill(0)` already left, and
+    // the way back towards it in the other three: the shine reads them only when the fourth is one,
+    // and where a reflection lands on its round picture (envUv) turns by them always. No camera at
+    // all is drawn orthographic, looking down -Z like a camera that never turned.
+    if (camera !== null && camera.projection === 'perspective') {
+        const forward = mirroredBy(camera, transformForward(camera.transform));
+        const length = Math.hypot(forward.x, forward.y, forward.z) || 1;
+        out[VIEW_AT] = -forward.x / length;
+        out[VIEW_AT + 1] = -forward.y / length;
+        out[VIEW_AT + 2] = -forward.z / length;
+    }
     if (camera === null || camera.projection !== 'perspective') {
         const forward = camera === null || (camera.flat ?? null) !== null
             ? { x: 0, y: 0, z: -1 }
-            : transformForward({ ...camera.transform, quaternion: null });
+            : mirroredBy(camera, transformForward({ ...camera.transform, quaternion: null }));
         const length = Math.hypot(forward.x, forward.y, forward.z) || 1;
         out[VIEW_AT] = -forward.x / length;
         out[VIEW_AT + 1] = -forward.y / length;
         out[VIEW_AT + 2] = -forward.z / length;
         out[VIEW_AT + 3] = 1;
     }
+
+    // The light from below, when the ambient has one; zero, which `fill(0)` left, is none. Its fourth
+    // number says two things that add up: one when there is a ground, and two when the models are seen
+    // through the 2D camera, whose y runs down, so what faces the sky and what a reflection shows
+    // above are the other way up.
+    if (ground !== null) {
+        out[GROUND_AT] = ground.r;
+        out[GROUND_AT + 1] = ground.g;
+        out[GROUND_AT + 2] = ground.b;
+    }
+    out[GROUND_AT + 3] = (ground !== null ? 1 : 0) + ((camera?.flat ?? null) !== null ? 2 : 0);
 
     return lights.length;
 };

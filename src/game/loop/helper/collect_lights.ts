@@ -10,7 +10,7 @@ import type { TTransform3d } from '../../../gameobjects/types/t_transform_3d';
 /**
  * What a scene's lighting comes out as: the ones that shine, and the level under them.
  */
-export type TSceneLighting = { lights: TPunctualLight[]; ambient: TColor };
+export type TSceneLighting = { lights: TPunctualLight[]; ambient: TColor; ground: TColor | null };
 
 /**
  * A sun when a scene said nothing at all, so a model is never a silhouette by accident.
@@ -118,12 +118,27 @@ export const holdsLights = (box: TBox): boolean => {
 /**
  * The level of the dark side that the last of these ambient lights asks for, or `null` with none.
  */
-const levelOf = (found: readonly TLight[]): TColor | null => {
+const lastAmbientOf = (found: readonly TLight[]): Extract<TLight, { type: 'ambient' }> | null => {
     let last: Extract<TLight, { type: 'ambient' }> | null = null;
     for (const light of found) {
         if (light.type === 'ambient') last = light;
     }
+    return last;
+};
+
+const levelOf = (found: readonly TLight[]): TColor | null => {
+    const last = lastAmbientOf(found);
     return last === null ? null : { r: last.color.r * last.intensity, g: last.color.g * last.intensity, b: last.color.b * last.intensity, a: 1 };
+};
+
+/**
+ * The level from below that the same light asks for, at its strength, or `null` when it is one
+ * colour (or there is none).
+ */
+const groundOf = (found: readonly TLight[]): TColor | null => {
+    const last = lastAmbientOf(found);
+    const ground = last?.ground ?? null;
+    return last === null || ground === null ? null : { r: ground.r * last.intensity, g: ground.g * last.intensity, b: ground.b * last.intensity, a: 1 };
 };
 
 /**
@@ -134,10 +149,11 @@ const levelOf = (found: readonly TLight[]): TColor | null => {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const ownAmbientOf = (view: TBox): TColor | null => {
+export const ownAmbientOf = (view: TBox): { ambient: TColor; ground: TColor | null } | null => {
     const found: TLight[] = [];
     gatherLights(view, found, null);
-    return levelOf(found);
+    const ambient = levelOf(found);
+    return ambient === null ? null : { ambient, ground: groundOf(found) };
 };
 
 /**
@@ -161,6 +177,7 @@ export const viewLighting = (view: TBox, world: TBox): TSceneLighting => {
     return {
         lights: borrowed.lights.map((light) => (light.castShadow === true ? { ...light, castShadow: false } : light)),
         ambient: levelOf(found) ?? borrowed.ambient,
+        ground: levelOf(found) !== null ? groundOf(found) : borrowed.ground,
     };
 };
 
@@ -211,7 +228,7 @@ export const collectLighting = (scene: TBox): TSceneLighting => {
         if (declared.length > 1 && firstTimeIn(game, 'lights: a second ambient')) {
             console.warn(`[NacatamalOn] lights: a scene has ${declared.length} ambient ones and one sets how dark its shade is: the last one made.`);
         }
-        return { lights: lights.length > 0 ? lights : [], ambient: levelOf(declared)! };
+        return { lights: lights.length > 0 ? lights : [], ambient: levelOf(declared)!, ground: groundOf(declared) };
     }
 
     const source = lights.length > 0 ? lights : [DEFAULT_LIGHT];
@@ -225,5 +242,5 @@ export const collectLighting = (scene: TBox): TSceneLighting => {
         { r: 0, g: 0, b: 0, a: 1 },
     );
 
-    return { lights: source, ambient };
+    return { lights: source, ambient, ground: null };
 };

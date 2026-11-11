@@ -71,7 +71,25 @@ export type TCamera3d = {
      * ```
      */
     cullingCamera?: TCamera3d | null;
+    /**
+     * Sees the world in a mirror: everything reflected across this plane, as a mirror lying on it
+     * shows it, and nothing behind the plane. The plane is the points where `x * px + y * py + z * pz
+     * + d = 0`, its normal (`x`, `y`, `z`, length one) towards the side the mirror is seen from. Its
+     * picture comes out turned left to right, which is how a mirror's material reads it back.
+     * `useMirror` sets it on the camera of the picture it makes, every frame; `null` or absent, none.
+     */
+    mirror?: TMirrorPlane | null;
 };
+
+/**
+ * A plane a camera sees the world reflected in (`TCamera3d.mirror`): its normal, towards the side it
+ * is seen from, and how far along it the plane is from the origin, `x * px + y * py + z * pz + d = 0`.
+ *
+ * @category Camera
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TMirrorPlane = { x: number; y: number; z: number; d: number };
 
 /**
  * What a 3D camera can start with. Everything is optional.

@@ -118,8 +118,8 @@ export const composerCameraPos = (): TComposerNode => newNode('input', 'vec3<f32
  *
  * It is handed over **on its own** so a graph can light things its own way, in hard bands or with
  * a rim. The engine's own look is the surface times this, plus `composerEmissive`. The light is
- * worked out at the corners and blended in between, as the consoles of the era did. Models only,
- * colour stage.
+ * worked out at the corners and blended in between, as the consoles of the era did, or at every
+ * pixel on a material with `perPixel`. Models only, colour stage.
  * @returns The node, to use as the input of another.
  *
  * @category Shader composer
@@ -204,6 +204,26 @@ export const composerShine = (): TComposerNode => newNode('input', 'vec3<f32>', 
  * @author Francisco Pereira Alvarado
  */
 export const composerEnvUv = (): TComposerNode => newNode('input', 'vec2<f32>', [], { input: 'envUv' });
+
+/**
+ * Where the surface reflects the world on a picture of its surroundings drawn as the six faces of a
+ * cube, three across and two down, as `useEnvironment` draws them: in the world's own axes, so the
+ * same from wherever it is seen. Feed it to a map sample of that picture.
+ *
+ * @returns The place on that picture, `0` to `1` each way.
+ *
+ * @example
+ * ```ts
+ * import { composerCubeUv, composerMapSample } from 'nacatamalon/shader';
+ *
+ * const around = composerMapSample('room', composerCubeUv(), { scale: 0 });
+ * ```
+ *
+ * @category Shader composer
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const composerCubeUv = (): TComposerNode => newNode('input', 'vec2<f32>', [], { input: 'cubeUv' });
 
 /**
  * Where this pixel is across what is drawn, from `0` to `1` (`vec2`): the whole sprite however its

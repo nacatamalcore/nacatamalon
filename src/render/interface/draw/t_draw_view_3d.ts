@@ -1,3 +1,4 @@
+import type { TRenderStyle } from '../../../style/t_render_style';
 import type { TColor } from '../../../color';
 import type { TDrawCamera3d } from './t_draw_camera_3d';
 import type { TDrawLight } from './t_draw_light';
@@ -32,6 +33,15 @@ export type TDrawView3d = {
      * The level everything is lit to before any of those reach it.
      */
     readonly ambient: TColor;
+    /**
+     * The level from below, when the ambient is two colours; `null` or left out, it is one.
+     */
+    readonly ground?: TColor | null;
+    /**
+     * The style it is drawn in: what a material that does not say about `perPixel`, `affine` or
+     * `vertexSnap` takes. `null` or left out, each material as it says.
+     */
+    readonly style?: TRenderStyle | null;
     /**
      * The fog it is seen through, or `null` for none. Read whole every frame.
      */

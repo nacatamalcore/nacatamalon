@@ -18,7 +18,12 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  * `intensity: 1` reads in full while the game around it is dark. In a picture that sees `'3d'`, it
  * sets the level of the room it shows.
  *
- * @param options Its colour and how strong it is.
+ * With a `ground` it is two colours: `color` comes down from above and `ground` up from below, and a
+ * surface takes them by which way it faces, the light of a photographer's studio (a bright sky over a
+ * warm floor). A model lit only at its corners shares it out at its corners, as it does its other
+ * light.
+ *
+ * @param options Its colour, how strong it is, and the colour from below.
  * @returns The light, to read and to change.
  *
  * @example
@@ -26,6 +31,8 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  * const Level = () => {
  *     useCamera3d({ projection: 'perspective', transform: { z: 5 } });
  *     useAmbientLight({ intensity: 1.2 });
+ *     // Or two colours, a sky above and a floor below:
+ *     // useAmbientLight({ color: '#dce6ff', ground: '#4a3328', intensity: 0.5 });
  *     createMesh({ geometry: useSphereGeometry() });
  *
  *     return createScene();
@@ -36,7 +43,7 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const useAmbientLight = (options: { color?: TColorOption; intensity?: number } = {}): TAmbientLight => {
+export const useAmbientLight = (options: { color?: TColorOption; intensity?: number; ground?: TColorOption } = {}): TAmbientLight => {
     const box = getActiveBox();
     if (box === null) {
         throw outsideSceneBody('useAmbientLight');

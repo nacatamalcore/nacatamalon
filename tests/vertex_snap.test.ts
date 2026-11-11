@@ -111,11 +111,11 @@ describe('the option', () => {
         expect(none.material.vertexSnap).toBeUndefined();
     });
 
-    it('is written down only when on, and read back the same', () => {
-        const written = (vertexSnap: boolean | number) => {
+    it('is written down when said, a false included (a no to the scene\'s style), never when not, and read back the same', () => {
+        const written = (vertexSnap?: boolean | number) => {
             const { store } = createTestGame();
             const root = startTestScene(store, 'Level', () => {
-                createMesh({ geometry: useCubeGeometry(), vertexSnap });
+                createMesh({ geometry: useCubeGeometry(), ...(vertexSnap !== undefined ? { vertexSnap } : {}) });
                 return createScene();
             });
             return serializeScene(root);
@@ -125,7 +125,10 @@ describe('the option', () => {
             return mesh?.type === 'mesh' ? mesh.material : undefined;
         };
 
-        expect(materialOf(written(false))).not.toHaveProperty('vertexSnap');
+        expect(materialOf(written())).not.toHaveProperty('vertexSnap');
+        const off = written(false);
+        expect(materialOf(off)?.vertexSnap).toBe(false);
+        expect(parseSceneDoc(off, '/scenes/level.scene')).toEqual(off);
         const on = written(true);
         expect(materialOf(on)?.vertexSnap).toBe(true);
         expect(parseSceneDoc(on, '/scenes/level.scene')).toEqual(on);
@@ -133,6 +136,13 @@ describe('the option', () => {
         const rows = written(120);
         expect(materialOf(rows)?.vertexSnap).toBe(120);
         expect(parseSceneDoc(rows, '/scenes/level.scene')).toEqual(rows);
+        // No rows, set while the game runs to turn a style's snap off, is saved as the no it is.
+        const { store } = createTestGame();
+        const root = startTestScene(store, 'Level', () => {
+            createMesh({ geometry: useCubeGeometry() }).material.vertexSnap = 0;
+            return createScene();
+        });
+        expect(materialOf(serializeScene(root))?.vertexSnap).toBe(false);
     });
 });
 

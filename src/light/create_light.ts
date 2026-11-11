@@ -132,7 +132,9 @@ export const createRectLight = (options: TLightOptionsBase & { range?: number; w
 /**
  * @internal
  */
-export const createAmbientLight = (options: { color?: import('../color').TColorOption; intensity?: number } = {}): TAmbientLight => createRecord('ambient', {
+export const createAmbientLight = (options: { color?: import('../color').TColorOption; intensity?: number; ground?: import('../color').TColorOption } = {}): TAmbientLight => createRecord('ambient', {
     color: getColor(options.color ?? 'white'),
     intensity: options.intensity ?? 0.35,
+    // Left out when not asked for, so a scene that never had one saves as before.
+    ...(options.ground !== undefined ? { ground: getColor(options.ground) } : {}),
 });

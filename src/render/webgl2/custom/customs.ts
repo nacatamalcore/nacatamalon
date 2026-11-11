@@ -201,7 +201,7 @@ export const beginCustomPassGl = (
         view.eye.y = spaces[v].y;
         view.eye.z = spaces[v].z;
         const its = shadowOf(shadows, scene);
-        fillLightUniforms(view.lights, scene.lights, scene.ambient, its?.uniforms ?? null, scene.fog ?? null, scene.camera);
+        fillLightUniforms(view.lights, scene.lights, scene.ambient, its?.uniforms ?? null, scene.fog ?? null, scene.camera, scene.ground ?? null);
         view.shadowMap = its?.map ?? null;
     }
 

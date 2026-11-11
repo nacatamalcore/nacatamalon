@@ -66,7 +66,7 @@ fn vs(
     out.shadowCoord = shadowCoordOf(worldPos);
     out.uv = affineUv(uv, out.position);
     out.color = color;
-    out.fog = fogAt(worldPos);${secondUv ? `
+    out.fog = vec2<f32>(fogAt(worldPos), skyward(worldNormal));${secondUv ? `
     out.uv2 = affineUv(uv2, out.position).xy;` : ''}
     return out;
 }

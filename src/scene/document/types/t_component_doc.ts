@@ -110,15 +110,32 @@ export type TMeshMaterialDoc = TMaterialDoc & {
      */
     wrap?: TTextureWrap | { u: TTextureWrap; v: TTextureWrap };
     /**
-     * Corners on a coarse grid of the screen: `true` for the game's own rows, or how many rows. Left
-     * out when off, which is the default.
+     * Corners on a coarse grid of the screen: `true` for the game's own rows, or how many rows; `false`
+     * says no to a style that snaps. Left out when never said, which takes the scene's style.
      */
     vertexSnap?: boolean | number;
     /**
-     * The picture stretched across the screen without correcting for depth. Left out when off, which
-     * is the default.
+     * The picture stretched across the screen without correcting for depth; `false` says no to a style
+     * that stretches it. Left out when never said, which takes the scene's style.
      */
     affine?: boolean;
+    /**
+     * The light worked out at every pixel rather than at the corners; `false` says no to a style that
+     * does. Left out when never said, which takes the scene's style.
+     */
+    perPixel?: boolean;
+    /**
+     * What its surface reflects: the picture of its surroundings by key, how much it reflects in front
+     * and at the edge, and how much what it reflects takes its colour (`metal`), only where they differ
+     * from `0.04`, `1` and `0`. The recipe, as the looks are: the picture is not written again among
+     * `maps`, nor its numbers among `uniforms`. Left out when it has none.
+     */
+    reflection?: { texture: string; front?: number; edge?: number; metal?: number };
+    /**
+     * The normal map that bends its surface: its picture by key, and its strength only where it is not
+     * `1`. Not written again among `maps`, nor its strength among `uniforms`. Left out when it has none.
+     */
+    normalMap?: { texture: string; strength?: number };
     /**
      * Which side of its triangles is thrown away: `'back'`, `'front'` or `'none'`. Left out when it was
      * never asked for, which draws as `'back'`, except a model piece whose file says both sides are
@@ -695,6 +712,11 @@ export type TLightComponent = {
      * How much of this light reaches a surface facing away from it. Not on an ambient one.
      */
     ambient?: number;
+    /**
+     * The colour that comes up from below, for an ambient one in two colours. Ambient only; left out
+     * when it is one colour.
+     */
+    ground?: TColor;
     /**
      * How far it reaches. Point, spot and rect only.
      */

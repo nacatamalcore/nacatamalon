@@ -25,6 +25,7 @@ export type TInputKind =
     | 'emissive'
     | 'shine'
     | 'envUv'
+    | 'cubeUv'
     | 'vertexPosition'
     | 'vertexNormal'
     | 'vertexColor'

@@ -4,8 +4,12 @@
 // one a person can read: `nacatamalon/math`, `/pixels`, `/shader`, `/effects`, `/transitions`, `/files`.
 export { createGame } from './game/bootstrap/create_game';
 export { createScene } from './scene';
-export { useTransform, useCamera3d, useFog } from './hooks';
-export { useLight2d, useAmbientLight2d, useUnlit2d, useDirectionalLight, usePointLight, useSpotLight, useRectLight, useAmbientLight, useBlobShadow } from './hooks';
+export { useTransform, useCamera3d, useFog, useRenderStyle } from './hooks';
+export type { TRenderStyle, TRenderStyleHandle } from './style';
+export { useLight2d, useAmbientLight2d, useUnlit2d, useDirectionalLight, usePointLight, useSpotLight, useRectLight, useAmbientLight, useBlobShadow, useStudio } from './hooks';
+export { useMirror, useEnvironment } from './hooks';
+export type { TMirror, TMirrorOptions, TEnvironment, TEnvironmentOptions } from './hooks';
+export type { TStudio, TStudioOptions } from './hooks';
 export { createMesh, createMeshInstances } from './gameobjects/mesh';
 export type { TMesh, TMeshOptions, TMeshInstancePlacement, TMeshInstanceRun, TMeshInstances, TMeshInstancesOptions } from './gameobjects/mesh';
 export { createModel } from './gameobjects/model';
@@ -43,6 +47,7 @@ export {
     useParticleCollider3d,
 } from './hooks';
 export { createMaterial } from './gameobjects/material';
+export { plastic, ceramic, chrome, rubber, carPaint, glass, neon, pearl, hologram, gold, copper, brass, anodized } from './materials';
 // Lines in space: the debug helpers (an axis gizmo, a floor grid) and any lines a game wants to draw.
 export { setLines, useLines, useHelperAxis, useHelperGrid } from './hooks';
 export type { TUseLinesOptions, TUseHelperAxisOptions, THelperAxisColors, TUseHelperGridOptions } from './hooks';
@@ -138,8 +143,8 @@ export type { TDestroyOptions } from './destroy';
 export type { TLoadProgress, TLoadStatus, TAsset, TTexture, TLoadedAtlas, TBitmapFont, TFont, TAudioClip, TGltfModel, TGltfPart, TShading } from './loaders';
 export type { TSkeleton, TSkeletalClip, TJointPose, TClipEvent } from './animation';
 export type {
-    TMaterial, TSpriteMaterial, TMeshMaterial, TMaterialMap, TMaterialOcclusion, TTextureWrap, TCullMode, TMaterialShader, TMaterialOptions,
-    TSpriteMaterialOptions, TMeshMaterialOptions, TUniformType, TUniformValues, TUniformValue, TUniformPoint, TUniformPointValue, TUniformColorValue, TUniformNumbers, TUniformSignature,
+    TMaterial, TSpriteMaterial, TMeshMaterial, TMaterialMap, TMaterialOcclusion, TMaterialReflection, TMaterialReflectionRecord, TMaterialNormalMap, TTextureWrap, TCullMode, TMaterialShader, TMaterialOptions,
+    TSpriteMaterialOptions, TMeshMaterialOptions, TMaterialRecipe, TMaterialRecipeOptions, TUniformType, TUniformValues, TUniformValue, TUniformPoint, TUniformPointValue, TUniformColorValue, TUniformNumbers, TUniformSignature,
 } from './materials';
 export type { TLightingLook, TStepLook } from './shader_composer';
 export type { TSprite, TSpriteOptions } from './gameobjects/sprite/types';
@@ -151,7 +156,7 @@ export type { TNineSlice, TNineSliceBorders, TNineSliceMode, TNineSliceOptions }
 export type { TTilemap, TTilemapLayer, TTilemapOptions, TTilemapDrawOptions, TTilemapFileOptions, TTilemapDocOptions, TTilemapCodeDoc } from './gameobjects/tilemap';
 export type { TTileDoc, TTileLayerOrder } from './loaders';
 export type { TSpriteAtlas, TSpriteAtlasOptions, TAtlasPoint, TAtlasFramePoints } from './atlas';
-export type { TCamera2d, TCamera2dOptions, TCamera3d, TCamera3dOptions } from './camera';
+export type { TCamera2d, TCamera2dOptions, TCamera3d, TCamera3dOptions, TMirrorPlane } from './camera';
 export type { TFog, TFogOptions } from './fog';
 export type { TKeyboard, TKeyName, TPointerInfo, TPointerDragInfo, TPointerDragListener, TDropZoneListener, TPointerHandle, TPointerType, TPointerTouch, TPointerListener, TPointerWheelInfo, TPointerWheelListener, TPointerLockOptions, TSpriteEvents } from './input';
 export type { TGamepad, TGamepadAxisName, TGamepadButtonName, TGamepadInfo, TGamepadListener, TGamepadTarget, TRumbleOptions, TUseGamepadOptions } from './input';

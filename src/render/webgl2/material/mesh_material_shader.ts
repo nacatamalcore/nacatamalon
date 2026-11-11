@@ -1,6 +1,6 @@
 import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import {
-    FACED_LIGHT_GLSL, FACING_TURN_GLSL, INSTANCE_HEAD_GLSL, LIT_BY_GLSL, MESH_FRAGMENT_HEAD_GLSL, MESH_SAMPLE_LIGHT_GLSL, MESH_VERTEX_ATTRIBUTES_GLSL,
+    FACED_LIGHT_GLSL, FACING_TURN_GLSL, INSTANCE_HEAD_GLSL, LIT_BY_GLSL, MESH_FRAGMENT_HEAD_GLSL, MESH_LIGHT_GLSL, MESH_SAMPLE_LIGHT_GLSL, MESH_VERTEX_ATTRIBUTES_GLSL,
     TWO_SIDED_VARYINGS_GLSL, TWO_SIDED_WRITE_GLSL, worldNormalOfGlsl,
 } from '../mesh/mesh_shader';
 import { MAX_LIGHTS } from '../../../light';
@@ -151,15 +151,72 @@ ${readers}
 /**
  * The maps for the colour half: the readers, and `envUv`, where a reflection of the world lands on a
  * round picture of its surroundings. Only there, because it reads a `FragContext`, which the corner
- * half does not have.
+ * half does not have. `lit` is whether the shader has the lights block; a shadow's has not, and its
+ * `envUv` keeps the world's axes (see the twin in webgpu/material/mesh_material_shader.ts).
  */
-const maps = (names: readonly string[]): string => `${mapReaders(names, 'colour')}
-vec2 envUv(FragContext ctx) {
-    vec3 r = reflect(-ctx.viewDir, normalize(ctx.normal));
+const maps = (names: readonly string[], lit = true): string => `${mapReaders(names, 'colour')}
+${lit ? ENV_UV : ENV_UV_UNLIT}
+${ENV_CUBE_UV}
+`;
+
+// The twin of envUv in webgpu/material/mesh_material_shader.ts, which says why.
+const ENV_UV = /* glsl */ `vec2 envUv(FragContext ctx) {
+    vec3 r = reflect(-normalize(ctx.viewDir), normalize(ctx.normal));
+    vec3 back = dot(lights.look.xyz, lights.look.xyz) > 0.5 ? lights.look.xyz : vec3(0.0, 0.0, 1.0);
+    vec3 across = cross(vec3(0.0, 1.0, 0.0), back);
+    vec3 right = dot(across, across) > 0.000001 ? normalize(across) : vec3(1.0, 0.0, 0.0);
+    vec3 up = cross(back, right);
+    // Through the 2D camera the world's y runs down: what shows above is the other way.
+    vec3 v = vec3(dot(r, right), dot(r, up) * (lights.ground.w > 1.5 ? -1.0 : 1.0), dot(r, back));
+    float m = max(2.0 * sqrt(v.x * v.x + v.y * v.y + (v.z + 1.0) * (v.z + 1.0)), 0.0001);
+    return vec2(v.x / m + 0.5, 0.5 - v.y / m);
+}`;
+
+// The twin of envCubeUv in webgpu/material/mesh_material_shader.ts, which says why.
+const ENV_CUBE_UV = /* glsl */ `vec2 envCubeUv(FragContext ctx) {
+    vec3 r = reflect(-normalize(ctx.viewDir), normalize(ctx.normal));
+    vec3 a = abs(r);
+    vec2 cell = vec2(0.0, 0.0);
+    vec3 forward = vec3(1.0, 0.0, 0.0);
+    vec3 right = vec3(0.0, 0.0, 1.0);
+    vec3 up = vec3(0.0, 1.0, 0.0);
+    if (a.x >= a.y && a.x >= a.z) {
+        if (r.x < 0.0) {
+            cell = vec2(1.0, 0.0);
+            forward = vec3(-1.0, 0.0, 0.0);
+            right = vec3(0.0, 0.0, -1.0);
+        }
+    } else if (a.y >= a.z) {
+        right = vec3(1.0, 0.0, 0.0);
+        if (r.y > 0.0) {
+            cell = vec2(2.0, 0.0);
+            forward = vec3(0.0, 1.0, 0.0);
+            up = vec3(0.0, 0.0, 1.0);
+        } else {
+            cell = vec2(0.0, 1.0);
+            forward = vec3(0.0, -1.0, 0.0);
+            up = vec3(0.0, 0.0, -1.0);
+        }
+    } else if (r.z > 0.0) {
+        cell = vec2(1.0, 1.0);
+        forward = vec3(0.0, 0.0, 1.0);
+        right = vec3(-1.0, 0.0, 0.0);
+    } else {
+        cell = vec2(2.0, 1.0);
+        forward = vec3(0.0, 0.0, -1.0);
+        right = vec3(1.0, 0.0, 0.0);
+    }
+    float depth = max(dot(r, forward), 0.0001);
+    vec2 face = clamp(vec2(0.5 + 0.5 * dot(r, right) / depth, 0.5 - 0.5 * dot(r, up) / depth), vec2(0.002), vec2(0.998));
+    return (cell + face) / vec2(3.0, 2.0);
+}`;
+
+// The same with the world's axes, for a shader with no lights block (a shadow's).
+const ENV_UV_UNLIT = /* glsl */ `vec2 envUv(FragContext ctx) {
+    vec3 r = reflect(-normalize(ctx.viewDir), normalize(ctx.normal));
     float m = max(2.0 * sqrt(r.x * r.x + r.y * r.y + (r.z + 1.0) * (r.z + 1.0)), 0.0001);
     return vec2(r.x / m + 0.5, 0.5 - r.y / m);
-}
-`;
+}`;
 
 /**
  * The maps for the corner half, when its corner hook reads one: then all of the material's readers,
@@ -375,11 +432,14 @@ ${cull === 'none' ? '' : `    vViewDir = viewDir;
 }
 `;
 
-const fragmentBody = (cull: TCullMode): string => {
+const fragmentBody = (cull: TCullMode, bumped = false): string => {
     // A model drawn on both sides reads the light of the side it is, and faces the way that side does.
     const [light, shine, casterLight, casterShine] = cull === 'none'
         ? ['sideLight', 'sideShine', 'sideCasterLight', 'sideCasterShine']
         : ['vLight', 'vShine', 'vCasterLight', 'vCasterShine'];
+    // The facing at the pixel, or bent by the material's normal map, as its twin has it.
+    const smeared = cull === 'none' ? '(gl_FrontFacing ? vNormal.xyz : -vNormal.xyz)' : 'vNormal.xyz';
+    const facing = bumped ? 'facing' : `normalize(${smeared})`;
     return /* glsl */ `
 out vec4 fragColor;
 
@@ -401,21 +461,36 @@ void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     // material is affine, and the corrected one when it is not (see affineUv).
     vec2 uv = vUv.xy / vUv.z;
     vec2 uv2 = vec2(vNormal.w, vScreen.w) / vUv.z;${MEASURE_UV('uv')}
-    // Laid out by the coordinate the material says, which rides beside its amount.
-    float occlusion = occlusionAt(uniforms.normalMatrix[1].w > 0.5 ? uv2 : uv);
+    // Laid out by the coordinate the material says, which rides beside its amount, as the odd half of
+    // that number.
+    float occlusion = occlusionAt(mod(uniforms.normalMatrix[1].w, 2.0) > 0.5 ? uv2 : uv);${bumped ? `
+    // Bent by the material's normal map, before anything is lit by it, as its twin does.
+    vec3 facing = bentBy(normalize(${smeared}), vTangent, sampleMap_normalMap(uv).xyz, mu.normalStrength);` : ''}
+    // The light the corners worked out, or, when the material asks for it (perPixel, two more in that
+    // same number), worked out again here from this pixel's own facing and place: the twin of the
+    // same choice in webgpu/material/mesh_material_shader.ts.
+    vec3 hereLight = ${light};
+    vec3 hereShine = ${shine};
+    vec3 hereCasterLight = ${casterLight};
+    vec3 hereCasterShine = ${casterShine};
+    if (uniforms.normalMatrix[1].w > 1.5) {
+        litBy(vWorldPos, ${facing}, viewDirOf(vWorldPos), hereLight, hereShine, hereCasterLight, hereCasterShine);
+    }
     // A crease lowers the floor and nothing else, as in the built-in ending.
-    vec3 lit = max(litWithShadow(${light}, ${casterLight}, coord), lights.ambient.rgb * occlusion);
+    vec3 lit = max(litWithShadow(hereLight, hereCasterLight, coord), ambientAt(skyward(${facing})) * occlusion);
     FragContext ctx;
     ctx.uv = uv;
-    ctx.normal = ${cull === 'none' ? '(gl_FrontFacing ? vNormal.xyz : -vNormal.xyz)' : 'vNormal.xyz'};
+    ctx.normal = ${bumped ? 'facing' : smeared};
     ctx.worldPos = vWorldPos;
     ctx.light = lit;
-    ctx.shine = litWithShadow(${shine}, ${casterShine}, coord);
+    ctx.shine = litWithShadow(hereShine, hereCasterShine, coord);
     // The glow through its picture, so a shader of your own adds it the way the built-in one does.
     ctx.emissive = uniforms.emissive.rgb * textureGrad(meshEmissive, uv, meshUvDx, meshUvDy).rgb;
     // Drawn on both sides, worked out again at the pixel rather than carried, as its twin does to make
     // room for the light of the other side.
-    ctx.viewDir = ${cull === 'none' ? 'viewDirOf(vWorldPos)' : 'vViewDir'};
+    // Worked out again here when the light is (perPixel), as its twin does, so a reflection or a
+    // fresnel lines up with the shine.
+    ctx.viewDir = ${cull === 'none' ? 'viewDirOf(vWorldPos)' : '(uniforms.normalMatrix[1].w > 1.5 ? viewDirOf(vWorldPos) : vViewDir)'};
     ctx.cameraPos = uniforms.cameraPosition.xyz;
     ctx.color = vColor;
     ctx.screen = screenOf(vScreen.xyz);
@@ -441,6 +516,21 @@ void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
 }
 `;
 };
+
+/**
+ * Whether a material bends its facing by a normal map, as its twin in
+ * webgpu/material/mesh_material_shader.ts decides it.
+ */
+const bumpedBy = (mapNames: readonly string[], sig: TUniformSignature): boolean =>
+    mapNames.includes('normalMap') && Object.hasOwn(sig, 'normalStrength');
+
+// The twin of bentBy in webgpu/material/mesh_material_shader.ts, which says why.
+const BENT_BY = /* glsl */ `vec3 bentBy(vec3 normal, vec4 tangent, vec3 texel, float strength) {
+    vec3 t = normalize(tangent.xyz - normal * dot(normal, tangent.xyz));
+    vec3 b = cross(normal, t) * tangent.w;
+    vec3 n = texel * 2.0 - 1.0;
+    return normalize(t * (n.x * strength) + b * (n.y * strength) + normal * n.z);
+}`;
 
 /**
  * Builds a model material's two halves for this backend.
@@ -481,13 +571,17 @@ export const buildMeshMaterialShaderGlsl = (
     ].join('\n'),
     fragment: [
         MESH_FRAGMENT_HEAD_GLSL,
+        // The lights again, for a material that works its light out at every pixel (perPixel).
+        MESH_LIGHT_GLSL,
+        LIT_BY_GLSL,
         glslUniformBlock(sig),
         VARYINGS('in', cull),
         FRAG_CONTEXT,
         SAMPLE,
         maps(mapNames),
+        bumpedBy(mapNames, sig) ? BENT_BY : '',
         fragment ?? DEFAULT_EFFECT,
-        fragmentBody(cull),
+        fragmentBody(cull, bumpedBy(mapNames, sig)),
     ].join('\n'),
 });
 
@@ -594,7 +688,8 @@ void main() {${restOf(instanced)}${CORNER_CONTEXT}${vertex === null ? PLAIN_NORM
             'in vec2 vUv;\nin vec3 vNormal;\nin vec3 vWorldPos;\nin vec4 vColor;\nin vec4 vTangent;\nin vec2 vUv2;\nin vec4 vCarry;',
             FRAG_CONTEXT,
             SAMPLE,
-            maps(mapNames),
+            // No lights block here: its envUv keeps the world's axes.
+            maps(mapNames, false),
             cut.fragment ?? DEFAULT_EFFECT,
             /* glsl */ `
 void main() {${MEASURE_UV('vUv')}

@@ -1,4 +1,5 @@
 import type { TPostChain } from '../../post/types/t_post_chain';
+import type { TRenderStyle } from '../../style/t_render_style';
 import type { TCanvasScaling } from '../../DOM/types/t_canvas_scaling';
 import type { TCanvasKeep } from '../../DOM/types/t_canvas_keep';
 import type { TColorOption } from "../../color";
@@ -42,12 +43,16 @@ export type TGameOptions = {
      * size it is painted at, and `keep` is the only thing that changes these numbers.
      *
      * A camera measures in these units, so this is what decides how much of a level fits.
+     *
+     * Left out, the `style`'s (`RENDER.STYLES.n64` is 320 × 240), and with none 800 × 600. Said, it
+     * wins over the style's: `{ style: RENDER.STYLES.n64, width: 640, height: 480 }`. It can change
+     * while the game runs with `useGame().setResolution`.
      */
-    width: number;
+    width?: number;
     /**
      * See {@link TGameOptions.width}: the two are one decision.
      */
-    height: number;
+    height?: number;
     /**
      * Colour the frame is cleared to before anything draws. Defaults to `darkviolet`,
      * deliberately loud: a scene that renders nothing should be obvious, not black.
@@ -79,9 +84,17 @@ export type TGameOptions = {
     msaa?: 1 | 4;
     /**
      * Default texture filtering for sprites. `false` (default) renders them pixelated
-     * (nearest) for crisp pixel art; `true` renders them smooth (linear).
+     * (nearest) for crisp pixel art; `true` renders them smooth (linear). Left out, the `style`'s
+     * when it has one.
      */
     smooth?: boolean;
+    /**
+     * Whether the screen is scaled up to the page smoothly, or by whole pixels kept square. Left
+     * out, the `style`'s, and with none it follows `smooth`. Apart from `smooth` for a game whose
+     * pictures are smooth but whose screen is not: the Nintendo 64 blurred its textures, and its
+     * 320 x 240 shown big on a page is sharper pixel by pixel than one blurred again by the browser.
+     */
+    smoothScaling?: boolean;
     /**
      * Which pixels everything flat is drawn on: where each sprite, text, panel and map is drawn is
      * rounded, never where it is. A character at 1.83 is drawn on a whole pixel, and moves at 1.83 a
@@ -293,6 +306,15 @@ export type TGameOptions = {
      * file lands, so a slow palette costs you the palette and never the first seconds of the game.
      */
     post?: TPostChain;
+    /**
+     * The style every scene is drawn in unless it asks for its own (`useRenderStyle`): how the models'
+     * materials are drawn when they do not say, and the effects the game is seen through, after the
+     * ones in `post`, and the resolution and smoothing the game is drawn with when `width`, `height`
+     * and `smooth` are left out. One of `RENDER.STYLES` (`nes`, `snes`, `genesis`, `gameBoy`, `gba`,
+     * `ps1`, `saturn`, `n64`, `dreamcast`, `cgi`) or one of the game's own. Left out, none: each
+     * material is drawn as it says.
+     */
+    style?: TRenderStyle;
     /**
      * Print the startup line in the console: the engine, its version and which backend started.
      * `true` by default.

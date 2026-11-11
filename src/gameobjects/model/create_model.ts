@@ -101,6 +101,9 @@ const buildPart = (
                 shininess: options.shininess,
                 vertexSnap: options.vertexSnap,
                 affine: options.affine,
+                perPixel: options.perPixel,
+                reflection: options.reflection,
+                normalMap: options.normalMap,
                 // The file's word unless the game says otherwise, as with see-through: a leaf the
                 // modelling program kept both sides of is drawn on both.
                 cull: options.cull ?? (part.doubleSided ? 'none' : undefined),

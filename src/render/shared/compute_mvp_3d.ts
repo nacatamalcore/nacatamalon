@@ -1,3 +1,4 @@
+import type { TRenderStyle } from '../../style/t_render_style';
 import * as mat from '../../math/mat4';
 import * as quat from '../../math/quat';
 import { degToRad } from '../../math/angle';
@@ -215,6 +216,11 @@ export type TCameraSpace = {
      * model is turned upright in it (`fillMeshUniforms`).
      */
     flat: boolean;
+    /**
+     * The style the view is drawn in, which a material that does not say takes its `perPixel`,
+     * `affine` and `vertexSnap` from. `null` for none. Copied from the view with its camera.
+     */
+    style: TRenderStyle | null;
 };
 
 /**
@@ -224,13 +230,87 @@ export type TCameraSpace = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const newCameraSpace = (): TCameraSpace => ({ viewProjection: mat.create(), x: 0, y: 0, z: 0, right: [1, 0, 0], up: [0, 1, 0], width: 1, height: 1, flat: false });
+export const newCameraSpace = (): TCameraSpace => ({ viewProjection: mat.create(), x: 0, y: 0, z: 0, right: [1, 0, 0], up: [0, 1, 0], width: 1, height: 1, flat: false, style: null });
 
 /**
  * Where the two halves are built before they are multiplied together. Never handed out.
  */
 const viewScratch = mat.create();
 const projectionScratch = mat.create();
+const mirrorScratch = mat.create();
+const inverseScratch = mat.create();
+
+type TPlane = { readonly x: number; readonly y: number; readonly z: number; readonly d: number };
+
+/**
+ * The reflection across a plane, as a matrix: a point goes to the other side, as far from it.
+ */
+const reflectionAcross = (plane: TPlane, out: Mat4): Mat4 => {
+    const { x, y, z, d } = plane;
+    const n = [x, y, z];
+    for (let c = 0; c < 3; c++) {
+        for (let r = 0; r < 3; r++) {
+            out[c * 4 + r] = (r === c ? 1 : 0) - 2 * n[r]! * n[c]!;
+        }
+        out[c * 4 + 3] = 0;
+    }
+    out[12] = -2 * d * x;
+    out[13] = -2 * d * y;
+    out[14] = -2 * d * z;
+    out[15] = 1;
+    return out;
+};
+
+/**
+ * Turns the projection's near plane into the mirror's plane, so nothing on the far side of the mirror
+ * is drawn in it (an oblique near plane): a room behind a mirrored wall would show through otherwise.
+ * `plane` is in the view's space, its side to keep where `plane · v >= 0`. For a depth from 0 to 1,
+ * as the projections here are; the far plane is tilted to match and stays behind everything.
+ */
+const clipNearTo = (projection: Mat4, plane: readonly [number, number, number, number]): void => {
+    mat.invert(projection, inverseScratch);
+    // The corner of the view opposite the plane, in the view's space.
+    const corner = [Math.sign(plane[0]), Math.sign(plane[1]), 1, 1];
+    const q = [0, 0, 0, 0];
+    for (let r = 0; r < 4; r++) {
+        q[r] = inverseScratch[r]! * corner[0]! + inverseScratch[4 + r]! * corner[1]! + inverseScratch[8 + r]! * corner[2]! + inverseScratch[12 + r]! * corner[3]!;
+    }
+    const scale = 1 / (plane[0] * q[0]! + plane[1] * q[1]! + plane[2] * q[2]! + plane[3] * q[3]!);
+    // The third row: what depth is measured by.
+    for (let c = 0; c < 4; c++) {
+        projection[c * 4 + 2] = plane[c]! * scale;
+    }
+};
+
+/**
+ * A camera seeing the world in a mirror: its view reflected across the plane, its near plane laid on
+ * the plane, and its picture turned left to right, which turns the triangles back the right way round
+ * (a reflection alone would have every model drawn inside out). Gives back where its eye is in the
+ * reflected world, where a shine is seen from.
+ */
+const mirrorView = (plane: TPlane, view: Mat4, projection: Mat4, eye: [number, number, number]): void => {
+    reflectionAcross(plane, mirrorScratch);
+    mat.multiply(view, mirrorScratch, view);
+    // The plane in the reflected view's space: a plane is carried by the inverse's transpose.
+    mat.invert(view, inverseScratch);
+    const world = [plane.x, plane.y, plane.z, plane.d];
+    const seen: [number, number, number, number] = [0, 0, 0, 0];
+    for (let c = 0; c < 4; c++) {
+        seen[c] = world[0]! * inverseScratch[c * 4]! + world[1]! * inverseScratch[c * 4 + 1]! + world[2]! * inverseScratch[c * 4 + 2]! + world[3]! * inverseScratch[c * 4 + 3]!;
+    }
+    // Back off it by a hair, so the mirror's own surface is not cut into.
+    seen[3] += 1e-4;
+    clipNearTo(projection, seen);
+    // Turned left to right: the first row the other way.
+    for (let c = 0; c < 4; c++) {
+        projection[c * 4] = -projection[c * 4]!;
+    }
+    const [x, y, z] = eye;
+    const side = 2 * (plane.x * x + plane.y * y + plane.z * z + plane.d);
+    eye[0] = x - side * plane.x;
+    eye[1] = y - side * plane.y;
+    eye[2] = z - side * plane.z;
+};
 
 /**
  * Works out how a scene is looked at, into a place that already exists.
@@ -247,6 +327,11 @@ export const fillCameraSpace = (
 ): TCameraSpace => {
     computeView(camera, viewScratch);
     computeProjection(camera, viewportWidth, viewportHeight, projectionScratch);
+    const eye: [number, number, number] = [camera?.transform.x ?? 0, camera?.transform.y ?? 0, camera?.transform.z ?? 0];
+    const mirror = camera?.mirror ?? null;
+    if (mirror !== null && (camera?.flat ?? null) === null) {
+        mirrorView(mirror, viewScratch, projectionScratch, eye);
+    }
     mat.multiply(projectionScratch, viewScratch, out.viewProjection);
 
     out.right[0] = viewScratch[0]!;
@@ -256,9 +341,9 @@ export const fillCameraSpace = (
     out.up[1] = viewScratch[5]!;
     out.up[2] = viewScratch[9]!;
 
-    out.x = camera?.transform.x ?? 0;
-    out.y = camera?.transform.y ?? 0;
-    out.z = camera?.transform.z ?? 0;
+    out.x = eye[0];
+    out.y = eye[1];
+    out.z = eye[2];
     out.width = Math.max(viewportWidth, 1);
     out.height = Math.max(viewportHeight, 1);
     out.flat = (camera?.flat ?? null) !== null;
@@ -289,7 +374,7 @@ export const fillCameraSpace = (
 const spaces: TCameraSpace[] = [];
 
 export const cameraSpacesFor = (
-    views: readonly { readonly camera: TDrawCamera3d | null }[],
+    views: readonly { readonly camera: TDrawCamera3d | null; readonly style?: TRenderStyle | null }[],
     viewportWidth: number,
     viewportHeight: number,
 ): readonly TCameraSpace[] => {
@@ -298,6 +383,7 @@ export const cameraSpacesFor = (
     }
     for (let i = 0; i < views.length; i++) {
         fillCameraSpace(spaces[i], views[i].camera, viewportWidth, viewportHeight);
+        spaces[i].style = views[i].style ?? null;
     }
     return spaces;
 };

@@ -18,6 +18,7 @@ const INPUT_SOURCE: Record<TInputKind, Partial<Record<TStageCtx, string>>> = {
     emissive:       { 'mesh3d.frag': 'ctx.emissive', 'preview.frag': 'vec3<f32>(0.0, 0.0, 0.0)' },
     shine:          { 'mesh3d.frag': 'ctx.shine', 'preview.frag': 'vec3<f32>(0.0, 0.0, 0.0)' },
     envUv:          { 'mesh3d.frag': 'envUv(ctx)', 'preview.frag': 'uv' },
+    cubeUv:         { 'mesh3d.frag': 'envCubeUv(ctx)', 'preview.frag': 'uv' },
     vertexPosition: { 'mesh3d.vert': 'pos', 'preview.frag': 'sgPreviewPos(uv)' },
     vertexNormal:   { 'mesh3d.vert': 'ctx.normal', 'preview.frag': 'sgPreviewNormal(uv)' },
     vertexColor:    { 'mesh3d.frag': 'ctx.color', 'mesh3d.vert': 'ctx.color', 'preview.frag': 'vec4<f32>(1.0, 1.0, 1.0, 1.0)' },

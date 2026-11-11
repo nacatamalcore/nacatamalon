@@ -1,4 +1,5 @@
 import { useLight2d, useAmbientLight2d, useUnlit2d } from '../../hooks/light';
+import { cutReflection } from '../../materials/new_material';
 import { createMaterial } from '../../gameobjects/material';
 import { createFilter, releaseFilter } from '../../filter/create_filter';
 import { effectFromEntry } from '../../post/install_post_chain';
@@ -266,8 +267,8 @@ const occurrenceOf = (source: TGeometry['source']): number =>
  * A mesh whose shape is a piece of a model file, built at once and given its piece when the file lands.
  *
  * **The file decides how it looks**: its picture, its colour, its glow and its bones all come from the
- * piece. From the document only a shader of its own is taken, because a shader exists nowhere in the
- * file and can only have been authored. It is the old engine's rule, kept so a scene it wrote looks
+ * piece. From the document only a shader of its own and what it reflects are taken, because neither
+ * exists anywhere in the file and both can only have been authored. It is the old engine's rule, kept so a scene it wrote looks
  * the same here.
  *
  * The mesh is on its box from the start, with its identity, so a tool that selected it or a link that
@@ -277,9 +278,13 @@ const buildModelMesh = (
     component: Extract<TComponentDoc, { type: 'mesh' }>,
     { model, node, occurrence }: TModelShape,
     store: TRuntimeStore,
+    assets: { textures: Map<string, TTexture> },
     src: string,
 ): void => {
     const surface = component.material;
+    // Its surroundings exist nowhere in the file either: authored, so taken, by their key.
+    const reflectionTexture = surface.reflection === undefined ? undefined : found(assets.textures, surface.reflection.texture, 'model', src);
+    const bumpTexture = surface.normalMap === undefined ? undefined : found(assets.textures, surface.normalMap.texture, 'model', src);
     const mesh = createMesh({
         ...(component.transform !== undefined ? { transform: component.transform } : {}),
         geometry: pendingShape(component.geometry, {
@@ -298,7 +303,21 @@ const buildModelMesh = (
             ...(surface.uniforms !== null ? { uniforms: surface.uniforms } : {}),
             ...(surface.wrap !== undefined ? { wrap: surface.wrap } : {}),
             ...(surface.vertexSnap !== undefined ? { vertexSnap: surface.vertexSnap } : {}),
-            ...(surface.affine === true ? { affine: true } : {}),
+            ...(surface.affine !== undefined ? { affine: surface.affine } : {}),
+            ...(surface.perPixel !== undefined ? { perPixel: surface.perPixel } : {}),
+            ...(reflectionTexture !== undefined && surface.reflection !== undefined
+                ? {
+                    reflection: {
+                        texture: reflectionTexture,
+                        ...(surface.reflection.front !== undefined ? { front: surface.reflection.front } : {}),
+                        ...(surface.reflection.edge !== undefined ? { edge: surface.reflection.edge } : {}),
+                        ...(surface.reflection.metal !== undefined ? { metal: surface.reflection.metal } : {}),
+                    },
+                }
+                : {}),
+            ...(bumpTexture !== undefined && surface.normalMap !== undefined
+                ? { normalMap: { texture: bumpTexture, ...(surface.normalMap.strength !== undefined ? { strength: surface.normalMap.strength } : {}) } }
+                : {}),
             ...(surface.cull !== undefined ? { cull: surface.cull } : {}),
             ...(surface.alphaCutoff !== undefined ? { alphaCutoff: surface.alphaCutoff } : {}),
             ...(surface.transparent !== undefined ? { transparent: surface.transparent } : {}),
@@ -357,6 +376,8 @@ const buildModelMesh = (
         // And a leaf the file cuts out of its picture is cut, unless the scene says how much.
         if (surface.alphaCutoff === undefined && part.alphaCutoff !== null) {
             mesh.material.alphaCutoff = part.alphaCutoff;
+            // One that reflects was made not knowing it would be cut: its holes stay holes.
+            if (part.alphaCutoff > 0) cutReflection(mesh.material);
         }
     });
 };
@@ -525,7 +546,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
         case 'mesh': {
             const fromModel = modelShapesOf(store).get(component.geometry);
             if (fromModel !== undefined) {
-                buildModelMesh(component, fromModel, store, src);
+                buildModelMesh(component, fromModel, store, assets, src);
                 break;
             }
             const geometry = found(assets.geometries, component.geometry, 'model', src);
@@ -537,6 +558,10 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
             const emissiveTexture = surface.emissiveTexture === undefined ? undefined : found(assets.textures, surface.emissiveTexture, 'model', src);
             // One whose picture is not there is left out, and the model is drawn wide open.
             const occlusionTexture = surface.occlusion === undefined ? undefined : found(assets.textures, surface.occlusion.texture, 'model', src);
+            // Its surroundings by their key; not there, it reflects nothing rather than white.
+            const reflectionTexture = surface.reflection === undefined ? undefined : found(assets.textures, surface.reflection.texture, 'model', src);
+            // Its normal map the same: not there, the surface is flat.
+            const bumpTexture = surface.normalMap === undefined ? undefined : found(assets.textures, surface.normalMap.texture, 'model', src);
             // Each map by its picture's key; one whose picture is not there is left out and reads white.
             const maps = mapsFrom(surface.maps, assets, src);
             const model = createMesh({
@@ -572,7 +597,21 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                     ...(surface.wrap !== undefined ? { wrap: surface.wrap } : {}),
                     ...(Object.keys(maps).length > 0 ? { maps } : {}),
                     ...(surface.vertexSnap !== undefined ? { vertexSnap: surface.vertexSnap } : {}),
-                    ...(surface.affine === true ? { affine: true } : {}),
+                    ...(surface.affine !== undefined ? { affine: surface.affine } : {}),
+                    ...(surface.perPixel !== undefined ? { perPixel: surface.perPixel } : {}),
+                    ...(reflectionTexture !== undefined && surface.reflection !== undefined
+                        ? {
+                            reflection: {
+                                texture: reflectionTexture,
+                                ...(surface.reflection.front !== undefined ? { front: surface.reflection.front } : {}),
+                                ...(surface.reflection.edge !== undefined ? { edge: surface.reflection.edge } : {}),
+                                ...(surface.reflection.metal !== undefined ? { metal: surface.reflection.metal } : {}),
+                            },
+                        }
+                        : {}),
+                    ...(bumpTexture !== undefined && surface.normalMap !== undefined
+                        ? { normalMap: { texture: bumpTexture, ...(surface.normalMap.strength !== undefined ? { strength: surface.normalMap.strength } : {}) } }
+                        : {}),
                     ...(surface.cull !== undefined ? { cull: surface.cull } : {}),
                     ...(surface.alphaCutoff !== undefined ? { alphaCutoff: surface.alphaCutoff } : {}),
                     ...(surface.transparent !== undefined ? { transparent: surface.transparent } : {}),
@@ -653,7 +692,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
             }
             const shared = { color: component.color, intensity: component.intensity };
             if (component.kind === 'ambient') {
-                useAmbientLight(shared).id = component.id;
+                useAmbientLight({ ...shared, ...(component.ground !== undefined ? { ground: component.ground } : {}) }).id = component.id;
                 break;
             }
             // Everything the document had, put back by hand, because each of these is a decision

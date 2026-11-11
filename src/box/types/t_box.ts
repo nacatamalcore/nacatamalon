@@ -1,4 +1,5 @@
 import type { TFog } from '../../fog/types/t_fog';
+import type { TRenderStyle } from '../../style/t_render_style';
 import type { TDrawable } from '../../gameobjects/types';
 import type { TDataRecord } from '../../hooks/state';
 import type { TScriptAttachment } from '../../scripts';
@@ -229,6 +230,11 @@ export type TBox = {
      * seen through, from `useFog`. Kept where the camera is, for the same reason.
      */
     fog: TFog | null;
+    /**
+     * Only meaningful on a view, like `fog`: the style it is drawn in, from `useRenderStyle`, or `null`
+     * for the game's.
+     */
+    renderStyle: TRenderStyle | null;
     /**
      * Where this box is, which moves everything under it: its own drawables and every box beneath.
      * `null` means it is not anywhere in particular, which is what an empty box used only to group

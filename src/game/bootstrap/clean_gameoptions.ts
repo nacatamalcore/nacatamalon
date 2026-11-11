@@ -18,8 +18,15 @@ const PIXEL_SNAPS: readonly TPixelSnap[] = ['screen', 'game', 'off'];
  * @author Francisco Pereira Alvarado
  */
 export const cleanGameOptions = (game_options: TGameOptions ) => {
-    const width = game_options.width || DEFAULT_GAME_OPTIONS.width;
-    const height = game_options.height || DEFAULT_GAME_OPTIONS.height;
+    // What the game says, then its style's, then the default: the style sets them, the game rewrites.
+    // The two are one decision, taken from one place: a game that says either says the resolution,
+    // and a style that gives only one of them gives none.
+    const style = game_options.style;
+    const sized = game_options.width || game_options.height
+        ? game_options
+        : style?.width && style.height ? style : DEFAULT_GAME_OPTIONS;
+    const width = sized.width || DEFAULT_GAME_OPTIONS.width!;
+    const height = sized.height || DEFAULT_GAME_OPTIONS.height!;
     // `??` and not `||`: black written as a number is 0, and `||` turned it into the default.
     const background = getColor(game_options.background ?? DEFAULT_GAME_OPTIONS.background!);
     // Read in capitals whatever way it is written: 'webgl2' is what a person means by 'WEBGL2'. Not
@@ -32,7 +39,10 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
     }
     // `??` and not `||`: 0 is a seed like any other, and `||` turned it into a different run every time.
     const seed = game_options.seed ?? DEFAULT_GAME_OPTIONS.seed;
-    const smooth = game_options.smooth ?? DEFAULT_GAME_OPTIONS.smooth;
+    const smooth = game_options.smooth ?? game_options.style?.smooth ?? DEFAULT_GAME_OPTIONS.smooth!;
+    // The screen scaled up the way the pictures are read (`null`, following `smooth` as it changes),
+    // unless the game or its style says otherwise.
+    const smoothScaling = game_options.smoothScaling ?? game_options.style?.smoothScaling ?? null;
     // Follows `smooth` unless it says: pixel art is drawn on whole pixels, smooth pictures between them.
     // Anything but the three names is refused, a `true` from before there were three as much as a
     // misspelt one, rather than guessed at.
@@ -40,7 +50,7 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
     if (!PIXEL_SNAPS.includes(pixelSnap)) {
         throw new Error(`[NacatamalOn] createGame: pixelSnap must be ${PIXEL_SNAPS.map((name) => `'${name}'`).join(', ')}, got ${String(game_options.pixelSnap)}.`);
     }
-    const pixelAspect = game_options.pixelAspect ?? DEFAULT_GAME_OPTIONS.pixelAspect!;
+    const pixelAspect = game_options.pixelAspect ?? game_options.style?.pixelAspect ?? DEFAULT_GAME_OPTIONS.pixelAspect!;
     if (!(typeof pixelAspect === 'number' && Number.isFinite(pixelAspect) && pixelAspect > 0)) {
         throw new Error(`[NacatamalOn] createGame: pixelAspect must be a number above 0 (1 for square pixels, 8 / 7 for the NES and the SNES), got ${String(game_options.pixelAspect)}.`);
     }
@@ -82,6 +92,7 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
         renderer,
         seed,
         smooth,
+        smoothScaling,
         pixelSnap,
         pixelAspect,
         msaa,
@@ -97,6 +108,7 @@ export const cleanGameOptions = (game_options: TGameOptions ) => {
         contextMenu,
         debug,
         post,
+        style,
         banner,
         splash,
         step

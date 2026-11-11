@@ -252,13 +252,24 @@ export const lightSpaceMatrix = (light: TDrawLight, camera: TDrawCamera3d | null
     //
     // A scene with no camera is drawn flat on, and then the origin is as good an answer as any.
     const ahead = half;
-    const facing = camera === null ? { x: 0, y: 0, z: -1 } : transformForward({ ...camera.transform, quaternion: null });
+    let facing = camera === null ? { x: 0, y: 0, z: -1 } : transformForward({ ...camera.transform, quaternion: null });
+    let seenFrom = camera === null ? { x: 0, y: 0, z: 0 } : { x: camera.transform.x, y: camera.transform.y, z: camera.transform.z };
+    // A camera seeing the world in a mirror sees what is round its eye reflected across the mirror,
+    // looking the reflected way: its shadows are wanted there, on the camera's side of the mirror,
+    // and not through it.
+    const mirror = camera?.mirror ?? null;
+    if (mirror !== null && (camera?.flat ?? null) === null) {
+        const side = 2 * (mirror.x * seenFrom.x + mirror.y * seenFrom.y + mirror.z * seenFrom.z + mirror.d);
+        seenFrom = { x: seenFrom.x - side * mirror.x, y: seenFrom.y - side * mirror.y, z: seenFrom.z - side * mirror.z };
+        const along = 2 * (facing.x * mirror.x + facing.y * mirror.y + facing.z * mirror.z);
+        facing = { x: facing.x - along * mirror.x, y: facing.y - along * mirror.y, z: facing.z - along * mirror.z };
+    }
     const focus = camera === null
         ? { x: 0, y: 0, z: 0 }
         : {
-            x: camera.transform.x + facing.x * ahead,
-            y: camera.transform.y + facing.y * ahead,
-            z: camera.transform.z + facing.z * ahead,
+            x: seenFrom.x + facing.x * ahead,
+            y: seenFrom.y + facing.y * ahead,
+            z: seenFrom.z + facing.z * ahead,
         };
 
     const alongRight = Math.round(dot(focus, right) / step) * step;

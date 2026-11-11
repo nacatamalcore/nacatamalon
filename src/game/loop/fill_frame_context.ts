@@ -46,6 +46,10 @@ import type { TDrawCamera3d } from '../../render/interface/draw/t_draw_camera_3d
 import type { TSceneColliders } from '../../gameobjects/particles/collide';
 import type { TSceneLighting } from './helper/collect_lights';
 import type { TCamera3d } from '../../camera/types/t_camera_3d';
+import { isSkippedIn, preparePicture } from '../../gameobjects/sprite_texture/picture_skips';
+import { syncStylePost } from '../../style/sync_style_post';
+import { syncStyleScreen, topSceneStyle } from '../../style/sync_style_screen';
+import type { TRenderStyle } from '../../style/t_render_style';
 import type { TRenderPass } from '../../render/interface';
 import { rootOf } from '../../box';
 import type { TBox } from '../../box';
@@ -54,6 +58,13 @@ import type { TColor } from '../../color';
 import { isTransparentMesh } from '../../render/shared/is_transparent_mesh';
 import { computeView } from '../../render/shared/compute_mvp_3d';
 import * as mat from '../../math/mat4';
+
+/**
+ * The level a picture's room is lit to: its own ambient when it has one, its two colours with it,
+ * and otherwise the scene's.
+ */
+const ambientOfPicture = (own: { ambient: TColor; ground: TColor | null } | null, lighting: TSceneLighting): { ambient: TColor; ground: TColor | null } =>
+    own ?? { ambient: lighting.ambient, ground: lighting.ground };
 
 /**
  * Whether a drawable is seen through its scene's camera in depth: a model, particles or lines in space,
@@ -439,7 +450,7 @@ const finishPass = (pass: TRenderPass, lists: TPassLists, target: TMaskTarget): 
  * What a picture that watches the world around it is shown of that world: its models and particles
  * in depth, the camera it would be seen through without one of its own, and its lamps.
  */
-type TWorldSeen = { models: Array<TDrawable | TDrawSprite>; camera: TCamera3d | null; lighting: TSceneLighting | null; fog: TFog | null };
+type TWorldSeen = { models: Array<TDrawable | TDrawSprite>; camera: TCamera3d | null; lighting: TSceneLighting | null; fog: TFog | null; style: TRenderStyle | null };
 
 /**
  * Collects one world into `lists`: a scene into the screen's, or a picture into its own. Everything
@@ -567,6 +578,11 @@ const keptByBoxes = (drawable: TDrawable, hide: ReadonlySet<TBox | TDrawable> | 
  * Which pixels this frame draws flat things on: the game's `pixelSnap`, read once a frame.
  */
 let snapping: TPixelSnap = 'off';
+
+/**
+ * The style every scene is drawn in unless it has its own: the game's `style`, read once a frame.
+ */
+let gameStyle: TRenderStyle | null = null;
 
 /**
  * The game's screen, in its pixels, this frame: what a 2D camera skipping for another is measured
@@ -782,12 +798,15 @@ const gatherTree = (
     // a 2D game never pays for a walk looking for lamps it does not have.
     const view = drawables.slice(start).some(inDepth) ? views3d.length : -1;
     let lighting: TSceneLighting | null = null;
+    // Its own style, the world's when it is a view of one, its scene's when it is a picture with a
+    // world of its own, or the game's.
+    const style = root.renderStyle ?? viewport?.worldOf?.renderStyle ?? rootOf(root).renderStyle ?? gameStyle;
     if (view >= 0) {
         const world = viewport?.worldOf;
         lighting = world !== undefined && world !== root ? viewLighting(root, world) : collectLighting(root);
         const fog = root.fog ?? world?.fog ?? null;
         const seenThrough = viewport?.camera3d ?? root.camera3d;
-        views3d.push({ camera: drawnThrough(seenThrough, camera2d), cullingCamera: skippedBy(seenThrough, camera2d), lights: lighting.lights, ambient: lighting.ambient, fog });
+        views3d.push({ camera: drawnThrough(seenThrough, camera2d), cullingCamera: skippedBy(seenThrough, camera2d), lights: lighting.lights, ambient: lighting.ambient, ground: lighting.ground, fog, style });
     }
     for (let i = start; i < drawables.length; i++) {
         viewIndex[i] = inDepth(drawables[i]) ? view : -1;
@@ -827,7 +846,7 @@ const gatherTree = (
     if (modelsOffScreen !== null) {
         models.push(...modelsOffScreen);
     }
-    return { models, camera: root.camera3d, lighting, fog: root.fog };
+    return { models, camera: root.camera3d, lighting, fog: root.fog, style };
 };
 
 /**
@@ -957,6 +976,8 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
     if (picture.texture.gpu === null) {
         return;
     }
+    // What it reads of the world this frame, now that everything has moved and been placed.
+    preparePicture(picture.texture);
 
     const lists = newLists();
     // The cameras a view looks through, its own or its scene's, which what it draws itself shares:
@@ -982,11 +1003,11 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
         walkingView(walk, () => gatherTree(scene, lists, 0, { flat: [], deep: [] }, [], through, true, { width: picture.texture.width, height: picture.texture.height }));
         // Its own fog and its own shade, when it asked for them: it is looking at that world, and a
         // minimap of a dark dungeon can read in full.
-        const ambient = firstView < lists.views3d.length ? ownAmbientOf(box) : null;
-        if (box.fog !== null || ambient !== null) {
+        const own = firstView < lists.views3d.length ? ownAmbientOf(box) : null;
+        if (box.fog !== null || own !== null || box.renderStyle !== null) {
             for (let i = firstView; i < lists.views3d.length; i++) {
                 const view = lists.views3d[i]!;
-                lists.views3d[i] = { ...view, fog: box.fog ?? view.fog, ambient: ambient ?? view.ambient };
+                lists.views3d[i] = { ...view, fog: box.fog ?? view.fog, ambient: own?.ambient ?? view.ambient, ground: own !== null ? own.ground : view.ground ?? null, style: box.renderStyle ?? view.style ?? null };
             }
         }
     }
@@ -997,11 +1018,12 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
         const seenThrough = box.camera3d ?? seen.camera;
         // Through its 2D camera as the picture draws its own sprites with it, rounded the same.
         const flat = cameraAsDrawn(box.camera2d, snapping);
-        lists.views3d.push({ camera: drawnThrough(seenThrough, flat), cullingCamera: skippedBy(seenThrough, flat), lights: lighting.lights, ambient: ownAmbientOf(box) ?? lighting.ambient, fog: box.fog ?? seen.fog });
+        lists.views3d.push({ camera: drawnThrough(seenThrough, flat), cullingCamera: skippedBy(seenThrough, flat), lights: lighting.lights, ...ambientOfPicture(ownAmbientOf(box), lighting), fog: box.fog ?? seen.fog, style: box.renderStyle ?? seen.style });
         const first = lists.drawables.length;
         for (const model of seen.models) {
             // Whatever wears the picture this pass draws into: a model, or an effect's particles.
-            if (showsPicture(model as TDrawable, picture.texture)) {
+            // Or what the picture was told to leave out: an object's own surroundings, drawn from inside it.
+            if (showsPicture(model as TDrawable, picture.texture) || isSkippedIn(picture.texture, model)) {
                 continue;
             }
             lists.drawables.push(model);
@@ -1076,6 +1098,13 @@ export const fillFrameContext = (store: TRuntimeStore, ctx: TFrameContext, delta
     pass++;
     ctx.delta = delta;
     startTextFrame();
+    gameStyle = store.get('config').style ?? null;
+    // The style the game is seen in now: the topmost scene's own that has one, or the game's. First,
+    // because a scene's style can bring its own resolution, and everything below measures the screen.
+    // Each changes things only when the style does, so a frame like the last touches nothing.
+    const sceneStyle = topSceneStyle(store.get('world').scenes);
+    syncStyleScreen(store, sceneStyle);
+    syncStylePost(store, sceneStyle ?? gameStyle);
     snapping = store.get('config').pixelSnap;
     drawingWith = store.get('screen').renderer;
     if (drawingWith !== null) {
