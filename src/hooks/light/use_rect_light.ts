@@ -1,3 +1,4 @@
+import { sceneOnly } from '../../game_systems/game_systems';
 import { createRectLight } from '../../light';
 import { getActiveBox } from '../../store';
 import type { TLightOptionsBase } from '../../light';
@@ -44,6 +45,7 @@ export const useRectLight = (options: TLightOptionsBase & { range?: number; widt
     if (box === null) {
         throw outsideSceneBody('useRectLight');
     }
+    sceneOnly('useRectLight');
 
     const light = createRectLight(options);
     box.lights.push(light);

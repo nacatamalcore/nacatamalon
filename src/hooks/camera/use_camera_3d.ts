@@ -1,3 +1,4 @@
+import { sceneOnly } from '../../game_systems/game_systems';
 import { viewOf } from '../../box';
 import { createCamera3d } from '../../camera/create_camera_3d';
 import { getActiveBox } from '../../store';
@@ -45,6 +46,7 @@ export const useCamera3d = (options: TCamera3dOptions = {}): TCamera3d => {
     if (box === null) {
         throw outsideSceneBody('useCamera3d');
     }
+    sceneOnly('useCamera3d');
 
     const scene = viewOf(box);
     if (scene.camera3d !== null) {

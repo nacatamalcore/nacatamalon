@@ -26,6 +26,6 @@ export type {
 export { registerDrawableKind, createDrawable } from '../../gameobjects/custom';
 export type { TCreateDrawableOptions, TCustomDrawable } from '../../gameobjects/custom';
 export type {
-    TDrawableKind, TDrawableBounds, TDrawableCamera, TWebGpuDrawableContext, TWebGpuDrawables, TWebGpuDrawablePass, TWebGpuDrawableView,
+    TDrawableKind, TDrawableBounds, TDrawableCamera, TDrawableStyle, TWebGpuDrawableContext, TWebGpuDrawables, TWebGpuDrawablePass, TWebGpuDrawableView,
     TWebGpuDrawableShadow, TWebGl2DrawableContext, TWebGl2Drawables, TWebGl2DrawablePass, TWebGl2DrawableView,
 } from './drawable_types';

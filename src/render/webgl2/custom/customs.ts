@@ -7,6 +7,9 @@ import { drawableKindOf } from '../../../gameobjects/custom';
 import { fillLightUniforms, LIGHT_UNIFORM_FLOATS, shadowOf } from '../../shared/fill_light_uniforms';
 import { customInView } from '../../shared/mesh_in_view';
 import { LIGHTS_GLSL } from '../mesh/mesh_shader';
+import { MODEL_SHADING_GLSL } from '../mesh/model_shading_glsl';
+import { fillDrawableStyle, newDrawableStyle } from '../../shared/drawable_style';
+import type { TDrawableStyleSlot } from '../../shared/drawable_style';
 import { toGlClip } from '../mesh/depth_range';
 import { createGlGuard } from '../extensions/guard_gl_state';
 import { toGlTexture } from '../texture';
@@ -46,7 +49,7 @@ export type TCustomsOnGl = {
      * The 2D views handed to every flat kind in a pass, written over each pass.
      */
     readonly cameras: { viewProjection: Float32Array; lights: Float32Array }[];
-    readonly views: { viewProjection: Float32Array; eye: { x: number; y: number; z: number }; lights: Float32Array; shadowMap: WebGLTexture | null }[];
+    readonly views: { viewProjection: Float32Array; eye: { x: number; y: number; z: number }; lights: Float32Array; shadowMap: WebGLTexture | null; style: TDrawableStyleSlot }[];
     readonly casting: TKindOnGl[];
     /**
      * Whether each entry of the pass being drawn is drawn: false for one a camera cannot see.
@@ -107,6 +110,7 @@ const kindOnGl = (state: TWebGL2State, name: string): TKindOnGl | null => {
             gl: customs.guard.gl,
             lights: { glsl: LIGHTS_GLSL, floats: LIGHT_UNIFORM_FLOATS },
             lights2d: { glsl: LIGHTS_2D_GLSL, floats: LIGHTING_2D_FLOATS },
+            shading: { glsl: MODEL_SHADING_GLSL },
             texture: (record: TTexture) => record.status === 'ready' && record.gpu !== null ? toGlTexture(record.gpu) : null,
         };
         const factory = kind.webgl2;
@@ -195,7 +199,7 @@ export const beginCustomPassGl = (
     customs.views.length = views3d.length;
     for (let v = 0; v < views3d.length; v++) {
         const scene = views3d[v];
-        const view = customs.views[v] ??= { viewProjection: spaces[v].viewProjection, eye: { x: 0, y: 0, z: 0 }, lights: new Float32Array(LIGHT_UNIFORM_FLOATS), shadowMap: null };
+        const view = customs.views[v] ??= { viewProjection: spaces[v].viewProjection, eye: { x: 0, y: 0, z: 0 }, lights: new Float32Array(LIGHT_UNIFORM_FLOATS), shadowMap: null, style: newDrawableStyle() };
         view.viewProjection = spaces[v].viewProjection;
         view.eye.x = spaces[v].x;
         view.eye.y = spaces[v].y;
@@ -203,6 +207,7 @@ export const beginCustomPassGl = (
         const its = shadowOf(shadows, scene);
         fillLightUniforms(view.lights, scene.lights, scene.ambient, its?.uniforms ?? null, scene.fog ?? null, scene.camera, scene.ground ?? null);
         view.shadowMap = its?.map ?? null;
+        fillDrawableStyle(view.style, spaces[v]);
     }
 
     for (const kind of customs.inPass) {

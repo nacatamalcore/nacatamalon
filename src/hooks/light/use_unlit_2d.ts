@@ -1,3 +1,4 @@
+import { sceneOnly } from '../../game_systems/game_systems';
 import { getActiveBox } from '../../store';
 import { outsideSceneBody } from '../../utils/outside_scene_body';
 import { countUnlit2d } from '../../light/count_lights_2d';
@@ -36,6 +37,7 @@ export const useUnlit2d = (on = true): void => {
     if (box === null) {
         throw outsideSceneBody('useUnlit2d');
     }
+    sceneOnly('useUnlit2d');
     if (on && !box.unlit2d) countUnlit2d(box);
     box.unlit2d = on;
 };

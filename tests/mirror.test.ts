@@ -5,6 +5,8 @@ import { createMaterial } from '../src/gameobjects/material/create_material';
 import { usePlaneGeometry } from '../src/hooks/geometry/use_plane_geometry';
 import { useCamera3d } from '../src/hooks/camera/use_camera_3d';
 import { useEnvironment, useMirror } from '../src/hooks/mirror';
+import { createDrawable, registerDrawableKind } from '../src/extend/gpu';
+import type { TCustomDrawable } from '../src/extend/gpu';
 import { chrome } from '../src/materials';
 import { buildMeshMaterialShader, buildMeshMaterialShadowShader } from '../src/render/webgpu/material/mesh_material_shader';
 import { buildMeshMaterialShaderGlsl } from '../src/render/webgl2/material/mesh_material_shader';
@@ -164,6 +166,31 @@ describe('useEnvironment', () => {
             // The model is left out of its own surroundings; the other plane is in them.
             const drawn = face.drawables!.filter((d) => d.type === 'mesh');
             expect(drawn.some((d) => (d as { transform: { x: number } }).transform.x === 3)).toBe(false);
+        }
+    });
+
+    it('follows a plugin\'s drawing and leaves it out of its own surroundings, as it does a model', () => {
+        registerDrawableKind({ name: 'test-environment-blob', prepare: () => null });
+        const { store } = createTestGame();
+        let blob!: TCustomDrawable;
+        startTestScene(store, 'Hall', () => {
+            useCamera3d({ projection: 'perspective', transform: { y: 2, z: 6 } });
+            blob = createDrawable('test-environment-blob', { transform: { x: -2, y: 1 } });
+            useEnvironment({ around: blob, size: 16, live: true });
+            createMesh({ geometry: usePlaneGeometry(), transform: { z: -4 } });
+            return createScene();
+        });
+        const ctx = frame();
+        advanceFrame(store, ctx, 1000 / 60);
+        advanceFrame(store, ctx, 1000 / 60);
+        const faces = ctx.passes.filter((pass) => pass.views3d?.[0]?.camera?.fov === 90);
+        expect(faces).toHaveLength(6);
+        for (const face of faces) {
+            expect(face.views3d![0]!.camera!.transform).toMatchObject({ x: -2, y: 1, z: 0 });
+            // The drawing is in the list as the engine's stand-in for it, never as itself: the only one
+            // in the scene, so none at all.
+            expect(face.drawables!.some((d) => d.type === 'custom')).toBe(false);
+            expect(face.drawables!.some((d) => d.type === 'mesh')).toBe(true);
         }
     });
 

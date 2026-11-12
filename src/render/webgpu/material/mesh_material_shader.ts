@@ -2,6 +2,7 @@ import { FACED_LIGHT, FACING_TURN, INSTANCE_INPUTS, INSTANCE_PLACE, MESH_SHADER_
 import { buildUniformLayout } from '../../shared/material_uniforms';
 import { SHADOW_CUT_UNIFORMS_WGSL, SHADOW_UNIFORMS_WGSL } from '../shadow/shadow_shader';
 import { MAX_MATERIAL_MAPS } from '../../shared/material_maps';
+import { MODEL_REFLECTION_WGSL } from '../mesh/model_shading_wgsl';
 import type { TCullMode, TUniformSignature } from '../../../materials';
 
 /**
@@ -214,12 +215,11 @@ const maps = (names: readonly string[], lit = true): string => {
         `fn sampleMapScaled_${name}(uv: vec2<f32>, scale: vec2<f32>) -> vec4<f32> {\n    return textureSampleGrad(mapTexture${i}, mapSampler${i}, uv, meshUvDx * scale, meshUvDy * scale);\n}`).join('\n');
     return `${slots}
 
-// Where the reflection lands on a round picture of the surroundings, the way the consoles laid
-// chrome on: the reflection turned to the camera's own axes first, so the middle of the picture is
-// what is behind the camera whichever way it looks, and the rim, where the picture pinches to a
-// point, is always behind the model. The camera's back is the scene's look (see fill_light_uniforms.ts);
-// its up is the world's, so the sky stays up in the picture; looking straight up or down, the world's
-// x stands in. The twin of envUv in webgl2/material/mesh_material_shader.ts.
+// Where the reflection lands, on a round picture of the surroundings (envUv, turned to the camera by
+// the scene's look, see fill_light_uniforms.ts) or on a cube's six faces (envCubeUv): the ones a
+// plugin's kind is handed too (see mesh/model_shading_wgsl.ts, which says how each reads). The twins
+// of envUv and envCubeUv in webgl2/material/mesh_material_shader.ts.
+${MODEL_REFLECTION_WGSL}
 ${lit ? ENV_UV : ENV_UV_UNLIT}
 ${ENV_CUBE_UV}
 ${readers}
@@ -227,65 +227,16 @@ ${readers}
 };
 
 const ENV_UV = /* wgsl */ `fn envUv(ctx: FragContext) -> vec2<f32> {
-    let r = reflect(-normalize(ctx.viewDir), normalize(ctx.normal));
-    let back = select(vec3<f32>(0.0, 0.0, 1.0), lights.look.xyz, dot(lights.look.xyz, lights.look.xyz) > 0.5);
-    let across = cross(vec3<f32>(0.0, 1.0, 0.0), back);
-    let right = select(vec3<f32>(1.0, 0.0, 0.0), normalize(across), dot(across, across) > 0.000001);
-    let up = cross(back, right);
-    // Through the 2D camera the world's y runs down: what shows above is the other way.
-    let v = vec3<f32>(dot(r, right), dot(r, up) * select(1.0, -1.0, lights.ground.w > 1.5), dot(r, back));
-    let m = max(2.0 * sqrt(v.x * v.x + v.y * v.y + (v.z + 1.0) * (v.z + 1.0)), 0.0001);
-    return vec2<f32>(v.x / m + 0.5, 0.5 - v.y / m);
+    return roundReflectionUv(reflect(-normalize(ctx.viewDir), normalize(ctx.normal)), lights.look, lights.ground);
 }`;
 
-// Where the reflection lands on a picture of the surroundings drawn as the six faces of a cube, three
-// across and two down (+x, -x, +y; -y, +z, -z), each seen from its middle by a camera of 90 degrees as
-// useEnvironment draws them: in the world's own axes, so the same from wherever it is seen. Kept a
-// hair inside each face, so a read never takes the next face's edge. The twin of envCubeUv in
-// webgl2/material/mesh_material_shader.ts.
 const ENV_CUBE_UV = /* wgsl */ `fn envCubeUv(ctx: FragContext) -> vec2<f32> {
-    let r = reflect(-normalize(ctx.viewDir), normalize(ctx.normal));
-    let a = abs(r);
-    var cell = vec2<f32>(0.0, 0.0);
-    var forward = vec3<f32>(1.0, 0.0, 0.0);
-    var right = vec3<f32>(0.0, 0.0, 1.0);
-    var up = vec3<f32>(0.0, 1.0, 0.0);
-    if (a.x >= a.y && a.x >= a.z) {
-        if (r.x < 0.0) {
-            cell = vec2<f32>(1.0, 0.0);
-            forward = vec3<f32>(-1.0, 0.0, 0.0);
-            right = vec3<f32>(0.0, 0.0, -1.0);
-        }
-    } else if (a.y >= a.z) {
-        right = vec3<f32>(1.0, 0.0, 0.0);
-        if (r.y > 0.0) {
-            cell = vec2<f32>(2.0, 0.0);
-            forward = vec3<f32>(0.0, 1.0, 0.0);
-            up = vec3<f32>(0.0, 0.0, 1.0);
-        } else {
-            cell = vec2<f32>(0.0, 1.0);
-            forward = vec3<f32>(0.0, -1.0, 0.0);
-            up = vec3<f32>(0.0, 0.0, -1.0);
-        }
-    } else if (r.z > 0.0) {
-        cell = vec2<f32>(1.0, 1.0);
-        forward = vec3<f32>(0.0, 0.0, 1.0);
-        right = vec3<f32>(-1.0, 0.0, 0.0);
-    } else {
-        cell = vec2<f32>(2.0, 1.0);
-        forward = vec3<f32>(0.0, 0.0, -1.0);
-        right = vec3<f32>(1.0, 0.0, 0.0);
-    }
-    let depth = max(dot(r, forward), 0.0001);
-    let face = clamp(vec2<f32>(0.5 + 0.5 * dot(r, right) / depth, 0.5 - 0.5 * dot(r, up) / depth), vec2<f32>(0.002), vec2<f32>(0.998));
-    return (cell + face) / vec2<f32>(3.0, 2.0);
+    return cubeReflectionUv(reflect(-normalize(ctx.viewDir), normalize(ctx.normal)));
 }`;
 
 // The same with the world's axes, for a shader with no lights block (a shadow's).
 const ENV_UV_UNLIT = /* wgsl */ `fn envUv(ctx: FragContext) -> vec2<f32> {
-    let r = reflect(-normalize(ctx.viewDir), normalize(ctx.normal));
-    let m = max(2.0 * sqrt(r.x * r.x + r.y * r.y + (r.z + 1.0) * (r.z + 1.0)), 0.0001);
-    return vec2<f32>(r.x / m + 0.5, 0.5 - r.y / m);
+    return roundReflectionUv(reflect(-normalize(ctx.viewDir), normalize(ctx.normal)), vec4<f32>(0.0), vec4<f32>(0.0));
 }`;
 
 const DEFAULT_VERTEX = /* wgsl */ `

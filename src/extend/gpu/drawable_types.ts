@@ -134,6 +134,33 @@ export type TWebGpuDrawableContext = {
      */
     readonly lights2d: { readonly wgsl: string; readonly floats: number };
     /**
+     * What a model's shader does that a kind can do the same way, for a kind in depth that wants to
+     * look like the models round it. `wgsl` declares five functions, the ones a model's shader reads
+     * itself; a kind's shader adds it and never declares those names of its own:
+     *
+     * - `snapToGrid(clip: vec4<f32>, grid: vec2<f32>) -> vec4<f32>`: a corner's clip position put on
+     *   a coarse grid of the screen, the way `vertexSnap` makes a model shiver as it moves. `grid` is
+     *   the view's (`style.snap`, as columns and rows); zero columns leaves it as it is.
+     * - `affineUvOf(uv: vec2<f32>, clip: vec4<f32>, affine: bool) -> vec3<f32>`: where in a picture a
+     *   corner is, carried to the pixel, which reads it as `uv.xy / uv.z`; with `affine` the picture
+     *   swims, as an `affine` material's does. `clip` is the corner's clip position, snapped or not.
+     * - `ambientFacing(normal: vec3<f32>, ambient: vec4<f32>, ground: vec4<f32>) -> vec3<f32>`: the
+     *   light from all around at a surface facing `normal`, with the view's `lights.ambient` and
+     *   `lights.ground`: one colour, or from the ground's below to the sky's above when the scene's
+     *   ambient has two (`useAmbientLight({ ground })`).
+     * - `roundReflectionUv(ray: vec3<f32>, look: vec4<f32>, ground: vec4<f32>) -> vec2<f32>`: where a
+     *   reflection lands on a round picture of the surroundings (a `studioEnvironment`, a
+     *   `sphereFromPanorama`, a matcap), as a model's `reflection` reads one. `ray` is
+     *   `reflect(-toEye, normal)`, both of length one, in the world; `look` and `ground` are the view's
+     *   `lights.look` and `lights.ground`, which turn it to the camera.
+     * - `cubeReflectionUv(ray: vec3<f32>) -> vec2<f32>`: the same on the six faces of a cube, as
+     *   `useEnvironment` draws them (`read: 'cube'`).
+     *
+     * The picture itself is the game's to give: a plugin's hook takes it in its options (a
+     * `TTexture`, or a `useEnvironment`'s `texture`) and reads it through `texture`.
+     */
+    readonly shading: { readonly wgsl: string };
+    /**
      * The GPU side of one of the game's pictures, or `null` while it is still loading or after it
      * was let go of. Ask again each frame rather than keeping it: when the picture is loaded again,
      * the one kept is gone. Never read a picture the pass is drawing into (a view of the world that
@@ -168,6 +195,40 @@ export type TWebGpuDrawableView = {
      * `lights`.
      */
     readonly shadowMap: GPUTextureView | null;
+    /**
+     * How the scene's style asks a model whose material does not say to be drawn.
+     */
+    readonly style: TDrawableStyle;
+};
+
+/**
+ * How a scene's style (`createGame({ style })`, `useRenderStyle`) asks a model whose material does
+ * not say to be drawn, as a kind in depth is told it for each view: all off in a scene with no
+ * style. A kind does with it what a model does, and lets an option of its own win over it, as a
+ * material's `perPixel`, `affine` and `vertexSnap` win: the functions that do it are
+ * `context.shading`'s.
+ *
+ * @experimental It can change from one version to the next.
+ * @category Extending
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TDrawableStyle = {
+    /**
+     * The light worked out at every pixel rather than at the corners.
+     */
+    readonly perPixel: boolean;
+    /**
+     * Pictures stretched across the screen without correcting for depth, so they swim
+     * (`affineUvOf`).
+     */
+    readonly affine: boolean;
+    /**
+     * The grid of the screen the corners are put on (`snapToGrid`), as columns and rows: square
+     * cells, worked out for this view's size. Both zero for none. A kind with a number of rows of
+     * its own makes the columns the same way, `rows * pass.width / pass.height`.
+     */
+    readonly snap: { readonly columns: number; readonly rows: number };
 };
 
 /**
@@ -344,6 +405,13 @@ export type TWebGl2DrawableContext = {
      */
     readonly lights2d: { readonly glsl: string; readonly floats: number };
     /**
+     * What a model's shader does that a kind can do the same way: the GLSL twin of
+     * `TWebGpuDrawableContext.shading`, with the same five functions (`snapToGrid`, `affineUvOf`,
+     * `ambientFacing`, `roundReflectionUv`, `cubeReflectionUv`). Added to the vertex shader, the fragment one or both,
+     * after `precision`: each is a program of its own.
+     */
+    readonly shading: { readonly glsl: string };
+    /**
      * The GL side of one of the game's pictures, or `null` while it is still loading or after it was
      * let go of. Ask again each frame rather than keeping it.
      */
@@ -374,6 +442,11 @@ export type TWebGl2DrawableView = {
      * (`sampler2DShadow`), or `null` when it casts none.
      */
     readonly shadowMap: WebGLTexture | null;
+    /**
+     * How the scene's style asks a model whose material does not say to be drawn. See
+     * `TDrawableStyle`.
+     */
+    readonly style: TDrawableStyle;
 };
 
 /**

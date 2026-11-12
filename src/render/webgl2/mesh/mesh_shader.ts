@@ -1,4 +1,5 @@
 import { MAX_LIGHTS, MAX_SCENE_LIGHTS } from '../../../light';
+import { MODEL_CORNERS_GLSL } from './model_shading_glsl';
 import { INSTANCE_LOCATION } from '../../shared/mesh_instances';
 import type { TCullMode } from '../../../materials/types/t_material';
 
@@ -129,14 +130,9 @@ ${MESH_UNIFORMS_GLSL}
 // A corner put on a coarse grid of the screen, the way the PlayStation drew. The twin of
 // snapToPixels in webgpu/mesh/mesh_shader.ts: the grid (columns and rows) rides in the two spare
 // fourth numbers, and zero means the material did not ask for it.
+${MODEL_CORNERS_GLSL}
 vec4 snapToPixels(vec4 clip) {
-    vec2 grid = vec2(uniforms.emissive.w, uniforms.cameraPosition.w);
-    if (grid.x <= 0.0 || clip.w <= 0.0) {
-        return clip;
-    }
-    vec2 halfGrid = grid * 0.5;
-    vec2 snapped = floor(clip.xy / clip.w * halfGrid + 0.5) / halfGrid;
-    return vec4(snapped * clip.w, clip.z, clip.w);
+    return snapToGrid(clip, vec2(uniforms.emissive.w, uniforms.cameraPosition.w));
 }
 
 // Where in the picture a corner is, times a depth the ending divides by to undo the card's
@@ -144,8 +140,7 @@ vec4 snapToPixels(vec4 clip) {
 // flag rides in the last number of the turning matrix, and not affine the depth is one. A corner
 // behind the eye keeps its w too: the card cuts the triangle before dividing, so it comes out right.
 vec3 affineUv(vec2 uv, vec4 clip) {
-    float k = uniforms.normalMatrix[3].w > 0.5 ? clip.w : 1.0;
-    return vec3(uv * k, k);
+    return affineUvOf(uv, clip, uniforms.normalMatrix[3].w > 0.5);
 }
 
 // How much of a corner is lost in the fog, 0 to 1. The twin of fogAt in webgpu/mesh/mesh_shader.ts.

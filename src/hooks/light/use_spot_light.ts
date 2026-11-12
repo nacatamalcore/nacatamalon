@@ -1,3 +1,4 @@
+import { sceneOnly } from '../../game_systems/game_systems';
 import { createSpotLight } from '../../light';
 import { getActiveBox } from '../../store';
 import type { TLightOptionsBase } from '../../light';
@@ -42,6 +43,7 @@ export const useSpotLight = (options: TLightOptionsBase & { range?: number; angl
     if (box === null) {
         throw outsideSceneBody('useSpotLight');
     }
+    sceneOnly('useSpotLight');
 
     const light = createSpotLight(options);
     box.lights.push(light);

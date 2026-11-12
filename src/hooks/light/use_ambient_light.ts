@@ -1,3 +1,4 @@
+import { sceneOnly } from '../../game_systems/game_systems';
 import { createAmbientLight } from '../../light';
 import { getActiveBox } from '../../store';
 import type { TColorOption } from '../../color';
@@ -48,6 +49,7 @@ export const useAmbientLight = (options: { color?: TColorOption; intensity?: num
     if (box === null) {
         throw outsideSceneBody('useAmbientLight');
     }
+    sceneOnly('useAmbientLight');
 
     const light = createAmbientLight(options);
     box.lights.push(light);

@@ -1,3 +1,4 @@
+import { sceneOnly } from '../../game_systems/game_systems';
 import { getActiveBox } from '../../store';
 import { getPhysicsProviders, warnMissingPhysicsProvider } from '../../physics';
 import { nanoId } from '../../utils';
@@ -40,6 +41,7 @@ export const usePhysicsWorld2d = (options: { id?: string; gravity?: { x: number;
     if (box === null) {
         throw outsideSceneBody('usePhysicsWorld2d');
     }
+    sceneOnly('usePhysicsWorld2d');
     if (box.parent !== null) {
         console.warn(`[NacatamalOn] usePhysicsWorld2d: '${box.name}' is not a scene, and only a scene's simulation is read. Call it in the scene's own body.`);
     }
@@ -85,6 +87,7 @@ export const usePhysicsWorld3d = (options: { id?: string; gravity?: { x: number;
     if (box === null) {
         throw outsideSceneBody('usePhysicsWorld3d');
     }
+    sceneOnly('usePhysicsWorld3d');
     if (box.parent !== null) {
         console.warn(`[NacatamalOn] usePhysicsWorld3d: '${box.name}' is not a scene, and only a scene's simulation is read. Call it in the scene's own body.`);
     }

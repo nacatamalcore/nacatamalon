@@ -3,6 +3,9 @@
 // What almost every game uses. What is a subject of its own has a door of its own, so this list stays
 // one a person can read: `nacatamalon/math`, `/pixels`, `/shader`, `/effects`, `/transitions`, `/files`.
 export { createGame } from './game/bootstrap/create_game';
+// Code that belongs to the whole game rather than to a scene: a game's, or a plugin's.
+export { registerGameSystem } from './game_systems/game_systems';
+export type { TGameSystemFn } from './game_systems/game_systems';
 export { createScene } from './scene';
 export { useTransform, useCamera3d, useFog, useRenderStyle } from './hooks';
 export type { TRenderStyle, TRenderStyleHandle } from './style';

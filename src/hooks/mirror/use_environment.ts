@@ -13,6 +13,12 @@ import type { TModel } from '../../gameobjects/model';
 import type { TTexture } from '../../loaders';
 
 /**
+ * A plugin's drawing as `around` knows it: by what it is, where it was last drawn and where it is
+ * placed. Only this much, so the front door's types never reach the GPU types its door names.
+ */
+type TAroundDrawing = { readonly type: 'custom'; readonly worldMatrix?: Float32Array; readonly transform: { readonly x: number; readonly y: number } };
+
+/**
  * What `useEnvironment` is asked for. Everything is optional.
  *
  * @category Materials
@@ -21,11 +27,11 @@ import type { TTexture } from '../../loaders';
  */
 export type TEnvironmentOptions = {
     /**
-     * Where the surroundings are seen from: the model that reflects them (a mesh or a model from a
-     * file), followed as it moves and left out of its own surroundings, or a fixed point. Default the
-     * origin.
+     * Where the surroundings are seen from: the model that reflects them (a mesh, a model from a
+     * file, or a plugin's drawing in depth), followed as it moves and left out of its own
+     * surroundings, or a fixed point. Default the origin.
      */
-    around?: TMesh | TModel | { x: number; y: number; z: number };
+    around?: TMesh | TModel | TAroundDrawing | { x: number; y: number; z: number };
     /**
      * How far above `around` to see them from, so a character reflects the room from its chest and not
      * its feet. Default `0`.
@@ -96,21 +102,23 @@ const isModel = (around: TEnvironmentOptions['around']): around is TModel =>
     typeof around === 'object' && around !== null && (around as { type?: unknown }).type === 'model';
 const isMesh = (around: TEnvironmentOptions['around']): around is TMesh =>
     typeof around === 'object' && around !== null && (around as { type?: unknown }).type === 'mesh';
+const isCustom = (around: TEnvironmentOptions['around']): around is TAroundDrawing =>
+    typeof around === 'object' && around !== null && (around as { type?: unknown }).type === 'custom';
 
 /**
- * Where `around` is now: where a mesh ended up the last frame it was drawn, a model's first piece, or
- * the point itself.
+ * Where `around` is now: where a mesh or a plugin's drawing ended up the last frame it was drawn, a
+ * model's first piece, or the point itself.
  */
 const whereIs = (around: TEnvironmentOptions['around']): { x: number; y: number; z: number } => {
     if (around === undefined) {
         return { x: 0, y: 0, z: 0 };
     }
-    const piece = isMesh(around) ? around : isModel(around) ? around.parts[0] : undefined;
+    const piece = isMesh(around) || isCustom(around) ? around : isModel(around) ? around.parts[0] : undefined;
     if (piece?.worldMatrix !== undefined) {
         return { x: piece.worldMatrix[12]!, y: piece.worldMatrix[13]!, z: piece.worldMatrix[14]! };
     }
-    const at = isMesh(around) || isModel(around) ? around.transform : around;
-    return { x: at.x, y: at.y, z: at.z };
+    const at = isMesh(around) || isModel(around) || isCustom(around) ? around.transform : around;
+    return { x: at.x, y: at.y, z: (at as { z?: number }).z ?? 0 };
 };
 
 /**

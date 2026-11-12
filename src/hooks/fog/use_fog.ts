@@ -1,3 +1,4 @@
+import { sceneOnly } from '../../game_systems/game_systems';
 import { viewOf } from '../../box';
 import { createFog } from '../../fog/create_fog';
 import { getActiveBox } from '../../store';
@@ -39,6 +40,7 @@ export const useFog = (options: TFogOptions = {}): TFog => {
     if (box === null) {
         throw outsideSceneBody('useFog');
     }
+    sceneOnly('useFog');
 
     // The view's and not the scene's, for the reason the camera is: a screen with a world of its
     // own has its own fog, and asking for one inside it must not fog the room the screen is in.

@@ -17,7 +17,10 @@ import { beginCustomPassGl, beginCustomShadowsGl, destroyCustomsGl, drawCustomsG
 import { inSight } from '../src/game/loop/helper/collect_drawables';
 import type { TDrawable } from '../src/gameobjects/types';
 import type { TWebGL2State } from '../src/render/webgl2/types/t_webgl2_state';
-import type { TWebGl2Drawables } from '../src/extend/gpu';
+import type { TWebGl2Drawables, TWebGl2DrawablePass, TWebGpuDrawableContext } from '../src/extend/gpu';
+import { buildMeshMaterialShader } from '../src/render/webgpu/material/mesh_material_shader';
+import { buildMeshMaterialShaderGlsl } from '../src/render/webgl2/material/mesh_material_shader';
+import { MESH_SHADER } from '../src/render/webgpu/mesh/mesh_shader';
 import { runHookUpdates } from '../src/game/loop/runHookUpdates';
 import { newSkeleton, restingJoint } from '../src/animation';
 import { LIGHT_UNIFORM_FLOATS } from '../src/render/shared/fill_light_uniforms';
@@ -680,5 +683,73 @@ describe('the animator', () => {
         runHookUpdates(scene, 0);
         runHookUpdates(scene, 0.5);
         expect(skeleton.pose[0].t[0]).toBeCloseTo(5, 4);
+    });
+});
+
+describe('what a kind is handed to draw like the models round it', () => {
+    const styled = (style: object | null) => ({ ...(space(0) as object), style }) as never;
+
+    it('is told each view\'s style, its grid worked out as a model\'s, all off with none', () => {
+        let seen: TWebGpuDrawablePass<unknown> | null = null;
+        let context: TWebGpuDrawableContext | null = null;
+        const blobs = kind({
+            webgpu: (made): TWebGpuDrawables<unknown> => {
+                context = made;
+                return { beginPass: (pass) => { seen = pass; }, draw: () => {} };
+            },
+        });
+        registerDrawableKind(blobs);
+        const gpu = fakeCard();
+        const drawables = [item(blobs.name, 'a')];
+        beginCustomPass(gpu, drawables, [0], [], [], [styled({ affine: true, vertexSnap: 120 }), styled(null)], [at(), at()], [view3d(), view3d()], [], 0, 320, 180);
+
+        const views = (seen as TWebGpuDrawablePass<unknown> | null)!.views;
+        // 120 rows at 320 x 180: the columns follow the view's shape, so the cells stay square.
+        expect(views[0].style).toEqual({ perPixel: false, affine: true, snap: { columns: 120 * (320 / 180), rows: 120 } });
+        expect(views[1].style).toEqual({ perPixel: false, affine: false, snap: { columns: 0, rows: 0 } });
+        const wgsl = (context as TWebGpuDrawableContext | null)!.shading.wgsl;
+        for (const name of ['fn snapToGrid(', 'fn affineUvOf(', 'fn ambientFacing(', 'fn roundReflectionUv(', 'fn cubeReflectionUv('])  {
+            expect(wgsl).toContain(name);
+        }
+        // Its code reads nothing of a model's own: a kind's shader has no `uniforms` or `lights` of the
+        // engine's. Comments may name them.
+        const code = wgsl.split('\n').filter((line) => !line.trim().startsWith('//')).join('\n');
+        expect(code).not.toContain('uniforms.');
+        expect(code).not.toContain('lights.');
+        destroyCustoms(gpu.customs);
+    });
+
+    it('on WebGL2 too: the style in each view and the GLSL twins in the context', () => {
+        let seen: TWebGl2DrawablePass<unknown> | null = null;
+        let glsl = '';
+        const blobs = kind({
+            webgl2: (made): TWebGl2Drawables<unknown> => {
+                glsl = made.shading.glsl;
+                return { beginPass: (pass) => { seen = pass; }, draw: () => {} };
+            },
+        });
+        registerDrawableKind(blobs);
+        const state = fakeGl();
+        beginCustomPassGl(state, [item(blobs.name, 'a')], [0], [], [], [styled({ perPixel: true, vertexSnap: true })], [at()], [view3d()], [], 0, 320, 180);
+
+        // `true` is the view's own pixels.
+        expect((seen as TWebGl2DrawablePass<unknown> | null)!.views[0].style).toEqual({ perPixel: true, affine: false, snap: { columns: 320, rows: 180 } });
+        for (const name of ['vec4 snapToGrid(', 'vec3 affineUvOf(', 'vec3 ambientFacing(', 'vec2 roundReflectionUv(', 'vec2 cubeReflectionUv(']) {
+            expect(glsl).toContain(name);
+        }
+        destroyCustomsGl(state.customs);
+    });
+
+    it('is what a model\'s own shaders read, declared once in each', () => {
+        const once = (code: string, name: string) => expect(code.split(name).length - 1).toBe(1);
+        const wgsl = buildMeshMaterialShader(null, null, {}, [], false, 'back', false);
+        once(wgsl, 'fn snapToGrid(');
+        once(wgsl, 'fn roundReflectionUv(');
+        expect(wgsl).toContain('return snapToGrid(clip, vec2<f32>(uniforms.emissive.w, uniforms.cameraPosition.w));');
+        expect(wgsl).toContain('return cubeReflectionUv(reflect(-normalize(ctx.viewDir), normalize(ctx.normal)));');
+        const gl = buildMeshMaterialShaderGlsl(null, null, {}, [], false, 'back', false);
+        once(gl.vertex, 'vec4 snapToGrid(');
+        once(gl.fragment, 'vec2 roundReflectionUv(');
+        expect(MESH_SHADER).toContain('fn snapToGrid(');
     });
 });

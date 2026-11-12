@@ -79,7 +79,53 @@ mano ese juego y ese objeto, y `useSelf` y `useUpdate` les pertenecen.
 | Cambia la escena | `useScene`, `useSceneTransitionEnd` |
 
 Para lo que es de todo el juego, el plugin exporta una función `install…()` que el juego llama una
-vez al principio de `main.ts`, como `installPhysics2d()`.
+vez al principio de `main.ts`, como `installPhysics2d()`. Lo que instala puede ser un sistema de
+juego (`registerGameSystem`), más abajo.
+
+## Código para todo el juego
+
+Un guardado que corre esté la escena que esté, analítica, una ayuda para depurar, música que no se
+corta entre niveles: lo que es del juego y no de una escena. `registerGameSystem(nombre, fn)` ejecuta
+`fn` una vez en cada juego que arranca, antes de su primera escena, en una caja propia que ningún
+cambio de escena toca, y la desmonta cuando el juego termina. Está en la puerta principal,
+`nacatamalon`, porque un juego también lo usa para su propio código; un plugin exporta una función de
+instalación que lo llama:
+
+```ts
+import { registerGameSystem, useGame, useUpdate, useCleanup } from 'nacatamalon';
+
+// Hecha una vez, arriba del módulo: la misma función se llame cuantas veces se llame el install.
+const playTime = () => {
+    let seconds = 0;
+    useUpdate((delta) => { seconds += delta; });           // cada fotograma, esté la escena que esté
+    useGame().onLeaving(() => localStorage.setItem('play-time', String(seconds)));
+    useCleanup(() => { /* el juego termina */ });
+};
+
+export const installPlayTime = () => registerGameSystem('nacatamalon-play-time', playTime);
+```
+
+El juego llama a `installPlayTime()` al principio de `main.ts`, antes de `createGame`; uno registrado
+con un juego en marcha espera al siguiente, y lo dice. Dentro, los hooks son los de siempre:
+
+- Sus `useUpdate` corren antes que los de todas las escenas en cada fotograma, y sus `useLateUpdate`
+  después de los de todas, así que prepara las cosas para las escenas y lee dónde las dejaron.
+- El juego en pausa lo pausa también (`useGame().onPaused` se lo dice); una escena en pausa, no.
+- No es de ninguna escena: `useScene`, las cámaras, las luces, la física, `useRenderStyle` y `useFog`
+  lanzan un error dentro de él. Lo que crea no se dibuja en ningún sitio; para enseñar algo, lanza
+  una escena propia.
+- Uno que lanza un error se informa y se deja fuera, y el juego sigue.
+- El mismo nombre con la misma función no hace nada, y por eso el cuerpo se hace una vez, fuera del
+  install: un install llamado dos veces no hace nada. Con otra función, lanza un error. Devuelve una
+  función que lo quita para los juegos que arranquen después.
+- Mientras una herramienta monta el juego en vez de jugarlo (el modo edición del editor), sus sistemas
+  se desmontan, listeners incluidos, y vuelven a arrancar cuando se juega.
+
+Corre empiece el juego por la escena que empiece. Una escena que lanza las demás (un `Main` que nunca
+se para, con los niveles a su lado) haría lo mismo mientras el juego empiece por ella, y faltaría
+cuando no: un nivel jugado directamente desde el editor, un juego creado con `initialScene`, un test
+que empieza en el tercer nivel. Una escena lanzada al lado de los niveles sigue siendo la forma de
+tener algo siempre en pantalla, un marcador o un marco, porque un sistema no dibuja.
 
 ## Lo que `nacatamalon/extend` da a un plugin
 
@@ -213,6 +259,17 @@ sus vistas 2D (`cameras`: la pantalla y luego cada cámara 2D), cada una con la 
 del mundo a la pantalla y sus luces 2D, con las que `context.lights2d` ilumina un color
 (`illuminate2d`) como se ilumina un sprite.
 
+Para parecerse a los modelos que lo rodean, un tipo en profundidad dibuja como se dibuja un modelo, con
+las funciones de shader del propio motor (`context.shading`, añadido a su shader): `ambientFacing` para
+el ambiente de la escena, del color del suelo abajo al del cielo arriba cuando tiene dos;
+`roundReflectionUv` y `cubeReflectionUv` para dónde cae un reflejo en una imagen del entorno (un
+`studioEnvironment`, la `texture` de un `useEnvironment`, un matcap), que el juego le da al hook del
+plugin en sus opciones (un dibujo puede ser el `around` de su propio `useEnvironment`, y queda fuera de
+él, como un modelo); y `snapToGrid` y `affineUvOf` para las esquinas que tiemblan y las imágenes que
+nadan del estilo. Cada vista dice qué pide el estilo de su escena (`style`: `perPixel`, `affine` y la
+rejilla `snap`), así que con `RENDER.STYLES.ps1` un dibujo tiembla en la misma rejilla que los modelos
+de al lado.
+
 Un tipo da lo que lo dibuja en cada backend: `webgpu` y `webgl2`, con los mismos momentos en los dos
 (`TWebGl2Drawables`, sin encoder porque WebGL2 dibuja al momento; cada llamada corre dentro de la
 pasada del motor y el estado de GL se deja como estaba al volver, y pone él mismo cada estado con el
@@ -226,6 +283,5 @@ bosque, mejor hecho como varios.
 
 ## Lo que un plugin todavía no puede hacer
 
-Registrar un tipo de archivo, poner un componente propio en un
-documento de escena para el editor, o correr para todo el juego sin que el juego lo llame. Cada una
-está planeada como su propia parte de `nacatamalon/extend`.
+Registrar un tipo de archivo, o poner un componente propio en un documento de escena para el editor.
+Cada una está planeada como su propia parte de `nacatamalon/extend`.

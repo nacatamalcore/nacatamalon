@@ -1,3 +1,4 @@
+import { sceneOnly } from '../../game_systems/game_systems';
 import { getActiveBox } from '../../store';
 import { outsideSceneBody } from '../../utils/outside_scene_body';
 
@@ -29,5 +30,6 @@ export const useParallax = (factor: { x: number; y: number }): void => {
     if (box === null) {
         throw outsideSceneBody('useParallax');
     }
+    sceneOnly('useParallax');
     box.parallax = { x: factor.x, y: factor.y };
 };

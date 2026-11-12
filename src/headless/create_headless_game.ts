@@ -1,4 +1,5 @@
 import { noteFoundByName, teardownBox } from '../box';
+import { startGameSystems, stopGameSystems } from '../game_systems/game_systems';
 import { boxRegion, boxesIn } from '../capture/photo_boxes';
 import { cleanGameOptions } from '../game/bootstrap/clean_gameoptions';
 import { createFrameContext, fillFrameContext } from '../game/loop';
@@ -135,8 +136,28 @@ export const createHeadlessGame = (options: THeadlessGameOptions): THeadlessGame
         registerScene(store, name, scene);
     }
     const first = initialScene ?? Object.keys(scenes)[0];
+    startGameSystems(store);
     if (first !== undefined) {
-        startScene(store, first);
+        try {
+            startScene(store, first);
+        } catch (error) {
+            // No game after all: what it started goes with it, its systems and the browser's own
+            // things it stood in for, as `destroy` would.
+            store.setState('loop', { destroyed: true });
+            // What did start (a scene whose ready threw, one its body launched) leaves first.
+            for (const scene of store.get('world').scenes) {
+                teardownBox(scene);
+            }
+            stopGameSystems(store);
+            store.get('input').keyboard.destroy();
+            store.get('input').pointer.destroy();
+            store.get('input').gamepads.destroy();
+            store.get('audio').manager?.destroy();
+            renderer.destroy();
+            store.destroy();
+            leaveHeadless();
+            throw error;
+        }
     }
 
     const ctx = createFrameContext();
@@ -309,6 +330,7 @@ export const createHeadlessGame = (options: THeadlessGameOptions): THeadlessGame
             for (const scene of store.get('world').scenes) {
                 teardownBox(scene);
             }
+            stopGameSystems(store);
             store.get('input').keyboard.destroy();
             store.get('input').pointer.destroy();
             store.get('input').gamepads.destroy();

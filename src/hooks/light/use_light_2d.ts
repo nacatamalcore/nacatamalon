@@ -1,3 +1,4 @@
+import { sceneOnly } from '../../game_systems/game_systems';
 import { getActiveBox } from '../../store';
 import { getColor } from '../../color';
 import type { TColorOption } from '../../color';
@@ -61,6 +62,7 @@ export type TLight2dOptions = {
 export const useLight2d = (options: TLight2dOptions = {}): TLight2d => {
     const box = getActiveBox();
     if (box === null) throw outsideSceneBody('useLight2d');
+    sceneOnly('useLight2d');
     const light: TLight2d = createRecord('point-2d', {
         color: getColor(options.color ?? 'white'),
         intensity: options.intensity ?? 1,
@@ -88,6 +90,7 @@ export const useLight2d = (options: TLight2dOptions = {}): TLight2d => {
 export const useAmbientLight2d = (options: { color?: TColorOption; intensity?: number } = {}): TAmbientLight2d => {
     const box = getActiveBox();
     if (box === null) throw outsideSceneBody('useAmbientLight2d');
+    sceneOnly('useAmbientLight2d');
     const light: TAmbientLight2d = createRecord('ambient-2d', {
         color: getColor(options.color ?? 'white'),
         intensity: options.intensity ?? 0.2,

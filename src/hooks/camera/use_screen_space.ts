@@ -1,3 +1,4 @@
+import { sceneOnly } from '../../game_systems/game_systems';
 import { getActiveBox } from '../../store';
 import { outsideSceneBody } from '../../utils/outside_scene_body';
 
@@ -40,5 +41,6 @@ export const useScreenSpace = (on = true): void => {
     if (box === null) {
         throw outsideSceneBody('useScreenSpace');
     }
+    sceneOnly('useScreenSpace');
     box.screenSpace = on;
 };

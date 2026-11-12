@@ -1,3 +1,4 @@
+import { sceneOnly } from '../../game_systems/game_systems';
 import { getActiveBox } from '../../store';
 import { rootOf } from '../../box';
 import { outsideSceneBody } from '../../utils/outside_scene_body';
@@ -43,5 +44,6 @@ export const useWorldOffScreen = (on = true): void => {
     if (box === null) {
         throw outsideSceneBody('useWorldOffScreen');
     }
+    sceneOnly('useWorldOffScreen');
     rootOf(box).worldOffScreen = on;
 };

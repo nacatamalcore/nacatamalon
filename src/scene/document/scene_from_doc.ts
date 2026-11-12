@@ -47,6 +47,7 @@ import type { TGeometry } from '../../geometry';
 import type { TAssetEntry } from './types/t_asset_entry';
 import type { TBox } from '../../box';
 import { rootOf } from '../../box/root_of';
+import { markShownOnly } from '../../game_systems/game_systems';
 import { createMask, releaseMask } from '../../mask/create_mask';
 import type { TMask } from '../../mask/types/t_mask';
 import type { TBoxNode, TSceneDoc } from './types/t_scene_doc';
@@ -1078,6 +1079,11 @@ export const sceneFromDoc = (doc: TSceneDoc, src = doc.name, options: TSceneFrom
     // are both here, and building a scene is one unbroken run with nothing awaited in the middle.
     const before = store.get('world').buildScripts;
     store.setState('world', { buildScripts: options.scripts ?? 'run' });
+    // A scene shown and not played (a tool laying it out) says so for as long as it runs: the game's
+    // systems wait while every scene is one of these. Only when this document IS the scene: one built
+    // inside a scene being played (a preview in a menu) leaves that scene played.
+    const active = getActiveBox();
+    if (options.scripts === 'attach' && active !== null && active.parent === null) markShownOnly(active);
     const masks = shapesToFind.length;
     try {
         // Everything the scene needs fetched, before anything that will want it exists.

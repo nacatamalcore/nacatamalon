@@ -97,6 +97,12 @@ export type TRuntimeState = {
     world: {
         scenes: TBox[];
         /**
+         * The game's systems (`registerGameSystem`), each the root of a box of its own, in the order
+         * they started: outside `scenes`, so no change of scene touches them and nothing of theirs is
+         * drawn. Set once when the game starts.
+         */
+        systems: TBox[];
+        /**
          * Every scene the game knows, by name: what can be started. It only grows, through
          * `registerScene`. `createGame` registers the object it receives at boot, so those are
          * listed before any scene runs. Replaced, never mutated, so listeners hear new entries.

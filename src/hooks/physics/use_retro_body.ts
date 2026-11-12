@@ -1,3 +1,4 @@
+import { sceneOnly } from '../../game_systems/game_systems';
 import { getActiveBox, getActiveGame } from '../../store';
 import { resolveLayers } from '../../physics/layer_names';
 import type { TPhysicsLayerOptions } from '../../physics/layer_names';
@@ -61,6 +62,7 @@ export const useRetroBody2d = (options: TRetroBody2dOptions): TRetroBody2d => {
     if (box === null) {
         throw outsideSceneBody('useRetroBody2d');
     }
+    sceneOnly('useRetroBody2d');
 
     const { layer, collidesWith, ...rest } = options;
     const record = createRetroBody2d({ name: box.name, ...rest, ...resolveLayers({ layer, collidesWith }, layerNames()) });
@@ -119,6 +121,7 @@ export const useRetroWorld2d = (options: Partial<Omit<TRetroWorld2d, '_type'>> =
     if (box === null) {
         throw outsideSceneBody('useRetroWorld2d');
     }
+    sceneOnly('useRetroWorld2d');
     if (box.parent !== null) {
         console.warn(`[NacatamalOn] useRetroWorld2d: '${box.name}' is not a scene, and only a scene's simulation is read. Call it in the scene's own body.`);
     }

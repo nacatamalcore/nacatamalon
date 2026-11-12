@@ -13,6 +13,22 @@ import type { TCustomDrawable } from '../../../gameobjects/custom';
 const stand = new WeakMap<TCustomDrawable, { -readonly [K in keyof TDrawCustom]: TDrawCustom[K] }>();
 
 /**
+ * The drawing each stand-in stands for, as its plugin made it: what a picture told to leave a drawing
+ * out (an object's own surroundings, `useEnvironment({ around })`) knows it by.
+ */
+const standsFor = new WeakMap<object, TCustomDrawable>();
+
+/**
+ * The drawing a plugin made that `item` stands in for in the list, or `item` itself when it stands
+ * for none.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const customRecordOf = (item: object): object => standsFor.get(item) ?? item;
+
+/**
  * Where a drawing is when nothing above it has a placement: its own, built here. Scratch.
  */
 const ownMatrix = mat.create();
@@ -60,6 +76,7 @@ export const stepSceneCustom = (drawables: TDrawable[], start: number, upright =
             stand.set(drawable, drawn);
         }
         const record = recordOf(drawable);
+        standsFor.set(drawn, record);
         drawn.zIndex = drawable.zIndex;
         // Its own copy: the record's is written over when it is placed again for another view.
         if (drawable.space === '2d') {

@@ -1,3 +1,4 @@
+import { sceneOnly } from '../../game_systems/game_systems';
 import { createDirectionalLight } from '../../light';
 import { getActiveBox } from '../../store';
 import type { TLightOptionsBase } from '../../light';
@@ -44,6 +45,7 @@ export const useDirectionalLight = (options: TLightOptionsBase & { shadowArea?: 
     if (box === null) {
         throw outsideSceneBody('useDirectionalLight');
     }
+    sceneOnly('useDirectionalLight');
 
     const light = createDirectionalLight(options);
     box.lights.push(light);

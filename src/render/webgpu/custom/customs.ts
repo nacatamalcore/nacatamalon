@@ -9,6 +9,9 @@ import { SHADOW_FORMAT } from '../shadow/shadow_map';
 import { LIGHT_UNIFORM_FLOATS, shadowOf } from '../../shared/fill_light_uniforms';
 import { LIGHT_STRIDE } from '../mesh/create_mesh_pipeline';
 import { LIGHTS_WGSL } from '../mesh/mesh_shader';
+import { MODEL_SHADING_WGSL } from '../mesh/model_shading_wgsl';
+import { fillDrawableStyle, newDrawableStyle } from '../../shared/drawable_style';
+import type { TDrawableStyleSlot } from '../../shared/drawable_style';
 import { customInView } from '../../shared/mesh_in_view';
 import type { TCameraSpace } from '../../shared/compute_mvp_3d';
 import type { TDrawCustom, TDrawItem } from '../../interface';
@@ -58,7 +61,7 @@ export type TCustomsOnCard = {
      * The 2D views handed to every flat kind in a pass, written over each pass.
      */
     readonly cameras: { viewProjection: Float32Array; lights: Float32Array }[];
-    readonly views: { viewProjection: Float32Array; eye: { x: number; y: number; z: number }; lights: Float32Array; shadowMap: GPUTextureView | null }[];
+    readonly views: { viewProjection: Float32Array; eye: { x: number; y: number; z: number }; lights: Float32Array; shadowMap: GPUTextureView | null; style: TDrawableStyleSlot }[];
     /**
      * The kinds that cast into this frame's shadow maps, written over each frame.
      */
@@ -111,6 +114,7 @@ const kindOnCard = (gpu: TWebGPUState, name: string): TKindOnCard | null => {
             shadowFormat: SHADOW_FORMAT,
             lights: { wgsl: LIGHTS_WGSL, floats: LIGHT_UNIFORM_FLOATS },
             lights2d: { wgsl: LIGHTS_2D_WGSL, floats: LIGHTING_2D_FLOATS },
+            shading: { wgsl: MODEL_SHADING_WGSL },
             texture: gpuTextureOf,
         };
         try {
@@ -205,7 +209,7 @@ export const beginCustomPass = (
     customs.views.length = views3d.length;
     for (let v = 0; v < views3d.length; v++) {
         const at = v * LIGHT_STRIDE / 4;
-        const view = customs.views[v] ??= { viewProjection: spaces[v].viewProjection, eye: { x: 0, y: 0, z: 0 }, lights: lights.subarray(at, at + LIGHT_UNIFORM_FLOATS), shadowMap: null };
+        const view = customs.views[v] ??= { viewProjection: spaces[v].viewProjection, eye: { x: 0, y: 0, z: 0 }, lights: lights.subarray(at, at + LIGHT_UNIFORM_FLOATS), shadowMap: null, style: newDrawableStyle() };
         view.viewProjection = spaces[v].viewProjection;
         view.eye.x = spaces[v].x;
         view.eye.y = spaces[v].y;
@@ -215,6 +219,7 @@ export const beginCustomPass = (
             view.lights = lights.subarray(at, at + LIGHT_UNIFORM_FLOATS);
         }
         view.shadowMap = shadowOf(shadows, views3d[v])?.map ?? null;
+        fillDrawableStyle(view.style, spaces[v]);
     }
 
     for (const kind of customs.inPass) {

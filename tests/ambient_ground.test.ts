@@ -60,10 +60,12 @@ describe('the lights block', () => {
         expect(MESH_SHADER_TYPES).toContain('lights.ground.w % 2.0 < 0.5');
         expect(MESH_SHADER_TYPES).toContain('select(up, 1.0 - up, lights.ground.w > 1.5)');
         const wgsl = buildMeshMaterialShader(null, null, {}, [], false, 'back', false);
-        expect(wgsl).toContain('dot(r, up) * select(1.0, -1.0, lights.ground.w > 1.5)');
+        expect(wgsl).toContain('dot(ray, up) * select(1.0, -1.0, ground.w > 1.5)');
+        expect(wgsl).toContain('lights.look, lights.ground)');
         const glsl = buildMeshMaterialShaderGlsl(null, null, {}, [], false, 'back', false).fragment;
         expect(MESH_UNIFORMS_GLSL).toContain('mod(lights.ground.w, 2.0) < 0.5');
-        expect(glsl).toContain('dot(r, up) * (lights.ground.w > 1.5 ? -1.0 : 1.0)');
+        expect(glsl).toContain('dot(ray, up) * (ground.w > 1.5 ? -1.0 : 1.0)');
+        expect(glsl).toContain('lights.look, lights.ground)');
     });
 });
 

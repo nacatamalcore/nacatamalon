@@ -1,4 +1,5 @@
 import { createCanvas } from "../../DOM/create_canvas";
+import { startGameSystems, stopGameSystems } from '../../game_systems/game_systems';
 import { teardownBox } from "../../box";
 import { createRenderer } from "../../render";
 import { installPostChain, normalizePostChain } from "../../post";
@@ -138,6 +139,8 @@ export const createGame = (target: TGameTarget, game_options: TGameOptions) => {
             for (const scene of current.get('world').scenes) {
                 teardownBox(scene);
             }
+            // Then the systems, which outlive every scene, the last started first.
+            stopGameSystems(current);
             unwatchConfig?.();
             current.get('input').keyboard.destroy();
             current.get('input').pointer.destroy();
@@ -293,14 +296,22 @@ export const createGame = (target: TGameTarget, game_options: TGameOptions) => {
             // Only the requested scene runs; the rest stay dormant until something launches them.
             // Without an initial scene, the first one declared starts. With no scenes, nothing does.
             const initial = initialScene ?? Object.keys(scenes)[0];
+            // The game's systems before any scene, so they see the whole game from its start.
+            startGameSystems(runtime);
             if (initial !== undefined) {
                 // Decided here and not at `createGame`: a tool asks for the handle just after that
                 // returns, and a game a tool drives opens on its scene, not on a logo.
                 const withSplash = splashModule !== null && !isHostClaimed(instance) ? await splashModule : null;
-                if (withSplash) {
-                    withSplash.startWithSplash(runtime, initial, screen.canvas);
-                } else {
-                    startScene(runtime, initial);
+                try {
+                    if (withSplash) {
+                        withSplash.startWithSplash(runtime, initial, screen.canvas);
+                    } else {
+                        startScene(runtime, initial);
+                    }
+                } catch (error) {
+                    // No game after all: its systems go with it.
+                    stopGameSystems(runtime);
+                    throw error;
                 }
             }
             // `runtime`, not `store`: the const that cannot be null, rather than the outer `let`

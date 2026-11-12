@@ -25,7 +25,7 @@ import type { TMaskLevel, TMaskWalk } from '../../mask/mask_walk';
 import type { TMaskTarget } from '../../mask/apply_masks';
 import type { TDrawItem } from '../../render/interface';
 import { stepSceneLines } from './helper/step_scene_lines';
-import { stepSceneCustom } from './helper/step_scene_custom';
+import { customRecordOf, stepSceneCustom } from './helper/step_scene_custom';
 import type { TFrameContext } from '../../render';
 import type { TDrawSprite } from '../../render/interface';
 import { expandText, startTextFrame } from '../../gameobjects/text/expand_text';
@@ -1023,7 +1023,7 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
         for (const model of seen.models) {
             // Whatever wears the picture this pass draws into: a model, or an effect's particles.
             // Or what the picture was told to leave out: an object's own surroundings, drawn from inside it.
-            if (showsPicture(model as TDrawable, picture.texture) || isSkippedIn(picture.texture, model)) {
+            if (showsPicture(model as TDrawable, picture.texture) || isSkippedIn(picture.texture, customRecordOf(model))) {
                 continue;
             }
             lists.drawables.push(model);

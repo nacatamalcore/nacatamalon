@@ -1,3 +1,4 @@
+import { sceneOnly } from '../../game_systems/game_systems';
 import { createPointLight } from '../../light';
 import { getActiveBox } from '../../store';
 import type { TLightOptionsBase } from '../../light';
@@ -42,6 +43,7 @@ export const usePointLight = (options: TLightOptionsBase & { range?: number } = 
     if (box === null) {
         throw outsideSceneBody('usePointLight');
     }
+    sceneOnly('usePointLight');
 
     const light = createPointLight(options);
     box.lights.push(light);

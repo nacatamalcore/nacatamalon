@@ -67,7 +67,7 @@ describe('the front door', () => {
 
     it('keeps what a game itself runs, including reading a document', () => {
         for (const name of [
-            'createGame', 'registerScript', 'useScript', 'parseSceneDoc', 'sceneFromDoc', 'objectFromDoc', 'copyObject',
+            'createGame', 'registerGameSystem', 'registerScript', 'useScript', 'parseSceneDoc', 'sceneFromDoc', 'objectFromDoc', 'copyObject',
             // A behaviour plays a sound laid out in the scene.
             'soundOf',
             // A published game resolves the store an object was given, and lays what its files

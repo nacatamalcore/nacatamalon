@@ -1,4 +1,5 @@
 import { MAX_LIGHTS, MAX_SCENE_LIGHTS } from '../../../light';
+import { MODEL_CORNERS_WGSL } from './model_shading_wgsl';
 import { INSTANCE_LOCATION } from '../../shared/mesh_instances';
 import type { TCullMode } from '../../../materials/types/t_material';
 
@@ -152,14 +153,9 @@ fn ambientAt(sky: f32) -> vec3<f32> {
 // they moved. The grid rides in the two spare fourth numbers (its columns and rows, see
 // fill_mesh_uniforms.ts); zero means the material did not ask for it, and a corner behind the eye is
 // left alone rather than divided by nothing.
+${MODEL_CORNERS_WGSL}
 fn snapToPixels(clip: vec4<f32>) -> vec4<f32> {
-    let grid = vec2<f32>(uniforms.emissive.w, uniforms.cameraPosition.w);
-    if (grid.x <= 0.0 || clip.w <= 0.0) {
-        return clip;
-    }
-    let halfGrid = grid * 0.5;
-    let snapped = floor(clip.xy / clip.w * halfGrid + 0.5) / halfGrid;
-    return vec4<f32>(snapped * clip.w, clip.z, clip.w);
+    return snapToGrid(clip, vec2<f32>(uniforms.emissive.w, uniforms.cameraPosition.w));
 }
 
 // Where in the picture a corner is, carried so the ending can undo the depth correction when the
@@ -173,8 +169,7 @@ fn snapToPixels(clip: vec4<f32>) -> vec4<f32> {
 // amount, so the new corners come out right. Giving that one corner a one while its neighbours
 // carry w is what would break the triangle.
 fn affineUv(uv: vec2<f32>, clip: vec4<f32>) -> vec3<f32> {
-    let k = select(1.0, clip.w, uniforms.normalMatrix[3].w > 0.5);
-    return vec3<f32>(uv * k, k);
+    return affineUvOf(uv, clip, uniforms.normalMatrix[3].w > 0.5);
 }
 
 // How much of a corner is lost in the fog, 0 to 1, by how far it is from the camera and how low it

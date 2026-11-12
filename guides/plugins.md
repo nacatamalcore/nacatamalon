@@ -78,7 +78,52 @@ has that game and that object in hand, and `useSelf` and `useUpdate` belong to t
 | A scene changes | `useScene`, `useSceneTransitionEnd` |
 
 For something that belongs to the whole game, a plugin exports an `install…()` function the game
-calls once at the start of `main.ts`, as `installPhysics2d()` does.
+calls once at the start of `main.ts`, as `installPhysics2d()` does. What it installs can be a game
+system (`registerGameSystem`), below.
+
+## Code for the whole game
+
+A save that runs whatever scene is on, analytics, a debugging aid, music that does not stop between
+levels: what belongs to the game and not to a scene. `registerGameSystem(name, fn)` runs `fn` once in
+each game that starts, before its first scene, in a box of its own that no change of scene touches,
+and tears it down when the game ends. It is on the front door, `nacatamalon`, because a game uses it
+for its own code too; a plugin exports an install function that calls it:
+
+```ts
+import { registerGameSystem, useGame, useUpdate, useCleanup } from 'nacatamalon';
+
+// Made once, at the top of the module: the same function however many times the install is called.
+const playTime = () => {
+    let seconds = 0;
+    useUpdate((delta) => { seconds += delta; });           // every frame, whatever scene is on
+    useGame().onLeaving(() => localStorage.setItem('play-time', String(seconds)));
+    useCleanup(() => { /* the game ends */ });
+};
+
+export const installPlayTime = () => registerGameSystem('nacatamalon-play-time', playTime);
+```
+
+The game calls `installPlayTime()` at the start of `main.ts`, before `createGame`; one registered
+while a game runs waits for the next game, and says so. Inside, the hooks are the usual ones:
+
+- Its `useUpdate` run before every scene's in a frame, and its `useLateUpdate` after every scene's,
+  so it gets things ready for the scenes and reads where they left them.
+- A paused game pauses it too (`useGame().onPaused` tells it); a paused scene does not.
+- It belongs to no scene: `useScene`, the cameras, the lights, physics, `useRenderStyle` and
+  `useFog` throw inside it. What it creates is drawn nowhere; to show something, it launches a scene
+  of its own.
+- One that throws is reported and left out, and the game goes on.
+- The same name with the same function does nothing, which is why the body is made once, outside
+  the install: an install called twice then does nothing. With another function it throws. It hands
+  back a function that takes it out for the games that start after.
+- While a tool lays the game out rather than playing it (the editor's edit mode), its systems are
+  taken down, listeners and all, and started again when it is played.
+
+It runs whatever scene the game starts on. A scene that launches the others (a `Main` that never
+stops, with the levels beside it) would do the same while the game starts on it, and be missing
+when it does not: a level played straight from the editor, a game made with `initialScene`, a test
+that starts on the third level. A scene launched beside the levels is still the way to keep
+something on screen, a score or a frame, since a system draws nothing.
 
 ## What `nacatamalon/extend` gives a plugin
 
@@ -210,6 +255,16 @@ its 2D views (`cameras`: the screen, then each 2D camera), each with the matrix 
 pixels to the screen and its 2D lights, which `context.lights2d` lights a colour with
 (`illuminate2d`), as a sprite is lit.
 
+To look like the models round it, a kind in depth draws as a model is drawn, with the engine's own
+shader functions (`context.shading`, added to its shader): `ambientFacing` for the scene's ambient,
+from the ground's colour below to the sky's above when it has two; `roundReflectionUv` and
+`cubeReflectionUv` for where a reflection lands on a picture of the surroundings (a
+`studioEnvironment`, a `useEnvironment`'s `texture`, a matcap), which the game hands to the plugin's
+hook in its options (a drawing can be the `around` of its own `useEnvironment`, and is left out of
+it, as a model is); and `snapToGrid` and `affineUvOf` for the style's shivering corners and swimming
+pictures. Each view says what its scene's style asks (`style`: `perPixel`, `affine`, and the grid
+`snap`), so with `RENDER.STYLES.ps1` a drawing shivers on the same grid as the models beside it.
+
 A kind gives what draws it on each backend: `webgpu` and `webgl2`, the same moments on both
 (`TWebGl2Drawables`, with no encoder since WebGL2 draws at once; each call runs inside the engine's
 pass with the GL state put back after it, and sets every state it draws with itself). A backend it
@@ -223,6 +278,5 @@ or a forest, is best made as several.
 
 ## What a plugin cannot do yet
 
-Register a file type, put its own component in a scene document
-for the editor, or run for the whole game without the game calling it. Each one is planned as its
-own part of `nacatamalon/extend`.
+Register a file type, or put its own component in a scene document for the editor. Each one is
+planned as its own part of `nacatamalon/extend`.

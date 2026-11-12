@@ -15,6 +15,7 @@ import { settleCapture } from "../capture";
 import { reportFrameError } from "./report_frame_error";
 import { windowOf } from "../../DOM/window_of";
 import { updateDebug } from "../../debug/draw_debug";
+import { followLayout, runSystemLateUpdates, runSystemUpdates } from "../../game_systems/game_systems";
 
 /**
  * Tick one frame of the game loop.
@@ -66,6 +67,9 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
     // because a pause menu has to be clickable; a paused scene's own listeners are skipped inside.
     store.get('input').pointer.dispatch(store);
 
+    // The game's systems down while a tool lays the game out, and up again when it is played.
+    followLayout(store);
+
     // A pad sends no events: it can only be asked how it is, and "just pressed" is the difference
     // between this answer and the last one. So it is asked **every** frame, paused or not: a game
     // that stopped asking would report everything the player did in the menu as pressed on the
@@ -93,6 +97,8 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
         // Marked as walking the tree for as long as the updates run, so a `destroy` asking to
         // take something out on the spot is queued instead of cutting under the walk.
         withSceneUpdates(store, () => {
+            // The game's systems first, so what they get ready is there for every scene this frame.
+            const systemsLate = runSystemUpdates(store, dt);
             for (const scene of [...store.get('world').scenes]) {
                 // Looked up again because the copy can be stale: an earlier scene may have stopped this
                 // one during this same frame, and `stop` has to take effect when it is asked for.
@@ -121,6 +127,8 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
                     reportFrameError(store, error);
                 }
             }
+            // And their late updates last, so they read where every scene left things.
+            runSystemLateUpdates(store, systemsLate, dt);
         });
     }
 

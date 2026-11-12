@@ -21,9 +21,33 @@ releases are in [changelog/](./changelog/), one file each.
   brings the ground's colour up onto what stands on it: more the closer a part is to the ground and
   the more it looks down, none `reach` above the ground nor on a face looking up. It goes on a matcap as well as on the engine's light;
   its numbers are uniforms (`groundBounceAmount`…), and a scene document keeps it.
+- **A plugin's kind of drawing can look like the models round it** (`nacatamalon/extend/gpu`,
+  experimental). Its context hands the engine's own shader functions, `context.shading` (WGSL and
+  GLSL): `ambientFacing` for a two-coloured ambient, `roundReflectionUv` and `cubeReflectionUv` for a
+  reflection read as a model's `reflection` reads it, and `snapToGrid` and `affineUvOf` for the
+  style's corners and pictures. Each view in depth says what its scene's style asks (`style`:
+  `perPixel`, `affine`, the grid `snap`), so a drawing shivers with `RENDER.STYLES.ps1` as a model
+  does. A model's shaders read the same reflection, corner and picture functions, so those cannot
+  drift; `ambientFacing` works out per pixel what a model works out at its corners.
+- **Game systems, `registerGameSystem(name, fn)`**: code that belongs to the whole game rather than
+  to a scene (music that goes on between levels, keys that work everywhere, achievements, analytics),
+  for a game's own code and for plugins alike. Each game runs `fn` once before its first scene, in a
+  box no change of scene touches, and tears it down after its scenes when it ends; in a frame its
+  `useUpdate` run before every scene's and its `useLateUpdate` after. It runs whatever scene the game
+  starts on, a level played from the editor included. A paused game pauses it, it draws nothing, the
+  hooks that need a scene (`useScene`, cameras, lights, physics, `useRenderStyle`, `useFog`) throw
+  inside it, and one that throws is reported while the game goes on. Registered while a game runs,
+  it waits for the next one; the same name with the same function does nothing, so the body is made
+  once and an install called twice is harmless. While a tool lays the game out (the editor's edit
+  mode), its systems are taken down and start again when it is played.
+- **`useEnvironment({ around })` takes a plugin's drawing** as well as a mesh or a model: the
+  surroundings are seen from where it is, followed as it moves, and it is left out of them, so a
+  plugin's chrome reflects the room and not the inside of itself.
 
 ### Changed
 
+- **A headless game whose first scene throws gives the browser back its own** (`fetch` and the rest it
+  stood in for), as `destroy` does, rather than leaving them replaced for whatever runs next.
 - **What a metal reflects no longer covers a see-through surface.** A reflection made a see-through
   surface more solid where it reflected, so a glass shows its edges; with `metal` that part now
   stays as see-through as the surface, since what it reflects is in the surface's own colour. Only a

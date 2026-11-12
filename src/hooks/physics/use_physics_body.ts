@@ -1,3 +1,4 @@
+import { sceneOnly } from '../../game_systems/game_systems';
 import { getActiveBox, getActiveGame } from '../../store';
 import { resolveLayers } from '../../physics/layer_names';
 import type { TPhysicsLayerOptions } from '../../physics/layer_names';
@@ -81,6 +82,7 @@ export const usePhysicsBody2d = (options: TPhysicsBody2dOptions): TPhysicsBody2d
     if (box === null) {
         throw outsideSceneBody('usePhysicsBody2d');
     }
+    sceneOnly('usePhysicsBody2d');
 
     const { layer, collidesWith, ...rest } = options;
     const record = createPhysicsBody2d({ name: box.name, ...rest, ...resolveLayers({ layer, collidesWith }, layerNames()) });
@@ -136,6 +138,7 @@ export const usePhysicsBody3d = (options: TPhysicsBody3dOptions): TPhysicsBody3d
     if (box === null) {
         throw outsideSceneBody('usePhysicsBody3d');
     }
+    sceneOnly('usePhysicsBody3d');
 
     const { layer, collidesWith, ...rest } = options;
     const record = createPhysicsBody3d({ name: box.name, ...rest, ...resolveLayers({ layer, collidesWith }, layerNames()) });

@@ -1,3 +1,4 @@
+import { sceneOnly } from '../../game_systems/game_systems';
 import { getActiveBox } from '../../store';
 import { viewOf } from '../../box';
 import { createCamera2d } from '../../camera';
@@ -54,6 +55,7 @@ export const useCamera2d = (options?: TCamera2dOptions): TCamera2d => {
     if (box === null) {
         throw outsideSceneBody('useCamera2d');
     }
+    sceneOnly('useCamera2d');
 
     const scene = viewOf(box);
     if (scene.camera2d !== null) {

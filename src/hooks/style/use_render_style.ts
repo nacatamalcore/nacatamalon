@@ -1,3 +1,4 @@
+import { sceneOnly } from '../../game_systems/game_systems';
 import { viewOf } from '../../box';
 import { getActiveBox, getActiveGame } from '../../store';
 import { styleScreenNow } from '../../style/sync_style_screen';
@@ -47,6 +48,7 @@ export const useRenderStyle = (style: TRenderStyle | null): TRenderStyleHandle =
     if (box === null) {
         throw outsideSceneBody('useRenderStyle');
     }
+    sceneOnly('useRenderStyle');
     const view = viewOf(box);
     const store = getActiveGame();
     view.renderStyle = style;

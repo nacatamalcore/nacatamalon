@@ -4,6 +4,7 @@ import {
     TWO_SIDED_VARYINGS_GLSL, TWO_SIDED_WRITE_GLSL, worldNormalOfGlsl,
 } from '../mesh/mesh_shader';
 import { MAX_LIGHTS } from '../../../light';
+import { MODEL_REFLECTION_GLSL } from '../mesh/model_shading_glsl';
 import { glslUniformBlock } from './uniform_block';
 import { SHADOW_FRAGMENT_GLSL } from '../shadow/shadow_shader';
 import type { TCullMode, TUniformSignature } from '../../../materials';
@@ -155,67 +156,24 @@ ${readers}
  * `envUv` keeps the world's axes (see the twin in webgpu/material/mesh_material_shader.ts).
  */
 const maps = (names: readonly string[], lit = true): string => `${mapReaders(names, 'colour')}
+${MODEL_REFLECTION_GLSL}
 ${lit ? ENV_UV : ENV_UV_UNLIT}
 ${ENV_CUBE_UV}
 `;
 
 // The twin of envUv in webgpu/material/mesh_material_shader.ts, which says why.
 const ENV_UV = /* glsl */ `vec2 envUv(FragContext ctx) {
-    vec3 r = reflect(-normalize(ctx.viewDir), normalize(ctx.normal));
-    vec3 back = dot(lights.look.xyz, lights.look.xyz) > 0.5 ? lights.look.xyz : vec3(0.0, 0.0, 1.0);
-    vec3 across = cross(vec3(0.0, 1.0, 0.0), back);
-    vec3 right = dot(across, across) > 0.000001 ? normalize(across) : vec3(1.0, 0.0, 0.0);
-    vec3 up = cross(back, right);
-    // Through the 2D camera the world's y runs down: what shows above is the other way.
-    vec3 v = vec3(dot(r, right), dot(r, up) * (lights.ground.w > 1.5 ? -1.0 : 1.0), dot(r, back));
-    float m = max(2.0 * sqrt(v.x * v.x + v.y * v.y + (v.z + 1.0) * (v.z + 1.0)), 0.0001);
-    return vec2(v.x / m + 0.5, 0.5 - v.y / m);
+    return roundReflectionUv(reflect(-normalize(ctx.viewDir), normalize(ctx.normal)), lights.look, lights.ground);
 }`;
 
 // The twin of envCubeUv in webgpu/material/mesh_material_shader.ts, which says why.
 const ENV_CUBE_UV = /* glsl */ `vec2 envCubeUv(FragContext ctx) {
-    vec3 r = reflect(-normalize(ctx.viewDir), normalize(ctx.normal));
-    vec3 a = abs(r);
-    vec2 cell = vec2(0.0, 0.0);
-    vec3 forward = vec3(1.0, 0.0, 0.0);
-    vec3 right = vec3(0.0, 0.0, 1.0);
-    vec3 up = vec3(0.0, 1.0, 0.0);
-    if (a.x >= a.y && a.x >= a.z) {
-        if (r.x < 0.0) {
-            cell = vec2(1.0, 0.0);
-            forward = vec3(-1.0, 0.0, 0.0);
-            right = vec3(0.0, 0.0, -1.0);
-        }
-    } else if (a.y >= a.z) {
-        right = vec3(1.0, 0.0, 0.0);
-        if (r.y > 0.0) {
-            cell = vec2(2.0, 0.0);
-            forward = vec3(0.0, 1.0, 0.0);
-            up = vec3(0.0, 0.0, 1.0);
-        } else {
-            cell = vec2(0.0, 1.0);
-            forward = vec3(0.0, -1.0, 0.0);
-            up = vec3(0.0, 0.0, -1.0);
-        }
-    } else if (r.z > 0.0) {
-        cell = vec2(1.0, 1.0);
-        forward = vec3(0.0, 0.0, 1.0);
-        right = vec3(-1.0, 0.0, 0.0);
-    } else {
-        cell = vec2(2.0, 1.0);
-        forward = vec3(0.0, 0.0, -1.0);
-        right = vec3(1.0, 0.0, 0.0);
-    }
-    float depth = max(dot(r, forward), 0.0001);
-    vec2 face = clamp(vec2(0.5 + 0.5 * dot(r, right) / depth, 0.5 - 0.5 * dot(r, up) / depth), vec2(0.002), vec2(0.998));
-    return (cell + face) / vec2(3.0, 2.0);
+    return cubeReflectionUv(reflect(-normalize(ctx.viewDir), normalize(ctx.normal)));
 }`;
 
 // The same with the world's axes, for a shader with no lights block (a shadow's).
 const ENV_UV_UNLIT = /* glsl */ `vec2 envUv(FragContext ctx) {
-    vec3 r = reflect(-normalize(ctx.viewDir), normalize(ctx.normal));
-    float m = max(2.0 * sqrt(r.x * r.x + r.y * r.y + (r.z + 1.0) * (r.z + 1.0)), 0.0001);
-    return vec2(r.x / m + 0.5, 0.5 - r.y / m);
+    return roundReflectionUv(reflect(-normalize(ctx.viewDir), normalize(ctx.normal)), vec4(0.0), vec4(0.0));
 }`;
 
 /**

@@ -1,3 +1,4 @@
+import { sceneOnly } from '../../game_systems/game_systems';
 import { rootOf } from '../../box';
 import { findScene, isScenePaused, setScenePaused, startedAs, startScene, stopScene } from '../../scene';
 import { isSceneStopped } from '../../scene/stopped_scenes';
@@ -169,6 +170,7 @@ export const useScene = (): TSceneHandle => {
     if (store === null || active === null) {
         throw outsideSceneBody('useScene');
     }
+    sceneOnly('useScene');
 
     const owner = rootOf(active);
     let leaving = false;

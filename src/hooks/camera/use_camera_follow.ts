@@ -1,3 +1,4 @@
+import { sceneOnly } from '../../game_systems/game_systems';
 import { getActiveBox, getActiveGame } from '../../store';
 import { viewOf } from '../../box';
 import { ownerOfDrawable } from '../../box/drawable_owner';
@@ -285,6 +286,7 @@ export const useCameraFollow = (target: TCameraTarget | null, options: TCameraFo
     if (store === null || box === null) {
         throw outsideSceneBody('useCameraFollow');
     }
+    sceneOnly('useCameraFollow');
     const scene = viewOf(box);
     /**
      * The scene's camera as it is now, made when it has none. Asked for every time rather than kept:
