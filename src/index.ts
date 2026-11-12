@@ -70,6 +70,11 @@ export { createSprite } from './gameobjects/sprite/create_sprite';
 // The far layers of a level: a picture repeated endlessly across, moving with the camera only so much.
 export { createBackdrop } from './gameobjects/sprite/create_backdrop';
 export type { TBackdropOptions } from './gameobjects/sprite/create_backdrop';
+// A floor in perspective that turns and stretches with its camera, and what stands on it.
+export { createMode7 } from './gameobjects/sprite/create_mode7';
+export type { TMode7, TMode7Options, TMode7View } from './gameobjects/sprite/create_mode7';
+export { mode7ToScreen, screenToMode7, placeOnMode7 } from './gameobjects/sprite/mode7_points';
+export type { TMode7Point } from './gameobjects/sprite/mode7_points';
 export type { TCreateSprite } from './gameobjects/sprite/create_sprite';
 export { createText } from './gameobjects/text/create_text';
 export { createNineSlice } from './gameobjects/nine_slice/create_nine_slice';

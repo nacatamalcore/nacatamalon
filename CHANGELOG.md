@@ -52,6 +52,16 @@ releases are in [changelog/](./changelog/), one file each.
 - **`useEnvironment({ around })` takes a plugin's drawing** as well as a mesh or a model: the
   surroundings are seen from where it is, followed as it moves, and it is left out of them, so a
   plugin's chrome reflects the room and not the inside of itself.
+- **Mode 7, `createMode7({ key, height, horizon, fov, outside, haze })`.** A floor in perspective
+  that turns and stretches as its camera moves: a kart racer's track, a world map seen from the air.
+  One sprite as large as the screen (or the view it is made in) with the map as its picture, worked
+  out per pixel by a material in both renderers; above the horizon nothing is drawn, so a
+  `createBackdrop` behind it is the sky. Its camera is its `uniforms` (`x`, `y`, `angle`, `height`…),
+  in pixels of the map, the same numbers `tileAt` and the physics read. Past the map's edges it
+  repeats or shows a colour, and the far floor can fade into a haze.
+- **`placeOnMode7(floor, sprite, x, y)`** stands a sprite on a point of the map: placed, scaled by
+  its distance, ordered with the rest by depth and hidden behind the camera. **`mode7ToScreen`** and
+  **`screenToMode7`** are the same arithmetic each way, for anything else and for clicks.
 
 ### Fixed
 
