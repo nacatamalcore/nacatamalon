@@ -270,6 +270,13 @@ nadan del estilo. Cada vista dice qué pide el estilo de su escena (`style`: `pe
 rejilla `snap`), así que con `RENDER.STYLES.ps1` un dibujo tiembla en la misma rejilla que los modelos
 de al lado.
 
+Con qué puede contar: las formas de `nacatamalon/extend/gpu` se mantienen como están hasta la 2.0, y
+también las piezas de shader que recibe (`context.lights`, `context.lights2d`, `context.shading`), por
+su nombre. A un campo de sus structs o a una de sus funciones solo se les añade; nunca se quitan, se
+renombran ni cambian de argumentos. Por eso un tipo las lee con las declaraciones que le da el motor,
+por su nombre, y dimensiona lo que guarda un bloque con los `floats` que se le dicen, nunca con un
+número escrito en el plugin.
+
 Un tipo da lo que lo dibuja en cada backend: `webgpu` y `webgl2`, con los mismos momentos en los dos
 (`TWebGl2Drawables`, sin encoder porque WebGL2 dibuja al momento; cada llamada corre dentro de la
 pasada del motor y el estado de GL se deja como estaba al volver, y pone él mismo cada estado con el

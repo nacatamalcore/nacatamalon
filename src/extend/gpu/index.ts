@@ -12,7 +12,12 @@
  * It is a door of its own, apart from `nacatamalon/extend`, because it names WebGPU's types and
  * hands over the GPU itself: a plugin that does not draw never sees either.
  *
- * @experimental It can change from one version to the next.
+ * **What it promises.** The shapes here are kept as they are until 2.0. So are the shader pieces it
+ * hands over (`context.lights`, `context.lights2d`, `context.shading`) by name: until 2.0, a field of
+ * their structs or a function in them is only ever added, never taken away, renamed or given other
+ * arguments, and what a field means does not change. A kind reads them through the declarations the
+ * engine hands it, by name, never by where a number sits in a block, and sizes what holds a block by
+ * the `floats` it is told, so a field added moves nothing it reads.
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */

@@ -4,7 +4,6 @@ import type { TTexture } from '../../loaders';
  * A picture the pass draws into, of a size fixed when the pass is made: RGBA, 8 bits a channel.
  * Another size is another pass: destroy this one and make a new one.
  *
- * @experimental It can change from one version to the next.
  * @category Render
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -17,7 +16,6 @@ export type TGpuPassOutput = { readonly width: number; readonly height: number }
  *
  * The same object is handed over every frame: a pass that wants to keep a value copies it.
  *
- * @experimental It can change from one version to the next.
  * @category Render
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -48,7 +46,7 @@ export type TGpuPassFrame = {
  * Each picture in `outputs` is `rgba8unorm` with one sample, and can be read in a shader, written
  * from compute (`texture_storage_2d`), drawn into and copied.
  *
- * @experimental A plugin that names it needs the WebGPU types: TypeScript 6 has them, and on
+ * A plugin that names it needs the WebGPU types: TypeScript 6 has them, and on
  * TypeScript 5 the plugin adds `@webgpu/types`.
  * @category Render
  * @since 1.0.0
@@ -81,7 +79,6 @@ export type TWebGpuPassContext = {
  * same frame: both read what was written last. Two dispatches that need different numbers read them
  * from two different places.
  *
- * @experimental It can change from one version to the next.
  * @category Render
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -103,7 +100,6 @@ export type TWebGpuPass = {
  * A framebuffer draws from the bottom up, so a pass that draws something with a top and a bottom
  * into one has to turn it over itself.
  *
- * @experimental It can change from one version to the next.
  * @category Render
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -130,7 +126,6 @@ export type TWebGl2PassContext = {
  * is called (deleting what died with the context does no harm) and the factory runs again once the
  * context comes back.
  *
- * @experimental It can change from one version to the next.
  * @category Render
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -147,7 +142,6 @@ export type TWebGl2Pass = {
  * A pass has to give the backend the game is running on: one for WebGPU alone fails when it is
  * made on WebGL2, rather than drawing nothing without saying so.
  *
- * @experimental It can change from one version to the next.
  * @category Render
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -182,7 +176,6 @@ export type TGpuPassOptions = {
 /**
  * What `useGpuPass` gives back.
  *
- * @experimental It can change from one version to the next.
  * @category Render
  * @since 1.0.0
  * @author Francisco Pereira Alvarado

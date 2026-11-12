@@ -9,7 +9,6 @@ import type { TTransform2d } from '../../types/t_transform_2d';
  *
  * The plugin keeps its own fields on it, beside these.
  *
- * @experimental It can change from one version to the next.
  * @category Extending
  * @since 1.0.0
  * @author Francisco Pereira Alvarado

@@ -1,9 +1,9 @@
-# A plugin's own work on the GPU (experimental)
+# A plugin's own work on the GPU
 
 `useGpuPass`, in `nacatamalon/extend/gpu`, is for whoever writes a plugin that needs what a
 material or a post effect cannot do: a simulation in compute, a picture worked out on the GPU. A
-game never calls it: it calls the hook the plugin exports, which hands back ordinary pictures. It
-can change from one version to the next.
+game never calls it: it calls the hook the plugin exports, which hands back ordinary pictures. Its
+shapes are kept as they are until 2.0.
 
 A pass is not something in the world and does not replace how the engine draws. It is work the
 engine runs once a frame, for as long as the component that made it lives, with the GPU itself in

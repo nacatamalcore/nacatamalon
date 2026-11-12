@@ -9,7 +9,6 @@ import type { TCustomDrawable } from '../../gameobjects/custom/types/t_custom_dr
  * belongs to, orders it in its scene, leaves it out when it is hidden, hands the backend each
  * scene's camera, lights, fog and shadow, and lets it cast into the shadow maps.
  *
- * @experimental It can change from one version to the next.
  * @category Extending
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -75,7 +74,6 @@ export type TDrawableKind<TPayload = unknown> = {
 /**
  * A box in a drawing's own space, from its smallest corner to its largest.
  *
- * @experimental It can change from one version to the next.
  * @category Extending
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -89,7 +87,7 @@ export type TDrawableBounds = {
  * What a kind's WebGPU half is given when it is made. Everything in it belongs to the engine: the
  * kind uses it and never destroys it.
  *
- * @experimental A plugin that names it needs the WebGPU types: TypeScript 6 has them, and on
+ * A plugin that names it needs the WebGPU types: TypeScript 6 has them, and on
  * TypeScript 5 the plugin adds `@webgpu/types`. TypeScript 6 does not have WebGPU's constants
  * (`GPUBufferUsage`, `GPUShaderStage`, `GPUTextureUsage`), which a pipeline needs: a plugin that makes
  * one adds `@webgpu/types` either way.
@@ -172,7 +170,6 @@ export type TWebGpuDrawableContext = {
 /**
  * One scene seen in depth, as a pass hands it to a kind: how it is seen and how it is lit.
  *
- * @experimental It can change from one version to the next.
  * @category Extending
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -208,7 +205,6 @@ export type TWebGpuDrawableView = {
  * material's `perPixel`, `affine` and `vertexSnap` win: the functions that do it are
  * `context.shading`'s.
  *
- * @experimental It can change from one version to the next.
  * @category Extending
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -236,7 +232,6 @@ export type TDrawableStyle = {
  * camera. A flat drawing is drawn through the one its `draw` is told, as a sprite in its place would
  * be.
  *
- * @experimental It can change from one version to the next.
  * @category Extending
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -261,7 +256,6 @@ export type TDrawableCamera = {
  *
  * The same object is handed over every pass: a kind that wants to keep a value copies it.
  *
- * @experimental It can change from one version to the next.
  * @category Extending
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -294,7 +288,6 @@ export type TWebGpuDrawablePass<TPayload> = {
  * One shadow map a frame draws, as a kind is told about it: its drawings in that map's scene, and
  * the light's matrix it is drawn through.
  *
- * @experimental It can change from one version to the next.
  * @category Extending
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -330,7 +323,6 @@ export type TWebGpuDrawableShadow<TPayload> = {
  *   next.
  * - It never begins, ends or submits a pass or an encoder of its own here; the engine does.
  *
- * @experimental It can change from one version to the next.
  * @category Extending
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -385,7 +377,6 @@ export type TWebGpuDrawables<TPayload> = {
  * with one of them unbound fails (`INVALID_OPERATION`), so a program that declares the lights block
  * and does not read it (a shadow's) still has a buffer bound to it.
  *
- * @experimental It can change from one version to the next.
  * @category Extending
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -421,7 +412,6 @@ export type TWebGl2DrawableContext = {
 /**
  * One scene seen in depth, as a WebGL2 pass hands it to a kind. See `TWebGpuDrawableView`.
  *
- * @experimental It can change from one version to the next.
  * @category Extending
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -452,7 +442,6 @@ export type TWebGl2DrawableView = {
 /**
  * What a WebGL2 kind is told before a pass draws anything. See `TWebGpuDrawablePass`.
  *
- * @experimental It can change from one version to the next.
  * @category Extending
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -471,7 +460,6 @@ export type TWebGl2DrawablePass<TPayload> = {
  * to record into, since WebGL2 draws as it is told. `drawShadow` draws into the shadow map already
  * bound, through `matrix` (in WebGL2's depth range), depth only.
  *
- * @experimental It can change from one version to the next.
  * @category Extending
  * @since 1.0.0
  * @author Francisco Pereira Alvarado

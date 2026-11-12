@@ -94,7 +94,6 @@ const sceneClock = (box: TBox, store: TRuntimeStore) => (frame: { time: number; 
  *
  * @param options Its name, when it runs, the pictures it draws into, and how on each backend.
  * @returns Its pictures, the switch that turns it off, and `destroy`.
- * @experimental It can change from one version to the next.
  * @category Render
  * @since 1.0.0
  * @author Francisco Pereira Alvarado

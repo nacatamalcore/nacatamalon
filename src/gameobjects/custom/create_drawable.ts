@@ -14,7 +14,6 @@ const HERE = { x: 0, y: 0, z: 0, rotation: 0, rotationX: 0, rotationY: 0, scaleX
 /**
  * Where a drawing of a registered kind goes, and whether it starts drawn.
  *
- * @experimental It can change from one version to the next.
  * @category Extending
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
@@ -53,7 +52,6 @@ export type TCreateDrawableOptions = {
  * @param fields The plugin's own fields, kept on the drawing as they are.
  * @returns The drawing.
  *
- * @experimental It can change from one version to the next.
  * @category Extending
  * @since 1.0.0
  * @author Francisco Pereira Alvarado

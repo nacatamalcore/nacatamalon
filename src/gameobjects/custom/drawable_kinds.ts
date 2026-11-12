@@ -32,7 +32,6 @@ const kinds = new Map<string, TDrawableKind>();
  * };
  * ```
  *
- * @experimental It can change from one version to the next.
  * @category Extending
  * @since 1.0.0
  * @author Francisco Pereira Alvarado

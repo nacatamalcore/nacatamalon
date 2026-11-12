@@ -1,9 +1,9 @@
-# El trabajo propio de un plugin en la GPU (experimental)
+# El trabajo propio de un plugin en la GPU
 
 `useGpuPass`, en `nacatamalon/extend/gpu`, es para quien escribe un plugin que necesita lo
 que un material o un efecto de post no pueden hacer: una simulación en compute, una imagen
 calculada en la GPU. Un juego nunca lo llama: llama al hook que exporta el plugin, que le devuelve
-imágenes normales. Puede cambiar de una versión a otra.
+imágenes normales. Sus formas se mantienen como están hasta la 2.0.
 
 Una pasada no es algo del mundo ni cambia cómo dibuja el motor. Es trabajo que el motor ejecuta una
 vez por fotograma, mientras vive el componente que la creó, con la GPU en sus manos.

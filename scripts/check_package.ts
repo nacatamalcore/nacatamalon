@@ -145,12 +145,12 @@ check(renderExample !== undefined, 'the render pass guide has a TypeScript examp
 writeFileSync(join(work, 'src', 'gpu_pass.ts'), renderExample ?? '');
 writeFileSync(join(work, 'tsconfig.gpu_pass.json'), JSON.stringify({ extends: './tsconfig.json', include: ['src/gpu_pass.ts'] }));
 const renderPass = run([tsc, '-p', 'tsconfig.gpu_pass.json'], work);
-check(renderPass.code === 0, 'the experimental GPU pass example compiles against the installed package', renderPass.out);
+check(renderPass.code === 0, 'the GPU pass example compiles against the installed package', renderPass.out);
 if (!offline) {
     besideIt('@webgpu/types');
     writeFileSync(join(work, 'tsconfig.gpu_pass_old.json'), JSON.stringify({ extends: './tsconfig.gpu_pass.json', compilerOptions: { types: ['@webgpu/types'] } }));
     const oldRenderPass = run(['bunx', '-p', `typescript@${OLD_TYPESCRIPT}`, 'tsc', '-p', 'tsconfig.gpu_pass_old.json'], work);
-    check(oldRenderPass.code === 0, `the experimental door compiles on TypeScript ${OLD_TYPESCRIPT} with explicit WebGPU types`, oldRenderPass.out);
+    check(oldRenderPass.code === 0, `the GPU door compiles on TypeScript ${OLD_TYPESCRIPT} with explicit WebGPU types`, oldRenderPass.out);
 }
 
 // 3. The README's physics example, compiling against the physics engines installed beside it.

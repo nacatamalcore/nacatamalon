@@ -21,8 +21,7 @@ releases are in [changelog/](./changelog/), one file each.
   brings the ground's colour up onto what stands on it: more the closer a part is to the ground and
   the more it looks down, none `reach` above the ground nor on a face looking up. It goes on a matcap as well as on the engine's light;
   its numbers are uniforms (`groundBounceAmount`…), and a scene document keeps it.
-- **A plugin's kind of drawing can look like the models round it** (`nacatamalon/extend/gpu`,
-  experimental). Its context hands the engine's own shader functions, `context.shading` (WGSL and
+- **A plugin's kind of drawing can look like the models round it** (`nacatamalon/extend/gpu`). Its context hands the engine's own shader functions, `context.shading` (WGSL and
   GLSL): `ambientFacing` for a two-coloured ambient, `roundReflectionUv` and `cubeReflectionUv` for a
   reflection read as a model's `reflection` reads it, and `snapToGrid` and `affineUvOf` for the
   style's corners and pictures. Each view in depth says what its scene's style asks (`style`:
@@ -45,6 +44,12 @@ releases are in [changelog/](./changelog/), one file each.
   plugin's chrome reflects the room and not the inside of itself.
 
 ### Changed
+
+- **`nacatamalon/extend/gpu` is no longer experimental.** `useGpuPass` and a plugin's kinds of drawing
+  (`registerDrawableKind`, `createDrawable`) are kept as they are until 2.0. So are the shader pieces
+  a kind is handed (`context.lights`, `context.lights2d`, `context.shading`), by name: a field or a
+  function is only ever added, never taken away, renamed or given other arguments, and a kind reads
+  them by name and sizes its buffers by the `floats` it is told.
 
 - **A headless game whose first scene throws gives the browser back its own** (`fetch` and the rest it
   stood in for), as `destroy` does, rather than leaving them replaced for whatever runs next.

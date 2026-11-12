@@ -265,6 +265,12 @@ it, as a model is); and `snapToGrid` and `affineUvOf` for the style's shivering 
 pictures. Each view says what its scene's style asks (`style`: `perPixel`, `affine`, and the grid
 `snap`), so with `RENDER.STYLES.ps1` a drawing shivers on the same grid as the models beside it.
 
+What it can count on: the shapes of `nacatamalon/extend/gpu` are kept as they are until 2.0, and so
+are the shader pieces it is handed (`context.lights`, `context.lights2d`, `context.shading`), by name.
+A field of their structs or one of their functions is only ever added, never taken away, renamed or
+given other arguments. So a kind reads them through the declarations the engine hands it, by name,
+and sizes what holds a block by the `floats` it is told, never by a number written in the plugin.
+
 A kind gives what draws it on each backend: `webgpu` and `webgl2`, the same moments on both
 (`TWebGl2Drawables`, with no encoder since WebGL2 draws at once; each call runs inside the engine's
 pass with the GL state put back after it, and sets every state it draws with itself). A backend it
