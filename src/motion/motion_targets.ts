@@ -1,5 +1,5 @@
 import { findObject } from '../box/find_object';
-import { POST_BUILTINS } from '../post/builtin/catalog';
+import { allPostEffects } from '../post/builtin/catalog';
 import type { TBox } from '../box';
 import type { TMotionTrack } from './types/t_motion_doc';
 import type { TPostEffect } from '../post/types/t_post_effect';
@@ -146,7 +146,7 @@ export const resolveMotionTrack = (roots: readonly TBox[], track: TMotionTrack, 
 const resolvePostTrack = (effects: readonly TPostEffect[], track: TMotionTrack): TMotionTarget | string => {
     // An engine effect a project left unnamed is called after its key, and a motion written before
     // the key was renamed (`'palette'`, now `'paletteMatch'`) names the old one.
-    const now = POST_BUILTINS.find((builtin) => builtin.formerKeys?.includes(track.post!))?.key;
+    const now = allPostEffects().find((builtin) => builtin.formerKeys?.includes(track.post!))?.key;
     const effect = effects.find((one) => one.name === track.post) ?? effects.find((one) => now !== undefined && one.name === now);
     if (effect === undefined) {
         return `the game has no screen effect called "${track.post}"`;
@@ -157,7 +157,7 @@ const resolvePostTrack = (effects: readonly TPostEffect[], track: TMotionTrack):
     // tell which effect it is when it was read: the effect lacking the old name and having the new
     // one is enough to know.
     if (parts.length === 1 && parts[0] === 'uniforms' && !(field in effect.uniforms)) {
-        const now = POST_BUILTINS.map((builtin) => builtin.renamed?.[field]).find((name) => name !== undefined && name in effect.uniforms);
+        const now = allPostEffects().map((builtin) => builtin.renamed?.[field]).find((name) => name !== undefined && name in effect.uniforms);
         if (now !== undefined) {
             field = now;
         }

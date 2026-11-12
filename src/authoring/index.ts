@@ -97,7 +97,7 @@ export type { TCameraPreview } from '../game/preview';
 
 // The post-processing effects the engine ships, as a list a tool offers, and the cleanup a chain
 // written by hand gets before it is saved.
-export { POST_BUILTINS, findPostBuiltin, normalizePostChain } from '../post';
+export { POST_BUILTINS, findPostBuiltin, allPostEffects, normalizePostChain } from '../post';
 export type { TPostBuiltinInfo, TEffectField } from '../post';
 
 // The material looks the same way: the list a tool offers with their uniforms, finding one by the name a

@@ -1,4 +1,5 @@
 import { dataOwnerOf } from '../../hooks/state/use_data';
+import { pluginEntriesOf } from '../../loaders/plugin/asset_types';
 import { isDebugDrawable } from '../../debug/draw_debug';
 import { SCENE_FORMAT, SCENE_VERSION } from './types/t_scene_doc';
 import { builtinKeyOf, entryExtrasOf } from '../../post/install_post_chain';
@@ -1085,6 +1086,11 @@ export const rememberBoxExtra = (box: TBox, extra: Record<string, unknown>): voi
 export const serializeScene = (root: TBox): TSceneDoc => {
     const writing: TWriting = { assets: new Map() };
     const node = writeBox(root, writing);
+    // What a plugin's kind of file the document listed: nothing in the scene names it yet, so it is
+    // kept from the document it was built from.
+    for (const entry of pluginEntriesOf(root)) {
+        if (!writing.assets.has(entry.key)) writing.assets.set(entry.key, entry);
+    }
     return {
         format: SCENE_FORMAT,
         version: SCENE_VERSION,

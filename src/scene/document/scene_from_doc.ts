@@ -53,6 +53,7 @@ import type { TMask } from '../../mask/types/t_mask';
 import type { TBoxNode, TSceneDoc } from './types/t_scene_doc';
 import type { TComponentDoc, TMaterialDoc, TSpriteTextureComponent, TTilemapComponent } from './types/t_component_doc';
 import type { TMaterialMap, TMeshMaterial, TSpriteMaterial } from '../../materials';
+import { loadPluginEntry } from '../../loaders/plugin/asset_types';
 import type { TRuntimeStore } from '../../store';
 import type { TSprite } from '../../gameobjects/sprite/types/t_sprite';
 import type { TScene } from '../types/t_scene';
@@ -87,6 +88,7 @@ export const loadAssets = (assets: readonly TAssetEntry[], src: string): void =>
             // its layers on a box. The entry is here so the manifest still lists the file.
             case 'tilemap': break;
             case 'geometry': loadGeometry(asset, src); break;
+            case 'plugin': loadPluginEntry(asset, src); break;
             default: {
                 const never: never = asset;
                 return never;

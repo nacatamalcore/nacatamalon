@@ -1,5 +1,5 @@
 import type { TPostChain, TPostChainEntry } from './types/t_post_chain';
-import { findPostBuiltin, POST_BUILTINS } from './builtin/catalog';
+import { allPostEffects, findPostBuiltin } from './builtin/catalog';
 import type { TUniformNumbers } from '../materials/types/t_uniforms';
 
 /**
@@ -112,7 +112,7 @@ const asCurrentKey = (key: string): string => {
     if (findPostBuiltin(key) !== null) {
         return key;
     }
-    const now = POST_BUILTINS.find((builtin) => builtin.formerKeys?.includes(key));
+    const now = allPostEffects().find((builtin) => builtin.formerKeys?.includes(key));
     if (now === undefined) {
         return key;
     }

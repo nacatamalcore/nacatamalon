@@ -15,6 +15,7 @@ import type { TLut } from '../lut/types/t_lut';
 import type { TLoadedPack } from '../pack/types/t_loaded_pack';
 import type { TLoadedScene } from '../scene/types/t_loaded_scene';
 import type { TLoadedPixels } from '../pixels/types/t_loaded_pixels';
+import type { TPluginAsset } from '../plugin/types';
 
 /**
  * Anything a game loads and keeps by key: what the `useLoad…` hooks and the shape hooks hand back.
@@ -41,4 +42,5 @@ export type TAsset =
     | TLut
     | TLoadedPack
     | TLoadedScene
-    | TLoadedPixels;
+    | TLoadedPixels
+    | TPluginAsset;

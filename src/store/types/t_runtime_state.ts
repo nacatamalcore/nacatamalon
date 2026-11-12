@@ -10,6 +10,7 @@ import type { TShader } from '../../loaders/shader/types/t_shader';
 import type { TPalette } from '../../loaders/palette/types/t_palette';
 import type { TLut } from '../../loaders/lut/types/t_lut';
 import type { TLoadedPixels } from '../../loaders/pixels/types/t_loaded_pixels';
+import type { TPluginAsset } from '../../loaders/plugin/types';
 import type { TLoadedPack } from '../../loaders/pack/types/t_loaded_pack';
 import type { TLoadedScene } from '../../loaders/scene/types/t_loaded_scene';
 import type { TPostEffect } from '../../post/types/t_post_effect';
@@ -347,6 +348,10 @@ export type TRuntimeState = {
          * Picture files loaded as pixels, so two scenes processing the same one fetch and decode it once.
          */
         pixels: Map<string, TLoadedPixels>;
+        /**
+         * Files of the kinds plugins taught the engine (`registerAssetType`), whatever their kind.
+         */
+        pluginAssets: Map<string, TPluginAsset>;
     };
     /**
      * The full-screen effects, in the order they run.

@@ -53,4 +53,9 @@ export type TAssetEntry =
      * Values moved over time by keys, a `.motion` file.
      */
     | { type: 'motion'; key: string; src: string }
-    | { type: 'tilemap'; key: string; src: string };
+    | { type: 'tilemap'; key: string; src: string }
+    /**
+     * A file of a kind a plugin taught the engine (`registerAssetType`), loaded with that kind. Without
+     * the plugin it is left out, said once, and kept in the document when it is saved again.
+     */
+    | { type: 'plugin'; kind: string; key: string; src: string };

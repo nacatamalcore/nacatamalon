@@ -136,6 +136,8 @@ A game never imports it; a plugin does.
   right now, for what a plugin keeps per game.
 - `placementOf`, `worldPlacementOf`, `localPositionFrom`, and the same in 3D: where an object
   really is, whether it was placed itself or through what it draws.
+- `registerAssetType`: a kind of file of its own, below.
+- `registerPostEffect`: a screen effect with a name the game's data can use, below.
 - `registerPhysicsProvider`: another physics engine.
 
 `nacatamalon/extend/gpu` has `useGpuPass`, for work of the plugin's own on the GPU: a simulation in
@@ -282,7 +284,51 @@ when the kind says how much room each takes (`bounds`, a box in the drawing's ow
 whatever its shader moves too). It leaves out whole drawings: one spread over a large area, a field
 or a forest, is best made as several.
 
+## A kind of file of its own
+
+A plugin with a format of its own (a rig, a dialogue tree, a level of its own kind) teaches the
+engine to load it with `registerAssetType`, from `nacatamalon/extend`. The engine fetches the file
+(the same in a page, with no browser and from a `data:` address), reads it as JSON, text or bytes, and
+hands it to the plugin's `parse`, which makes what the game uses of it. What the file names, a picture
+or a sound or another file of a plugin's, `parse` asks for through its `help`: the engine loads it
+next to the file and the file is ready only once all of it is.
+
+```ts
+import { registerAssetType } from 'nacatamalon/extend';
+import type { TTexture } from 'nacatamalon';
+
+type TDialogue = { lines: string[]; portrait: TTexture };
+
+// Made once, at the top of the module.
+const DIALOGUES = registerAssetType<TDialogue>({
+    kind: 'nacatamalon-talk-dialogue',
+    read: 'json',
+    parse: (json, help) => {
+        const doc = json as { lines: string[]; portrait: string };
+        return { lines: doc.lines, portrait: help.texture(doc.portrait) };   // next to the file
+    },
+    release: (dialogue) => { /* what the plugin keeps of it, if anything */ },
+});
+
+export const useLoadDialogue = DIALOGUES.useLoad;   // useLoadDialogue({ src: 'talk/intro.json' })
+```
+
+The record it hands back is like the engine's: counted by `useLoadProgress`, so a loading scene waits
+for it (and a headless game's `loaded()`), kept under its `key` and shared, let go of with `releaseAsset` (which calls
+`release` and lets go of what `parse` asked for, unless something else holds it). Its `data` is what
+`parse` made, once it is `'ready'`. A scene document lists one as `{ type: 'plugin', kind, key, src }`
+and loads it with the scene; without the plugin, it says so once, leaves it out, and keeps it in the
+document when it is saved.
+
+## A screen effect with a name
+
+A plugin's screen effect can be put on in code (`usePostProcess(vhs())`). To be named in the game's
+data too (`createGame({ post: [{ builtin: 'nacatamalon-vhs' }] })`, a render style's `post`, a scene
+document, a motion moving its uniforms), it is registered with `registerPostEffect`, from
+`nacatamalon/extend`, described as the engine describes its own (`TPostBuiltinInfo`: `key`, `label`,
+`description`, `fields`, `binds`, `build`). `allPostEffects()` lists it after the engine's.
+
 ## What a plugin cannot do yet
 
-Register a file type, or put its own component in a scene document for the editor. Each one is
-planned as its own part of `nacatamalon/extend`.
+Put its own component in a scene document for the editor, or show its files in the editor's palette.
+Both come with the editor's own extensions, after 1.0.

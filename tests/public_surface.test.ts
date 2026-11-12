@@ -147,7 +147,7 @@ describe('the tools door', () => {
             'resetStores',
             // A layer list's order, the effects a post chain editor offers, a new project's window
             // and the angles a tool aims a light with.
-            'resolveLayerOrder', 'TILE_LAYER_BANDS', 'POST_BUILTINS', 'findPostBuiltin', 'normalizePostChain',
+            'resolveLayerOrder', 'TILE_LAYER_BANDS', 'POST_BUILTINS', 'findPostBuiltin', 'allPostEffects', 'normalizePostChain',
             'DEFAULT_PROJECT_SETTINGS', 'eulerAim',
             // The material looks a tool offers, finding one by name, and which uniform each uniform is.
             'MATERIAL_LOOKS', 'findMaterialLook', 'lookUniforms',
@@ -188,6 +188,8 @@ describe('the extension door', () => {
         expect(extend.sort()).toEqual([
             // Whether the running engine is one the plugin was made for.
             'requireEngine',
+            // A kind of file of a plugin's own, and a screen effect with a name the game's data uses.
+            'registerAssetType', 'registerPostEffect',
             // Installing what simulates physics. A game never calls it: the adapter's own
             // `installPhysics2d()` does.
             'registerPhysicsProvider',

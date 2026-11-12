@@ -54,6 +54,9 @@ const placeInPack = (pack: TLoadedPack, doc: TSceneDoc): TSceneDoc => {
             case 'atlas':
             case 'particles':
             case 'tilemap':
+            case 'song':
+            case 'motion':
+            case 'plugin':
                 asset.src = inPack(pack, asset.src);
                 break;
             case 'bitmap-font':
@@ -63,6 +66,12 @@ const placeInPack = (pack: TLoadedPack, doc: TSceneDoc): TSceneDoc => {
             case 'geometry':
                 if (asset.source.kind === 'gltf') asset.source.src = inPack(pack, asset.source.src);
                 break;
+            default: {
+                // Every kind of entry decides here where its file is: one added later and forgotten
+                // would fetch from the page's root and fail as a confusing parse error.
+                const never: never = asset;
+                return never;
+            }
         }
     }
     const walk = (box: TBoxNode): void => {

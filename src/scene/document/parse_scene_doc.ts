@@ -1289,6 +1289,9 @@ const parseAsset = (value: unknown): TAssetEntry | null => {
     if (raw.type === 'texture') {
         return { type: 'texture', key, src: asString(raw.src, key), ...(raw.mipmaps === true ? { mipmaps: true as const } : {}) };
     }
+    if (raw.type === 'plugin') {
+        return typeof raw.kind === 'string' && raw.kind !== '' ? { type: 'plugin', kind: raw.kind, key, src: asString(raw.src, key) } : null;
+    }
     if (raw.type === 'atlas' || raw.type === 'shader' || raw.type === 'particles' || raw.type === 'tilemap' || raw.type === 'audio' || raw.type === 'song' || raw.type === 'motion') {
         // `src` defaults to the key, because for most of these they are the same string and a file
         // that only said it once meant both.

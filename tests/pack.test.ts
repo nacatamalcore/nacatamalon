@@ -130,6 +130,25 @@ describe('useLoadPack', () => {
         expect(asset.key).toBe('packs/signs/assets/sign.png');
     });
 
+    it("finds every file its documents list inside the pack's folder: songs, motions and plugins' files too", async () => {
+        const listed = [
+            { type: 'song', key: 'packs/signs/music/a.song', src: 'packs/signs/music/a.song' },
+            { type: 'motion', key: 'packs/signs/motions/a.motion', src: 'packs/signs/motions/a.motion' },
+            { type: 'plugin', kind: 'test-rig', key: 'packs/signs/rigs/a.json', src: 'packs/signs/rigs/a.json' },
+        ];
+        serve('shop', { ...SIGNS, 'pack.json': { ...SIGNS['pack.json'] }, 'boxes/Arrow.box': boxFile('Arrow', [], listed) });
+        const { store } = createTestGame();
+        let pack!: TLoadedPack;
+        startTestScene(store, 'Level', () => {
+            pack = useLoadPack({ src: '/packs/shop/' });
+            return createScene();
+        });
+        await whenLoaded(pack);
+
+        const srcs = pack.boxes.Arrow!.assets.map((asset) => ('src' in asset ? asset.src : null));
+        expect(srcs).toEqual(['/packs/shop/music/a.song', '/packs/shop/motions/a.motion', '/packs/shop/rigs/a.json']);
+    });
+
     it('reads a pack once however many scenes ask for it', async () => {
         serve('signs', SIGNS);
         const { store } = createTestGame();

@@ -1,4 +1,5 @@
 import { warnIfKeyTaken } from '../../loaders/key_taken';
+import { GAME, hold } from '../../loaders/asset_holds';
 import { rootOf } from '../../box';
 import { getActiveBox, getActiveGame } from '../../store';
 import { getAudioManager } from '../../audio';
@@ -77,6 +78,10 @@ export const useLoadAudio = ({ src, key }: TUseLoadAudioOptions): TAudioClip => 
         const { context } = getAudioManager(store);
         trackLoad(clip, loadAudio(store, clip, (data) => context.decodeAudioData(data)));
     }
+
+    // Asked for by the game, which a plugin's file naming the same sound does not undo: letting go of
+    // the file leaves it.
+    hold(clip, GAME);
 
     // Listed on the scene even when it came from the cache: `useLoadProgress()` counts everything the
     // scene asked for, and one already loaded counts as done.

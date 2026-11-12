@@ -327,4 +327,33 @@ export const POST_BUILTINS: readonly TPostBuiltinInfo[] = [
  * @author Francisco Pereira Alvarado
  */
 export const findPostBuiltin = (key: string): TPostBuiltinInfo | null =>
-    POST_BUILTINS.find((builtin) => builtin.key === key) ?? null;
+    POST_BUILTINS.find((builtin) => builtin.key === key) ?? pluginEffects.find((effect) => effect.key === key) ?? null;
+
+/**
+ * The effects plugins gave a name (`registerPostEffect`), in the order they did. Apart from
+ * `POST_BUILTINS`, which is the engine's own and stays what it says.
+ */
+const pluginEffects: TPostBuiltinInfo[] = [];
+
+/**
+ * Adds a plugin's effect to those `findPostBuiltin` and `allPostEffects` know.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const addPluginPostEffect = (info: TPostBuiltinInfo): void => {
+    pluginEffects.push(info);
+};
+
+/**
+ * Every effect a chain can name: the engine's own (`POST_BUILTINS`), then those plugins registered
+ * (`registerPostEffect`). What a tool lists for a game with plugins installed.
+ *
+ * @returns The effects, the engine's first.
+ *
+ * @category Post-processing
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const allPostEffects = (): readonly TPostBuiltinInfo[] => (pluginEffects.length === 0 ? POST_BUILTINS : [...POST_BUILTINS, ...pluginEffects]);

@@ -1,7 +1,7 @@
 import { asColor, asRecord } from '../utils';
 import { isMotionEase } from './motion_eases';
 import { MOTION_FORMAT, MOTION_VERSION } from './types/t_motion_doc';
-import { findPostBuiltin, POST_BUILTINS } from '../post/builtin/catalog';
+import { allPostEffects, findPostBuiltin } from '../post/builtin/catalog';
 import type { TPostBuiltinInfo } from '../post/builtin/types/t_builtin';
 import { MATERIAL_LOOKS } from '../shader_composer/surface/looks';
 import type { TMotionDoc, TMotionEvent, TMotionKey, TMotionTrack, TMotionTransition } from './types/t_motion_doc';
@@ -104,8 +104,8 @@ const readTrack = (raw: unknown, src: string, index: number): TMotionTrack => {
  * a game's own effect with an `angle` in a file of before version 3 would be read as one too.
  */
 const onlyConverting = (uniform: string): TPostBuiltinInfo | undefined => {
-    const converting = POST_BUILTINS.filter((builtin) => builtin.converted?.[uniform] !== undefined);
-    const current = POST_BUILTINS.some((builtin) => builtin.fields.some((field) => field.key === uniform));
+    const converting = allPostEffects().filter((builtin) => builtin.converted?.[uniform] !== undefined);
+    const current = allPostEffects().some((builtin) => builtin.fields.some((field) => field.key === uniform));
     return converting.length === 1 && !current ? converting[0] : undefined;
 };
 

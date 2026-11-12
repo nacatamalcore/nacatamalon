@@ -4,7 +4,7 @@ export { normalizePostChain } from './post_chain';
 export { installPostChain, replaceProjectPostChain } from './install_post_chain';
 export { buildPostChain } from './build_post_chain';
 export {
-    dither, posterize, paletteMatch, lutGrade, COLOR_LEVELS, POST_BUILTINS, findPostBuiltin,
+    dither, posterize, paletteMatch, lutGrade, COLOR_LEVELS, POST_BUILTINS, findPostBuiltin, allPostEffects,
     crt, CRT_PRESETS, colorAdjust, mosaic, rgbSplit, wave, shockwave, distort, glitch, grain, oldFilm, halftone, ascii, ntsc, lcd, zoomBlur, motionBlur, blur, bloom, godrays, tiltShift, phosphor,
     outline, dropShadow, glow,
 } from './builtin';

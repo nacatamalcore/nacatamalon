@@ -39,9 +39,25 @@ releases are in [changelog/](./changelog/), one file each.
   it waits for the next one; the same name with the same function does nothing, so the body is made
   once and an install called twice is harmless. While a tool lays the game out (the editor's edit
   mode), its systems are taken down and start again when it is played.
+- **A plugin's own kind of file, `registerAssetType({ kind, read, parse, release })`** in
+  `nacatamalon/extend`. The engine fetches the file (in a page, headless or from `data:`), reads it as
+  JSON, text or bytes, and the plugin's `parse` makes what the game uses of it, asking through its
+  `help` for what the file names (a picture, a sound, another plugin file), loaded next to it and
+  waited for. It hands back the kind's loading hook; its record counts in `useLoadProgress`, works with
+  a loading scene's wait and `releaseAsset` (which calls `release` and lets go of what it asked for), and a scene
+  document lists it as `{ type: 'plugin', kind, key, src }`, kept when saved even without the plugin.
+- **A plugin's screen effect with a name, `registerPostEffect(info)`** in `nacatamalon/extend`, shaped
+  as the engine's own effects: chains, render styles, scene documents and motions name it as they name
+  `bloom`. **`allPostEffects()`** (tools) lists the engine's effects, then the plugins'.
 - **`useEnvironment({ around })` takes a plugin's drawing** as well as a mesh or a model: the
   surroundings are seen from where it is, followed as it moves, and it is left out of them, so a
   plugin's chrome reflects the room and not the inside of itself.
+
+### Fixed
+
+- **A pack's songs and motions are found in the pack's folder.** A document in a pack listing a
+  `.song` or a `.motion` fetched it from the page's root, where it is not, rather than from where the
+  pack is served, as its pictures and sounds already were.
 
 ### Changed
 

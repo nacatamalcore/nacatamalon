@@ -22,6 +22,14 @@
 // Whether the running engine is one the plugin was made for, said the same way by every plugin.
 export { requireEngine } from './require_engine';
 
+// A kind of file of the plugin's own, loaded, counted, waited on and let go of like the engine's.
+export { registerAssetType } from '../loaders/plugin/asset_types';
+export type { TAssetType, TAssetTypeDefinition, TAssetTypeHelp, TPluginAsset } from '../loaders/plugin/types';
+
+// A screen effect of the plugin's own, with a name the game's data can use, as the engine's have.
+export { registerPostEffect } from '../post/register_post_effect';
+export type { TPostBuiltinInfo, TEffectField, TBuiltinPostEffect } from '../post';
+
 // Installing what simulates physics, and the shape of one. `null` uninstalls it.
 export { registerPhysicsProvider } from '../physics';
 export type { TPhysicsProvider } from '../physics';

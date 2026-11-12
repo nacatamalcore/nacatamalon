@@ -1,4 +1,6 @@
 import { bumpVersion } from '../store/record_version';
+import { assetTypeOf } from './plugin/asset_types';
+import type { TPluginAsset } from './plugin/types';
 import { isMadeTexture } from './texture/made_texture';
 import { freeGeometryBuffers } from '../geometry/free_geometry';
 import { isOwnedGeometry } from '../geometry/create_geometry';
@@ -218,6 +220,41 @@ const releaseChild = (store: TRuntimeStore, child: TParticlesFile, leaving: TPar
 };
 
 /**
+ * Lets go of a sound or a plugin's file once nothing else holds it: a plugin's file that asked for it
+ * keeps it for as long as that file is here, and the last one to go takes it.
+ */
+const releaseWhenNotHeld = (store: TRuntimeStore, asset: TAsset): void => {
+    if (heldByOthers(asset)) {
+        whenFree(asset, 'release', () => { releaseWhenNotHeld(store, asset); });
+        return;
+    }
+    releaseOne(store, asset);
+};
+
+/**
+ * Lets go of a plugin's file: what its kind made of it, by the kind's own `release`, and what it asked
+ * for (a picture, a sound, another file), each unless something else still holds it.
+ */
+const releasePluginAsset = (store: TRuntimeStore, asset: TPluginAsset): void => {
+    const definition = assetTypeOf(asset.kind);
+    if (asset.data !== null && definition?.release !== undefined) {
+        try {
+            definition.release(asset.data);
+        } catch (error) {
+            console.warn(`[NacatamalOn] ${asset.kind}: letting go of '${asset.src}' threw:`, error);
+        }
+    }
+    asset.data = null;
+    for (const held of heldBy(asset) as TAsset[]) {
+        if (held.type === 'texture') {
+            releasePicture(store, held, asset);
+        } else if (!heldByOthers(held, asset)) {
+            releaseOne(store, held);
+        }
+    }
+};
+
+/**
  * Lets one asset go, with what is its own.
  */
 const releaseOne = (store: TRuntimeStore, asset: TAsset): void => {
@@ -288,6 +325,9 @@ const releaseOne = (store: TRuntimeStore, asset: TAsset): void => {
                 drop(asset.atlas, asset);
             }
             break;
+        case 'plugin-asset':
+            releasePluginAsset(store, asset);
+            break;
         // Plain data, and nothing of the card's or the sound's: out of the cache is all there is.
         case 'shader':
         case 'motion-file':
@@ -333,6 +373,11 @@ const letGo = (store: TRuntimeStore, asset: TAsset): void => {
             return;
         case 'atlas':
             releaseSheet(store, asset, asset);
+            return;
+        // What a plugin's file asked for stays for as long as that file is here.
+        case 'audio':
+        case 'plugin-asset':
+            releaseWhenNotHeld(store, asset);
             return;
         case 'geometry':
             // A shape a model is made of goes with the model, whatever else happens to it.
@@ -396,7 +441,7 @@ export const stopHolding = (asset: TAsset): void => {
     }
     // One still on its way would take them again when it lands. Ended, its loader hears it and stops;
     // nothing of it is drawn yet, so nothing goes blank.
-    if (asset.status === 'loading' && (asset.type === 'particles-file' || asset.type === 'tilemap-asset' || asset.type === 'gltf')) {
+    if (asset.status === 'loading' && (asset.type === 'particles-file' || asset.type === 'tilemap-asset' || asset.type === 'gltf' || asset.type === 'plugin-asset')) {
         asset.status = 'released';
         bumpVersion(asset);
     }
@@ -455,6 +500,11 @@ export const releaseLeftBehind = (store: TRuntimeStore, asset: TAsset): boolean 
             return true;
         case 'tilemap-asset':
             end(store, asset);
+            return true;
+        // What its kind made of it may be on the card or anywhere else: the kind lets go of it, as
+        // when the game does. What it asked for it no longer holds (`stopHolding`), and stays.
+        case 'plugin-asset':
+            releaseOne(store, asset);
             return true;
         case 'texture':
         case 'atlas':
