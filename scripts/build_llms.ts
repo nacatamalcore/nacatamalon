@@ -34,9 +34,10 @@ const DOORS: { spec: string; file: string; who: string }[] = [
     { spec: 'nacatamalon/physics3d', file: 'src/physics/box3d/index.ts', who: '3D physics on box3d, which comes with the package. Call `installPhysics3d()` once.' },
     { spec: 'nacatamalon/retro-physics2d', file: 'src/physics/retro2d/index.ts', who: 'Retro 2D physics: bodies that never turn, moved in pixels and stopped axis by axis, nothing to load. Call `installRetroPhysics2d()` once.' },
     { spec: 'nacatamalon/react', file: 'src/react/index.ts', who: 'A game inside a React page: `<Game>`, and hooks for the React components drawn over it. Needs `react`. Browser only: the native runtime does not show React components.' },
+    { spec: 'nacatamalon/net', file: 'src/net/index.ts', who: 'Online games: the same scenes in a room of a server, which decides, and in each player\'s page. Experimental. `useNet()` in the scenes; `createServer` (Bun or Node) or `createRoom` inside a server of someone else\'s; any line that carries text (WebSocket, socket.io, `connectLoopback` in memory).' },
     { spec: 'nacatamalon/headless', file: 'src/headless/index.ts', who: 'A game run from Node or Bun with no browser, a frame at a time, the same every time: for tests and scripts that check what a game does. A game never needs it.' },
     { spec: 'nacatamalon/authoring', file: 'src/authoring/index.ts', who: 'For tools that write scenes (editors, generators). A game never needs it.' },
-    { spec: 'nacatamalon/extend/gpu', file: 'src/extend/gpu/index.ts', who: 'For a plugin that runs work of its own on the GPU once a frame (compute, a picture worked out on the GPU). Experimental. A game never needs it; on TypeScript 5 it needs `@webgpu/types`.' },
+    { spec: 'nacatamalon/extend/gpu', file: 'src/extend/gpu/index.ts', who: 'For a plugin that runs work of its own on the GPU once a frame (compute, a picture worked out on the GPU). A game never needs it; on TypeScript 5 it needs `@webgpu/types`.' },
     { spec: 'nacatamalon/extend', file: 'src/extend/index.ts', who: 'For packages that extend the engine (another physics engine, a plugin). A game never needs it.' },
 ];
 

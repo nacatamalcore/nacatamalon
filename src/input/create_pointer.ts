@@ -124,6 +124,12 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
      */
     let lastPosition: { x: number; y: number } | null = null;
     /**
+     * Where a pointer that pressed or let go and then left in the same frame was: a quick tap sends
+     * its down, its up and its leave between two frames, and the frame that reads it as just pressed
+     * has to be able to ask where. Kept for that frame only; hovering still ends at the leave.
+     */
+    let leftAfterPress: { x: number; y: number } | null = null;
+    /**
      * What listens under the pointer right now.
      */
     let hovered: TPointerTarget | null = null;
@@ -736,6 +742,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
             queue = [];
             // A new frame: what is under the fingers is asked again.
             underActive = null;
+            leftAfterPress = null;
             wentDown.clear();
             wentDownAt.clear();
             cameUp.clear();
@@ -757,6 +764,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
                 }
 
                 if (kind === 'leave') {
+                    if (wentDown.size > 0 || cameUp.size > 0) leftAfterPress = lastPosition;
                     lastPosition = null;
                     continue;
                 }
@@ -769,6 +777,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
                     continue;
                 }
                 lastPosition = { x: screenX, y: screenY };
+                leftAfterPress = null;
 
                 // What is pressing, kept before anyone is told, so a listener that asks `isDown`
                 // hears the same as the event it is handling.
@@ -908,7 +917,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
         mouseJustPressed: (button) => mouseWentDown.has(button),
         mouseJustReleased: (button) => mouseCameUp.has(button),
         mousePressedAt: (button) => mouseWentDown.get(button) ?? null,
-        position: () => lastPosition,
+        position: () => lastPosition ?? leftAfterPress,
         isPressing: (store, target) => {
             if (active.size === 0) {
                 return false;

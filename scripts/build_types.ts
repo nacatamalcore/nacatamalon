@@ -51,6 +51,7 @@ const ENTRIES: Record<string, string> = {
     './react': 'react/index.d.ts',
     './headless': 'headless/index.d.ts',
     './speech': 'speech/index.d.ts',
+    './net': 'net/index.d.ts',
     './physics2d': 'physics/box2d/index.d.ts',
     './physics3d': 'physics/box3d/index.d.ts',
     './retro-physics2d': 'physics/retro2d/index.d.ts',

@@ -30,6 +30,7 @@ const DOORS = {
     'nacatamalon/physics3d': 'physics/box3d/index.ts',
     'nacatamalon/retro-physics2d': 'physics/retro2d/index.ts',
     'nacatamalon/speech': 'speech/index.ts',
+    'nacatamalon/net': 'net/index.ts',
 };
 
 const OPTIONS: ts.CompilerOptions = {

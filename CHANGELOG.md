@@ -7,6 +7,50 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **Online games, `nacatamalon/net` (experimental: it can change from one version to the next).** The same scenes run in a room of a server, with no screen
+  and no sound, where what happens is decided, and in each player's page, which shows it and asks.
+  `useNet()` is the network as a scene sees it, the same on both sides: `role` (`'server'` or
+  `'client'`), `status`, `room`, `me`, `players`; `onJoin`, `onLeave` and `onMessage(type, (data,
+  from) => …)`; a player's game `connect`s (to an address, or any connection), `send`s what the
+  player did and hears `onConnect`/`onDisconnect`; the server `sendTo`s, `broadcast`s and `kick`s.
+  What arrives is handed over at the start of a step, before any update, in order. `createServer({
+  scenes, step, admit, roomScene })` lets players in (`admit` reads the token their game sends, and
+  may give the name they go by) and gives each room a game of its own, ended when its last player
+  leaves; `listen(port)` in Bun or Node (a WebSocket of its own, nothing to install), `accept(connection)` from anywhere else. `createRoom` is one room,
+  for a server of someone else's (socket.io, or a framework with rooms of its own), moved by its own clock or by `step()`. A
+  connection is anything that carries text both ways (`TNetConnection`): a WebSocket
+  (`webSocketConnection`), socket.io or WebRTC in four functions, or `connectLoopback(server, {
+  delay })`, a line in memory to a server in the same page or process.
+
+  **Shared objects.** `useShared({ key, fields, owner, move, smooth })` makes an object one every
+  game in the room sees: the server decides where it is and what its `fields` hold, and each
+  player's game shows it a moment later, gliding between what it was told: as far behind as the
+  line needs, one of the room's sends and the lateness the line shows (about 0.04 s on a good one),
+  or what `connect`'s `interpolation` says. Nothing in a scene sends anything: the
+  room sends what changed, `sendRate` times a second, to everyone, and everything to whoever comes
+  later. `useNetSpawn('avatar', Avatar)` is the spawner both sides ask for by name: the server makes
+  the object, and it is made in every player's game with the same arguments, and ends everywhere
+  when the server destroys it. An object both sides build themselves matches by its `key`.
+
+  **Real time.** An object with an `owner` and a `move` is that player's own: the server moves it
+  with what they press, and their page moves it at once with the same `move`, ahead of the server,
+  and, when the server's word comes, starts again from it and runs once more the steps the server
+  had not seen. A player's game sends its actions on its own (when they change, and every step while
+  it moves something of its own); `useNet().actions(player)` is that player's `useActions` on the
+  server, and `useNet().rewind(player, fn)` runs `fn` with every shared object back where that
+  player saw it when they pressed, so a hit on their screen is a hit, never further back than the
+  room's `rewindLimit` (0.25 s unless it says) whatever a changed game claims it saw.
+  `useNet().ping` is the round trip, measured every second.
+
+  **Run by a tool.** `setNetHost` (`nacatamalon/authoring`) hands `listen(port)` and
+  `connect(address)` to a tool that runs the server and its players itself, side by side: an
+  editor, with nothing in the game changed.
+
+  **A guide**, `guides/online.md` (and `online.es.md` in Spanish): a first online game in three
+  files, objects everyone sees, messages, real time, shots, who gets in, what carries the lines
+  (the engine's WebSocket, `ws`, socket.io, Colyseus, WebRTC with no game server), trying it with
+  no internet, putting it online, and what it does not do yet.
+
 - **Matcaps, `matcap(texture, { tint })`.** A material recipe that colours a model with a picture of
   a ball already lit, its colour, shadow and shine, read by which way each part faces the camera: no
   lamp needed nor read, the light always from the same side of the screen, the soft look of a clay
@@ -65,6 +109,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **A quick tap knows where it was.** A finger's down, up and leave often come between two frames,
+  and `usePointer().position()` answered `null` in the very frame `justPressed()` was true, so a game
+  that asked where the tap landed lost it. It now says where the tap was for that frame, and `null`
+  from the next.
 - **A pack's songs and motions are found in the pack's folder.** A document in a pack listing a
   `.song` or a `.motion` fetched it from the page's root, where it is not, rather than from where the
   pack is served, as its pictures and sounds already were.

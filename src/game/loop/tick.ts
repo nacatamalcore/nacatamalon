@@ -16,6 +16,7 @@ import { reportFrameError } from "./report_frame_error";
 import { windowOf } from "../../DOM/window_of";
 import { updateDebug } from "../../debug/draw_debug";
 import { followLayout, runSystemLateUpdates, runSystemUpdates } from "../../game_systems/game_systems";
+import { deliverNet, finishNet, stepNet } from "../../net/net_inbox";
 
 /**
  * Tick one frame of the game loop.
@@ -67,6 +68,11 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
     // because a pause menu has to be clickable; a paused scene's own listeners are skipped inside.
     store.get('input').pointer.dispatch(store);
 
+    // What arrived from the network since the last step (`nacatamalon/net`), for the same reason and
+    // in the same place: messages are input that comes from far away. Paused or not, because the
+    // server goes on whatever this game is doing, and a scene behind a pause menu has to keep up.
+    deliverNet(store);
+
     // The game's systems down while a tool lays the game out, and up again when it is played.
     followLayout(store);
 
@@ -77,6 +83,12 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
     const input = store.get('input');
     input.gamepads.beginFrame();
     input.actions.sample(dt);
+
+    // What the network moves (`nacatamalon/net`), once the actions are read and before any update:
+    // a player's own object goes where its actions take it, and what the server shares to where it
+    // was. Paused or not, as the messages are: the world of an online game does not stop for one
+    // player's menu. By real time when paused, which is all a paused frame has.
+    stepNet(store, paused ? unscaled : dt);
 
     // Before the updates, so a HUD placed against the edges is moved on the first frame of the new
     // size. Paused or not: a pause menu has to fit the screen too.
@@ -142,6 +154,10 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
     // Outside the pause check on purpose: a destroy can come from a timer or a click while the
     // game is paused, and it should not sit in the queue until the game resumes.
     flushDestroyed(store);
+
+    // Where the step left what the network shares, said once every update has run and what was
+    // destroyed has gone: a room tells its players, a player's game asks for nothing here.
+    finishNet(store);
 
     // An update may have destroyed the game: the renderer would already be gone.
     if (store.get('loop').destroyed) {

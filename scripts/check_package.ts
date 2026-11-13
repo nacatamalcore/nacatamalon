@@ -34,7 +34,7 @@ const TOOL_ONLY = ['serializeScene: the shape', 'atlasDocFrames: a grid needs', 
  * Strings of what a game carries only when it uses it, which the README's game does not: reading a
  * tracker's export comes in with `useLoadTrackerSong`, not with every game.
  */
-const ONLY_WHEN_USED = ['not a text export of FamiTracker', 'useGpuPass'];
+const ONLY_WHEN_USED = ['not a text export of FamiTracker', 'useGpuPass', 'useNet().'];
 
 const root = join(import.meta.dir, '..');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
@@ -130,7 +130,7 @@ if (offline) {
     check(old.code === 0, `a game compiles against it (TypeScript ${OLD_TYPESCRIPT})`, old.out);
     // The other doors too, with no `@webgpu/types` installed: TypeScript 5 has no
     // WebGPU, and a door naming one of its types stops every project on it that loads the door.
-    writeFileSync(join(work, 'src', 'tool_doors.ts'), ['math', 'pixels', 'shader', 'effects', 'transitions', 'files', 'authoring', 'extend', 'headless', 'speech'].map((door, i) => `import * as tool${i} from 'nacatamalon/${door}';\nvoid tool${i};`).join('\n'));
+    writeFileSync(join(work, 'src', 'tool_doors.ts'), ['math', 'pixels', 'shader', 'effects', 'transitions', 'files', 'authoring', 'extend', 'headless', 'speech', 'net'].map((door, i) => `import * as tool${i} from 'nacatamalon/${door}';\nvoid tool${i};`).join('\n'));
     writeFileSync(join(work, 'tsconfig.tools.json'), JSON.stringify({ extends: './tsconfig.json', include: ['src/tool_doors.ts'] }));
     const oldTools = run(['bunx', '-p', `typescript@${OLD_TYPESCRIPT}`, 'tsc', '-p', 'tsconfig.tools.json'], work);
     check(oldTools.code === 0, `the other doors compile against it (TypeScript ${OLD_TYPESCRIPT}, no WebGPU types)`, oldTools.out);

@@ -158,6 +158,9 @@ describe('the tools door', () => {
             'serializeSongDoc', 'mixSong', 'encodeWav', 'analyzeAudio',
             // How big a text came out: an editor outlines it and picks it by it, a game never asks.
             'textBlockSize',
+            // An online game's server and players run side by side by a tool, its lines handed over
+            // by it: a shipped game listens on a real port.
+            'setNetHost',
             // A piano roll's: a voice's notes read, and written back as text after a click changed them.
             'parseSongNotes', 'writeSongNotes',
             // A song's instruments, for a tool that shows their mistakes and offers their names.

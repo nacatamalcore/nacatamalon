@@ -268,6 +268,14 @@ calling what it exports. Start one from the plugin template,
 how it is shared and the store: `node_modules/nacatamalon/guides/plugins.md`, and in Spanish,
 `guides/plugins.es.md`.
 
+## Online games
+
+`nacatamalon/net` (experimental) runs the same scenes in a room of a server, which decides, and in
+each player's page, which shows it: objects everyone sees, a player's own moved at once, and any
+line that carries text between them (a WebSocket, socket.io, Colyseus, WebRTC). The guide, from a
+first online game to one on the internet: `node_modules/nacatamalon/guides/online.md`, and in
+Spanish, `guides/online.es.md`.
+
 ## Community
 
 - Website: [nacatamalon.com](https://nacatamalon.com)

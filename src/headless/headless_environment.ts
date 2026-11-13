@@ -1,5 +1,3 @@
-import { readFile } from 'node:fs/promises';
-import { extname, resolve, sep } from 'node:path';
 import { decodePng } from '../pixels/decode_png';
 import { SilentAudioContext } from './silent_audio';
 
@@ -28,9 +26,28 @@ type TGlobals = {
 
 const globals = globalThis as unknown as TGlobals;
 
+type TNodeFiles = { readFile(path: string): Promise<Uint8Array> };
+type TNodePath = { resolve(...paths: string[]): string; extname(path: string): string; sep: string };
+
+/**
+ * Node's own modules, asked of the runtime when a game with no browser starts rather than imported:
+ * this file is also reached from `nacatamalon/net`, which a game's page bundles, and a bundler for
+ * the browser refuses an import of `node:fs` even when nothing on the page would call it.
+ */
+const node = (): { files: TNodeFiles; path: TNodePath } => {
+    const process = (globalThis as { process?: { getBuiltinModule?: (name: string) => unknown } }).process;
+    if (typeof process?.getBuiltinModule !== 'function') {
+        throw new Error('[NacatamalOn] headless: a game with no browser reads its files with Node or Bun, and this runtime has neither. Run it with Bun, or with Node 20.16, 22.3 or newer.');
+    }
+    return {
+        files: process.getBuiltinModule('node:fs/promises') as TNodeFiles,
+        path: process.getBuiltinModule('node:path') as TNodePath,
+    };
+};
+
 let realFetch: typeof fetch | null = null;
 let users = 0;
-let assetsRoot = resolve('public');
+let assetsRoot = '';
 
 const TYPES: Record<string, string> = {
     '.png': 'image/png',
@@ -51,6 +68,7 @@ const hasScheme = (address: string): boolean => /^[a-z][a-z0-9+.-]*:/i.test(addr
  * that is not there or that tries to leave the folder.
  */
 const readAsset = async (address: string): Promise<Response> => {
+    const { files: { readFile }, path: { resolve, extname, sep } } = node();
     const path = decodeURIComponent(address.split(/[?#]/)[0]!.replace(/^\/+/, ''));
     const file = resolve(assetsRoot, path);
     if (file !== assetsRoot && !file.startsWith(assetsRoot + sep)) {
@@ -116,7 +134,7 @@ const headlessBitmap = (before: TMakeBitmap | undefined): TMakeBitmap => {
  * @internal
  */
 export const enterHeadless = (assets: string): void => {
-    assetsRoot = resolve(assets);
+    assetsRoot = node().path.resolve(assets);
     users += 1;
     if (realFetch === null) {
         const real = globals.fetch;

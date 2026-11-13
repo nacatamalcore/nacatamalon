@@ -278,6 +278,8 @@ export type TPointerHandle = {
     /**
      * Where the pointer was last seen over the game, or `null` once it left (or before it came).
      * For the mouse that is where it hovers, pressed or not; for touch, the last finger that moved.
+     * A tap that went down, came up and left between two frames still says where it was in the
+     * frame that reads it as just pressed.
      */
     position(): { screenX: number; screenY: number; worldX: number; worldY: number } | null;
     /**

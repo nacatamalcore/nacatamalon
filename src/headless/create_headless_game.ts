@@ -9,6 +9,7 @@ import { registerScene, startScene } from '../scene';
 import { createRuntimeStore } from '../store';
 import { pendingWorkOf } from '../loaders/pending_work';
 import { enterHeadless, leaveHeadless } from './headless_environment';
+import { createScreenlessCanvas } from './screenless_canvas';
 import { createCpuRenderer } from './software/cpu_renderer';
 import { saysMilliseconds } from '../utils/says_milliseconds';
 
@@ -106,15 +107,7 @@ export const createHeadlessGame = (options: THeadlessGameOptions): THeadlessGame
 
     // Where the keyboard and the pads listen: a window of the game's own, so a key pressed here
     // reaches this game and no other, and nothing is asked of a `window` Node does not have.
-    const view = Object.assign(new EventTarget(), { navigator: {} });
-    const canvas = Object.assign(new EventTarget(), {
-        width,
-        height,
-        style: {},
-        ownerDocument: { defaultView: view },
-        // Read as it is now: the game can change its resolution while it runs (below).
-        getBoundingClientRect: () => ({ left: 0, top: 0, width: canvas.width, height: canvas.height, x: 0, y: 0, right: canvas.width, bottom: canvas.height }),
-    }) as unknown as HTMLCanvasElement;
+    const { canvas, view } = createScreenlessCanvas(width, height);
 
     const renderer = createCpuRenderer({ background: config.background, smooth: config.smooth });
     const store = createRuntimeStore({ canvas, renderer, config });

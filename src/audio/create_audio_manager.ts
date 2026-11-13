@@ -39,13 +39,14 @@ const BUILT_IN_CHANNELS = [DEFAULT_CHANNEL, 'music'];
  *
  * @param view The window the game is shown in, whose clicks and keys those are: a game in a window of
  * its own is touched there, not in the one the engine was loaded in. `null` where there is no page.
+ * @param context The audio engine it plays into: the browser's, unless a game that must not be heard
+ * (a server's room running in the same page as its players) gives a silent one.
  *
  * @internal
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const createAudioManager = (view: Window | null): TAudioManager => {
-    const context = new AudioContext();
+export const createAudioManager = (view: Window | null, context: AudioContext = new AudioContext()): TAudioManager => {
     const master = context.createGain();
     master.connect(context.destination);
 

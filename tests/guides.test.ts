@@ -37,43 +37,66 @@ const OPTIONS: ts.CompilerOptions = {
         'nacatamalon/react': [join(ROOT, 'react', 'index.ts')],
         'nacatamalon/headless': [join(ROOT, 'headless', 'index.ts')],
         'nacatamalon/speech': [join(ROOT, 'speech', 'index.ts')],
+        'nacatamalon/net': [join(ROOT, 'net', 'index.ts')],
         'nacatamalon/physics2d': [join(ROOT, 'physics', 'box2d', 'index.ts')],
         'nacatamalon/physics3d': [join(ROOT, 'physics', 'box3d', 'index.ts')],
     },
 };
 
+/** Where a guide's blocks are put to compile: a folder that is not there, next to the engine's. */
+const GUIDE_DIR = join(ROOT, '..', '__guide', 'src');
+
+/**
+ * The file a block stands for when its first line names one (`// src/game.ts`), so the guide's other
+ * blocks can import it (`from './game'`), as the files of a game import each other.
+ */
+const namedFile = (code: string): string | null => /^\/\/ src\/([\w/]+\.ts)\s*$/m.exec(code.split('\n')[0] ?? '')?.[1] ?? null;
+
 /**
  * What is wrong in each block of code, compiled against the engine. Each block is a file of its own,
- * so they cannot see each other's names, but all of them are one program: the engine is read and
- * checked once for the whole guide rather than once per block, which on a slower machine (CI) went
- * past the time a test is given.
+ * so they cannot see each other's names unless one is named for its file, but all of them are one
+ * program: the engine is read and checked once for the whole guide rather than once per block, which
+ * on a slower machine (CI) went past the time a test is given.
  */
 const compileEach = (codes: string[]): string[][] => {
-    const sources = new Map(codes.map((code, i) => [join(ROOT, '..', `__guide_example_${i}.ts`), `${code}\nexport {};\n`]));
-    // The plugins guide shows a game importing a plugin, which is not here: any package named
-    // `nacatamalon-…` is taken as it comes. The engine's own doors (`nacatamalon/…`) are still checked.
-    const plugins = join(ROOT, '..', '__guide_plugins.d.ts');
-    const stubs = new Map([[plugins, "declare module 'nacatamalon-*';\n"]]);
+    const sources = new Map(codes.map((code, i) => [join(GUIDE_DIR, namedFile(code) ?? `__example_${i}.ts`), `${code}\nexport {};\n`]));
+    // Packages a guide shows a game using that are not here: a plugin (any package named
+    // `nacatamalon-…`), and the servers and lines the online guide carries the game over. They are
+    // taken as they come; the engine's own doors (`nacatamalon/…`) are still checked.
+    const outside = join(ROOT, '..', '__guide_outside.d.ts');
+    const stubs = new Map([[outside, [
+        ...['nacatamalon-*', 'ws', 'socket.io', 'socket.io-client', 'colyseus.js'].map((name) => `declare module '${name}';`),
+        // Colyseus's player is named as a type, which a module taken as it comes cannot give.
+        "declare module 'colyseus' { export type Client = any; export const Room: any; export const Server: any; }",
+    ].join('\n')]]);
     const host = ts.createCompilerHost(OPTIONS);
     const { readFile, fileExists, getSourceFile } = host;
     host.readFile = (file) => sources.get(file) ?? stubs.get(file) ?? readFile(file);
     host.fileExists = (file) => sources.has(file) || stubs.has(file) || fileExists(file);
+    // The guide's folder is not there, so asking whether it is says yes.
+    const { directoryExists } = host;
+    host.directoryExists = (folder) => folder.startsWith(join(ROOT, '..', '__guide')) || (directoryExists?.(folder) ?? false);
     host.getSourceFile = (file, version) => {
         const source = sources.get(file) ?? stubs.get(file);
         return source === undefined ? getSourceFile(file, version) : ts.createSourceFile(file, source, version);
     };
-    const program = ts.createProgram([...sources.keys(), plugins], OPTIONS, host);
+    const program = ts.createProgram([...sources.keys(), outside], OPTIONS, host);
     return [...sources.keys()].map((name) =>
         ts.getPreEmitDiagnostics(program, program.getSourceFile(name)).map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n')));
 };
 
 describe('the guides', () => {
     it('are there, in English and in Spanish', () => {
-        expect(files.sort()).toEqual(['gpu_pass.es.md', 'gpu_pass.md', 'lighting_2d.es.md', 'lighting_2d.md', 'music.es.md', 'music.md', 'plugins.es.md', 'plugins.md']);
+        expect(files.sort()).toEqual(['gpu_pass.es.md', 'gpu_pass.md', 'lighting_2d.es.md', 'lighting_2d.md', 'music.es.md', 'music.md', 'online.es.md', 'online.md', 'plugins.es.md', 'plugins.md']);
     });
 
     for (const file of files) {
         const text = readFileSync(join(GUIDES, file), 'utf8');
+
+        it(`${file}: no two blocks stand for the same file`, () => {
+            const named = blocksOf(text, 'ts').map(namedFile).filter((name) => name !== null);
+            expect(named.filter((name, i) => named.indexOf(name) !== i)).toEqual([]);
+        });
 
         it(`${file}: every block of code compiles`, () => {
             const results = compileEach(blocksOf(text, 'ts'));

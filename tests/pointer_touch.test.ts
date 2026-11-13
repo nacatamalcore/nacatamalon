@@ -55,6 +55,32 @@ const pad = () => {
     return { canvas, frame, pointer: () => pointer, left: () => left, right: () => right, ship: () => ship, downs, ups, clicks };
 };
 
+describe('a quick tap', () => {
+    it('says where it was in the frame it reads as pressed, though the finger already left', () => {
+        const { canvas, frame, pointer } = pad();
+        // A finger's down, up and leave, all between two frames.
+        fire(canvas, 'pointerdown', 40, 280);
+        fire(canvas, 'pointerup', 40, 280);
+        fire(canvas, 'pointerleave', 40, 280);
+        frame();
+
+        expect(pointer().justPressed()).toBe(true);
+        expect(pointer().position()).toMatchObject({ screenX: 40, screenY: 280 });
+
+        frame();
+        expect(pointer().position()).toBeNull();
+    });
+
+    it('a pointer that leaves without pressing is nowhere at once', () => {
+        const { canvas, frame, pointer } = pad();
+        fire(canvas, 'pointermove', 40, 280, 1, 'mouse');
+        fire(canvas, 'pointerleave', 40, 280, 1, 'mouse');
+        frame();
+
+        expect(pointer().position()).toBeNull();
+    });
+});
+
 describe('each finger on its own', () => {
     it('tells listeners which pointer it is and what kind', () => {
         const { canvas, frame, downs } = pad();

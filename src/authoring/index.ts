@@ -90,6 +90,11 @@ export { readGltfNodes } from '../loaders';
 // its document changes. A published game never does that; it changes scene from inside, by name.
 export { editorHandleOf } from '../game/handle';
 export type { TEditorHandle } from '../game/handle';
+
+// An online game's server and players run together by the tool, their lines handed over by it
+// rather than through ports: what an editor does to show them side by side.
+export { setNetHost } from '../net/net_host';
+export type { TNetHost } from '../net/net_host';
 export type { TMotionPreview } from '../motion/preview_motion';
 export type { TLoggedSound, TSoundLog, TSoundLogPoint } from '../audio';
 export type { TCanvasFit } from '../DOM/types/t_canvas_fit';
