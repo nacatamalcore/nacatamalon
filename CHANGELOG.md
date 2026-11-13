@@ -78,8 +78,10 @@ releases are in [changelog/](./changelog/), one file each.
   box no change of scene touches, and tears it down after its scenes when it ends; in a frame its
   `useUpdate` run before every scene's and its `useLateUpdate` after. It runs whatever scene the game
   starts on, a level played from the editor included. A paused game pauses it, it draws nothing, the
-  hooks that need a scene (`useScene`, cameras, lights, physics, `useRenderStyle`, `useFog`) throw
-  inside it, and one that throws is reported while the game goes on. Registered while a game runs,
+  hooks that need a scene (cameras, lights, physics, `useRenderStyle`, `useFog`) throw inside it,
+  `useScene` reaches the scenes it names (`launch('Hud')`, `pause('Level')`, `stop('Hud')`) and
+  throws for `change` and the calls with no name, which would be about a scene of its own, and one
+  that throws is reported while the game goes on. Registered while a game runs,
   it waits for the next one; the same name with the same function does nothing, so the body is made
   once and an install called twice is harmless. While a tool lays the game out (the editor's edit
   mode), its systems are taken down and start again when it is played.

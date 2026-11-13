@@ -109,9 +109,10 @@ while a game runs waits for the next game, and says so. Inside, the hooks are th
 - Its `useUpdate` run before every scene's in a frame, and its `useLateUpdate` after every scene's,
   so it gets things ready for the scenes and reads where they left them.
 - A paused game pauses it too (`useGame().onPaused` tells it); a paused scene does not.
-- It belongs to no scene: `useScene`, the cameras, the lights, physics, `useRenderStyle` and
-  `useFog` throw inside it. What it creates is drawn nowhere; to show something, it launches a scene
-  of its own.
+- It belongs to no scene: the cameras, the lights, physics, `useRenderStyle` and `useFog` throw
+  inside it. `useScene` works for the scenes it names (`launch('Hud')`, `pause('Level')`,
+  `stop('Hud')`); `change`, and the calls with no name, throw, since they would be about a scene of
+  its own. What it creates is drawn nowhere; to show something, it launches a scene of its own.
 - One that throws is reported and left out, and the game goes on.
 - The same name with the same function does nothing, which is why the body is made once, outside
   the install: an install called twice then does nothing. With another function it throws. It hands

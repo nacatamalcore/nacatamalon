@@ -172,17 +172,84 @@ describe('registerGameSystem', () => {
     it('belongs to no scene: the hooks that need one throw, and what it would draw is said', () => {
         const error = spyOn(console, 'error').mockImplementation(() => {});
         const warn = spyOn(console, 'warn').mockImplementation(() => {});
-        register('test-scene', () => { useScene(); });
         register('test-camera', () => { useCamera3d(); });
         register('test-draws', () => { createSprite({}); });
         const running = game({ Level: () => createScene() });
         const said = error.mock.calls.map((call) => `${String(call[0])} ${String((call[1] as Error | undefined)?.message)}`);
-        expect(said[0]).toContain("useScene: 'test-scene' is a game system, which belongs to no scene");
-        expect(said[1]).toContain("useCamera3d: 'test-camera' is a game system");
+        expect(said[0]).toContain("useCamera3d: 'test-camera' is a game system, which belongs to no scene");
         expect(String(warn.mock.calls[0]?.[0])).toContain("game system 'test-draws': it made something to draw");
         running.destroy();
         error.mockRestore();
         warn.mockRestore();
+    });
+
+    it('reaches the scenes it names with useScene: launches, pauses, hears and stops them', () => {
+        const told: string[] = [];
+        let levelFrames = 0;
+        register('test-scenes', () => {
+            const scenes = useScene();
+            scenes.onPaused(() => told.push('heard Level paused'), 'Level');
+            let frame = 0;
+            useUpdate(() => {
+                frame++;
+                if (frame === 1) scenes.launch('Hud');
+                if (frame === 2) told.push(`paused ${scenes.pause('Level')}, asked ${scenes.isPaused('Level')}`);
+                if (frame === 4) told.push(`resumed ${!scenes.resume('Level')}`);
+                if (frame === 5) told.push(`stopped ${scenes.stop('Hud')}`);
+            });
+        });
+        const running = game({
+            Level: () => {
+                useUpdate(() => { levelFrames++; });
+                return createScene();
+            },
+            Hud: () => {
+                told.push('Hud up');
+                useCleanup(() => told.push('Hud down'));
+                return createScene();
+            },
+        });
+        running.run(6);
+        expect(told).toEqual([
+            'Hud up',
+            'heard Level paused', 'paused true, asked true',
+            'resumed true',
+            'Hud down', 'stopped true',
+        ]);
+        // Six frames, two of them paused: a system's update runs before the scenes', so the pause of
+        // the second frame already holds the level in it, and the resume of the fourth lets it run.
+        expect(levelFrames).toBe(4);
+        running.destroy();
+    });
+
+    it('throws for what would be about a scene of its own: change, and the calls with no name', () => {
+        const caught: string[] = [];
+        register('test-own', () => {
+            const scenes = useScene();
+            const attempt = (call: () => unknown): void => {
+                try {
+                    call();
+                } catch (error) {
+                    caught.push((error as Error).message);
+                }
+            };
+            attempt(() => scenes.change('Level'));
+            attempt(() => scenes.stop());
+            attempt(() => scenes.stop({}));
+            attempt(() => scenes.pause());
+            attempt(() => scenes.resume());
+            attempt(() => scenes.isPaused());
+            attempt(() => scenes.onPaused(() => {}));
+            attempt(() => scenes.onResumed(() => {}));
+        });
+        const running = game({ Level: () => createScene() });
+        expect(caught).toHaveLength(8);
+        expect(caught[0]).toBe("[NacatamalOn] useScene().change: 'test-own' is a game system, which has no scene to replace. Start the next one with launch() and stop the one it replaces by its name.");
+        expect(caught[1]).toBe("[NacatamalOn] useScene().stop: 'test-own' is a game system, which belongs to no scene. Name the scene it is about: useScene().stop('Level').");
+        for (const [i, action] of ['stop', 'pause', 'resume', 'isPaused', 'onPaused', 'onResumed'].entries()) {
+            expect(caught[i + 2]).toContain(`useScene().${action}: 'test-own' is a game system, which belongs to no scene`);
+        }
+        running.destroy();
     });
 
     it('without a plugin: a scene launched beside the levels lives through their changes', () => {

@@ -92,10 +92,12 @@ const beingLaidOut = (store: TRuntimeStore): boolean => {
  * every scene's: a system gets things ready for the scenes and reads where they left them. A paused
  * game pauses its systems as well (`useGame().onPaused` tells one so); a paused scene does not.
  *
- * A system belongs to no scene, so the hooks that need one throw inside it (`useScene`, the cameras,
- * the lights, physics, `useRenderStyle`, `useFog`): what concerns the whole game is `useGame()`'s, and
- * what lasts goes in a store. It draws nothing: what it creates is not seen, so something always on
- * screen (a score) is a scene launched beside the levels. One that throws, starting or in a frame, is
+ * A system belongs to no scene, so the hooks that need one throw inside it (the cameras, the lights,
+ * physics, `useRenderStyle`, `useFog`): what concerns the whole game is `useGame()`'s, and what lasts
+ * goes in a store. `useScene` works in it for the scenes it names (`launch('Hud')`, `pause('Level')`),
+ * and throws for what would be about a scene of its own: `change`, and the calls with no name. It
+ * draws nothing: what it creates is not seen, so something always on screen (a score) is a scene
+ * launched beside the levels. One that throws, starting or in a frame, is
  * reported and the game goes on without it.
  *
  * The same name with the same function does nothing, so an install called twice does nothing when
@@ -336,6 +338,16 @@ export const runSystemLateUpdates = (store: TRuntimeStore, late: TBox[][] | null
 };
 
 /**
+ * The name of the game system `box` belongs to, or `undefined` for a box of a scene: what lets a
+ * hook that works in both tell which one called it.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const systemNameOf = (box: TBox): string | undefined => systemNames.get(rootOf(box));
+
+/**
  * Throws, for a hook that needs a scene, when it is called inside a game system, which belongs to
  * none. Nothing outside a system.
  *
@@ -348,7 +360,7 @@ export const sceneOnly = (hook: string): void => {
     if (box === null) {
         return;
     }
-    const name = systemNames.get(rootOf(box));
+    const name = systemNameOf(box);
     if (name !== undefined) {
         throw new Error(`[NacatamalOn] ${hook}: '${name}' is a game system, which belongs to no scene. Use useGame() for what concerns the whole game, or launch a scene of its own.`);
     }

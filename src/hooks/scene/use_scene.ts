@@ -1,4 +1,4 @@
-import { sceneOnly } from '../../game_systems/game_systems';
+import { systemNameOf } from '../../game_systems/game_systems';
 import { rootOf } from '../../box';
 import { findScene, isScenePaused, setScenePaused, startedAs, startScene, stopScene } from '../../scene';
 import { isSceneStopped } from '../../scene/stopped_scenes';
@@ -15,6 +15,9 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  * What a scene can do with the game's scenes, returned by `useScene`. Every name is one of the keys
  * passed to `createGame`. Where the name is optional, leaving it out means the scene that called
  * `useScene`.
+ *
+ * Called in a game system, which belongs to no scene, every call names the scene it is about:
+ * `change`, and the ones with the name left out, throw there.
  *
  * `launch` and `change` take the scene by name or by its function. By the function, TypeScript
  * checks the props: `change(Level, { props: { level: 3 } })`.
@@ -144,6 +147,10 @@ export type TSceneHandle = {
  * Call it in the scene body, keep the handle, and use it later from `useUpdate`: it holds the game
  * and the scene it was called in, so it keeps working after the body is over.
  *
+ * A game system calls it too, for the scenes it names: a system that pauses the level when the pad
+ * is unplugged, or launches the HUD. It has no scene of its own, so `change`, and the calls with no
+ * name, throw there.
+ *
  * @example
  * ```ts
  * export const Intro: TSceneFn = () => {
@@ -170,9 +177,10 @@ export const useScene = (): TSceneHandle => {
     if (store === null || active === null) {
         throw outsideSceneBody('useScene');
     }
-    sceneOnly('useScene');
-
-    const owner = rootOf(active);
+    // A game system belongs to no scene: its handle reaches the scenes it names, and has none of its
+    // own. Its root is the system itself, which a `change` would stop.
+    const system = systemNameOf(active);
+    const owner: TBox | null = system === undefined ? rootOf(active) : null;
     let leaving = false;
     /**
      * Inside a `change` of this handle: a hard cut builds the scene coming in before it stops this
@@ -186,11 +194,23 @@ export const useScene = (): TSceneHandle => {
      * restarted cannot reach the new copy that took its name, and a scene built from a document
      * reaches itself even when another running scene answers to the name its document gave it.
      */
-    const running = (name: string | undefined): TBox | undefined => {
+    const running = (name: string | undefined, action: string): TBox | undefined => {
         if (name !== undefined) {
             return findScene(store, name);
         }
-        return store.get('world').scenes.includes(owner) ? owner : undefined;
+        const self = ownScene(action);
+        return store.get('world').scenes.includes(self) ? self : undefined;
+    };
+
+    /**
+     * The calling scene, for a call that left the name out. Thrown in a game system, which has none:
+     * the call was written for a scene, and guessing one would act on something nobody named.
+     */
+    const ownScene = (action: string): TBox => {
+        if (owner === null) {
+            throw new Error(`[NacatamalOn] useScene().${action}: '${system}' is a game system, which belongs to no scene. Name the scene it is about: useScene().${action}('Level').`);
+        }
+        return owner;
     };
 
     /**
@@ -217,7 +237,7 @@ export const useScene = (): TSceneHandle => {
     };
 
     const warnNotRunning = (action: string, name: string | undefined): void => {
-        const which = name === undefined ? `its own scene '${owner.name}'` : `scene '${name}'`;
+        const which = name === undefined ? `its own scene '${owner?.name}'` : `scene '${name}'`;
         console.warn(`[NacatamalOn] useScene().${action}: ${which} is not running.`);
     };
 
@@ -260,7 +280,7 @@ export const useScene = (): TSceneHandle => {
         stop: (nameOrOptions?: string | TSceneStopOptions, given?: TSceneStopOptions) => {
             const name = typeof nameOrOptions === 'string' ? nameOrOptions : undefined;
             const options = typeof nameOrOptions === 'object' && nameOrOptions !== null ? nameOrOptions : given;
-            const root = running(name);
+            const root = running(name, 'stop');
             if (root === undefined) {
                 warnNotRunning('stop', name);
                 return false;
@@ -302,6 +322,9 @@ export const useScene = (): TSceneHandle => {
             return true;
         },
         change: (scene: string | TSceneFn<never>, options?: TSceneChangeOptions<object>) => {
+            if (owner === null) {
+                throw new Error(`[NacatamalOn] useScene().change: '${system}' is a game system, which has no scene to replace. Start the next one with launch() and stop the one it replaces by its name.`);
+            }
             // Leaving holds while the change is being made, while the scene is gone, and while it is
             // still being covered on its way out. A change can also be called off behind the cover,
             // when the scene it was bringing in is stopped from elsewhere: the cover goes with it,
@@ -366,7 +389,7 @@ export const useScene = (): TSceneHandle => {
             }
         },
         pause: (name) => {
-            const target = running(name);
+            const target = running(name, 'pause');
             if (target === undefined) {
                 warnNotRunning('pause', name);
                 return false;
@@ -374,7 +397,7 @@ export const useScene = (): TSceneHandle => {
             return setScenePaused(store, target, true);
         },
         resume: (name) => {
-            const target = running(name);
+            const target = running(name, 'resume');
             if (target === undefined) {
                 warnNotRunning('resume', name);
                 return false;
@@ -382,12 +405,12 @@ export const useScene = (): TSceneHandle => {
             return setScenePaused(store, target, false);
         },
         isPaused: (name) => {
-            const target = running(name);
+            const target = running(name, 'isPaused');
             return target === undefined ? false : isScenePaused(store, target);
         },
         // By name, so a HUD listening to 'Level' still hears it after the level restarts. With no
         // name, about this scene only: another running scene can answer to the same name.
-        onPaused: (listener, name) => onGameMoment(store, `scene paused: ${name ?? owner.name}`, active, name === undefined ? own(listener) : listener),
-        onResumed: (listener, name) => onGameMoment(store, `scene resumed: ${name ?? owner.name}`, active, name === undefined ? own(listener) : listener),
+        onPaused: (listener, name) => onGameMoment(store, `scene paused: ${name ?? ownScene('onPaused').name}`, active, name === undefined ? own(listener) : listener),
+        onResumed: (listener, name) => onGameMoment(store, `scene resumed: ${name ?? ownScene('onResumed').name}`, active, name === undefined ? own(listener) : listener),
     };
 };

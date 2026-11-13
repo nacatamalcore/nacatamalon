@@ -111,9 +111,11 @@ con un juego en marcha espera al siguiente, y lo dice. Dentro, los hooks son los
 - Sus `useUpdate` corren antes que los de todas las escenas en cada fotograma, y sus `useLateUpdate`
   después de los de todas, así que prepara las cosas para las escenas y lee dónde las dejaron.
 - El juego en pausa lo pausa también (`useGame().onPaused` se lo dice); una escena en pausa, no.
-- No es de ninguna escena: `useScene`, las cámaras, las luces, la física, `useRenderStyle` y `useFog`
-  lanzan un error dentro de él. Lo que crea no se dibuja en ningún sitio; para enseñar algo, lanza
-  una escena propia.
+- No es de ninguna escena: las cámaras, las luces, la física, `useRenderStyle` y `useFog` lanzan un
+  error dentro de él. `useScene` funciona para las escenas que nombra (`launch('Hud')`,
+  `pause('Level')`, `stop('Hud')`); `change` y las llamadas sin nombre lanzan un error, porque serían
+  sobre una escena propia. Lo que crea no se dibuja en ningún sitio; para enseñar algo, lanza una
+  escena propia.
 - Uno que lanza un error se informa y se deja fuera, y el juego sigue.
 - El mismo nombre con la misma función no hace nada, y por eso el cuerpo se hace una vez, fuera del
   install: un install llamado dos veces no hace nada. Con otra función, lanza un error. Devuelve una
