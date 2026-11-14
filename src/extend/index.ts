@@ -53,3 +53,9 @@ export type { TPose3d } from '../box';
 // Every object in the tree as the engine holds it, whatever made it. A game names `TGameObject`;
 // this is what the engine's own signatures name (`onReport`, `listen`), so it has a door.
 export type { TBox } from '../box';
+
+// What a running game has in it, for a tool that watches one: its scenes, its systems and its files,
+// with who asked for each file and who keeps it loaded, and when either half changed.
+export { inspectGame } from './inspect_game';
+export type { TGameInspection, TSceneInspection, TSystemInspection, TAssetInspection, THolderInspection, TLoadsInspection } from './inspect_game';
+export { onScenesChanged, onAssetsChanged } from './game_changes';

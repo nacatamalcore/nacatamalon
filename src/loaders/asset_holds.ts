@@ -265,6 +265,15 @@ export const whenFree = (thing: object, waitFor: TWaitFor, finish: () => void, e
 export const holdersOf = (thing: object): THolder[] => [...(holdersByThing.get(thing) ?? [])];
 
 /**
+ * Those holding `thing` who still count, as `heldByOthers` counts them. Asks and changes nothing.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const countingHoldersOf = (thing: object): THolder[] => holdersOf(thing).filter(counts);
+
+/**
  * Everything `by` is noted as holding.
  *
  * @internal

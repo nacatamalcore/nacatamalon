@@ -203,6 +203,8 @@ describe('the extension door', () => {
             'placement3dOf', 'worldPlacement3dOf', 'localPosition3dFrom', 'localQuaternionFrom',
             // The colours a physics draws its bodies in for the debug mode, shared by every one.
             'DEBUG_COLORS',
+            // What a running game has in it, for a tool that watches one, and when that changed.
+            'inspectGame', 'onScenesChanged', 'onAssetsChanged',
         ].sort());
     });
 

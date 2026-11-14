@@ -96,6 +96,16 @@ releases are in [changelog/](./changelog/), one file each.
 - **A plugin's screen effect with a name, `registerPostEffect(info)`** in `nacatamalon/extend`, shaped
   as the engine's own effects: chains, render styles, scene documents and motions name it as they name
   `bloom`. **`allPostEffects()`** (tools) lists the engine's effects, then the plugins'.
+- **A plugin can look at the game, `inspectGame(store)`** in `nacatamalon/extend`, for a tool that
+  watches one (a debugging panel, a check for files nobody let go of). A frozen picture of the game
+  now: its scenes, registered or running, with their state (`running`, `paused`, `held` or
+  `stopped`) and how many of the files they asked for are ready; its systems; and every file it
+  keeps, with its type, key, status, size or length, roughly how many bytes it takes, the scenes
+  and systems that asked for it (those that stopped since included) and who keeps it loaded (the
+  game, another file, or something made in code). **`onScenesChanged(store, listener)`** and
+  **`onAssetsChanged(store, listener)`** call it once at the end of a frame in which that half
+  changed, paused or not, so a panel need not ask every frame. What `inspectGame` hands back only
+  gains fields and values until 2.0.
 - **`useEnvironment({ around })` takes a plugin's drawing** as well as a mesh or a model: the
   surroundings are seen from where it is, followed as it moves, and it is left out of them, so a
   plugin's chrome reflects the room and not the inside of itself.

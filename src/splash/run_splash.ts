@@ -1,4 +1,5 @@
 import { registerScene } from '../scene/register_scene';
+import { SPLASH_SCENE } from './behind_splash';
 import { startScene } from '../scene/start_scene';
 import { stopScene } from '../scene/stop_scene';
 import { useCleanup } from '../hooks/scene/use_cleanup';
@@ -8,10 +9,8 @@ import { clearSplash, releaseGame, setSplash, splashOf } from './behind_splash';
 import { createSplashScene } from './splash_scene';
 import { launchesDue } from '../game_systems/game_systems';
 
-/**
- * The splash's name among the game's scenes. Namespaced so it cannot collide with one of the game's.
- */
-export const SPLASH_SCENE = 'nacatamalon:splash';
+// The splash's name among the game's scenes, kept with what the loop asks of the splash.
+export { SPLASH_SCENE } from './behind_splash';
 
 /**
  * Whether the game behind the splash can be shown: no change of its being covered, no launch of a

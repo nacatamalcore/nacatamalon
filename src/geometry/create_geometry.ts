@@ -89,6 +89,26 @@ type TOwned = {
 const owned = new WeakMap<TGeometry, TOwned>();
 
 /**
+ * How many corners and corner numbers `geometry` has room for on the graphics card: for one made
+ * with `createGeometry`, the room it was last given, which `updateGeometry` keeps when the shape
+ * shrinks; for any other, what it has.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const geometryRoom = (geometry: TGeometry): { readonly corners: number; readonly indices: number } => {
+    const held = owned.get(geometry);
+    if (held === undefined) {
+        return { corners: geometry.vertexCount, indices: geometry.indexCount };
+    }
+    return {
+        corners: Math.max(geometry.vertexCount, held.vertexBytes / (GEOMETRY_STRIDE * 4)),
+        indices: Math.max(geometry.indexCount, held.indexBytes / (held.indexType === 'uint16' ? 2 : 4)),
+    };
+};
+
+/**
  * Whether a shape was made with `createGeometry` and so belongs to the object that made it, rather
  * than being one of the game's shared shapes.
  *

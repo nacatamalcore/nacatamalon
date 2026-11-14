@@ -145,6 +145,8 @@ Un juego nunca lo importa; un plugin sí.
 - `registerAssetType`: un tipo de archivo propio, más abajo.
 - `registerPostEffect`: un efecto de pantalla con un nombre que los datos del juego pueden usar, más abajo.
 - `registerPhysicsProvider`: otro motor de física.
+- `inspectGame`, `onScenesChanged`, `onAssetsChanged`: lo que tiene un juego en marcha, para una
+  herramienta que lo observa, más abajo.
 
 `nacatamalon/extend/gpu` tiene `useGpuPass`, para trabajo propio del plugin en la GPU: una simulación
 en compute, una imagen calculada en la GPU. Ver [la guía de la pasada de GPU](gpu_pass.es.md). Tiene
@@ -337,6 +339,42 @@ un estilo de render, un documento de escena, una motion que mueve sus uniforms),
 `registerPostEffect`, de `nacatamalon/extend`, descrito como el motor describe los suyos
 (`TPostBuiltinInfo`: `key`, `label`, `description`, `fields`, `binds`, `build`). `allPostEffects()` lo
 lista detrás de los del motor.
+
+## Mirar el juego
+
+Un panel de depuración, una comprobación de archivos que nadie soltó, un contador de memoria: un
+plugin que observa el juego en lugar de añadirle algo. `inspectGame(store)` devuelve lo que el juego
+tiene ahora, como una foto congelada:
+
+- `scenes`: todas las escenas registradas, paradas o no, y cualquiera que corra sin un nombre
+  registrado (`registered: false`), con su `state` (`'running'`, `'paused'`, `'held'` detrás de una
+  transición, o `'stopped'`) y cuántos de los archivos que pidió están listos. El splash no es una de
+  ellas; el juego que hay detrás está `running`.
+- `systems`: los sistemas del juego, con la misma cuenta.
+- `assets`: cada archivo que guarda el juego, con su `type`, su `key`, su `status`, un `detail` (el
+  tamaño de una imagen, la duración de un sonido), los `bytes` que ocupa más o menos, `askedBy` (las
+  escenas y sistemas que lo pidieron, también los que ya se pararon) y `heldBy` (quién lo mantiene
+  cargado: el juego, otro archivo o algo hecho en código).
+
+`onScenesChanged(store, listener)` y `onAssetsChanged(store, listener)` llaman al listener una vez al
+final de cada frame en el que cambió esa mitad, en pausa o no, y devuelven cómo dejar de escuchar. El
+listener vuelve a llamar a `inspectGame`; no hay que preguntar cada poco.
+
+```ts
+import { registerGameSystem, useCleanup } from 'nacatamalon';
+import { getActiveGame, inspectGame, onScenesChanged } from 'nacatamalon/extend';
+
+export const installSceneLog = () => registerGameSystem('nacatamalon-scene-log', () => {
+    const store = getActiveGame()!;
+    useCleanup(onScenesChanged(store, () => {
+        console.log(inspectGame(store).scenes.map((scene) => `${scene.name}: ${scene.state}`));
+    }));
+});
+```
+
+Para actuar sobre lo que ve, un sistema tiene `useScene` por nombre (`launch`, `stop`, `restart`,
+`pause`, `isRunning`) y `useGame()` (`releaseAsset`, `setTimeScale`, `pause`). Lo que devuelve
+`inspectGame` solo gana campos y valores hasta la 2.0.
 
 ## Lo que un plugin todavía no puede hacer
 

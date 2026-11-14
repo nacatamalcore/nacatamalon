@@ -19,6 +19,7 @@ import { windowOf } from "../../DOM/window_of";
 import { updateDebug } from "../../debug/draw_debug";
 import { flushSystemLaunches, followLayout, runSystemLateUpdates, runSystemUpdates } from "../../game_systems/game_systems";
 import { deliverNet, finishNet, stepNet } from "../../net/net_inbox";
+import { tellGameChanges } from "../../extend/game_changes";
 
 /**
  * Tick one frame of the game loop.
@@ -350,8 +351,14 @@ export const advanceFrame = (store: TRuntimeStore, ctx: TFrameContext, elapsedMs
     } catch (error) {
         // A capture drawn in this frame was not drawn, and has to hear so.
         settleCapture(store, error);
+        // What changed is still told, or a tool watching a game whose drawing keeps failing would
+        // hear nothing more of it.
+        tellGameChanges(store);
         throw error;
     }
     settleCapture(store);
+
+    // Last, with the frame done and drawn: a tool watching the game hears once what changed in it.
+    tellGameChanges(store);
 
 };

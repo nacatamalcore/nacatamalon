@@ -4,6 +4,9 @@ import type { TRuntimeStore } from '../store';
 import { runningScene } from './find_scene';
 import { markSceneStopped } from './stopped_scenes';
 import { endTransition } from '../transition/end_transition';
+import { rememberAsked } from '../loaders/asked_by';
+import { startedAs } from './start_scene';
+import { splashOf } from '../splash/behind_splash';
 
 /**
  * Takes a running scene out of the game: off `world.scenes`, then through its cleanups.
@@ -44,6 +47,11 @@ export const stopScene = (store: TRuntimeStore, scene: string | TBox): boolean =
         endTransition(store, transition);
     }
 
+    // Who asked for what outlives the scene, for a tool hunting what nobody lets go of. Not the
+    // splash's: it is not one of the game's scenes.
+    if (root !== splashOf(store)) {
+        rememberAsked(store, root, startedAs(root));
+    }
     store.setState('world', { scenes: store.get('world').scenes.filter((scene) => scene !== root) });
     // Before its cleanups, so one of them that makes something finds the scene already gone.
     markSceneStopped(root);

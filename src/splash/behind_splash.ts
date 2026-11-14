@@ -2,6 +2,17 @@ import type { TBox } from '../box';
 import type { TRuntimeStore } from '../store';
 
 /**
+ * The splash's name among the game's scenes. Namespaced so it cannot collide with one of the game's.
+ * Here, with what the loop asks of the splash, so a tool listing the game's scenes can leave it out
+ * without loading the splash.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const SPLASH_SCENE = 'nacatamalon:splash';
+
+/**
  * The splash each game is showing: its scene, and whether it has let the game go yet.
  *
  * Kept apart from the splash itself, which is only loaded by a game that shows it: the loop, the

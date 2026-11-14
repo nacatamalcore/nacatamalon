@@ -1,4 +1,6 @@
 import { newBox, teardownBox, trackBoxGame } from '../box';
+import { rememberAsked } from '../loaders/asked_by';
+import { SPLASH_SCENE } from '../splash/behind_splash';
 import { markSceneStopped } from './stopped_scenes';
 import type { TBox } from '../box';
 import { withActiveBox, withActiveGame } from '../store';
@@ -265,27 +267,37 @@ export const startScene = (store: TRuntimeStore, name: string, props: object = {
         places.set(root, placeOf(inPlace.old));
     }
     const entry: TBuilding = { store, root, before: new Set(scenes), inPlace };
+    // A scene that does not start: what its body asked for stays loaded, and is still said to be
+    // its (see `inspectGame`). Not the splash's, which is not one of the game's scenes.
+    const failed = (error: unknown): unknown => {
+        if (name !== SPLASH_SCENE) {
+            rememberAsked(store, root, name);
+        }
+        return error;
+    };
     building.push(entry);
     let result: ReturnType<typeof body>;
     try {
         result = withActiveGame(store, () => withActiveBox(store, root, () => body(props)));
+    } catch (error) {
+        throw failed(error);
     } finally {
         building.splice(building.lastIndexOf(entry), 1);
     }
 
     // TypeScript already rejects both of these. They are here for plain JavaScript.
     if (typeof (result as { then?: unknown } | undefined)?.then === 'function') {
-        throw new Error(`[NacatamalOn] scenes: '${name}' returned a promise. A scene's function cannot be async: load what it needs with the useLoad… hooks, which return at once.`);
+        throw failed(new Error(`[NacatamalOn] scenes: '${name}' returned a promise. A scene's function cannot be async: load what it needs with the useLoad… hooks, which return at once.`));
     }
     if (result === undefined || !Array.isArray(result.children)) {
-        throw new Error(`[NacatamalOn] scenes: '${name}' must end with \`return createScene()\`.`);
+        throw failed(new Error(`[NacatamalOn] scenes: '${name}' must end with \`return createScene()\`.`));
     }
 
     for (const child of result.children) {
         // Created inside the body, or listed twice: already attached here.
         if (child.parent === root) continue;
         if (child.parent !== null) {
-            throw new Error(`[NacatamalOn] scenes: '${child.name}' already belongs to '${child.parent.name}'.`);
+            throw failed(new Error(`[NacatamalOn] scenes: '${child.name}' already belongs to '${child.parent.name}'.`));
         }
         child.parent = root;
         root.children.push(child);

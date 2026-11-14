@@ -5,6 +5,7 @@ import { gameBehindSplash, splashOf } from '../splash/behind_splash';
 import { withActiveBox, withActiveGame, getActiveBox } from '../store';
 import { runHookUpdates, runLateUpdates } from '../game/loop/runHookUpdates';
 import { reportFrameError } from '../game/loop/report_frame_error';
+import { rememberAsked } from '../loaders/asked_by';
 import type { TBox } from '../box';
 import type { TRuntimeStore } from '../store';
 
@@ -220,6 +221,8 @@ const startEach = (store: TRuntimeStore): void => {
             }
         } catch (error) {
             console.error(`[NacatamalOn] game system '${name}': it could not start, and the game goes on without it.`, error);
+            // What it asked for before it threw stays loaded, and is still said to be its.
+            rememberAsked(store, box, name);
             teardownBox(box);
             // Gone for good, it and all it made, so nothing they set aside (a `useReady`) runs after all.
             markGone(box);
@@ -293,6 +296,8 @@ export const stopGameSystems = (store: TRuntimeStore): void => {
 const takeDown = (store: TRuntimeStore): void => {
     const systems = store.get('world').systems;
     for (let i = systems.length - 1; i >= 0; i--) {
+        // What it asked for is still said to be its, once it is gone (see `inspectGame`).
+        rememberAsked(store, systems[i]!, systems[i]!.name);
         teardownBox(systems[i]!);
     }
     if (systems.length > 0) store.setState('world', { systems: [] });
