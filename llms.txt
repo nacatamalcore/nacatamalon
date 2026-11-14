@@ -137,7 +137,10 @@ import says which name it does not have, and `llms-full.txt` lists each door.
   the new size, before the updates, once per change. A HUD placed against an edge is placed once by
   hand and again there, rather than read every frame.
 - **Splash**: off unless asked for. `createGame` `splash: true` opens the published game with
-  "Made with NacatamalOn" for under two seconds while the first scene loads behind it; it is
+  "Made with NacatamalOn" for under two seconds. Behind it the game starts exactly as it would
+  without it (its scenes, what they launch, their changes, covered ones too), but is not updated,
+  drawn or clicked and its sounds set to start on their own (`autoplay`) wait, until the splash is over and every file is here; then it
+  fades off the game. Nothing in the game has to know it is there. It is
   skipped on `localhost` and in automated browsers, so development and tests never see it.
   `splash: 'always'` shows it there too.
 - **Sprite anchor** defaults to the middle, `{ x: 0.5, y: 0.5 }`: `transform` places the centre.
@@ -316,8 +319,10 @@ import says which name it does not have, and `llms-full.txt` lists each door.
 - **A scene takes props**, how it is opened: `const Level = ({ level = 1 }: { level?: number }) =>
   ...`, then `useScene().change(Level, { props: { level: 3 } })` (or `launch(Hud, { props })`). By the
   function TypeScript checks them; by name it does not. Every prop needs a default: the first scene,
-  a restart and the editor's Play start it with none. What stays true across scenes (lives, coins)
-  is a store, not a prop.
+  a `change` to its own name and the editor's Play start it with none. `useScene().restart('Level')`
+  builds a running scene again with the props it was started with (or `{ props }`), in its place
+  under the HUD; `isRunning('Hud')` asks before a `launch`, which throws for a scene already running.
+  What stays true across scenes (lives, coins) is a store, not a prop.
 - **`change()` acts at once, but the frame it is called in finishes**: the code after it and the old
   scene's other `useUpdate` callbacks still run that one frame, then never again. `return` right
   after `change()` if the rest should not run. The new scene's first update is the next frame, so the
@@ -447,11 +452,13 @@ import says which name it does not have, and `llms-full.txt` lists each door.
   once at the top of its module. Each game runs `fn` once before its first scene, in a box no change
   of scene touches; its `useUpdate` run before every scene's and its `useLateUpdate` after, a paused
   game pauses it, and it is torn down when the game ends. It runs whatever scene the game starts on (a
-  level played from the editor, `initialScene`, a test). It draws nothing, and `useScene`, cameras,
-  lights, physics, `useRenderStyle` and `useFog` throw inside it: something always on screen (a score)
-  is a scene `launch`ed beside the levels, and what lasts goes in a store.
-- One covered change at a time, and the first one wins: a `change`, or a `launch` or `stop` with a
-  transition, asked while another is covering is ignored with a warning, not queued. A scene that
+  level played from the editor, `initialScene`, a test). It draws nothing, and cameras, lights,
+  physics, `useRenderStyle` and `useFog` throw inside it; `useScene` reaches only the scenes it names
+  (`change` and the calls with no name throw): something always on screen (a score) is a scene
+  `launch`ed beside the levels, and what lasts goes in a store. A `launch` from its body or its
+  `useReady` comes on the first frame the game is shown, over the scene it starts on.
+- One covered change at a time, and the first one wins: a `change`, or a `launch`, `stop` or
+  `restart` with a transition, asked while another is covering is ignored with a warning, not queued. A scene that
   moves on as soon as it arrives asks from `useSceneTransitionEnd`, once the cover is off.
 - **Two scenes cross their music** with `fadeOut` on the one leaving and `fadeIn` on the one coming
   in (`useSong(file, { autoplay: true, fadeIn: 1, fadeOut: 1 })`, the same on `useMusic`, in seconds):

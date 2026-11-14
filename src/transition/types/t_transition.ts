@@ -154,6 +154,27 @@ export type TSceneLaunchOptions<P extends object = Record<string, unknown>> = {
 export type TSceneChangeOptions<P extends object = Record<string, unknown>> = TSceneLaunchOptions<P>;
 
 /**
+ * What `useScene().restart` accepts beyond the scene.
+ *
+ * @category Scenes
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TSceneRestartOptions<P extends object = Record<string, unknown>> = {
+    /**
+     * What the new copy is called with. Left out, the props the scene was started with: a level
+     * restarted is the same level. Kept as they were handed over, one level deep: a body that
+     * changes a field of them does not change them, one that changes an object inside a field does.
+     */
+    props?: P;
+    /**
+     * Covers the screen, stops the scene behind the cover, builds it again there and uncovers it:
+     * the two copies never run at once. Without one, it is stopped and built again at once.
+     */
+    transition?: TTransition;
+};
+
+/**
  * What `useScene().stop` accepts beyond the scene.
  *
  * @category Scenes

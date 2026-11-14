@@ -31,6 +31,12 @@ const OPTIONS: ts.CompilerOptions = {
     // there to fall back on when the tests run before a build (CI does).
     paths: {
         nacatamalon: [join(ROOT, 'index.ts')],
+        'nacatamalon/math': [join(ROOT, 'doors', 'math.ts')],
+        'nacatamalon/pixels': [join(ROOT, 'doors', 'pixels.ts')],
+        'nacatamalon/shader': [join(ROOT, 'doors', 'shader.ts')],
+        'nacatamalon/effects': [join(ROOT, 'doors', 'effects.ts')],
+        'nacatamalon/transitions': [join(ROOT, 'doors', 'transitions.ts')],
+        'nacatamalon/files': [join(ROOT, 'doors', 'files.ts')],
         'nacatamalon/authoring': [join(ROOT, 'authoring', 'index.ts')],
         'nacatamalon/extend': [join(ROOT, 'extend', 'index.ts')],
         'nacatamalon/extend/gpu': [join(ROOT, 'extend', 'gpu', 'index.ts')],
@@ -40,6 +46,7 @@ const OPTIONS: ts.CompilerOptions = {
         'nacatamalon/net': [join(ROOT, 'net', 'index.ts')],
         'nacatamalon/physics2d': [join(ROOT, 'physics', 'box2d', 'index.ts')],
         'nacatamalon/physics3d': [join(ROOT, 'physics', 'box3d', 'index.ts')],
+        'nacatamalon/retro-physics2d': [join(ROOT, 'physics', 'retro2d', 'index.ts')],
     },
 };
 

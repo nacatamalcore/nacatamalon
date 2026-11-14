@@ -80,9 +80,10 @@ releases are in [changelog/](./changelog/), one file each.
   starts on, a level played from the editor included. A paused game pauses it, it draws nothing, the
   hooks that need a scene (cameras, lights, physics, `useRenderStyle`, `useFog`) throw inside it,
   `useScene` reaches the scenes it names (`launch('Hud')`, `pause('Level')`, `stop('Hud')`) and
-  throws for `change` and the calls with no name, which would be about a scene of its own, and one
-  that throws is reported while the game goes on. Registered while a game runs,
-  it waits for the next one; the same name with the same function does nothing, so the body is made
+  throws for `change` and the calls with no name, which would be about a scene of its own (a
+  `launch` from its body, before the game has a scene, comes on the first frame, over the scene it
+  starts on, the same behind a splash), and one that throws is reported while
+  the game goes on. Registered while a game runs, it waits for the next one; the same name with the same function does nothing, so the body is made
   once and an install called twice is harmless. While a tool lays the game out (the editor's edit
   mode), its systems are taken down and start again when it is played.
 - **A plugin's own kind of file, `registerAssetType({ kind, read, parse, release })`** in
@@ -109,8 +110,65 @@ releases are in [changelog/](./changelog/), one file each.
   its distance, ordered with the rest by depth and hidden behind the camera. **`mode7ToScreen`** and
   **`screenToMode7`** are the same arithmetic each way, for anything else and for clicks.
 
+- **`useScene().restart(name, { props, transition })`** builds a running scene again, from itself,
+  from the HUD over it or from a game system: with the props it was started with unless given
+  others, in its place among the scenes, and, with a transition, stopped and built again behind the
+  cover so the two copies never run at once. **`useScene().isRunning(name)`** asks whether a scene is
+  running, by either name it answers to, before a `launch` that would throw.
+
 ### Fixed
 
+- **The next level stays under the HUD.** `useScene().change` built the scene coming in on top of
+  every running scene, so a HUD launched beside the levels ended up under the next one, and under a
+  level that restarted itself. It now takes the place of the scene it replaces, cut, covered or
+  crossed, with the scenes its body launches just under it. And a restart (a change to its own
+  name) when another running scene's document gives its root that same name throws before anything
+  stops, where it used to stop the scene and then fail to start it again.
+- **A scene built from a document answers to the name it was registered under** in every call of
+  `useScene` that names one: `stop('Level1')`, `pause`, `resume`, `isPaused`, and `onPaused` and
+  `onResumed` hear it by that name too. Only the name its document gave its root reached it. A
+  name a scene is registered under now always means that scene; the name a document gave its root
+  reaches a scene only when no scene is registered under it.
+- **What a game starts behind the splash waits behind it.** A first scene that launched the level
+  and the HUD from its `useReady` and stopped itself, the usual way to open a game, had them drawn
+  over the splash from its first frame, and the splash's fade then waited on the scene that had
+  gone. Now the whole game is behind the splash, doing exactly what it does without one: its
+  scenes, what they launch (a game system's too), their changes, covered ones included. It is only
+  not updated, drawn or clicked meanwhile, its systems wait with it, its sounds set to
+  start on their own (`autoplay`) and `useSceneTransitionEnd` wait to be seen, and a cover it puts on is not drawn over the splash. The
+  splash waits for its files and its systems', for a change being covered and for what a system
+  launched, and then fades off it, letting it go halfway, on a screen of one colour. A game paused
+  behind it, or with its time stopped, no longer keeps it up, and a sound a system starts on its own
+  waits behind it too.
+- **A picture with no step does what one with a step does.** In a game with a fixed `step`, a
+  picture drawn with no step of the game in it (the screen faster than the step) moved the
+  transition, but a scene change it uncovered was heard by `useSceneTransitionEnd`, and the sounds
+  set to start once it was seen began, only on the next picture with a step: the scene showed
+  uncovered first. Now they come on that same picture, as at the screen's own rate. A headless game
+  or a room runs its first scene's `useSceneTransitionEnd` as it is made, as a page's game does on
+  its first frame.
+- **A game ended from inside itself stops there.** A game system whose body called the page's
+  `destroy()` left the systems started before it running with no cleanup, and the first scene was
+  still built; a `destroy()` from an update, a late update, `useSceneTransitionEnd` or a system
+  started again when a laid-out game is played let the rest of that frame's updates run on the
+  ended game. Now nothing more of it runs, and what had started is taken down. And a game destroyed
+  while its splash was still arriving no longer starts its systems afterwards.
+- **Nothing starts in a game that has ended.** A `useScene` handle kept past `destroy()` (from a
+  promise, a timer, the editor reloading), or a `useCleanup` run as the game ends, still built the
+  scenes it launched, changed to or restarted into the dead game, where their cleanups never ran.
+  Now `launch`, `change` and `restart` do nothing once the game has ended.
+- **A scene launched with a transition that stops itself from its `useReady`** left the screen
+  covered for nothing, and every other covered change refused meanwhile. The cover now goes with it;
+  changed to, the change finishes onto what is left, as a cut would.
+- **A scene is not started twice while its body runs.** A body that launched its own name, or
+  two scenes each launching the other if it was not running, started a second copy, or went on
+  until the stack ran out. `launch` now throws for a scene whose body is running, and `isRunning`
+  says `true` for it. And a `change` without a transition from a scene's own body, which left both
+  scenes running, is left with a warning (from its `useReady`, or with a transition, it goes ahead).
+- **A scene whose body ends the game** was listed in the ended game and its cleanups never ran; it
+  is taken down instead.
+- **The handle of a scene whose body threw** changed to another scene as if it were a `launch`, and
+  with a transition covered a scene that never ran. It now says its scene is not running.
 - **A quick tap knows where it was.** A finger's down, up and leave often come between two frames,
   and `usePointer().position()` answered `null` in the very frame `justPressed()` was true, so a game
   that asked where the tap landed lost it. It now says where the tap was for that frame, and `null`

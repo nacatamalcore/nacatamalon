@@ -2,6 +2,7 @@ import type { TBox } from '../box';
 import type { TRuntimeStore } from '../store';
 import { runningScene } from './find_scene';
 import { gameMoment } from '../signal/game_moments';
+import { startedAs } from './start_scene';
 
 /**
  * The scene whose pause is being told, while it is. The moment is named after the scene, and two
@@ -45,7 +46,15 @@ export const setScenePaused = (store: TRuntimeStore, scene: string | TBox, pause
         const before = telling;
         telling = root;
         try {
-            gameMoment(store, `${paused ? 'scene paused' : 'scene resumed'}: ${root.name}`).emit();
+            const moment = paused ? 'scene paused' : 'scene resumed';
+            gameMoment(store, `${moment}: ${root.name}`).emit();
+            // And by the name it was registered under, when its document gave its root another:
+            // `onPaused(fn, 'Level1')` hears the scene `pause('Level1')` paused.
+            const registered = startedAs(root);
+            // Unless a listener of the first changed it meanwhile: unpaused it, or stopped it.
+            if (registered !== root.name && root.paused === paused && store.get('world').scenes.includes(root)) {
+                gameMoment(store, `${moment}: ${registered}`).emit();
+            }
         } finally {
             telling = before;
         }

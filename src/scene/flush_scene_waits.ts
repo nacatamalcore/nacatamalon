@@ -42,6 +42,8 @@ export const flushSceneWaits = (
     waiting.splice(0, waiting.length, ...kept);
 
     for (const { box, run } of due) {
+        // One before it ended the game: nothing more runs in it.
+        if (store.get('loop').destroyed) return;
         // Asked again before each one: the one before it may have sent the game elsewhere, stopping
         // this scene, or destroyed this box, and what it set aside must not run in a scene that left.
         if (box.destroyed || isSceneStopped(sceneOf(box))) continue;

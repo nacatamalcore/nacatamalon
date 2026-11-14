@@ -7,6 +7,7 @@ import type { TDrawable } from '../gameobjects/types';
 import type { TPixelRegion } from '../pixels';
 import type { TRuntimeStore } from '../store';
 import type { TPhoto, TPhotoBoxRef, TPhotoOptions } from './types/t_photo';
+import { isBehindSplash } from '../splash/behind_splash';
 
 const TRANSPARENT = { r: 0, g: 0, b: 0, a: 0 };
 
@@ -69,7 +70,7 @@ const regionOf = (scenes: readonly TBox[], region: TPhotoOptions['region'], scre
 const queues = new WeakMap<TRuntimeStore, Promise<unknown>>();
 
 const shoot = async (store: TRuntimeStore, options: TPhotoOptions): Promise<TPhoto> => {
-    const scenes = store.get('world').scenes.filter((scene) => !scene.held);
+    const scenes = store.get('world').scenes.filter((scene) => !scene.held && !isBehindSplash(store, scene));
     const hide = boxesOf(scenes, options.hide);
     const only = boxesOf(scenes, options.only);
     // The game's own view, whatever a tool is looking through: each scene's camera, every kind.

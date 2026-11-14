@@ -6,6 +6,8 @@ import { MAX_FRAME_DELTA, MAX_STEPS_PER_FRAME } from "../../DEFAULTS";
 import { runHookUpdates as runUpdates, runLateUpdates, runMoves } from "./runHookUpdates";
 import { stepGameTransition } from "./helper/step_game_transition";
 import { flushTransitionEnd } from "../../scene/flush_transition_end";
+import { stepSplash } from "./helper/step_splash";
+import { isBehindSplash, splashOf } from "../../splash/behind_splash";
 import { flushReleased } from "../../scene/when_released";
 import { noticeResize } from "./helper/notice_resize";
 import { flushDestroyed } from "../../destroy";
@@ -15,7 +17,7 @@ import { settleCapture } from "../capture";
 import { reportFrameError } from "./report_frame_error";
 import { windowOf } from "../../DOM/window_of";
 import { updateDebug } from "../../debug/draw_debug";
-import { followLayout, runSystemLateUpdates, runSystemUpdates } from "../../game_systems/game_systems";
+import { flushSystemLaunches, followLayout, runSystemLateUpdates, runSystemUpdates } from "../../game_systems/game_systems";
 import { deliverNet, finishNet, stepNet } from "../../net/net_inbox";
 
 /**
@@ -75,6 +77,10 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
 
     // The game's systems down while a tool lays the game out, and up again when it is played.
     followLayout(store);
+    // A system started again may have ended the game from its body: nothing of it runs after.
+    if (store.get('loop').destroyed) {
+        return;
+    }
 
     // A pad sends no events: it can only be asked how it is, and "just pressed" is the difference
     // between this answer and the last one. So it is asked **every** frame, paused or not: a game
@@ -99,11 +105,22 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
     // that the screen always uncovers. A transition frozen at full cover has no pause menu
     // visible to get out of it, so it would be a lock-up with nothing to show for itself.
     stepGameTransition(store, unscaled);
+    // The splash, on real time and outside the pause check, as the transition: see `stepSplash`.
+    // Before what waits to be seen is flushed, so on the frame it lets the game go, the game hears
+    // its transition's end and starts its sounds before its first update, as without a splash.
+    stepSplash(store, unscaled);
     // Right after, so the frame that takes the cover away is the one `useSceneTransitionEnd` runs
     // in, before any update of it. Outside the pause check with the transition it waits for.
     flushTransitionEnd(store);
     // The sounds a held scene was asked to start, now that the swap has let it go.
     flushReleased(store);
+    // The scenes a system launched before the game had one, once it is shown: over the scene it
+    // started on. Outside the pause check, as the transition is.
+    flushSystemLaunches(store);
+    // Any of those may have ended the game, from a scene's or a system's code: no update runs in it.
+    if (store.get('loop').destroyed) {
+        return;
+    }
 
     if (!paused) {
         // Marked as walking the tree for as long as the updates run, so a `destroy` asking to
@@ -111,13 +128,21 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
         withSceneUpdates(store, () => {
             // The game's systems first, so what they get ready is there for every scene this frame.
             const systemsLate = runSystemUpdates(store, dt);
+            // Stepped on its own, above.
+            const splash = splashOf(store);
             for (const scene of [...store.get('world').scenes]) {
+                // A system or an earlier scene ended the game from its update: nothing more of it
+                // runs, its renderer, its sound and its input being gone already.
+                if (store.get('loop').destroyed) {
+                    return;
+                }
                 // Looked up again because the copy can be stale: an earlier scene may have stopped this
                 // one during this same frame, and `stop` has to take effect when it is asked for.
                 // A paused scene is skipped here and only here: it stays in the list, so it still draws.
                 // A held one is skipped everywhere: it is waiting behind a transition and is not
-                // being seen, so a frame of it would be a frame it arrives already late by.
-                if (!store.get('world').scenes.includes(scene) || scene.paused || scene.held) {
+                // being seen, so a frame of it would be a frame it arrives already late by. And so is
+                // one behind the splash, for the same reason.
+                if (!store.get('world').scenes.includes(scene) || scene.paused || scene.held || scene === splash || isBehindSplash(store, scene)) {
                     continue;
                 }
                 // One scene at a time, so a script that throws costs its own scene and not the
@@ -140,7 +165,9 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
                 }
             }
             // And their late updates last, so they read where every scene left things.
-            runSystemLateUpdates(store, systemsLate, dt);
+            if (!store.get('loop').destroyed) {
+                runSystemLateUpdates(store, systemsLate, dt);
+            }
         });
     }
 
@@ -248,7 +275,6 @@ export const advanceFrame = (store: TRuntimeStore, ctx: TFrameContext, elapsedMs
     if (store.get('loop').destroyed) {
         return;
     }
-
     const { pausedBy, timeScale, step, stepCount } = store.get('loop');
     // A host stepping a paused game one frame at a time: this frame runs, by exactly the time it
     // asked for, and the game stays paused. See `TEditorHandle.stepFrame`. Or several frames at
@@ -282,7 +308,21 @@ export const advanceFrame = (store: TRuntimeStore, ctx: TFrameContext, elapsedMs
         if (steps === 0) {
             // No step this picture, so nothing reads the input and it waits for the next one. The
             // transition is on real time and moves anyway, or a cut would wait for the game.
+            // And, in the order a frame with a step does it, what this picture has to show: the
+            // systems in step with how the game is shown (a tool laying it out takes them down,
+            // and what they launched), the transition's end heard by the scene it uncovered, the
+            // splash, the sounds a swap let go of, and what a system launched before the game had a
+            // scene.
+            followLayout(store);
             stepGameTransition(store, unscaled);
+            stepSplash(store, unscaled);
+            flushTransitionEnd(store);
+            flushReleased(store);
+            flushSystemLaunches(store);
+            // Any of those may have ended the game: the renderer would already be gone.
+            if (store.get('loop').destroyed) {
+                return;
+            }
         }
         for (let i = 0; i < steps; i++) {
             // The transition moves by the whole picture once, on the first step.

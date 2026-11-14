@@ -5,6 +5,7 @@ import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { useUpdate, useLateUpdate } from '../src/hooks/loop';
 import { useCleanup } from '../src/hooks/scene/use_cleanup';
 import { useReady } from '../src/hooks/scene/use_ready';
+import { useSceneTransitionEnd } from '../src/hooks/scene/use_scene_transition_end';
 import { useGame } from '../src/hooks/game/use_game';
 import { useScene } from '../src/hooks/scene/use_scene';
 import { useCamera3d } from '../src/hooks/camera/use_camera_3d';
@@ -13,6 +14,11 @@ import { parseSceneDoc, sceneFromDoc } from '../src/scene/document';
 import { followLayout, runSystemUpdates, startGameSystems, stopGameSystems } from '../src/game_systems/game_systems';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { stopScene } from '../src/scene/stop_scene';
+import { teardownBox } from '../src/box/teardown_box';
+import { whenReleased } from '../src/scene/when_released';
+import { getActiveBox } from '../src/store';
+import { advanceFrame } from '../src/game/loop/tick';
+import { createFrameContext } from '../src/game/loop/create_frame_context';
 import { useRenderStyle } from '../src/hooks/style/use_render_style';
 import { useFog } from '../src/hooks/fog/use_fog';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
@@ -44,6 +50,152 @@ describe('registerGameSystem', () => {
         const running = game({ Level: () => { told.push('scene'); return createScene(); } });
         expect(told).toEqual(['first', 'second', 'first ready', 'scene']);
         running.destroy();
+    });
+
+    it('takes down what started when a system\'s body ends the game, and starts none after it', () => {
+        const told: string[] = [];
+        const { store } = createTestGame();
+        register('test-before', () => {
+            useCleanup(() => told.push('before cleanup'));
+        });
+        register('test-ender', () => {
+            useCleanup(() => told.push('ender cleanup'));
+            // What the page's `destroy` does, called from inside the body.
+            store.setState('loop', { destroyed: true });
+            stopGameSystems(store);
+        });
+        register('test-after', () => { told.push('after body'); });
+        startGameSystems(store);
+        expect(told).toEqual(['ender cleanup', 'before cleanup']);
+        expect(store.get('world').systems).toEqual([]);
+    });
+
+    it('runs no scene after a system started again, once a laid-out game is played, ends the game', () => {
+        const told: string[] = [];
+        const { store } = createTestGame();
+        let starts = 0;
+        register('test-ender-again', () => {
+            starts++;
+            if (starts === 2) {
+                // What the page's `destroy` does, called from inside the body.
+                store.setState('loop', { destroyed: true });
+                for (const scene of store.get('world').scenes) teardownBox(scene);
+                stopGameSystems(store);
+            }
+        });
+        const doc = parseSceneDoc({
+            format: 'nacatamalon-scene',
+            version: 1,
+            name: 'Level',
+            assets: [],
+            root: { id: 'root', name: 'Level', transform: null, children: [], components: [] },
+        }, 'test');
+        startGameSystems(store);
+        // Laid out: the systems go down.
+        const laid = startTestScene(store, 'Level', sceneFromDoc(doc, 'Level', { scripts: 'attach' }));
+        const ctx = createFrameContext();
+        advanceFrame(store, ctx, 17);
+        stopScene(store, laid);
+        // Played: they start again, and this time one ends the game.
+        startTestScene(store, 'Played', () => {
+            useUpdate(() => { told.push('played update'); });
+            useCleanup(() => told.push('played cleanup'));
+            return createScene();
+        });
+        advanceFrame(store, ctx, 17);
+        expect(starts).toBe(2);
+        expect(told).toEqual(['played cleanup']);
+    });
+
+    it('runs no update in a frame whose earlier steps ended the game, at any step rate', () => {
+        for (const step of ['display', 60] as const) {
+            const told: string[] = [];
+            const { store } = createTestGame({ step });
+            startTestScene(store, 'Level', () => {
+                useSceneTransitionEnd(() => {
+                    told.push('end');
+                    // What the page's `destroy` does, called from the callback.
+                    store.setState('loop', { destroyed: true });
+                    for (const scene of store.get('world').scenes) teardownBox(scene);
+                    stopGameSystems(store);
+                });
+                useUpdate(() => { told.push('update'); });
+                return createScene();
+            });
+            advanceFrame(store, createFrameContext(), 17);
+            expect(told, String(step)).toEqual(['end']);
+        }
+    });
+
+    it('runs nothing more of a frame whose system or scene ended the game from its update', () => {
+        for (const ender of ['system', 'scene', 'system late'] as const) {
+            const told: string[] = [];
+            const { store } = createTestGame();
+            // What the page's `destroy` does, called from an update.
+            const end = (): void => {
+                store.setState('loop', { destroyed: true });
+                for (const scene of store.get('world').scenes) teardownBox(scene);
+                stopGameSystems(store);
+            };
+            register(`test-${ender}-update-ender`, () => {
+                useUpdate(() => {
+                    told.push('system');
+                    if (ender === 'system') end();
+                });
+                useLateUpdate(() => {
+                    told.push('system late');
+                    if (ender === 'system late') end();
+                });
+            });
+            register(`test-${ender}-update-after`, () => {
+                useUpdate(() => { told.push('second system'); });
+                useLateUpdate(() => { told.push('second system late'); });
+            });
+            startGameSystems(store);
+            startTestScene(store, 'First', () => {
+                useUpdate(() => { told.push('first'); });
+                return createScene();
+            });
+            // The last scene: the systems' late updates are what would come after it.
+            startTestScene(store, 'Second', () => {
+                useUpdate(() => {
+                    told.push('second');
+                    if (ender === 'scene') end();
+                });
+                return createScene();
+            });
+            advanceFrame(store, createFrameContext(), 17);
+            const expected = {
+                'system': ['system'],
+                'scene': ['system', 'second system', 'first', 'second'],
+                'system late': ['system', 'second system', 'first', 'second', 'system late'],
+            }[ender];
+            expect(told, ender).toEqual(expected);
+            while (removals.length > 0) removals.pop()!();
+        }
+    });
+
+    it('runs nothing set aside for the scene once a callback before it in the same flush ended the game', () => {
+        const told: string[] = [];
+        const { store } = createTestGame();
+        startTestScene(store, 'Level', () => {
+            useSceneTransitionEnd(() => {
+                told.push('end');
+                // What the page's `destroy` does, called from the callback.
+                store.setState('loop', { destroyed: true });
+                for (const scene of store.get('world').scenes) teardownBox(scene);
+                stopGameSystems(store);
+            });
+            useSceneTransitionEnd(() => { told.push('second end'); });
+            // Held while it is built, as behind a cover, so this waits for the flush.
+            const root = getActiveBox()!;
+            root.held = true;
+            whenReleased(store, root, () => told.push('released'));
+            root.held = false;
+            return createScene();
+        });
+        advanceFrame(store, createFrameContext(), 17);
+        expect(told).toEqual(['end']);
     });
 
     it('runs its updates before every scene\'s and its late updates after, each frame', () => {

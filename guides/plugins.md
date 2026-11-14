@@ -113,6 +113,8 @@ while a game runs waits for the next game, and says so. Inside, the hooks are th
   inside it. `useScene` works for the scenes it names (`launch('Hud')`, `pause('Level')`,
   `stop('Hud')`); `change`, and the calls with no name, throw, since they would be about a scene of
   its own. What it creates is drawn nowhere; to show something, it launches a scene of its own.
+  Launched from its body or its `useReady`, before the game has a scene, that scene comes on the
+  first frame, over the scene it starts on, the same behind a splash.
 - One that throws is reported and left out, and the game goes on.
 - The same name with the same function does nothing, which is why the body is made once, outside
   the install: an install called twice then does nothing. With another function it throws. It hands

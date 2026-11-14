@@ -1,7 +1,8 @@
 import { newPostEffect } from '../post/new_post_effect';
 import { whenLoaded } from '../loaders';
 import { stopScene } from '../scene/stop_scene';
-import { startedAs } from '../scene/start_scene';
+import { nameTakenBy, inPlaceOf, startedAs } from '../scene/start_scene';
+import type { TSceneInPlace } from '../scene/start_scene';
 import { endTransition } from './end_transition';
 import type { TBox } from '../box';
 import type { TRuntimeStore } from '../store';
@@ -116,7 +117,16 @@ export const startTransitionBuilding = (
         throw error;
     }
     if (store.get('transition').active === state) {
-        bringIn(state, incoming);
+        if (store.get('world').scenes.includes(incoming)) {
+            bringIn(state, incoming);
+        } else if (outgoing === null) {
+            // Stopped from its own `useReady`, and only launched: nothing to cover for any more.
+            endTransition(store, state);
+        } else {
+            // Stopped from its own `useReady` on its way in: nothing to wait for, and the swap
+            // takes the scene going out away and uncovers onto what is left, as a cut would.
+            state.loaded = true;
+        }
     }
     return incoming;
 };
@@ -132,7 +142,8 @@ export const startTransitionBuilding = (
  * @param store The runtime store of the game the restart belongs to.
  * @param transition What was asked for.
  * @param outgoing The old copy.
- * @param build Starts the new copy and gives it back.
+ * @param build Starts the new copy where the old one was among the running scenes (`restart`), and
+ * gives it back.
  *
  * @internal
  * @since 1.0.0
@@ -142,7 +153,7 @@ export const startTransitionRestart = (
     store: TRuntimeStore,
     transition: TTransition,
     outgoing: TBox,
-    build: () => TBox,
+    build: (restart: TSceneInPlace | undefined) => TBox,
 ): void => {
     cover(store, transition, outgoing).rebuild = build;
 };
@@ -169,19 +180,44 @@ export const rebuildBehindCover = (store: TRuntimeStore, state: TTransitionState
     // Let go of before it is stopped, as at any swap: see `stepGameTransition`.
     const leaving = state.outgoing;
     state.outgoing = null;
+    // Another scene that came to answer to its name while the screen was covering would make the
+    // new copy refuse to start once the old one had stopped: the old one is left, uncovered.
+    const taken = leaving === null ? undefined : nameTakenBy(store, startedAs(leaving), leaving);
+    if (leaving !== null && taken !== undefined) {
+        endTransition(store, state);
+        console.warn(`[NacatamalOn] scene '${startedAs(leaving)}': it was left running rather than restarted, because scene '${taken.name}' (started as '${startedAs(taken)}') came to answer to that name too while the screen was covered, and a name means one scene. Stop that one first, or give its document's root another name.`);
+        return;
+    }
+    // Where the old copy was among the running scenes, which the new one takes: a level started
+    // over stays under the HUD launched over it. Taken before it stops: see `inPlaceOf`.
+    const restart = leaving === null ? undefined : inPlaceOf(store, leaving);
     // By its root: another running scene may answer to the same name.
     if (leaving !== null) {
         stopScene(store, leaving);
     }
+    // Its cleanups may have ended the game: nothing is built into it then.
+    if (store.get('loop').destroyed) {
+        return;
+    }
+    // Or started another scene under its name: the new copy is not built over it, and that is said
+    // for what it is, not as its body throwing.
+    const startedMeanwhile = leaving === null ? undefined : nameTakenBy(store, startedAs(leaving), leaving);
+    if (leaving !== null && startedMeanwhile !== undefined) {
+        endTransition(store, state);
+        console.warn(`[NacatamalOn] scene '${startedAs(leaving)}': it was not built again, because scene '${startedMeanwhile.name}' (started as '${startedAs(startedMeanwhile)}') started under that name while the old copy was stopping, and a name means one scene. Launch it from one place only.`);
+        return;
+    }
 
     let incoming: TBox;
     try {
-        incoming = build();
+        incoming = build(restart);
     } catch (error) {
         endTransition(store, state);
         const failure = error instanceof Error ? error : new Error(String(error));
+        // Said by the scene and not the call: `change` and `restart` both get here, at a swap long
+        // after either was made.
         console.error(
-            `[NacatamalOn] useScene().change: ${leaving === null ? 'a scene' : `'${startedAs(leaving)}'`} threw while it was being restarted, ` +
+            `[NacatamalOn] ${leaving === null ? 'a scene' : `scene '${startedAs(leaving)}'`}: it threw while it was being restarted, ` +
             'with the old copy already stopped behind the cover. Fix what throws in its body or its useReady.',
             failure,
         );

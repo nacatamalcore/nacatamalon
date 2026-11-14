@@ -18,7 +18,7 @@ import type { TRenderStyle, TRenderStyleHandle } from '../../style';
  *
  * Its resolution and filtering, when it has them, are the game's from the moment it is asked for, so
  * the rest of the scene is built at the size it is drawn at; behind a transition's cover, from the
- * swap. A material that says otherwise keeps what it says. The first time a scene draws a material at every
+ * swap, and behind the splash, from when it lets the game go. A material that says otherwise keeps what it says. The first time a scene draws a material at every
  * pixel it has not drawn that way before, its shader is made; until it is ready the model is drawn at
  * its corners, for a frame or two.
  *

@@ -1,6 +1,7 @@
 export { createScene } from './create_scene';
 export { registerScene } from './register_scene';
-export { startScene, startedAs } from './start_scene';
+export { startScene, startedAs, startedWith, inPlaceOf, scenesOnceBuilt, nameTakenBy, isBeingBuilt, isNameBeingBuilt } from './start_scene';
+export type { TSceneInPlace } from './start_scene';
 export { stopScene } from './stop_scene';
 export { findScene } from './find_scene';
 export { setScenePaused, isScenePaused } from './pause_scene';

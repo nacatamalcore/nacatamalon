@@ -1,12 +1,12 @@
-import { getColor } from '../color/get_color';
 import { registerScene } from '../scene/register_scene';
 import { startScene } from '../scene/start_scene';
 import { stopScene } from '../scene/stop_scene';
+import { useCleanup } from '../hooks/scene/use_cleanup';
 import type { TBox } from '../box';
 import type { TRuntimeStore } from '../store';
-import { fade } from '../transition/builtin/fade';
-import { canDrawTransition, startTransition } from '../transition/start_transition';
-import { SPLASH_BACKGROUND, createSplashScene } from './splash_scene';
+import { clearSplash, releaseGame, setSplash, splashOf } from './behind_splash';
+import { createSplashScene } from './splash_scene';
+import { launchesDue } from '../game_systems/game_systems';
 
 /**
  * The splash's name among the game's scenes. Namespaced so it cannot collide with one of the game's.
@@ -14,37 +14,64 @@ import { SPLASH_BACKGROUND, createSplashScene } from './splash_scene';
 export const SPLASH_SCENE = 'nacatamalon:splash';
 
 /**
- * Starts the game behind the splash: "Made with NacatamalOn" first, then the game's first scene.
+ * Whether the game behind the splash can be shown: no change of its being covered, no launch of a
+ * system's about to be made (which may come covered), and nothing any of its scenes or its systems
+ * asked for still loading.
+ */
+const gameReady = (store: TRuntimeStore): boolean => {
+    if (store.get('transition').active !== null || launchesDue(store)) {
+        return false;
+    }
+    const loading = (root: TBox): boolean => root.loads.some((asset) => asset.status === 'loading');
+    const splash = splashOf(store);
+    const { scenes, systems } = store.get('world');
+    return !scenes.some((scene) => scene !== splash && loading(scene)) && !systems.some(loading);
+};
+
+/**
+ * Starts the game behind the splash: "Made with NacatamalOn" first, then the game.
  *
- * **The game is not kept waiting.** Its first scene is built straight away and held, the same way a
- * scene change holds the scene coming in: it exists and its files are already loading, but it
- * neither updates nor draws nor answers the pointer. When the splash is over it fades into the game,
- * and the fade waits for those files, so on a game with a lot to load the splash is the loading
- * screen rather than time added on top.
+ * **The splash leaves the game alone.** The game's first scene is started as it would be without
+ * one, and whatever the game does from there happens as it would without one too: the level and
+ * the HUD a first scene launches, the scene a game system launches, a change covered by a
+ * transition. It is only behind the splash (see `isBehindSplash`): not updated, not drawn, not
+ * answering the pointer, its sounds and its `useSceneTransitionEnd` waiting, its transitions going
+ * on without their cover being drawn.
+ *
+ * **Nor is the game kept waiting.** Its files load while the splash plays, and the splash waits for
+ * them and for any change being covered, so on a game with a lot to load the splash is the loading
+ * screen rather than time added on top. Then it sinks into its background, lets the game go, and
+ * clears off it.
  *
  * @internal
  */
 export const startWithSplash = (store: TRuntimeStore, initial: string, canvas: HTMLCanvasElement): void => {
     let splash: TBox | null = null;
-    let game: TBox | null = null;
-
-    const reveal = (): void => {
-        if (splash === null || game === null) {
-            return;
-        }
-        const transition = fade(0.5, getColor(SPLASH_BACKGROUND));
-        // The game started a change of its own while it was being built, or the card cannot draw
-        // the fade: the splash steps aside and the game is simply shown.
-        if (store.get('transition').active !== null || !canDrawTransition(store, transition)) {
-            game.held = false;
-            stopScene(store, SPLASH_SCENE);
-            return;
-        }
-        startTransition(store, transition, game, splash);
-    };
-
-    registerScene(store, SPLASH_SCENE, createSplashScene(canvas, reveal));
+    const splashScene = createSplashScene(canvas, {
+        ready: () => gameReady(store),
+        release: () => releaseGame(store),
+        gone: () => {
+            if (splash !== null) stopScene(store, splash);
+        },
+    });
+    registerScene(store, SPLASH_SCENE, () => {
+        // However it goes (its own way out, stopped by anything else, the game ending), the game is
+        // let go of and the splash forgotten.
+        useCleanup(() => {
+            clearSplash(store);
+            // Its scene stays registered for as long as the game runs, and would keep the splash's
+            // whole tree alive through this.
+            splash = null;
+        });
+        return splashScene();
+    });
     splash = startScene(store, SPLASH_SCENE);
-    game = startScene(store, initial);
-    game.held = true;
+    setSplash(store, splash);
+    try {
+        startScene(store, initial);
+    } catch (error) {
+        // No game after all: nothing for the splash to wait for, nor to keep listening for.
+        stopScene(store, splash);
+        throw error;
+    }
 };

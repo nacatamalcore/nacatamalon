@@ -58,6 +58,7 @@ import type { TColor } from '../../color';
 import { isTransparentMesh } from '../../render/shared/is_transparent_mesh';
 import { computeView } from '../../render/shared/compute_mvp_3d';
 import * as mat from '../../math/mat4';
+import { gameBehindSplash, isBehindSplash, splashOf } from '../../splash/behind_splash';
 
 /**
  * The level a picture's room is lit to: its own ambient when it has one, its two colours with it,
@@ -1068,6 +1069,21 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
 };
 
 /**
+ * The running scenes in the order they are drawn: the order they started in, with the splash, while
+ * there is one, over all of them. The game can start scenes after it (the level and the HUD of a
+ * first scene, all behind it), and it goes on covering them while it fades out.
+ */
+const drawOrder = (store: TRuntimeStore): readonly TBox[] => {
+    const scenes = store.get('world').scenes;
+    const splash = splashOf(store);
+    const at = splash === null ? -1 : scenes.indexOf(splash);
+    if (at === -1 || at === scenes.length - 1) {
+        return scenes;
+    }
+    return [...scenes.slice(0, at), ...scenes.slice(at + 1), splash!];
+};
+
+/**
  * The scenes once more for a capture or a preview, through the cameras and kinds it asked for. The
  * caller says where it goes.
  *
@@ -1079,8 +1095,8 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
  */
 const secondPass = (store: TRuntimeStore, seenThrough: TSeenThrough, clearColor: TColor, target: TMaskTarget, effects = true): TRenderPass => {
     const lists = newLists();
-    for (const scene of store.get('world').scenes) {
-        if (!scene.held) {
+    for (const scene of drawOrder(store)) {
+        if (!scene.held && !isBehindSplash(store, scene)) {
             gatherTree(scene, lists, 0, { flat: [], deep: [] }, [], seenThrough, true, { width: target.width / target.pixelRatio, height: target.height / target.pixelRatio });
         }
     }
@@ -1102,7 +1118,8 @@ export const fillFrameContext = (store: TRuntimeStore, ctx: TFrameContext, delta
     // The style the game is seen in now: the topmost scene's own that has one, or the game's. First,
     // because a scene's style can bring its own resolution, and everything below measures the screen.
     // Each changes things only when the style does, so a frame like the last touches nothing.
-    const sceneStyle = topSceneStyle(store.get('world').scenes);
+    // Behind the splash, the game's own: none of its scenes is seen yet.
+    const sceneStyle = gameBehindSplash(store) ? null : topSceneStyle(store.get('world').scenes);
     syncStyleScreen(store, sceneStyle);
     syncStylePost(store, sceneStyle ?? gameStyle);
     snapping = store.get('config').pixelSnap;
@@ -1113,7 +1130,7 @@ export const fillFrameContext = (store: TRuntimeStore, ctx: TFrameContext, delta
 
     // Game objects while collecting and sorting; only sprites once texts are expanded.
     const lists = newLists();
-    const scenes = store.get('world').scenes;
+    const scenes = drawOrder(store);
     // The game's pixels the screen is drawn in, which is what its cameras show.
     const shown = store.get('screen').canvas;
     const ratio = shown === null || shown === undefined ? 1 : screenSizeOf(shown).pixelRatio;
@@ -1127,7 +1144,7 @@ export const fillFrameContext = (store: TRuntimeStore, ctx: TFrameContext, delta
         // Waiting behind a transition. It is running and its assets are arriving, but what is on
         // screen is still the scene it replaces, so drawing it now would put the new room
         // underneath the old one for the whole cover.
-        if (scene.held) {
+        if (scene.held || isBehindSplash(store, scene)) {
             return;
         }
 
@@ -1179,7 +1196,15 @@ export const fillFrameContext = (store: TRuntimeStore, ctx: TFrameContext, delta
     // How far through its half the scene change is, and which half. Zero and zero when there is no
     // change, which is the right answer to "nothing is covering the screen" and is what every
     // full-screen effect has been handed since they existed.
-    const transition = store.get('transition').active;
+    // None behind the splash, whose cover is not drawn: see `buildPostChain`. A crossing there asks
+    // for a picture of the scene going out, which nobody sees: taken as given, as a game with no
+    // screen does, rather than waited for until the crossing gives up and cuts.
+    const behind = gameBehindSplash(store);
+    const active = store.get('transition').active;
+    if (behind && active !== null && active.effect.outgoing === 'take') {
+        active.effect.outgoing = 'taken';
+    }
+    const transition = behind ? null : active;
     // How many real pixels a game pixel is drawn with on the canvas. The backend applies it to the
     // screen's pass only.
     ctx.pixelRatio = screenSizeOf(store.get('screen').canvas).pixelRatio;

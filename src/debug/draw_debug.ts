@@ -17,6 +17,7 @@ import type { TLine } from '../gameobjects/lines/lines_state';
 import type { TLines } from '../gameobjects/lines/types/t_lines';
 import type { TDrawable } from '../gameobjects/types';
 import type { TPhysicsBody2d, TPhysicsBody3d } from '../physics/types/t_physics';
+import { isBehindSplash } from '../splash/behind_splash';
 
 /**
  * What the debug mode draws in each scene: one set of flat shapes and one of lines in space, on the
@@ -258,7 +259,7 @@ export const updateDebug = (store: TRuntimeStore): void => {
             }
             continue;
         }
-        if (scene.held) continue;
+        if (scene.held || isBehindSplash(store, scene)) continue;
         const overlay = overlayOf(store, scene);
         const pen = penFor();
         drawScene(store, scene, pen.draw);

@@ -46,8 +46,8 @@ export type TRenderStyle = {
      * `height`: the two are one decision, and one without the other is no resolution. Left out, the
      * game's. A scene that asks for its style with `useRenderStyle` is built at it already, so its HUD
      * placed by `useGame().getWidth()` is where it should be; one built behind a transition's cover
-     * is built at the size before, and gets its own at the swap, so its HUD is placed again on
-     * `onResized` as well. With `scaling` `'none'`, the default, the canvas is shown at the new size.
+     * or behind the splash is built at the size before, and gets its own at the swap or once the
+     * splash lets the game go, so its HUD is placed again on `onResized` as well. With `scaling` `'none'`, the default, the canvas is shown at the new size.
      */
     width?: number;
     /**

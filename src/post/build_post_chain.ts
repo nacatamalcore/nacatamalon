@@ -1,5 +1,6 @@
 import type { TPostEffect } from './types/t_post_effect';
 import type { TRuntimeStore } from '../store';
+import { gameBehindSplash } from '../splash/behind_splash';
 
 /**
  * The effects that will actually run this frame, or `null` when none will.
@@ -23,7 +24,9 @@ export const buildPostChain = (store: TRuntimeStore): TPostEffect[] | null => {
     // that reduces its colours quantizes its own fades, which is how they looked on that hardware;
     // and a host that turned the chain off to see the raw scene still sees the change covered
     // rather than a scene that is invisible for a third of a second and then appears at once.
-    const transition = store.get('transition').active;
+    // Not behind the splash: a change the game makes there is covered all the same, but the cover
+    // would be drawn over the splash, which is all there is to see.
+    const transition = gameBehindSplash(store) ? null : store.get('transition').active;
 
     const { effects, enabled } = store.get('post');
     if (!enabled || effects.length === 0) {

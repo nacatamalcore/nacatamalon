@@ -12,6 +12,7 @@ import type { TQuat } from '../math/quat';
 import type { TRuntimeStore } from '../store';
 import type { TCamera3d } from '../camera/types/t_camera_3d';
 import type { TAudioManager, TVoice } from './types/t_audio';
+import { splashOf } from '../splash/behind_splash';
 
 type TPoint3 = { x: number; y: number; z: number };
 
@@ -123,11 +124,12 @@ const turnOfCamera = (camera: TCamera3d): TQuat =>
  *
  * A scene with no camera draws in screen pixels, so the middle of the screen is the middle of the
  * world too. The first scene that has a camera wins: there is one listener, and the scene under
- * everything else is the one being played.
+ * everything else is the one being played. Never the splash's: it is not the game.
  */
 const flatEar = (store: TRuntimeStore): TEar => {
     const screen = screenSizeOf(store.get('screen').canvas);
-    const camera = store.get('world').scenes.map((scene) => scene.camera2d).find((found) => found !== null) ?? null;
+    const splash = splashOf(store);
+    const camera = store.get('world').scenes.find((scene) => scene !== splash && scene.camera2d !== null)?.camera2d ?? null;
     const position = camera === null
         ? { x: screen.width / 2, y: screen.height / 2, z: 0 }
         : {
@@ -200,7 +202,8 @@ const findEar = (store: TRuntimeStore, audio: TAudioManager): TEar => {
         return objectEar(on[0]);
     }
 
-    const camera = store.get('world').scenes.map((scene) => scene.camera3d).find((found) => found !== null) ?? null;
+    const splash = splashOf(store);
+    const camera = store.get('world').scenes.find((scene) => scene !== splash && scene.camera3d !== null)?.camera3d ?? null;
     return camera === null ? flatEar(store) : cameraEar(store, camera);
 };
 

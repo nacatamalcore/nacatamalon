@@ -333,10 +333,13 @@ export type TGameOptions = {
      * - `'always'` shows it there too, to see it while working on the game.
      * - `false`, or leaving it out, never shows it.
      *
-     * It costs the game no time. The first scene is built and loads its files while the splash
-     * plays, and the splash fades into it once those have arrived, so on a game with a lot to
-     * load it is the loading screen. It lasts under two seconds, and a key or a click ends it. It
-     * never shows when a tool drives the game (`editorHandleOf`).
+     * It costs the game no time, and changes nothing in it. The game starts behind it as it would
+     * without one: its first scene is built and loads its files, the level and the HUD that scene
+     * launches are launched, its scene changes are made, covered ones too. It only waits there,
+     * neither updated, drawn nor clicked, its sounds set to start on their own (`autoplay`) held
+     * back, until the splash is over and its files have arrived, and then the splash fades off it;
+     * so on a game with a lot to load it is the loading screen. It lasts under two seconds, and a key or a click ends it. It never shows
+     * when a tool drives the game (`editorHandleOf`).
      */
     splash?: boolean | 'always';
 };

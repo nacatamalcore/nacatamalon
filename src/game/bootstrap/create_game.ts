@@ -12,6 +12,7 @@ import type { TGameOptions } from "../types/t_game_options";
 import { cleanGameOptions } from "./clean_gameoptions";
 import { isHostClaimed, openHost } from "../handle/editor_handle_of";
 import { isDevelopmentPage, shouldShowSplash } from "../../splash/should_show_splash";
+import { clearSplash, expectSplash } from "../../splash/behind_splash";
 import { createGameEvents } from "./create_game_events";
 import { createGameHandle } from "../handle/create_game_handle";
 import { holdingSound, watchVisibility } from "./watch_visibility";
@@ -296,12 +297,28 @@ export const createGame = (target: TGameTarget, game_options: TGameOptions) => {
             // Only the requested scene runs; the rest stay dormant until something launches them.
             // Without an initial scene, the first one declared starts. With no scenes, nothing does.
             const initial = initialScene ?? Object.keys(scenes)[0];
+            // Decided here and not at `createGame`: a tool asks for the handle just after that
+            // returns, and a game a tool drives opens on its scene, not on a logo. And before the
+            // systems start, so a sound one starts on its own waits behind the splash too.
+            const withSplash = initial !== undefined && splashModule !== null && !isHostClaimed(instance) ? await splashModule : null;
+            // Destroyed while the splash was arriving: `destroy` has already taken down what there
+            // was, so nothing starts now in a game nobody will take down again, its systems least
+            // of all, whose cleanups would never run.
+            if (destroyRequested) {
+                host.cancel(new Error('[NacatamalOn] editorHandleOf: the game was destroyed before it started.'));
+                return;
+            }
+            if (withSplash) {
+                expectSplash(runtime);
+            }
             // The game's systems before any scene, so they see the whole game from its start.
             startGameSystems(runtime);
+            // One of them ended the game: no scene starts in it.
+            if (destroyRequested) {
+                host.cancel(new Error('[NacatamalOn] editorHandleOf: the game was destroyed before it started.'));
+                return;
+            }
             if (initial !== undefined) {
-                // Decided here and not at `createGame`: a tool asks for the handle just after that
-                // returns, and a game a tool drives opens on its scene, not on a logo.
-                const withSplash = splashModule !== null && !isHostClaimed(instance) ? await splashModule : null;
                 try {
                     if (withSplash) {
                         withSplash.startWithSplash(runtime, initial, screen.canvas);
@@ -309,9 +326,16 @@ export const createGame = (target: TGameTarget, game_options: TGameOptions) => {
                         startScene(runtime, initial);
                     }
                 } catch (error) {
-                    // No game after all: its systems go with it.
+                    // No game after all: its systems go with it, and nothing waits behind a splash.
+                    clearSplash(runtime);
                     stopGameSystems(runtime);
                     throw error;
+                }
+                // The first scene ended the game, from its body or its `useReady`: no frame, and no
+                // `ready` after the `destroy` the page has already heard.
+                if (destroyRequested) {
+                    host.cancel(new Error('[NacatamalOn] editorHandleOf: the game was destroyed before it started.'));
+                    return;
                 }
             }
             // `runtime`, not `store`: the const that cannot be null, rather than the outer `let`

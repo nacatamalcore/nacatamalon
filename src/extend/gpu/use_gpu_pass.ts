@@ -7,6 +7,7 @@ import { gpuPassHostOf, attachGpuPassHost, inertGpuPass } from '../../render/ext
 import type { TBox } from '../../box';
 import type { TRuntimeStore } from '../../store';
 import type { TGpuPassOptions, TGpuPassHandle } from './types';
+import { isBehindSplash } from '../../splash/behind_splash';
 
 /**
  * Says what is wrong with a pass before anything of the GPU is touched, so a mistake fails where
@@ -47,7 +48,7 @@ const sceneClock = (box: TBox, store: TRuntimeStore) => (frame: { time: number; 
         if (root.parent === null) break;
         root = root.parent;
     }
-    if (root.held || !store.get('world').scenes.includes(root)) return false;
+    if (root.held || isBehindSplash(store, root) || !store.get('world').scenes.includes(root)) return false;
     frame.time = root.time;
     if (root.paused) frame.delta = 0;
     return true;

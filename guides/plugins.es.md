@@ -115,7 +115,9 @@ con un juego en marcha espera al siguiente, y lo dice. Dentro, los hooks son los
   error dentro de él. `useScene` funciona para las escenas que nombra (`launch('Hud')`,
   `pause('Level')`, `stop('Hud')`); `change` y las llamadas sin nombre lanzan un error, porque serían
   sobre una escena propia. Lo que crea no se dibuja en ningún sitio; para enseñar algo, lanza una
-  escena propia.
+  escena propia. Lanzada desde su cuerpo o su `useReady`, antes de que el juego tenga escenas,
+  esa escena llega en el primer fotograma, encima de la escena con la que empieza, también detrás
+  de un splash.
 - Uno que lanza un error se informa y se deja fuera, y el juego sigue.
 - El mismo nombre con la misma función no hace nada, y por eso el cuerpo se hace una vez, fuera del
   install: un install llamado dos veces no hace nada. Con otra función, lanza un error. Devuelve una

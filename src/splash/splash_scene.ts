@@ -37,10 +37,39 @@ const NAME_FOR = 0.4;
 const DONE_AT = 1.6;
 
 /**
+ * How long it takes to go once the game is ready: half for what it says to sink into the background,
+ * half for the background to clear off the game. The game is let go in between, on a screen of one
+ * colour, so a style of the game's that changes the resolution changes it unseen.
+ */
+const OUT_FOR = 0.5;
+
+/**
+ * What the splash asks of the game behind it on its way out.
+ *
+ * @internal
+ */
+export type TSplashExit = {
+    /** Whether the game can be shown: nothing of it still loading, and no change of its being covered. */
+    ready: () => boolean;
+    /** Lets the game go: from here it runs and is seen, under what is left of the splash. */
+    release: () => void;
+    /** The splash is over and can be stopped. */
+    gone: () => void;
+};
+
+/**
  * Every character of the engine's default font is 8 pixels wide with 1 pixel between them, both
  * times the text's scale: the name can be split into two colours without measuring anything.
  */
 const GLYPH_ADVANCE = 9;
+
+/**
+ * How wide and tall the background and the veil are, in pixels: far more than any screen, so they
+ * cover it whatever size it has on the frame it is drawn. Kept to the screen's size, they could not
+ * follow a change of it made later in the same frame: the game's own resolution, applied as the
+ * splash lets it go, left the new part of the screen showing the game for a frame.
+ */
+const COVER = 1 << 15;
 
 /**
  * A soft round glow, drawn once on a 2D canvas: the halo the website puts behind the logo. Null
@@ -84,12 +113,14 @@ const prefersStill = (): boolean =>
  * Everything is placed from the size the canvas really has, not the one the game asked for: with a
  * free side (`keep: 'none'`, `'width'` or `'height'`) the two differ, and a splash laid out in the
  * asked-for size would sit in a corner of the screen. It reads the same in a 320 x 240 game and in
- * a full-HD one. `done` is called once, when it has finished or been skipped; what comes after it is
- * not this scene's business.
+ * a full-HD one.
+ *
+ * Over once it has finished or been skipped and the game behind it is ready (`exit.ready`): until
+ * then it is the game's loading screen. Then it goes on its own, the game let go halfway through.
  *
  * @internal
  */
-export const createSplashScene = (canvas: HTMLCanvasElement, done: () => void): (() => TScene) => () => {
+export const createSplashScene = (canvas: HTMLCanvasElement, exit: TSplashExit): (() => TScene) => () => {
     const { width, height } = screenSizeOf(canvas);
     const still = prefersStill();
     const tween = useTween();
@@ -115,8 +146,8 @@ export const createSplashScene = (canvas: HTMLCanvasElement, done: () => void): 
     const nameY = madeWithY + smallHeight + Math.round(smallHeight * 0.6);
 
     const background = createSprite({
-        width,
-        height,
+        width: COVER,
+        height: COVER,
         tint: getColor(SPLASH_BACKGROUND),
         transform: {
             x: width / 2,
@@ -126,8 +157,7 @@ export const createSplashScene = (canvas: HTMLCanvasElement, done: () => void): 
     });
 
     const halo = haloImage();
-    if (halo !== null) {
-        createSprite({
+    const haloSprite = halo === null ? null : createSprite({
             texture: useLoadTexture({
                 src: halo,
                 key: 'nacatamalon:splash-halo',
@@ -141,7 +171,6 @@ export const createSplashScene = (canvas: HTMLCanvasElement, done: () => void): 
             },
             zIndex: 1,
         });
-    }
 
     const mark = createSprite({
         texture: useLoadTexture({
@@ -247,30 +276,78 @@ export const createSplashScene = (canvas: HTMLCanvasElement, done: () => void): 
         }).play();
     }
 
-    // Over when its time is up, or straight away on a key or a click. Listened to on the page
-    // rather than through the game's input, which the game has not been told about yet and should
-    // not see as its first key press.
+    // What it says sinks into the background on its way out: this, in the background's colour, laid
+    // over it.
+    const veil = createSprite({
+        width: COVER,
+        height: COVER,
+        tint: withAlpha(getColor(SPLASH_BACKGROUND), 0),
+        transform: {
+            x: width / 2,
+            y: height / 2,
+        },
+        zIndex: 4,
+    });
+
+    // Finished when its time is up, or straight away on a key or a click. Listened to on the page
+    // rather than through the game's input, which the game behind it does not hear yet.
     let finished = false;
     const finish = (): void => {
-        if (finished) {
+        finished = true;
+    };
+    // When it started going, in its own time, and whether the game has been let go.
+    let leavingAt: number | null = null;
+    let released = false;
+    let over = false;
+    const leave = (time: number): void => {
+        if (leavingAt === null) {
+            if (!finished || !exit.ready()) {
+                return;
+            }
+            leavingAt = time;
+        }
+        const k = Math.min(1, (time - leavingAt) / OUT_FOR);
+        if (k < 0.5) {
+            veil.tint = withAlpha(veil.tint, k * 2);
             return;
         }
-        finished = true;
-        done();
+        if (!released) {
+            // Asked again: in the quarter second the screen took to sink, something of the game's
+            // that does not wait for a frame (a promise, a timer, a message) may have started a
+            // change or a file. The background holds until that is over too.
+            if (!exit.ready()) {
+                veil.tint = withAlpha(veil.tint, 1);
+                leavingAt = time - OUT_FOR / 2;
+                return;
+            }
+            released = true;
+            // A screen of one colour: what it said is hidden, and only the background is left.
+            mark.visible = false;
+            madeWith.visible = false;
+            nacatamal.visible = false;
+            on.visible = false;
+            veil.visible = false;
+            if (haloSprite !== null) haloSprite.visible = false;
+            exit.release();
+        }
+        background.tint = withAlpha(background.tint, 1 - (k - 0.5) * 2);
+        if (k >= 1 && !over) {
+            over = true;
+            exit.gone();
+        }
     };
     // The canvas can still change size while the splash is up (the window being resized, a free
-    // side settling). Laying it all out again would fight the tweens, so the camera keeps the
-    // block in the middle instead, and the background is stretched to cover the new size.
+    // side settling, the game's resolution as it is let go). Laying it all out again would fight the
+    // tweens, so the camera keeps the block in the middle instead; the background covers any size.
     const camera = useCamera2d();
     useUpdate((_delta, time) => {
         const now = screenSizeOf(canvas);
         camera.transform.x = Math.round((width - now.width) / 2);
         camera.transform.y = Math.round((height - now.height) / 2);
-        background.width = now.width;
-        background.height = now.height;
         if (time >= DONE_AT) {
             finish();
         }
+        leave(time);
     });
     globalThis.addEventListener?.('keydown', finish);
     canvas.addEventListener('pointerdown', finish);

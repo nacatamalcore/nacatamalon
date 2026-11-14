@@ -20,6 +20,7 @@ import type { TListeningSprite, TPointerTarget } from './topmost_listening';
 import { DRAG_SLOP } from '../DEFAULTS';
 import type { TDropZoneSpec, TPointerDragInfo, TPointerInfo, TPointerKind, TPointerListener, TPointerLockOptions, TPointerSource, TPointerType, TPointerWheelListener } from './types/t_pointer';
 import type { TSpriteEvents } from './types/t_sprite_events';
+import { isBehindSplash } from '../splash/behind_splash';
 
 /**
  * One event as the DOM left it, already in the game's pixels. `leave` is the pointer leaving the
@@ -812,7 +813,8 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
                     // neither does one held behind a transition. The held one matters most: it is
                     // not even on screen, so a click meant for what is covering it would otherwise
                     // be answered by a room nobody can see.
-                    if (registration.box.destroyed || scene.paused || scene.held) {
+                    // A scene behind the splash is not on screen either.
+                    if (registration.box.destroyed || scene.paused || scene.held || isBehindSplash(store, scene)) {
                         continue;
                     }
                     const info = infoFor(registration.box, screenX, screenY, button, hits);

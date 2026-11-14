@@ -1,7 +1,9 @@
 import type { TBox } from '../box';
+import { scenesOnceBuilt } from '../scene/start_scene';
 import type { TPixelSnap } from '../game/types/t_game_options';
 import type { TRuntimeStore } from '../store';
 import type { TRenderStyle } from './t_render_style';
+import { isBehindSplash } from '../splash/behind_splash';
 
 /**
  * What of the screen a style can set: the game's own settings of the same names. `pixelSnap` is not
@@ -146,14 +148,16 @@ export const syncStyleScreen = (store: TRuntimeStore, style: TRenderStyle | null
  * @author Francisco Pereira Alvarado
  */
 export const styleScreenNow = (store: TRuntimeStore, scene: TBox): void => {
-    if (scene.parent !== null || scene.spriteTexture !== null || scene.held) {
+    if (scene.parent !== null || scene.spriteTexture !== null || scene.held || isBehindSplash(store, scene)) {
         return;
     }
     const transition = store.get('transition').active;
     if (transition !== null && transition.incoming === null) {
         return;
     }
-    const scenes = store.get('world').scenes;
-    // Being built, it is not listed yet; it goes on top when it is.
+    // Being built, it is not listed yet, nor are the scenes being built around it: the list as it
+    // will be once they are, which is on top for a scene launched, and back where its old copy was
+    // for one restarted, under the scenes that were over it.
+    const scenes = scenesOnceBuilt(store);
     syncStyleScreen(store, topSceneStyle(scenes.includes(scene) ? scenes : [...scenes, scene]));
 };

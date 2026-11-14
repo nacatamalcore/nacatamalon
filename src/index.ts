@@ -64,7 +64,7 @@ export type {
     TParticlesFile, TParticleBlend, TParticleAnimPace, TEmitShape2d, TEmitShape3d, TParticleCollision,
     TParticleTrail, TParticlesBounds, TChildEmitter,
 } from './loaders/particles';
-export type { TSceneChangeOptions, TSceneLaunchOptions, TSceneStopOptions } from './transition';
+export type { TSceneChangeOptions, TSceneLaunchOptions, TSceneRestartOptions, TSceneStopOptions } from './transition';
 export type { TConsolePaletteName } from './loaders/palette/console_palettes';
 export { createSprite } from './gameobjects/sprite/create_sprite';
 // The far layers of a level: a picture repeated endlessly across, moving with the camera only so much.
