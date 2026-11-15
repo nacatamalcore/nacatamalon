@@ -12,15 +12,13 @@ import { pickTargets, pickTargetsAt } from './pick_targets';
 import { ownerOfDrawable } from '../box/drawable_owner';
 import { topmostListening } from './topmost_listening';
 import type { TBox } from '../box';
-import type { TSprite } from '../gameobjects/sprite/types/t_sprite';
-import type { TText } from '../gameobjects/text/types/t_text';
-import type { TNineSlice } from '../gameobjects/nine_slice/types/t_nine_slice';
 import type { TRuntimeStore } from '../store';
 import type { TListeningSprite, TPointerTarget } from './topmost_listening';
 import { DRAG_SLOP } from '../DEFAULTS';
 import type { TDropZoneSpec, TPointerDragInfo, TPointerInfo, TPointerKind, TPointerListener, TPointerLockOptions, TPointerSource, TPointerType, TPointerWheelListener } from './types/t_pointer';
 import type { TSpriteEvents } from './types/t_sprite_events';
 import { isBehindSplash } from '../splash/behind_splash';
+import type { TPointerPicture } from './types/t_pointer_picture';
 
 /**
  * One event as the DOM left it, already in the game's pixels. `leave` is the pointer leaving the
@@ -116,8 +114,8 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
     let registrations: TRegistration[] = [];
 
     /**
-     * What reacts by itself: sprites, texts, nine-slices and whole objects. A map beside them, never a
-     * field in them.
+     * What reacts by itself: sprites, texts, nine-slices, sets of shapes and whole objects. A map
+     * beside them, never a field in them.
      */
     const listening = new Map<TPointerTarget, TListeningSprite>();
     /**
@@ -194,7 +192,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
      * until the next frame's events: several buttons asking about the same fingers lay the scene out
      * once. Same order as `active`.
      */
-    let underActive: Array<Array<TSprite | TText | TNineSlice>> | null = null;
+    let underActive: Array<Array<TPointerPicture>> | null = null;
 
     /**
      * From a position on the page to the game's pixels. The canvas is shown at a CSS size that may
@@ -365,7 +363,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
     /**
      * What a listener belonging to `box` is told: the world through the camera of its own scene.
      */
-    const infoFor = (box: TBox, screenX: number, screenY: number, button: TPointerButtonName, hits: Array<TSprite | TText | TNineSlice>): TPointerInfo => {
+    const infoFor = (box: TBox, screenX: number, screenY: number, button: TPointerButtonName, hits: Array<TPointerPicture>): TPointerInfo => {
         const world = unapplyView2d(cameraAsDrawn(rootOf(box).camera2d, snap), { x: screenX, y: screenY });
         return {
             screenX,
@@ -452,7 +450,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
      * Calls one of a sprite's own events on every connection that has it, in the order they were
      * made. Over a copy: a connection removed by an earlier one does not hear this same event.
      */
-    const fireSprite = (sprite: TPointerTarget | null, name: Exclude<keyof TSpriteEvents, 'onDragStart' | 'onDrag' | 'onDragEnd'>, screenX: number, screenY: number, button: TPointerButtonName, hits: Array<TSprite | TText | TNineSlice>): void => {
+    const fireSprite = (sprite: TPointerTarget | null, name: Exclude<keyof TSpriteEvents, 'onDragStart' | 'onDrag' | 'onDragEnd'>, screenX: number, screenY: number, button: TPointerButtonName, hits: Array<TPointerPicture>): void => {
         if (sprite === null) {
             return;
         }
@@ -492,7 +490,8 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
         }
         const names: readonly string[] = typeof wanted === 'string' ? [wanted] : wanted;
         const carries = (thing: { tags?: string[] }): boolean => names.some((name) => thing.tags?.includes(name) === true);
-        if (carries(dragged)) {
+        // A set of shapes carries no tags of its own: its object's count, just below.
+        if ('tags' in dragged && carries(dragged)) {
             return true;
         }
         for (let box = ('children' in dragged ? dragged.parent : ownerOfDrawable(dragged)?.box ?? null); box !== null; box = box.parent) {
@@ -518,7 +517,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
      * The zone on top under a drag that takes what it drags: for each hit, the hit itself or the
      * nearest object it sits in, as with what listens.
      */
-    const zoneUnder = (dragged: TPointerTarget, under: ReadonlyArray<TSprite | TText | TNineSlice>): TZone | null => {
+    const zoneUnder = (dragged: TPointerTarget, under: ReadonlyArray<TPointerPicture>): TZone | null => {
         if (zones.length === 0) {
             return null;
         }
@@ -540,13 +539,13 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
     /**
      * What is under a drag: every hit but the dragged thing and its pieces.
      */
-    const underOf = (drag: TDrag, hits: Array<TSprite | TText | TNineSlice>): Array<TSprite | TText | TNineSlice> =>
+    const underOf = (drag: TDrag, hits: Array<TPointerPicture>): Array<TPointerPicture> =>
         hits.filter((hit) => hit !== drag.target && !sitsIn(hit, drag.target));
 
     /**
      * What a drag listener belonging to `box` is told.
      */
-    const dragInfo = (box: TBox, drag: TDrag, screenX: number, screenY: number, button: TPointerButtonName, under: Array<TSprite | TText | TNineSlice>): TPointerDragInfo => {
+    const dragInfo = (box: TBox, drag: TDrag, screenX: number, screenY: number, button: TPointerButtonName, under: Array<TPointerPicture>): TPointerDragInfo => {
         const pointerInfo = infoFor(box, screenX, screenY, button, under);
         const start = unapplyView2d(cameraAsDrawn(rootOf(box).camera2d, snap), { x: drag.startX, y: drag.startY });
         return {
@@ -562,7 +561,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
     /**
      * Moves a drag over another zone, or off every one: the one it leaves is told first.
      */
-    const setOver = (drag: TDrag, next: TZone | null, screenX: number, screenY: number, button: TPointerButtonName, under: Array<TSprite | TText | TNineSlice>): void => {
+    const setOver = (drag: TDrag, next: TZone | null, screenX: number, screenY: number, button: TPointerButtonName, under: Array<TPointerPicture>): void => {
         const before = drag.over;
         if (before === next) {
             return;
@@ -581,7 +580,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
      * settles the zone it is over first. Not when it was destroyed, or its scene paused or held:
      * then nothing reacts, as with any event.
      */
-    const fireDrag = (drag: TDrag, name: 'onDragStart' | 'onDrag' | 'onDragEnd', screenX: number, screenY: number, button: TPointerButtonName, hits: Array<TSprite | TText | TNineSlice>): void => {
+    const fireDrag = (drag: TDrag, name: 'onDragStart' | 'onDrag' | 'onDragEnd', screenX: number, screenY: number, button: TPointerButtonName, hits: Array<TPointerPicture>): void => {
         const entry = listening.get(drag.target);
         if (entry === undefined || drag.target.destroyed) {
             return;
@@ -623,7 +622,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
         }
 
         let next: TPointerTarget | null = null;
-        let hits: Array<TSprite | TText | TNineSlice> = [];
+        let hits: Array<TPointerPicture> = [];
         if (lastPosition !== null && listening.size > 0) {
             hits = pickTargets(store, lastPosition.x, lastPosition.y);
             next = topmostListening(hits, listening);
@@ -682,7 +681,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
     /**
      * What is under each pressing pointer this frame, laid out once and kept until the next.
      */
-    const heldHits = (store: TRuntimeStore): Array<Array<TSprite | TText | TNineSlice>> => {
+    const heldHits = (store: TRuntimeStore): Array<Array<TPointerPicture>> => {
         if (underActive === null) {
             underActive = pickTargetsAt(store, [...active.values()].map((finger) => ({ x: finger.screenX, y: finger.screenY })));
         }
@@ -692,7 +691,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
     /**
      * Whether a drawable belongs to an object, by itself or through anything above it.
      */
-    const sitsIn = (hit: TSprite | TText | TNineSlice, target: TPointerTarget): boolean => {
+    const sitsIn = (hit: TPointerPicture, target: TPointerTarget): boolean => {
         if (!('children' in target)) {
             return false;
         }

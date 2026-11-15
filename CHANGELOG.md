@@ -125,9 +125,26 @@ releases are in [changelog/](./changelog/), one file each.
   others, in its place among the scenes, and, with a transition, stopped and built again behind the
   cover so the two copies never run at once. **`useScene().isRunning(name)`** asks whether a scene is
   running, by either name it answers to, before a `launch` that would throw.
+- **The pointer touches shapes.** A set of shapes made with `createShapes` takes the pointer as one
+  thing wherever one of its shapes is drawn, filled or outlined, in its place among the sprites:
+  `listen(hud, { onClick })`, `onPointerOver` and the rest, `useDraggable`, `useDropZone` and
+  `isPressing`. A listener on the object holding them covers them too, so a button of shapes and a
+  label is one button with no hitbox. It carries no tags of its own: a drop zone reads its object's.
+  A set scaled to nothing on either axis is not touched, as a sprite is not.
+
+  What the pointer finds is now a `TPointerPicture`: `info.target`, `info.hits`, `pick()` and a
+  drag's `zone` can be a set of shapes, so code that hands one of them to something that takes only
+  sprites (`sizeOf`, `worldToLocal`, `useCameraFollow`, a hitbox's collision, `carries`) or reads its
+  `anchor`, `texture` or `tags` narrows it first (`target.type === 'sprite'`). And a set of shapes
+  that does not listen (a backdrop, a HUD's frame) is now what is under the pointer where it is
+  drawn: `info.target === null` no longer means empty space there, and a set inside an object
+  counts as that object for a touch action.
 
 ### Fixed
 
+- **A mask squashed to nothing is touched as nothing.** The pointer took a mask in the shape of a
+  polygon or of shapes, scaled to 0 on either axis, as if it were at its full size, so what it hides
+  could still be clicked where nothing was seen.
 - **The next level stays under the HUD.** `useScene().change` built the scene coming in on top of
   every running scene, so a HUD launched beside the levels ended up under the next one, and under a
   level that restarted itself. It now takes the place of the scene it replaces, cut, covered or

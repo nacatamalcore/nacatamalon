@@ -2,18 +2,16 @@
 import { rootOf } from '../box/root_of';
 import { ownerOfDrawable } from '../box/drawable_owner';
 import type { TBox } from '../box';
-import type { TSprite } from '../gameobjects/sprite/types/t_sprite';
-import type { TText } from '../gameobjects/text/types/t_text';
-import type { TNineSlice } from '../gameobjects/nine_slice/types/t_nine_slice';
 import type { TSpriteEvents } from './types/t_sprite_events';
+import type { TPointerPicture } from './types/t_pointer_picture';
 
 /**
- * What can react to the pointer: a sprite, a text or a nine-slice by itself, or a whole object, which
- * reacts as one thing to a pointer over any of its pieces or its children's.
+ * What can react to the pointer: a sprite, a text, a nine-slice or a set of shapes by itself, or a
+ * whole object, which reacts as one thing to a pointer over any of its pieces or its children's.
  *
  * @internal
  */
-export type TPointerTarget = TSprite | TText | TNineSlice | TBox;
+export type TPointerTarget = TPointerPicture | TBox;
 
 /**
  * Something that reacts to the pointer: the part of the scene it belongs to, and every set of events
@@ -52,7 +50,7 @@ const answers = (target: TPointerTarget, entry: TListeningSprite, listening: Map
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const topmostListening = (hits: ReadonlyArray<TSprite | TText | TNineSlice>, listening: Map<TPointerTarget, TListeningSprite>): TPointerTarget | null => {
+export const topmostListening = (hits: ReadonlyArray<TPointerPicture>, listening: Map<TPointerTarget, TListeningSprite>): TPointerTarget | null => {
     for (const sprite of hits) {
         const own = listening.get(sprite);
         if (own !== undefined) {

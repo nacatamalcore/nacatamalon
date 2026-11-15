@@ -56,6 +56,10 @@ export type TShapesOptions = {
  * `end`), push one, take one out, and the next frame draws it. Their places are measured from the
  * object's `transform`, which moves, turns and scales them all.
  *
+ * The pointer touches them as one thing, wherever one of them is drawn, filled or outlined:
+ * `listen(hud, { onClick })`, a drag or a drop zone, as on a sprite. What a listener is told names
+ * the whole set, not the shape under the pointer.
+ *
  * Their edges are hard, as everything the engine draws, and widths are in the game's pixels, so they
  * grow with the camera's zoom. However many there are, the card draws them in one go: what they cost
  * is working their corners out again each frame.

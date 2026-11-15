@@ -27,9 +27,10 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  *
  * It can also be asked, like the keyboard, from an update: `isDown()` while a finger is on the
  * screen or a button is held, `justPressed()` and `justReleased()` for the one frame it went down
- * or came up, `position()` for where it is, `touches()` for every finger, and
- * `isPressing(button)` for whether a finger is on a sprite right now, which is what an on-screen
- * button needs. An action can be bound to one, too: `{ type: 'touch', box: 'Jump' }`.
+ * or came up, `position()` for where it is, `touches()` for every finger, and `isPressing(button)`
+ * for whether a finger is on a sprite, a text, a nine-slice, a set of shapes or an object right
+ * now, which is what an on-screen button needs. An action can be bound to one, too:
+ * `{ type: 'touch', box: 'Jump' }`.
  *
  * They stop by themselves when the part of the scene that registered them goes away, and they are
  * not called while their scene is paused. Each one returns a function that stops it earlier.

@@ -1,10 +1,8 @@
 import { getActiveBox, getActiveGame } from '../../store';
 import type { TBox } from '../../box';
-import type { TSprite } from '../../gameobjects/sprite/types/t_sprite';
-import type { TText } from '../../gameobjects/text/types/t_text';
-import type { TNineSlice } from '../../gameobjects/nine_slice/types/t_nine_slice';
 import type { TDropZoneListener, TDropZoneState } from '../../input';
 import { outsideSceneBody } from '../../utils/outside_scene_body';
+import type { TPointerPicture } from '../../input/types/t_pointer_picture';
 
 /**
  * What a drop zone accepts, and what it is told.
@@ -72,8 +70,8 @@ export type TDropZoneHandle = {
 };
 
 /**
- * Makes a sprite, a text, a nine-slice or a whole object a place things can be dragged into: a slot
- * of an inventory, the square of a board, a bin.
+ * Makes a sprite, a text, a nine-slice, a set of shapes or a whole object a place things can be
+ * dragged into: a slot of an inventory, the square of a board, a bin.
  *
  * The zone says what it accepts, by tag, and its state is asked like the keyboard's, every frame:
  * `canDrop()` while something it accepts is dragged anywhere, `isOver()` while it is over this very
@@ -88,8 +86,8 @@ export type TDropZoneHandle = {
  * It belongs to what calls it, like every hook: it goes when that goes, and does nothing while its
  * scene is paused. To open a zone later, start it with `enabled: false` and call `enable()` then.
  *
- * @param target The place: a sprite, a text, a nine-slice, or a whole object, which counts the
- * pointer over any of its pieces.
+ * @param target The place: a sprite, a text, a nine-slice, a set of shapes, or a whole object,
+ * which counts the pointer over any of its pieces.
  * @param options What it accepts, and what to do when something comes over it, leaves or is
  * dropped.
  * @returns Its state, `isOver` and `canDrop`, and `enable` and `disable`.
@@ -127,7 +125,7 @@ export type TDropZoneHandle = {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const useDropZone = (target: TSprite | TText | TNineSlice | TBox, options: TUseDropZoneOptions = {}): TDropZoneHandle => {
+export const useDropZone = (target: TPointerPicture | TBox, options: TUseDropZoneOptions = {}): TDropZoneHandle => {
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {

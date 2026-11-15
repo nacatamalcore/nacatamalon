@@ -4,11 +4,9 @@ import { worldToLocal } from '../../layout/world_to_local';
 import { carries } from '../../tags/tags';
 import type { TBox } from '../../box';
 import type { TTaggable } from '../../tags';
-import type { TSprite } from '../../gameobjects/sprite/types/t_sprite';
-import type { TText } from '../../gameobjects/text/types/t_text';
-import type { TNineSlice } from '../../gameobjects/nine_slice/types/t_nine_slice';
 import type { TPointerDragInfo } from '../../input';
 import { outsideSceneBody } from '../../utils/outside_scene_body';
+import type { TPointerPicture } from '../../input/types/t_pointer_picture';
 
 /**
  * What `useDraggable`'s `onDragEnd` is told: the drag's info, and what it was dropped on.
@@ -20,10 +18,11 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
 export type TDraggableDropInfo = TPointerDragInfo & {
     /**
      * Where it was dropped. With `dropOn`, what it was let go over that carries one of those tags:
-     * the sprite, text or object itself, or the nearest object above it that carries one. Without,
-     * the drop zone (`useDropZone`) it was let go over that accepts it. `null` when there was none.
+     * the sprite, text or object itself (a set of shapes carries no tags: its object's count), or
+     * the nearest object above it that carries one. Without, the drop zone (`useDropZone`) it was
+     * let go over that accepts it. `null` when there was none.
      */
-    readonly dropped: TSprite | TText | TNineSlice | TBox | null;
+    readonly dropped: TPointerPicture | TBox | null;
 };
 
 /**
@@ -113,17 +112,18 @@ export type TDraggableHandle = {
 /**
  * Whether what was handed over is a whole object rather than one drawable.
  */
-const isObject = (target: TSprite | TText | TNineSlice | TBox): target is TBox =>
+const isObject = (target: TPointerPicture | TBox): target is TBox =>
     'children' in target && 'drawables' in target;
 
 /**
  * What it was let go over that carries one of `tags`, the topmost first: each hit, or the nearest
  * object above it that carries one.
  */
-const droppedOn = (hits: ReadonlyArray<TSprite | TText | TNineSlice>, tags: readonly string[]): TSprite | TText | TNineSlice | TBox | null => {
+const droppedOn = (hits: ReadonlyArray<TPointerPicture>, tags: readonly string[]): TPointerPicture | TBox | null => {
     const tagged = (thing: TTaggable | TBox): boolean => tags.some((tag) => carries(thing, tag));
     for (const hit of hits) {
-        if (tagged(hit)) return hit;
+        // A set of shapes carries no tags of its own: its object's count, just below.
+        if ('tags' in hit && tagged(hit)) return hit;
         for (let box = ownerOfDrawable(hit)?.box ?? null; box !== null; box = box.parent) {
             if (tagged(box)) return box;
         }
@@ -132,8 +132,9 @@ const droppedOn = (hits: ReadonlyArray<TSprite | TText | TNineSlice>, tags: read
 };
 
 /**
- * Makes a sprite, a text, a nine-slice or a whole object follow the pointer that drags it: pressed
- * with the main button or a finger, it moves with it, held where it was taken, until it is let go.
+ * Makes a sprite, a text, a nine-slice, a set of shapes or a whole object follow the pointer that
+ * drags it: pressed with the main button or a finger, it moves with it, held where it was taken,
+ * until it is let go.
  *
  * Built on the drag events every sprite has (`onDragStart`, `onDrag`, `onDragEnd`), and adding the
  * moving: what a card, a piece of a puzzle or an item of an inventory wants. For a drag that does
@@ -155,8 +156,8 @@ const droppedOn = (hits: ReadonlyArray<TSprite | TText | TNineSlice>, tags: read
  *
  * Only for 2D: a 3D object has nothing the pointer can pick.
  *
- * @param target What is dragged: a sprite, a text, a nine-slice, or a whole object (`self` in a
- * behaviour), which is dragged by any of its pieces.
+ * @param target What is dragged: a sprite, a text, a nine-slice, a set of shapes, or a whole object
+ * (`self` in a behaviour), which is dragged by any of its pieces.
  * @param options Which way, in what steps, inside what, onto what, and what to do on the way.
  * @returns A handle to turn the dragging on and off, and to ask whether it is going on.
  *
@@ -189,7 +190,7 @@ const droppedOn = (hits: ReadonlyArray<TSprite | TText | TNineSlice>, tags: read
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const useDraggable = (target: TSprite | TText | TNineSlice | TBox, options: TUseDraggableOptions = {}): TDraggableHandle => {
+export const useDraggable = (target: TPointerPicture | TBox, options: TUseDraggableOptions = {}): TDraggableHandle => {
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {

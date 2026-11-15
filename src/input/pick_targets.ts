@@ -19,6 +19,8 @@ import type { TMaskLevel, TShapeList } from '../mask/mask_walk';
 import type { TPolygon } from '../gameobjects/polygon/types/t_polygon';
 import type { TShapes } from '../gameobjects/shapes/types/t_shapes';
 import { traceShapes } from '../gameobjects/shapes/shapes_state';
+import type { TPointerPicture } from './types/t_pointer_picture';
+import { shapesOfDrawn } from '../game/loop/helper/step_scene_polygons';
 
 type TQuadTransform = { x: number; y: number; rotation: number; scaleX: number; scaleY: number };
 
@@ -91,7 +93,7 @@ const isOnPicture = (
 };
 
 /**
- * Every sprite, text and nine-slice under a screen point, the one on top first.
+ * Every sprite, text, nine-slice and set of shapes under a screen point, the one on top first.
  *
  * Built from the same frame the renderer is handed (`fillFrameContext`), so the order of scenes,
  * the `zIndex` sort and which camera each one is seen through have one definition: the one used to
@@ -107,7 +109,7 @@ const isOnPicture = (
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const pickTargets = (store: TRuntimeStore, screenX: number, screenY: number): Array<TSprite | TText | TNineSlice> =>
+export const pickTargets = (store: TRuntimeStore, screenX: number, screenY: number): Array<TPointerPicture> =>
     pickTargetsAt(store, [{ x: screenX, y: screenY }])[0];
 
 /**
@@ -119,7 +121,7 @@ export const pickTargets = (store: TRuntimeStore, screenX: number, screenY: numb
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const pickTargetsAt = (store: TRuntimeStore, points: ReadonlyArray<{ x: number; y: number }>): Array<Array<TSprite | TText | TNineSlice>> => {
+export const pickTargetsAt = (store: TRuntimeStore, points: ReadonlyArray<{ x: number; y: number }>): Array<Array<TPointerPicture>> => {
     if (points.length === 0) {
         return [];
     }
@@ -211,15 +213,33 @@ const spriteCovers = (sprite: TSprite, fraction: { u: number; v: number }, chann
     return luminance(read.data[at]! / 255 * tint.r, read.data[at + 1]! / 255 * tint.g, read.data[at + 2]! / 255 * tint.b) * alpha >= 0.5;
 };
 
-/** Whether a world point is inside a shape's outline, its corners placed as the shape is. */
-const polygonCovers = (polygon: TPolygon, x: number, y: number): boolean => {
-    const place = worldOf(polygon);
+/**
+ * A world point in the space of what is placed at `place`, written into `out`; `false` when `place`
+ * is squashed flat on either axis, which draws nothing and so covers nothing, as with a sprite.
+ */
+const toLocal = (place: TQuadTransform, x: number, y: number, out: { x: number; y: number }): boolean => {
+    if (place.scaleX === 0 || place.scaleY === 0) {
+        return false;
+    }
     const dx = x - place.x;
     const dy = y - place.y;
     const c = Math.cos(-place.rotation);
     const s = Math.sin(-place.rotation);
-    const lx = (dx * c - dy * s) / (place.scaleX || 1);
-    const ly = (dx * s + dy * c) / (place.scaleY || 1);
+    out.x = (dx * c - dy * s) / place.scaleX;
+    out.y = (dx * s + dy * c) / place.scaleY;
+    return true;
+};
+
+/** Scratch for `toLocal`, read straight after each call. */
+const local = { x: 0, y: 0 };
+
+/** Whether a world point is inside a shape's outline, its corners placed as the shape is. */
+const polygonCovers = (polygon: TPolygon, x: number, y: number): boolean => {
+    if (!toLocal(worldOf(polygon), x, y, local)) {
+        return false;
+    }
+    const lx = local.x;
+    const ly = local.y;
     let inside = false;
     const points = polygon.points;
     for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
@@ -232,15 +252,20 @@ const polygonCovers = (polygon: TPolygon, x: number, y: number): boolean => {
     return inside;
 };
 
-/** Whether a world point is on one of a set of shapes, filled or outlined, as they are drawn. */
-const shapesCover = (shapes: TShapes, x: number, y: number): boolean => {
-    const place = worldOf(shapes);
-    const dx = x - place.x;
-    const dy = y - place.y;
-    const c = Math.cos(-place.rotation);
-    const s = Math.sin(-place.rotation);
-    const lx = (dx * c - dy * s) / (place.scaleX || 1);
-    const ly = (dx * s + dy * c) / (place.scaleY || 1);
+/**
+ * Whether a world point is on one of a set of shapes, filled or outlined, as they are drawn. With
+ * `bounds`, the rectangle round the triangles drawn this frame, in the set's own space, a point
+ * outside it is answered without going through them again.
+ */
+const shapesCover = (shapes: TShapes, x: number, y: number, bounds?: { x: number; y: number; width: number; height: number }): boolean => {
+    if (!toLocal(worldOf(shapes), x, y, local)) {
+        return false;
+    }
+    const lx = local.x;
+    const ly = local.y;
+    if (bounds !== undefined && !(lx >= bounds.x && lx <= bounds.x + bounds.width && ly >= bounds.y && ly <= bounds.y + bounds.height)) {
+        return false;
+    }
     let on = false;
     traceShapes(shapes, () => {}, (ax, ay, bx, by, cx, cy) => {
         if (on) {
@@ -313,14 +338,8 @@ const seenThrough = (
         if (mask.by === null) {
             const rect = mask.rect!;
             const world = unapplyView2d(at.camera >= 0 ? cameras[at.camera] ?? null : null, screen);
-            const place = at.place;
-            const dx = world.x - place.x;
-            const dy = world.y - place.y;
-            const c = Math.cos(-place.rotation);
-            const s = Math.sin(-place.rotation);
-            const lx = (dx * c - dy * s) / (place.scaleX || 1);
-            const ly = (dx * s + dy * c) / (place.scaleY || 1);
-            inside = lx >= rect.x && lx <= rect.x + rect.width && ly >= rect.y && ly <= rect.y + rect.height;
+            inside = toLocal(at.place, world.x, world.y, local)
+                && local.x >= rect.x && local.x <= rect.x + rect.width && local.y >= rect.y && local.y <= rect.y + rect.height;
         } else {
             const shape = shapes.get(mask);
             if (shape !== undefined) {
@@ -347,8 +366,8 @@ const hitsAt = (
     screen: { x: number; y: number },
     levels: readonly (TMaskLevel | null)[] | null = null,
     shapes: ReadonlyMap<TMask, TShapeList> | null = null,
-): Array<TSprite | TText | TNineSlice> => {
-    const hits: Array<TSprite | TText | TNineSlice> = [];
+): Array<TPointerPicture> => {
+    const hits: Array<TPointerPicture> = [];
     const tested = new Set<TText | TNineSlice>();
 
     // Back to front: what was painted last is on top.
@@ -392,8 +411,20 @@ const hitsAt = (
             continue;
         }
 
-        // Only a sprite is touched. A map is not: it has no size of its own and covers the level,
-        // so testing it would put something under the pointer everywhere. Anything else that
+        // A set of shapes is touched where its shapes are drawn, filled or outlined, and as one
+        // thing: the whole set is the hit, whichever of its shapes is under the pointer.
+        const set = shapesOfDrawn(drawables[i]);
+        if (set !== undefined) {
+            const { bounds } = drawables[i] as { bounds?: { x: number; y: number; width: number; height: number } };
+            // Nothing drawn this frame is nowhere to be touched.
+            if (!set.destroyed && bounds !== undefined && shapesCover(set, world.x, world.y, bounds)) {
+                hits.push(set);
+            }
+            continue;
+        }
+
+        // Only a sprite is touched besides. A map is not: it has no size of its own and covers the
+        // level, so testing it would put something under the pointer everywhere. Anything else that
         // reaches the frame is not a sprite either, and was being measured as one.
         if (drawables[i].type !== 'sprite') {
             continue;

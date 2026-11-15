@@ -4,9 +4,7 @@ import { firstTimeIn } from '../utils/first_time_in';
 import type { TBox } from '../box';
 import { SPRITE_EVENT_NAMES } from '../input/types/t_sprite_events';
 import type { TSpriteEvents } from '../input/types/t_sprite_events';
-import type { TSprite } from '../gameobjects/sprite/types/t_sprite';
-import type { TText } from '../gameobjects/text/types/t_text';
-import type { TNineSlice } from '../gameobjects/nine_slice/types/t_nine_slice';
+import type { TPointerPicture } from '../input/types/t_pointer_picture';
 
 
 const nothing = (): void => {};
@@ -14,12 +12,12 @@ const nothing = (): void => {};
 /**
  * Whether what was handed over is a whole object rather than one drawable.
  */
-const isObject = (target: TSprite | TText | TNineSlice | TBox): target is TBox =>
+const isObject = (target: TPointerPicture | TBox): target is TBox =>
     'children' in target && 'drawables' in target;
 
 /**
- * Makes a sprite, a text, a nine-slice or a whole object react to the mouse and touch, after it was
- * created.
+ * Makes a sprite, a text, a nine-slice, a set of shapes or a whole object react to the mouse and
+ * touch, after it was created.
  *
  * The same events `createSprite`, `createText` and `createNineSlice` accept in their options (`onClick`, `onPointerOver`, `onPointerOut`,
  * `onPointerMove`, `onPointerDown`, `onPointerUp`), for when they are not known at creation: a button
@@ -40,8 +38,10 @@ const isObject = (target: TSprite | TText | TNineSlice | TBox): target is TBox =
  * the ones a scene document or a pack made: `listen(self, { onClick })`. A piece that listens by
  * itself inside it still answers for itself, being the more specific.
  *
- * @param sprite The sprite, text, nine-slice or object that should react. A text reacts anywhere
- * inside its block, a nine-slice anywhere inside its rectangle, and an object over any of its pieces.
+ * @param sprite The sprite, text, nine-slice, set of shapes or object that should react. A text
+ * reacts anywhere inside its block, a nine-slice anywhere inside its rectangle, a set of shapes
+ * (`createShapes`) as one thing wherever one of its shapes is drawn, filled or outlined, and an
+ * object over any of its pieces.
  * @param events Which events, and what to do on each.
  * @returns A function that disconnects these events.
  *
@@ -69,7 +69,7 @@ const isObject = (target: TSprite | TText | TNineSlice | TBox): target is TBox =
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const listen = (sprite: TSprite | TText | TNineSlice | TBox, events: TSpriteEvents): (() => void) => {
+export const listen = (sprite: TPointerPicture | TBox, events: TSpriteEvents): (() => void) => {
     const store = isObject(sprite) ? gameOfBox(sprite) : ownerOfDrawable(sprite)?.store;
     const owner = isObject(sprite)
         ? (store === undefined ? undefined : { box: sprite, store })

@@ -25,6 +25,21 @@ const copyFor = <T extends object>(copy: object, shared: T): T => {
 };
 
 /**
+ * The set of shapes each map layer drawn this frame stands for, the one a game listens to. What the
+ * pointer finds in the screen's frame is the layer, and it is the shapes that are touched.
+ */
+const shapesOfLayer = new WeakMap<object, TShapes>();
+
+/**
+ * The set of shapes a map layer in the frame draws, or `undefined` for anything else.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const shapesOfDrawn = (drawable: object): TShapes | undefined => shapesOfLayer.get(drawable);
+
+/**
  * A plain white picture, one per renderer, for shapes with no picture of their own: their colour is
  * their tint, multiplied into it.
  */
@@ -63,6 +78,7 @@ export const stepScenePolygons = (drawables: TDrawable[], start: number, rendere
             drawn.transform = shapes.transform;
             drawn.worldTransform = shapes.worldTransform;
             drawn.tint = shapes.tint;
+            shapesOfLayer.set(drawn, record);
             drawables[i] = drawn as unknown as TDrawable;
             continue;
         }

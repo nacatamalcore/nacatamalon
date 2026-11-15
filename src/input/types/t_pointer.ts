@@ -1,10 +1,8 @@
 import type { TBox } from '../../box';
-import type { TSprite } from '../../gameobjects/sprite/types/t_sprite';
-import type { TText } from '../../gameobjects/text/types/t_text';
-import type { TNineSlice } from '../../gameobjects/nine_slice/types/t_nine_slice';
 import type { TRuntimeStore } from '../../store';
 import type { TPointerButtonName } from '../pointer_buttons';
 import type { TSpriteEvents } from './t_sprite_events';
+import type { TPointerPicture } from './t_pointer_picture';
 
 /**
  * What a pointer listener is told: where the mouse or finger is, which button, and what is under it.
@@ -58,13 +56,14 @@ export type TPointerInfo = {
      */
     readonly time: number;
     /**
-     * The sprite, text or nine-slice on top under the pointer, or `null` over empty space.
+     * The sprite, text, nine-slice or set of shapes on top under the pointer, or `null` over empty
+     * space.
      */
-    readonly target: TSprite | TText | TNineSlice | null;
+    readonly target: TPointerPicture | null;
     /**
-     * Every sprite, text and nine-slice under the pointer, the one on top first.
+     * Every sprite, text, nine-slice and set of shapes under the pointer, the one on top first.
      */
-    readonly hits: ReadonlyArray<TSprite | TText | TNineSlice>;
+    readonly hits: ReadonlyArray<TPointerPicture>;
 };
 
 /**
@@ -136,7 +135,7 @@ export type TPointerDragInfo = TPointerInfo & {
      * The drop zone (`useDropZone`) under the pointer that accepts what is being dragged, or `null`:
      * what it would be dropped into if it were let go now.
      */
-    readonly zone: TSprite | TText | TNineSlice | TBox | null;
+    readonly zone: TPointerPicture | TBox | null;
 };
 
 /**
@@ -146,7 +145,7 @@ export type TPointerDragInfo = TPointerInfo & {
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TDropZoneListener = (dragged: TSprite | TText | TNineSlice | TBox, info: TPointerDragInfo) => void;
+export type TDropZoneListener = (dragged: TPointerPicture | TBox, info: TPointerDragInfo) => void;
 
 /**
  * What a drop zone accepts and is told, as the pointer holds it.
@@ -244,9 +243,10 @@ export type TPointerHandle = {
      */
     onWheel(listener: TPointerWheelListener): () => void;
     /**
-     * Every sprite and text under a point of the screen, the one on top first.
+     * Every sprite, text, nine-slice and set of shapes under a point of the screen, the one on top
+     * first.
      */
-    pick(screenX: number, screenY: number): Array<TSprite | TText | TNineSlice>;
+    pick(screenX: number, screenY: number): Array<TPointerPicture>;
     /**
      * Whether anything is pressing right now: a finger on the screen, or a mouse button held. The
      * pointer's answer to the keyboard's `isDown`, for what continues while it is held (charging,
@@ -289,13 +289,13 @@ export type TPointerHandle = {
     touches(): readonly TPointerTouch[];
     /**
      * Whether a finger (or a held mouse button) is on `target` right now: a sprite, a text, a
-     * nine-slice, or a whole object, which counts a finger on any of its pieces.
+     * nine-slice, a set of shapes, or a whole object, which counts a finger on any of its pieces.
      *
      * What an on-screen button needs. It follows the finger, not the press: a thumb that slides from
      * one button to the next without lifting moves from pressing one to pressing the other, the way
      * the pads of touch-screen games work. Something drawn over the button does not stop it.
      */
-    isPressing(target: TSprite | TText | TNineSlice | TBox): boolean;
+    isPressing(target: TPointerPicture | TBox): boolean;
     /**
      * Captures the mouse for the game: the cursor disappears and the mouse moves nothing but
      * `movementX`/`movementY`, however far it goes, which is what a first-person camera needs. The
@@ -366,7 +366,7 @@ export type TPointerSource = {
      * away. A whole object can listen too (`sprite` is then the box itself), and then answers for a
      * pointer over any of its pieces. Returns the function that forgets it earlier.
      */
-    listenSprite(sprite: TSprite | TText | TNineSlice | TBox, box: TBox, events: TSpriteEvents): () => void;
+    listenSprite(sprite: TPointerPicture | TBox, box: TBox, events: TSpriteEvents): () => void;
     /**
      * Hands every event queued since the last call to its listeners. Called by the loop at the start
      * of a frame, which is what keeps a click from landing half way through the updates.
@@ -406,7 +406,7 @@ export type TPointerSource = {
     /**
      * Whether a pressing pointer is on `target`. See `TPointerHandle.isPressing`.
      */
-    isPressing(store: TRuntimeStore, target: TSprite | TText | TNineSlice | TBox): boolean;
+    isPressing(store: TRuntimeStore, target: TPointerPicture | TBox): boolean;
     /**
      * Every object a pressing pointer is on, and everything it sits in: what an action bound to a
      * touch (`{ type: 'touch', box }`) asks, by the object or by its name.
@@ -416,7 +416,7 @@ export type TPointerSource = {
      * Makes `target` a place things can be dragged into, on behalf of `box`: forgotten when the box
      * goes away. Returns its state, and the function that forgets it earlier.
      */
-    dropZone(target: TSprite | TText | TNineSlice | TBox, box: TBox, spec: TDropZoneSpec): TDropZoneState;
+    dropZone(target: TPointerPicture | TBox, box: TBox, spec: TDropZoneSpec): TDropZoneState;
     /**
      * Captures the mouse on this canvas. See `TPointerHandle.lock`.
      */
