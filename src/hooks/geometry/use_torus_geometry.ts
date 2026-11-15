@@ -1,5 +1,6 @@
 import { buildTorus } from '../../geometry/shapes/torus';
-import { useGeometry } from './use_geometry';
+import { useGeometry, uvKeyOf, uvRecipeOf } from './use_geometry';
+import type { TGeometryUvOptions } from '../../geometry/build/project_uvs';
 import type { TGeometry } from '../../geometry';
 
 /**
@@ -9,7 +10,7 @@ import type { TGeometry } from '../../geometry';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TTorusGeometryOptions = {
+export type TTorusGeometryOptions = TGeometryUvOptions & {
     /**
      * From the middle to the middle of the tube. Default `0.5`.
      */
@@ -27,8 +28,9 @@ export type TTorusGeometryOptions = {
      */
     tubularSegments?: number;
     /**
-     * What to keep it under. By default the size is the name, so two of different sizes never get
-     * mixed up and two of the same size are the same shape. Give one only to have a friendlier name.
+     * What to keep it under. By default every number it is asked for and how its picture is laid are
+     * the name, so two that differ in any never get mixed up and two the same are the same shape. Give one only to
+     * have a friendlier name: a name already taken gives back that shape, whatever is asked.
      */
     key?: string;
 };
@@ -41,6 +43,10 @@ export type TTorusGeometryOptions = {
  *
  * Asking for the same size twice gives back the same shape, so a hundred of them cost one shape and
  * a hundred placements.
+ *
+ * **Its picture** goes once round the tube and once round the ring: `u` round the tube, from `0` on
+ * its outer edge (`0.25` on top, `0.5` on the inner edge, `0.75` underneath); `v` round the ring,
+ * from `0` at `+x` (`0.25` at `-z`, `0.5` at `-x`, `0.75` at `+z`).
  *
  * @param options Its size, how smooth it is, and what to keep it under.
  * @returns The shape, ready to be shown.
@@ -65,7 +71,7 @@ export const useTorusGeometry = (options: TTorusGeometryOptions = {}): TGeometry
     const tube = options.tube ?? 0.2;
     const radialSegments = options.radialSegments ?? 32;
     const tubularSegments = options.tubularSegments ?? 16;
-    const key = options.key ?? `torus:${radius}:${tube}:${radialSegments}:${tubularSegments}`;
+    const key = options.key ?? `torus:${radius}:${tube}:${radialSegments}:${tubularSegments}${uvKeyOf(options)}`;
 
-    return useGeometry('useTorusGeometry', key, () => buildTorus(radius, tube, radialSegments, tubularSegments), { kind: 'torus', radius, tube, radialSegments, tubularSegments });
+    return useGeometry('useTorusGeometry', key, () => buildTorus(radius, tube, radialSegments, tubularSegments), { kind: 'torus', radius, tube, radialSegments, tubularSegments, ...uvRecipeOf(options) }, options);
 };

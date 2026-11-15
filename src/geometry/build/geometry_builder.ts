@@ -15,7 +15,11 @@ export type TGeometryBuilder = {
      */
     addVertex(px: number, py: number, pz: number, nx: number, ny: number, nz: number, u: number, v: number): number;
     addTriangle(a: number, b: number, c: number): void;
-    build(): { vertices: Float32Array; indices: Uint16Array };
+    /**
+     * The two runs. The corner numbers are the narrow kind while every one fits below 65535, the
+     * number a narrow run keeps for starting a new strip, which drops what touches it.
+     */
+    build(): { vertices: Float32Array; indices: Uint16Array | Uint32Array };
 };
 
 export const createGeometryBuilder = (): TGeometryBuilder => {
@@ -32,7 +36,7 @@ export const createGeometryBuilder = (): TGeometryBuilder => {
             indices.push(a, b, c);
         },
         build() {
-            return { vertices: new Float32Array(vertices), indices: new Uint16Array(indices) };
+            return { vertices: new Float32Array(vertices), indices: count > 65535 ? new Uint32Array(indices) : new Uint16Array(indices) };
         },
     };
 };
@@ -118,12 +122,15 @@ export const addRingQuads = (b: TGeometryBuilder, ring: number[], nextRing: numb
  */
 export const addDiskFan = (b: TGeometryBuilder, centerY: number, radius: number, segments: number, normalY: 1 | -1): void => {
     const center = b.addVertex(0, centerY, 0, 0, normalY, 0, 0.5, 0.5);
-    const rim = addRing(
-        b, segments,
-        (phi) => [Math.cos(phi) * radius, centerY, -Math.sin(phi) * radius],
-        () => [0, normalY, 0],
-        0.5,
-    );
+    // The picture laid flat over the disc, as `uvs: 'planar'` lays one: from above, across along X
+    // and down along Z, so a face up reads it as a floor does; from below for a face down, so a
+    // base reads it the right way round as it is seen.
+    const rim = Array.from({ length: segments + 1 }, (_, i) => {
+        const phi = (i / segments) * Math.PI * 2;
+        const x = Math.cos(phi);
+        const z = -Math.sin(phi);
+        return b.addVertex(x * radius, centerY, z * radius, 0, normalY, 0, (x + 1) / 2, normalY === 1 ? (z + 1) / 2 : (1 - z) / 2);
+    });
 
     for (let i = 0; i < segments; i++) {
         if (normalY === 1) {

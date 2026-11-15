@@ -1,5 +1,6 @@
 import { buildPlane } from '../../geometry/shapes/plane';
-import { useGeometry } from './use_geometry';
+import { useGeometry, uvKeyOf, uvRecipeOf } from './use_geometry';
+import type { TGeometryUvOptions } from '../../geometry/build/project_uvs';
 import type { TGeometry } from '../../geometry';
 
 /**
@@ -9,7 +10,7 @@ import type { TGeometry } from '../../geometry';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TPlaneGeometryOptions = {
+export type TPlaneGeometryOptions = TGeometryUvOptions & {
     /**
      * Across. Default `1`.
      */
@@ -27,8 +28,9 @@ export type TPlaneGeometryOptions = {
      */
     depthSegments?: number;
     /**
-     * What to keep it under. By default the size is the name, so two of different sizes never get
-     * mixed up and two of the same size are the same shape. Give one only to have a friendlier name.
+     * What to keep it under. By default every number it is asked for and how its picture is laid are
+     * the name, so two that differ in any never get mixed up and two the same are the same shape. Give one only to
+     * have a friendlier name: a name already taken gives back that shape, whatever is asked.
      */
     key?: string;
 };
@@ -41,6 +43,10 @@ export type TPlaneGeometryOptions = {
  *
  * Asking for the same size twice gives back the same shape, so a hundred of them cost one shape and
  * a hundred placements.
+ *
+ * **Its picture** is laid once over it as seen from above, the far edge (`-z`) at the top: `0, 0`
+ * at its `-x, -z` corner, `u` along `+x` and `v` along `+z`. `uvs: 'planar'` with `uvScale` lays it
+ * by the plane's units instead, so a big floor repeats it rather than stretching it.
  *
  * @param options Its size, how smooth it is, and what to keep it under.
  * @returns The shape, ready to be shown.
@@ -65,7 +71,7 @@ export const usePlaneGeometry = (options: TPlaneGeometryOptions = {}): TGeometry
     const depth = options.depth ?? 1;
     const widthSegments = options.widthSegments ?? 1;
     const depthSegments = options.depthSegments ?? 1;
-    const key = options.key ?? `plane:${width}:${depth}:${widthSegments}:${depthSegments}`;
+    const key = options.key ?? `plane:${width}:${depth}:${widthSegments}:${depthSegments}${uvKeyOf(options)}`;
 
-    return useGeometry('usePlaneGeometry', key, () => buildPlane(width, depth, widthSegments, depthSegments), { kind: 'plane', width, depth, widthSegments, depthSegments });
+    return useGeometry('usePlaneGeometry', key, () => buildPlane(width, depth, widthSegments, depthSegments), { kind: 'plane', width, depth, widthSegments, depthSegments, ...uvRecipeOf(options) }, options);
 };

@@ -11,12 +11,15 @@ export const buildCube = (width: number, height: number, depth: number) => {
     const hy = height / 2;
     const hz = depth / 2;
 
-    addQuadFace(b, { x: hx, y: 0, z: 0 }, [1, 0, 0], [0, 1, 0], [0, 0, 1], hy, hz);
+    // Each face reads its picture upright as it is seen from outside, the way `uvs: 'box'` lays
+    // one: across to the right and down, the sides with up as up, the top as seen from the front
+    // (its far edge at the top of the picture) and the bottom as seen from below.
+    addQuadFace(b, { x: hx, y: 0, z: 0 }, [1, 0, 0], [0, 0, -1], [0, 1, 0], hz, hy);
     addQuadFace(b, { x: -hx, y: 0, z: 0 }, [-1, 0, 0], [0, 0, 1], [0, 1, 0], hz, hy);
-    addQuadFace(b, { x: 0, y: hy, z: 0 }, [0, 1, 0], [0, 0, 1], [1, 0, 0], hz, hx);
+    addQuadFace(b, { x: 0, y: hy, z: 0 }, [0, 1, 0], [1, 0, 0], [0, 0, -1], hx, hz);
     addQuadFace(b, { x: 0, y: -hy, z: 0 }, [0, -1, 0], [1, 0, 0], [0, 0, 1], hx, hz);
     addQuadFace(b, { x: 0, y: 0, z: hz }, [0, 0, 1], [1, 0, 0], [0, 1, 0], hx, hy);
-    addQuadFace(b, { x: 0, y: 0, z: -hz }, [0, 0, -1], [0, 1, 0], [1, 0, 0], hy, hx);
+    addQuadFace(b, { x: 0, y: 0, z: -hz }, [0, 0, -1], [-1, 0, 0], [0, 1, 0], hx, hy);
 
     return b.build();
 };

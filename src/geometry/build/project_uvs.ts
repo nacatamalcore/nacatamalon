@@ -58,8 +58,10 @@ const roundOf = (dx: number, dz: number): number => {
  * whole picture backwards: the corners near 0 are taken past 1 instead. A corner on the axis has no
  * way round of its own, and any one it is given smears its triangles: it takes the middle of the
  * other two.
+ *
+ * @internal
  */
-const mendRound = (u: [number, number, number], onAxis: [boolean, boolean, boolean]): void => {
+export const mendRound = (u: [number, number, number], onAxis: [boolean, boolean, boolean]): void => {
     const round = [0, 1, 2].filter((k) => !onAxis[k]);
     if (round.length === 0) {
         u[0] = u[1] = u[2] = 0;
@@ -192,27 +194,125 @@ export const projectUvs = (
         }
     };
 
-    // Each corner as many times as the triangles at it want it in different places of the picture.
+    // Each corner as many times as the triangles at it want it in different places of the picture,
+    // or read the other way round: where a projection folds (a ball seen from above, its top and
+    // its bottom on one picture), the triangles on either side of the fold read it mirrored, and a
+    // corner they share would need its surface's way across (its tangent) both ways at once, which
+    // a normal map then reads wrong on one side.
     const copies = new Map<number, number[]>();
     const outUvs: number[] = [];
     const outSource: number[] = [];
+    const outHand: number[] = [];
     const outIndices = new Uint32Array(indices.length);
     for (let t = 0; t + 2 < indices.length; t += 3) {
         triangleUvs(t);
+        // Which way round the triangle reads the picture: the sign of its area in it, its corners in
+        // the order that faces out. None for one with no area there, which goes either way.
+        const area = (u[1] - u[0]) * (v[2] - v[0]) - (u[2] - u[0]) * (v[1] - v[0]);
+        const hand = Math.abs(area) < 1e-12 ? 0 : Math.sign(area);
         for (let k = 0; k < 3; k++) {
             const corner = indices[t + k];
             const known = copies.get(corner) ?? [];
-            let copy = known.find((c) => Math.abs(outUvs[c * 2] - u[k]) < SAME && Math.abs(outUvs[c * 2 + 1] - v[k]) < SAME);
+            let copy = known.find((c) => Math.abs(outUvs[c * 2] - u[k]) < SAME && Math.abs(outUvs[c * 2 + 1] - v[k]) < SAME
+                && (hand === 0 || outHand[c] === 0 || outHand[c] === hand));
             if (copy === undefined) {
                 copy = outSource.length;
                 outSource.push(corner);
                 outUvs.push(u[k], v[k]);
+                outHand.push(hand);
                 known.push(copy);
                 copies.set(corner, known);
+            } else if (outHand[copy] === 0) {
+                outHand[copy] = hand;
             }
             outIndices[t + k] = copy;
         }
     }
 
     return { uvs: Float32Array.from(outUvs), source: Uint32Array.from(outSource), indices: outIndices };
+};
+
+/**
+ * How a shape hook's picture places are worked out: by name, and how often the picture is laid.
+ *
+ * @category Geometry
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TGeometryUvOptions = {
+    /**
+     * The picture places worked out from where the corners are, instead of the shape's own: `'planar'`
+     * (seen from above, a floor), `'box'` (each face from the side it faces, a wall, a crate),
+     * `'cylinder'` (round the upright axis, a column) or `'sphere'` (by longitude and latitude). See
+     * `TUvProjection`. A corner two faces want at two places of the picture is split in two. Left out,
+     * the shape keeps its own, described on each hook.
+     */
+    uvs?: TUvProjection;
+    /**
+     * With `uvs`, how many times the picture is laid every unit of the shape, rather than stretched
+     * once over it: `1` a picture each unit, `0.25` one every four. Two walls of different sizes then
+     * have bricks of one size. It reads the shape's own size, before the object's `transform`: a shape
+     * scaled up gets bigger bricks. Round an axis it is rounded to whole times, so the seam meets
+     * itself. Only with `uvs`: a shape's own picture places are laid once, and are not scaled.
+     */
+    uvScale?: number;
+};
+
+/**
+ * Says how `uvs` and `uvScale` are wrong, or nothing, and hands back the projection named, `null`
+ * for none. Shared by `createGeometry` and the shape hooks, so a mistake reads the same in both.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const checkUvProjection = (hook: string, uvs: unknown, uvScale: unknown): TUvProjection | null => {
+    const projection = typeof uvs === 'string' ? uvs : null;
+    if (projection !== null && !UV_PROJECTIONS.includes(projection as TUvProjection)) {
+        throw new Error(`[NacatamalOn] ${hook}: 'uvs' is '${projection}', and the ways to work them out are ${UV_PROJECTIONS.map((name) => `'${name}'`).join(', ')}.`);
+    }
+    if (uvScale !== undefined) {
+        if (projection === null) {
+            throw new Error(`[NacatamalOn] ${hook}: 'uvScale' lays a picture worked out by name; give 'uvs' one of ${UV_PROJECTIONS.map((name) => `'${name}'`).join(', ')}.`);
+        }
+        if (typeof uvScale !== 'number' || !Number.isFinite(uvScale) || uvScale <= 0) {
+            throw new Error(`[NacatamalOn] ${hook}: 'uvScale' is ${uvScale}, and it takes how many times the picture is laid every unit, more than 0.`);
+        }
+    }
+    return projection as TUvProjection | null;
+};
+
+/**
+ * A shape already woven for the card (`GEOMETRY_STRIDE` numbers a corner: place, facing, picture
+ * place) with its picture places worked out by name instead. Each corner keeps its place and its
+ * facing; one split for the picture takes both from the corner it came from, so a hard edge stays
+ * hard and a round one round.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const reprojectWoven = (
+    built: { vertices: Float32Array; indices: Uint16Array | Uint32Array },
+    projection: TUvProjection,
+    scale?: number,
+): { vertices: Float32Array; indices: Uint16Array | Uint32Array } => {
+    const stride = 8;
+    const corners = built.vertices.length / stride;
+    const positions = new Float32Array(corners * 3);
+    for (let c = 0; c < corners; c++) {
+        positions[c * 3] = built.vertices[c * stride];
+        positions[c * 3 + 1] = built.vertices[c * stride + 1];
+        positions[c * 3 + 2] = built.vertices[c * stride + 2];
+    }
+    const projected = projectUvs(positions, built.indices, projection, scale);
+    const count = projected.source.length;
+    const vertices = new Float32Array(count * stride);
+    for (let c = 0; c < count; c++) {
+        const was = projected.source[c];
+        vertices.set(built.vertices.subarray(was * stride, was * stride + 6), c * stride);
+        vertices[c * stride + 6] = projected.uvs[c * 2];
+        vertices[c * stride + 7] = projected.uvs[c * 2 + 1];
+    }
+    return { vertices, indices: count > 65535 ? projected.indices : Uint16Array.from(projected.indices) };
 };

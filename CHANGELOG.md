@@ -140,8 +140,33 @@ releases are in [changelog/](./changelog/), one file each.
   drawn: `info.target === null` no longer means empty space there, and a set inside an object
   counts as that object for a touch action.
 
+- **Every shape hook takes `uvs` and `uvScale`**, as `createGeometry` does:
+  `useCubeGeometry({ width: 8, height: 3, uvs: 'box', uvScale: 1 })` lays one brick a unit, the
+  same size on a wall of any size, and `usePlaneGeometry({ width: 40, depth: 40, uvs: 'planar',
+  uvScale: 0.25 })` one tile every four. Each corner keeps its facing, so hard edges stay hard. A
+  scene document keeps them in the shape's recipe.
+  `uvScale` goes only with `uvs`: a shape's own picture places are laid once, and are not scaled.
+  Each hook now says where its own picture places fall.
+
 ### Fixed
 
+- **A box's picture is upright on every face.** Three of its six faces (`+x`, `-z` and the top) read
+  it a quarter turn round; now each reads it as it is seen from outside, as `uvs: 'box'` lays it. A
+  textured box made before shows those three faces turned.
+- **A disc reads its whole picture.** `useCircleGeometry`, and the lid and the base of a tube and a
+  cone, read a single row of it, smeared round from the middle; now it is laid flat over them, as
+  over a plane.
+- **The evenly divided ball reads its picture the right way round**: `useIcoSphereGeometry` read it
+  mirrored and half a turn round from `useSphereGeometry`; now both go round from `+x`, to the right
+  as seen from outside. Its triangles across the seam no longer read the whole picture backwards in
+  a strip, and its poles no longer pinch it.
+- **A normal map reads the right way where a picture worked out by name folds.** With `uvs` by
+  name (`createGeometry`, and now the shape hooks), a corner shared by triangles that read the
+  picture mirrored, as the top and the bottom of a ball seen from above, kept one way across the
+  surface for both, so a normal map lit one side of the fold inside out. Such a corner is split.
+- **A built shape of more than 65535 corners loses no triangles.** A plane cut 255 by 255 numbered
+  its last corner 65535, which WebGL2 takes as the start of a new strip, and dropped the triangles
+  touching it; such a shape is now numbered the wide way.
 - **A mask squashed to nothing is touched as nothing.** The pointer took a mask in the shape of a
   polygon or of shapes, scaled to 0 on either axis, as if it were at its full size, so what it hides
   could still be clicked where nothing was seen.

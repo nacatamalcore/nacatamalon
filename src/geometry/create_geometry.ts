@@ -3,7 +3,7 @@ import { freeGeometryBuffers } from './free_geometry';
 import { nanoId } from '../utils';
 import { computeDetail } from './build/compute_tangents';
 import { computeNormals, splitPerCorner, toFlatShaded } from './build/normals';
-import { projectUvs, UV_PROJECTIONS } from './build/project_uvs';
+import { checkUvProjection, projectUvs, UV_PROJECTIONS } from './build/project_uvs';
 import { boundsOf, colorsFor, positionsOf, uploadGeometry } from './upload_geometry';
 import { COLOR_STRIDE, DETAIL_STRIDE, GEOMETRY_STRIDE } from './types/t_geometry';
 import type { TRuntimeStore } from '../store';
@@ -151,20 +151,12 @@ const assemble = (hook: string, data: TGeometryData): { vertices: Float32Array; 
     }
     const corners = positions.length / 3;
     checkLength(hook, 'normals', data.normals, 3, corners);
-    const projection = typeof data.uvs === 'string' ? data.uvs : null;
-    if (projection !== null && !UV_PROJECTIONS.includes(projection)) {
-        throw new Error(`[NacatamalOn] ${hook}: 'uvs' is '${projection}', and the ways to work them out are ${UV_PROJECTIONS.map((name) => `'${name}'`).join(', ')}. Or give them, two numbers a corner.`);
+    if (typeof data.uvs === 'string' && !UV_PROJECTIONS.includes(data.uvs)) {
+        throw new Error(`[NacatamalOn] ${hook}: 'uvs' is '${data.uvs}', and the ways to work them out are ${UV_PROJECTIONS.map((name) => `'${name}'`).join(', ')}. Or give them, two numbers a corner.`);
     }
+    const projection = checkUvProjection(hook, data.uvs, data.uvScale);
     if (projection === null) {
         checkLength(hook, 'uvs', data.uvs as ArrayLike<number> | undefined, 2, corners);
-    }
-    if (data.uvScale !== undefined) {
-        if (projection === null) {
-            throw new Error(`[NacatamalOn] ${hook}: 'uvScale' lays a picture worked out by name; give 'uvs' one of ${UV_PROJECTIONS.map((name) => `'${name}'`).join(', ')}.`);
-        }
-        if (!Number.isFinite(data.uvScale) || data.uvScale <= 0) {
-            throw new Error(`[NacatamalOn] ${hook}: 'uvScale' is ${data.uvScale}, and it takes how many times the picture is laid every unit, more than 0.`);
-        }
     }
     checkLength(hook, 'colors', data.colors, 4, corners);
     checkLength(hook, 'uv2', data.uv2, 2, corners);

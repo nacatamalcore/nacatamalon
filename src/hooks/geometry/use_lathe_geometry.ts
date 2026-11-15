@@ -1,5 +1,6 @@
 import { buildLathe } from '../../geometry/shapes/lathe';
-import { useGeometry } from './use_geometry';
+import { useGeometry, uvKeyOf, uvRecipeOf } from './use_geometry';
+import type { TGeometryUvOptions } from '../../geometry/build/project_uvs';
 import type { TGeometry } from '../../geometry';
 
 /**
@@ -9,7 +10,7 @@ import type { TGeometry } from '../../geometry';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TLatheGeometryOptions = {
+export type TLatheGeometryOptions = TGeometryUvOptions & {
     /**
      * Half the outline, from the bottom up: for each point, `x` is how far it is from the axis and
      * `y` how high. At least two points. A point on the axis (`x: 0`) closes the shape there, as the
@@ -21,8 +22,9 @@ export type TLatheGeometryOptions = {
      */
     segments?: number;
     /**
-     * What to keep it under. By default the profile and the faces round are the name, so two the same
-     * are the same shape. Give one only to have a friendlier name.
+     * What to keep it under. By default the profile, the faces round and how its picture is laid are
+     * the name, so two the same are the same shape. Give one only to have a friendlier name: a name
+     * already taken gives back that shape, whatever is asked.
      */
     key?: string;
 };
@@ -44,6 +46,10 @@ export type TLatheGeometryOptions = {
  * Asking for the same profile twice gives back the same shape, so a shelf of a hundred bottles costs
  * one shape and a hundred placements. The profile goes from the bottom up; given the other way, the
  * shape is turned inside out and seen only from within.
+ *
+ * **Its picture** goes once round (`u`, from `0` at `+x`, growing to the right as the side is seen
+ * from outside) and once down the profile by its length (`v`, from `0` at the top), so a label
+ * wrapped round a bottle is not stretched where the profile is steep.
  *
  * @param options The profile, and how many faces round.
  * @returns The shape, ready to be shown.
@@ -86,12 +92,8 @@ export const useLatheGeometry = (options: TLatheGeometryOptions): TGeometry => {
         }
     }
     const segments = Math.max(3, Math.floor(options.segments ?? 32));
-    const corners = (segments + 1) * profile.length;
-    if (corners > 65535) {
-        throw new Error(`[NacatamalOn] useLatheGeometry: ${profile.length} points by ${segments} faces round is ${corners} corners, and a shape holds 65535. Use fewer of either.`);
-    }
     const points = profile.map(({ x, y }) => ({ x, y }));
-    const key = options.key ?? `lathe:${segments}:${points.map((point) => `${point.x},${point.y}`).join(';')}`;
+    const key = options.key ?? `lathe:${segments}:${points.map((point) => `${point.x},${point.y}`).join(';')}${uvKeyOf(options)}`;
 
-    return useGeometry('useLatheGeometry', key, () => buildLathe(points, segments), { kind: 'lathe', profile: points, segments });
+    return useGeometry('useLatheGeometry', key, () => buildLathe(points, segments), { kind: 'lathe', profile: points, segments, ...uvRecipeOf(options) }, options);
 };

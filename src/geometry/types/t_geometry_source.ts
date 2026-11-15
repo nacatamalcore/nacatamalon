@@ -1,3 +1,5 @@
+import type { TGeometryUvOptions } from '../build/project_uvs';
+
 /**
  * How a shape is made, when it was made rather than drawn by an artist.
  *
@@ -9,7 +11,8 @@
  * does spell the recipe for every shape this engine builds (`cube:1:1:1`), but only until somebody
  * passes a key of their own, and then reading it back would be reading a name as if it were a fact.
  *
- * Every field but `gltf`'s `src` may be left out, and leaving one out means its default, exactly as
+ * A shape this engine builds keeps `uvs` and `uvScale` too, when they were given
+ * (`TGeometryUvOptions`). Every field but `gltf`'s `src` may be left out, and leaving one out means its default, exactly as
  * calling `useCubeGeometry({})` does. So the smallest cube is `{ kind: 'cube' }`.
  *
  * @category Geometry
@@ -17,15 +20,15 @@
  * @author Francisco Pereira Alvarado
  */
 export type TGeometrySource =
-    | { kind: 'cube'; width?: number; height?: number; depth?: number }
-    | { kind: 'plane'; width?: number; depth?: number; widthSegments?: number; depthSegments?: number }
-    | { kind: 'circle'; radius?: number; segments?: number }
-    | { kind: 'uvSphere'; radius?: number; segments?: number; rings?: number }
-    | { kind: 'icoSphere'; radius?: number; subdivisions?: number }
-    | { kind: 'cylinder'; radius?: number; height?: number; segments?: number }
-    | { kind: 'cone'; radius?: number; height?: number; segments?: number }
-    | { kind: 'torus'; radius?: number; tube?: number; radialSegments?: number; tubularSegments?: number }
-    | { kind: 'lathe'; profile: Array<{ x: number; y: number }>; segments?: number }
+    | ({ kind: 'cube'; width?: number; height?: number; depth?: number } & TGeometryUvOptions)
+    | ({ kind: 'plane'; width?: number; depth?: number; widthSegments?: number; depthSegments?: number } & TGeometryUvOptions)
+    | ({ kind: 'circle'; radius?: number; segments?: number } & TGeometryUvOptions)
+    | ({ kind: 'uvSphere'; radius?: number; segments?: number; rings?: number } & TGeometryUvOptions)
+    | ({ kind: 'icoSphere'; radius?: number; subdivisions?: number } & TGeometryUvOptions)
+    | ({ kind: 'cylinder'; radius?: number; height?: number; segments?: number } & TGeometryUvOptions)
+    | ({ kind: 'cone'; radius?: number; height?: number; segments?: number } & TGeometryUvOptions)
+    | ({ kind: 'torus'; radius?: number; tube?: number; radialSegments?: number; tubularSegments?: number } & TGeometryUvOptions)
+    | ({ kind: 'lathe'; profile: Array<{ x: number; y: number }>; segments?: number } & TGeometryUvOptions)
     /**
      * A piece of a model file. `node` is the name of the piece, `''` for one the file did not
      * name. `occurrence` is which of the pieces of that name, from 0 and 0 when left out: a node

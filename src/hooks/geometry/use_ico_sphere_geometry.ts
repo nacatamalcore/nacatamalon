@@ -1,5 +1,6 @@
 import { buildIcoSphere } from '../../geometry/shapes/ico_sphere';
-import { useGeometry } from './use_geometry';
+import { useGeometry, uvKeyOf, uvRecipeOf } from './use_geometry';
+import type { TGeometryUvOptions } from '../../geometry/build/project_uvs';
 import type { TGeometry } from '../../geometry';
 
 /**
@@ -9,7 +10,7 @@ import type { TGeometry } from '../../geometry';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TIcoSphereGeometryOptions = {
+export type TIcoSphereGeometryOptions = TGeometryUvOptions & {
     /**
      * Default `0.5`.
      */
@@ -19,8 +20,9 @@ export type TIcoSphereGeometryOptions = {
      */
     subdivisions?: number;
     /**
-     * What to keep it under. By default the size is the name, so two of different sizes never get
-     * mixed up and two of the same size are the same shape. Give one only to have a friendlier name.
+     * What to keep it under. By default every number it is asked for and how its picture is laid are
+     * the name, so two that differ in any never get mixed up and two the same are the same shape. Give one only to
+     * have a friendlier name: a name already taken gives back that shape, whatever is asked.
      */
     key?: string;
 };
@@ -33,6 +35,11 @@ export type TIcoSphereGeometryOptions = {
  *
  * Asking for the same size twice gives back the same shape, so a hundred of them cost one shape and
  * a hundred placements.
+ *
+ * **Its picture** goes round as on `useSphereGeometry`: `u` from `0` at `+x`, growing to the right
+ * as the ball is seen from outside, `v` from `0` at the top to `1` at the bottom. A triangle across the
+ * seam reads on past 1 rather than back across the picture, which the default `wrap`, `'repeat'`,
+ * shows as one picture; with `'clamp'` that strip smears the picture's edge.
  *
  * @param options Its size, how smooth it is, and what to keep it under.
  * @returns The shape, ready to be shown.
@@ -55,7 +62,7 @@ export type TIcoSphereGeometryOptions = {
 export const useIcoSphereGeometry = (options: TIcoSphereGeometryOptions = {}): TGeometry => {
     const radius = options.radius ?? 0.5;
     const subdivisions = options.subdivisions ?? 2;
-    const key = options.key ?? `ico_sphere:${radius}:${subdivisions}`;
+    const key = options.key ?? `ico_sphere:${radius}:${subdivisions}${uvKeyOf(options)}`;
 
-    return useGeometry('useIcoSphereGeometry', key, () => buildIcoSphere(radius, subdivisions), { kind: 'icoSphere', radius, subdivisions });
+    return useGeometry('useIcoSphereGeometry', key, () => buildIcoSphere(radius, subdivisions), { kind: 'icoSphere', radius, subdivisions, ...uvRecipeOf(options) }, options);
 };

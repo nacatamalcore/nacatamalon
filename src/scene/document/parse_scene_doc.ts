@@ -1,3 +1,5 @@
+import { UV_PROJECTIONS } from '../../geometry/build/project_uvs';
+import type { TGeometryUvOptions, TUvProjection } from '../../geometry/build/project_uvs';
 import { findMaterialLook } from '../../shader_composer/surface/looks';
 import type { TLook } from '../../shader_composer/surface/types';
 import { MAP_NAME, MAX_MATERIAL_MAPS } from '../../render/shared/material_maps';
@@ -1300,20 +1302,33 @@ const parseAsset = (value: unknown): TAssetEntry | null => {
     return null;
 };
 
+/**
+ * A built shape's `uvs` and `uvScale`, as far as they make sense: a projection this version knows,
+ * and a scale only with one, above 0. Anything else is left out, so the shape keeps its own picture
+ * places rather than refusing the scene.
+ */
+const uvRecipe = (raw: Record<string, unknown>): TGeometryUvOptions => {
+    if (typeof raw.uvs !== 'string' || !UV_PROJECTIONS.includes(raw.uvs as TUvProjection)) {
+        return {};
+    }
+    const scale = typeof raw.uvScale === 'number' && Number.isFinite(raw.uvScale) && raw.uvScale > 0 ? { uvScale: raw.uvScale } : {};
+    return { uvs: raw.uvs as TUvProjection, ...scale };
+};
+
 const parseGeometrySource = (value: unknown, key: string): TGeometrySource | null => {
     const raw = asRecord(value);
     if (raw === null || typeof raw.kind !== 'string') {
         return null;
     }
     switch (raw.kind) {
-        case 'cube': return { kind: 'cube', ...optionalNumber(raw, 'width'), ...optionalNumber(raw, 'height'), ...optionalNumber(raw, 'depth') };
-        case 'plane': return { kind: 'plane', ...optionalNumber(raw, 'width'), ...optionalNumber(raw, 'depth'), ...optionalNumber(raw, 'widthSegments'), ...optionalNumber(raw, 'depthSegments') };
-        case 'circle': return { kind: 'circle', ...optionalNumber(raw, 'radius'), ...optionalNumber(raw, 'segments') };
-        case 'uvSphere': return { kind: 'uvSphere', ...optionalNumber(raw, 'radius'), ...optionalNumber(raw, 'segments'), ...optionalNumber(raw, 'rings') };
-        case 'icoSphere': return { kind: 'icoSphere', ...optionalNumber(raw, 'radius'), ...optionalNumber(raw, 'subdivisions') };
-        case 'cylinder': return { kind: 'cylinder', ...optionalNumber(raw, 'radius'), ...optionalNumber(raw, 'height'), ...optionalNumber(raw, 'segments') };
-        case 'cone': return { kind: 'cone', ...optionalNumber(raw, 'radius'), ...optionalNumber(raw, 'height'), ...optionalNumber(raw, 'segments') };
-        case 'torus': return { kind: 'torus', ...optionalNumber(raw, 'radius'), ...optionalNumber(raw, 'tube'), ...optionalNumber(raw, 'radialSegments'), ...optionalNumber(raw, 'tubularSegments') };
+        case 'cube': return { kind: 'cube', ...optionalNumber(raw, 'width'), ...optionalNumber(raw, 'height'), ...optionalNumber(raw, 'depth'), ...uvRecipe(raw) };
+        case 'plane': return { kind: 'plane', ...optionalNumber(raw, 'width'), ...optionalNumber(raw, 'depth'), ...optionalNumber(raw, 'widthSegments'), ...optionalNumber(raw, 'depthSegments'), ...uvRecipe(raw) };
+        case 'circle': return { kind: 'circle', ...optionalNumber(raw, 'radius'), ...optionalNumber(raw, 'segments'), ...uvRecipe(raw) };
+        case 'uvSphere': return { kind: 'uvSphere', ...optionalNumber(raw, 'radius'), ...optionalNumber(raw, 'segments'), ...optionalNumber(raw, 'rings'), ...uvRecipe(raw) };
+        case 'icoSphere': return { kind: 'icoSphere', ...optionalNumber(raw, 'radius'), ...optionalNumber(raw, 'subdivisions'), ...uvRecipe(raw) };
+        case 'cylinder': return { kind: 'cylinder', ...optionalNumber(raw, 'radius'), ...optionalNumber(raw, 'height'), ...optionalNumber(raw, 'segments'), ...uvRecipe(raw) };
+        case 'cone': return { kind: 'cone', ...optionalNumber(raw, 'radius'), ...optionalNumber(raw, 'height'), ...optionalNumber(raw, 'segments'), ...uvRecipe(raw) };
+        case 'torus': return { kind: 'torus', ...optionalNumber(raw, 'radius'), ...optionalNumber(raw, 'tube'), ...optionalNumber(raw, 'radialSegments'), ...optionalNumber(raw, 'tubularSegments'), ...uvRecipe(raw) };
         case 'lathe': {
             // Each point a pair of numbers, the distance from the axis not below 0: a profile with
             // one that is not is not the shape it says, and is dropped whole rather than in part.
@@ -1322,7 +1337,7 @@ const parseGeometrySource = (value: unknown, key: string): TGeometrySource | nul
                 point !== null && typeof point.x === 'number' && typeof point.y === 'number' && Number.isFinite(point.x) && Number.isFinite(point.y) && point.x >= 0
                     ? [{ x: point.x, y: point.y }]
                     : []);
-            return profile.length >= 2 && profile.length === points.length ? { kind: 'lathe', profile, ...optionalNumber(raw, 'segments') } : null;
+            return profile.length >= 2 && profile.length === points.length ? { kind: 'lathe', profile, ...optionalNumber(raw, 'segments'), ...uvRecipe(raw) } : null;
         }
         case 'gltf': {
             if (typeof raw.src !== 'string') return null;

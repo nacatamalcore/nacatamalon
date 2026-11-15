@@ -1,5 +1,6 @@
 import { buildCube } from '../../geometry/shapes/cube';
-import { useGeometry } from './use_geometry';
+import { useGeometry, uvKeyOf, uvRecipeOf } from './use_geometry';
+import type { TGeometryUvOptions } from '../../geometry/build/project_uvs';
 import type { TGeometry } from '../../geometry';
 
 /**
@@ -9,7 +10,7 @@ import type { TGeometry } from '../../geometry';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TCubeGeometryOptions = {
+export type TCubeGeometryOptions = TGeometryUvOptions & {
     /**
      * Across. Default `1`.
      */
@@ -23,8 +24,9 @@ export type TCubeGeometryOptions = {
      */
     depth?: number;
     /**
-     * What to keep it under. By default the size is the name, so two of different sizes never get
-     * mixed up and two of the same size are the same shape. Give one only to have a friendlier name.
+     * What to keep it under. By default every number it is asked for and how its picture is laid are
+     * the name, so two that differ in any never get mixed up and two the same are the same shape. Give one only to
+     * have a friendlier name: a name already taken gives back that shape, whatever is asked.
      */
     key?: string;
 };
@@ -37,6 +39,11 @@ export type TCubeGeometryOptions = {
  *
  * Asking for the same size twice gives back the same shape, so a hundred of them cost one shape and
  * a hundred placements.
+ *
+ * **Its picture** is laid once on each face, upright as the face is seen from outside, `0, 0` at
+ * the face's top left: the sides with up as up, the top as seen from the front (its far edge at
+ * the top of the picture), the bottom as seen from below. The same as `uvs: 'box'`; with
+ * `uvScale` the picture is laid by the box's units instead, the same size on a box of any size.
  *
  * @param options Its size, how smooth it is, and what to keep it under.
  * @returns The shape, ready to be shown.
@@ -60,7 +67,7 @@ export const useCubeGeometry = (options: TCubeGeometryOptions = {}): TGeometry =
     const width = options.width ?? 1;
     const height = options.height ?? 1;
     const depth = options.depth ?? 1;
-    const key = options.key ?? `cube:${width}:${height}:${depth}`;
+    const key = options.key ?? `cube:${width}:${height}:${depth}${uvKeyOf(options)}`;
 
-    return useGeometry('useCubeGeometry', key, () => buildCube(width, height, depth), { kind: 'cube', width, height, depth });
+    return useGeometry('useCubeGeometry', key, () => buildCube(width, height, depth), { kind: 'cube', width, height, depth, ...uvRecipeOf(options) }, options);
 };
