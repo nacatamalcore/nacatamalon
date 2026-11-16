@@ -143,7 +143,6 @@ export const buildExtrude = (
     // hard corner has two facings; a soft one gives both the same.
     const rings = ringsOf(depth, bevel);
     const chamfer = bevel !== null && bevel.segments === 1;
-    const crease = Math.cos(creaseAngle);
     for (const [c, ring] of contours.entries()) {
         const n = ring.length;
         const outward = inwards[c]!.map((p) => ({ x: -p.x, y: -p.y }));
@@ -151,7 +150,9 @@ export const buildExtrude = (
         const soft = ring.map((_, i) => {
             const before = outward[(i - 1 + n) % n]!;
             const after = outward[i]!;
-            if (before.x * after.x + before.y * after.y < crease) {
+            // By the angle the outline turns, never more than half a turn: a `creaseAngle` of half a
+            // turn or more creases nothing, and a right angle is not more than a right angle.
+            if (Math.atan2(Math.abs(before.x * after.y - before.y * after.x), before.x * after.x + before.y * after.y) > creaseAngle) {
                 return null;
             }
             const length = Math.hypot(before.x + after.x, before.y + after.y);

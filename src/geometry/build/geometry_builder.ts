@@ -83,6 +83,9 @@ export const addQuadFace = (
  * purpose, so whoever joins two rings can count from 0 to `segments` without wrapping, and so the
  * picture can run all the way round instead of jumping back at the seam.
  *
+ * Or part of the way round, `arc` of it from `from`: then the first and the last are its two ends,
+ * and the picture runs across it once.
+ *
  * @internal
  */
 export const addRing = (
@@ -91,9 +94,11 @@ export const addRing = (
     point: (phi: number) => [number, number, number],
     normal: (phi: number) => [number, number, number],
     uvV: number,
+    from = 0,
+    arc = Math.PI * 2,
 ): number[] =>
     Array.from({ length: segments + 1 }, (_, i) => {
-        const phi = (i / segments) * Math.PI * 2;
+        const phi = from + (i / segments) * arc;
         const [x, y, z] = point(phi);
         return b.addVertex(x, y, z, ...normal(phi), i / segments, uvV);
     });

@@ -165,6 +165,13 @@ releases are in [changelog/](./changelog/), one file each.
   `composerSwizzle(composerPolar(), 'yx')` is a strip laid round a ring: a dial, a radar, rays from
   a sun, a ring that fills like a clock; with `composerTime()` added, one that spins.
 
+- **`useLatheGeometry` turned part of the way, with hard edges**: `startAngle` and `arc`, in
+  radians from `+x` the way `rotationY` turns, make a slice with its ends open (a roulette pocket, a
+  half pipe, an arch), its picture across it; slices in colours are one shape with
+  `mergeGeometries`, each turned and tinted. `creaseAngle`, when given, makes a hard edge wherever
+  the profile turns more than it, rather than giving those points twice; left out, a profile is
+  smooth all along as before. A scene document keeps all three.
+
 - **A box with its edges rounded or cut: `useCubeGeometry({ bevel: { size, segments } })`**, for a
   cushioned table edge, a 3D button, a die. The edges are cut `size` in from every face, so the box
   still fills its `width` by `height` by `depth`; one segment is a straight cut at 45°, more a rounded

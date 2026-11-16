@@ -1390,7 +1390,7 @@ const parseGeometrySource = (value: unknown, key: string): TGeometrySource | nul
                 point !== null && typeof point.x === 'number' && typeof point.y === 'number' && Number.isFinite(point.x) && Number.isFinite(point.y) && point.x >= 0
                     ? [{ x: point.x, y: point.y }]
                     : []);
-            return profile.length >= 2 && profile.length === points.length ? { kind: 'lathe', profile, ...optionalNumber(raw, 'segments'), ...uvRecipe(raw) } : null;
+            return profile.length >= 2 && profile.length === points.length ? { kind: 'lathe', profile, ...optionalNumber(raw, 'segments'), ...optionalNumber(raw, 'startAngle'), ...optionalNumber(raw, 'arc'), ...optionalNumber(raw, 'creaseAngle'), ...uvRecipe(raw) } : null;
         }
         case 'extrude': {
             // Each outline whole or not at all, as a lathe's profile: one point that is not two

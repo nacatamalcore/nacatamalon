@@ -174,7 +174,7 @@ const loadGeometry = (asset: Extract<TAssetEntry, { type: 'geometry' }>, src: st
         case 'cylinder': useCylinderGeometry({ key, ...source }); break;
         case 'cone': useConeGeometry({ key, ...source }); break;
         case 'torus': useTorusGeometry({ key, ...source }); break;
-        case 'lathe': useLatheGeometry({ key, ...source }); break;
+        case 'lathe': madeOrSaid(() => useLatheGeometry({ key, ...source }), key, src); break;
         case 'extrude': madeOrSaid(() => useExtrudeGeometry({ key, ...source }), key, src); break;
         case 'gltf': {
             // The whole file, as one call: its parts land in the model cache under keys of their

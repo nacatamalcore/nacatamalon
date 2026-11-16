@@ -139,6 +139,10 @@ describe('useExtrudeGeometry', () => {
         expect(facingsAt(made({ outline: circle(1, 32) })).every((n) => n === 1)).toBe(true);
         expect(facingsAt(made({ outline: circle(1, 32), creaseAngle: 0 })).every((n) => n === 2)).toBe(true);
         expect(facingsAt(made({ outline: DIAMOND, creaseAngle: Math.PI })).every((n) => n === 1)).toBe(true);
+        // Half a turn or more creases nothing, rather than coming back round to creasing all.
+        expect(facingsAt(made({ outline: DIAMOND, creaseAngle: Math.PI * 2 })).every((n) => n === 1)).toBe(true);
+        // A right angle is not more than a right angle.
+        expect(facingsAt(made({ outline: square(1), creaseAngle: Math.PI / 2 })).every((n) => n === 1)).toBe(true);
     });
 
     it('lays its picture once over each face, upright, and once round its sides', () => {

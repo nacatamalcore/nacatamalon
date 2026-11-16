@@ -28,7 +28,7 @@ export type TGeometrySource =
     | ({ kind: 'cylinder'; radius?: number; height?: number; segments?: number } & TGeometryUvOptions)
     | ({ kind: 'cone'; radius?: number; height?: number; segments?: number } & TGeometryUvOptions)
     | ({ kind: 'torus'; radius?: number; tube?: number; radialSegments?: number; tubularSegments?: number } & TGeometryUvOptions)
-    | ({ kind: 'lathe'; profile: Array<{ x: number; y: number }>; segments?: number } & TGeometryUvOptions)
+    | ({ kind: 'lathe'; profile: Array<{ x: number; y: number }>; segments?: number; startAngle?: number; arc?: number; creaseAngle?: number } & TGeometryUvOptions)
     | ({
         kind: 'extrude';
         outline: Array<{ x: number; y: number }>;
