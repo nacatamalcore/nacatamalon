@@ -23,9 +23,9 @@ export type { TSpriteTexture, TSpriteTextureSees, TSpriteTextureOptions, TViewFi
 export type { TModel, TModelOptions } from './gameobjects/model';
 export type { TLight2dOptions } from './hooks/light/use_light_2d';
 export type { TLight2d, TAmbientLight2d, TLight, TDirectionalLight, TPointLight, TSpotLight, TRectLight, TAmbientLight, TLightOptionsBase } from './light';
-export { useCubeGeometry, usePlaneGeometry, useCircleGeometry, useSphereGeometry, useIcoSphereGeometry, useCylinderGeometry, useConeGeometry, useTorusGeometry, useLatheGeometry } from './hooks';
+export { useCubeGeometry, usePlaneGeometry, useCircleGeometry, useSphereGeometry, useIcoSphereGeometry, useCylinderGeometry, useConeGeometry, useTorusGeometry, useLatheGeometry, useExtrudeGeometry } from './hooks';
 export type { TBlobShadowOptions } from './hooks';
-export type { TCubeGeometryOptions, TPlaneGeometryOptions, TCircleGeometryOptions, TSphereGeometryOptions, TIcoSphereGeometryOptions, TCylinderGeometryOptions, TConeGeometryOptions, TTorusGeometryOptions, TLatheGeometryOptions } from './hooks';
+export type { TCubeGeometryOptions, TPlaneGeometryOptions, TCircleGeometryOptions, TSphereGeometryOptions, TIcoSphereGeometryOptions, TCylinderGeometryOptions, TConeGeometryOptions, TTorusGeometryOptions, TLatheGeometryOptions, TExtrudeGeometryOptions } from './hooks';
 export type { TGeometry, TGeometryData, TGeometryUvOptions, TMergePiece, TUvProjection } from './geometry';
 export type { TDrawable } from './gameobjects/types';
 export type { TTransformOptions } from './hooks';

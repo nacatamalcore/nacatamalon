@@ -29,6 +29,14 @@ export type TGeometrySource =
     | ({ kind: 'cone'; radius?: number; height?: number; segments?: number } & TGeometryUvOptions)
     | ({ kind: 'torus'; radius?: number; tube?: number; radialSegments?: number; tubularSegments?: number } & TGeometryUvOptions)
     | ({ kind: 'lathe'; profile: Array<{ x: number; y: number }>; segments?: number } & TGeometryUvOptions)
+    | ({
+        kind: 'extrude';
+        outline: Array<{ x: number; y: number }>;
+        holes?: Array<Array<{ x: number; y: number }>>;
+        depth?: number;
+        bevel?: { size: number; segments?: number };
+        creaseAngle?: number;
+    } & TGeometryUvOptions)
     /**
      * A piece of a model file. `node` is the name of the piece, `''` for one the file did not
      * name. `occurrence` is which of the pieces of that name, from 0 and 0 when left out: a node

@@ -1381,6 +1381,35 @@ const parseGeometrySource = (value: unknown, key: string): TGeometrySource | nul
                     : []);
             return profile.length >= 2 && profile.length === points.length ? { kind: 'lathe', profile, ...optionalNumber(raw, 'segments'), ...uvRecipe(raw) } : null;
         }
+        case 'extrude': {
+            // Each outline whole or not at all, as a lathe's profile: one point that is not two
+            // numbers makes it some other shape. Whether it crosses itself is the hook's to say.
+            const ring = (value: unknown): Array<{ x: number; y: number }> | null => {
+                if (!Array.isArray(value)) return null;
+                const points = value.map((point) => asRecord(point));
+                const kept = points.flatMap((point) =>
+                    point !== null && typeof point.x === 'number' && typeof point.y === 'number' && Number.isFinite(point.x) && Number.isFinite(point.y)
+                        ? [{ x: point.x, y: point.y }]
+                        : []);
+                return kept.length >= 3 && kept.length === points.length ? kept : null;
+            };
+            const outline = ring(raw.outline);
+            const holes = raw.holes === undefined ? [] : Array.isArray(raw.holes) ? raw.holes.map(ring) : [null];
+            if (outline === null || holes.some((hole) => hole === null)) return null;
+            const bevelRaw = asRecord(raw.bevel);
+            const bevel = bevelRaw !== null && typeof bevelRaw.size === 'number' && Number.isFinite(bevelRaw.size) && bevelRaw.size > 0
+                ? { bevel: { size: bevelRaw.size, ...optionalNumber(bevelRaw, 'segments') } }
+                : {};
+            return {
+                kind: 'extrude',
+                outline,
+                ...(holes.length > 0 ? { holes: holes as Array<Array<{ x: number; y: number }>> } : {}),
+                ...optionalNumber(raw, 'depth'),
+                ...bevel,
+                ...optionalNumber(raw, 'creaseAngle'),
+                ...uvRecipe(raw),
+            };
+        }
         case 'gltf': {
             if (typeof raw.src !== 'string') return null;
             // A count or nothing: anything else would have to be guessed into some piece, and the

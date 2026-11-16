@@ -31,7 +31,7 @@ import { attachPicture, newSpriteTexture } from '../../gameobjects/sprite_textur
 import type { TSpriteTexture } from '../../gameobjects/sprite_texture';
 import {
     useCircleGeometry, useConeGeometry, useCubeGeometry, useCylinderGeometry,
-    useIcoSphereGeometry, useLatheGeometry, usePlaneGeometry, useTorusGeometry, useSphereGeometry,
+    useIcoSphereGeometry, useLatheGeometry, useExtrudeGeometry, usePlaneGeometry, useTorusGeometry, useSphereGeometry,
 } from '../../hooks/geometry';
 import { useLoadAtlas, useLoadAudio, useLoadBitmapFont, useLoadFont, useLoadModel, useLoadParticles, useLoadShader, useLoadSong, useLoadMotion, useLoadTexture } from '../../hooks/loaders';
 import { useMotion } from '../../hooks/motion';
@@ -161,6 +161,17 @@ const loadGeometry = (asset: Extract<TAssetEntry, { type: 'geometry' }>, src: st
         case 'cone': useConeGeometry({ key, ...source }); break;
         case 'torus': useTorusGeometry({ key, ...source }); break;
         case 'lathe': useLatheGeometry({ key, ...source }); break;
+        case 'extrude': {
+            // An outline that crosses itself, or a bevel too wide for it, is the document's word and
+            // not a mistake in the game's code: said, and the meshes that want it go without, as
+            // for a shape not in the manifest, rather than the whole scene not opening.
+            try {
+                useExtrudeGeometry({ key, ...source });
+            } catch (error) {
+                console.warn(`[NacatamalOn] scene "${src}": the shape "${key}" is not made: ${error instanceof Error ? error.message.replace(/^\[NacatamalOn\] /, '') : String(error)}`);
+            }
+            break;
+        }
         case 'gltf': {
             // The whole file, as one call: its parts land in the model cache under keys of their
             // own, and a mesh names the one it wants.

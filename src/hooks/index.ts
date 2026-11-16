@@ -27,7 +27,7 @@ export type { TMirror, TMirrorOptions, TEnvironment, TEnvironmentOptions } from 
 export { useLight2d, useAmbientLight2d, useUnlit2d, useDirectionalLight, usePointLight, useSpotLight, useRectLight, useAmbientLight, useBlobShadow, useStudio } from './light';
 export type { TStudio, TStudioOptions } from './light';
 export { useParticleCollider2d, useParticleCollider3d } from './particles';
-export { useCubeGeometry, usePlaneGeometry, useCircleGeometry, useSphereGeometry, useIcoSphereGeometry, useCylinderGeometry, useConeGeometry, useTorusGeometry, useLatheGeometry } from './geometry';
+export { useCubeGeometry, usePlaneGeometry, useCircleGeometry, useSphereGeometry, useIcoSphereGeometry, useCylinderGeometry, useConeGeometry, useTorusGeometry, useLatheGeometry, useExtrudeGeometry } from './geometry';
 export { useLoadTexture, useLoadAtlas, useLoadBitmapFont, useLoadFont, useLoadModel, useLoadShader, useLoadPalette, useLoadLut, useLoadParticles, useLoadPack, useLoadScene, useLoadAudio, useLoadProgress, useLoadPixels, useLoadSong, useLoadTrackerSong, useLoadMotion } from './loaders';
 export type { TUseLoadPackOptions, TUseLoadSceneOptions } from './loaders';
 export { usePostProcess } from './post/use_post_process';
@@ -44,7 +44,7 @@ export type { TSceneHandle } from './scene';
 export type { TDataRecord, TDataSetter, TWatchDep, TStateMachine, TStateDef, TStateGoOptions, TStateMachineOptions } from './state';
 export type { TTransformOptions } from './transform';
 export type { TBlobShadowOptions } from './light';
-export type { TCubeGeometryOptions, TPlaneGeometryOptions, TCircleGeometryOptions, TSphereGeometryOptions, TIcoSphereGeometryOptions, TCylinderGeometryOptions, TConeGeometryOptions, TTorusGeometryOptions, TLatheGeometryOptions } from './geometry';
+export type { TCubeGeometryOptions, TPlaneGeometryOptions, TCircleGeometryOptions, TSphereGeometryOptions, TIcoSphereGeometryOptions, TCylinderGeometryOptions, TConeGeometryOptions, TTorusGeometryOptions, TLatheGeometryOptions, TExtrudeGeometryOptions } from './geometry';
 export type { TUseActionsOptions, TUseDraggableOptions, TDraggableHandle, TDraggableDropInfo, TUseDropZoneOptions, TDropZoneHandle } from './input';
 export type { TGameObject, TSpawnOptions } from './spawn';
 export type { TSpriteAnimation, TSpriteAnimationOptions, TAnimationClip, TSkeletalAnimation, TSkeletalAnimationOptions, TSkeletalClipOptions, TAnimatable } from './animation';

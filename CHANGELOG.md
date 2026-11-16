@@ -165,6 +165,14 @@ releases are in [changelog/](./changelog/), one file each.
   `composerSwizzle(composerPolar(), 'yx')` is a strip laid round a ring: a dial, a radar, rays from
   a sun, a ring that fills like a clock; with `composerTime()` added, one that spins.
 
+- **`useExtrudeGeometry`: a flat outline pushed out into a solid**: a diamond, a star, a letter,
+  a gear, a frame. `{ outline, holes, depth, bevel: { size, segments }, creaseAngle }`: the outline
+  in points as its front face is seen, either way round, pushed out along `z` and centred on its
+  depth; holes cut right through; a bevel cuts its edges in from the outline and the faces, so it
+  still fills the outline by its depth (one segment a straight cut, more a rounder one); sides meet
+  hard where the outline turns sharply and smoothly where it turns a little. Its picture is laid
+  once over each face and once round the sides, and a scene document keeps its recipe.
+
 - **`mergeGeometries(pieces)`: several shapes made one, each where it sits**, for what stands still
   together: a fence, a table, the separators round a wheel. Each piece is `{ geometry, x, y, z,
   rotation…, quaternion, scale…, tint }`, placed as an instance of `createMeshInstances` is; its facings turn
