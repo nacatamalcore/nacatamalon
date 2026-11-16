@@ -15,7 +15,7 @@ export {
 } from './math';
 export { composerPipe } from './pipe';
 export { composerSimplexNoise, composerFbm, composerCellularNoise } from './noise';
-export { composerFresnel, composerCelShade } from './effects';
+export { composerFresnel, composerCelShade, composerPolar } from './effects';
 export { toonLighting, unlitLighting, mangaDots, rim, groundBounce, MATERIAL_LOOKS, findMaterialLook } from './surface/looks';
 export type { TMaterialLookInfo } from './surface/looks';
 export { lookUniforms } from './surface/compose_surface';

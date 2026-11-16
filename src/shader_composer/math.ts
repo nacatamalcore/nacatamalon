@@ -443,17 +443,24 @@ const SPELLED: Record<TUniformType, { wgsl: string; glsl: string; suffix: string
  * The one built-in the two languages spell differently, `atan2` in WGSL and `atan` with two
  * arguments in GLSL. Wrapped in a helper of the same name in both, one per type, so the rule that a
  * call needs no translation holds.
+ *
+ * At the origin itself there is no angle, and neither language says what it gives there: one card
+ * may give `0`, another anything. So both give `0` there, every card the same, and a picture read at
+ * an angle (the middle of a ring) reads the same place everywhere.
  */
 const atan2Helper = (type: TUniformType): THelperDef => {
     const t = SPELLED[type];
     const name = `sgAtan2${t.suffix}`;
+    const glslAtOrigin = type === 'f32'
+        ? 'abs(x) + abs(y) == 0.0 ? 0.0 : atan(y, x)'
+        : `mix(atan(y, x), ${t.glsl}(0.0), equal(abs(x) + abs(y), ${t.glsl}(0.0)))`;
     return {
         name,
         wgsl: /* wgsl */ `fn ${name}(y: ${t.wgsl}, x: ${t.wgsl}) -> ${t.wgsl} {
-    return atan2(y, x);
+    return select(atan2(y, x), ${t.wgsl}(0.0), abs(x) + abs(y) == ${t.wgsl}(0.0));
 }`,
         glsl: /* glsl */ `${t.glsl} ${name}(${t.glsl} y, ${t.glsl} x) {
-    return atan(y, x);
+    return ${glslAtOrigin};
 }`,
     };
 };
@@ -465,7 +472,8 @@ const atan2Helper = (type: TUniformType): THelperDef => {
  * It is what turns a place into "how far round": a swirl, rays from a sun, a ring that fills like a
  * clock, a pattern wrapped around a centre. Taken around the middle of a sprite,
  * `composerAtan2(uv.y - 0.5, uv.x - 0.5)`; around a model's axis, from the corner's own position.
- * Divide by `2π` and add `0.5` for a turn from 0 to 1.
+ * Divide by `2π` and add `0.5` for a turn from 0 to 1. At the origin itself, where there is no
+ * angle, `0`, on every card.
  * @param y - The second coordinate. A number spreads over a vector given as `x`.
  * @param x - The first coordinate.
  * @returns The node, to use as the input of another.

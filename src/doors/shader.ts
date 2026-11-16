@@ -20,7 +20,7 @@ export {
     composerCross, composerPow, composerMin, composerMax, composerClamp, composerMix, composerStep,
     composerSmoothstep, composerReflect, composerMod, composerAtan2, composerOneMinus, composerSaturate,
     composerPipe, composerSimplexNoise, composerFbm, composerCellularNoise, composerFresnel,
-    composerCelShade, parseShaderGraph, compileShaderGraph, toonLighting, unlitLighting, mangaDots, rim, groundBounce,
+    composerCelShade, composerPolar, parseShaderGraph, compileShaderGraph, toonLighting, unlitLighting, mangaDots, rim, groundBounce,
 } from '../shader_composer';
 export type {
     TComposerNode, TComposerInput, TComposerSampleOptions, TComposerStep, TInputKind, THelperDef, TShaderGraph, TCompiledShader,

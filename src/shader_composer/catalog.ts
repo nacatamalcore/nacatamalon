@@ -12,7 +12,7 @@ import {
     composerSmoothstep, composerSqrt, composerStep, composerSub,
 } from './math';
 import { composerCellularNoise, composerFbm, composerSimplexNoise } from './noise';
-import { composerCelShade, composerFresnel } from './effects';
+import { composerCelShade, composerFresnel, composerPolar } from './effects';
 import type { TUniformType } from '../materials/types/t_uniforms';
 import type { TComposerNode } from './types/t_composer_node';
 import type { TGraphTarget, TParamValue } from './types/t_shader_graph_doc';
@@ -474,6 +474,18 @@ const DEFS: TNodeDef[] = [
             }
             return out;
         },
+    },
+
+    {
+        type: 'polar',
+        label: 'Polar',
+        category: 'vector',
+        summary: 'A place read round a centre: X how far from it (0 there, 1 at the middle of the edge), Y how far round (0 to 1, from the left). A picture read at it (Swizzle yx) becomes a ring: a dial, a radar, a ring that fills.',
+        inputs: [port('uv', V2, () => composerUv()), port('center', V2, [0.5, 0.5])],
+        outputs: OUT,
+        params: [],
+        outputType: V2,
+        build: (i) => composerPolar(i.uv, i.center),
     },
 
     // ── Procedural ──────────────────────────────────────────────────────────────────

@@ -146,9 +146,21 @@ releases are in [changelog/](./changelog/), one file each.
   uvScale: 0.25 })` one tile every four. Each corner keeps its facing, so hard edges stay hard. A
   scene document keeps them in the shape's recipe.
   `uvScale` goes only with `uvs`: a shape's own picture places are laid once, and are not scaled.
-  Each hook now says where its own picture places fall.
+  Each hook now says where its own picture places fall. A ring of numbers is a lathe of two points,
+  from the outside in: `useLatheGeometry({ profile: [{ x: 1.3, y: 0 }, { x: 1, y: 0 }] })` faces
+  up, with a strip once round it, its top at the inner edge.
+
+- **`composerPolar(uv?, center?)`** in the shader composer, and a Polar node in a shader graph: a
+  place read round a centre, `x` how far from it (`0` there, `1` at the middle of the edge) and `y`
+  how far round (a turn from `0`, on the left, to `1`). A picture read at
+  `composerSwizzle(composerPolar(), 'yx')` is a strip laid round a ring: a dial, a radar, rays from
+  a sun, a ring that fills like a clock; with `composerTime()` added, one that spins.
 
 ### Fixed
+
+- **`composerAtan2` at the origin is `0` on every card.** Neither shader language says what the
+  angle of `(0, 0)` is, so one card could give `0` and another anything, and a picture read at it
+  (the middle of a swirl or of a ring) could differ from one computer to the next.
 
 - **A box's picture is upright on every face.** Three of its six faces (`+x`, `-z` and the top) read
   it a quarter turn round; now each reads it as it is seen from outside, as `uvs: 'box'` lays it. A

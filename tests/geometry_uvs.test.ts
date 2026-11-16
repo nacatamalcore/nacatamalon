@@ -223,6 +223,23 @@ describe('a shape hook\'s own picture places', () => {
         }
     });
 
+    it('lay a strip round a flat ring turned from two points, outside in: facing up, its top at the inner edge', () => {
+        const { renderer, made } = built(() => [useLatheGeometry({ profile: [{ x: 1.3, y: 0 }, { x: 1, y: 0 }], segments: 8 })]);
+        const corners = cornersOf(renderer, made[0]);
+        expect(corners.length).toBeGreaterThan(0);
+        for (const corner of corners) {
+            const [x, , z] = corner.p;
+            expect(corner.n[1]).toBeCloseTo(1, 5);
+            // Down the picture from the inner edge (0) to the outer (1).
+            expect(corner.uv[1]).toBeCloseTo((Math.hypot(x, z) - 1) / 0.3, 5);
+            // Once round from +x, to the right as seen from outside, as the other round shapes.
+            const u = corner.uv[0];
+            if (near(u, 0) || near(u, 1)) continue;
+            const turn = Math.atan2(-z, x) / (Math.PI * 2);
+            expect(u).toBeCloseTo(turn < 0 ? turn + 1 : turn, 5);
+        }
+    });
+
     it('go round the evenly divided ball with no triangle across the seam and no picture pinched at a pole', () => {
         const { renderer, made } = built(() => [useIcoSphereGeometry({ subdivisions: 2 })]);
         const corners = cornersOf(renderer, made[0]);

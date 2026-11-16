@@ -49,7 +49,10 @@ export type TLatheGeometryOptions = TGeometryUvOptions & {
  *
  * **Its picture** goes once round (`u`, from `0` at `+x`, growing to the right as the side is seen
  * from outside) and once down the profile by its length (`v`, from `0` at the top), so a label
- * wrapped round a bottle is not stretched where the profile is steep.
+ * wrapped round a bottle is not stretched where the profile is steep. A flat ring (the numbers round
+ * a wheel, a dial's rim) is two points, from the outside in, `[{ x: 1.3, y: 0 }, { x: 1, y: 0 }]`:
+ * it faces up, and a strip of pictures goes once round it with its top at the inner edge, each one
+ * upright for whoever reads it from outside.
  *
  * @param options The profile, and how many faces round.
  * @returns The shape, ready to be shown.

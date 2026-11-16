@@ -296,8 +296,8 @@ describe('composerAtan2', () => {
             color: composerVec4(composerAtan2(composerSwizzle(composerUv(), 'y'), composerSwizzle(composerUv(), 'x')), 0, 0, 1),
         });
 
-        expect(compiled.fragment).toContain('fn sgAtan2f(y: f32, x: f32) -> f32 {\n    return atan2(y, x);\n}');
-        expect(compiled.fragmentGlsl).toContain('float sgAtan2f(float y, float x) {\n    return atan(y, x);\n}');
+        expect(compiled.fragment).toContain('fn sgAtan2f(y: f32, x: f32) -> f32 {\n    return select(atan2(y, x), f32(0.0), abs(x) + abs(y) == f32(0.0));\n}');
+        expect(compiled.fragmentGlsl).toContain('float sgAtan2f(float y, float x) {\n    return abs(x) + abs(y) == 0.0 ? 0.0 : atan(y, x);\n}');
         expect(compiled.fragment).toContain('sgAtan2f(');
         expect(compiled.fragmentGlsl).not.toContain('atan2(');
     });
