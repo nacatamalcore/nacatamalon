@@ -149,10 +149,24 @@ const pendingShape = (key: string, source: TGeometry['source']): TGeometry => cr
     detailBuffer: null,
 });
 
+/**
+ * A shape the document asks for that cannot be made (an outline that crosses itself, a bevel too
+ * wide for its box) is the document's word and not a mistake in the game's code: said, and the
+ * meshes that want it go without, as for a shape not in the manifest, rather than the whole scene
+ * not opening.
+ */
+const madeOrSaid = (make: () => void, key: string, src: string): void => {
+    try {
+        make();
+    } catch (error) {
+        console.warn(`[NacatamalOn] scene "${src}": the shape "${key}" is not made: ${error instanceof Error ? error.message.replace(/^\[NacatamalOn\] /, '') : String(error)}`);
+    }
+};
+
 const loadGeometry = (asset: Extract<TAssetEntry, { type: 'geometry' }>, src: string): void => {
     const { key, source } = asset;
     switch (source.kind) {
-        case 'cube': useCubeGeometry({ key, ...source }); break;
+        case 'cube': madeOrSaid(() => useCubeGeometry({ key, ...source }), key, src); break;
         case 'plane': usePlaneGeometry({ key, ...source }); break;
         case 'circle': useCircleGeometry({ key, ...source }); break;
         case 'uvSphere': useSphereGeometry({ key, ...source }); break;
@@ -161,17 +175,7 @@ const loadGeometry = (asset: Extract<TAssetEntry, { type: 'geometry' }>, src: st
         case 'cone': useConeGeometry({ key, ...source }); break;
         case 'torus': useTorusGeometry({ key, ...source }); break;
         case 'lathe': useLatheGeometry({ key, ...source }); break;
-        case 'extrude': {
-            // An outline that crosses itself, or a bevel too wide for it, is the document's word and
-            // not a mistake in the game's code: said, and the meshes that want it go without, as
-            // for a shape not in the manifest, rather than the whole scene not opening.
-            try {
-                useExtrudeGeometry({ key, ...source });
-            } catch (error) {
-                console.warn(`[NacatamalOn] scene "${src}": the shape "${key}" is not made: ${error instanceof Error ? error.message.replace(/^\[NacatamalOn\] /, '') : String(error)}`);
-            }
-            break;
-        }
+        case 'extrude': madeOrSaid(() => useExtrudeGeometry({ key, ...source }), key, src); break;
         case 'gltf': {
             // The whole file, as one call: its parts land in the model cache under keys of their
             // own, and a mesh names the one it wants.

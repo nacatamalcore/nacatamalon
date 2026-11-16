@@ -1357,13 +1357,24 @@ const uvRecipe = (raw: Record<string, unknown>): TGeometryUvOptions => {
     return { uvs: raw.uvs as TUvProjection, ...scale };
 };
 
+/**
+ * A built shape's `bevel`, when its `size` is a number above 0: anything else is left out, and the
+ * edges stay sharp. Whether it fits the shape is the hook's to say.
+ */
+const bevelRecipe = (raw: Record<string, unknown>): { bevel?: { size: number; segments?: number } } => {
+    const bevel = asRecord(raw.bevel);
+    return bevel !== null && typeof bevel.size === 'number' && Number.isFinite(bevel.size) && bevel.size > 0
+        ? { bevel: { size: bevel.size, ...optionalNumber(bevel, 'segments') } }
+        : {};
+};
+
 const parseGeometrySource = (value: unknown, key: string): TGeometrySource | null => {
     const raw = asRecord(value);
     if (raw === null || typeof raw.kind !== 'string') {
         return null;
     }
     switch (raw.kind) {
-        case 'cube': return { kind: 'cube', ...optionalNumber(raw, 'width'), ...optionalNumber(raw, 'height'), ...optionalNumber(raw, 'depth'), ...uvRecipe(raw) };
+        case 'cube': return { kind: 'cube', ...optionalNumber(raw, 'width'), ...optionalNumber(raw, 'height'), ...optionalNumber(raw, 'depth'), ...bevelRecipe(raw), ...uvRecipe(raw) };
         case 'plane': return { kind: 'plane', ...optionalNumber(raw, 'width'), ...optionalNumber(raw, 'depth'), ...optionalNumber(raw, 'widthSegments'), ...optionalNumber(raw, 'depthSegments'), ...uvRecipe(raw) };
         case 'circle': return { kind: 'circle', ...optionalNumber(raw, 'radius'), ...optionalNumber(raw, 'segments'), ...uvRecipe(raw) };
         case 'uvSphere': return { kind: 'uvSphere', ...optionalNumber(raw, 'radius'), ...optionalNumber(raw, 'segments'), ...optionalNumber(raw, 'rings'), ...uvRecipe(raw) };
@@ -1396,16 +1407,12 @@ const parseGeometrySource = (value: unknown, key: string): TGeometrySource | nul
             const outline = ring(raw.outline);
             const holes = raw.holes === undefined ? [] : Array.isArray(raw.holes) ? raw.holes.map(ring) : [null];
             if (outline === null || holes.some((hole) => hole === null)) return null;
-            const bevelRaw = asRecord(raw.bevel);
-            const bevel = bevelRaw !== null && typeof bevelRaw.size === 'number' && Number.isFinite(bevelRaw.size) && bevelRaw.size > 0
-                ? { bevel: { size: bevelRaw.size, ...optionalNumber(bevelRaw, 'segments') } }
-                : {};
             return {
                 kind: 'extrude',
                 outline,
                 ...(holes.length > 0 ? { holes: holes as Array<Array<{ x: number; y: number }>> } : {}),
                 ...optionalNumber(raw, 'depth'),
-                ...bevel,
+                ...bevelRecipe(raw),
                 ...optionalNumber(raw, 'creaseAngle'),
                 ...uvRecipe(raw),
             };

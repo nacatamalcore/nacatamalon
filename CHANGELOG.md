@@ -165,6 +165,13 @@ releases are in [changelog/](./changelog/), one file each.
   `composerSwizzle(composerPolar(), 'yx')` is a strip laid round a ring: a dial, a radar, rays from
   a sun, a ring that fills like a clock; with `composerTime()` added, one that spins.
 
+- **A box with its edges rounded or cut: `useCubeGeometry({ bevel: { size, segments } })`**, for a
+  cushioned table edge, a 3D button, a die. The edges are cut `size` in from every face, so the box
+  still fills its `width` by `height` by `depth`; one segment is a straight cut at 45°, more a rounded
+  one with corners like a ball's. Each face's picture reaches round to the middle of its edges, and a
+  scene document keeps the bevel in the cube's recipe. A bevel that does not fit is said, and a scene
+  whose cube asks for one opens without that shape.
+
 - **`useExtrudeGeometry`: a flat outline pushed out into a solid**: a diamond, a star, a letter,
   a gear, a frame. `{ outline, holes, depth, bevel: { size, segments }, creaseAngle }`: the outline
   in points as its front face is seen, either way round, pushed out along `z` and centred on its

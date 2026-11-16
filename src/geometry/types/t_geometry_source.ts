@@ -20,7 +20,7 @@ import type { TGeometryUvOptions } from '../build/project_uvs';
  * @author Francisco Pereira Alvarado
  */
 export type TGeometrySource =
-    | ({ kind: 'cube'; width?: number; height?: number; depth?: number } & TGeometryUvOptions)
+    | ({ kind: 'cube'; width?: number; height?: number; depth?: number; bevel?: { size: number; segments?: number } } & TGeometryUvOptions)
     | ({ kind: 'plane'; width?: number; depth?: number; widthSegments?: number; depthSegments?: number } & TGeometryUvOptions)
     | ({ kind: 'circle'; radius?: number; segments?: number } & TGeometryUvOptions)
     | ({ kind: 'uvSphere'; radius?: number; segments?: number; rings?: number } & TGeometryUvOptions)

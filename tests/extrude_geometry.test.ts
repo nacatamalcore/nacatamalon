@@ -7,6 +7,7 @@ import { useExtrudeGeometry } from '../src/hooks/geometry/use_extrude_geometry';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { useTransform } from '../src/hooks/transform/use_transform';
 import { parseSceneDoc, sceneFromDoc, serializeScene } from '../src/scene/document';
+import { corner, seenFromOutside, solidOf } from './helpers/solid';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import type { TExtrudeGeometryOptions } from '../src/hooks/geometry/use_extrude_geometry';
 import type { TGeometry } from '../src/geometry';
@@ -36,50 +37,6 @@ const made = (options: TExtrudeGeometryOptions) => {
     const vertices = game.renderer.buffers.find((buffer) => buffer.handle === g.vertexBuffer)!.data as Float32Array;
     const indices = game.renderer.buffers.find((buffer) => buffer.handle === g.indexBuffer)!.data as Uint16Array;
     return { geometry: g, vertices, indices };
-};
-
-const corner = (vertices: Float32Array, i: number) => Array.from(vertices.subarray(i * GEOMETRY_STRIDE, i * GEOMETRY_STRIDE + 8));
-
-/**
- * Whether the solid is closed, every side of every triangle met by another going the other way, and
- * how much it holds: positive when every triangle is seen from outside.
- */
-const solidOf = ({ vertices, indices }: { vertices: Float32Array; indices: Uint16Array | Uint32Array }) => {
-    const key = (i: number) => [0, 1, 2].map((k) => vertices[i * GEOMETRY_STRIDE + k]!.toFixed(6)).join(',');
-    const sides = new Map<string, number>();
-    let volume = 0;
-    for (let t = 0; t < indices.length; t += 3) {
-        const [a, b, c] = [indices[t]!, indices[t + 1]!, indices[t + 2]!];
-        const p = [a, b, c].map((i) => corner(vertices, i));
-        volume += (p[0]![0]! * (p[1]![1]! * p[2]![2]! - p[1]![2]! * p[2]![1]!)
-            - p[0]![1]! * (p[1]![0]! * p[2]![2]! - p[1]![2]! * p[2]![0]!)
-            + p[0]![2]! * (p[1]![0]! * p[2]![1]! - p[1]![1]! * p[2]![0]!)) / 6;
-        for (const [from, to] of [[a, b], [b, c], [c, a]] as const) {
-            const there = `${key(from)}>${key(to)}`;
-            sides.set(there, (sides.get(there) ?? 0) + 1);
-        }
-    }
-    let open = 0;
-    for (const [side, count] of sides) {
-        const [from, to] = side.split('>');
-        if ((sides.get(`${to}>${from}`) ?? 0) !== count) open++;
-    }
-    return { closed: open === 0, volume };
-};
-
-/** For each triangle, whether its corners' facings agree with the way its corners go round. */
-const seenFromOutside = ({ vertices, indices }: { vertices: Float32Array; indices: Uint16Array | Uint32Array }): boolean => {
-    for (let t = 0; t < indices.length; t += 3) {
-        const p = [indices[t]!, indices[t + 1]!, indices[t + 2]!].map((i) => corner(vertices, i));
-        const e1 = [0, 1, 2].map((k) => p[1]![k]! - p[0]![k]!);
-        const e2 = [0, 1, 2].map((k) => p[2]![k]! - p[0]![k]!);
-        const n = [e1[1]! * e2[2]! - e1[2]! * e2[1]!, e1[2]! * e2[0]! - e1[0]! * e2[2]!, e1[0]! * e2[1]! - e1[1]! * e2[0]!];
-        if (Math.hypot(n[0]!, n[1]!, n[2]!) < 1e-12) continue;
-        for (const q of p) {
-            if (n[0]! * q[3]! + n[1]! * q[4]! + n[2]! * q[5]! <= 0) return false;
-        }
-    }
-    return true;
 };
 
 describe('useExtrudeGeometry', () => {
@@ -205,7 +162,13 @@ describe('useExtrudeGeometry', () => {
         expect(ask({ outline: DIAMOND, depth: 0 })).toThrow('depth is 0');
         expect(ask({ outline: DIAMOND, depth: 1, bevel: { size: 0.6 } })).toThrow('at most half the depth (0.5)');
         expect(ask({ outline: DIAMOND, bevel: { size: 0.1, segments: 0 } })).toThrow('bevel.segments is 0');
-        expect(ask({ outline: square(1), holes: [square(0.9)], bevel: { size: 0.2 } })).toThrow('a bevel of 0.2 is wider than the outline is at its narrowest');
+        expect(ask({ outline: square(1), holes: [square(0.9)], bevel: { size: 0.2 } })).toThrow('a bevel of 0.2 reaches past the middle of the outline where it is narrowest');
+        // Cut past its middle, a square, a triangle or any round outline comes out turned half
+        // round: still the same way round, but every side backwards.
+        expect(ask({ outline: square(1), depth: 6, bevel: { size: 1.1 } })).toThrow('a bevel of 1.1 reaches past the middle of the outline where it is narrowest');
+        expect(ask({ outline: circle(1, 3), depth: 6, bevel: { size: 0.6 } })).toThrow('a bevel of 0.6 reaches past');
+        expect(ask({ outline: circle(1, 6), depth: 6, bevel: { size: 1.2 } })).toThrow('a bevel of 1.2 reaches past');
+        expect(ask({ outline: square(1), depth: 6, bevel: { size: 0.99 } })).not.toThrow();
         expect(ask({ outline: DIAMOND, creaseAngle: -1 })).toThrow('creaseAngle is -1');
         expect(ask({ outline: [{ x: 0, y: 0 }, { x: 1, y: 1 }, { x: 1, y: 0 }, { x: 0, y: 1 }] })).toThrow('useExtrudeGeometry: the outline crosses or touches itself');
         expect(ask({} as TExtrudeGeometryOptions)).toThrow('useExtrudeGeometry: the outline takes a list of points');

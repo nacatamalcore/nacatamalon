@@ -96,13 +96,21 @@ export const buildExtrude = (
     const faceInset = bevel === null ? 0 : bevel.size;
     const faces = contours.map((ring, c) => inset(ring, miters[c]!, faceInset));
     if (bevel !== null) {
-        // Each still going round as it did, none crossing itself or another, and every hole still
-        // inside the outline and outside the others: one grown past the outline meets nothing.
-        const folded = faces.some((ring, c) => Math.sign(areaOf(ring)) !== Math.sign(areaOf(contours[c]!)) || crossesItself(ring))
+        // Each still going round as it did, every side still running the way it ran on the outline
+        // (a square cut past its middle comes out turned half round, the same way round but every
+        // side backwards), none crossing itself or another, and every hole still inside the outline
+        // and outside the others: one grown past the outline meets nothing.
+        const backwards = (ring: ReadonlyArray<TPoint>, c: number) => ring.some((p, i) => {
+            const q = ring[(i + 1) % ring.length]!;
+            const a = contours[c]![i]!;
+            const b = contours[c]![(i + 1) % ring.length]!;
+            return (q.x - p.x) * (b.x - a.x) + (q.y - p.y) * (b.y - a.y) <= 0;
+        });
+        const folded = faces.some((ring, c) => Math.sign(areaOf(ring)) !== Math.sign(areaOf(contours[c]!)) || backwards(ring, c) || crossesItself(ring))
             || faces.some((ring, c) => faces.some((other, d) => d > c && ringsTouch(ring, other)))
             || faces.some((ring, c) => c > 0 && (!insideRing(ring[0]!, faces[0]!) || faces.some((other, d) => d > 0 && d !== c && insideRing(ring[0]!, other))));
         if (folded) {
-            throw new Error(`[NacatamalOn] ${hook}: a bevel of ${bevel.size} is wider than the outline is at its narrowest, and its faces would fold over themselves. Make it smaller.`);
+            throw new Error(`[NacatamalOn] ${hook}: a bevel of ${bevel.size} reaches past the middle of the outline where it is narrowest, past the rounding of a corner given in points, or past the room a sharp corner pointing into the solid leaves (a notch, the tip of a hole), and its faces would fold over themselves. Make it smaller.`);
         }
     }
 

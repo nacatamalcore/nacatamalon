@@ -31,7 +31,11 @@ export type TExtrudeGeometryOptions = TGeometryUvOptions & {
      * The edges between its faces and its sides cut off, `size` in from both: the solid still fills
      * the outline by `depth`, and its faces are smaller by `size`. `segments` is in how many steps,
      * `1` a straight cut at 45° and more a rounder one; default `3`. Left out, the edges are sharp.
-     * At most half the depth, and narrower than the outline is at its narrowest.
+     * At most half the depth, less than half as wide as the outline is at its narrowest (it cuts in
+     * from both sides), and less than the rounding of a corner given in points: a card's corners
+     * rounded by `0.05` in eight points take a bevel up to `0.0496`. A sharp corner pointing into
+     * the solid, a narrow notch or the tip of a pointed hole, is cut back further than the bevel,
+     * and leaves room for less: a notch `0.1` wide at its mouth and `1` deep takes about `0.048`.
      */
     bevel?: { size: number; segments?: number };
     /**
