@@ -129,10 +129,10 @@ export type { TCameraFollow, TCameraFollowOptions, TCameraTarget } from './hooks
 export { useTileBody2d } from './physics/character/use_tile_body_2d';
 export type { TCharacterBody2d, TCharacterShape2d } from './physics/character/t_character_body_2d';
 export type { THitboxOptions } from './hooks';
-// Where the pointer is in the world, and where a point of the world is on the screen; and turning a
-// camera to look at something.
-export { screenToRay, worldToScreen, cameraLookAt } from './camera';
-export type { TRay, TScreenPoint } from './camera';
+// Where the pointer is in the world, and where a point of the world is on the screen; what a ray from
+// it meets, a model or a plane; and turning a camera to look at something.
+export { screenToRay, worldToScreen, cameraLookAt, castRay, rayOnPlane } from './camera';
+export type { TRay, TScreenPoint, TRayHit, TCastRayOptions, TPlane } from './camera';
 // A shape by the name it is kept under, which is how a collider names one.
 export { getGeometry, createGeometry, updateGeometry, mergeGeometries } from './geometry';
 export { createGameStore, localStorageAdapter, indexedDbAdapter } from './game_store';

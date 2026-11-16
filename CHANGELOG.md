@@ -165,6 +165,14 @@ releases are in [changelog/](./changelog/), one file each.
   `composerSwizzle(composerPolar(), 'yx')` is a strip laid round a ring: a dial, a radar, rays from
   a sun, a ring that fills like a clock; with `composerTime()` added, one that spins.
 
+- **`castRay(ray, where)`: what a ray meets among the models, no physics needed**: what was
+  clicked, with `screenToRay`, or what a piece stands on. Every model in `where` (a box, or several,
+  and what they hold) as it is drawn, nearest first: the object and the model, where, which way the
+  triangle faces, how far, which triangle and which instance of `createMeshInstances`. What is hidden
+  or pinned to the screen and the side of a triangle its material culls are not met; a boned model is
+  met unbent. And `rayOnPlane(ray, plane)`, where a ray meets a flat plane without end, the floor by
+  default: the point of the table under the pointer.
+
 - **`useLatheGeometry` turned part of the way, with hard edges**: `startAngle` and `arc`, in
   radians from `+x` the way `rotationY` turns, make a slice with its ends open (a roulette pocket, a
   half pipe, an arch), its picture across it; slices in colours are one shape with

@@ -11,6 +11,18 @@ import type { TTransform2d } from './t_transform_2d';
  * Rotations are in radians and applied Y, then X, then Z, and the whole is move, then turn, then
  * scale. Written out rather than filled in from defaults, for the reason {@link TTransform2d} gives.
  *
+ * **Which way each turns**, with `y` up, `x` to the right and `z` towards the viewer, as a camera
+ * that is not turned sees them, looking along `-z`:
+ *
+ * - `rotationY` turns to the left as seen from above: a quarter, `Math.PI / 2`, takes `+x` to `-z`,
+ *   and what looked along `-z` then looks along `-x`.
+ * - `rotationX` looks up: a quarter takes what looked along `-z` to `+y`, and `+y` to `+z`.
+ * - `rotation` turns about `z`, against the clock as the viewer sees it: a quarter takes `+x` to
+ *   `+y`. The same number turns a sprite with the clock, because in 2D `y` grows down.
+ *
+ * Y first, so `rotationX` looks up and down from wherever `rotationY` has turned to, and `rotation`
+ * rolls about the way it then faces.
+ *
  * A `quaternion` is the other way to say which way something is turned, and when one is set it is
  * the one that counts. Three angles cannot express every turn on their way to it: at certain
  * facings two of the three end up turning around the same line and one of them stops doing
@@ -27,11 +39,12 @@ export type TTransform3d = TTransform2d & {
      */
     z: number;
     /**
-     * Looking up and down, in radians.
+     * Looking up and down, in radians: more looks up, what faced `-z` tipping towards `+y`.
      */
     rotationX: number;
     /**
-     * Turning left and right, in radians.
+     * Turning left and right, in radians: more turns to the left as seen from above, `+x` towards
+     * `-z`.
      */
     rotationY: number;
     scaleZ: number;

@@ -8,3 +8,7 @@ export type { TRay } from './screen_to_ray';
 export { worldToScreen } from './world_to_screen';
 export type { TScreenPoint } from './world_to_screen';
 export { cameraLookAt } from './camera_look_at';
+export { castRay } from './cast_ray';
+export type { TRayHit, TCastRayOptions } from './cast_ray';
+export { rayOnPlane } from './ray_on_plane';
+export type { TPlane } from './ray_on_plane';
