@@ -2,6 +2,8 @@ import { getActiveBox, getActiveGame } from '../store';
 import { freeGeometryBuffers } from './free_geometry';
 import { nanoId } from '../utils';
 import { computeDetail } from './build/compute_tangents';
+import { keepCorners } from './kept_corners';
+import type { TKeptCorners } from './kept_corners';
 import { computeNormals, splitPerCorner, toFlatShaded } from './build/normals';
 import { checkUvProjection, projectUvs, UV_PROJECTIONS } from './build/project_uvs';
 import { boundsOf, colorsFor, positionsOf, uploadGeometry } from './upload_geometry';
@@ -81,6 +83,13 @@ export type TGeometryData = {
  */
 type TOwned = {
     store: TRuntimeStore;
+    /**
+     * What it was last built from, for a merge to lay out anew: its corners, colours and second
+     * places kept on this side for as long as the shape lives, which a shape of the object's own
+     * pays for (about 32 bytes a corner more than its places alone) and a shape hook's does not,
+     * being built again from its recipe. One copy, replaced by each `updateGeometry`.
+     */
+    built: TKeptCorners;
     vertexBytes: number;
     indexBytes: number;
     indexType: 'uint16' | 'uint32';
@@ -295,19 +304,36 @@ const release = (geometry: TGeometry): void => {
  * @author Francisco Pereira Alvarado
  */
 export const createGeometry = (data: TGeometryData): TGeometry => {
+    if (getActiveGame() === null || getActiveBox() === null) {
+        throw outsideSceneBody('createGeometry');
+    }
+    return ownGeometry('createGeometry', assemble('createGeometry', data));
+};
+
+/**
+ * Puts corners already built on the card as a shape of the object being made, the way
+ * `createGeometry` makes one: it goes when the object goes, `updateGeometry` changes it, and a merge
+ * can read it again. What `mergeGeometries` makes is one of these too.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const ownGeometry = (hook: string, built: TKeptCorners): TGeometry => {
     const store = getActiveGame();
     const box = getActiveBox();
     if (store === null || box === null) {
-        throw outsideSceneBody('createGeometry');
+        throw outsideSceneBody(hook);
     }
-    const built = assemble('createGeometry', data);
     const geometry = uploadGeometry(store, `geometry:${nanoId()}`, { ...built, detail: computeDetail(built.vertices, built.indices, null, built.uv2) }, null);
     owned.set(geometry, {
         store,
+        built,
         vertexBytes: built.vertices.byteLength,
         indexBytes: built.indices.byteLength,
         indexType: geometry.indexType,
     });
+    keepCorners(geometry, () => owned.get(geometry)?.built ?? null);
     box.cleanups.push(() => release(geometry));
     return geometry;
 };
@@ -413,6 +439,7 @@ export const updateGeometry = (geometry: TGeometry, data: TGeometryData): void =
         held.indexType = indexType;
     }
 
+    held.built = built;
     geometry.indexType = indexType;
     geometry.vertexCount = built.vertices.length / GEOMETRY_STRIDE;
     geometry.indexCount = built.indices.length;

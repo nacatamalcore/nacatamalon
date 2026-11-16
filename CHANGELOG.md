@@ -165,6 +165,15 @@ releases are in [changelog/](./changelog/), one file each.
   `composerSwizzle(composerPolar(), 'yx')` is a strip laid round a ring: a dial, a radar, rays from
   a sun, a ring that fills like a clock; with `composerTime()` added, one that spins.
 
+- **`mergeGeometries(pieces)`: several shapes made one, each where it sits**, for what stands still
+  together: a fence, a table, the separators round a wheel. Each piece is `{ geometry, x, y, z,
+  rotation…, quaternion, scale…, tint }`, placed as an instance of `createMeshInstances` is; its facings turn
+  with it, one mirrored by a negative scale is turned back the right way out, and its `tint` is
+  painted on its corners, so pieces that differ only in colour share one material. One draw only
+  for pieces in one material: nine materials are still nine merges. Shapes from a shape hook,
+  `createGeometry` or another merge; not a piece of a model file, whose corners are on the card
+  alone. It is the object's own, as `createGeometry`'s is.
+
 ### Fixed
 
 - **`composerAtan2` at the origin is `0` on every card.** Neither shader language says what the

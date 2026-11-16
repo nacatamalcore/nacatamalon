@@ -4,6 +4,7 @@ import type { TGeometry } from '../../geometry';
 import type { TGeometrySource } from '../../geometry/types/t_geometry_source';
 import { outsideSceneBody } from '../../utils/outside_scene_body';
 import { checkUvProjection, reprojectWoven } from '../../geometry/build/project_uvs';
+import { keepCorners } from '../../geometry/kept_corners';
 import type { TGeometryUvOptions } from '../../geometry/build/project_uvs';
 
 /**
@@ -59,6 +60,16 @@ export const useGeometry = (
         return cached;
     }
 
-    const built = build();
-    return uploadGeometry(store, key, projection === null ? built : reprojectWoven(built, projection, uv.uvScale), source);
+    // The picture's way and scale read now, not when the corners are asked for again: the options
+    // are the game's, and may have changed by then.
+    const scale = uv.uvScale;
+    const woven = () => {
+        const built = build();
+        return projection === null ? built : reprojectWoven(built, projection, scale);
+    };
+    const geometry = uploadGeometry(store, key, woven(), source);
+    // Built again from the recipe when a merge asks, rather than kept: every hook's `build` closes
+    // over its own copy of the numbers it was asked for.
+    keepCorners(geometry, () => ({ ...woven(), colors: null, uv2: null }));
+    return geometry;
 };

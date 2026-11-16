@@ -26,7 +26,7 @@ export type { TLight2d, TAmbientLight2d, TLight, TDirectionalLight, TPointLight,
 export { useCubeGeometry, usePlaneGeometry, useCircleGeometry, useSphereGeometry, useIcoSphereGeometry, useCylinderGeometry, useConeGeometry, useTorusGeometry, useLatheGeometry } from './hooks';
 export type { TBlobShadowOptions } from './hooks';
 export type { TCubeGeometryOptions, TPlaneGeometryOptions, TCircleGeometryOptions, TSphereGeometryOptions, TIcoSphereGeometryOptions, TCylinderGeometryOptions, TConeGeometryOptions, TTorusGeometryOptions, TLatheGeometryOptions } from './hooks';
-export type { TGeometry, TGeometryData, TGeometryUvOptions, TUvProjection } from './geometry';
+export type { TGeometry, TGeometryData, TGeometryUvOptions, TMergePiece, TUvProjection } from './geometry';
 export type { TDrawable } from './gameobjects/types';
 export type { TTransformOptions } from './hooks';
 export type { TTransform3d } from './gameobjects/types/t_transform_3d';
@@ -134,7 +134,7 @@ export type { THitboxOptions } from './hooks';
 export { screenToRay, worldToScreen, cameraLookAt } from './camera';
 export type { TRay, TScreenPoint } from './camera';
 // A shape by the name it is kept under, which is how a collider names one.
-export { getGeometry, createGeometry, updateGeometry } from './geometry';
+export { getGeometry, createGeometry, updateGeometry, mergeGeometries } from './geometry';
 export { createGameStore, localStorageAdapter, indexedDbAdapter } from './game_store';
 // Reaching a store, by its key or from the object it was given to. Reading its file is in
 // `nacatamalon/files`; listing them and writing them are a tool's, in `nacatamalon/authoring`.
