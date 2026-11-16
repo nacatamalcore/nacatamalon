@@ -1,5 +1,5 @@
 import type { TColorOption } from '../../color';
-import type { TCullMode, TMaterialNormalMap, TMaterialReflection, TTextureWrap } from '../../materials';
+import type { TCullMode, TMaterialNormalMap, TMaterialReflection, TMaterialUvTransform, TTextureWrap } from '../../materials';
 import type { TTexture } from '../../loaders';
 import type { TTransform3d } from './t_transform_3d';
 
@@ -78,6 +78,12 @@ export type TMeshSurfaceOptions = {
      * the material's `normalMap`.
      */
     normalMap?: TTexture | TMaterialNormalMap;
+    /**
+     * Its picture laid moved from where its shape puts it: repeated, turned and slid,
+     * `{ scale, rotation, offset }`. See the material's `uvTransform`. A model file's own is read from
+     * the file, and this one is laid in its place.
+     */
+    uvTransform?: TMaterialUvTransform;
     /**
      * Which side of its triangles is thrown away. `'back'` (the default) is a shape seen from
      * outside; `'front'` one seen from inside, such as a dome of sky; `'none'` draws both sides, each

@@ -1,6 +1,6 @@
 import { buildMeshMaterialShader, buildMeshMaterialShadowShader, MESH_MATERIAL_GROUP, MESH_MATERIAL_JOINTS_BINDING } from './mesh_material_shader';
 import { failWithLines } from './fail_with_lines';
-import { buildUniformLayout, MAX_MATERIAL_FLOATS, writeUniformValues } from '../../shared/material_uniforms';
+import { buildUniformLayout, MAX_MATERIAL_FLOATS, writeUniformValues, writeUvTransformValues } from '../../shared/material_uniforms';
 import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import { textureWrapOf, wrapKey } from '../../shared/texture_wrap';
 import { toGpuTexture } from '../texture';
@@ -306,6 +306,7 @@ export const createMeshMaterials = (
 
             values.fill(0, 0, entry.layout.floatCount);
             writeUniformValues(values, entry.layout, material.uniforms ?? {}, time, width, height, overrides);
+            writeUvTransformValues(values, entry.layout, material.uvTransform);
             device.queue.writeBuffer(
                 slots as GPUBuffer,
                 slot * MESH_MATERIAL_STRIDE,

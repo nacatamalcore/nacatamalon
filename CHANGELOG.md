@@ -150,6 +150,15 @@ releases are in [changelog/](./changelog/), one file each.
   from the outside in: `useLatheGeometry({ profile: [{ x: 1.3, y: 0 }, { x: 1, y: 0 }] })` faces
   up, with a strip once round it, its top at the inner edge.
 
+- **`uvTransform` on a model's material: its picture repeated, turned and slid**, whatever the
+  shape: `createMaterial({ shader: 'mesh3d', texture, uvTransform: { scale: 4, rotation, offset } })`,
+  or on `createMesh` and `createModel`. Scaled, turned clockwise about the picture's top-left corner, then slid,
+  the order a model file's own `KHR_texture_transform` uses, now read from the file. Its glow, its
+  normal map (laid the new way round, so its relief leans right), an occlusion laid by the first
+  picture coordinate and `ctx.uv` move with it. Plain numbers read every frame, so
+  `material.uvTransform.offset.x += delta` scrolls a river. A scene document keeps it, and the
+  editor's inspector sets it (Picture repeat, turn and slide).
+
 - **`composerPolar(uv?, center?)`** in the shader composer, and a Polar node in a shader graph: a
   place read round a centre, `x` how far from it (`0` there, `1` at the middle of the edge) and `y`
   how far round (a turn from `0`, on the left, to `1`). A picture read at

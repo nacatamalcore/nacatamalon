@@ -1,7 +1,7 @@
 import type { TColor } from '../../../color';
 import type { TDrawTexture } from './t_draw_texture';
 import type { TUniformSignature, TUniformValues } from '../../../materials/types/t_uniforms';
-import type { TCullMode, TTextureWrap } from '../../../materials/types/t_material';
+import type { TCullMode, TMaterialUvTransformRecord, TTextureWrap } from '../../../materials/types/t_material';
 
 /**
  * A shader of the author's own, as the card needs to see it.
@@ -123,4 +123,9 @@ export type TDrawMaterial = TDrawShader & {
      * nothing is cut.
      */
     readonly alphaCutoff?: number;
+    /**
+     * How its picture is laid, moved from where its shape puts it, written into its two uniforms every
+     * draw (see `meshMaterialUniforms`).
+     */
+    readonly uvTransform?: TMaterialUvTransformRecord;
 };

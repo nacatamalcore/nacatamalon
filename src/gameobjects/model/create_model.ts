@@ -104,6 +104,8 @@ const buildPart = (
                 perPixel: options.perPixel,
                 reflection: options.reflection,
                 normalMap: options.normalMap,
+                // The game's word over the file's, as with the side and the cut.
+                uvTransform: options.uvTransform ?? part.uvTransform ?? undefined,
                 // The file's word unless the game says otherwise, as with see-through: a leaf the
                 // modelling program kept both sides of is drawn on both.
                 cull: options.cull ?? (part.doubleSided ? 'none' : undefined),

@@ -4,7 +4,7 @@ export { applyShader, rememberOverrides } from './apply_shader';
 export { plastic, ceramic, chrome, rubber, carPaint, glass, neon, pearl, hologram, gold, copper, brass, anodized, matcap } from './recipes';
 export type { TMaterialRecipe, TMaterialRecipeOptions, TMatcapOptions } from './recipes';
 
-export type { TMaterial, TSpriteMaterial, TMeshMaterial, TMaterialMap, TMaterialOcclusion, TMaterialReflection, TMaterialReflectionRecord, TMaterialNormalMap, TTextureWrap, TCullMode } from './types/t_material';
+export type { TMaterial, TSpriteMaterial, TMeshMaterial, TMaterialMap, TMaterialOcclusion, TMaterialReflection, TMaterialReflectionRecord, TMaterialNormalMap, TMaterialUvTransform, TMaterialUvTransformRecord, TTextureWrap, TCullMode } from './types/t_material';
 export type { TMaterialShader, TUniformType, TUniformValues, TUniformValue, TUniformPoint, TUniformPointValue, TUniformColorValue, TUniformNumbers, TUniformSignature } from './types/t_uniforms';
 export type {
     TMaterialOptions, TSpriteMaterialOptions, TMeshMaterialOptions, TMaterialShaderOptions,

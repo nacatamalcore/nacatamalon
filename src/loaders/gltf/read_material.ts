@@ -1,7 +1,7 @@
 import { toScreen } from './to_screen';
 import type { TColor } from '../../color';
-import type { TGltfDoc } from './types/t_gltf_doc';
-import type { TTextureWrap } from '../../materials';
+import type { TGltfDoc, TGltfMaterial, TGltfTextureInfo } from './types/t_gltf_doc';
+import type { TMaterialUvTransformRecord, TTextureWrap } from '../../materials';
 
 /**
  * The surface of one piece, in the only terms this engine's models understand.
@@ -56,6 +56,11 @@ export type TGltfSurface = {
      * What its picture does past its edge, from the file's sampler. Repeating when it says nothing.
      */
     wrap: { u: TTextureWrap; v: TTextureWrap };
+    /**
+     * How its pictures are laid moved, from its colour picture's `KHR_texture_transform`, or `null`
+     * when the file does not move them.
+     */
+    uvTransform: TMaterialUvTransformRecord | null;
 };
 
 /**
@@ -157,7 +162,7 @@ const occlusionOf = (
 export const readMaterial = (doc: TGltfDoc, index: number | undefined): TGltfSurface => {
     const material = index !== undefined ? doc.materials?.[index] : undefined;
     if (material === undefined) {
-        return { name: '', tint: WHITE, emissive: BLACK, image: null, emissiveImage: null, emissiveMasked: false, occlusion: null, transparent: false, doubleSided: false, alphaCutoff: null, wrap: REPEAT };
+        return { name: '', tint: WHITE, emissive: BLACK, image: null, emissiveImage: null, emissiveMasked: false, occlusion: null, transparent: false, doubleSided: false, alphaCutoff: null, wrap: REPEAT, uvTransform: null };
     }
 
     const [r, g, b, a] = material.pbrMetallicRoughness?.baseColorFactor ?? [1, 1, 1, 1];
@@ -186,5 +191,70 @@ export const readMaterial = (doc: TGltfDoc, index: number | undefined): TGltfSur
         // Kept in range: a file that says more than 1 cuts everything, which is what it asked for.
         alphaCutoff: material.alphaMode === 'MASK' ? Math.min(Math.max(material.alphaCutoff ?? 0.5, 0), 1) : null,
         wrap: { u: wrapOf(sampler?.wrapS), v: wrapOf(sampler?.wrapT) },
+        uvTransform: uvTransformOfMaterial(doc, material),
     };
+};
+
+/**
+ * A file's `KHR_texture_transform` as a material's `uvTransform`, or `null` for none or one that
+ * moves nothing. Its numbers are glTF's, in its order, so nothing is converted.
+ */
+const transformOf = (info: TGltfTextureInfo | undefined): TMaterialUvTransformRecord | null => {
+    const given = info?.extensions?.KHR_texture_transform;
+    if (given === undefined) {
+        return null;
+    }
+    const finite = (value: unknown, fallback: number): number => (typeof value === 'number' && Number.isFinite(value) ? value : fallback);
+    const sx = finite(given.scale?.[0], 1);
+    const sy = finite(given.scale?.[1], 1);
+    const record = {
+        // A scale of 0 squashes the picture to a line, which the file cannot have meant: laid as it is.
+        scale: { x: sx === 0 ? 1 : sx, y: sy === 0 ? 1 : sy },
+        rotation: finite(given.rotation, 0),
+        offset: { x: finite(given.offset?.[0], 0), y: finite(given.offset?.[1], 0) },
+    };
+    const still = record.scale.x === 1 && record.scale.y === 1 && record.rotation === 0 && record.offset.x === 0 && record.offset.y === 0;
+    return still ? null : record;
+};
+
+const sameTransform = (a: TMaterialUvTransformRecord | null, b: TMaterialUvTransformRecord | null): boolean =>
+    JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * How a surface's pictures are laid: its colour picture's transform, the one this engine lays all of
+ * them by (its glow, and an occlusion laid by the first coordinate, follow it). A glow or occlusion
+ * that the file moves another way is said once, and laid as the colour is.
+ */
+/**
+ * What was said about each file's surfaces, so a surface worn by many pieces is said once, not once a
+ * piece.
+ */
+const said = new WeakMap<TGltfDoc, Set<string>>();
+
+const sayOnce = (doc: TGltfDoc, message: string): void => {
+    const known = said.get(doc) ?? new Set<string>();
+    said.set(doc, known);
+    if (!known.has(message)) {
+        known.add(message);
+        console.warn(message);
+    }
+};
+
+const uvTransformOfMaterial = (doc: TGltfDoc, material: TGltfMaterial): TMaterialUvTransformRecord | null => {
+    const colour = transformOf(material.pbrMetallicRoughness?.baseColorTexture);
+    // A colour picture laid by another picture coordinate is read here by the first, moved or not.
+    const set = material.pbrMetallicRoughness?.baseColorTexture?.extensions?.KHR_texture_transform?.texCoord ?? 0;
+    if (set !== 0) {
+        sayOnce(doc, `[NacatamalOn] useLoadModel: the surface "${material.name ?? ''}" lays its colour picture by picture coordinate ${set} (KHR_texture_transform), and a colour picture here is laid by the first. It is laid by the first, moved as the file says.`);
+    }
+    const others = [
+        ['glow', material.emissiveTexture],
+        ['occlusion', (material.occlusionTexture?.texCoord ?? 0) === 0 ? material.occlusionTexture : undefined],
+    ] as const;
+    for (const [what, info] of others) {
+        if (info !== undefined && !sameTransform(transformOf(info), colour)) {
+            sayOnce(doc, `[NacatamalOn] useLoadModel: the surface "${material.name ?? ''}" lays its ${what} picture moved another way than its colour picture (KHR_texture_transform), and a surface here lays them all one way: its ${what} is laid as its colour is.`);
+        }
+    }
+    return colour;
 };

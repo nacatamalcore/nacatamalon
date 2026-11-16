@@ -151,7 +151,7 @@ export type { TDestroyOptions } from './destroy';
 export type { TLoadProgress, TLoadStatus, TAsset, TTexture, TLoadedAtlas, TBitmapFont, TFont, TAudioClip, TGltfModel, TGltfPart, TShading } from './loaders';
 export type { TSkeleton, TSkeletalClip, TJointPose, TClipEvent } from './animation';
 export type {
-    TMaterial, TSpriteMaterial, TMeshMaterial, TMaterialMap, TMaterialOcclusion, TMaterialReflection, TMaterialReflectionRecord, TMaterialNormalMap, TTextureWrap, TCullMode, TMaterialShader, TMaterialOptions,
+    TMaterial, TSpriteMaterial, TMeshMaterial, TMaterialMap, TMaterialOcclusion, TMaterialReflection, TMaterialReflectionRecord, TMaterialNormalMap, TMaterialUvTransform, TMaterialUvTransformRecord, TTextureWrap, TCullMode, TMaterialShader, TMaterialOptions,
     TSpriteMaterialOptions, TMeshMaterialOptions, TMaterialRecipe, TMaterialRecipeOptions, TMatcapOptions, TUniformType, TUniformValues, TUniformValue, TUniformPoint, TUniformPointValue, TUniformColorValue, TUniformNumbers, TUniformSignature,
 } from './materials';
 export type { TLightingLook, TStepLook } from './shader_composer';

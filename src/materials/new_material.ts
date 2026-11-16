@@ -6,10 +6,12 @@ import { checkParameterRoom } from './check_parameter_room';
 import { compileShader } from '../shader_composer/compile_shader';
 import { composeSurface, REFLECTION_MAP } from '../shader_composer/surface/compose_surface';
 import { MAP_NAME, MAX_MATERIAL_MAPS } from '../render/shared/material_maps';
-import type { TMaterial, TMaterialMap, TMaterialOcclusion, TMaterialReflection, TMaterialNormalMap, TMaterialReflectionRecord, TMeshMaterial, TSpriteMaterial } from './types/t_material';
+import { UV_MATRIX, UV_OFFSET, UV_SIGNATURE, uvTransformOf } from './material_uv_transform';
+import type { TMaterial, TMaterialMap, TMaterialOcclusion, TMaterialReflection, TMaterialNormalMap, TMaterialReflectionRecord, TMaterialUvTransformRecord, TMeshMaterial, TSpriteMaterial } from './types/t_material';
 import type { TMaterialOptions, TMeshMaterialOptions, TSpriteMaterialOptions } from './types/t_material_options';
 import type { TShader } from '../loaders/shader/types/t_shader';
 import type { TTexture } from '../loaders';
+import type { TUniformSignature } from './types/t_uniforms';
 
 /**
  * Whether a cull was asked for in a word the engine knows. Anything else is left out, and draws as
@@ -186,6 +188,38 @@ export const cutReflection = (material: TMeshMaterial): void => {
 };
 
 /**
+ * Lays a material's picture moved, after it was made: for a model piece whose file moves its picture
+ * (`KHR_texture_transform`), which is only known once the file lands. The same as made with
+ * `uvTransform`: its two numbers among its uniforms and, with no hook of its own, the engine's own
+ * ending as its colour hook. One already moved takes the new numbers. One drawn by an effect from a
+ * file cannot be moved (its shader is not the engine's): said, and left as it is.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const moveUv = (material: TMeshMaterial, transform: TMaterialUvTransformRecord): void => {
+    const laid = { scale: { ...transform.scale }, rotation: transform.rotation, offset: { ...transform.offset } };
+    if (material.uvTransform !== undefined) {
+        material.uvTransform = laid;
+        return;
+    }
+    if (material.effect !== null) {
+        console.warn(`[NacatamalOn] createMaterial: the material "${material.name ?? 'mesh material'}" is drawn by an effect from a file, so its picture cannot be laid as its model file moves it (KHR_texture_transform). It is laid as the shape puts it.`);
+        return;
+    }
+    const uniforms = material.uniforms ?? {};
+    if (material.fragment === null && material.fragmentGlsl === null && material.vertex === null && material.vertexGlsl === null) {
+        material.fragment = plainSurfaceHook().fragment;
+        material.fragmentGlsl = plainSurfaceHook().fragmentGlsl;
+    }
+    material.uniforms = uniforms;
+    material.uniformSig = withUvSignature(material.uniformSig ?? deriveSignature(uniforms), true);
+    checkParameterRoom(material.uniformSig, MATERIAL_RULES, material.name);
+    material.uvTransform = laid;
+};
+
+/**
  * The map a normal map takes, and the number its strength is: reserved names, which the ending of a
  * material's shader looks for to bend its facing (see mesh_material_shader.ts, `bumpedBy`).
  *
@@ -284,6 +318,45 @@ const withNormalMap = (options: TMeshMaterialOptions, effect: TShader | null): T
 };
 
 /**
+ * The options of a material whose picture is moved (`uvTransform`), made ready for it: for one with no
+ * hook of its own, the engine's own ending as its colour hook, so it is drawn by the shader that moves
+ * the picture (the built-in one has no room for its numbers), as one with a normal map is. The two
+ * numbers are declared in its signature (see `newMaterial`) and written by the renderer as it draws,
+ * never into the game's own uniforms.
+ */
+const withUvTransform = (options: TMeshMaterialOptions, effect: TShader | null): TMeshMaterialOptions => {
+    const moved = uvTransformOf(options.uvTransform);
+    const given = options.uniforms ?? {};
+    // Its two names are the engine's: a uniform of one's own by either would be written over, or move
+    // the picture of a material that never asked for it.
+    for (const name of [UV_MATRIX, UV_OFFSET]) {
+        if (typeof given === 'object' && given !== null && Object.hasOwn(given, name)) {
+            throw new Error(`[NacatamalOn] createMaterial: '${name}' is where uvTransform keeps its numbers, which the engine writes as it draws. Give your uniform another name, or lay the picture with uvTransform.`);
+        }
+    }
+    if (moved === undefined) {
+        return options;
+    }
+    if (effect !== null) {
+        throw new Error('[NacatamalOn] createMaterial: uvTransform goes with a shader written at the call site or with looks, not with an effect from a file: the file is read later, and the picture is moved by numbers the shader has from the start.');
+    }
+    const plain = options.fragment === undefined && options.fragmentGlsl === undefined && options.vertex === undefined && options.vertexGlsl === undefined
+        ? plainSurfaceHook()
+        : null;
+    return {
+        ...options,
+        ...(plain?.fragment !== undefined && plain.fragment !== null ? { fragment: plain.fragment } : {}),
+        ...(plain?.fragmentGlsl !== undefined && plain.fragmentGlsl !== null ? { fragmentGlsl: plain.fragmentGlsl } : {}),
+    };
+};
+
+/**
+ * A material's signature with the two numbers its moved picture is drawn with, when it moves it.
+ */
+const withUvSignature = (sig: TUniformSignature, moved: boolean): TUniformSignature =>
+    moved ? { ...sig, ...UV_SIGNATURE } : sig;
+
+/**
  * The shader a material's looks make, or `null` when it has none. Refuses what contradicts them: a
  * colour hook of its own (the looks make the colour), and a material for sprites (looks light a
  * model's surface).
@@ -343,6 +416,7 @@ export const newMaterial = (
     }
     if (options.shader === 'mesh3d') {
         options = withNormalMap(options as TMeshMaterialOptions, effect);
+        options = withUvTransform(options as TMeshMaterialOptions, effect);
     }
     const asked = options.uniforms ?? {};
     // Written inline, the source is what it is from the start. From a file, everything stays empty
@@ -363,7 +437,9 @@ export const newMaterial = (
         // Handed back when it was handed in, even with no shader to read it yet: whoever passed a
         // bag holds on to it to write into, and `createMaterial`'s type promises it is there.
         uniforms: shaded ? asked : options.uniforms ?? null,
-        uniformSig: shaded ? deriveSignature(asked) : null,
+        uniformSig: shaded
+            ? withUvSignature(deriveSignature(asked), options.shader === 'mesh3d' && uvTransformOf((options as TMeshMaterialOptions).uvTransform) !== undefined)
+            : null,
         effect,
     };
     if (half.uniformSig !== null) {
@@ -411,6 +487,10 @@ export const newMaterial = (
             ...(typeof (options as TMeshMaterialOptions).perPixel === 'boolean' ? { perPixel: (options as TMeshMaterialOptions).perPixel } : {}),
             ...(normalMapOf((options as TMeshMaterialOptions).normalMap) !== undefined
                 ? { normalMap: normalMapOf((options as TMeshMaterialOptions).normalMap)! }
+                : {}),
+            // The same: left out unless asked.
+            ...(uvTransformOf((options as TMeshMaterialOptions).uvTransform) !== undefined
+                ? { uvTransform: uvTransformOf((options as TMeshMaterialOptions).uvTransform)! }
                 : {}),
             // The same: left out unless asked. Asked for, even `'back'` is kept, because it is then a
             // decision: the side a scene keeps of a model piece whose file says both.

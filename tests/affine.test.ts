@@ -129,7 +129,8 @@ describe('the shaders', () => {
         expect(MESH_VERTEX_GLSL).toContain('vUv = affineUv(aUv, gl_Position);');
         expect(SKINNED_VERTEX_GLSL).toContain('vUv = affineUv(aUv, gl_Position);');
         expect(source('../src/render/webgpu/material/mesh_material_shader.ts')).toContain('out.uv = affineUv(uv, out.position);');
-        expect(source('../src/render/webgl2/material/mesh_material_shader.ts')).toContain('vUv = affineUv(aUv, gl_Position);');
+        // A material's is the picture place its uvTransform moved, or the corner's own.
+        expect(source('../src/render/webgl2/material/mesh_material_shader.ts')).toContain('vUv = affineUv(restUv, gl_Position);');
     });
 
     it('divide it back at the pixel in every ending, a material\'s own included', () => {

@@ -1,4 +1,6 @@
 import { writeUniform } from '../../materials/uniform_numbers';
+import { UV_MATRIX, UV_OFFSET, writeUvTransform } from '../../materials/material_uv_transform';
+import type { TMaterialUvTransformRecord } from '../../materials/types/t_material';
 import type { TUniformSignature, TUniformType, TUniformValues } from '../../materials';
 
 /**
@@ -190,4 +192,24 @@ export const writeUniformValues = (
     if (overrides !== null) {
         writeValues(out, layout, overrides);
     }
+};
+
+/**
+ * Writes a model material's `uvTransform` into its numbers for this draw, as it is now, so a game
+ * that slid its picture this frame sees it slid this frame. Straight into the places its layout gave
+ * the two numbers the engine declared for it (never among the game's own uniforms), after those are
+ * written. Nothing for a material that does not move its picture. Shared by the pass that draws the
+ * model and the one that draws its shadow, on both cards.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const writeUvTransformValues = (out: Float32Array, layout: TUniformLayout, transform: TMaterialUvTransformRecord | undefined): void => {
+    const matrixAt = layout.offsets[UV_MATRIX];
+    const offsetAt = layout.offsets[UV_OFFSET];
+    if (transform === undefined || matrixAt === undefined || offsetAt === undefined) {
+        return;
+    }
+    writeUvTransform(out, matrixAt, offsetAt, transform);
 };

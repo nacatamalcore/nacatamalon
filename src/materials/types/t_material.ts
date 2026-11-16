@@ -253,6 +253,49 @@ export type TMaterialNormalMap = {
 };
 
 /**
+ * How a model's picture is laid on it, moved from where its shape puts it: repeated, turned and slid.
+ * The three are done in that order, as a model file's own (glTF's `KHR_texture_transform`) are, so
+ * one read from a file is laid exactly as its author saw it.
+ *
+ * @category Materials
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TMaterialUvTransform = {
+    /**
+     * How many times the picture is laid across (`x`) and down (`y`) the place it had: `4` is four
+     * times each way, a floor of tiles from a picture of one; `{ x: 4, y: 1 }` only across; a
+     * negative one lays it mirrored. Not `0`. Default `1`.
+     */
+    scale?: number | { x: number; y: number };
+    /**
+     * How far it is turned, in radians, about the picture's top-left corner, its `(0, 0)`: clockwise as
+     * it is seen, as a model file turns it. Default `0`.
+     */
+    rotation?: number;
+    /**
+     * How far it is slid, in pictures (`1` is a whole picture): the place read is moved by this, so
+     * `{ x: 0.25, y: 0 }` shows the picture a quarter of the way on, moved to the left. Growing it
+     * every frame scrolls the picture: a river, a conveyor belt, clouds. Default none.
+     */
+    offset?: { x: number; y: number };
+};
+
+/**
+ * A material's `uvTransform` as it keeps it: every part filled in, plain numbers a game changes while
+ * it runs (`material.uvTransform.offset.x += delta * 0.5`), read afresh every frame.
+ *
+ * @category Materials
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TMaterialUvTransformRecord = {
+    scale: { x: number; y: number };
+    rotation: number;
+    offset: { x: number; y: number };
+};
+
+/**
  * A material's reflection as it keeps it: every number filled in, and how it is read and softened
  * only when it is a mirror's.
  *
@@ -393,6 +436,13 @@ export type TMeshMaterial = TShaderHalf & {
      * can be written down and made again. Left out when it has none.
      */
     normalMap?: Required<TMaterialNormalMap>;
+    /**
+     * How its picture is laid, moved from where its shape puts it (see {@link TMaterialUvTransform}):
+     * plain numbers, read every frame, so a game changes them while it runs. Left out when it has none,
+     * and then setting one later does nothing: the material is drawn by a shader that moves the
+     * picture only when it was made with one (`uvTransform: {}` for a picture that starts still).
+     */
+    uvTransform?: TMaterialUvTransformRecord;
     /**
      * Which side of its triangles is thrown away: `'back'`, `'front'` or `'none'` (see
      * {@link TCullMode}). Omitted, `'back'`. Read every frame, so it can change while the game runs.

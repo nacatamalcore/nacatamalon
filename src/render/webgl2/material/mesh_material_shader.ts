@@ -293,7 +293,7 @@ const STILL = /* glsl */ `
 const REST = /* glsl */ `
     vec3 rest = aPosition;
     vec3 restNormal = aNormal;
-    vec3 restTangent = aTangent.xyz;
+    vec3 builtTangent = aTangent.xyz;
     vec4 restColor = aColor;
     vec4 restInstance = vec4(0.0);
     vec3 restOrigin = vec3(0.0);
@@ -308,13 +308,43 @@ const REST_INSTANCED = /* glsl */ `
     mat4 instance = instancePlace();
     vec3 rest = (instance * vec4(aPosition, 1.0)).xyz;
     vec3 restNormal = normalize(facingTurnOf(mat3(instance)) * aNormal);
-    vec3 restTangent = normalize(mat3(instance) * aTangent.xyz);
+    vec3 builtTangent = normalize(mat3(instance) * aTangent.xyz);
     vec4 restColor = aColor * aInstanceColor;
     vec4 restInstance = aInstanceData;
     vec3 restOrigin = instance[3].xyz;
 `;
 
-const restOf = (instanced: boolean): string => instanced ? REST_INSTANCED : REST;
+/**
+ * The corner's picture place and the way across it, as the shape has them. The twin of UV_AS_BUILT
+ * in webgpu/material/mesh_material_shader.ts.
+ */
+const UV_AS_BUILT = /* glsl */ `
+    vec2 restUv = aUv;
+    vec3 restTangent = builtTangent;
+    float restHand = aTangent.w;
+`;
+
+/**
+ * The corner's picture place moved by the material's `uvTransform`, and the way across the picture
+ * with it. The twin of UV_MOVED in webgpu/material/mesh_material_shader.ts, which says why.
+ */
+const UV_MOVED = /* glsl */ `
+    mat2 uvTurn = mat2(mu.uvTransformMatrix.xy, mu.uvTransformMatrix.zw);
+    vec2 restUv = uvTurn * aUv + mu.uvTransformOffset;
+    float uvHand = sign(determinant(uvTurn));
+    vec3 builtDown = cross(restNormal, builtTangent) * aTangent.w;
+    vec3 restTangent = normalize(builtTangent * uvTurn[1].y - builtDown * uvTurn[0].y) * uvHand;
+    float restHand = aTangent.w * uvHand;
+`;
+
+/**
+ * Whether a material moves its picture: it has the two numbers a `uvTransform` writes.
+ */
+const movedBy = (sig: TUniformSignature): boolean =>
+    sig.uvTransformMatrix === 'vec4<f32>' && sig.uvTransformOffset === 'vec2<f32>';
+
+const restOf = (instanced: boolean, sig: TUniformSignature): string =>
+    (instanced ? REST_INSTANCED : REST) + (movedBy(sig) ? UV_MOVED : UV_AS_BUILT);
 
 /**
  * What a corner of a model drawn as many reads of its instance, with the helper its facing is turned
@@ -329,10 +359,10 @@ const INSTANCED_HEAD = INSTANCE_HEAD_GLSL + FACING_TURN_GLSL;
 const CORNER_CONTEXT = /* glsl */ `
     VertContext ctx;
     ctx.normal = restNormal;
-    ctx.uv = aUv;
+    ctx.uv = restUv;
     ctx.color = restColor;
     ctx.tangent = restTangent;
-    ctx.bitangent = cross(restNormal, restTangent) * aTangent.w;
+    ctx.bitangent = cross(restNormal, restTangent) * restHand;
     ctx.uv2 = aUv2;
     ctx.instance = restInstance;
     ctx.origin = restOrigin;
@@ -343,8 +373,8 @@ const CORNER_CONTEXT = /* glsl */ `
     vec3 given = surfaceNormal;
 `;
 
-const vertexBody = (normal: string, skinned: boolean, cull: TCullMode, instanced: boolean): string => /* glsl */ `
-void main() {${restOf(instanced)}${CORNER_CONTEXT}${normal}${skinned ? SKIN : STILL}
+const vertexBody = (normal: string, skinned: boolean, cull: TCullMode, instanced: boolean, sig: TUniformSignature): string => /* glsl */ `
+void main() {${restOf(instanced, sig)}${CORNER_CONTEXT}${normal}${skinned ? SKIN : STILL}
     gl_Position = snapToPixels(uniforms.mvp * placed);
 
     vec3 worldPos = (uniforms.model * placed).xyz;
@@ -375,7 +405,7 @@ void main() {${restOf(instanced)}${CORNER_CONTEXT}${normal}${skinned ? SKIN : ST
     vShine = shine;
     vCasterLight = casterDiffuse;
     vCasterShine = casterShine;${cull === 'none' ? TWO_SIDED_WRITE_GLSL : ''}
-    vUv = affineUv(aUv, gl_Position);
+    vUv = affineUv(restUv, gl_Position);
     // The second picture coordinate stretched the way the first is, as its twin does.
     vec2 stretched2 = affineUv(aUv2, gl_Position).xy;
     vNormal = vec4(worldNormal, stretched2.x);
@@ -385,7 +415,7 @@ ${cull === 'none' ? '' : `    vViewDir = viewDir;
     vFog = fogAt(worldPos);
     vScreen = vec4(gl_Position.xyw, stretched2.y);
     // A direction, so it is moved by the model's own turn and stretch rather than the facing's.
-    vTangent = vec4(normalize((uniforms.model * vec4(across, 0.0)).xyz), aTangent.w);
+    vTangent = vec4(normalize((uniforms.model * vec4(across, 0.0)).xyz), restHand);
     vCarry = carried;
 }
 `;
@@ -525,7 +555,7 @@ export const buildMeshMaterialShaderGlsl = (
         VERT_CONTEXT,
         cornerMaps(vertex, mapNames),
         vertex ?? DEFAULT_VERTEX,
-        vertexBody(vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL, skinned, cull, instanced),
+        vertexBody(vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL, skinned, cull, instanced, sig),
     ].join('\n'),
     fragment: [
         MESH_FRAGMENT_HEAD_GLSL,
@@ -599,7 +629,7 @@ export const buildMeshMaterialShadowShaderGlsl = (
                 cornerMaps(vertex, mapNames),
                 vertex ?? DEFAULT_VERTEX,
                 /* glsl */ `
-void main() {${restOf(instanced)}${CORNER_CONTEXT}${bend}
+void main() {${restOf(instanced, sig)}${CORNER_CONTEXT}${bend}
     gl_Position = uLightViewProj * uModel * placed;
 }
 `,
@@ -623,17 +653,17 @@ void main() {${restOf(instanced)}${CORNER_CONTEXT}${bend}
             cornerMaps(vertex, mapNames),
             vertex ?? DEFAULT_VERTEX,
             /* glsl */ `
-void main() {${restOf(instanced)}${CORNER_CONTEXT}${vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL}${bend}
+void main() {${restOf(instanced, sig)}${CORNER_CONTEXT}${vertex === null ? PLAIN_NORMAL : DEFORMED_NORMAL}${bend}
     // Turned as the model is, and measured again where the hook moved it, as the drawn model's is:
     // what the colour hook reads of the surface. The facing by the inverse of the placement, as the
     // drawn model's normal matrix turns it, so a model stretched unevenly is cut by the same facing.
     mat3 turn = ${skinned ? 'mat3(skin)' : 'mat3(1.0)'};
     gl_Position = uLightViewProj * uModel * placed;
-    vUv = aUv;
+    vUv = restUv;
     vNormal = normalize(facingTurnOf(mat3(uModel)) * ${skinned ? '(facingTurnOf(turn) * shaped)' : 'shaped'});
     vWorldPos = (uModel * placed).xyz;
     vColor = restColor;
-    vTangent = vec4(normalize((uModel * vec4(turn * restTangent, 0.0)).xyz), aTangent.w);
+    vTangent = vec4(normalize((uModel * vec4(turn * restTangent, 0.0)).xyz), restHand);
     vUv2 = aUv2;
     vCarry = carried;
 }

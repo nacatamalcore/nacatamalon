@@ -1,5 +1,6 @@
 import { deriveSignature, MATERIAL_RULES, withFileKinds } from './derive_signature';
 import { checkParameterRoom } from './check_parameter_room';
+import { UV_MATRIX, UV_OFFSET } from './material_uv_transform';
 import type { TMaterial } from './types/t_material';
 import type { TUniformValues } from './types/t_uniforms';
 import type { TShader } from '../loaders/shader/types/t_shader';
@@ -33,6 +34,11 @@ export const rememberOverrides = (material: TMaterial, values: TUniformValues): 
 const misfits = new WeakMap<TShader, Set<TMaterial['shader']>>();
 
 /**
+ * The model files already told they name a parameter a uvTransform keeps its numbers in.
+ */
+const takenNames = new WeakSet<TShader>();
+
+/**
  * Pours a loaded file into one material: its hooks, its uniforms, and the kinds of those uniforms.
  *
  * The file's own values go underneath and the call site's go on top, which is the rule a reader
@@ -58,6 +64,19 @@ export const applyShader = (material: TMaterial, shader: TShader): void => {
                 `${material.name !== null ? `"${material.name}" ` : ''}is ${material.shader}, so it keeps the built-in look. ` +
                 `Make the material with createMaterial({ shader: '${shader.shader}', ... }), or change the file's ` +
                 `'// @shader' line to ${material.shader}.`,
+            );
+        }
+        return;
+    }
+    // A model's file that names a parameter after the two a uvTransform is drawn with would move the
+    // picture of a material that never asked for it (the engine's shader moves it whenever both are
+    // there): not poured in, said once for the file, and the material keeps the built-in look.
+    if (material.shader === 'mesh3d' && (Object.hasOwn(shader.uniformSig, UV_MATRIX) || Object.hasOwn(shader.uniformSig, UV_OFFSET))) {
+        if (!takenNames.has(shader)) {
+            takenNames.add(shader);
+            console.warn(
+                `[NacatamalOn] createMaterial: '${shader.src}' names a parameter '${UV_MATRIX}' or '${UV_OFFSET}', which are where ` +
+                'a material\'s uvTransform keeps its numbers. It keeps the built-in look: give the parameter another name.',
             );
         }
         return;

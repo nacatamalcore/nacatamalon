@@ -1,5 +1,5 @@
 import { useLight2d, useAmbientLight2d, useUnlit2d } from '../../hooks/light';
-import { cutReflection } from '../../materials/new_material';
+import { cutReflection, moveUv } from '../../materials/new_material';
 import { createMaterial } from '../../gameobjects/material';
 import { createFilter, releaseFilter } from '../../filter/create_filter';
 import { effectFromEntry } from '../../post/install_post_chain';
@@ -51,7 +51,13 @@ import { markShownOnly } from '../../game_systems/game_systems';
 import { createMask, releaseMask } from '../../mask/create_mask';
 import type { TMask } from '../../mask/types/t_mask';
 import type { TBoxNode, TSceneDoc } from './types/t_scene_doc';
-import type { TComponentDoc, TMaterialDoc, TSpriteTextureComponent, TTilemapComponent } from './types/t_component_doc';
+import type { TMaterialUvTransform } from '../../materials/types/t_material';
+import { UV_MATRIX, UV_OFFSET } from '../../materials/material_uv_transform';
+import { parseUvTransform } from './parse_scene_doc';
+import { rememberStatedUv } from './stated_uv';
+import type { TStatedUv } from './stated_uv';
+import type { TUniformValues } from '../../materials/types/t_uniforms';
+import type { TComponentDoc, TMaterialDoc, TMeshMaterialDoc, TSpriteTextureComponent, TTilemapComponent } from './types/t_component_doc';
 import type { TMaterialMap, TMeshMaterial, TSpriteMaterial } from '../../materials';
 import { loadPluginEntry } from '../../loaders/plugin/asset_types';
 import type { TRuntimeStore } from '../../store';
@@ -267,6 +273,64 @@ const occurrenceOf = (source: TGeometry['source']): number =>
     source?.kind === 'gltf' ? source.occurrence ?? 0 : 0;
 
 /**
+ * How a document lays a material's picture, as `createMaterial` takes it. Beside an effect from a
+ * file, which the engine cannot move, it is said and left out, so the scene still opens: a document
+ * edited by hand, or by a tool that did not know.
+ */
+const toldEffect = new Set<string>();
+
+const laidOf = (surface: TMeshMaterialDoc, src: string): { uvTransform?: TMaterialUvTransform } => {
+    if (surface.uvTransform === undefined) {
+        return {};
+    }
+    if (typeof surface.effect === 'string') {
+        // Said once a scene, not each time it starts again.
+        if (!toldEffect.has(src)) {
+            toldEffect.add(src);
+            console.warn(`[NacatamalOn] scene "${src}": a material drawn by the effect "${surface.effect}" says how its picture is laid (uvTransform), and an effect from a file cannot move it. It is laid as its shape puts it.`);
+        }
+        return {};
+    }
+    // Read by the document's rules again: a copy an editor hands in was never parsed.
+    const own = parseUvTransform(surface.uvTransform).uvTransform;
+    if (own === undefined) {
+        return {};
+    }
+    const scale = typeof own.scale === 'number' ? { x: own.scale, y: own.scale } : own.scale;
+    return {
+        uvTransform: {
+            ...(scale !== undefined ? { scale: { x: scale.x ?? 1, y: scale.y ?? 1 } } : {}),
+            ...(own.rotation !== undefined ? { rotation: own.rotation } : {}),
+            ...(own.offset !== undefined ? { offset: { x: own.offset.x ?? 0, y: own.offset.y ?? 0 } } : {}),
+        },
+    };
+};
+
+/**
+ * A material's own uniforms as a document writes them, a copy, so building the scene again never
+ * writes into the document. The two a uvTransform keeps its numbers in are the engine's, written as
+ * it draws: one a document names (a shader file's defaults copied in by a tool, or a hand edit) is
+ * said and left out, so the scene still opens.
+ */
+const toldTaken = new Set<string>();
+
+const ownUniformsOf = (surface: TMaterialDoc, src: string): { uniforms?: TUniformValues } => {
+    // Nothing that is not a bag of uniforms, from a copy that was never parsed.
+    if (typeof surface.uniforms !== 'object' || surface.uniforms === null || Array.isArray(surface.uniforms)) {
+        return {};
+    }
+    const own = structuredClone(surface.uniforms);
+    const taken = [UV_MATRIX, UV_OFFSET].filter((name) => Object.hasOwn(own, name));
+    // Said once a scene, not each time it starts again.
+    if (taken.length > 0 && !toldTaken.has(src)) {
+        toldTaken.add(src);
+        console.warn(`[NacatamalOn] scene "${src}": a material names the uniform ${taken.map((name) => `'${name}'`).join(' and ')}, where a uvTransform keeps its numbers. Left out: give it another name.`);
+    }
+    for (const name of taken) delete own[name];
+    return { uniforms: own };
+};
+
+/**
  * A mesh whose shape is a piece of a model file, built at once and given its piece when the file lands.
  *
  * **The file decides how it looks**: its picture, its colour, its glow and its bones all come from the
@@ -303,7 +367,7 @@ const buildModelMesh = (
             ...(surface.fragmentGlsl !== null ? { fragmentGlsl: surface.fragmentGlsl } : {}),
             ...(surface.vertex !== null ? { vertex: surface.vertex } : {}),
             ...(surface.vertexGlsl !== null ? { vertexGlsl: surface.vertexGlsl } : {}),
-            ...(surface.uniforms !== null ? { uniforms: surface.uniforms } : {}),
+            ...ownUniformsOf(surface, src),
             ...(surface.wrap !== undefined ? { wrap: surface.wrap } : {}),
             ...(surface.vertexSnap !== undefined ? { vertexSnap: surface.vertexSnap } : {}),
             ...(surface.affine !== undefined ? { affine: surface.affine } : {}),
@@ -321,6 +385,7 @@ const buildModelMesh = (
             ...(bumpTexture !== undefined && surface.normalMap !== undefined
                 ? { normalMap: { texture: bumpTexture, ...(surface.normalMap.strength !== undefined ? { strength: surface.normalMap.strength } : {}) } }
                 : {}),
+            ...laidOf(surface, src),
             ...(surface.cull !== undefined ? { cull: surface.cull } : {}),
             ...(surface.alphaCutoff !== undefined ? { alphaCutoff: surface.alphaCutoff } : {}),
             ...(surface.transparent !== undefined ? { transparent: surface.transparent } : {}),
@@ -336,6 +401,12 @@ const buildModelMesh = (
         ...(component.boundsMargin !== undefined ? { boundsMargin: component.boundsMargin } : {}),
     });
     mesh.id = component.id;
+    // What the document said of its picture, way by way, for a save before its file lands.
+    const said = typeof surface.effect === 'string' ? undefined : parseUvTransform(surface.uvTransform).uvTransform;
+    if (said !== undefined) {
+        // Read by the document's rules, a scale of one number is already both ways.
+        rememberStatedUv(mesh.material, said as TStatedUv);
+    }
 
     void whenLoaded(model).then(() => {
         if (store.get('loop').destroyed || mesh.destroyed || model.status !== 'ready') {
@@ -370,6 +441,18 @@ const buildModelMesh = (
         // The file's word unless the scene has one of its own.
         if (surface.wrap === undefined) {
             mesh.material.wrap = part.wrap;
+        }
+        // And its picture laid as the file moves it, each part the scene does not say: an inspector
+        // that turned it said only the turn, and the file's repeat and slide stay.
+        if (part.uvTransform !== null) {
+            // Way by way: a repeat across set by the scene keeps the file's repeat down.
+            const own = typeof surface.effect === 'string' ? undefined : parseUvTransform(surface.uvTransform).uvTransform;
+            const scale = typeof own?.scale === 'number' ? { x: own.scale, y: own.scale } : own?.scale;
+            moveUv(mesh.material, {
+                scale: { x: scale?.x ?? part.uvTransform.scale.x, y: scale?.y ?? part.uvTransform.scale.y },
+                rotation: own?.rotation ?? part.uvTransform.rotation,
+                offset: { x: own?.offset?.x ?? part.uvTransform.offset.x, y: own?.offset?.y ?? part.uvTransform.offset.y },
+            });
         }
         // The same: a leaf the modelling program kept both sides of is drawn on both, unless the
         // scene says which side to keep.
@@ -578,7 +661,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                     ...(surface.fragmentGlsl !== null ? { fragmentGlsl: surface.fragmentGlsl } : {}),
                     ...(surface.vertex !== null ? { vertex: surface.vertex } : {}),
                     ...(surface.vertexGlsl !== null ? { vertexGlsl: surface.vertexGlsl } : {}),
-                    ...(surface.uniforms !== null ? { uniforms: surface.uniforms } : {}),
+                    ...ownUniformsOf(surface, src),
                     ...(texture !== undefined ? { texture } : {}),
                     tint: surface.tint,
                     emissive: surface.emissive,
@@ -615,6 +698,7 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
                     ...(bumpTexture !== undefined && surface.normalMap !== undefined
                         ? { normalMap: { texture: bumpTexture, ...(surface.normalMap.strength !== undefined ? { strength: surface.normalMap.strength } : {}) } }
                         : {}),
+                    ...laidOf(surface, src),
                     ...(surface.cull !== undefined ? { cull: surface.cull } : {}),
                     ...(surface.alphaCutoff !== undefined ? { alphaCutoff: surface.alphaCutoff } : {}),
                     ...(surface.transparent !== undefined ? { transparent: surface.transparent } : {}),

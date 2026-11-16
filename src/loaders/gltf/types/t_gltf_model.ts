@@ -3,7 +3,7 @@ import type { TSkeletalClip, TSkeleton } from '../../../animation';
 import type { TGeometry } from '../../../geometry';
 import type { TLoadStatus } from '../../types/t_load_status';
 import type { TTexture } from '../../texture/types/t_texture';
-import type { TMaterialOcclusion, TTextureWrap } from '../../../materials';
+import type { TMaterialOcclusion, TMaterialUvTransformRecord, TTextureWrap } from '../../../materials';
 
 /**
  * One drawable piece of a model: a shape and the surface it wears.
@@ -64,6 +64,11 @@ export type TGltfPart = {
      * What its picture does past its edge, as the file says: repeating, unless it says otherwise.
      */
     wrap: { u: TTextureWrap; v: TTextureWrap };
+    /**
+     * How its pictures are laid moved, as the file says (`KHR_texture_transform` on its colour
+     * picture), or `null` when it does not move them. Laid so unless the game says otherwise.
+     */
+    uvTransform: TMaterialUvTransformRecord | null;
     /**
      * The bones that move it, or `null` when nothing does.
      */

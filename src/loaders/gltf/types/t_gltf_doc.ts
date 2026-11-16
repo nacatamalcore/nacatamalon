@@ -126,13 +126,37 @@ export type TGltfBufferView = {
 };
 
 /**
+ * How a picture is laid moved from where the corners put it (`KHR_texture_transform`): scaled, turned
+ * about its top-left corner, then slid. `texCoord` names another picture coordinate to lay it by.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TGltfTextureTransform = {
+    offset?: [number, number];
+    rotation?: number;
+    scale?: [number, number];
+    texCoord?: number;
+};
+
+/**
+ * A picture a material reads: which one, and how it is laid when the file moves it.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TGltfTextureInfo = { index: number; extensions?: { KHR_texture_transform?: TGltfTextureTransform } };
+
+/**
  * @internal
  */
 export type TGltfMaterial = {
     name?: string;
     pbrMetallicRoughness?: {
         baseColorFactor?: [number, number, number, number];
-        baseColorTexture?: { index: number };
+        baseColorTexture?: TGltfTextureInfo;
     };
     emissiveFactor?: [number, number, number];
     /**
@@ -150,12 +174,12 @@ export type TGltfMaterial = {
     /**
      * A picture masking where the glow actually is: the factor multiplies it.
      */
-    emissiveTexture?: { index: number };
+    emissiveTexture?: TGltfTextureInfo;
     /**
      * Where the light from all around is kept out: the picture's red, `strength` how much of it (absent
      * is 1), and `texCoord` which picture coordinate lays it out (absent is the first).
      */
-    occlusionTexture?: { index: number; strength?: number; texCoord?: number };
+    occlusionTexture?: TGltfTextureInfo & { strength?: number; texCoord?: number };
     extensions?: { KHR_materials_emissive_strength?: { emissiveStrength?: number } };
 };
 

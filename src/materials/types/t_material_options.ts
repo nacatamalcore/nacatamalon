@@ -3,7 +3,7 @@ import type { TColorOption } from '../../color';
 import type { TTexture } from '../../loaders';
 import type { TShader } from '../../loaders/shader/types/t_shader';
 import type { TUniformValues } from './t_uniforms';
-import type { TCullMode, TMaterialMap, TMaterialNormalMap, TMaterialOcclusion, TMaterialReflection, TTextureWrap } from './t_material';
+import type { TCullMode, TMaterialMap, TMaterialNormalMap, TMaterialOcclusion, TMaterialReflection, TMaterialUvTransform, TTextureWrap } from './t_material';
 
 /**
  * The shader half of what a material can be asked for, which both kinds share.
@@ -276,6 +276,31 @@ export type TMeshMaterialOptions = TMaterialShaderOptions & {
      * ```
      */
     normalMap?: TTexture | TMaterialNormalMap;
+    /**
+     * Its picture laid moved from where its shape puts it: repeated (`scale`), turned (`rotation`)
+     * and slid (`offset`), in that order, as a model file's own are. It moves everything laid by the
+     * first picture coordinate: the picture, its glow (`emissiveTexture`), its normal map (laid the
+     * new way round, so its relief leans right), an occlusion laid by it, and what a hook of your own
+     * reads at `ctx.uv`. What is laid by the second (`occlusion: { uv: 'uv2' }`, `ctx.uv2`) stays.
+     *
+     * Read every frame from `material.uvTransform`, so a game changes it while it runs: growing
+     * `offset.x` scrolls a river. The material is drawn with the engine's own ending as its colour
+     * hook, as one with a normal map is, and the two numbers it is drawn with are the uniforms
+     * `uvTransformMatrix` and `uvTransformOffset`, written by the engine. Not with an `effect` from a file. Default none.
+     *
+     * @example
+     * ```ts
+     * declare const tile: TTexture;
+     *
+     * // A floor of 40 by 40, a tile every unit; the plane's own picture covers it once.
+     * const floor = createMesh({ geometry: usePlaneGeometry({ width: 40, depth: 40 }), material: createMaterial({ shader: 'mesh3d', texture: tile, uvTransform: { scale: 40 } }) });
+     * // A river that flows.
+     * useUpdate((delta) => {
+     *     floor.material.uvTransform!.offset.y -= delta * 0.2;
+     * });
+     * ```
+     */
+    uvTransform?: TMaterialUvTransform;
     /**
      * Which side of its triangles is thrown away. `'back'` (the default) is a shape seen from
      * outside; `'front'` one seen from inside, such as a dome of sky; `'none'` draws both sides, each

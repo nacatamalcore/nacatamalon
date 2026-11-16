@@ -308,6 +308,7 @@ export const loadGltf = async (store: TRuntimeStore, model: TGltfModel, options:
                 doubleSided: surface.doubleSided,
                 alphaCutoff: surface.alphaCutoff,
                 wrap: surface.wrap,
+                uvTransform: surface.uvTransform,
                 skeleton: piece.skeleton === undefined ? null : skeletons[piece.skeleton] ?? null,
             });
         }

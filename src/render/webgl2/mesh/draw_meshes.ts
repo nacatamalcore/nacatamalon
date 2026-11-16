@@ -265,7 +265,7 @@ export const drawMesh = (
     gl.bindBufferBase(gl.UNIFORM_BUFFER, MESH_LIGHTS_BINDING, meshes.lights);
 
     if (effect !== null) {
-        meshes.materials.bind(effect, surface.uniforms ?? {}, null, time, width, height);
+        meshes.materials.bind(effect, surface.uniforms ?? {}, null, time, width, height, surface.uvTransform);
         bindMaterialMaps(gl, meshes, surface, effect.mapNames);
     }
 

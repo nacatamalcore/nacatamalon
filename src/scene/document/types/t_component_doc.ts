@@ -137,6 +137,15 @@ export type TMeshMaterialDoc = TMaterialDoc & {
      */
     normalMap?: { texture: string; strength?: number };
     /**
+     * How its picture is laid, moved from where its shape puts it: only the parts that move it, a
+     * `scale` not `1`, a `rotation` not `0`, an `offset` not none, and `{}` for one made to be moved by
+     * a script. A `scale` of one number, as `createMaterial` takes it, is read as both ways; a way left
+     * out of `scale` or `offset` is the engine's default, or on a piece of a model file its file's. A
+     * piece of a model file writes every part, so its file's are not taken over what the game set.
+     * Left out when it has none.
+     */
+    uvTransform?: { scale?: number | { x?: number; y?: number }; rotation?: number; offset?: { x?: number; y?: number } };
+    /**
      * Which side of its triangles is thrown away: `'back'`, `'front'` or `'none'`. Left out when it was
      * never asked for, which draws as `'back'`, except a model piece whose file says both sides are
      * seen: that is drawn with `'none'` unless the document says otherwise.

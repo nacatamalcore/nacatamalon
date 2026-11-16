@@ -14,6 +14,9 @@ import type { TTexture } from '../../loaders';
 import type { TColor } from '../../color';
 import { uniformsAsNumbers } from '../../materials/uniform_numbers';
 import { hookWithoutNormalMap, NORMAL_MAP, NORMAL_STRENGTH } from '../../materials/new_material';
+import type { TMaterialUvTransformRecord } from '../../materials/types/t_material';
+import { statedUvOf } from './stated_uv';
+import type { TStatedUv } from './stated_uv';
 import { DEFAULT_CHANNEL } from '../../audio';
 import { lookUniforms, REFLECTION_BLUR, REFLECTION_EDGE, REFLECTION_FRONT, REFLECTION_MAP, REFLECTION_METAL } from '../../shader_composer/surface/compose_surface';
 import type { TAssetEntry } from './types/t_asset_entry';
@@ -164,6 +167,42 @@ const listTexture = (texture: TTexture, writing: TWriting): void => {
 };
 
 /**
+ * A picture laid moved, as a document writes it: only the parts that move it, as they are now. Written
+ * even with none of them, as `{}`: a material made to be moved by a script (a river that starts
+ * still) has to be one again when the scene is opened.
+ */
+const writtenUvTransform = (moved: TMaterialUvTransformRecord | null, whole: boolean, said?: TStatedUv): { uvTransform?: NonNullable<TMeshMaterialDoc['uvTransform']> } => {
+    if (moved === null) {
+        return {};
+    }
+    // A piece of a model file lays what the scene leaves out as its file does: every part written,
+    // so a repeat of 1 the game set over the file's 2 stays 1 when the scene is opened. Only once
+    // its file has landed: before, it holds the defaults the document's own were filled in with,
+    // and written whole they would be taken over the file's; then only what moves it, as a plain
+    // mesh's, way by way, so a repeat across said by the scene leaves the file's repeat down to it.
+    if (whole) {
+        return { uvTransform: { scale: { ...moved.scale }, rotation: moved.rotation, offset: { ...moved.offset } } };
+    }
+    // A way is written when it moves the picture, or when the scene's document said it (a piece still
+    // waiting for its file: a turn of 0 said over the file's turn is a word, not a default).
+    const ways = (point: { x: number; y: number }, still: number, stated: { x?: number; y?: number } | undefined): { x?: number; y?: number } | null => {
+        const written = {
+            ...(point.x !== still || stated?.x !== undefined ? { x: point.x } : {}),
+            ...(point.y !== still || stated?.y !== undefined ? { y: point.y } : {}),
+        };
+        return Object.keys(written).length === 0 ? null : written;
+    };
+    const scale = ways(moved.scale, 1, said?.scale);
+    const offset = ways(moved.offset, 0, said?.offset);
+    const parts = {
+        ...(scale !== null ? { scale } : {}),
+        ...(moved.rotation !== 0 || said?.rotation !== undefined ? { rotation: moved.rotation } : {}),
+        ...(offset !== null ? { offset } : {}),
+    };
+    return { uvTransform: parts };
+};
+
+/**
  * What a picture does past its edge, written only when it does not repeat, which is the default
  * however it is spelled.
  */
@@ -212,7 +251,7 @@ const withoutMap = (maps: TMeshMaterial['maps'], name: string | null): TMeshMate
  * it were one of its own, and opening the scene would fetch that name, fail, and leave the error
  * where the file's picture would be looked for, drawing the piece without it.
  */
-const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting, fromFile: boolean): TMeshMaterialDoc => {
+const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting, fromFile: boolean, whole = false): TMeshMaterialDoc => {
     const texture = fromFile ? null : material.texture;
     if (texture !== null) {
         listTexture(texture, writing);
@@ -244,10 +283,14 @@ const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting, fromFile:
     if (bump !== null) {
         listTexture(material.maps?.[NORMAL_MAP]?.texture ?? bump.texture, writing);
     }
-    const ownHook = bump === null ? null : hookWithoutNormalMap(material.fragment);
-    const ownHookGlsl = bump === null ? null : hookWithoutNormalMap(material.fragmentGlsl);
+    // A picture laid moved the same: written as its transform, and a hook that is only the engine's
+    // own ending, made for it, not at all.
+    const moved = material.uvTransform ?? null;
+    const special = bump !== null || moved !== null;
+    const ownHook = special ? hookWithoutNormalMap(material.fragment) : null;
+    const ownHookGlsl = special ? hookWithoutNormalMap(material.fragmentGlsl) : null;
     const looked = material.lighting !== undefined || material.steps !== undefined || reflects || ownHook?.plain === true;
-    const written = bump === null
+    const written = !special
         ? writeMaterial(material, writing)
         : { ...writeMaterial(material, writing), fragment: ownHook!.code, fragmentGlsl: ownHookGlsl!.code };
     const lighting = material.lighting === undefined ? undefined : { ...material.lighting } as Record<string, unknown>;
@@ -351,6 +394,7 @@ const writeMeshMaterial = (material: TMeshMaterial, writing: TWriting, fromFile:
             : {}),
         ...(material.cull === 'back' || material.cull === 'front' || material.cull === 'none' ? { cull: material.cull } : {}),
         ...(material.alphaCutoff !== undefined ? { alphaCutoff: material.alphaCutoff } : {}),
+        ...writtenUvTransform(moved, whole, fromFile && !whole ? statedUvOf(material) : undefined),
         ...(material.transparent !== undefined ? { transparent: material.transparent } : {}),
         ...(material.blend === 'additive' ? { blend: 'additive' as const } : {}),
         ...(lighting !== undefined ? { lighting: lighting as TMeshMaterialDoc['lighting'] } : {}),
@@ -547,7 +591,7 @@ const writeMesh = (mesh: TMesh, writing: TWriting): TComponentDoc | null => {
         id: mesh.id,
         ...(place !== undefined ? { transform: place } : {}),
         geometry: geometry.key,
-        material: writeMeshMaterial(mesh.material, writing, geometry.source.kind === 'gltf'),
+        material: writeMeshMaterial(mesh.material, writing, geometry.source.kind === 'gltf', geometry.source.kind === 'gltf' && geometry.status !== 'loading'),
         ...unless('visible', mesh.visible, true),
         ...unless('zIndex', mesh.zIndex, undefined),
         // Only `false` is ever written: absent means it casts, so writing `true` would put a

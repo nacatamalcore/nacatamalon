@@ -1,12 +1,12 @@
 import { buildMeshMaterialShaderGlsl, buildMeshMaterialShadowShaderGlsl } from './mesh_material_shader';
-import { buildUniformLayout, MAX_MATERIAL_FLOATS, writeUniformValues } from '../../shared/material_uniforms';
+import { buildUniformLayout, MAX_MATERIAL_FLOATS, writeUniformValues, writeUvTransformValues } from '../../shared/material_uniforms';
 import { compileProgram } from '../utils/compile_program';
 import { MATERIAL_UNIFORMS_BINDING } from './uniform_block';
 import { MESH_EMISSIVE_UNIT, MESH_OCCLUSION_UNIT, MESH_JOINTS_UNIT, MESH_LIGHTS_BINDING, MESH_MAP_UNITS, MESH_SHADOW_UNIT, MESH_TEXTURE_UNIT, MESH_UNIFORMS_BINDING } from '../bindings';
 import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import type { TDrawShader } from '../../interface/draw/t_draw_material';
 import type { TUniformLayout } from '../../shared/material_uniforms';
-import type { TCullMode, TUniformValues } from '../../../materials';
+import type { TCullMode, TMaterialUvTransformRecord, TUniformValues } from '../../../materials';
 
 type TCompiled = {
     program: WebGLProgram | null;
@@ -248,6 +248,7 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
             time: number,
             width: number,
             height: number,
+            uvTransform?: TMaterialUvTransformRecord,
         ): void => {
             if (parameters === null) {
                 parameters = gl.createBuffer();
@@ -257,6 +258,7 @@ export const createMeshMaterials = (gl: WebGL2RenderingContext) => {
 
             values.fill(0, 0, entry.layout.floatCount);
             writeUniformValues(values, entry.layout, uniforms, time, width, height, overrides);
+            writeUvTransformValues(values, entry.layout, uvTransform);
 
             gl.bindBuffer(gl.UNIFORM_BUFFER, parameters);
             gl.bufferSubData(gl.UNIFORM_BUFFER, 0, values, 0, entry.layout.floatCount);

@@ -199,6 +199,47 @@ const parseNormalMap = (value: unknown): Pick<TMeshMaterialDoc, 'normalMap'> => 
     return { normalMap: { texture: raw.texture, ...(strength !== 1 ? { strength } : {}) } };
 };
 
+/**
+ * How a document says the picture is laid: each part kept when it is usable, the rest left out, as
+ * the engine fills it in (or, on a piece of a model file, as its file says), a way left out of a scale
+ * or an offset too, which is kept left out. A scale with a way of `0`, which would squash the picture
+ * to a line, is left out.
+ * One with no parts, `{}`, is kept: a picture made to be moved by a script.
+ */
+/**
+ * @internal Also what a scene applies to a document that was never read by `parseSceneDoc` (an
+ * editor's live copy), so a repeat of 0 or a word where a number goes opens as nothing rather than
+ * stopping the scene.
+ */
+export const parseUvTransform = (value: unknown): Pick<TMeshMaterialDoc, 'uvTransform'> => {
+    const raw = asRecord(value);
+    if (raw === null) {
+        return {};
+    }
+    // Each way on its own, kept as said: an inspector that set only how many times across wrote only
+    // that, and the other way is the engine's default, or, on a piece of a model file, its file's.
+    const point = (part: unknown): { x?: number; y?: number } | null => {
+        const given = asRecord(part);
+        if (given === null) {
+            return null;
+        }
+        const read = {
+            ...(typeof given.x === 'number' && Number.isFinite(given.x) ? { x: given.x } : {}),
+            ...(typeof given.y === 'number' && Number.isFinite(given.y) ? { y: given.y } : {}),
+        };
+        return Object.keys(read).length === 0 ? null : read;
+    };
+    // One number is both ways, as createMaterial takes it.
+    const scale = typeof raw.scale === 'number' && Number.isFinite(raw.scale) ? { x: raw.scale, y: raw.scale } : point(raw.scale);
+    const offset = point(raw.offset);
+    const read = {
+        ...(scale !== null && scale.x !== 0 && scale.y !== 0 ? { scale } : {}),
+        ...(typeof raw.rotation === 'number' && Number.isFinite(raw.rotation) ? { rotation: raw.rotation } : {}),
+        ...(offset !== null ? { offset } : {}),
+    };
+    return { uvTransform: read };
+};
+
 const parseMeshMaterial = (value: unknown): TMeshMaterialDoc => {
     const raw = asRecord(value) ?? {};
     // Its maps are read further down, with the rest of its surface, where a model's document has them.
@@ -226,6 +267,7 @@ const parseMeshMaterial = (value: unknown): TMeshMaterialDoc => {
         ...(typeof raw.perPixel === 'boolean' ? { perPixel: raw.perPixel } : {}),
         ...parseReflection(raw.reflection),
         ...parseNormalMap(raw.normalMap),
+        ...parseUvTransform(raw.uvTransform),
         // Written only when asked for; anything unknown draws as the default.
         ...(raw.cull === 'back' || raw.cull === 'front' || raw.cull === 'none' ? { cull: raw.cull } : {}),
         // The same: a number from 0 to 1, or nothing cut.
