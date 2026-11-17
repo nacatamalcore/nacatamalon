@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { createMaterial } from '../src/gameobjects/material/create_material';
-import { anodized, brass, carPaint, ceramic, chrome, copper, glass, gold, hologram, matcap, neon, pearl, plastic, rubber } from '../src/materials';
+import { anodized, brass, carPaint, ceramic, chrome, copper, felt, glass, gold, hologram, ice, leather, matcap, neon, paper, pearl, plastic, rubber, steel, wood } from '../src/materials';
 import { groundBounce } from '../src/shader_composer/surface/looks';
 import type { TTexture } from '../src/loaders';
 import type { TMeshMaterial } from '../src/materials';
@@ -42,7 +42,7 @@ describe('the recipes', () => {
     });
 
     it('are all made, each a material that takes them as they are', () => {
-        for (const make of [plastic, ceramic, chrome, rubber, carPaint, glass, neon, pearl, hologram, gold, copper, brass, anodized]) {
+        for (const make of [plastic, ceramic, chrome, rubber, carPaint, glass, neon, pearl, hologram, gold, copper, brass, anodized, steel, ice, felt, wood, leather, paper]) {
             const material = createMaterial(make({ environment: studio })) as TMeshMaterial;
             expect(material.perPixel).toBe(true);
             expect(material.fragment).not.toBeNull();
@@ -50,13 +50,13 @@ describe('the recipes', () => {
     });
 
     it('make the metals reflect and shine in their own colour, and the rest in white', () => {
-        for (const make of [gold, copper, brass, anodized]) {
+        for (const make of [gold, copper, brass, anodized, steel]) {
             const options = make({ environment: studio });
             expect(options.specular).toBe(options.tint);
             expect((createMaterial(options) as TMeshMaterial).reflection?.metal).toBe(1);
         }
         expect(anodized({ tint: '#a02ad8' }).specular).toBe('#a02ad8');
-        for (const make of [rubber, carPaint, glass, pearl]) {
+        for (const make of [rubber, carPaint, glass, pearl, ice, felt, wood, leather, paper]) {
             expect((createMaterial(make({ environment: studio })) as TMeshMaterial).reflection?.metal).toBe(0);
         }
     });
@@ -69,6 +69,39 @@ describe('the recipes', () => {
         // Light reflects nothing, whatever it is given.
         expect(ghost.reflection).toBeUndefined();
         expect(ghost.steps?.map((step) => step.look)).toEqual(['rim']);
+    });
+
+    it('make steel a metal that is not a mirror, and ice a solid see-through with a cold rim', () => {
+        expect((createMaterial(steel({ environment: studio })) as TMeshMaterial).reflection).toEqual({ texture: studio, front: 0.35, edge: 0.8, metal: 1 });
+        const block = createMaterial(ice({ environment: studio })) as TMeshMaterial;
+        expect([block.alpha, block.transparent]).toEqual([0.7, true]);
+        expect(block.steps?.map((step) => step.look)).toEqual(['rim']);
+    });
+
+    it('make felt shine nothing and catch a sheen of its own colour, lighter, at its edge', () => {
+        const cloth = felt({ tint: '#ff0000', environment: studio });
+        expect(cloth.specular).toBe('#101010');
+        const sheen = cloth.steps?.[0] as unknown as { look: string; color: [number, number, number] };
+        expect(sheen.look).toBe('rim');
+        // Red made lighter: still red, the others raised towards white.
+        expect(sheen.color[0]).toBeCloseTo(1);
+        expect(sheen.color[1]).toBeCloseTo(0.45);
+        expect(sheen.color[2]).toBeCloseTo(0.45);
+        expect((createMaterial(cloth) as TMeshMaterial).reflection).toEqual({ texture: studio, front: 0, edge: 0.08, metal: 0 });
+        // Its sheen is there with nothing to reflect too.
+        expect(felt().steps?.map((step) => step.look)).toEqual(['rim']);
+    });
+
+    it('make wood a varnish with a white shine, leather a grey one and paper next to none', () => {
+        const made = (options: ReturnType<typeof wood>) => (createMaterial(options) as TMeshMaterial).reflection;
+        expect(wood().specular).toBe('#ffffff');
+        expect(made(wood({ environment: studio }))).toEqual({ texture: studio, front: 0.04, edge: 0.6, metal: 0 });
+        expect(made(leather({ environment: studio }))).toEqual({ texture: studio, front: 0.02, edge: 0.35, metal: 0 });
+        expect(made(paper({ environment: studio }))).toEqual({ texture: studio, front: 0, edge: 0.12, metal: 0 });
+        expect([wood().shininess, leather().shininess, paper().shininess]).toEqual([80, 24, 6]);
+        // A grain or a print is a picture given with a spread.
+        const grain: TTexture = { ...studio, key: 'grain' };
+        expect((createMaterial({ ...wood({ tint: '#ffffff', environment: studio }), texture: grain }) as TMeshMaterial).texture).toBe(grain);
     });
 
     it('make neon glow its own colour, and pearl turn another at its rim', () => {

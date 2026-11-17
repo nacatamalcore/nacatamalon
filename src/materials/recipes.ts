@@ -1,3 +1,5 @@
+import { getColor } from '../color/get_color';
+import { lerpColor } from '../color/lerp_color';
 import type { TColorOption } from '../color';
 import type { TTexture } from '../loaders';
 import { rim, unlitLighting } from '../shader_composer/surface/looks';
@@ -410,6 +412,176 @@ export const brass = (options: TMaterialRecipeOptions = {}): TMaterialRecipe =>
  */
 export const anodized = (options: TMaterialRecipeOptions = {}): TMaterialRecipe =>
     recipe(options, { tint: '#3a6ad8', specular: 'tint', shininess: 120, front: 0.8, edge: 1, metal: 1 });
+
+/**
+ * Steel, or iron: a grey metal that is not polished, a wide shine in its own colour and only some of
+ * the surroundings, so it reads as metal without being a mirror. Machines, tools, weapons, robots,
+ * the plates of a ship.
+ *
+ * A metal reflects in its own colour (`reflection.metal: 1`) and shines in it too (`specular` its
+ * own colour): `shininess: 30`, `reflection` `front: 0.35`, `edge: 0.8`, `metal: 1`.
+ *
+ * @param options Its colour (a mid steel grey by default) and the surroundings it reflects.
+ * @returns The options, for `createMaterial`.
+ *
+ * @example
+ * ```ts
+ * declare const studio: TTexture;
+ *
+ * createMaterial(steel({ environment: studio }));
+ * ```
+ *
+ * @category Materials
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const steel = (options: TMaterialRecipeOptions = {}): TMaterialRecipe =>
+    recipe(options, { tint: '#8a9098', specular: 'tint', shininess: 30, front: 0.35, edge: 0.8, metal: 1 });
+
+/**
+ * Ice: a block of it, pale and half see-through, a tight shine, the surroundings strong at the edge
+ * and a cold glow along its outline, where light runs through it. An ice level, a frozen lake, a
+ * crystal. Glass is a window; this is solid.
+ *
+ * Options of a model's material: `alpha: 0.7` and `transparent`, `shininess: 160`, `reflection`
+ * `front: 0.08`, `edge: 0.9`, and a strong `rim` step in a pale cyan.
+ *
+ * @param options Its colour (a pale blue by default) and the surroundings it reflects.
+ * @returns The options, for `createMaterial`.
+ *
+ * @example
+ * ```ts
+ * declare const studio: TTexture;
+ *
+ * createMaterial(ice({ environment: studio }));
+ * ```
+ *
+ * @category Materials
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const ice = (options: TMaterialRecipeOptions = {}): TMaterialRecipe =>
+    recipe(options, {
+        tint: '#d4f0fa',
+        shininess: 160,
+        front: 0.08,
+        edge: 0.9,
+        alpha: 0.7,
+        steps: [rim({ color: '#e8fcff', power: 2, amount: 0.6 })],
+    });
+
+/**
+ * Felt, or any cloth with a nap: no shine and almost nothing of the surroundings, only a soft sheen
+ * of its own colour, lighter, where it turns away, as the fibres catch the light at the edge. The top
+ * of a card table, a pool table, a hat, a stuffed toy.
+ *
+ * Options of a model's material: a near-black `specular` with `shininess: 6`, `reflection`
+ * `front: 0`, `edge: 0.08`, and a soft `rim` step in its own colour made lighter. The sheen does not
+ * follow the lamp: the side away from it keeps a sheen at its edge too, as the era's renders gave it.
+ *
+ * @param options Its colour (a card table's green by default) and the surroundings it reflects.
+ * @returns The options, for `createMaterial`.
+ *
+ * @example
+ * ```ts
+ * declare const studio: TTexture;
+ *
+ * createMaterial(felt({ tint: '#7a1626', environment: studio }));
+ * ```
+ *
+ * @category Materials
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const felt = (options: TMaterialRecipeOptions = {}): TMaterialRecipe => {
+    const tint = options.tint ?? '#1f6b3a';
+    const sheen = lerpColor(getColor(tint), { r: 1, g: 1, b: 1, a: 1 }, 0.45);
+    return recipe(options, {
+        tint,
+        shininess: 6,
+        specular: '#101010',
+        front: 0,
+        edge: 0.08,
+        steps: [rim({ color: [sheen.r, sheen.g, sheen.b], power: 2.5, amount: 0.35 })],
+    });
+};
+
+/**
+ * Varnished wood: its colour under a thin clear coat, a tight white shine and a little of the
+ * surroundings, more towards the edge. A table's rail, a guitar, a cabinet.
+ *
+ * Options of a model's material, like `plastic`: `shininess: 80`, `reflection` `front: 0.04`,
+ * `edge: 0.6`. The grain is a picture of it given with a spread (`texture`), which the tint
+ * multiplies: give a white `tint` for the picture's own colours.
+ *
+ * @param options Its colour (a warm brown by default) and the surroundings it reflects.
+ * @returns The options, for `createMaterial`.
+ *
+ * @example
+ * ```ts
+ * declare const studio: TTexture;
+ * declare const grain: TTexture;
+ *
+ * createMaterial(wood({ environment: studio }));
+ * createMaterial({ ...wood({ tint: '#ffffff', environment: studio }), texture: grain });
+ * ```
+ *
+ * @category Materials
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const wood = (options: TMaterialRecipeOptions = {}): TMaterialRecipe =>
+    recipe(options, { tint: '#8a5a32', shininess: 80, front: 0.04, edge: 0.6 });
+
+/**
+ * Leather: a dark colour with a soft, low shine, wider than plastic's and grey rather than white, and
+ * a little of the surroundings at the edge. A chair, a jacket, a book's cover, a ball.
+ *
+ * Options of a model's material, like `plastic`: `shininess: 24`, a grey `specular`, `reflection`
+ * `front: 0.02`, `edge: 0.35`.
+ *
+ * @param options Its colour (a dark brown by default) and the surroundings it reflects.
+ * @returns The options, for `createMaterial`.
+ *
+ * @example
+ * ```ts
+ * declare const studio: TTexture;
+ *
+ * createMaterial(leather({ tint: '#1c1c20', environment: studio }));
+ * ```
+ *
+ * @category Materials
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const leather = (options: TMaterialRecipeOptions = {}): TMaterialRecipe =>
+    recipe(options, { tint: '#4a2c1c', shininess: 24, specular: '#6a625c', front: 0.02, edge: 0.35 });
+
+/**
+ * Paper, or card: matte, a faint wide shine and almost nothing of the surroundings. A playing card, a
+ * page, a box, a sign. What is printed on it is a picture given with a spread (`texture`), which the
+ * tint multiplies: give a white `tint` for the picture's own colours.
+ *
+ * Options of a model's material, like `plastic`: `shininess: 6`, a dark grey `specular`,
+ * `reflection` `front: 0`, `edge: 0.12`.
+ *
+ * @param options Its colour (an off-white by default) and the surroundings it reflects.
+ * @returns The options, for `createMaterial`.
+ *
+ * @example
+ * ```ts
+ * declare const studio: TTexture;
+ * declare const aceOfSpades: TTexture;
+ *
+ * createMaterial({ ...paper({ tint: '#ffffff', environment: studio }), texture: aceOfSpades });
+ * ```
+ *
+ * @category Materials
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const paper = (options: TMaterialRecipeOptions = {}): TMaterialRecipe =>
+    recipe(options, { tint: '#f2eee2', shininess: 6, specular: '#383838', front: 0, edge: 0.12 });
 
 /**
  * What `matcap` is asked for besides its picture.

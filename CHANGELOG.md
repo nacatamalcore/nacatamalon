@@ -217,6 +217,14 @@ releases are in [changelog/](./changelog/), one file each.
   `createGeometry` or another merge; not a piece of a model file, whose corners are on the card
   alone. It is the object's own, as `createGeometry`'s is.
 
+- **Material recipes for the soft surfaces of a table: `felt()`, `wood()`, `leather()` and
+  `paper()`; and `steel()` and `ice()`**, with `{ tint, environment }` like the others. Steel is a
+  metal that is not polished, which reads as metal without being a mirror; ice a solid, half
+  see-through block with a cold rim, where glass is a window. Felt has no shine and a sheen of its
+  own colour, lighter, at its edge (a `rim` step); wood is a varnish, a tight white shine and a
+  little of the surroundings; leather a soft grey shine; paper next to none. A grain or a print is
+  a picture given with a spread, `{ ...wood({ tint: '#ffffff' }), texture: grain }`.
+
 ### Fixed
 
 - **A capture that leaves out an object (`hide`) or keeps only some (`only`) leaves out or keeps the

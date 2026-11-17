@@ -1,7 +1,7 @@
 export { newMaterial } from './new_material';
 export { deriveSignature } from './derive_signature';
 export { applyShader, rememberOverrides } from './apply_shader';
-export { plastic, ceramic, chrome, rubber, carPaint, glass, neon, pearl, hologram, gold, copper, brass, anodized, matcap } from './recipes';
+export { plastic, ceramic, chrome, rubber, carPaint, glass, neon, pearl, hologram, gold, copper, brass, anodized, steel, ice, felt, wood, leather, paper, matcap } from './recipes';
 export type { TMaterialRecipe, TMaterialRecipeOptions, TMatcapOptions } from './recipes';
 
 export type { TMaterial, TSpriteMaterial, TMeshMaterial, TMaterialMap, TMaterialOcclusion, TMaterialReflection, TMaterialReflectionRecord, TMaterialNormalMap, TMaterialUvTransform, TMaterialUvTransformRecord, TTextureWrap, TCullMode } from './types/t_material';
