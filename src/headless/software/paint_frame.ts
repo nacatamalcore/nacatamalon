@@ -435,7 +435,14 @@ const clear = (picture: TPicture, color: TColor): void => {
 /**
  * Paints one pass into its picture, in the order its entries come, as the card's frame does.
  */
-const paintPass = (pass: TRenderPass, picture: TPicture, clearColor: TColor, store: TPaintStore, notDrawn: Set<string>): void => {
+const paintPass = (
+    pass: TRenderPass,
+    picture: TPicture,
+    clearColor: TColor,
+    store: TPaintStore,
+    notDrawn: Set<string>,
+    cut: ((through: number) => void) | null = null,
+): void => {
     clear(picture, pass.clearColor ?? clearColor);
     const drawables = pass.drawables ?? [];
     const cameraIndex = pass.cameraIndex ?? [];
@@ -447,8 +454,14 @@ const paintPass = (pass: TRenderPass, picture: TPicture, clearColor: TColor, sto
         cameras: pass.cameras ?? [],
         state: null,
     };
+    // Where the effects run partway, before what is drawn over them (`TRenderPass.postCuts`).
+    const cuts = cut === null ? [] : pass.postCuts ?? [];
+    let next = 0;
     for (let i = 0; i < drawables.length; i++) {
         const item = drawables[i]!;
+        while (next < cuts.length && cuts[next]!.at === i) {
+            cut!(cuts[next++]!.through);
+        }
         target.state = stencilStates?.[i] ?? null;
         target.bounds = boundsFor(picture, target.state);
         switch (item.type) {
@@ -534,8 +547,14 @@ export const paintFrame = (ctx: TFrameContext, width: number, height: number, st
             picture.data = new Uint8Array(picture.width * picture.height * 4);
         }
         // A pass that does not say is cleared to the game's background, a picture's as the screen's,
-        // as the cards do.
-        paintPass(pass, picture, store.background, store, notDrawn);
+        // as the cards do. One the chain runs over may stop partway for it, for what is drawn over
+        // some of its effects, and runs the rest at the end.
+        const chain = pass.postProcess === true && (ctx.post?.length ?? 0) > 0 ? ctx.post! : null;
+        let ran = 0;
+        paintPass(pass, picture, store.background, store, notDrawn, chain === null ? null : (through) => {
+            paintEffects(chain.slice(ran, through + 1), picture, store.pictures, false, notDrawn);
+            ran = through + 1;
+        });
         if (pass.filter !== undefined) {
             // Its part of the pass drawn out into a picture of its own, its effects run over that as
             // over a whole screen, and the result is what the pass's filter layer lays back.
@@ -563,8 +582,8 @@ export const paintFrame = (ctx: TFrameContext, width: number, height: number, st
             }
         }
         // On whichever pass asks for them: the screen's, or a picture the game takes of itself.
-        if (pass.postProcess === true && (ctx.post?.length ?? 0) > 0) {
-            paintEffects(ctx.post!, picture, store.pictures, false, notDrawn);
+        if (chain !== null && ran < chain.length) {
+            paintEffects(ran === 0 ? chain : chain.slice(ran), picture, store.pictures, false, notDrawn);
         }
     }
     return { screen, notDrawn };

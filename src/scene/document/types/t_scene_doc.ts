@@ -110,6 +110,10 @@ export type TBoxNode = {
      */
     screenSpace?: boolean;
     /**
+     * Drawn over the screen effects (`useOverlay`). Only ever written when it is `true`.
+     */
+    overlay?: boolean;
+    /**
      * Left out of the scene's 2D lights (`useUnlit2d`). Only ever written when it is `true`.
      */
     unlit2d?: boolean;

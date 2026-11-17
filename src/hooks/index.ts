@@ -31,6 +31,7 @@ export { useCubeGeometry, usePlaneGeometry, useCircleGeometry, useSphereGeometry
 export { useLoadTexture, useLoadAtlas, useLoadBitmapFont, useLoadFont, useLoadModel, useLoadShader, useLoadPalette, useLoadLut, useLoadParticles, useLoadPack, useLoadScene, useLoadAudio, useLoadProgress, useLoadPixels, useLoadSong, useLoadTrackerSong, useLoadMotion } from './loaders';
 export type { TUseLoadPackOptions, TUseLoadSceneOptions } from './loaders';
 export { usePostProcess } from './post/use_post_process';
+export { useOverlay } from './post/use_overlay';
 export { useScene, useCleanup, useReady, useSceneTransitionEnd } from './scene';
 export { useSpawn, useSelf } from './spawn';
 export { useData, useWatch, useStateMachine } from './state';

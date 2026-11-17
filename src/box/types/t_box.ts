@@ -279,6 +279,11 @@ export type TBox = {
      */
     screenSpace: boolean;
     /**
+     * Draws this box, and everything under it, over the screen effects (`useOverlay`). Inherited
+     * downwards. Set it with the hook, which is what tells the game to look for it.
+     */
+    overlay: boolean;
+    /**
      * Leaves this box, and everything under it, out of the scene's 2D lights (`useUnlit2d`): drawn in
      * its own colours where the world is dark, still moving with the camera. Inherited downwards.
      */

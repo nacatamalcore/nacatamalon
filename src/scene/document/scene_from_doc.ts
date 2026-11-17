@@ -36,6 +36,7 @@ import {
 import { useLoadAtlas, useLoadAudio, useLoadBitmapFont, useLoadFont, useLoadModel, useLoadParticles, useLoadShader, useLoadSong, useLoadMotion, useLoadTexture } from '../../hooks/loaders';
 import { useMotion } from '../../hooks/motion';
 import { useScreenSpace } from '../../hooks/camera/use_screen_space';
+import { useOverlay } from '../../hooks/post/use_overlay';
 import { useWorldOffScreen } from '../../hooks/camera/use_world_off_screen';
 import type { TViewFilter } from '../../gameobjects/sprite_texture/types';
 import { useTransform } from '../../hooks/transform/use_transform';
@@ -1053,6 +1054,7 @@ const buildBox = (node: TBoxNode, store: TRuntimeStore, src: string): void => {
     if (node.tags !== undefined) box.tags = [...node.tags];
     if (node.visible === false) box.visible = false;
     if (node.screenSpace === true) useScreenSpace();
+    if (node.overlay === true) useOverlay();
     if (node.unlit2d === true) useUnlit2d();
     if (node.worldOffScreen === true) useWorldOffScreen();
     if (node.transform !== null) useTransform(node.transform);

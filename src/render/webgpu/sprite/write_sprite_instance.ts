@@ -2,6 +2,7 @@
 import { SPRITE_TEXTURE_SLOTS, pictureList } from '../../shared/sprite_batch';
 import type { TDrawItem } from '../../interface';
 import type { TDrawStencil } from '../../interface/draw/t_draw_stencil';
+import type { TPostCut } from '../../interface';
 import { toGpuTexture } from '../texture';
 import { isAway } from '../../../loaders/texture/is_away';
 import { getTextureBindGroup } from './get_texture_bind_group';
@@ -205,6 +206,7 @@ export const writeSpriteInstances = (
     cameraIndex: readonly number[],
     stencil: readonly TDrawStencil[] | null = null,
     passIndex = 0,
+    cuts: readonly TPostCut[] | null = null,
 ): number => {
     sprites.runs = sprites.runsByPass[passIndex] ??= [];
     if (drawables.length > sprites.capacity) {
@@ -217,9 +219,16 @@ export const writeSpriteInstances = (
     // True when the last thing looked at was not a sprite, so the next one starts a new batch even
     // if it could have joined the one before: a map's layer drawn in between has to stay in between.
     let broken = true;
+    // Where the screen's effects run partway: a batch never reaches across one, since what comes
+    // after it is drawn after them.
+    let cut = 0;
 
     for (let i = 0; i < drawables.length; i++) {
         const item = drawables[i];
+        if (cuts !== null && cut < cuts.length && cuts[cut]!.at === i) {
+            broken = true;
+            cut++;
+        }
         switch (item.type) {
             case 'sprite': {
                 // Where it ends up, not where it says it is: a box above it may have moved it.

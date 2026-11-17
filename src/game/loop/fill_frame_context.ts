@@ -5,7 +5,7 @@ import type { TDrawCamera2d } from '../../render/interface/draw/t_draw_camera_2d
 import type { TFog } from '../../fog/types/t_fog';
 import type { TDrawable } from '../../gameobjects/types';
 import { screenSizeOf } from '../../DOM/screen_size';
-import { collectDrawables, notePinnedInto } from './helper/collect_drawables';
+import { collectDrawables, noteBoxesInto, notePinnedInto } from './helper/collect_drawables';
 import { drawingPicture, showsPicture, viewWalk, walkingView } from './helper/view_walk';
 import type { TViewWalk } from './helper/view_walk';
 import { pictureMadeAt } from '../../gameobjects/sprite_texture/create_sprite_texture';
@@ -38,6 +38,9 @@ import { computeJointMatrices } from '../../math/skinning';
 import { syncMeshInstances } from '../../gameobjects/mesh/create_mesh_instances';
 import type { TMesh } from '../../gameobjects/mesh/types/t_mesh';
 import { buildPostChain } from '../../post/build_post_chain';
+import type { TPostEffect } from '../../post/types/t_post_effect';
+import { cutsOf, noteOver, overlayFrameOf, settleOver } from './helper/post_over';
+import type { TOverlayFrame, TOverWalk } from './helper/post_over';
 import type { TCamera2d } from '../../camera';
 import { cameraAsDrawn, pixelsPerUnit } from '../../camera/camera_as_drawn';
 import type { TPixelSnap } from '../types/t_game_options';
@@ -148,7 +151,7 @@ const sortLevels: Array<TMaskLevel | null> = [];
  * among themselves the nearest has to be last. `zIndex` still wins over all of it, so a scene that
  * ordered its glass by hand keeps that order.
  */
-const sortSceneByZIndex = (drawables: TDrawable[], cameraIndex: number[], start: number, camera: TCamera3d | null, levels: Array<TMaskLevel | null> | null): void => {
+const sortSceneByZIndex = (drawables: TDrawable[], cameraIndex: number[], start: number, camera: TCamera3d | null, levels: Array<TMaskLevel | null> | null, boxes: TBox[] | null = null): void => {
     let needed = false;
     let models = false;
     for (let i = start; i < drawables.length; i++) {
@@ -235,18 +238,23 @@ const sortSceneByZIndex = (drawables: TDrawable[], cameraIndex: number[], start:
         sortedDrawables[i] = drawables[start + order[i]];
         sortedCameras[i] = cameraIndex[start + order[i]];
     }
-    // A drawable's masks go with it, like its camera.
+    // A drawable's masks go with it, like its camera, and so does the box it was found on, which
+    // counts from the start of the scene.
     if (levels !== null) {
         sortLevels.length = count;
         for (let i = 0; i < count; i++) {
             sortLevels[i] = levels[start + order[i]] ?? null;
         }
     }
+    const sortedBoxes = boxes === null ? null : order.slice(0, count).map((at) => boxes[at]!);
     for (let i = 0; i < count; i++) {
         drawables[start + i] = sortedDrawables[i];
         cameraIndex[start + i] = sortedCameras[i];
         if (levels !== null) {
             levels[start + i] = sortLevels[i]!;
+        }
+        if (sortedBoxes !== null) {
+            boxes![i] = sortedBoxes[i]!;
         }
     }
     // Let go of what was sorted, so a scene that is gone is not kept alive by the last frame's copy.
@@ -259,7 +267,7 @@ const sortSceneByZIndex = (drawables: TDrawable[], cameraIndex: number[], start:
  * each one drawn through the camera of what it came from. Only rebuilds the stretch when it holds
  * one, so a scene of sprites alone pays one pass over it and nothing else.
  */
-const expandSceneIntoSprites = (drawables: Array<TDrawable | TDrawSprite>, cameraIndex: number[], start: number, viewIndex: number[], levels: Array<TMaskLevel | null> | null = null): void => {
+const expandSceneIntoSprites = (drawables: Array<TDrawable | TDrawSprite>, cameraIndex: number[], start: number, viewIndex: number[], levels: Array<TMaskLevel | null> | null = null, over: TOverWalk | null = null): void => {
     let found = false;
     for (let i = start; i < drawables.length; i++) {
         if (drawables[i].type === 'text' || drawables[i].type === 'nine-slice') {
@@ -276,8 +284,15 @@ const expandSceneIntoSprites = (drawables: Array<TDrawable | TDrawSprite>, camer
     // Cut alongside the others: every list here is one entry per drawable, and one growing while
     // another does not is how a HUD ends up drawn through the world's camera.
     const tailViews = viewIndex.splice(start);
-    // And the masks, which each part keeps from what it is part of.
+    // And the masks, which each part keeps from what it is part of, and what it is drawn over.
     const tailLevels = levels?.splice(start) ?? null;
+    const tailOver = over === null ? null : { at: over.at.splice(start), box: over.box.splice(start) };
+    const keepOver = (i: number): void => {
+        if (over !== null) {
+            over.at.push(tailOver!.at[i] ?? -1);
+            over.box.push(tailOver!.box[i] ?? null);
+        }
+    };
     for (let i = 0; i < tailDrawables.length; i++) {
         const drawable = tailDrawables[i];
         const level = tailLevels?.[i] ?? null;
@@ -287,6 +302,7 @@ const expandSceneIntoSprites = (drawables: Array<TDrawable | TDrawSprite>, camer
                 cameraIndex.push(tailCameras[i]);
                 viewIndex.push(-1);
                 levels?.push(level);
+                keepOver(i);
             }
             continue;
         }
@@ -295,6 +311,7 @@ const expandSceneIntoSprites = (drawables: Array<TDrawable | TDrawSprite>, camer
             cameraIndex.push(tailCameras[i]);
             viewIndex.push(tailViews[i]);
             levels?.push(level);
+            keepOver(i);
             continue;
         }
         for (const glyph of expandText(drawable as TText)) {
@@ -303,6 +320,7 @@ const expandSceneIntoSprites = (drawables: Array<TDrawable | TDrawSprite>, camer
             // A character is a sprite, so it belongs to no 3D view.
             viewIndex.push(-1);
             levels?.push(level);
+            keepOver(i);
         }
     }
 };
@@ -369,9 +387,29 @@ type TPassLists = {
      * masked: a game with no masks keeps no list for them.
      */
     masks: TMaskWalk | null;
+    /**
+     * The screen effect each drawable is drawn after, for a pass the chain runs over in a frame where
+     * something may be drawn over the effects (`useOverlay`); `null` otherwise, which is nearly always.
+     */
+    over: TOverWalk | null;
 };
 
-const newLists = (): TPassLists => ({ drawables: [], cameraIndex: [], cameras: [], views3d: [], viewIndex: [], masks: anyMasks() || anyFilters() ? { levels: [], shapes: new Map(), found: new Map(), filtered: new Map() } : null });
+/**
+ * This frame's chain, as it will run, and where it stops for what is drawn over its effects: `null`
+ * when nothing is. Worked out once, before anything is collected.
+ */
+let chainNow: TPostEffect[] | null = null;
+let overNow: TOverlayFrame | null = null;
+
+/**
+ * Empty lists for a pass. `effects` for one the chain runs over, which notes what is drawn over its
+ * effects when anything may be.
+ */
+const newLists = (effects = false): TPassLists => ({
+    drawables: [], cameraIndex: [], cameras: [], views3d: [], viewIndex: [],
+    masks: anyMasks() || anyFilters() ? { levels: [], shapes: new Map(), found: new Map(), filtered: new Map() } : null,
+    over: effects && overNow !== null ? { at: [], box: [] } : null,
+});
 
 /**
  * The passes each pass needs drawn before it: what its soft masks draw into. Kept per pass and
@@ -408,6 +446,13 @@ const finishPass = (pass: TRenderPass, lists: TPassLists, target: TMaskTarget): 
     if (pass.stencil !== undefined) {
         delete pass.stencil;
     }
+    // What is drawn over the effects, settled so nothing changes its order on screen, and where the
+    // chain stops for them.
+    const over = lists.over;
+    if (over !== null) {
+        settleOver(over);
+    }
+    cutPass(pass, over?.at ?? null);
     passesBefore.delete(pass);
     rememberMaskedPass(pass, null);
     const masks = lists.masks;
@@ -436,6 +481,7 @@ const finishPass = (pass: TRenderPass, lists: TPassLists, target: TMaskTarget): 
         shapes: masks.shapes,
         cameras: lists.cameras,
         views3d: lists.views3d,
+        ...(over !== null ? { over: over.at } : {}),
     }, target, drawingWith, whiteFor(drawingWith));
     if (masked === null) {
         return;
@@ -444,7 +490,23 @@ const finishPass = (pass: TRenderPass, lists: TPassLists, target: TMaskTarget): 
     pass.cameraIndex = masked.cameraIndex;
     pass.viewIndex = masked.viewIndex;
     pass.stencil = masked.stencil;
+    cutPass(pass, over !== null ? masked.over : null);
     passesBefore.set(pass, masked.before);
+};
+
+/**
+ * Says where a pass stops for its effects, from what each of its drawables is drawn over, or that it
+ * does not.
+ */
+const cutPass = (pass: TRenderPass, over: readonly number[] | null): void => {
+    const cuts = over === null ? undefined : cutsOf(over);
+    if (cuts === undefined) {
+        if (pass.postCuts !== undefined) {
+            delete pass.postCuts;
+        }
+        return;
+    }
+    pass.postCuts = cuts;
 };
 
 /**
@@ -559,12 +621,13 @@ type TSeenThrough = Pick<TRuntimeState['viewport'], 'camera3d' | 'camera2d' | 'l
  * Whether a capture that leaves out `hide` and keeps only `only` draws `drawable`: by itself, by the
  * box it is in, or by any box above that one.
  */
-const keptByBoxes = (drawable: TDrawable, hide: ReadonlySet<TBox | TDrawable> | null, only: ReadonlySet<TBox | TDrawable> | null): boolean => {
+const keptByBoxes = (drawable: TDrawable, hide: ReadonlySet<TBox | TDrawable> | null, only: ReadonlySet<TBox | TDrawable> | null, found: TBox | null = null): boolean => {
     if (hide?.has(drawable)) {
         return false;
     }
     let kept = only === null || only.has(drawable);
-    for (let box: TBox | null = ownerOfDrawable(drawable)?.box ?? null; box !== null; box = box.parent) {
+    // The box the walk found it on, or where it was made: a map from a file has no maker of its own.
+    for (let box: TBox | null = found ?? ownerOfDrawable(drawable)?.box ?? null; box !== null; box = box.parent) {
         if (hide?.has(box)) {
             return false;
         }
@@ -692,11 +755,16 @@ const gatherTree = (
     // another camera wants the world itself. A view's own walk always does.
     const ownSight = viewport === null || (viewport.camera2d == null && viewport.camera3d == null);
     const pinnedOnly = root.worldOffScreen && root.parent === null && viewWalk() === null && ownSight ? [] as boolean[] : null;
+    // The box each is found on, counted from `start`, only when something asks a drawing's box after
+    // the walk: what is drawn over the screen effects, or what a capture leaves out.
+    const boxes = lists.over !== null || viewport?.hide != null || viewport?.only != null ? [] as TBox[] : null;
     notePinnedInto(pinnedOnly);
+    noteBoxesInto(boxes);
     try {
         collectDrawables(root, drawables as TDrawable[], cameraIndex, sceneCamera, false, null, 0, colliders, pictures, screenCamera, measuredBy, null, snapping, lists.masks, null, null, sights, unlitCamera);
     } finally {
         notePinnedInto(null);
+        noteBoxesInto(null);
     }
     // The models the screen leaves out with its world, which a picture watching the world around it
     // still sees (see the end of the walk).
@@ -723,11 +791,13 @@ const gatherTree = (
             drawables[kept] = drawables[i];
             cameraIndex[kept] = cameraIndex[i];
             if (levels !== null) levels[kept] = levels[i] ?? null;
+            if (boxes !== null) boxes[kept - start] = boxes[i - start]!;
             kept++;
         }
         drawables.length = kept;
         cameraIndex.length = kept;
         if (levels !== null) levels.length = kept;
+        if (boxes !== null) boxes.length = kept - start;
         if (unseen.length > 0 && !again) {
             stepSceneParticles(unseen, unseenCameras, 0, rootOf(root).paused ? 0 : delta, colliders);
         }
@@ -763,11 +833,13 @@ const gatherTree = (
             drawables[kept] = drawables[i];
             cameraIndex[kept] = cameraIndex[i];
             if (levels !== null) levels[kept] = levels[i] ?? null;
+            if (boxes !== null) boxes[kept - start] = boxes[i - start]!;
             kept++;
         }
         drawables.length = kept;
         cameraIndex.length = kept;
         if (levels !== null) levels.length = kept;
+        if (boxes !== null) boxes.length = kept - start;
         // A kind the screen does not show is still going on in the game, so its particles still move:
         // a capture of the game has to find them where they got to, and they must not all start
         // again the moment the screen shows them. A second look moves nothing (see below).
@@ -781,19 +853,21 @@ const gatherTree = (
     if (hide !== null || only !== null) {
         let kept = start;
         for (let i = start; i < drawables.length; i++) {
-            if (!keptByBoxes(drawables[i] as TDrawable, hide, only)) {
+            if (!keptByBoxes(drawables[i] as TDrawable, hide, only, boxes?.[i - start] ?? null)) {
                 continue;
             }
             drawables[kept] = drawables[i];
             cameraIndex[kept] = cameraIndex[i];
             if (levels !== null) levels[kept] = levels[i] ?? null;
+            if (boxes !== null) boxes[kept - start] = boxes[i - start]!;
             kept++;
         }
         drawables.length = kept;
         cameraIndex.length = kept;
         if (levels !== null) levels.length = kept;
+        if (boxes !== null) boxes.length = kept - start;
     }
-    sortSceneByZIndex(drawables as TDrawable[], cameraIndex, start, viewport?.camera3d ?? root.camera3d, levels);
+    sortSceneByZIndex(drawables as TDrawable[], cameraIndex, start, viewport?.camera3d ?? root.camera3d, levels, boxes);
 
     // The scene's own way of seeing and lighting its models, worked out only when it has any:
     // a 2D game never pays for a walk looking for lamps it does not have.
@@ -814,6 +888,13 @@ const gatherTree = (
     }
 
     poseSkeletons(drawables, start);
+
+    // What each is drawn over, worked out on the drawings themselves, by their objects and their
+    // kinds: before an emitter, a map layer, a shape, lines or a plugin's drawing is swapped for what
+    // stands in for it on the card, and before a text is its letters.
+    if (lists.over !== null && overNow !== null) {
+        noteOver(overNow, lists.over, drawables, boxes, start, levels);
+    }
 
     // After the walk, because a particle is born where its emitter **ended up**. A paused scene
     // is frozen rather than skipped: it keeps drawing the cloud it last had.
@@ -841,7 +922,7 @@ const gatherTree = (
     stepSceneCustom(drawables as TDrawable[], start, seenFlat !== null && followsFlat(seenFlat));
 
     // After the sort, so a text or a nine-slice moves as one block and its parts stay together.
-    expandSceneIntoSprites(drawables, cameraIndex, start, viewIndex, levels);
+    expandSceneIntoSprites(drawables, cameraIndex, start, viewIndex, levels, lists.over);
 
     const models = drawables.slice(start).filter(inDepth);
     if (modelsOffScreen !== null) {
@@ -1094,7 +1175,7 @@ const drawOrder = (store: TRuntimeStore): readonly TBox[] => {
  * again: see `lookAgainAtParticles` for why that matters.
  */
 const secondPass = (store: TRuntimeStore, seenThrough: TSeenThrough, clearColor: TColor, target: TMaskTarget, effects = true): TRenderPass => {
-    const lists = newLists();
+    const lists = newLists(effects);
     for (const scene of drawOrder(store)) {
         if (!scene.held && !isBehindSplash(store, scene)) {
             gatherTree(scene, lists, 0, { flat: [], deep: [] }, [], seenThrough, true, { width: target.width / target.pixelRatio, height: target.height / target.pixelRatio });
@@ -1122,6 +1203,9 @@ export const fillFrameContext = (store: TRuntimeStore, ctx: TFrameContext, delta
     const sceneStyle = gameBehindSplash(store) ? null : topSceneStyle(store.get('world').scenes);
     syncStyleScreen(store, sceneStyle);
     syncStylePost(store, sceneStyle ?? gameStyle);
+    // The chain this frame runs, worked out before anything is collected, since what is drawn over
+    // its effects is noted as it is.
+    ({ chain: chainNow, frame: overNow } = overlayFrameOf(store, buildPostChain(store)));
     snapping = store.get('config').pixelSnap;
     drawingWith = store.get('screen').renderer;
     if (drawingWith !== null) {
@@ -1129,7 +1213,7 @@ export const fillFrameContext = (store: TRuntimeStore, ctx: TFrameContext, delta
     }
 
     // Game objects while collecting and sorting; only sprites once texts are expanded.
-    const lists = newLists();
+    const lists = newLists(true);
     const scenes = drawOrder(store);
     // The game's pixels the screen is drawn in, which is what its cameras show.
     const shown = store.get('screen').canvas;
@@ -1213,7 +1297,9 @@ export const fillFrameContext = (store: TRuntimeStore, ctx: TFrameContext, delta
 
     // A list only when something will run. Undefined is the whole of the promise that a game with
     // no effects draws exactly as it did before they existed: see `TFrameContext.post`.
-    const post = buildPostChain(store);
+    const post = chainNow;
+    chainNow = null;
+    overNow = null;
     if (post === null) {
         delete ctx.post;
     } else {

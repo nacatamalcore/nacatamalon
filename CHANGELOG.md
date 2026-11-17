@@ -165,6 +165,19 @@ releases are in [changelog/](./changelog/), one file each.
   `composerSwizzle(composerPolar(), 'yx')` is a strip laid round a ring: a dial, a radar, rays from
   a sun, a ring that fills like a clock; with `composerTime()` added, one that spins.
 
+- **Drawn over the screen effects: `useOverlay()`**, for a HUD that a bloom does not make glow, or a
+  menu that the blur behind it does not blur. It marks a box, or a whole scene from its body, to be
+  drawn after the effects, untouched by them; a scene document keeps it as `overlay: true`. It is apart
+  from `useScreenSpace`, which says where a thing is placed: a pinned HUD that is not an overlay goes
+  through the effects as before. The chain can say where it goes with an `{ overlay: true }` entry, in a
+  project's `post` or a style's: the effects before it run under the overlay, the ones after over it
+  too, so `[bloom, { overlay: true }, crt]` is a HUD that does not glow, on a curved screen. Without
+  one, it goes after every effect. Only what is in front of everything that is not an overlay is drawn
+  there: one with a glass or a sprite in front of it stays where it is, under the effects, and is said
+  once, so nothing ever changes its order on screen; a model drawn over the effects is still hidden by
+  the models in front of it. While a scene changes, or the splash fades out, an overlay is drawn
+  with everything else, under the effects and the cover, which stays first in the chain as ever.
+
 - **`castRay(ray, where)`: what a ray meets among the models, no physics needed**: what was
   clicked, with `screenToRay`, or what a piece stands on. Every model in `where` (a box, or several,
   and what they hold) as it is drawn, nearest first: the object and the model, where, which way the
@@ -205,6 +218,10 @@ releases are in [changelog/](./changelog/), one file each.
   alone. It is the object's own, as `createGeometry`'s is.
 
 ### Fixed
+
+- **A capture that leaves out an object (`hide`) or keeps only some (`only`) leaves out or keeps the
+  maps laid in it too.** A map's layers were found by who made them, and one loaded from a file has
+  no maker: it is found now by where it is laid, even laid in two places at once.
 
 - **`composerAtan2` at the origin is `0` on every card.** Neither shader language says what the
   angle of `(0, 0)` is, so one card could give `0` and another anything, and a picture read at it

@@ -301,6 +301,12 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
         // With `msaa`, drawn in a place with several samples per pixel and resolved into whatever was
         // bound above when the drawing is done.
         const into = state.samples > 1 ? bindMultisampled(state, target.width, target.height) : null;
+        // Where the chain runs partway, for what is drawn over some of its effects, and the
+        // framebuffer drawn into, which what they made is drawn back into.
+        const cuts = redirected ? drawn.postCuts ?? null : null;
+        const drawing = cuts === null ? null : gl.getParameter(gl.FRAMEBUFFER_BINDING) as WebGLFramebuffer | null;
+        let ran = 0;
+        let nextCut = 0;
         gl.viewport(0, 0, target.width, target.height);
         // With a `pixelRatio` the screen's buffer holds more real pixels than the game has. The
         // viewport, depth, samples and pictures above are the buffer's size; everything placed in
@@ -350,7 +356,7 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
             beginStencil(gl);
         }
         let masking: TDrawStencil | null = null;
-        writeSpriteInstances(gl, state.sprites, drawables, cameraIndex, stencil);
+        writeSpriteInstances(gl, state.sprites, drawables, cameraIndex, stencil, cuts);
 
         // Counted and reserved before anything is drawn, so the buffer cannot be swapped out from
         // under a draw that was already pointed at it.
@@ -383,9 +389,10 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
         const order = deepFilters && stencil !== null ? deepLayerOrder(drawables, stencil, (layer) => state.filterDepth?.kept(layer.picture) === true) : null;
         waiting.length = 0;
         let laid = 0;
-        // Lays the halo of each one that waits for entry `last`, inside its own masks.
-        const layWaiting = order === null ? null : (last: number): void => {
-            while (laid < waiting.length && order[waiting[laid]!] === last) {
+        // Lays the halo of each one that waits for entry `last`, inside its own masks; every one still
+        // waiting, with no `last`.
+        const layWaiting = order === null ? null : (last?: number): void => {
+            while (laid < waiting.length && (last === undefined || order[waiting[laid]!] === last)) {
                 const j = waiting[laid++]!;
                 if (spritesReady) {
                     gl.bindVertexArray(null);
@@ -399,6 +406,31 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
             const item = drawables[i];
             if (layWaiting !== null && i > 0) {
                 layWaiting(i - 1);
+            }
+            // What follows is drawn over some of the effects: they run now over what is drawn so far,
+            // and what they made goes back where the pass draws, keeping its depth and its stencil.
+            while (cuts !== null && nextCut < cuts.length && cuts[nextCut]!.at === i) {
+                layWaiting?.();
+                if (spritesReady) {
+                    gl.bindVertexArray(null);
+                    spritesReady = false;
+                }
+                gl.disable(gl.STENCIL_TEST);
+                gl.disable(gl.SCISSOR_TEST);
+                gl.colorMask(true, true, true, true);
+                if (state.samples > 1) {
+                    resolveMultisampled(state, into, target.width, target.height);
+                }
+                const through = cuts[nextCut++]!.through;
+                state.post!.runPart(chain!, ran, through, drawing, ctx.time, ctx.progress, ctx.phase, ratio);
+                ran = through + 1;
+                gl.bindFramebuffer(gl.FRAMEBUFFER, drawing);
+                gl.viewport(0, 0, target.width, target.height);
+                if (stencil !== null) {
+                    beginStencil(gl);
+                }
+                masking = null;
+                litView = -1;
             }
             if (stencil !== null) {
                 masking = applyStencil(gl, stencil[i]!, masking, ratio, target.width, target.height);
@@ -467,7 +499,8 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
                 let last = i;
                 while (order === null && last + 1 < drawables.length) {
                     const next = drawables[last + 1];
-                    if (next.type !== 'custom' || next.kind !== item.kind || (stencil !== null && stencil[last + 1] !== stencil[i])) {
+                    if (next.type !== 'custom' || next.kind !== item.kind || (stencil !== null && stencil[last + 1] !== stencil[i])
+                        || (cuts !== null && nextCut < cuts.length && cuts[nextCut]!.at === last + 1)) {
                         break;
                     }
                     last++;
@@ -559,10 +592,10 @@ export const renderFrame = (state: TWebGL2State, ctx: TFrameContext): void => {
         // The chain, straight after the pass it reads. To the canvas for the screen; for a capture,
         // into the place a picture is drawn in first, and turned over from there like any other.
         if (redirected && pass.renderTarget === undefined) {
-            state.post!.run(chain!, null, ctx.time, ctx.progress, ctx.phase, ratio);
+            state.post!.run(chain!, null, ctx.time, ctx.progress, ctx.phase, ratio, ran);
         } else if (redirected) {
             bindUpright(state, size.width, size.height);
-            state.post!.run(chain!, state.upright.get(`${size.width}x${size.height}`) ?? null, ctx.time, ctx.progress, ctx.phase);
+            state.post!.run(chain!, state.upright.get(`${size.width}x${size.height}`) ?? null, ctx.time, ctx.progress, ctx.phase, 1, ran);
             copyUpright(state, pass, size.width, size.height);
         }
 

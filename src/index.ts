@@ -42,7 +42,7 @@ export {
     useUpdate, useLateUpdate, useLoadTexture, useLoadAtlas, useLoadProgress, useScene, useCleanup, useReady,
     useSceneTransitionEnd, useSpawn, useSelf, useKeyboard, useGame, useSpriteAnimation,
     getSpriteAnimation, useSkeletalAnimation, useTween, useTimer, useCamera2d, useScreenSpace,
-    useWorldOffScreen, usePointer, useGamepad, useActions, useAction, useDirection, useInputMap,
+    useOverlay, useWorldOffScreen, usePointer, useGamepad, useActions, useAction, useDirection, useInputMap,
     useTouchAction, useDraggable, useDropZone, useSignal, useStore, useStoreLink, usePhysicsBody2d,
     usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d, useRetroBody2d, useRetroWorld2d, useLoadBitmapFont, useLoadFont, useLoadModel,
     useLoadParticles, useLoadPack, useLoadScene, useLoadAudio, useSound, useAudio, useMusic, useSong,

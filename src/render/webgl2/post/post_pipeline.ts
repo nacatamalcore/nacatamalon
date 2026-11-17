@@ -38,6 +38,24 @@ type TCompiled = {
 };
 
 /**
+ * An effect that changes nothing, to copy a picture somewhere with the chain's own programs.
+ */
+const COPY: readonly TPostEffect[] = [{
+    type: 'post',
+    id: 'copy',
+    name: 'copy',
+    fragment: 'fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> { return color; }',
+    fragmentGlsl: 'vec4 effect(vec4 color, vec2 uv) { return color; }',
+    uniforms: {},
+    uniformSig: {},
+    palette: null,
+    lut: null,
+    source: 'scene',
+    enabled: true,
+    effect: null,
+}];
+
+/**
  * Every screen-wide effect this game has compiled on this card, and the pictures they pass between.
  *
  * @internal
@@ -51,6 +69,11 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
 
     let parameters: WebGLBuffer | null = null;
     let scene: ITexture | null = null;
+    /**
+     * Where the effects run partway write before what they made goes back where the scene is drawn:
+     * made the first time something is drawn over an effect (`TRenderPass.postCuts`).
+     */
+    let between: ITexture | null = null;
     /**
      * The pictures the chain passes between, by size, made the first time a size is asked for.
      */
@@ -141,6 +164,10 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
             release(scene);
         }
         scene = null;
+        if (between !== null) {
+            release(between);
+        }
+        between = null;
         dropPool();
         dropHistories();
         width = nextWidth;
@@ -323,6 +350,8 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
         phase: number,
         pixelRatio: number,
         screen: boolean,
+        from = 0,
+        to = chain.length - 1,
     ): void => {
         if (parameters === null) {
             parameters = gl.createBuffer();
@@ -406,9 +435,9 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
             gl.drawArrays(gl.TRIANGLES, 0, 3);
         };
 
-        for (let i = 0; i < chain.length; i++) {
+        for (let i = from; i <= to; i++) {
             const effect = chain[i]!;
-            const lastEffect = i === chain.length - 1;
+            const lastEffect = i === to;
             const input = source;
             // A filter's effect has no last frame of its own: see the other card.
             const history = effect.history === true && screen ? historyOf(effect) : null;
@@ -498,9 +527,36 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
         // `pixelRatio`: real pixels per game pixel. The hooks run on every real one, but read the
         // game's `resolution`, so a dither pattern keeps the size of a game pixel. A pass reads its
         // own size. The routing is its twin's: see the WebGPU `run`.
-        run: (chain: readonly TPostEffect[], destination: WebGLFramebuffer | null, time: number, progress: number, phase: number, pixelRatio = 1): void => {
+        // `from`: the first of the chain still to run, after `runPart` ran the ones before it. With
+        // none left, the scene's picture is copied to `destination` as it is.
+        run: (chain: readonly TPostEffect[], destination: WebGLFramebuffer | null, time: number, progress: number, phase: number, pixelRatio = 1, from = 0): void => {
             pruneHistories(chain);
-            runChain(chain, scene!, width, height, destination, time, progress, phase, pixelRatio, true);
+            if (from >= chain.length) {
+                runChain(COPY, scene!, width, height, destination, time, progress, phase, pixelRatio, true);
+                return;
+            }
+            runChain(chain, scene!, width, height, destination, time, progress, phase, pixelRatio, true, from);
+        },
+
+        /**
+         * Runs the chain from `from` through `through` over the scene's picture as it is drawn so far,
+         * and draws what they made back into `back`, the framebuffer the scene goes on being drawn
+         * into, colour only: its depth and stencil stay, for what is drawn over these effects. The
+         * caller turns the stencil and the scissor off around it, and puts its own state back after.
+         */
+        runPart: (
+            chain: readonly TPostEffect[],
+            from: number,
+            through: number,
+            back: WebGLFramebuffer | null,
+            time: number,
+            progress: number,
+            phase: number,
+            pixelRatio = 1,
+        ): void => {
+            between ??= createWebGL2RenderTexture(gl, width, height);
+            runChain(chain, scene!, width, height, framebufferFor(between), time, progress, phase, pixelRatio, true, from, through);
+            runChain(COPY, between, width, height, back, time, progress, phase, pixelRatio, true);
         },
 
         /**
@@ -571,7 +627,7 @@ export const createPostPipelines = (gl: WebGL2RenderingContext) => {
                 gl.deleteFramebuffer(framebuffer);
             }
             targets.clear();
-            for (const texture of [scene, blank]) {
+            for (const texture of [scene, between, blank]) {
                 if (texture !== null) {
                     gl.deleteTexture(toGlTexture(texture));
                 }

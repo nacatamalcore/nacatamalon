@@ -49,6 +49,7 @@ export const newBox = (name: string): TBox => ({
     audioListener: null,
     spriteTexture: null,
     screenSpace: false,
+    overlay: false,
     unlit2d: false,
     worldOffScreen: false,
     mask: null,

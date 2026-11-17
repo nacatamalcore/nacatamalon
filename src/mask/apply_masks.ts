@@ -31,6 +31,11 @@ export type TMaskedLists = {
     levels: readonly (TMaskLevel | null)[];
     /** Each mask's shape, already turned into what a backend draws (a text into its letters). */
     shapes: ReadonlyMap<TMask, TShapeList>;
+    /**
+     * One entry per drawable: the screen effect it is drawn after (`TRenderPass.postCuts`), or `-1`.
+     * Left out when no effect has anything drawn over it.
+     */
+    over?: readonly number[];
     cameras: readonly TDrawCamera2d[];
     views3d: readonly TDrawView3d[];
 };
@@ -54,10 +59,16 @@ export type TMaskedPass = {
     cameraIndex: number[];
     viewIndex: number[];
     stencil: TDrawStencil[];
+    /**
+     * The screen effect each is drawn over, as `TMaskedLists.over` was, with what it brought: a
+     * mask's writes go with what they keep in, a filter's or a soft mask's layer with the first of
+     * what it holds, which is the furthest under of them.
+     */
+    over: number[];
     before: TRenderPass[];
 };
 
-type TEntry = { item: TMaskedItem; camera: number; view: number; chain: readonly TMaskLevel[] };
+type TEntry = { item: TMaskedItem; camera: number; view: number; chain: readonly TMaskLevel[]; over: number };
 
 /** Big enough to cover any picture from the middle of the screen: what a whole-picture write is. */
 const EVERYWHERE = 1 << 16;
@@ -118,9 +129,12 @@ export const applyMasks = (lists: TMaskedLists, target: TMaskTarget, renderer: I
         camera: lists.cameraIndex[i] ?? -1,
         view: lists.viewIndex[i] ?? -1,
         chain: chainOf(lists.levels[i] ?? null),
+        over: lists.over?.[i] ?? -1,
     }));
+    // Only kept when something may be drawn over the effects: a game with no overlay pays nothing for it.
+    const keeping = lists.over !== undefined;
     const before: TRenderPass[] = [];
-    const out = resolve(entries, { lists, target, renderer, white, before, states: new Map(), scissors: new Map() });
+    const out = resolve(entries, { lists, target, renderer, white, before, states: new Map(), scissors: new Map(), keeping });
     return { ...out, before };
 };
 
@@ -132,6 +146,8 @@ type TContext = {
     before: TRenderPass[];
     states: Map<string, TDrawStencil>;
     scissors: Map<TMaskLevel, TDrawStencil['scissor'] | undefined>;
+    /** Whether the screen effect each entry is drawn over is kept (`TMaskedLists.over`). */
+    keeping: boolean;
 };
 
 /**
@@ -269,7 +285,7 @@ const softLayer = (context: TContext, level: TMaskLevel, group: TEntry[], depth:
         viewIndex: drawn.drawables.map(() => -1),
     });
     const layer: TDrawMaskLayer = { type: 'mask-layer', content, shape, channel: level.mask!.channel, invert: level.mask!.invert };
-    return { item: layer, camera: -1, view: -1, chain: group[0]!.chain.slice(0, depth) };
+    return { item: layer, camera: -1, view: -1, chain: group[0]!.chain.slice(0, depth), over: group[0]!.over };
 };
 
 /**
@@ -356,7 +372,7 @@ const filterLayer = (context: TContext, level: TMaskLevel, group: TEntry[], dept
     const layer: TDrawFilterLayer = deep
         ? { type: 'filter-layer', picture: into, ...region, depth: true }
         : { type: 'filter-layer', picture: into, ...region };
-    return { item: layer, camera: -1, view: -1, chain: group[0]!.chain.slice(0, depth) };
+    return { item: layer, camera: -1, view: -1, chain: group[0]!.chain.slice(0, depth), over: group[0]!.over };
 };
 
 /**
@@ -395,11 +411,17 @@ const resolve = (entries: readonly TEntry[], context: TContext): Omit<TMaskedPas
     const cameraIndex: number[] = [];
     const viewIndex: number[] = [];
     const stencil: TDrawStencil[] = [];
+    const over: number[] = [];
+    // What the writes for an entry are drawn over: the entry's own, so they go with what they keep in.
+    let overNow = -1;
     const emit = (item: TMaskedItem, camera: number, view: number, state: TDrawStencil): void => {
         drawables.push(item);
         cameraIndex.push(camera);
         viewIndex.push(view);
         stencil.push(state);
+        if (context.keeping) {
+            over.push(overNow);
+        }
     };
     const writeShape = (list: TShapeList, ref: number, write: 'add' | 'sub', channel: TDrawStencil['channel']): void => {
         const state = stateOf(context, ref, write, channel, null);
@@ -411,6 +433,7 @@ const resolve = (entries: readonly TEntry[], context: TContext): Omit<TMaskedPas
     // What is in the stencil now: the masks it counts, outermost first.
     let written: TMaskLevel[] = [];
     for (const entry of flat) {
+        overNow = entry.over;
         let scissor: TDrawStencil['scissor'] = null;
         const needed: TMaskLevel[] = [];
         for (const level of entry.chain) {
@@ -445,5 +468,5 @@ const resolve = (entries: readonly TEntry[], context: TContext): Omit<TMaskedPas
 
         emit(entry.item, entry.camera, entry.view, stateOf(context, needed.length, 'none', 'alpha', scissor));
     }
-    return { drawables, cameraIndex, viewIndex, stencil };
+    return { drawables, cameraIndex, viewIndex, stencil, over };
 };

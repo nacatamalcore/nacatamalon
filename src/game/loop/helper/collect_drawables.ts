@@ -396,6 +396,25 @@ export const notePinnedInto = (into: boolean[] | null): void => {
 };
 
 /**
+ * Where the walk notes, alongside what it collects, the box each one is found on, or `null` when
+ * nobody asked. The box it is drawn from here, which is not always the one it was made on: a map
+ * from a file is laid wherever it is asked for, and one cached map can be laid in two places at once.
+ */
+let boxesOut: TBox[] | null = null;
+
+/**
+ * Asks the next walks to note the box each drawing is found on into `into`, or stops asking with
+ * `null`.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const noteBoxesInto = (into: TBox[] | null): void => {
+    boxesOut = into;
+};
+
+/**
  * @param cameraIndex Filled alongside `out`, one entry per drawable: which camera draws it, `-1`
  * for screen pixels.
  * @param sceneCamera The index of the scene's camera, or `-1` if the scene has none.
@@ -538,6 +557,7 @@ export const collectDrawables = (
         cameraIndex.push(view);
         masks?.levels.push(here);
         pinnedOut?.push(pinned);
+        boxesOut?.push(box);
     }
     for (const child of box.children) {
         collectDrawables(child, out, cameraIndex, sceneCamera, pinned, world, depth + 1, colliders, pictures, screenCamera, camera, parallax, snap, masks, here, shapes, sights, unlitCamera);

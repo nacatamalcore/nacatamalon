@@ -1072,6 +1072,7 @@ const writeBox = (box: TBox, writing: TWriting): TBoxNode => {
         }) } : {}),
         ...unless('visible', box.visible, true),
         ...unless('screenSpace', box.screenSpace, false),
+        ...unless('overlay', box.overlay, false),
         ...unless('unlit2d', box.unlit2d, false),
         ...unless('worldOffScreen', box.worldOffScreen, false),
         ...(Object.keys(extra).length > 0 ? { extra } : {}),

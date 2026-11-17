@@ -41,6 +41,16 @@ export type TRenderPass = {
      */
     postProcess?: boolean;
     /**
+     * Where the chain stops partway, for a pass it runs over that has something drawn over the effects
+     * (`useOverlay`): before `drawables[at]` is drawn, the chain runs over what is drawn so far up to
+     * its effect `through` (an index into `TFrameContext.post`), its result goes back where the pass
+     * draws, and the rest is drawn over it, against the same depth and the same stencil; at the end the
+     * rest of the chain runs as ever. Both grow from one cut to the next. Left out when nothing is
+     * drawn over an effect, which is every game that does not ask, and then the chain runs once, at
+     * the end.
+     */
+    postCuts?: readonly TPostCut[];
+    /**
      * What to draw in this pass, in order. The game's records, passed by reference, never copied.
      */
     drawables?: readonly TDrawItem[];
@@ -96,6 +106,19 @@ export type TRenderPass = {
         readonly into: ITexture;
         readonly depth?: { readonly reach: number };
     };
+};
+
+/**
+ * One place a pass stops for its effects: see `TRenderPass.postCuts`.
+ *
+ * @category Render
+ * @since 1.0.0
+ */
+export type TPostCut = {
+    /** The first drawable drawn over the effects run here. */
+    readonly at: number;
+    /** The last effect run here, an index into `TFrameContext.post`. */
+    readonly through: number;
 };
 
 /**

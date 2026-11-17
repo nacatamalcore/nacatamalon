@@ -148,11 +148,24 @@ export const normalizePostChain = (value: unknown): TPostChain => {
     }
 
     const chain: TPostChain = [];
+    let overlay = false;
     for (const raw of value) {
         if (typeof raw !== 'object' || raw === null) {
             continue;
         }
         const read = raw as Record<string, unknown>;
+
+        // Not an effect: where what is drawn over the effects goes. One place: a second is said and
+        // left out, since a thing cannot be drawn in two.
+        if (read.overlay === true) {
+            if (overlay) {
+                console.warn('[NacatamalOn] post: the chain has two { overlay: true } entries, and what is drawn over the effects goes in one place, so the second is left out.');
+                continue;
+            }
+            overlay = true;
+            chain.push(read.enabled === false ? { overlay: true, enabled: false } : { overlay: true });
+            continue;
+        }
 
         const named = asPath(read.builtin);
         const builtin = named === undefined ? undefined : asCurrentKey(named);

@@ -4,7 +4,7 @@ export type { IBuffer, TBufferUsage } from './i_buffer';
 export type { TCaptureResult } from './t_capture_result';
 export type { TTextureRegion } from './t_texture_region';
 export type { TDrawTexture } from './draw/t_draw_texture';
-export type { TFrameContext, TRenderPass } from './t_frame_context';
+export type { TFrameContext, TPostCut, TRenderPass } from './t_frame_context';
 export type { TDrawSprite } from './draw/t_draw_sprite';
 export type { TDrawItem } from './draw/t_draw_item';
 export type { TDrawTilemapLayer } from './draw/t_draw_tilemap_layer';

@@ -258,10 +258,18 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         const keptDepth = drawn.filter?.depth !== undefined && drawn.renderTarget !== undefined
             ? readableDepthFor(gpu, target.width, target.height)
             : null;
-        const gpuPass = encoder.beginRenderPass({
+        // Where the chain runs partway, for what is drawn over some of its effects: the pass ends
+        // there and starts again, keeping its depth and its stencil.
+        const cuts = destination !== null ? drawn.postCuts ?? null : null;
+        let ran = 0;
+        let nextCut = 0;
+        const depthView = keptDepth?.createView() ?? depthViewFor(gpu, target.width, target.height);
+        // `again` for one started again after a cut: what was drawn is drawn back in by the effects,
+        // and the depth and the stencil are taken up where they were.
+        const beginPass = (again: boolean): GPURenderPassEncoder => encoder.beginRenderPass({
             colorAttachments: [multisampled === null ? {
                 view: target.view,
-                loadOp: 'clear',
+                loadOp: again ? 'load' : 'clear',
                 storeOp: 'store',
                 clearValue: drawn.clearColor ?? gpu.clearColor,
             } : {
@@ -272,17 +280,19 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
                 clearValue: drawn.clearColor ?? gpu.clearColor,
             }],
             // Cleared to the far plane: everything is in front of nothing.
-            // The stencil, which only masks write, starts at 0 and is not kept: nothing reads it after.
+            // The stencil, which only masks write, starts at 0 and is not kept unless the pass is
+            // started again after a cut: nothing else reads it after.
             depthStencilAttachment: {
-                view: keptDepth?.createView() ?? depthViewFor(gpu, target.width, target.height),
+                view: depthView,
                 depthClearValue: 1,
-                depthLoadOp: 'clear',
+                depthLoadOp: again ? 'load' : 'clear',
                 depthStoreOp: 'store',
                 stencilClearValue: 0,
-                stencilLoadOp: 'clear',
-                stencilStoreOp: 'discard',
+                stencilLoadOp: again ? 'load' : 'clear',
+                stencilStoreOp: cuts !== null ? 'store' : 'discard',
             },
         });
+        let gpuPass = beginPass(false);
 
         // The game's size, which is the resolution (the buffer's only at a `pixelRatio` of 1).
         // One uniform buffer for every pass: fine while a frame has a single pass, and the first
@@ -308,7 +318,7 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
             gpu.masks ??= createMaskPipelines(gpu.device, gpu.format, gpu.samples, gpu.sprites, gpu.tilemaps);
         }
         let state: TDrawStencil | null = null;
-        const spriteCount = writeSpriteInstances(gpu.device, gpu.sprites, drawables, cameraIndex, stencil, spritePassCount++);
+        const spriteCount = writeSpriteInstances(gpu.device, gpu.sprites, drawables, cameraIndex, stencil, spritePassCount++, cuts);
         // Each filter's picture says where it goes in a slot of its own, so the room for all of them
         // is made before the first is drawn.
         let filterLayers = 0;
@@ -379,9 +389,10 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         waiting.length = 0;
         waitingSlots.length = 0;
         let laid = 0;
-        // Lays the halo of each one that waits for entry `last`, inside its own masks.
-        const layWaiting = order === null ? null : (last: number): void => {
-            while (laid < waiting.length && order[waiting[laid]!] === last) {
+        // Lays the halo of each one that waits for entry `last`, inside its own masks; every one still
+        // waiting, with no `last`.
+        const layWaiting = order === null ? null : (last?: number): void => {
+            while (laid < waiting.length && (last === undefined || order[waiting[laid]!] === last)) {
                 const j = waiting[laid]!;
                 const slot = waitingSlots[laid++]!;
                 const layer = drawables[j] as TDrawFilterLayer;
@@ -394,6 +405,22 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
             const item = drawables[i];
             if (layWaiting !== null && i > 0) {
                 layWaiting(i - 1);
+            }
+            // What follows is drawn over some of the effects: the pass ends, they run over what it
+            // drew, and it starts again with what they made drawn back in. Sent at once, since every
+            // run of the chain writes its parameters from the first slot.
+            while (cuts !== null && nextCut < cuts.length && cuts[nextCut]!.at === i) {
+                layWaiting?.();
+                gpuPass.end();
+                const through = cuts[nextCut++]!.through;
+                gpu.post!.runPart(encoder, chain!, ran, through, ctx.time, ctx.progress, ctx.phase, ratio);
+                ran = through + 1;
+                gpu.device.queue.submit([encoder.finish()]);
+                encoder = gpu.device.createCommandEncoder();
+                gpuPass = beginPass(true);
+                gpu.post!.drawBack(gpuPass, multisampled === null ? 1 : gpu.samples);
+                state = null;
+                spritesReady = false;
             }
             if (stencil !== null) {
                 state = applyStencil(gpuPass, stencil[i]!, state, ratio, target.width, target.height);
@@ -500,7 +527,7 @@ export const renderFrame = (gpu: TWebGPUState, ctx: TFrameContext): void => {
         // writes its parameters into a slot of its own, so two of them inside one submit cannot run
         // against each other's numbers: the reason the slots exist rather than a buffer per effect.
         if (destination !== null) {
-            gpu.post!.run(encoder, chain!, destination.view, ctx.time, ctx.progress, ctx.phase, ratio);
+            gpu.post!.run(encoder, chain!, destination.view, ctx.time, ctx.progress, ctx.phase, ratio, ran);
         }
         // What a filter filters, drawn: its part run through its effects, into its own picture.
         if (drawn.filter !== undefined && drawn.renderTarget !== undefined) {

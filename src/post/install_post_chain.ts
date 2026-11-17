@@ -4,6 +4,7 @@ import { loadLut, newLut } from '../loaders/lut';
 import { loadPalette, newPalette } from '../loaders/palette';
 import { loadShader, newShader } from '../loaders/shader';
 import { newPostEffect } from './new_post_effect';
+import { markOverlayPlace } from './overlay_place';
 import type { TPostChain, TPostChainEntry } from './types/t_post_chain';
 import type { TPostEffect, TPostSource } from './types/t_post_effect';
 import type { TRuntimeStore } from '../store';
@@ -109,6 +110,19 @@ export const effectFromEntry = (
     const asked = entry.uniforms ?? {};
     let effect: TPostEffect;
     let unbind = (): void => undefined;
+
+    // The place in the chain where what is drawn over the effects goes: a record of its own, with
+    // nothing to run, so the entries after it keep their places.
+    if (entry.overlay === true) {
+        // A filter draws what its object holds as one picture: nothing in it goes anywhere else.
+        if (source === 'filter') {
+            console.warn('[NacatamalOn] filter: an { overlay: true } entry is a place in the screen\'s chain, and a filter\'s effects have none, so it is left out.');
+            return null;
+        }
+        effect = newPostEffect({ name: 'overlay', enabled: entry.enabled ?? true }, null, source);
+        markOverlayPlace(effect);
+        return { effect, unbind };
+    }
 
     if (entry.builtin !== undefined) {
         const builtin = findPostBuiltin(entry.builtin);

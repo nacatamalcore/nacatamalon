@@ -7,6 +7,7 @@ import { passSize, postStepsOf } from '../../shared/post_steps';
 import type { ITexture } from '../../interface';
 import type { TPostEffect } from '../../../post/types/t_post_effect';
 import type { TUniformLayout } from '../../shared/material_uniforms';
+import { DEPTH_FORMAT } from '../frame/depth';
 
 /**
  * One slot of the shared parameter buffer. The smallest offset a card will take.
@@ -49,6 +50,44 @@ fn fs(@builtin(position) at: vec4<f32>) -> @location(0) vec4<f32> {
     return textureLoad(whole, pixel, 0);
 }
 `;
+
+/**
+ * Draws a picture the size of what it is drawn on back into it, pixel for pixel: what the effects
+ * that ran partway made, into the pass the scene goes on being drawn in.
+ */
+const BACK_SHADER = /* wgsl */ `
+@group(0) @binding(0) var made: texture_2d<f32>;
+
+@vertex
+fn vs(@builtin(vertex_index) index: u32) -> @builtin(position) vec4<f32> {
+    let at = vec2<f32>(f32((index << 1u) & 2u), f32(index & 2u));
+    return vec4<f32>(at * 2.0 - 1.0, 0.0, 1.0);
+}
+
+@fragment
+fn fs(@builtin(position) at: vec4<f32>) -> @location(0) vec4<f32> {
+    return textureLoad(made, vec2<i32>(at.xy), 0);
+}
+`;
+
+/**
+ * An effect that changes nothing, to copy the scene's picture to the screen with the chain's own
+ * pipelines when every effect has already run.
+ */
+const COPY: readonly TPostEffect[] = [{
+    type: 'post',
+    id: 'copy',
+    name: 'copy',
+    fragment: 'fn effect(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> { return color; }',
+    fragmentGlsl: 'vec4 effect(vec4 color, vec2 uv) { return color; }',
+    uniforms: {},
+    uniformSig: {},
+    palette: null,
+    lut: null,
+    source: 'scene',
+    enabled: true,
+    effect: null,
+}];
 
 type TCompiled = {
     pipeline: GPURenderPipeline | null;
@@ -123,6 +162,17 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
      */
     let scene: ITexture | null = null;
     /**
+     * Where the effects that run partway write, for what is drawn over some of them
+     * (`TRenderPass.postCuts`), made the first time they do; and what draws it back into the pass,
+     * by how many samples that has.
+     */
+    let between: ITexture | null = null;
+    const back: { layout: GPUBindGroupLayout | null; pipelines: Map<number, GPURenderPipeline>; groups: WeakMap<GPUTexture, GPUBindGroup> } = {
+        layout: null,
+        pipelines: new Map(),
+        groups: new WeakMap(),
+    };
+    /**
      * The pictures the chain passes between, by size. Made the first time a size is asked for, so a
      * chain of one-step effects only ever has two, both the size of the canvas.
      */
@@ -169,6 +219,11 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
             toGpuTexture(scene).destroy();
         }
         scene = null;
+        if (between !== null) {
+            toGpuTexture(between).destroy();
+        }
+        between = null;
+        back.groups = new WeakMap();
         dropPool();
         for (const history of histories.values()) {
             history.pair.forEach((texture) => toGpuTexture(texture).destroy());
@@ -430,6 +485,8 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
         phase: number,
         pixelRatio: number,
         screen: boolean,
+        from = 0,
+        to = chain.length - 1,
     ): void => {
         const gameWidth = w / pixelRatio;
         const gameHeight = h / pixelRatio;
@@ -483,9 +540,9 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
             slot++;
         };
 
-        for (let i = 0; i < chain.length; i++) {
+        for (let i = from; i <= to; i++) {
             const effect = chain[i]!;
-            const lastEffect = i === chain.length - 1;
+            const lastEffect = i === to;
             const input = source;
             // A filter's effect has no last frame of its own: its object's part of the screen
             // moves and changes size. It reads the frame it was handed there instead.
@@ -648,9 +705,76 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
             progress: number,
             phase: number,
             pixelRatio = 1,
+            from = 0,
         ): void => {
             pruneHistories(chain);
-            runChain(encoder, chain, scene!, width, height, destination, time, progress, phase, pixelRatio, true);
+            // `from`: the first still to run, after `runPart` ran the ones before it. With none left,
+            // the picture goes to the screen as it is.
+            if (from >= chain.length) {
+                runChain(encoder, COPY, scene!, width, height, destination, time, progress, phase, pixelRatio, true);
+                return;
+            }
+            runChain(encoder, chain, scene!, width, height, destination, time, progress, phase, pixelRatio, true, from);
+        },
+
+        /**
+         * Runs the chain from `from` through `through` over the world's picture as it is drawn so far,
+         * into a picture of its own that `drawBack` then draws into the pass the world goes on being
+         * drawn in. The caller ends its pass before and sends what is recorded after: each run of the
+         * chain writes its parameters from the first slot.
+         */
+        runPart: (
+            encoder: GPUCommandEncoder,
+            chain: readonly TPostEffect[],
+            from: number,
+            through: number,
+            time: number,
+            progress: number,
+            phase: number,
+            pixelRatio = 1,
+        ): void => {
+            between ??= createWebGPURenderTexture(device, format, width, height);
+            runChain(encoder, chain, scene!, width, height, toGpuTexture(between).createView(), time, progress, phase, pixelRatio, true, from, through);
+        },
+
+        /**
+         * Draws what `runPart` made into `pass`, every pixel, colour only: the pass's depth and stencil
+         * are left as they are, for what is drawn over the effects. `samples` is how many the pass has.
+         */
+        drawBack: (pass: GPURenderPassEncoder, samples: number): void => {
+            if (between === null) {
+                return;
+            }
+            if (back.layout === null) {
+                back.layout = device.createBindGroupLayout({
+                    label: 'post back',
+                    entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'unfilterable-float' } }],
+                });
+            }
+            let pipeline = back.pipelines.get(samples);
+            if (pipeline === undefined) {
+                const module = device.createShaderModule({ label: 'post back', code: BACK_SHADER });
+                pipeline = device.createRenderPipeline({
+                    label: 'post back',
+                    layout: device.createPipelineLayout({ bindGroupLayouts: [back.layout] }),
+                    vertex: { module, entryPoint: 'vs' },
+                    fragment: { module, entryPoint: 'fs', targets: [{ format }] },
+                    primitive: { topology: 'triangle-list' },
+                    // Over everything, touching neither the depth nor the stencil.
+                    depthStencil: { format: DEPTH_FORMAT, depthWriteEnabled: false, depthCompare: 'always' },
+                    multisample: { count: samples },
+                });
+                back.pipelines.set(samples, pipeline);
+            }
+            const texture = toGpuTexture(between);
+            let group = back.groups.get(texture);
+            if (group === undefined) {
+                group = device.createBindGroup({ label: 'post back', layout: back.layout, entries: [{ binding: 0, resource: texture.createView() }] });
+                back.groups.set(texture, group);
+            }
+            pass.setPipeline(pipeline);
+            pass.setBindGroup(0, group);
+            pass.draw(3);
         },
 
         /**
@@ -679,7 +803,7 @@ export const createPostPipelines = (device: GPUDevice, format: GPUTextureFormat)
         endFrame: pruneIdle,
 
         destroy: (): void => {
-            for (const texture of [scene, blank, ...[...photos.values()].map((photo) => photo.texture)]) {
+            for (const texture of [scene, between, blank, ...[...photos.values()].map((photo) => photo.texture)]) {
                 if (texture !== null) {
                     toGpuTexture(texture).destroy();
                 }

@@ -61,6 +61,10 @@ const gba: TRenderStyle = {
  * The computer graphics of the era: every material lit at every pixel, for round, sliding shines,
  * and a soft bloom over what is brightest, at 640 x 480 and smooth, the size a renderer drew at. With
  * `useStudio()` and the material recipes (`plastic()`, `chrome()`) it is the glossy studio look.
+ *
+ * The bloom runs over everything but what is drawn over the effects (`useOverlay`): a HUD marked so
+ * does not glow. For an old screen over that HUD, the style takes the place and a CRT after it:
+ * `{ ...RENDER.STYLES.cgi, post: [...RENDER.STYLES.cgi.post!, { overlay: true }, { builtin: 'crt' }] }`.
  */
 const cgi: TRenderStyle = {
     perPixel: true,

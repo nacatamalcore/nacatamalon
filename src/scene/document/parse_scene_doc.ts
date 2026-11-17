@@ -41,7 +41,7 @@ const BLACK: TColor = { r: 0, g: 0, b: 0, a: 1 };
 /**
  * Which keys of a box node the reader consumes. Everything else is somebody else's and is kept.
  */
-const BOX_KEYS = new Set(['id', 'name', 'tags', 'transform', 'components', 'children', 'data', 'visible', 'screenSpace', 'unlit2d', 'worldOffScreen', 'extra']);
+const BOX_KEYS = new Set(['id', 'name', 'tags', 'transform', 'components', 'children', 'data', 'visible', 'screenSpace', 'overlay', 'unlit2d', 'worldOffScreen', 'extra']);
 
 /**
  * Where an unknown component is kept, so that writing the document back puts it where it was.
@@ -1506,6 +1506,7 @@ const parseBox = (value: unknown, unknowns: TUnknowns): TBoxNode => {
         ...(Array.isArray(raw.data) && raw.data.length > 0 ? { data: parseData(raw.data) } : {}),
         ...optionalBoolean(raw, 'visible'),
         ...optionalBoolean(raw, 'screenSpace'),
+        ...optionalBoolean(raw, 'overlay'),
         ...optionalBoolean(raw, 'unlit2d'),
         ...optionalBoolean(raw, 'worldOffScreen'),
         ...(Object.keys(extra).length > 0 ? { extra } : {}),

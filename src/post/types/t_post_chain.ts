@@ -51,6 +51,15 @@ export type TPostChainEntry = {
      * What the editor calls it in its list. Defaults to the file's own name.
      */
     name?: string;
+    /**
+     * `true` makes the entry no effect but a place: where what is drawn over the effects
+     * (`useOverlay`) goes. The effects before it run under it, the ones after it over it too:
+     * `[{ builtin: 'bloom' }, { overlay: true }, { builtin: 'crt' }]` is a HUD that does not glow on a
+     * curved screen. Without one, it goes after every effect. Written alone: `{ overlay: true }`, and
+     * `enabled: false` keeps it without using it. One a chain: a project's comes before a style's,
+     * which is then not used. A filter's effects take none.
+     */
+    overlay?: boolean;
 };
 
 /**
