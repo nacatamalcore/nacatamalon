@@ -5,6 +5,7 @@ import { isSceneStopped } from '../../scene/stopped_scenes';
 import { scenePauseTold } from '../../scene/pause_scene';
 import type { TBox } from '../../box';
 import { getActiveBox, getActiveGame } from '../../store';
+import type { TRuntimeStore } from '../../store';
 import { onGameMoment } from '../../signal/game_moments';
 import { canDrawTransition, startTransition, startTransitionBuilding, startTransitionRestart } from '../../transition';
 import type { TSceneChangeOptions, TSceneLaunchOptions, TSceneRestartOptions, TSceneStopOptions, TTransition } from '../../transition';
@@ -236,6 +237,79 @@ export type TSceneHandle = {
  */
 const beingReplaced = new WeakSet<TBox>();
 
+
+/**
+ * Replaces the running scene `outgoing` with the one registered as `name`, as `useScene().change`
+ * does once it has decided to: covered with `transition` if given (one this card can draw), in
+ * `outgoing`'s place among the scenes, and a restart when `name` is the one `outgoing` was started
+ * under. What calls it has checked that nothing else is being covered.
+ *
+ * Throws what building the new scene threw, with the old one still running, except in a covered
+ * restart, which builds at the swap: there `restartFailed`, if given, hears what threw and the cover
+ * goes quietly, and without it the swap says it, as ever.
+ *
+ * @returns The new scene's root, or `null` for a covered restart, built later.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const replaceScene = (
+    store: TRuntimeStore,
+    outgoing: TBox,
+    name: string,
+    props: object | undefined,
+    transition: TTransition | undefined,
+    restartFailed?: (error: unknown) => void,
+): TBox | null => {
+    // By the name it was started under, which a scene built from a document does not answer to.
+    const restarting = name === startedAs(outgoing) && store.get('world').names.has(name);
+    if (transition !== undefined && restarting) {
+        // Restarting under the cover: the old copy stays on screen until it is covered, and the new
+        // one is built then, once the old one has stopped. Never both at once, since a name means
+        // one scene.
+        startTransitionRestart(store, transition, outgoing, (restart) => {
+            if (restartFailed === undefined) return startScene(store, name, props, restart);
+            try {
+                return startScene(store, name, props, restart);
+            } catch (error) {
+                restartFailed(error);
+                return null;
+            }
+        });
+        return null;
+    }
+    if (transition !== undefined) {
+        // In flight before the new scene is built, so a covered change its body or its `useReady`
+        // asks for is refused rather than written over; a name that is not there throws and takes
+        // the cover with it. Nothing stops yet: the scene going out is what the screen is still
+        // showing, and it is stopped at the swap. Built in its place among the scenes, so the next
+        // level comes in under the HUD.
+        return startTransitionBuilding(store, transition, outgoing, () => startScene(store, name, props, inPlaceOf(store, outgoing)));
+    }
+    if (restarting) {
+        // Restarting: the old copy has to be gone before the name can start again, and the new one
+        // takes its place among the scenes, under a HUD launched over it.
+        const restart = inPlaceOf(store, outgoing);
+        stopScene(store, outgoing);
+        // Its cleanups may have ended the game: nothing is built into it then.
+        if (store.get('loop').destroyed) {
+            return null;
+        }
+        return startScene(store, name, props, restart);
+    }
+    // The new scene first, so a name that does not exist throws before anything stops, in this
+    // one's place among the scenes, so the next level is under the HUD.
+    beingReplaced.add(outgoing);
+    let built: TBox;
+    try {
+        built = startScene(store, name, props, inPlaceOf(store, outgoing));
+    } finally {
+        beingReplaced.delete(outgoing);
+    }
+    stopScene(store, outgoing);
+    return built;
+};
 
 export const useScene = (): TSceneHandle => {
     const store = getActiveGame();
@@ -530,39 +604,7 @@ export const useScene = (): TSceneHandle => {
             changing = true;
 
             try {
-                if (transition !== undefined && restarting) {
-                    // Restarting under the cover: the old copy stays on screen until it is covered,
-                    // and the new one is built then, once the old one has stopped. Never both at
-                    // once, since a name means one scene.
-                    startTransitionRestart(store, transition, owner, (restart) => startScene(store, name, props, restart));
-                } else if (transition !== undefined) {
-                    // In flight before the new scene is built, so a covered change its body or its
-                    // `useReady` asks for is refused rather than written over; a name that is not
-                    // there throws and takes the cover with it. Nothing stops yet: the scene going
-                    // out is what the screen is still showing, and it is stopped at the swap. Built in
-                    // its place among the scenes, so the next level comes in under the HUD.
-                    startTransitionBuilding(store, transition, owner, () => startScene(store, name, props, inPlaceOf(store, owner)));
-                } else if (restarting) {
-                    // Restarting: the old copy has to be gone before the name can start again, and
-                    // the new one takes its place among the scenes, under a HUD launched over it.
-                    const restart = inPlaceOf(store, owner);
-                    stopScene(store, owner);
-                    // Its cleanups may have ended the game: nothing is built into it then.
-                    if (ended()) {
-                        return;
-                    }
-                    startScene(store, name, props, restart);
-                } else {
-                    // The new scene first, so a name that does not exist throws before anything stops,
-                    // in this one's place among the scenes, so the next level is under the HUD.
-                    beingReplaced.add(owner);
-                    try {
-                        startScene(store, name, props, inPlaceOf(store, owner));
-                    } finally {
-                        beingReplaced.delete(owner);
-                    }
-                    stopScene(store, owner);
-                }
+                replaceScene(store, owner, name, props, transition);
             } catch (error) {
                 leaving = false;
                 throw error;

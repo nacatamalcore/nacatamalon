@@ -8,7 +8,8 @@ import type { TActionsHandle } from '../../input';
  * It only moves the object, from where it is, by `input` and `dt`: when the server corrects the
  * player's page, the page goes back to where the server had it and runs this again for the steps
  * the server had not seen yet, several in one frame. So nothing else belongs here (no spawning, no
- * sound, no score): what comes of a shot is the server's, in an update, from `useNet().actions`.
+ * sound, no score, no room store): what comes of a shot is the server's, in an update, from
+ * `useNet().actions`.
  *
  * @experimental
  * @category Net

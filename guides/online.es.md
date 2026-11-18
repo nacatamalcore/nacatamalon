@@ -223,10 +223,59 @@ export const Pond: TSceneFn = () => {
 Los mensajes son JSON. Todo lo que llega (un mensaje, un jugador que entra o sale) se entrega al
 empezar un paso, antes de cualquier update, en el orden en que llegó. `net.players`, `net.me`,
 `net.status` y `net.ping` dicen quién está, quién es esta página, cómo está la línea y cuánto tarda
-una palabra en ir y volver. Una página oye `onConnect` cuando la dejan entrar y
-`onDisconnect(reason)` cuando se va la línea.
+una palabra en ir y volver. Una página oye `onConnect` cuando la dejan entrar y ya tiene la sala
+entera (sus objetos en su sitio, sus stores de sala), y `onDisconnect(reason)` cuando se va la línea.
 
 La suerte en el servidor es `useRandom()`, nunca `Math.random()`: la suerte de la sala es suya.
+
+## Lo que guarda una sala
+
+Un marcador, una ronda, de quién es el turno: datos de toda la sala, no de un objeto. Un store del
+juego (`createGameStore`) no sirve aquí: es un objeto para todo lo que lo importa, así que en un
+servidor con muchas salas todas escribirían en el mismo. Un **store de sala** se declara una vez y
+cada juego tiene el suyo: la sala lo cambia y cada jugador lo ve un momento después, solo para leer.
+
+```ts
+import { createScene, createText, type TSceneFn } from 'nacatamalon';
+import { createRoomStore, useNet, useRoomStore } from 'nacatamalon/net';
+
+// stores/score.ts: un plano, sin nada dentro; cada juego pide el suyo.
+export const score = createRoomStore({ key: 'score', state: { red: 0, blue: 0 } });
+
+export const Match: TSceneFn = () => {
+    const net = useNet();
+    const board = useRoomStore(score);
+    const label = createText({ text: '0 - 0' });
+    board.watch((s) => `${s.red} - ${s.blue}`, (text) => {
+        label.text = text;
+    });
+
+    if (board.writable) {
+        net.onMessage<'red' | 'blue'>('goal', (team) => {
+            board.set((s) => {
+                s[team] += 1;
+            });
+            // Los jugadores leen el marcador nuevo al oír esto: lo que cambió un store sale antes
+            // que lo que la sala diga después.
+            net.broadcast('goal', team);
+        });
+    }
+    return createScene();
+};
+```
+
+- `useRoomStore` se pide mientras se construye algo (una escena, un objeto, un sistema de juego); guarda
+  lo que da. Desde el código del propio servidor es `room.store(score)`, y desde un HUD de la página
+  sobre el juego, `await roomStoreOf(game, score)`.
+- `state` está congelado: se cambia con `set`, que trabaja sobre una copia (si lanza, no cambia
+  nada). Guarda datos planos, porque viajan.
+- `writable` es `true` en la sala y en un juego que nunca se ha conectado: un juego probado solo
+  cambia el suyo, y el de la sala lo sustituye cuando se conecta.
+- `serverOnly: true` deja un store en la sala (las reglas, lo que se guarda al acabar). Lo que es de
+  un jugador se le manda con `sendTo`.
+- Un jugador oye `onConnect` cuando ya tiene la sala entera, sus stores incluidos: leer el marcador
+  ahí lee el de la sala.
+- Una sala que `createServer` cierra cuando se va el último jugador se lleva sus stores.
 
 ## Moverse en tiempo real
 
@@ -324,6 +373,102 @@ server.listen(8080);
 Las cuentas, las contraseñas y las bases de datos son del juego: el motor solo lleva el token y
 pregunta. `roomScene` elige qué escena corre una sala según su nombre (`'pool'` corre `'Pool'`);
 `net.kick(player)` echa a alguien.
+
+## Cuando la sala cambia de escena
+
+Una sala cambia de escena como cualquier juego, con `useScene().change` en el código del servidor:
+del vestuario al partido, de la ronda al podio. Sus jugadores la siguen solos, en la misma sala y por
+la misma línea, y oyen `onConnect` en la escena nueva cuando la tienen entera.
+
+```ts
+import { createScene, useScene, type TSceneFn } from 'nacatamalon';
+import { useNet } from 'nacatamalon/net';
+import { fade } from 'nacatamalon/transitions';
+
+export const LockerRoom: TSceneFn = () => {
+    const net = useNet();
+    const scene = useScene();
+    if (net.role === 'server') {
+        // La sala decide; todos los jugadores del vestuario van con ella.
+        net.onMessage('ready', () => scene.change('Match'));
+    } else if (net.status === 'offline') {
+        // Cómo sigue esta página los cambios de escena de la sala: las transiciones no viajan.
+        net.connect('wss://example.com', { room: 'main', sceneTransition: fade(0.3) });
+    }
+    return createScene();
+};
+
+export const Match: TSceneFn = () => {
+    const net = useNet();
+    // Lo que se hace al llegar: el partido entero, sus objetos y sus stores.
+    net.onConnect(() => console.log(`el partido, en ${net.room}`));
+    return createScene();
+};
+```
+
+- Solo la sigue una página que está en la escena de la sala; `net.scene` dice cuál es. Una página que
+  se conectó desde un menú se queda en él, y va a ella con `useScene().change(net.scene)` en su
+  `onConnect`.
+- La sala, sus jugadores y el nombre del jugador no cambian. Nadie oye `onLeave` ni `onDisconnect`;
+  los stores de sala siguen `ready`. Lo que compartía la escena vieja se va, y los objetos compartidos
+  de un HUD se quedan.
+- La escena nueva oye `onConnect` y un `onJoin` por cada uno que está; un HUD oye otra vez
+  `onConnect`, y solo quien entra o sale de verdad.
+- Mientras tanto `status` es `'connecting'` y lo que se manda se tira, como con `joinRoom`.
+- Una página que no tiene la escena nueva de la sala, o cuya escena nueva lanza, cierra su línea con
+  el motivo. Una escena de sala que lanza en el servidor se dice allí, y sus jugadores siguen donde
+  estaban.
+
+## Moverse entre salas
+
+Un juego de sitios (un vestíbulo, una piscina, la habitación de alguien) hace de cada sitio una sala
+del servidor, con su escena (`roomScene`). `net.joinRoom(room)` lleva al jugador allí por la misma
+línea: el servidor pregunta a `admit` (con `from`, de dónde viene), y solo cuando la sala nueva lo
+acepta lo suelta la vieja, así que un jugador rechazado sigue donde estaba, como estaba.
+
+```ts
+import { createScene, useKeyboard, useUpdate, type TSceneFn } from 'nacatamalon';
+import { useNet } from 'nacatamalon/net';
+import { fade } from 'nacatamalon/transitions';
+
+export const Lobby: TSceneFn = () => {
+    const net = useNet();
+    const keys = useKeyboard();
+    useUpdate(() => {
+        // En la puerta, una tecla lleva al jugador a la piscina.
+        if (net.role !== 'client' || net.status !== 'online' || !keys.justPressed('Enter')) return;
+        net.joinRoom('pool', { transition: fade(0.3) }).catch((reason) => {
+            // Rechazado, sigue en el vestíbulo; o se cerró la línea. Solo se dice: a estas
+            // alturas la escena puede ser otra.
+            console.log(String(reason));
+        });
+    });
+    return createScene();
+};
+
+export const Pool: TSceneFn = () => {
+    const net = useNet();
+    // Lo que se hace al llegar: aquí la piscina está entera, sus objetos y sus stores.
+    net.onConnect(() => console.log(`en ${net.room} con ${net.players.join(', ')}`));
+    return createScene();
+};
+```
+
+- El jugador pasa de la escena de su sala a la de la nueva, como haría `useScene().change`, con
+  `transition` si se da; si las dos salas corren la misma escena, vuelve a empezar.
+- La sala que deja oye `onLeave`, y también quien siga escuchando aquí (un HUD); nadie oye
+  `onDisconnect`. La sala nueva oye `onJoin`, y el jugador oye `onConnect` y un `onJoin` por cada
+  uno que ya estaba, como al conectarse.
+- El cuerpo de la escena nueva corre antes de que llegue su sala: lo que hace al llegar va en
+  `onConnect`. Mientras tanto `status` es `'connecting'` y lo que se manda se tira, así que un juego
+  no debe cambiar de escena al ver `status !== 'online'`, sino en `onDisconnect`.
+- Lo que compartía la sala vieja se va; los objetos compartidos de un HUD se quedan y toman los
+  campos de la sala nueva.
+- Llamado desde una escena que no es la de su sala (un menú que se conectó), lanza: primero se
+  cambia a la escena de la sala. La promesa falla con la línea cerrada cuando la escena de la sala
+  nueva no arranca en la página, y la página oye `onDisconnect` con el motivo.
+- Solo entre salas de un mismo `createServer`: una sala de un servidor propio (`createRoom`) contesta
+  que no mueve jugadores.
 
 ## Elegir por dónde van las líneas
 
@@ -512,14 +657,9 @@ lado del otro, con una línea lenta para probar.
 
 Es experimental, y esto se sabe:
 
-- **Los jugadores no siguen un cambio de escena del servidor.** Los objetos que comparte se van
-  de sus páginas, pero su escena se queda. De momento, cambia de escena en los dos lados con un
-  mensaje.
-- **Los stores y las señales son de la página o del proceso, no de la sala.** Todas las salas de un
-  servidor los comparten, y en una página con loopback, también el servidor y sus jugadores. Guarda
-  el estado de una sala en su escena.
 - **Una corrección salta.** Cuando el servidor corrige el objeto propio de un jugador, que es raro,
   va al sitio correcto de golpe en vez de deslizarse.
-- **Una pestaña oculta** guarda lo que llega y lo entrega todo al volver: después de mucho rato
-  fuera, es mucho de golpe.
 - Los mensajes son texto JSON; todavía no hay forma binaria.
+- **Una escena de sala que lanza mientras un jugador se traslada a ella** cierra la línea del jugador,
+  como debe, pero lo que construyó de sí misma antes de lanzar sigue compartido en la página: arregla
+  la escena.

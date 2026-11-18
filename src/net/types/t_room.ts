@@ -1,6 +1,7 @@
 import type { THeadlessGameOptions } from '../../headless/types';
 import type { TGameObject } from '../../hooks';
 import type { TNetConnection } from './t_net_connection';
+import type { TRoomStore, TRoomStoreDecl } from './t_room_store';
 
 /**
  * How a room is made: the game's own options and scenes, as a player's page has them, and how it
@@ -72,6 +73,12 @@ export type TRoom = {
     leave(player: string, reason?: string): void;
     /** Runs `frames` steps (one when left out). For a room that does not keep its own time. */
     step(frames?: number): void;
+    /**
+     * The room's own store of a declaration made with `createRoomStore`, the same one its scenes
+     * use: for the server's code that is not a scene (a request, a panel, what is kept when the room
+     * ends). What it watches stays until the function `watch` returns is called, or the room ends.
+     */
+    store<S extends Record<string, unknown>>(decl: TRoomStoreDecl<S>): TRoomStore<S>;
     /** The first object of that name in the room's scenes, or `undefined`: to look at what it decided. */
     find(name: string): TGameObject | undefined;
     /** Every object of that name in the room's scenes. */

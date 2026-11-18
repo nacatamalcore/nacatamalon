@@ -18,7 +18,7 @@ import { reportFrameError } from "./report_frame_error";
 import { windowOf } from "../../DOM/window_of";
 import { updateDebug } from "../../debug/draw_debug";
 import { flushSystemLaunches, followLayout, runSystemLateUpdates, runSystemUpdates } from "../../game_systems/game_systems";
-import { deliverNet, finishNet, stepNet } from "../../net/net_inbox";
+import { deliverNet, finishNet, settleNet, stepNet } from "../../net/net_inbox";
 import { tellGameChanges } from "../../extend/game_changes";
 
 /**
@@ -119,6 +119,13 @@ const runFrame = (store: TRuntimeStore, ctx: TFrameContext, dt: number, unscaled
     // started on. Outside the pause check, as the transition is.
     flushSystemLaunches(store);
     // Any of those may have ended the game, from a scene's or a system's code: no update runs in it.
+    if (store.get('loop').destroyed) {
+        return;
+    }
+    // A player moving to another room (`nacatamalon/net`): its new scene started, or handed its
+    // room once it runs, here, with every scene a transition or the splash let go of known, and
+    // before any update, so that scene's first update is in its room.
+    settleNet(store, true);
     if (store.get('loop').destroyed) {
         return;
     }
@@ -320,6 +327,9 @@ export const advanceFrame = (store: TRuntimeStore, ctx: TFrameContext, elapsedMs
             flushTransitionEnd(store);
             flushReleased(store);
             flushSystemLaunches(store);
+            // A scene a transition let go of in this picture is drawn in it: a player moving to
+            // another room hands it its room first. Nothing is started here, with no step.
+            settleNet(store, false);
             // Any of those may have ended the game: the renderer would already be gone.
             if (store.get('loop').destroyed) {
                 return;

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { freePort } from './helpers/free_port';
 
 /**
  * `listen(port)` in Node: the engine's own WebSocket over Node's HTTP server, nothing installed.
@@ -44,7 +45,7 @@ describe('createServer().listen in Node', () => {
             const built = Bun.spawnSync([process.execPath, 'build', join(import.meta.dir, '../src/net/node_listen.ts'), '--target=node', '--format=esm', `--outfile=${join(dir, 'node_listen.mjs')}`]);
             expect(built.exitCode).toBe(0);
             writeFileSync(join(dir, 'server.mjs'), SERVER);
-            const port = 20000 + Math.floor(Math.random() * 20000);
+            const port = freePort();
             const node = Bun.spawn(['node', join(dir, 'server.mjs'), String(port)], { stdout: 'pipe', stderr: 'pipe' });
             const reader = node.stdout.getReader();
             let out = '';

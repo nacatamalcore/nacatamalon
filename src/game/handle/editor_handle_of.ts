@@ -51,6 +51,15 @@ const frameOf = (store: TRuntimeStore): number => {
 export const isHostClaimed = (instance: TGameInstance): boolean => claimed.has(instance);
 
 /**
+ * The running state of a game made with `createGame`, once it has started, without claiming it the
+ * way a tool does: for a game's own code that reaches its game from outside (a page's HUD), which
+ * must not change whether the game shows its splash. `undefined` for anything else.
+ *
+ * @internal
+ */
+export const runtimeOfInstance = (instance: TGameInstance): Promise<TRuntimeStore> | undefined => hosts.get(instance);
+
+/**
  * Registers an instance before its game has started, and returns the two ends of the promise its
  * state arrives on.
  *

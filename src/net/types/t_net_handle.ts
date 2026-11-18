@@ -1,4 +1,5 @@
 import type { TActionsHandle } from '../../input';
+import type { TTransition } from '../../transition';
 import type { TNetConnection } from './t_net_connection';
 
 /**
@@ -14,7 +15,8 @@ export type TNetRole = 'server' | 'client';
 
 /**
  * How a player's game is with its server: not connected, on its way (connected, waiting to be let
- * into the room), in the room, or with the line gone. A room of the server is always `'online'`.
+ * into the room and to be sent the whole of it), in the room and seeing it, or with the line gone.
+ * A room of the server is always `'online'`.
  *
  * @experimental
  * @category Net
@@ -48,6 +50,30 @@ export type TNetConnectOptions = {
      * 0.3). Given, it stays as given: less is fresher and shakier.
      */
     interpolation?: number;
+    /**
+     * How this game follows its room when the room changes its scene (a `useScene().change` in the
+     * server's room): a transition, as `fade(0.3)` gives. Left out, a cut. Transitions are the game's
+     * own, and do not travel from the server.
+     */
+    sceneTransition?: TTransition;
+};
+
+/**
+ * How a player moves to another room with `joinRoom`.
+ *
+ * @experimental
+ * @category Net
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TNetJoinRoomOptions = {
+    /**
+     * What proves who the player is, when it is not what it connected with: the server's `admit`
+     * reads it, and keeps it only if the move goes through. Left out, the one it connected with.
+     */
+    token?: string | null;
+    /** How the scene of the room it leaves gives way to the scene of the one it moves to. */
+    transition?: TTransition;
 };
 
 /**
@@ -73,6 +99,12 @@ export type TNetHandle = {
     readonly status: TNetStatus;
     /** The room this game is in, or `null` before a player's game has been let into one. */
     readonly room: string | null;
+    /**
+     * The scene the room runs, which a player's game in it follows when the room changes it: in the
+     * room, and in a player's game once let in (`null` before, and in a room with no scenes). A game
+     * that connected from a menu goes to it with `useScene().change(net.scene)` in its `onConnect`.
+     */
+    readonly scene: string | null;
     /** This player's own name in the room, once let in. `null` on the server and before. */
     readonly me: string | null;
     /** The players in the room now, in the order they came, this one among them. */
@@ -110,12 +142,43 @@ export type TNetHandle = {
     /** Leaves the room and ends the line. A player's game only. */
     disconnect(): void;
     /**
+     * Moves the player to another room of the same server over the line it is on, without
+     * connecting again: the server's `admit` is asked (with `from`, the room it leaves), and the
+     * player goes from the scene of its room to the scene of the new one, with `transition` if given.
+     * For a game of places, each a room (a lobby, a pool, someone's room). A player's game only, in
+     * the scene of its room, and one move at a time.
+     *
+     * The promise is kept once the player is in the new room and sees it, after its `onConnect`
+     * there. It fails with the player where it was, as it was, when the server does not take it
+     * (`admit` said no, there is no such room). It fails with the line closed when the line goes,
+     * the game connects again or disconnects meanwhile, or the new room's scene does not start here.
+     *
+     * The room it leaves sees it leave (`onLeave`), and so does every listener still here (a HUD);
+     * no `onDisconnect` sounds. Until the new room is here, `status` is `'connecting'` and what is
+     * sent is let go. The new room's scene is built before its room arrives in it: what it does on
+     * arriving goes in its `onConnect`. What runs after the promise, outside any scene, may find the
+     * scene it was in gone.
+     *
+     * @example
+     * ```ts
+     * door.onClick(() => {
+     *     net.joinRoom('pool', { transition: fade(0.3) }).catch((reason) => console.log(String(reason)));
+     * });
+     * ```
+     */
+    joinRoom(room: string, options?: TNetJoinRoomOptions): Promise<void>;
+    /**
      * Sends the server a message of a type, with what it carries. A player's game only. Sent after
      * the line has gone and before the scenes hear so (`onDisconnect`, at the next step), it is lost,
      * as on a line that dropped; sent before ever connecting, it throws.
      */
     send(type: string, data?: unknown): void;
-    /** Listens to this game being let into its room: `me`, `room` and `players` are there now. */
+    /**
+     * Listens to this game being let into its room and seeing it: `me`, `room` and `players` are
+     * there now, and so is what the room had when it let the player in (its shared objects where
+     * they are, its room stores), so what reads them here reads the room. A `onJoin` for everyone
+     * already there, this player among them, follows.
+     */
     onConnect(listener: () => void): () => void;
     /** Listens to the line going, or the server refusing the player, with why. */
     onDisconnect(listener: (reason: string) => void): () => void;

@@ -2,9 +2,11 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import { createScene, useUpdate } from '../src';
 import { createHeadlessGame } from '../src/headless';
 import { connectLoopback, createRoom, createServer, useNet } from '../src/net';
+import { WIRE_VERSION } from '../src/net/protocol';
 import type { THeadlessGame } from '../src/headless';
 import type { TNetHandle, TServer, TServerOptions } from '../src/net';
 import type { TSceneFn } from '../src';
+import { freePort } from './helpers/free_port';
 
 /**
  * The server and two players in one process, on the line in memory: the same scene runs in the
@@ -201,7 +203,7 @@ describe('nacatamalon/net', () => {
 
     it('works over a real WebSocket, with the server listening on a port in Bun', async () => {
         const log: TLog = [];
-        const port = 20000 + Math.floor(Math.random() * 20000);
+        const port = freePort();
         const { player } = start(log, {}, (net) => net.connect(`ws://127.0.0.1:${port}`, { room: 'lobby' }));
         server!.listen(port);
         const ana = player();
@@ -230,7 +232,7 @@ describe('nacatamalon/net', () => {
             if (wire.k === 'bye') reason = wire.reason ?? '';
         });
         line.onClose(() => {});
-        line.send(JSON.stringify({ k: 'hello', v: 1, room: 'lobby', token: 'x' }));
+        line.send(JSON.stringify({ k: 'hello', v: WIRE_VERSION, room: 'lobby', token: 'x' }));
         for (let i = 0; i < 100; i++) line.send(JSON.stringify({ k: 'msg', t: 'say', d: 'a'.repeat(100) }));
         await settle();
         await settle();

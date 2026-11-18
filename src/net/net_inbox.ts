@@ -1,12 +1,15 @@
 import type { TRuntimeStore } from '../store';
 
 /**
- * What a game on the network does in each step, at three moments the loop chose: as the step starts
- * (`deliver`, handing its scenes what arrived), once the actions have been read (`step`, moving what
- * the network moves) and as it ends (`finish`, telling the other end where things were left).
+ * What a game on the network does in each step, at the moments the loop chose: as the step starts
+ * (`deliver`, handing its scenes what arrived), once the scenes a transition or the splash let go of
+ * are known and before any update (`settle`, moving a player to its new room's scene), once the
+ * actions have been read (`step`, moving what the network moves) and as it ends (`finish`, telling
+ * the other end where things were left).
  */
 type TNetSteps = {
     deliver(): void;
+    settle(start: boolean): void;
     step(dt: number): void;
     finish(): void;
 };
@@ -39,6 +42,20 @@ export const setNetInbox = (store: TRuntimeStore, steps: TNetSteps): void => {
  */
 export const deliverNet = (store: TRuntimeStore): void => {
     inboxes.get(store)?.deliver();
+};
+
+/**
+ * A player's game moving to another room (`useNet().joinRoom`): starts the change to the new room's
+ * scene once everything of that room has arrived, and, once that scene runs, hands it the room.
+ * After the transition and the splash let scenes go and before any update, so the new scene's first
+ * update is already in its room. `start` is `false` in a picture with no step, which only looks.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const settleNet = (store: TRuntimeStore, start: boolean): void => {
+    inboxes.get(store)?.settle(start);
 };
 
 /**

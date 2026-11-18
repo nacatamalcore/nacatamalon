@@ -14,6 +14,11 @@ export type TNetAdmitRequest = {
     room: string;
     /** What their game sent to prove who they are, or `null` when it sent nothing. */
     token: string | null;
+    /**
+     * Where they come from when they move from another room of this server (`useNet().joinRoom`):
+     * that room and their name in it. Left out when they connect.
+     */
+    from?: { room: string; player: string };
 };
 
 /**
@@ -29,7 +34,8 @@ export type TServerOptions = Omit<TRoomOptions, 'name'> & {
      * Decides whether a player gets in: `true` lets them in with a name the room gives, a string lets
      * them in under that name (their account's, so they are the same player each time they come),
      * `false` refuses them. It may take its time (`async`, asking the game's own accounts). Left
-     * out, everyone gets in.
+     * out, everyone gets in. A player moving from another room (`useNet().joinRoom`) is asked about
+     * too, with `from`, and stays where it was while this decides.
      */
     admit?: (request: TNetAdmitRequest) => boolean | string | Promise<boolean | string>;
     /**

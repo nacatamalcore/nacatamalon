@@ -82,11 +82,12 @@ export type TTransitionState = {
      * when the change was asked for. Set only for a scene restarting itself: its new copy cannot run
      * beside the old one, since a name means one scene, and it has nothing new to load while the
      * screen covers, being the same scene. `null` for every other change, and from the swap on.
-     * Told where the old copy was among the running scenes, which the new one takes.
+     * Told where the old copy was among the running scenes, which the new one takes. `null` back
+     * means it did not start and whoever asked has already dealt with why: the cover goes, quietly.
      *
      * @internal
      */
-    rebuild:((restart: TSceneInPlace | undefined) => TBox) | null;
+    rebuild:((restart: TSceneInPlace | undefined) => TBox | null) | null;
     /**
      * Whether everything `incoming` asked to load has settled. The other half of what the swap waits for.
      */

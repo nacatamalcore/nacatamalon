@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import { createScene, destroy, useSelf, useSpawn, useUpdate } from '../src';
 import { createHeadlessGame } from '../src/headless';
 import { connectLoopback, createServer, useNet, useNetSpawn, useShared } from '../src/net';
+import { WIRE_VERSION } from '../src/net/protocol';
 import type { THeadlessGame } from '../src/headless';
 import type { TNetHandle, TServer, TServerOptions, TShared } from '../src/net';
 import type { TGameObject, TSceneFn } from '../src';
@@ -418,7 +419,7 @@ describe('nacatamalon/net: shared objects', () => {
         const line = connectLoopback(server!);
         line.onMessage(() => {});
         line.onClose(() => {});
-        line.send(JSON.stringify({ k: 'hello', v: 1, room: 'arena', token: null }));
+        line.send(JSON.stringify({ k: 'hello', v: WIRE_VERSION, room: 'arena', token: null }));
         await settle();
         let seq = 0;
         for (let step = 0; step < 10; step++) {
@@ -558,7 +559,7 @@ describe('nacatamalon/net: shared objects', () => {
         const line = connectLoopback(server!);
         line.onMessage(() => {});
         line.onClose(() => {});
-        line.send(JSON.stringify({ k: 'hello', v: 1, room: 'arena', token: null }));
+        line.send(JSON.stringify({ k: 'hello', v: WIRE_VERSION, room: 'arena', token: null }));
         await settle();
         line.send(JSON.stringify({ k: 'in', s: 1, t: 0, d: 1 / 60, e: 0, v: { fire: 1 }, p: ['fire'] }));
         await settle();

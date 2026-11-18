@@ -143,7 +143,7 @@ export const startTransitionBuilding = (
  * @param transition What was asked for.
  * @param outgoing The old copy.
  * @param build Starts the new copy where the old one was among the running scenes (`restart`), and
- * gives it back.
+ * gives it back, or `null` when it did not start and the one who asked has dealt with it.
  *
  * @internal
  * @since 1.0.0
@@ -153,7 +153,7 @@ export const startTransitionRestart = (
     store: TRuntimeStore,
     transition: TTransition,
     outgoing: TBox,
-    build: (restart: TSceneInPlace | undefined) => TBox,
+    build: (restart: TSceneInPlace | undefined) => TBox | null,
 ): void => {
     cover(store, transition, outgoing).rebuild = build;
 };
@@ -208,7 +208,7 @@ export const rebuildBehindCover = (store: TRuntimeStore, state: TTransitionState
         return;
     }
 
-    let incoming: TBox;
+    let incoming: TBox | null;
     try {
         incoming = build(restart);
     } catch (error) {
@@ -225,6 +225,11 @@ export const rebuildBehindCover = (store: TRuntimeStore, state: TTransitionState
         if (store.get('loop').failure === null) {
             store.setState('loop', { failure });
         }
+        return;
+    }
+    // Did not start, and whoever asked for it heard why already: the cover goes with it.
+    if (incoming === null) {
+        if (store.get('transition').active === state) endTransition(store, state);
         return;
     }
     // As in `startTransitionBuilding`: a cover dropped while the scene was being built has nothing

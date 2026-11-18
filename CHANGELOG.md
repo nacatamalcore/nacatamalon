@@ -42,6 +42,39 @@ releases are in [changelog/](./changelog/), one file each.
   room's `rewindLimit` (0.25 s unless it says) whatever a changed game claims it saw.
   `useNet().ping` is the round trip, measured every second.
 
+  **Room stores.** `createRoomStore({ key, state, serverOnly })` declares data of one room (its
+  score, its round): a plan that holds nothing, each game asking for its own with `useRoomStore`
+  (or `room.store` from the server's code, `roomStoreOf(game, …)` from a page's HUD). The room
+  changes it with `set`, on a copy, and every player reads it (`state`, frozen; `watch`); what it
+  changed reaches the players before anything the room says after it. Unlike `createGameStore`,
+  which is one for a whole process, two rooms of a server never share one. A game that never
+  connected changes its own, so it can be tried with no server; `serverOnly` keeps one in the room.
+  A player hears `onConnect` once it has the whole room, its objects and its stores, so what reads
+  them there reads the room's. `createRoom` warns once when the game's own stores would be shared
+  by every room.
+
+  **Moving between rooms.** `useNet().joinRoom(room, { token, transition })` moves a player to
+  another room of the same `createServer` over the line it is on: `admit` is asked (with `from`),
+  and the room it leaves lets it go only once the new one takes it, so a player turned away stays
+  where it was. The player goes from the scene of its room to the new room's (the `welcome` says
+  which), seeing it whole at its `onConnect`; the old room's players leave (`onLeave`) and no
+  `onDisconnect` sounds. The promise fails with the line closed when the new room's scene does not
+  start in the page. A room of a server of one's own (`createRoom`) answers that it does not move
+  players.
+
+  **A room's scene, followed.** A room that changes its scene (`useScene().change` in the server's
+  code) says so (`scene`), and every player in the room's scene goes to the new one, in the same
+  room and on the same line, hearing `onConnect` there once it is whole (and `onJoin` for everyone,
+  in the new scene only). `connect` takes `sceneTransition` for how; `useNet().scene` says the room's
+  scene; the `welcome` says the scene the room runs now, not the one it started with. A room's new
+  scene that throws on the server reaches no player.
+
+  What the network runs of the game's and throws (a listener, an object's `move`, a spawner, a room
+  store's `watch`) is said as what it is and where: `useNet: an onMessage listener of 'goal' threw,
+  in room 'lobby' of the server`, not as a scene's update.
+  A player's page that is hidden, and so takes no steps, still hears the room now and then (its
+  messages, its objects' fields as they are now) rather than everything at once when it comes back.
+
   **Run by a tool.** `setNetHost` (`nacatamalon/authoring`) hands `listen(port)` and
   `connect(address)` to a tool that runs the server and its players itself, side by side: an
   editor, with nothing in the game changed.

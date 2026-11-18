@@ -4,7 +4,7 @@ import { useTransform } from '../hooks/transform/use_transform';
 import { getActiveBox, getActiveGame } from '../store';
 import { outsideSceneBody } from '../utils/outside_scene_body';
 import { netGameOf, queueNet } from './net_game';
-import { addShared, announceSpawn } from './net_share';
+import { addShared, announceSpawn, keepSpawnerAside } from './net_share';
 import type { TGameObject, TSpawnOptions } from '../hooks/spawn/use_spawn';
 
 /**
@@ -85,7 +85,9 @@ export const useNetSpawn = <TArgs extends unknown[], TApi>(
         return api;
     }, { ...options, name: component.name.length > 0 ? component.name : kind });
 
-    share.spawners.set(kind, { spawn: spawn as (...args: unknown[]) => TGameObject, box: owner });
+    const spawner = { spawn: spawn as (...args: unknown[]) => TGameObject, box: owner };
+    // Asked for by the scene a player is leaving for another room: kept apart with the rest of it.
+    if (game.role === 'server' || !keepSpawnerAside(share, kind, spawner)) share.spawners.set(kind, spawner);
     // What the server made before this spawner was there, made at the start of the next step, from
     // what is still waiting then (a line changed or an object gone in between is not made).
     if (game.role === 'client' && share.orphans.has(kind)) {

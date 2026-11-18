@@ -1,6 +1,7 @@
 import { DEFAULT_ACTION_PRESS } from '../DEFAULTS';
+import { rootOf } from '../box/root_of';
 import { destroy } from '../destroy';
-import { reportFrameError } from '../game/loop/report_frame_error';
+import { reportNetError } from './report_net_error';
 import { createInputHandle, neutralInput } from './input_handle';
 import type { TBox } from '../box';
 import type { TActionDef, TActionsHandle } from '../input';
@@ -109,6 +110,27 @@ export type TSharedEntry = {
     authority: { s: number[] | null; f: Record<string, unknown> | 0; r?: string[]; ack: number } | null;
     /** A player's game: kept out of sight until the server says where it is. */
     hidden: { visible: boolean } | null;
+    /** A player's game: the fields it was built with, for a room that does not have it. */
+    initial: Record<string, unknown> | null;
+    /**
+     * A player's game: kept while it moved to another room (a HUD's), so the whole of the new room
+     * replaces its fields rather than adding to the old room's.
+     */
+    replace: boolean;
+};
+
+/**
+ * A player's game moving to another room: what of the scene it leaves was taken out of the registry,
+ * kept until that scene stops, so it can go back if the move goes no further. `spawned` is what the
+ * old room made, destroyed once the move is over.
+ *
+ * @internal
+ */
+export type TAside = {
+    root: TBox | null;
+    entries: TSharedEntry[];
+    spawners: Map<string, TSpawner>;
+    spawned: TBox[];
 };
 
 /**
@@ -139,8 +161,10 @@ type TRecordedStep = { seq: number; input: TInputState; dt: number };
 
 /**
  * A spawner of `useNetSpawn`, by its name: what makes the object, and the object that asked for it.
+ *
+ * @internal
  */
-type TSpawner = { spawn: (...args: unknown[]) => TBox; box: TBox };
+export type TSpawner = { spawn: (...args: unknown[]) => TBox; box: TBox };
 
 /**
  * Everything a game keeps to share objects over the network.
@@ -185,6 +209,8 @@ export type TShareState = {
     lastPing: number;
     ping: number | null;
     toldKinds: Set<string>;
+    /** A player's game moving to another room: what the scene it leaves keeps apart. */
+    aside: TAside | null;
 };
 
 /**
@@ -220,6 +246,7 @@ export const emptyShare = (): TShareState => ({
     lastPing: -Infinity,
     ping: null,
     toldKinds: new Set(),
+    aside: null,
 });
 
 /**
@@ -351,8 +378,11 @@ export const addShared = (
     options: { kind: string | null; owner: string | null; move: TSharedMove | null; smooth: boolean; fields: Record<string, unknown> },
 ): TSharedEntry => {
     const share = side.share;
+    // Made by the scene a player is leaving, behind the cover: kept apart with the rest of it, so
+    // it takes no key of the scene coming in.
+    const apart = side.role === 'client' && share.aside !== null && share.aside.root !== null && rootOf(box) === share.aside.root;
     const before = share.entries.get(id);
-    if (before !== undefined && !before.gone && !before.box.destroyed) {
+    if (!apart && before !== undefined && !before.gone && !before.box.destroyed) {
         throw new Error(`[NacatamalOn] useShared: '${id}' is already the key of '${before.box.name}', and a key names one object in the room. Give each its own (a door's could be 'door-1').`);
     }
     const entry: TSharedEntry = {
@@ -373,15 +403,19 @@ export const addShared = (
         fieldQueue: [],
         authority: null,
         hidden: null,
+        initial: side.role === 'client' ? structuredClone(options.fields) : null,
+        replace: false,
     };
-    share.entries.set(id, entry);
     share.byBox.set(box, entry);
+    if (apart) share.aside!.entries.push(entry);
+    else share.entries.set(id, entry);
+    // Also for one kept apart, which may go back into the registry if the move goes no further.
     box.cleanups.push(() => {
         entry.gone = true;
         // A player's game forgets it at once; the server keeps it until it has told the players.
         if (side.role === 'client' && share.entries.get(id) === entry) share.entries.delete(id);
     });
-    if (side.role === 'client') {
+    if (side.role === 'client' && !apart) {
         // What the server said of it before this game had built it.
         const waiting = share.pending.get(id);
         if (waiting !== undefined) {
@@ -595,7 +629,7 @@ export const serverStep = (store: TRuntimeStore, side: TShareSide, defsOf: () =>
             try {
                 entry.move!(createInputHandle(defsOf, () => step.input), step.dt);
             } catch (error) {
-                reportFrameError(store, error);
+                reportNetError(store, error, `the move of '${entry.box.name}' (${entry.owner}'s)`);
             }
         }
     }
@@ -685,11 +719,14 @@ const changeOf = (store: TRuntimeStore, share: TShareState, entry: TSharedEntry,
 };
 
 /**
- * The whole room for a player who just came: everything a spawner made, then where everything is.
+ * The whole room for a player who just came: everything a spawner made, then `stores` (the room's
+ * stores, whole), then where everything is, in a snapshot marked as the whole room (`w`), after
+ * which the player sees it. Without `whole`, not that snapshot: the room's scene is changing, and it
+ * comes once the new one runs.
  *
  * @internal
  */
-export const welcomeShared = (store: TRuntimeStore, side: TShareSide, player: string): void => {
+export const welcomeShared = (store: TRuntimeStore, side: TShareSide, player: string, stores: string, whole = true): void => {
     const share = side.share;
     const changes: string[] = [];
     for (const entry of share.entries.values()) {
@@ -701,7 +738,8 @@ export const welcomeShared = (store: TRuntimeStore, side: TShareSide, player: st
         const whole = changeOf(store, share, { ...entry, sentFields: new Map(entry.sentFields), removedFields: new Set(entry.removedFields) }, true);
         if (whole !== null) changes.push(whole);
     }
-    side.post(`{"k":"snap","a":-1,"t":${share.clock},"b":[${changes.join(',')}]}`, player);
+    side.post(stores, player);
+    if (whole) side.post(`{"k":"snap","a":-1,"w":1,"t":${share.clock},"b":[${changes.join(',')}]}`, player);
 };
 
 /** The words that make an object in a player's game. */
@@ -789,7 +827,7 @@ export const clientSpawn = (store: TRuntimeStore, side: TShareSide, wire: Extrac
     try {
         box = spawner.spawn(...wire.a);
     } catch (error) {
-        reportFrameError(store, error);
+        reportNetError(store, error, `the spawner '${wire.kind}', making what the server made`);
         return;
     } finally {
         share.spawning = before;
@@ -837,7 +875,7 @@ export const clientGone = (share: TShareState, id: string): void => {
  *
  * @internal
  */
-export const clientSnap = (side: TShareSide, t: number, ack: number, changes: TSnapEntry[]): void => {
+export const clientSnap = (side: TShareSide, t: number, ack: number, changes: TSnapEntry[], whole = false): void => {
     const share = side.share;
     // The server's clock against this game's: the soonest answer is the truest, and the estimate
     // only drifts slowly towards a later one, so one slow message does not move everything.
@@ -876,12 +914,22 @@ export const clientSnap = (side: TShareSide, t: number, ack: number, changes: TS
             entry.box.visible = entry.hidden.visible;
             entry.hidden = null;
         }
-        if (predicted(side, entry)) {
+        if (predicted(side, entry) && !whole) {
             entry.authority = { s: state === 0 ? stateOf(entry.box) : state, f: fields, r: removed, ack };
             continue;
         }
-        if (!entry.smooth) {
-            if (state !== 0) applyState(entry.box, state);
+        // The whole room, for a player who just came: shown as it is, not a moment later, so what
+        // the player is told it sees is there.
+        if (!entry.smooth || whole) {
+            if (state !== 0) {
+                applyState(entry.box, state);
+                if (entry.smooth) entry.samples.push({ t, s: state });
+            }
+            // Kept from the room before: this room's fields, and none of that one's.
+            if (whole && entry.replace) {
+                entry.replace = false;
+                for (const key of Object.keys(entry.fields)) delete entry.fields[key];
+            }
             applyFields(entry.fields, fields, removed);
             continue;
         }
@@ -1012,12 +1060,14 @@ export const clientStep = (store: TRuntimeStore, side: TShareSide, local: () => 
     }
 };
 
-/** Runs a player's own object one step, a mistake in it costing only its scene's update. */
+/**
+ * Runs a player's own object one step, a mistake in it costing only that step of it.
+ */
 const run = (store: TRuntimeStore, entry: TSharedEntry, input: TActionsHandle, dt: number): void => {
     try {
         entry.move!(input, dt);
     } catch (error) {
-        reportFrameError(store, error);
+        reportNetError(store, error, `the move of '${entry.box.name}' (this player's own)`);
     }
 };
 
@@ -1056,4 +1106,198 @@ export const clientOffline = (share: TShareState): void => {
     share.lastSent = '';
     share.lastPing = -Infinity;
     share.ping = null;
+};
+
+/**
+ * A player's game, moving to another room: what the room it leaves shared is taken out of the
+ * registry before anything of the new room's scene is built, so that scene can have its own `door`.
+ * What that room's spawners made, and what the scene going out (`outgoing`) built with a key and its
+ * spawners, are kept apart, the scene's to go back if the move goes no further; a key of a scene
+ * that stays (a HUD) stays, emptied as on a line that went, and takes the new room's fields whole.
+ * What travelled of the room before (its clock, this game's steps) starts over.
+ *
+ * @internal
+ */
+export const clientSetAside = (share: TShareState, outgoing: TBox | null): void => {
+    const aside: TAside = { root: outgoing, entries: [], spawners: new Map(), spawned: [] };
+    for (const [id, entry] of [...share.entries]) {
+        entry.samples = [];
+        entry.fieldQueue = [];
+        entry.authority = null;
+        if (entry.kind !== null) {
+            share.entries.delete(id);
+            aside.spawned.push(entry.box);
+        } else if (outgoing !== null && rootOf(entry.box) === outgoing) {
+            share.entries.delete(id);
+            aside.entries.push(entry);
+        } else {
+            entry.replace = true;
+        }
+    }
+    for (const [kind, spawner] of [...share.spawners]) {
+        if (outgoing !== null && rootOf(spawner.box) === outgoing) {
+            share.spawners.delete(kind);
+            aside.spawners.set(kind, spawner);
+        }
+    }
+    share.pending.clear();
+    share.orphans.clear();
+    share.streaming = false;
+    share.unanswered = [];
+    share.offset = null;
+    share.shown = null;
+    share.jitter = 0;
+    share.lastSnap = null;
+    share.lastSent = '';
+    share.aside = aside;
+};
+
+/**
+ * A player's game: whether `kind` has a spawner kept apart by a move, which then makes nothing.
+ *
+ * @internal
+ */
+export const keepSpawnerAside = (share: TShareState, kind: string, spawner: TSpawner): boolean => {
+    const aside = share.aside;
+    if (aside === null || aside.root === null || rootOf(spawner.box) !== aside.root) return false;
+    aside.spawners.set(kind, spawner);
+    return true;
+};
+
+/**
+ * A player's game: the move to another room is over, or went no further. What the old room made
+ * goes. With the scene going out still running (`back`, the move having gone no further), what it
+ * built with a key and its spawners go back into the registry, emptied as on a line that went, so a
+ * `connect` from there fills them again; a key taken meanwhile stays with what took it.
+ *
+ * @internal
+ */
+export const clientEndAside = (share: TShareState, back: boolean): void => {
+    const aside = share.aside;
+    if (aside === null) return;
+    share.aside = null;
+    for (const box of aside.spawned) {
+        if (!box.destroyed) destroy(box);
+    }
+    if (!back) return;
+    for (const entry of aside.entries) {
+        if (entry.gone || entry.box.destroyed) continue;
+        const now = share.entries.get(entry.id);
+        if (now !== undefined && !now.gone && !now.box.destroyed) continue;
+        entry.samples = [];
+        entry.fieldQueue = [];
+        entry.authority = null;
+        share.entries.set(entry.id, entry);
+    }
+    for (const [kind, spawner] of aside.spawners) {
+        if (spawner.box.destroyed) continue;
+        const now = share.spawners.get(kind);
+        if (now !== undefined && !now.box.destroyed) continue;
+        share.spawners.set(kind, spawner);
+    }
+};
+
+/**
+ * A player's game, in its new room: a key kept from the room before (a HUD's) that the new room did
+ * not have goes back to the fields it was built with.
+ *
+ * @internal
+ */
+export const clientSettleKept = (share: TShareState): void => {
+    for (const entry of share.entries.values()) {
+        if (!entry.replace) continue;
+        entry.replace = false;
+        for (const key of Object.keys(entry.fields)) delete entry.fields[key];
+        Object.assign(entry.fields, structuredClone(entry.initial ?? {}));
+    }
+};
+
+/**
+ * A player's game whose move went no further: a key kept from the room before (a HUD's) mixes what
+ * comes next with what it has, as after any line that went, rather than taking it whole.
+ *
+ * @internal
+ */
+export const clientForgetKept = (share: TShareState): void => {
+    for (const entry of share.entries.values()) entry.replace = false;
+};
+
+/**
+ * A player's game whose page is hidden, and so takes no steps: what arrived is kept to where things
+ * are now rather than piled up to be shown later. Each object keeps its last two placements and
+ * takes the fields it was sent at once; back on screen, it jumps to where the server has it.
+ *
+ * @internal
+ */
+export const clientCatchUp = (share: TShareState): void => {
+    for (const entry of share.entries.values()) {
+        if (entry.samples.length > 2) entry.samples.splice(0, entry.samples.length - 2);
+        for (const next of entry.fieldQueue.splice(0)) applyFields(entry.fields, next.f, next.r);
+    }
+};
+
+/**
+ * The server, as the room's scene changes: what the scene going out (`root`) shares with a key is
+ * taken out of the registry, so the scene coming in can use the same keys. The players put theirs
+ * aside themselves, so nobody is told they went.
+ *
+ * @internal
+ */
+export const serverSetAside = (share: TShareState, root: TBox): TSharedEntry[] => {
+    const apart: TSharedEntry[] = [];
+    for (const [id, entry] of [...share.entries]) {
+        if (entry.kind !== null || rootOf(entry.box) !== root) continue;
+        share.entries.delete(id);
+        apart.push(entry);
+    }
+    return apart;
+};
+
+/**
+ * The server, when the room's new scene (`failed`) did not start: what it shared goes, and what was
+ * taken out goes back, unless its key was taken meanwhile.
+ *
+ * @internal
+ */
+export const serverRestore = (share: TShareState, apart: TSharedEntry[], failed: TBox): void => {
+    // What the failed scene shared before it threw: never built, so never taken out by its cleanups.
+    for (const [id, entry] of [...share.entries]) {
+        if (rootOf(entry.box) === failed) share.entries.delete(id);
+    }
+    for (const entry of apart) {
+        if (entry.gone || entry.box.destroyed) continue;
+        const now = share.entries.get(entry.id);
+        if (now !== undefined && !now.gone && !now.box.destroyed) continue;
+        share.entries.set(entry.id, entry);
+    }
+};
+
+/**
+ * A player's game whose room changed its scene: what the scene going out (`outgoing`) shares is put
+ * aside, by the root of each object (its keys, what its spawners made, its spawners), so the new
+ * scene can have its own. The rest (a HUD's) stays, its queues emptied for the whole room to come;
+ * the room's clock and this player's own steps go on, as it is the same room.
+ *
+ * @internal
+ */
+export const clientSetAsideScene = (share: TShareState, outgoing: TBox): void => {
+    const aside: TAside = { root: outgoing, entries: [], spawners: new Map(), spawned: [] };
+    for (const [id, entry] of [...share.entries]) {
+        entry.samples = [];
+        entry.fieldQueue = [];
+        entry.authority = null;
+        if (rootOf(entry.box) !== outgoing) continue;
+        share.entries.delete(id);
+        if (entry.kind !== null) aside.spawned.push(entry.box);
+        else aside.entries.push(entry);
+    }
+    for (const [kind, spawner] of [...share.spawners]) {
+        if (rootOf(spawner.box) === outgoing) {
+            share.spawners.delete(kind);
+            aside.spawners.set(kind, spawner);
+        }
+    }
+    share.pending.clear();
+    share.orphans.clear();
+    share.aside = aside;
 };

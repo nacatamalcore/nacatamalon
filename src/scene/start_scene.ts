@@ -76,8 +76,12 @@ const placeOf = (scene: TBox): object => {
 /**
  * Where among `now` the scene in `scene`'s place is: itself while it runs, even with a scene on its
  * way to take its place behind a cover; the one that took its place once it has gone. `-1` for none.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
  */
-const indexInPlaceOf = (now: readonly TBox[], scene: TBox): number => {
+export const indexInPlaceOf = (now: readonly TBox[], scene: TBox): number => {
     const own = now.indexOf(scene);
     if (own >= 0) {
         return own;
@@ -212,6 +216,32 @@ export const nameTakenBy = (store: TRuntimeStore, name: string, except: TBox): T
     store.get('world').scenes.find((other) => other !== except && (other.name === name || startedAs(other) === name));
 
 /**
+ * Who hears, in a game, that a scene starts being built in another's place, and how its building
+ * ended: a room of the server, which follows its own scene. One per game; most have none.
+ *
+ * @internal
+ */
+export type TScenePlaceListener = {
+    /** Before the body of `root`, started as `name` in `old`'s place. */
+    started(old: TBox, root: TBox, name: string): void;
+    /** Its body and its children done (`true`, listed now, before its `useReady`), or thrown (`false`). */
+    built(root: TBox, ok: boolean): void;
+};
+
+const placeListeners = new WeakMap<TRuntimeStore, TScenePlaceListener>();
+
+/**
+ * Says who in `store` hears scenes started in another's place (see {@link TScenePlaceListener}).
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const listenScenePlaces = (store: TRuntimeStore, listener: TScenePlaceListener): void => {
+    placeListeners.set(store, listener);
+};
+
+/**
  * Turns a registered scene into a running one: creates its root box, runs the body with that
  * root active so every hook lands on it, attaches the children the body returns, and adds the
  * root to `world.scenes`. Returns the root.
@@ -267,6 +297,8 @@ export const startScene = (store: TRuntimeStore, name: string, props: object = {
         places.set(root, placeOf(inPlace.old));
     }
     const entry: TBuilding = { store, root, before: new Set(scenes), inPlace };
+    const listener = inPlace === undefined ? undefined : placeListeners.get(store);
+    listener?.started(inPlace!.old, root, name);
     // A scene that does not start: what its body asked for stays loaded, and is still said to be
     // its (see `inspectGame`). Not the splash's, which is not one of the game's scenes.
     const failed = (error: unknown): unknown => {
@@ -280,6 +312,7 @@ export const startScene = (store: TRuntimeStore, name: string, props: object = {
     try {
         result = withActiveGame(store, () => withActiveBox(store, root, () => body(props)));
     } catch (error) {
+        listener?.built(root, false);
         throw failed(error);
     } finally {
         building.splice(building.lastIndexOf(entry), 1);
@@ -287,9 +320,11 @@ export const startScene = (store: TRuntimeStore, name: string, props: object = {
 
     // TypeScript already rejects both of these. They are here for plain JavaScript.
     if (typeof (result as { then?: unknown } | undefined)?.then === 'function') {
+        listener?.built(root, false);
         throw failed(new Error(`[NacatamalOn] scenes: '${name}' returned a promise. A scene's function cannot be async: load what it needs with the useLoad… hooks, which return at once.`));
     }
     if (result === undefined || !Array.isArray(result.children)) {
+        listener?.built(root, false);
         throw failed(new Error(`[NacatamalOn] scenes: '${name}' must end with \`return createScene()\`.`));
     }
 
@@ -297,6 +332,7 @@ export const startScene = (store: TRuntimeStore, name: string, props: object = {
         // Created inside the body, or listed twice: already attached here.
         if (child.parent === root) continue;
         if (child.parent !== null) {
+            listener?.built(root, false);
             throw failed(new Error(`[NacatamalOn] scenes: '${child.name}' already belongs to '${child.parent.name}'.`));
         }
         child.parent = root;
@@ -310,9 +346,12 @@ export const startScene = (store: TRuntimeStore, name: string, props: object = {
     if (store.get('loop').destroyed) {
         markSceneStopped(root);
         teardownBox(root);
+        listener?.built(root, false);
         return root;
     }
     store.setState('world', { scenes: arrange(store.get('world').scenes, entry) });
+    // Before its `useReady`, which may itself start another scene in this one's place.
+    listener?.built(root, true);
     // Whole now, children attached and listed: what `useReady` waited for. Unless this start is
     // itself part of a build (a body launching another scene), whose end runs them all.
     if (store.get('world').boxStack.length === 0) flushReady(store);
