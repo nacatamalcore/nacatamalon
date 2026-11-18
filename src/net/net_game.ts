@@ -9,6 +9,7 @@ import { pageOf } from '../DOM/window_of';
 import { flushDestroyed } from '../destroy';
 import { describeNetGame, reportNetError } from './report_net_error';
 import { setNetInbox } from './net_inbox';
+import { pictureWithoutStep } from '../game/loop/helper/picture_without_step';
 import {
     clientCatchUp, clientEndAside, clientForgetKept, clientGone, clientSetAsideScene, clientOffline, clientPong, clientSetAside, clientSettleKept, clientSnap, clientSpawn,
     clientStep, emptyShare, remoteActions, rewindFor, serverFinish, serverStep,
@@ -165,6 +166,12 @@ const games = new WeakMap<TRuntimeStore, TNetGame>();
  * everything until the page comes back.
  */
 const HIDDEN_DELIVERY = 0.25;
+
+/**
+ * How far, in seconds, a hidden page moves the cover a move to another room is under, each time: the
+ * whole of it, since nobody sees it. Only that one: any other cover moves by the time gone by.
+ */
+const HIDDEN_CATCH_UP = 60;
 
 const emptyGame = (role: TNetRole): TNetGame => {
     const game: TNetGame = {
@@ -440,7 +447,7 @@ const roomSceneHere = (store: TRuntimeStore, game: TNetGame, name: string | null
  * Moves a player that changed rooms on to the new room's scene: starts the change once the room has
  * arrived whole and nothing else is being covered, and hands the room to the scene once it runs.
  */
-const settle = (store: TRuntimeStore, game: TNetGame, start: boolean): void => {
+const settle = (store: TRuntimeStore, game: TNetGame, start: boolean, cut = false): void => {
     const transfer = game.transfer;
     if (transfer === null || transfer.failed) return;
     // The line went meanwhile (a listener disconnected, or connected again): its `disconnect`, at the
@@ -467,7 +474,8 @@ const settle = (store: TRuntimeStore, game: TNetGame, start: boolean): void => {
             return;
         }
         transfer.started = true;
-        const transition = transfer.transition !== undefined && canDrawTransition(store, transfer.transition, transfer.kind === 'room' ? 'useNet().joinRoom' : 'useNet().connect\'s sceneTransition')
+        // A hidden page shows no cover: the change is a cut, so the move does not wait for its return.
+        const transition = !cut && transfer.transition !== undefined && canDrawTransition(store, transfer.transition, transfer.kind === 'room' ? 'useNet().joinRoom' : 'useNet().connect\'s sceneTransition')
             ? transfer.transition
             : undefined;
         try {
@@ -679,10 +687,28 @@ export const netGameOf = (store: TRuntimeStore, role: TNetRole = 'client'): TNet
         // A hidden page takes no steps, and what the room sends would wait for its return: hours of
         // it, handed over at once. Meanwhile it is handed over now and then, with no step, and what
         // is kept to be shown later is kept to now.
+        // When the interval last ran: what a cover that is not the move's moves by, as on the screen.
+        let last = performance.now();
         const hidden = setInterval(() => {
+            const now = performance.now();
+            const elapsed = Math.max(0, now - last) / 1000;
+            last = now;
             // The canvas's page, as everything else of the engine asks it.
-            if (pageOf(store.get('screen').canvas)?.hidden !== true || made.inbox.length === 0 || store.get('loop').destroyed) return;
+            if (pageOf(store.get('screen').canvas)?.hidden !== true || store.get('loop').destroyed) return;
+            if (made.inbox.length === 0 && made.transfer === null) return;
             deliver(store, made);
+            // A move to another room's scene (or to the room's new one) goes on with no step, or
+            // what the room sends would pile up for it until the page came back: its change started
+            // as a cut, a cover already on its way run to its end, and the room handed to the scene.
+            if (made.transfer !== null && !store.get('loop').destroyed) {
+                settle(store, made, true, true);
+                // Only the move's own cover is run to its end; one of the game's (a HUD fading in)
+                // moves on by the time that went by, and the move waits for it as it would on screen.
+                const cover = made.transfer?.cover ?? null;
+                const ours = cover !== null && store.get('transition').active === cover;
+                if (!store.get('loop').destroyed) pictureWithoutStep(store, ours ? HIDDEN_CATCH_UP : elapsed);
+            }
+            if (store.get('loop').destroyed) return;
             clientCatchUp(made.share);
             // What the server ended meanwhile goes now, not when the page comes back.
             flushDestroyed(store);

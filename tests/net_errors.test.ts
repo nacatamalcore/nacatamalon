@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, spyOn } from 'bun:test';
-import { createScene, destroy, useSpawn, useUpdate } from '../src';
+import { createScene, destroy, useScene, useSpawn, useUpdate } from '../src';
 import { createHeadlessGame } from '../src/headless';
 import { getActiveGame } from '../src/store';
 import { connectLoopback, createServer, useNet } from '../src/net';
@@ -190,5 +190,134 @@ describe('nacatamalon/net: a hidden page', () => {
         expect(entry.samples.map((sample) => sample.t)).toEqual([48, 49]);
         expect(entry.fieldQueue).toEqual([]);
         expect(entry.fields).toEqual({ n: 2 });
+    });
+
+    const hiddenMove = async (when: 'asked' | 'covered' | 'game cover') => {
+        const { useShared } = await import('../src/net');
+        const { useTransform } = await import('../src');
+        const { fade } = await import('../src/transition');
+        const { netGameOf } = await import('../src/net/net_game');
+        let ball: { fields: { n: number } } | null = null;
+        const Ball = () => {
+            useTransform({ x: 0, y: 0 });
+            ball = useShared({ key: 'ball', fields: { n: 0 } }) as unknown as { fields: { n: number } };
+        };
+        const Pool = () => {
+            const net = useNet();
+            const made = useSpawn(Ball)();
+            if (net.role === 'server') {
+                let n = 0;
+                useUpdate(() => {
+                    n += 1;
+                    made.transform!.x = n;
+                    ball!.fields.n = n;
+                    net.broadcast('tick', n);
+                });
+            }
+            return createScene();
+        };
+        server = createServer({
+            width: 160, height: 90, clock: false, step: 20,
+            scenes: { Lobby: () => { useNet(); return createScene(); }, Pool },
+            roomScene: (room) => (room === 'pool' ? 'Pool' : 'Lobby'),
+        });
+        const heard: number[] = [];
+        let net: TNetHandle | null = null;
+        let store: ReturnType<typeof getActiveGame> = null;
+        let canvas: HTMLCanvasElement | null = null;
+        let mine: { fields: { n: number } } | null = null;
+        const connects: string[] = [];
+        let scene: ReturnType<typeof useScene> | null = null;
+        const game = createHeadlessGame({
+            width: 160, height: 90,
+            scenes: {
+                Lobby: () => {
+                    net = useNet();
+                    scene = useScene();
+                    store = getActiveGame();
+                    canvas = store!.get('screen').canvas;
+                    net.connect(connectLoopback(server!), { room: 'lobby' });
+                    return createScene();
+                },
+                Pool: () => {
+                    const here = useNet();
+                    here.onMessage<number>('tick', (n) => heard.push(n));
+                    here.onConnect(() => connects.push(here.room!));
+                    useSpawn(Ball)();
+                    mine = ball;
+                    return createScene();
+                },
+                Hud: () => createScene(),
+            },
+        });
+        games.push(game);
+        const pump = async (times: number) => {
+            for (let i = 0; i < times; i++) {
+                await settle();
+                game.run(1);
+                for (const name of server!.rooms) server!.room(name)!.step(1);
+            }
+        };
+        await pump(4);
+        expect(net!.status).toBe('online');
+        // The game's own cover, a HUD fading in for four seconds, under way as the player moves.
+        if (when === 'game cover') scene!.launch('Hud', { transition: fade(4) });
+        const gameCover = store!.get('transition').active;
+        let kept = false;
+        // Left on its way when the game ends at the end of the test: heard, not thrown.
+        net!.joinRoom('pool', { transition: fade(1) }).then(() => { kept = true; }, () => {});
+        if (when === 'covered') {
+            // Until the cover is on its way: the pool let the player in, its scene waits behind it.
+            for (let i = 0; i < 20 && store!.get('transition').active === null; i++) await pump(1);
+            expect(store!.get('transition').active).not.toBeNull();
+        }
+        expect(kept).toBe(false);
+
+        // Hidden as it crosses the door; the pool goes on for two seconds, the page takes no step.
+        const page = canvas!.ownerDocument as unknown as { hidden?: boolean };
+        page.hidden = true;
+        try {
+            for (let i = 0; i < 40; i++) {
+                server.room('pool')?.step(1);
+                await settle();
+            }
+            await new Promise((done) => setTimeout(done, 600));
+            if (when === 'game cover') {
+                // The game's cover moves by the time gone by, not to its end; the move waits for it.
+                const active = store!.get('transition').active;
+                expect(active).toBe(gameCover);
+                expect(active!.elapsed).toBeLessThan(2);
+                expect(kept).toBe(false);
+                return;
+            }
+            // Moved while hidden: in the pool's scene, nothing kept back, its ticks heard as they come.
+            expect(kept).toBe(true);
+            // Started hidden, as a cut: no cover was ever begun for nobody to see.
+            if (when === 'asked') expect(store!.get('transition').active).toBeNull();
+            expect(net!.room).toBe('pool');
+            expect(game.scenes).toEqual(['Pool']);
+            expect(netGameOf(store!).held).toBeNull();
+            expect(connects).toEqual(['pool']);
+            expect(heard.length).toBeGreaterThan(20);
+        } finally {
+            page.hidden = false;
+        }
+        await pump(4);
+        // Every tick heard once, in order, and the ball where the pool has it.
+        expect(heard).toEqual(heard.map((_, i) => heard[0]! + i));
+        expect(mine!.fields.n).toBeGreaterThanOrEqual(heard.at(-1)! - 1);
+        expect(store!.get('transition').active).toBeNull();
+    };
+
+    it('crosses to another room while hidden, as a cut, rather than keeping the room for its return', async () => {
+        await hiddenMove('asked');
+    });
+
+    it('ends a cover already on its way when hidden, and crosses to the other room', async () => {
+        await hiddenMove('covered');
+    });
+
+    it('moves a cover of the game\'s own by the time gone by while hidden, not to its end', async () => {
+        await hiddenMove('game cover');
     });
 });

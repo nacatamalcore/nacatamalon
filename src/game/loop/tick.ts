@@ -5,6 +5,7 @@ import { fillFrameContext } from "./fill_frame_context";
 import { MAX_FRAME_DELTA, MAX_STEPS_PER_FRAME } from "../../DEFAULTS";
 import { runHookUpdates as runUpdates, runLateUpdates, runMoves } from "./runHookUpdates";
 import { stepGameTransition } from "./helper/step_game_transition";
+import { pictureWithoutStep } from "./helper/picture_without_step";
 import { flushTransitionEnd } from "../../scene/flush_transition_end";
 import { stepSplash } from "./helper/step_splash";
 import { isBehindSplash, splashOf } from "../../splash/behind_splash";
@@ -314,22 +315,9 @@ export const advanceFrame = (store: TRuntimeStore, ctx: TFrameContext, elapsedMs
         // Slow motion runs fewer steps, each one still exactly `length`: the game stays exact.
         const steps = stepsOwed(ctx, unscaled * timeScale, length);
         if (steps === 0) {
-            // No step this picture, so nothing reads the input and it waits for the next one. The
-            // transition is on real time and moves anyway, or a cut would wait for the game.
-            // And, in the order a frame with a step does it, what this picture has to show: the
-            // systems in step with how the game is shown (a tool laying it out takes them down,
-            // and what they launched), the transition's end heard by the scene it uncovered, the
-            // splash, the sounds a swap let go of, and what a system launched before the game had a
-            // scene.
-            followLayout(store);
-            stepGameTransition(store, unscaled);
-            stepSplash(store, unscaled);
-            flushTransitionEnd(store);
-            flushReleased(store);
-            flushSystemLaunches(store);
-            // A scene a transition let go of in this picture is drawn in it: a player moving to
-            // another room hands it its room first. Nothing is started here, with no step.
-            settleNet(store, false);
+            // No step this picture, so nothing reads the input and it waits for the next one; what
+            // it has to show moves all the same.
+            pictureWithoutStep(store, unscaled);
             // Any of those may have ended the game: the renderer would already be gone.
             if (store.get('loop').destroyed) {
                 return;

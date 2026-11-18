@@ -73,7 +73,9 @@ releases are in [changelog/](./changelog/), one file each.
   store's `watch`) is said as what it is and where: `useNet: an onMessage listener of 'goal' threw,
   in room 'lobby' of the server`, not as a scene's update.
   A player's page that is hidden, and so takes no steps, still hears the room now and then (its
-  messages, its objects' fields as they are now) rather than everything at once when it comes back.
+  messages, its objects' fields as they are now) rather than everything at once when it comes back,
+  and a move to another room (or to the room's new scene) under way when it hid ends there and then,
+  as a cut, rather than wait for its return.
 
   **Run by a tool.** `setNetHost` (`nacatamalon/authoring`) hands `listen(port)` and
   `connect(address)` to a tool that runs the server and its players itself, side by side: an
