@@ -200,37 +200,6 @@ export type TSceneHandle = {
 };
 
 /**
- * Returns the controls for the game's scenes: `launch`, `stop`, `change`, `restart`, `pause`,
- * `resume`, `isPaused` and `isRunning`.
- *
- * Call it in the scene body, keep the handle, and use it later from `useUpdate`: it holds the game
- * and the scene it was called in, so it keeps working after the body is over.
- *
- * A game system calls it too, for the scenes it names: a system that pauses the level when the pad
- * is unplugged, or launches the HUD. It has no scene of its own, so `change`, and the calls with no
- * name, throw there.
- *
- * @example
- * ```ts
- * export const Intro: TSceneFn = () => {
- *     const scene = useScene();
- *     let elapsed = 0;
- *     useUpdate((dt) => {
- *         elapsed += dt;
- *         if (elapsed > 3) scene.change('Level');
- *     });
- *     return createScene();
- * };
- * ```
- *
- * @returns The controls: `change`, `launch`, `stop`, `restart`, `pause`, `resume`, `isPaused`,
- * `isRunning`, and `onPaused` and `onResumed` to hear a scene freeze.
- *
- * @category Scenes
- * @since 1.0.0
- * @author Francisco Pereira Alvarado
- */
-/**
  * The scenes a change without a transition is replacing right now: the scene coming in is being
  * built while the one going out still runs. Neither stopped nor started over from inside that build,
  * as neither end of a covered change is.
@@ -311,6 +280,37 @@ export const replaceScene = (
     return built;
 };
 
+/**
+ * Returns the controls for the game's scenes: `launch`, `stop`, `change`, `restart`, `pause`,
+ * `resume`, `isPaused` and `isRunning`.
+ *
+ * Call it in the scene body, keep the handle, and use it later from `useUpdate`: it holds the game
+ * and the scene it was called in, so it keeps working after the body is over.
+ *
+ * A game system calls it too, for the scenes it names: a system that pauses the level when the pad
+ * is unplugged, or launches the HUD. It has no scene of its own, so `change`, and the calls with no
+ * name, throw there.
+ *
+ * @example
+ * ```ts
+ * export const Intro: TSceneFn = () => {
+ *     const scene = useScene();
+ *     let elapsed = 0;
+ *     useUpdate((dt) => {
+ *         elapsed += dt;
+ *         if (elapsed > 3) scene.change('Level');
+ *     });
+ *     return createScene();
+ * };
+ * ```
+ *
+ * @returns The controls: `change`, `launch`, `stop`, `restart`, `pause`, `resume`, `isPaused`,
+ * `isRunning`, and `onPaused` and `onResumed` to hear a scene freeze.
+ *
+ * @category Scenes
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
 export const useScene = (): TSceneHandle => {
     const store = getActiveGame();
     const active = getActiveBox();

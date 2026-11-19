@@ -219,12 +219,16 @@ console.log(game.drawn().map((p) => p.text ?? p.name));
 - **The era, first-class:** palette matching, ordered dithering, colour grading
   tables and a CRT pass as post-processing; crisp pixel art (nearest sampling
   and whole-number scaling); vertex lighting, Nintendo 64 fog, PlayStation-style
-  vertex snapping and affine textures, and blob shadows.
+  vertex snapping and affine textures, and blob shadows. Render styles switch the
+  look of a whole scene in one call (`RENDER.STYLES.ps1`, `n64`, `cgi`…), and
+  `createMode7` lays a 16-bit floor in perspective.
 - **2D:** sprites and atlases, sprite animation, tilemaps with solid-tile
   queries, bitmap text, nine-slice, particles, and coloured lights with ambient darkness
   and radial falloff ([2D lighting guide](guides/lighting_2d.md)).
 - **3D:** meshes, glTF models with skeletal animation, up to eight lights,
-  shadow maps, 3D particles, and 2D and 3D in the same frame.
+  shadow maps, 3D particles, and 2D and 3D in the same frame; shapes made in code
+  (boxes with rounded edges, lathes, outlines extruded, several merged into one),
+  material recipes from chrome to felt, matcaps, and `castRay` to click what is drawn.
 - **Everything around it:** scenes with transitions and pause, keyboard,
   pointer, gamepad and named actions, audio placed in the world, stores and
   signals, tweens and timers, seeded random, and the everyday maths (`clamp`,
@@ -259,6 +263,10 @@ import { installPhysics2d } from "nacatamalon/physics2d";
 
 installPhysics2d();
 ```
+
+For the movement of a console platformer rather than a simulation, `nacatamalon/retro-physics2d`
+is plain TypeScript with no engine underneath: boxes that stop at walls and tiles, slopes and
+ledges stood on from above (`installRetroPhysics2d()`). It can be installed beside Box2D.
 
 ## Plugins
 
