@@ -235,9 +235,10 @@ export type TMeshMaterialOptions = TMaterialShaderOptions & {
      * Worked out at every pixel, a shine is a round, clean spot that slides across the surface
      * however few triangles the model has: the look of the computer graphics of the time, glossy
      * plastic and chrome. It costs more per pixel, and a shader of your own receives that light in
-     * `ctx.light` and `ctx.shine` without changing. It can be changed while the game runs. Left out,
-     * the scene's render style decides (`useRenderStyle`), and with none it is off; `false` says no
-     * to that style.
+     * `ctx.light` and `ctx.shine` without changing. The scene's fog is taken at every pixel too, so a
+     * big floor of few triangles fades into it where it should. It can be changed while the game
+     * runs. Left out, the scene's render style decides (`useRenderStyle`), and with none it is off;
+     * `false` says no to that style.
      */
     perPixel?: boolean;
     /**

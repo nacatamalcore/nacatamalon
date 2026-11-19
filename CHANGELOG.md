@@ -3,6 +3,16 @@
 What changed in the current release of `nacatamalon`, and what is waiting for the next one. Earlier
 releases are in [changelog/](./changelog/), one file each.
 
+## Unreleased
+
+### Fixed
+
+- **A model lit at every pixel (`perPixel`) takes the fog at every pixel too.** It was still worked out
+  at the corners and smeared, so a big floor of two triangles whose corners all reach past the fog's
+  `far` was lost in it whole, the part under the camera included, and in a fog the colour of the
+  background it seemed not to be drawn at all. A model lit at the corners keeps its fog at the
+  corners, the way the era did it.
+
 ## 0.8.6 — 2026-11-19
 
 ### Added

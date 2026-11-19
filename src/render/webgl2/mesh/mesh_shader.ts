@@ -107,6 +107,34 @@ vec3 ambientAt(float sky) {
 `;
 
 /**
+ * How much of a place is lost in the fog, for the corners and, when a material lights every pixel,
+ * for the pixel too: one text so the two never drift apart.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const FOG_AT_GLSL = /* glsl */ `
+// How much of a corner is lost in the fog, 0 to 1. The twin of fogAt in webgpu/mesh/mesh_shader.ts.
+float fogAt(vec3 worldPos) {
+    float kinds = lights.fog.w;
+    if (kinds <= 0.0) {
+        return 0.0;
+    }
+    float amount = 0.0;
+    if (abs(kinds - 2.0) > 0.5) {
+        float dist = length(worldPos - uniforms.cameraPosition.xyz);
+        amount = clamp((dist - lights.fogRange.x) / (lights.fogRange.y - lights.fogRange.x), 0.0, 1.0);
+    }
+    if (kinds > 1.5) {
+        float low = (lights.fogRange.z - worldPos.y) / (lights.fogRange.z - lights.fogRange.w);
+        amount = max(amount, clamp(low, 0.0, 1.0));
+    }
+    return amount;
+}
+`;
+
+/**
  * The corners every model reads, and the work of turning lights into a colour.
  *
  * Shared with the shader that bends a model around its bones: what differs between them is where a
@@ -143,24 +171,7 @@ vec3 affineUv(vec2 uv, vec4 clip) {
     return affineUvOf(uv, clip, uniforms.normalMatrix[3].w > 0.5);
 }
 
-// How much of a corner is lost in the fog, 0 to 1. The twin of fogAt in webgpu/mesh/mesh_shader.ts.
-float fogAt(vec3 worldPos) {
-    float kinds = lights.fog.w;
-    if (kinds <= 0.0) {
-        return 0.0;
-    }
-    float amount = 0.0;
-    if (abs(kinds - 2.0) > 0.5) {
-        float dist = length(worldPos - uniforms.cameraPosition.xyz);
-        amount = clamp((dist - lights.fogRange.x) / (lights.fogRange.y - lights.fogRange.x), 0.0, 1.0);
-    }
-    if (kinds > 1.5) {
-        float low = (lights.fogRange.z - worldPos.y) / (lights.fogRange.z - lights.fogRange.w);
-        amount = max(amount, clamp(low, 0.0, 1.0));
-    }
-    return amount;
-}
-`;
+${FOG_AT_GLSL}`;
 
 /**
  * What the built-in vertex hands on. A material declares a wider set of its own, and pays for it.

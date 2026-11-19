@@ -196,7 +196,10 @@ describe('the shaders', () => {
         expect(MESH_SHADER).toContain('lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), in.fog.x)');
         expect(MESH_FRAGMENT_GLSL).toContain('lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), vFog.x)');
         const source = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
-        expect(source('../src/render/webgpu/material/mesh_material_shader.ts')).toContain('mix(shaded.rgb, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), in.worldPos.w)');
-        expect(source('../src/render/webgl2/material/mesh_material_shader.ts')).toContain('mix(shaded.rgb, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), vFog)');
+        // A material's: from its corners, or from its own pixel when it lights every pixel.
+        expect(source('../src/render/webgpu/material/mesh_material_shader.ts')).toContain('mix(shaded.rgb, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), fogged)');
+        expect(source('../src/render/webgpu/material/mesh_material_shader.ts')).toContain('select(in.worldPos.w, fogAt(in.worldPos.xyz), uniforms.normalMatrix[1].w > 1.5)');
+        expect(source('../src/render/webgl2/material/mesh_material_shader.ts')).toContain('mix(shaded.rgb, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), fogged)');
+        expect(source('../src/render/webgl2/material/mesh_material_shader.ts')).toContain('uniforms.normalMatrix[1].w > 1.5 ? fogAt(vWorldPos) : vFog');
     });
 });

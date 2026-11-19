@@ -174,7 +174,8 @@ fn affineUv(uv: vec2<f32>, clip: vec4<f32>) -> vec3<f32> {
 
 // How much of a corner is lost in the fog, 0 to 1, by how far it is from the camera and how low it
 // is: the denser of the two. Worked out per corner and smeared across the triangle, like the light,
-// which is how the Nintendo 64 did it. A scene with no fog says so in fog.w and gets zero, before
+// which is how the Nintendo 64 did it; a material lit at every pixel calls it from its fragment too
+// (see the material's ending). A scene with no fog says so in fog.w and gets zero, before
 // either division, which with no fog would be by nothing.
 fn fogAt(worldPos: vec3<f32>) -> f32 {
     let kinds = lights.fog.w;

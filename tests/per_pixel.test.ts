@@ -127,6 +127,24 @@ describe('the ending of a material', () => {
         }
     });
 
+    it('takes the fog at its own pixel by the same flag, so a big floor near the camera is not lost in it', () => {
+        // Two triangles of a floor reach past the fog's far end at every corner: smeared from them,
+        // the whole floor, the part under the camera too, was fog.
+        for (const skinned of [false, true]) {
+            for (const instanced of skinned ? [false] : [false, true]) {
+                for (const cull of culls) {
+                    const wgsl = buildMeshMaterialShader(null, null, {}, [], skinned, cull, instanced);
+                    expect(wgsl).toContain('let fogged = select(in.worldPos.w, fogAt(in.worldPos.xyz), uniforms.normalMatrix[1].w > 1.5);');
+                    expect(wgsl).toContain('uniforms.normalMatrix[2].w), fogged), shaded.a);');
+
+                    const glsl = buildMeshMaterialShaderGlsl(null, null, {}, [], skinned, cull, instanced).fragment;
+                    expect(glsl).toContain('float fogged = uniforms.normalMatrix[1].w > 1.5 ? fogAt(vWorldPos) : vFog;');
+                    expect(glsl).toContain('uniforms.normalMatrix[2].w), fogged), shaded.a);');
+                }
+            }
+        }
+    });
+
     it('reads the occlusion\'s coordinate from the odd half of the number, so the light does not move it', () => {
         const wgsl = buildMeshMaterialShader(null, null, {}, [], false, 'back', false);
         expect(wgsl).toContain('uniforms.normalMatrix[1].w % 2.0 > 0.5');
@@ -145,6 +163,10 @@ describe('the ending of a material', () => {
             expect(count('void sampleLight(int index')).toBe(1);
             expect(count('int meshLight(int k)')).toBe(1);
             expect(count('void litBy(vec3 worldPos')).toBe(1);
+            expect(count('float fogAt(vec3 worldPos)')).toBe(1);
+            // And in the corners once, where it always was.
+            const vertex = buildMeshMaterialShaderGlsl(null, null, {}, [], false, cull, false).vertex;
+            expect(vertex.split('float fogAt(vec3 worldPos)').length - 1).toBe(1);
         }
     });
 });

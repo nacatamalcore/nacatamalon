@@ -418,9 +418,10 @@ export type TMeshMaterial = TShaderHalf & {
      * already carries which way the surface faces and where it is to every pixel, which the light
      * needs. A shader of your own receives it in `ctx.light` and `ctx.shine` without changing; one
      * written in WGSL only is drawn the built-in way on WebGL2, as always, and there the light is
-     * worked out at the corners. Read every frame, so it can change while the game runs. Left out,
-     * the scene's render style decides (`useRenderStyle`), and with none it is off; `false` says no
-     * to that style.
+     * worked out at the corners. The scene's fog follows the light: at every pixel when the light
+     * is, at the corners when it is not. Read every frame, so it can change while the game runs.
+     * Left out, the scene's render style decides (`useRenderStyle`), and with none it is off; `false`
+     * says no to that style.
      */
     perPixel?: boolean;
     /**

@@ -534,9 +534,13 @@ fn fs(in: VertexOutput, @builtin(front_facing) front: bool) -> @location(0) vec4
     if (shaded.a < uniforms.normalMatrix[3].z) {
         discard;
     }
+    // The fog by this pixel's own place when the light is (perPixel), as the light is: smeared from
+    // the corners, a floor whose corners are all past the fog's far end is lost in it whole, near the
+    // camera too. Otherwise from the corners, the way the era did it.
+    let fogged = select(in.worldPos.w, fogAt(in.worldPos.xyz), uniforms.normalMatrix[1].w > 1.5);
     // One that adds its colour (normalMatrix[2].w) fades into the fog towards black, adding less:
     // adding the fog's colour would brighten it.
-    return vec4<f32>(mix(shaded.rgb, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), in.worldPos.w), shaded.a);
+    return vec4<f32>(mix(shaded.rgb, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), fogged), shaded.a);
 }
 `;
 };

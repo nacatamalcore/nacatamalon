@@ -1,6 +1,6 @@
 import { mapNamesOf, MAX_MATERIAL_MAPS } from '../../shared/material_maps';
 import {
-    FACED_LIGHT_GLSL, FACING_TURN_GLSL, INSTANCE_HEAD_GLSL, LIT_BY_GLSL, MESH_FRAGMENT_HEAD_GLSL, MESH_LIGHT_GLSL, MESH_SAMPLE_LIGHT_GLSL, MESH_VERTEX_ATTRIBUTES_GLSL,
+    FACED_LIGHT_GLSL, FACING_TURN_GLSL, FOG_AT_GLSL, INSTANCE_HEAD_GLSL, LIT_BY_GLSL, MESH_FRAGMENT_HEAD_GLSL, MESH_LIGHT_GLSL, MESH_SAMPLE_LIGHT_GLSL, MESH_VERTEX_ATTRIBUTES_GLSL,
     TWO_SIDED_VARYINGS_GLSL, TWO_SIDED_WRITE_GLSL, worldNormalOfGlsl,
 } from '../mesh/mesh_shader';
 import { MAX_LIGHTS } from '../../../light';
@@ -498,9 +498,13 @@ void main() {${cull === 'none' ? FACED_LIGHT_GLSL : ''}
     if (shaded.a < uniforms.normalMatrix[3].z) {
         discard;
     }
+    // The fog by this pixel's own place when the light is (perPixel), as the light is: smeared from
+    // the corners, a floor whose corners are all past the fog's far end is lost in it whole, near the
+    // camera too. Otherwise from the corners, the way the era did it. The twin of the other card's.
+    float fogged = uniforms.normalMatrix[1].w > 1.5 ? fogAt(vWorldPos) : vFog;
     // One that adds its colour (normalMatrix[2].w) fades into the fog towards black, adding less:
     // adding the fog's colour would brighten it.
-    fragColor = vec4(mix(shaded.rgb, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), vFog), shaded.a);
+    fragColor = vec4(mix(shaded.rgb, lights.fog.rgb * (1.0 - uniforms.normalMatrix[2].w), fogged), shaded.a);
 }
 `;
 };
@@ -559,9 +563,11 @@ export const buildMeshMaterialShaderGlsl = (
     ].join('\n'),
     fragment: [
         MESH_FRAGMENT_HEAD_GLSL,
-        // The lights again, for a material that works its light out at every pixel (perPixel).
+        // The lights again, for a material that works its light out at every pixel (perPixel), and
+        // the fog again for the same one.
         MESH_LIGHT_GLSL,
         LIT_BY_GLSL,
+        FOG_AT_GLSL,
         glslUniformBlock(sig),
         VARYINGS('in', cull),
         FRAG_CONTEXT,

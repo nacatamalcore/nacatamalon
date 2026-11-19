@@ -5,7 +5,8 @@ import type { TColor, TColorOption } from '../../color';
  *
  * It is what the Nintendo 64 is remembered by, and the way every game of the era hid how near it
  * stopped drawing. Worked out per corner and smeared across each triangle, like the light, which is
- * how that hardware did it too. Everything here is read every frame, so changing a field fades the
+ * how that hardware did it too; a model lit at every pixel (`perPixel`) takes it at every pixel as
+ * well, so a big floor of few triangles fades into it where it should. Everything here is read every frame, so changing a field fades the
  * fog in, thickens it or turns it to dusk with nothing set up again.
  *
  * @category Camera
