@@ -23,7 +23,8 @@ export type TPhysicsBody2dOptions = {
     id?: string;
     name?: string;
     body: TPhysicsBodyType;
-    collider: TCollider2d;
+    /** Its shape, or `null` for a body whose shapes are on objects under it (`useCollisionShape2d`). */
+    collider: TCollider2d | null;
 } & Partial<Omit<TPhysicsSurface, 'layer' | 'collidesWith'>> & TPhysicsLayerOptions;
 
 /**
@@ -37,7 +38,8 @@ export type TPhysicsBody3dOptions = {
     id?: string;
     name?: string;
     body: TPhysicsBodyType;
-    collider: TCollider3d;
+    /** Its shape, or `null` for a body whose shapes are on objects under it (`useCollisionShape3d`). */
+    collider: TCollider3d | null;
     offset?: [number, number, number];
 } & Partial<Omit<TPhysicsSurface, 'layer' | 'collidesWith'>> & TPhysicsLayerOptions;
 

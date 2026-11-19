@@ -4,7 +4,7 @@ import type { TDrawable } from '../../gameobjects/types';
 import type { TDataRecord } from '../../hooks/state';
 import type { TScriptAttachment } from '../../scripts';
 import type { TAudioListener, TMusicAttachment, TSongAttachment, TSoundAttachment } from '../../audio';
-import type { TPhysicsBody, TPhysicsWorld } from '../../physics';
+import type { TCollisionShape, TPhysicsBody, TPhysicsWorld } from '../../physics';
 import type { TTransform3d } from '../../gameobjects/types/t_transform_3d';
 import type { TLight } from '../../light';
 import type { TParticleCollider2d, TParticleCollider3d } from '../../gameobjects/particles/colliders/t_particle_collider';
@@ -138,11 +138,16 @@ export type TBox = {
      * What this object is made of, physically, or `null` for one nothing can bump into.
      *
      * A component and not a child object, because it is **something the object is**, the same as
-     * its picture and its sound. (An engine whose only primitive is the node has to make physics a
-     * node with a shape hanging under it; here there are both, and the rule for choosing is in the
-     * glossary.)
+     * its picture and its sound. Its shape can be on it too, for the common case of one; shapes
+     * that need a place of their own (turned, apart, several) are objects under it, each with a
+     * `collisionShape`, since a place is what an object has.
      */
     physics: TPhysicsBody | null;
+    /**
+     * One more shape for the nearest body above (or on) this object, placed by this object, or
+     * `null`. See `TCollisionShape2d`.
+     */
+    collisionShape: TCollisionShape | null;
     /**
      * The simulation's settings, on a scene's root and nowhere else.
      *

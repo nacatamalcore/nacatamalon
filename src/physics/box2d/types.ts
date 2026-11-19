@@ -198,6 +198,18 @@ export type TPhysicsBodyHandle2d = {
  */
 export type TPhysicsWorldHandle2d = {
     /**
+     * Adds a body with no shape of its own, whose shapes are all added to it with `addShape`: a
+     * body made of several, or of one turned apart from its object.
+     */
+    addEmpty: (box: TGameObject, options: { type: TPhysicsBodyType } & TColliderSurface2d) => TPhysicsBodyHandle2d;
+    /**
+     * Adds one more shape to the body of `owner`, placed by `box`: where it is, how it is turned and
+     * how big it is, relative to the body, as they are now. Its surface is the body's, with what
+     * `options` says over it. The whole moves as one; `box` destroyed, the shape meets nothing more.
+     * `false` when `owner` has no body in this world.
+     */
+    addShape: (owner: TGameObject, box: TGameObject, options: TShapeOptions) => boolean;
+    /**
      * Register a circular rigid body on an object.
      */
     addCircle: (box: TGameObject, options: { type: TPhysicsBodyType } & TColliderSurface2d & { radius: number }) => TPhysicsBodyHandle2d;

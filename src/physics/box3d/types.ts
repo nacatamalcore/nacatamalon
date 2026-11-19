@@ -118,6 +118,21 @@ export type TColliderSurface3d = {
 };
 
 /**
+ * A shape for `addShape`: one of the shapes a body can have, where it sits in its object (`offset`,
+ * before the object's scale), and what of its surface is its own.
+ *
+ * @category Physics
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TPlacedShapeOptions3d = (
+    | { shape: 'box'; size: [number, number, number] }
+    | { shape: 'sphere'; radius: number }
+    | { shape: 'capsule'; radius: number; height: number }
+    | { shape: 'hull' | 'mesh'; geometry: TGeometry }
+) & TColliderOptions3d;
+
+/**
  * The world a scene declared, and the factory for bodies in it. Deliberately narrow (box + sphere for now); more shapes and queries land
  * when a concrete case needs them, not before.
  *
@@ -126,6 +141,20 @@ export type TColliderSurface3d = {
  * @author Francisco Pereira Alvarado
  */
 export type TPhysicsWorldHandle3d = {
+    /**
+     * Adds a body with no shape of its own, whose shapes are all added to it with `addShape`: a
+     * body made of several, or of one turned apart from its object.
+     */
+    addEmpty: (box: TGameObject, opts: { type: TPhysicsBodyType } & TColliderSurface3d) => TPhysicsBodyHandle3d;
+    /**
+     * Adds one more shape to the body of `owner`, placed by `box`: where it is, how it is turned and
+     * how big it is, relative to the body, as they are now. Its surface is the body's, with what
+     * `opts` says over it. The whole moves as one, and `box` destroyed takes the shape away.
+     *
+     * `false` when `owner` has no body in this world, or the shape cannot be one of it (a triangle
+     * mesh on a body that moves, which has no inside to be pushed out of).
+     */
+    addShape: (owner: TGameObject, box: TGameObject, opts: TPlacedShapeOptions3d) => boolean;
     /**
      * Adds a box collider whose full extents are `size` (metres, halved internally to
      * Box3D's half-extents), positioned and turned from where the object is.

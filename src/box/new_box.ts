@@ -27,6 +27,7 @@ export const newBox = (name: string): TBox => ({
     motions: [],
     stores: [],
     physics: null,
+    collisionShape: null,
     physicsWorld: null,
     hitboxes: [],
     collisionCallbacks: [],

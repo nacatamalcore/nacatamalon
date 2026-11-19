@@ -1,7 +1,7 @@
 import { ALL_LAYERS } from './layers';
 import { nanoId } from '../utils';
 import type {
-    TCollider2d, TCollider3d, TPhysicsBody2d, TPhysicsBody3d, TPhysicsBodyType, TPhysicsSurface,
+    TCollider2d, TCollider3d, TCollisionShape2d, TCollisionShape3d, TPhysicsBody2d, TPhysicsBody3d, TPhysicsBodyType, TPhysicsSurface,
 } from './types/t_physics';
 
 /**
@@ -45,7 +45,7 @@ const surface = (options: Partial<TPhysicsSurface>): TPhysicsSurface => ({
  * @author Francisco Pereira Alvarado
  */
 export const createPhysicsBody2d = (
-    options: { id?: string; name?: string; body: TPhysicsBodyType; collider: TCollider2d } & Partial<TPhysicsSurface>,
+    options: { id?: string; name?: string; body: TPhysicsBodyType; collider: TCollider2d | null } & Partial<TPhysicsSurface>,
 ): TPhysicsBody2d => ({
     _type: 'physics-body-2d',
     id: options.id ?? nanoId(),
@@ -70,7 +70,7 @@ export const createPhysicsBody3d = (
         id?: string;
         name?: string;
         body: TPhysicsBodyType;
-        collider: TCollider3d;
+        collider: TCollider3d | null;
         offset?: [number, number, number];
     } & Partial<TPhysicsSurface>,
 ): TPhysicsBody3d => ({
@@ -81,4 +81,50 @@ export const createPhysicsBody3d = (
     collider: options.collider,
     offset: options.offset ?? [0, 0, 0],
     ...surface(options),
+});
+
+/**
+ * The surface a collision shape says of its own: only what it was given, since what it leaves out is
+ * its body's.
+ */
+const ownSurface = (options: Partial<TPhysicsSurface>): Partial<TPhysicsSurface> => {
+    const out: Partial<TPhysicsSurface> = {};
+    if (options.bounce !== undefined) out.bounce = options.bounce;
+    if (options.friction !== undefined) out.friction = options.friction;
+    if (options.density !== undefined) out.density = options.density;
+    if (options.sensor !== undefined) out.sensor = options.sensor;
+    if (options.layer !== undefined) out.layer = options.layer;
+    if (options.collidesWith !== undefined) out.collidesWith = options.collidesWith;
+    return out;
+};
+
+/**
+ * A flat collision shape as the engine keeps it, from what was said of it.
+ *
+ * @internal
+ */
+export const createCollisionShape2d = (
+    options: { id?: string; name?: string; collider: TCollider2d } & Partial<TPhysicsSurface>,
+): TCollisionShape2d => ({
+    _type: 'collision-shape-2d',
+    id: options.id ?? nanoId(),
+    name: options.name ?? 'Shape',
+    collider: options.collider,
+    ...ownSurface(options),
+});
+
+/**
+ * A collision shape in space as the engine keeps it, from what was said of it.
+ *
+ * @internal
+ */
+export const createCollisionShape3d = (
+    options: { id?: string; name?: string; collider: TCollider3d; offset?: [number, number, number] } & Partial<TPhysicsSurface>,
+): TCollisionShape3d => ({
+    _type: 'collision-shape-3d',
+    id: options.id ?? nanoId(),
+    name: options.name ?? 'Shape',
+    collider: options.collider,
+    offset: options.offset ?? [0, 0, 0],
+    ...ownSurface(options),
 });

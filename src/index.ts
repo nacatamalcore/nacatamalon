@@ -44,7 +44,7 @@ export {
     getSpriteAnimation, useSkeletalAnimation, useTween, useTimer, useCamera2d, useScreenSpace,
     useOverlay, useWorldOffScreen, usePointer, useGamepad, useActions, useAction, useDirection, useInputMap,
     useTouchAction, useDraggable, useDropZone, useSignal, useStore, useStoreLink, usePhysicsBody2d,
-    usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d, useRetroBody2d, useRetroWorld2d, useLoadBitmapFont, useLoadFont, useLoadModel,
+    usePhysicsBody3d, useCollisionShape2d, useCollisionShape3d, usePhysicsWorld2d, usePhysicsWorld3d, useRetroBody2d, useRetroWorld2d, useLoadBitmapFont, useLoadFont, useLoadModel,
     useLoadParticles, useLoadPack, useLoadScene, useLoadAudio, useSound, useAudio, useMusic, useSong,
     useLoadSong, useLoadTrackerSong, useMotion, useLoadMotion, useAudioListener, useParticleCollider2d,
     useParticleCollider3d,
@@ -98,6 +98,7 @@ export { createGameSignal } from './signal';
 export { createPhysicsBody2d, createPhysicsBody3d, createRetroBody2d } from './physics';
 export type { TPhysicsLayer, TPhysicsLayerOptions } from './physics';
 export type {
+    TCollisionShape, TCollisionShape2d, TCollisionShape3d,
     TPhysicsBody, TPhysicsBody2d, TPhysicsBody3d, TPhysicsBodyType,
     TPhysicsSurface, TPhysicsWorld, TPhysicsWorld2d, TPhysicsWorld3d, TCollider2d, TCollider3d,
     TRetroBody2d, TRetroCollider2d, TRetroMaxSpeed, TRetroWorld2d, TRetroBounce, TRetroSides, TRetroBounds,
@@ -231,6 +232,7 @@ export type { TMotionFile } from './loaders/motion';
 export type { TLoadedPack } from './loaders/pack';
 export type { TLoadedScene } from './loaders/scene';
 export type { TPhysicsBody2dOptions, TPhysicsBody3dOptions } from './hooks/physics/use_physics_body';
+export type { TCollisionShape2dOptions, TCollisionShape3dOptions } from './hooks/physics/use_collision_shape';
 export type { TRetroBody2dOptions } from './hooks/physics/use_retro_body';
 
 // Small pieces a game and a tool both reach for: a fresh id, and which way something faces.

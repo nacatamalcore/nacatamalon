@@ -27,7 +27,7 @@ export { loadPhysics3d } from './load_box3d';
 export { useCharacterBody3d } from './use_character_body_3d';
 
 export type {
-    TPhysicsWorldHandle3d, TPhysicsBodyHandle3d, TPhysicsWorldOptions3d, TColliderSurface3d, TColliderOptions3d,
+    TPhysicsWorldHandle3d, TPhysicsBodyHandle3d, TPhysicsWorldOptions3d, TColliderSurface3d, TColliderOptions3d, TPlacedShapeOptions3d,
     TRaycastOptions, TRaycastHit,
 } from './types';
 export { DEFAULT_RAY_DISTANCE } from './types';

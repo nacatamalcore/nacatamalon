@@ -8,7 +8,7 @@ import { placementOf } from '../../box';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
 import type { TGameSignal } from '../../signal';
 import { trackPendingWork } from '../../loaders/pending_work';
-import type { TBodyOptions, TPhysicsBodyHandle2d, TPhysicsWorldHandle2d, TPhysicsWorldOptions2d } from './types';
+import type { TBodyOptions, TColliderSurface2d, TPhysicsBodyHandle2d, TPhysicsBodyType, TPhysicsWorldHandle2d, TPhysicsWorldOptions2d, TShapeOptions } from './types';
 import type { TCharacterBody2d } from '../character/t_character_body_2d';
 import { worldPose2d, writeWorldPose2d } from './world_pose';
 import { physicsStepOf } from '../step_length';
@@ -88,7 +88,25 @@ type TBodyEntry = {
      * and a materialization still waiting for the WebAssembly never happens.
      */
     removed: boolean;
+    /** Its shapes besides its own, each from an object under it (`addShape`). */
+    extras: TPlacedShape2d[];
 };
+
+/**
+ * One shape of a body besides its own, placed in the body's own space: where the object carrying it
+ * is, relative to the body, and turned as it is. Its numbers are already scaled, as a body's are.
+ */
+type TPlacedShape2d = {
+    options: TShapeOptions;
+    x: number;
+    y: number;
+    angle: number;
+    made: number[];
+    removed: boolean;
+};
+
+/** What a body is made with: one of the shapes, or none of its own when all its shapes are added. */
+type TBodyMaking = TBodyOptions | ({ type: TPhysicsBodyType; shape: 'none' } & TColliderSurface2d);
 
 const MAX_FRAMES_PER_STEP = 5;
 /**
@@ -287,6 +305,32 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
      */
     const touching = new Map<string, { count: number; a: TBodyEntry; b: TBodyEntry }>();
     const pairKey = (a: TBodyEntry, b: TBodyEntry): string => (a.box.id < b.box.id ? `${a.box.id}|${b.box.id}` : `${b.box.id}|${a.box.id}`);
+    /**
+     * Each pair of shapes touching now, by the pair of bodies it counts for: what lets a shape taken
+     * away while touching take its touches with it (the simulation tells nothing of it afterwards).
+     */
+    const shapePairs = new Map<string, string>();
+    const shapePairOf = (x: number, y: number): string => (x < y ? `${x}|${y}` : `${y}|${x}`);
+
+    /** Forgets every touch of one shape, as if each had ended: the shape is being taken away. */
+    const forgetTouchesOf = (shape: number): void => {
+        for (const [shapes, key] of [...shapePairs]) {
+            const [first, second] = shapes.split('|').map(Number);
+            if (first !== shape && second !== shape) continue;
+            shapePairs.delete(shapes);
+            const pair = touching.get(key);
+            if (pair === undefined) continue;
+            pair.count--;
+            if (pair.count > 0) continue;
+            touching.delete(key);
+            // Taken down with something above it, a body parts from nothing: it is going, as a body of
+            // one shape goes, without a word.
+            if (!goingAway(pair.a.box) && !goingAway(pair.b.box)) {
+                pair.a.onExit?.emit(pair.b.box);
+                pair.b.onExit?.emit(pair.a.box);
+            }
+        }
+    };
 
     /**
      * Turn one step's contacts into signal emissions.
@@ -319,7 +363,11 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
 
             const key = pairKey(a, b);
             const pair = touching.get(key);
+            const shapes = shapePairOf(heard[i * 3 + 1], heard[i * 3 + 2]);
             if (kind === 1 || kind === 3) {
+                // The same two shapes told twice are one touch.
+                if (shapePairs.has(shapes)) continue;
+                shapePairs.set(shapes, key);
                 if (pair !== undefined) {
                     pair.count++;
                     continue;
@@ -329,6 +377,8 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
                 b.onEnter?.emit(a.box);
             } else {
                 if (pair === undefined) continue;
+                // An end of shapes whose beginning was never counted changes nothing.
+                if (!shapePairs.delete(shapes)) continue;
                 pair.count--;
                 if (pair.count > 0) continue;
                 touching.delete(key);
@@ -704,7 +754,17 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         softBodies.afterStep();
     };
 
-    const createBody = (box: TGameObject, options: TBodyOptions): TPhysicsBodyHandle2d => {
+    /** Makes one shape added to a body, once the body is in the world. */
+    const materializeExtra = (entry: TBodyEntry, extra: TPlacedShape2d): void => {
+        if (box2d === null || world === null || entry.removed || entry.body < 0 || extra.removed || extra.made.length > 0) return;
+        extra.made = createPlacedShapes(box2d, entry.body, extra);
+        for (const made of extra.made) {
+            byShape.set(made, entry);
+            entry.shapes.push(made);
+        }
+    };
+
+    const createBody = (box: TGameObject, options: TBodyMaking): TPhysicsBodyHandle2d => {
         // The placement the object really has, which in this engine is as often its picture's as its
         // own: `createSprite({ transform })` is how nearly every scene here is written, and asking for
         // `box.transform` alone would refuse almost all of them.
@@ -719,7 +779,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         // WORLD scale and, below, world position: a group that moves or scales what is under it moves
         // and scales what they collide with too. See `world_pose.ts`.
         const pose = worldPose2d(box);
-        const shape = scaleCollider(options, pose.scaleX, pose.scaleY, gameOfBox(box));
+        const shape: TBodyMaking = options.shape === 'none' ? options : scaleCollider(options, pose.scaleX, pose.scaleY, gameOfBox(box));
 
         const bodyEntry: TBodyEntry = {
             box,
@@ -736,6 +796,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
             // Filled in below, once the handle this entry describes actually exists.
             handle: null as unknown as TPhysicsBodyHandle2d,
             removed: false,
+            extras: [],
         };
 
         const materialize = () => {
@@ -747,13 +808,15 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
             const start = worldPose2d(box);
             bodyEntry.body = b2.nb_body_create(world, bodyTypeOf(shape.type), start.x, start.y, start.angle);
 
-            bodyEntry.shapes = createShapes(box2d, bodyEntry.body, shape);
+            // A body whose shapes are all added to it has none of its own to make.
+            bodyEntry.shapes = shape.shape === 'none' ? [] : createShapes(box2d, bodyEntry.body, shape);
             // A polygon whose points enclose no area has no shape to collide with. Said, and the body
             // is kept without one, rather than failing in the middle of building it with no message.
-            if (bodyEntry.shapes.length === 0) {
+            if (bodyEntry.shapes.length === 0 && shape.shape !== 'none') {
                 console.warn(`[NacatamalOn] usePhysicsBody2d: the polygon of '${box.name}' encloses no area, so it has no collider.`);
             }
             for (const made of bodyEntry.shapes) byShape.set(made, bodyEntry);
+            for (const extra of bodyEntry.extras) materializeExtra(bodyEntry, extra);
 
             flushImpulses(bodyEntry);
         };
@@ -807,6 +870,9 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
             // What it was touching is forgotten with it: it is not there to stop touching anything.
             for (const [key, pair] of touching) {
                 if (pair.a === bodyEntry || pair.b === bodyEntry) touching.delete(key);
+            }
+            for (const [shapes, key] of shapePairs) {
+                if (!touching.has(key)) shapePairs.delete(shapes);
             }
             if (box2d === null || world === null || bodyEntry.body < 0) return;
             // Taking the body out takes its shapes with it.
@@ -866,6 +932,11 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
                 // is built on the new layers when it lands.
                 shape.layer = layer;
                 shape.collidesWith = mask;
+                // Every shape of it moves to the new layers, those still waiting to be made too.
+                for (const extra of bodyEntry.extras) {
+                    extra.options.layer = layer;
+                    extra.options.collidesWith = mask;
+                }
                 if (box.physics?._type === 'physics-body-2d') {
                     box.physics.layer = layer;
                     box.physics.collidesWith = mask;
@@ -930,6 +1001,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         joints.clear();
         characters.clear();
         touching.clear();
+        shapePairs.clear();
         softBodies.clear();
         standing.clear();
         for (const entry of bodies.values()) {
@@ -946,7 +1018,57 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions2d = {}): TPhysicsW
         world = null;
     });
 
+    /**
+     * One more shape for the body of `owner`, placed by `box` as it is now, relative to the body. Its
+     * surface is the body's with what `options` says over it.
+     */
+    const addShape = (owner: TGameObject, box: TGameObject, options: TShapeOptions): boolean => {
+        const entry = bodies.get(owner.id);
+        if (entry === undefined || entry.box !== owner || entry.removed) return false;
+        const body = worldPose2d(owner);
+        const at = worldPose2d(box);
+        const cos = Math.cos(-body.angle);
+        const sin = Math.sin(-body.angle);
+        const dx = at.x - body.x;
+        const dy = at.y - body.y;
+        const own = owner.physics?._type === 'physics-body-2d' ? owner.physics : null;
+        // The body's surface under what the shape says of its own.
+        const surface: TColliderSurface2d = own === null ? {} : {
+            bounce: own.bounce, friction: own.friction, density: own.density, sensor: own.sensor, layer: own.layer, collidesWith: own.collidesWith,
+        };
+        for (const [key, value] of Object.entries(options)) if (value !== undefined) (surface as Record<string, unknown>)[key] = value;
+        const extra: TPlacedShape2d = {
+            options: scaleCollider({ ...surface, ...options, type: 'static' } as TBodyOptions, at.scaleX, at.scaleY, gameOfBox(box)),
+            x: dx * cos - dy * sin,
+            y: dx * sin + dy * cos,
+            angle: at.angle - body.angle,
+            made: [],
+            removed: false,
+        };
+        entry.extras.push(extra);
+        materializeExtra(entry, extra);
+        // Its object gone, the shape meets nothing more. (The simulation keeps no way to take one shape
+        // off a body, so it stays on it, meeting no layer.)
+        if (box !== owner) {
+            box.cleanups.push(() => {
+                if (extra.removed) return;
+                extra.removed = true;
+                for (const made of extra.made) {
+                    forgetTouchesOf(made);
+                    byShape.delete(made);
+                    if (box2d !== null && world !== null && !entry.removed) box2d.b2.nb_shape_filter(made, 0, 0);
+                    const at = entry.shapes.indexOf(made);
+                    if (at >= 0) entry.shapes.splice(at, 1);
+                }
+                extra.made = [];
+            });
+        }
+        return true;
+    };
+
     return {
+        addEmpty: (box, opts) => createBody(box, { ...opts, shape: 'none' }),
+        addShape,
         // Spread rather than copy field by field. The explicit version silently dropped every
         // option it did not know about: `sensor` was added to the type, typechecked clean, and
         // did nothing at runtime, which reads as "sensors are broken" rather than "one line is
@@ -1095,6 +1217,52 @@ const enclosesArea = (vertices: ReadonlyArray<readonly [number, number]>): boole
         }
     }
     return false;
+};
+
+/** Whether an object, or anything it hangs under, is being destroyed. */
+const goingAway = (box: TGameObject): boolean => {
+    for (let at: TGameObject | null = box; at !== null; at = at.parent as TGameObject | null) {
+        if (at.destroyed) return true;
+    }
+    return false;
+};
+
+/**
+ * Makes a shape added to a body, where it sits in the body's space and turned as it is: a circle by
+ * its middle, an unturned box as a box, and a turned box or a polygon by its corners moved where they
+ * go.
+ */
+const createPlacedShapes = (box2d: TBox2d, body: number, extra: TPlacedShape2d): number[] => {
+    const options = extra.options;
+    const { density, friction, bounce, flags, category, mask } = surfaceArgs(options);
+    if (options.shape === 'circle') {
+        return [box2d.b2.nb_shape_circle(body, extra.x, extra.y, Math.max(Math.abs(options.radius), LEAST_SIZE), density, friction, bounce, flags, category, mask)];
+    }
+    const cos = Math.cos(extra.angle);
+    const sin = Math.sin(extra.angle);
+    if (options.shape === 'rect' && Math.abs(sin) < 1e-9 && cos > 0) {
+        const halfWidth = Math.max(Math.abs(options.width) / 2, LEAST_SIZE);
+        const halfHeight = Math.max(Math.abs(options.height) / 2, LEAST_SIZE);
+        return [box2d.b2.nb_shape_box(body, halfWidth, halfHeight, extra.x, extra.y, 0, density, friction, bounce, flags, category, mask)];
+    }
+    const corners: Array<[number, number]> = options.shape === 'rect'
+        ? [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([x, y]): [number, number] => [(x * Math.abs(options.width)) / 2, (y * Math.abs(options.height)) / 2])
+        : options.vertices;
+    const placed = corners.map(([x, y]): [number, number] => [extra.x + x * cos - y * sin, extra.y + x * sin + y * cos]);
+    return addPolygon(box2d, body, placed, density, friction, bounce, flags, category, mask);
+};
+
+/** A shape's surface and layers as the simulation takes them. Said of no layer, on every one. */
+const surfaceArgs = (options: TColliderSurface2d) => {
+    const layered = options.layer !== undefined || options.collidesWith !== undefined;
+    return {
+        density: options.density ?? 1,
+        friction: options.friction ?? 0.5,
+        bounce: options.bounce ?? 0,
+        flags: options.sensor === true ? SHAPE_SENSOR : 0,
+        category: layered ? 1 << (options.layer ?? 0) : EVERY_LAYER,
+        mask: layered ? (options.collidesWith ?? ALL_LAYERS) : EVERY_LAYER,
+    };
 };
 
 /**

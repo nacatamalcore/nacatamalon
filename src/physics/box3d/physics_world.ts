@@ -58,6 +58,8 @@ type TBodySpec = {
      */
     driven?: boolean;
 } & (
+    /** A body with no shape of its own: its shapes are all added to it (`addShape`). */
+    | { kind: 'none'; type: TPhysicsBodyType }
     | { kind: 'box'; type: TPhysicsBodyType; half: [number, number, number] }
     | { kind: 'sphere'; type: TPhysicsBodyType; radius: number }
     /**
@@ -74,6 +76,26 @@ type TBodySpec = {
      */
     | { kind: 'mesh'; type: TPhysicsBodyType; positions: Float32Array; indices: Uint16Array | Uint32Array; scale: TVec3 }
 );
+
+/**
+ * One shape of a body besides its own, placed in the body's own space: where the object carrying it
+ * is, relative to the body, and turned as it is. Its numbers are already scaled, as a body's are.
+ */
+type TPlacedShape = (
+    | { kind: 'box'; half: [number, number, number] }
+    | { kind: 'sphere'; radius: number }
+    | { kind: 'capsule'; radius: number; halfSegment: number }
+    | { kind: 'hull'; positions: Float32Array; scale: TVec3 }
+    | { kind: 'mesh'; positions: Float32Array; indices: Uint16Array | Uint32Array; scale: TVec3 }
+) & {
+    position: TVec3;
+    rotation: TB3Quat;
+    /** Its surface: the body's, with what the shape says of its own over it. */
+    material?: TColliderSurface3d;
+    id: TShapeId | null;
+    geometryData: { kind: 'hull' | 'mesh'; handle: unknown } | null;
+    removed: boolean;
+};
 
 /**
  * Something asked of a body before its WASM shape existed. Replayed in order at
@@ -105,6 +127,10 @@ type TBodyEntry = {
      * a level reloaded a hundred times would leak its collision mesh a hundred times.
      */
     geometryData: { kind: 'hull' | 'mesh'; handle: unknown } | null;
+    /** Its shapes besides its own, each from an object under it (`addShape`). */
+    extras: TPlacedShape[];
+    /** Told apart from every other body of the world, for counting the shapes two bodies touch by. */
+    serial: number;
 };
 
 /**
@@ -195,6 +221,8 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
      * spawning and destroying does not keep the objects it destroyed.
      */
     const placed = new Map<TGameObject, TPhysicsBodyHandle3d>();
+    /** Each object's body entry, for the shapes added to it (`addShape`). */
+    const entryOfBox = new Map<TGameObject, TBodyEntry>();
 
     /**
      * Whether any sensor exists in this world yet.
@@ -207,6 +235,47 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
      * Worlds with no sensors pay nothing.
      */
     let sensorsPresent = false;
+
+    /**
+     * How many of their shapes each two bodies are touching by, keyed by their serials. Two bodies
+     * made of several shapes can touch by more than one at once, and they meet once: `onEnter` is
+     * told when the first pair of their shapes meets and `onExit` when the last one parts.
+     */
+    const touching = new Map<string, number>();
+    /**
+     * Each pair of shapes touching now, and the pair of bodies it counts for: what lets a shape taken
+     * away while touching (its object destroyed) take its touches with it, since the simulation tells
+     * nothing of a shape that is gone, and a count left behind would hold its bodies "touching" for good.
+     */
+    const shapePairs = new Map<string, { pair: string; a: TBodyEntry; b: TBodyEntry }>();
+    let nextSerial = 0;
+    const shapePairOf = (ka: string, kb: string): string => (ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`);
+
+    /** Tells two bodies they stopped touching, unless either is already gone. */
+    const toldApart = (a: TBodyEntry, b: TBodyEntry): void => {
+        // Taken down with something above it, a body parts from nothing: it is going, as a body of one
+        // shape goes, without a word.
+        if (goingAway(a.spec.box) || goingAway(b.spec.box)) return;
+        a.onExit?.emit(b.spec.box);
+        b.onExit?.emit(a.spec.box);
+    };
+
+    /** Forgets every touch of one shape, as if each had ended: the shape is being taken away. */
+    const forgetTouchesOf = (key: string): void => {
+        for (const [shapes, touch] of [...shapePairs]) {
+            const [first, second] = shapes.split('|');
+            if (first !== key && second !== key) continue;
+            shapePairs.delete(shapes);
+            const count = touching.get(touch.pair) ?? 0;
+            if (count > 1) {
+                touching.set(touch.pair, count - 1);
+            } else {
+                touching.delete(touch.pair);
+                toldApart(touch.a, touch.b);
+            }
+        }
+    };
+    const pairOf = (a: TBodyEntry, b: TBodyEntry): string => (a.serial < b.serial ? `${a.serial}:${b.serial}` : `${b.serial}:${a.serial}`);
 
     // Reusable WASM-backed buffers. Created once with the world and freed on unmount: refilling
     // costs nothing on the JS side, while recreating them per frame would allocate in WASM
@@ -230,16 +299,55 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
      * The collision filter a body's layers ask for, at creation and again when `setLayers` changes
      * them.
      */
-    const filterOf = (spec: TBodySpec): { categoryBits: bigint; maskBits: bigint; groupIndex: number } => ({
-        categoryBits: 1n << BigInt(spec.material?.layer ?? 0),
+    const filterOf = (spec: TBodySpec, material = spec.material): { categoryBits: bigint; maskBits: bigint; groupIndex: number } => ({
+        categoryBits: 1n << BigInt(material?.layer ?? 0),
         // Widened by the mover bit unless this body opted out: a character walks by querying, and a
         // shape whose mask does not accept the query is a shape the character passes straight
         // through. See `MOVER_CATEGORY` for why the opt-out has to live on this side.
         maskBits: spec.hiddenFromMovers
-            ? BigInt(spec.material?.collidesWith ?? ALL_LAYERS)
-            : BigInt(spec.material?.collidesWith ?? ALL_LAYERS) | MOVER_CATEGORY,
+            ? BigInt(material?.collidesWith ?? ALL_LAYERS)
+            : BigInt(material?.collidesWith ?? ALL_LAYERS) | MOVER_CATEGORY,
         groupIndex: 0,
     });
+
+    /**
+     * How one shape of `entry` is made: its surface, its layers and which of its events are told. The
+     * body's own shape and each one added to it are made the same way, each with its own surface.
+     */
+    const shapeDefOf = (mod: TBox3dModule, entry: TBodyEntry, mat: TColliderSurface3d | undefined) => {
+        const shapeDef = mod.b3DefaultShapeDef();
+        if (mat) {
+            if (mat.density !== undefined) shapeDef.density = mat.density;
+            // baseMaterial may be a copy on read (Embind), so mutate then write it back.
+            const bm = shapeDef.baseMaterial;
+            if (mat.bounce !== undefined) bm.restitution = mat.bounce;
+            if (mat.friction !== undefined) bm.friction = mat.friction;
+            shapeDef.baseMaterial = bm;
+            if (mat.sensor) shapeDef.isSensor = true;
+        }
+
+        // Layers. box3d's filter is 64-bit (`bigint`), while the format caps at 16 layers (see
+        // `PHYSICS_LAYERS`), so the widening here is free and the narrowing lives in the
+        // format, deliberately.
+        // Untouched shapes keep box3d's all-ones default, which already includes the mover bit.
+        if (entry.spec.hiddenFromMovers || (mat && (mat.layer !== undefined || mat.collidesWith !== undefined))) {
+            shapeDef.filter = filterOf(entry.spec, mat);
+        }
+        // Every event flag defaults to false in box3d, so both of these are real opt-ins.
+        shapeDef.enableContactEvents = entry.wantsEvents;
+        shapeDef.enableSensorEvents = sensorsPresent;
+        return shapeDef;
+    };
+
+    /** Makes one shape added to a body, once the body is in the world. */
+    const materializeExtra = (entry: TBodyEntry, extra: TPlacedShape): void => {
+        if (!b3 || entry.id === null || entry.destroyed || extra.removed || extra.id !== null) return;
+        const made = createPlacedShape(b3, entry.id, shapeDefOf(b3, entry, extra.material), extra);
+        if (made === null) return;
+        extra.id = made;
+        byShape.set(shapeKey(made), entry);
+        if (extra.material?.sensor) enableSensorReporting();
+    };
 
     const materialize = (entry: TBodyEntry): void => {
         if (!b3 || world === null || entry.destroyed) return;
@@ -263,37 +371,17 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
         def.rotation = [qx, qy, qz, qw];
         const id = b3.b3CreateBody(world, def);
 
-        const shapeDef = b3.b3DefaultShapeDef();
         const mat = entry.spec.material;
-        if (mat) {
-            if (mat.density !== undefined) shapeDef.density = mat.density;
-            // baseMaterial may be a copy on read (Embind), so mutate then write it back.
-            const bm = shapeDef.baseMaterial;
-            if (mat.bounce !== undefined) bm.restitution = mat.bounce;
-            if (mat.friction !== undefined) bm.friction = mat.friction;
-            shapeDef.baseMaterial = bm;
-            if (mat.sensor) shapeDef.isSensor = true;
-        }
-
-        // Layers. box3d's filter is 64-bit (`bigint`), while the format caps at 16 layers (see
-        // `PHYSICS_LAYERS`), so the widening here is free and the narrowing lives in the
-        // format, deliberately.
-        // Untouched shapes keep box3d's all-ones default, which already includes the mover bit.
-        if (entry.spec.hiddenFromMovers || (mat && (mat.layer !== undefined || mat.collidesWith !== undefined))) {
-            shapeDef.filter = filterOf(entry.spec);
-        }
-        // Every event flag defaults to false in box3d, so both of these are real opt-ins.
-        shapeDef.enableContactEvents = entry.wantsEvents;
-        shapeDef.enableSensorEvents = sensorsPresent;
-
-        const shape = createShape(b3, id, shapeDef, entry);
+        // A body whose shapes are all added to it has none of its own to make.
+        const shape = entry.spec.kind === 'none' ? null : createShape(b3, id, shapeDefOf(b3, entry, mat), entry);
 
         entry.id = id;
         entry.shape = shape;
-        byShape.set(shapeKey(shape), entry);
+        if (shape !== null) byShape.set(shapeKey(shape), entry);
         byBody.set(shapeKey(id), entry);
 
-        if (mat?.sensor) enableSensorReporting();
+        if (shape !== null && mat?.sensor) enableSensorReporting();
+        for (const extra of entry.extras) materializeExtra(entry, extra);
 
         for (const action of entry.pending) applyAction(b3, id, action);
         entry.pending.length = 0;
@@ -308,7 +396,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
         if (sensorsPresent || !b3) return;
         sensorsPresent = true;
         for (const entry of entries) {
-            if (entry.shape !== null) b3.b3Shape_EnableSensorEvents(entry.shape, true);
+            for (const shape of shapesOf(entry)) b3.b3Shape_EnableSensorEvents(shape, true);
         }
     };
 
@@ -369,16 +457,41 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
 
         // Read out of the buffer first and announced afterwards: whoever hears one can end the scene
         // (a door that changes the room), which frees this world and its buffer on the spot.
-        const heard: [TBodyEntry | undefined, TBodyEntry | undefined, boolean][] = [];
-        const emit = (a: TBodyEntry | undefined, b: TBodyEntry | undefined, started: boolean): void => {
-            heard.push([a, b, started]);
+        const heard: [TBodyEntry | undefined, TBodyEntry | undefined, boolean, string][] = [];
+        const emit = (a: { index1: number; generation: number }, b: { index1: number; generation: number }, started: boolean): void => {
+            const ka = shapeKey(a);
+            const kb = shapeKey(b);
+            heard.push([byShape.get(ka), byShape.get(kb), started, shapePairOf(ka, kb)]);
         };
-        const announce = (a: TBodyEntry | undefined, b: TBodyEntry | undefined, started: boolean): void => {
+        const announce = (a: TBodyEntry | undefined, b: TBodyEntry | undefined, started: boolean, shapes: string): void => {
             // A shape this world did not create, or one already torn down mid-step.
             if (!a || !b) return;
             // Destroyed earlier in this frame: its body is still in the world until the sweep, but
             // a contact with something already dead is not news to anyone.
             if (a.spec.box.destroyed || b.spec.box.destroyed) return;
+            // Counted by the pair of bodies, so two touching by several shapes meet and part once. An
+            // end with no beginning counted (a body that began listening while already touching) is
+            // told, as it always was.
+            const pair = pairOf(a, b);
+            const count = touching.get(pair) ?? 0;
+            const known = shapePairs.has(shapes);
+            if (started) {
+                // The same two shapes told twice are one touch.
+                if (known) return;
+                shapePairs.set(shapes, { pair, a, b });
+                touching.set(pair, count + 1);
+                if (count > 0) return;
+            } else {
+                if (known) shapePairs.delete(shapes);
+                // An end of shapes whose beginning was never counted, while the bodies touch by others,
+                // changes nothing.
+                else if (count > 0) return;
+                if (count > 1) {
+                    touching.set(pair, count - 1);
+                    return;
+                }
+                touching.delete(pair);
+            }
             if (started) {
                 a.onEnter?.emit(b.spec.box);
                 b.onEnter?.emit(a.spec.box);
@@ -390,24 +503,24 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
 
         for (let i = 0; i < b3.getNumContactBeginEvents(eventsBuffer); i++) {
             b3.getContactBeginEventAt(contactEvent, eventsBuffer, i);
-            emit(byShape.get(shapeKey(contactEvent.shapeIdA)), byShape.get(shapeKey(contactEvent.shapeIdB)), true);
+            emit(contactEvent.shapeIdA, contactEvent.shapeIdB, true);
         }
         for (let i = 0; i < b3.getNumContactEndEvents(eventsBuffer); i++) {
             b3.getContactEndEventAt(contactEvent, eventsBuffer, i);
-            emit(byShape.get(shapeKey(contactEvent.shapeIdA)), byShape.get(shapeKey(contactEvent.shapeIdB)), false);
+            emit(contactEvent.shapeIdA, contactEvent.shapeIdB, false);
         }
         for (let i = 0; i < b3.getNumSensorBeginEvents(eventsBuffer); i++) {
             b3.getSensorBeginEventAt(sensorEvent, eventsBuffer, i);
-            emit(byShape.get(shapeKey(sensorEvent.sensorShapeId)), byShape.get(shapeKey(sensorEvent.visitorShapeId)), true);
+            emit(sensorEvent.sensorShapeId, sensorEvent.visitorShapeId, true);
         }
         for (let i = 0; i < b3.getNumSensorEndEvents(eventsBuffer); i++) {
             b3.getSensorEndEventAt(sensorEvent, eventsBuffer, i);
-            emit(byShape.get(shapeKey(sensorEvent.sensorShapeId)), byShape.get(shapeKey(sensorEvent.visitorShapeId)), false);
+            emit(sensorEvent.sensorShapeId, sensorEvent.visitorShapeId, false);
         }
 
-        for (const [a, b, started] of heard) {
+        for (const [a, b, started, shapes] of heard) {
             if (disposed) return;
-            announce(a, b, started);
+            announce(a, b, started, shapes);
         }
     };
 
@@ -465,10 +578,14 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
             if (bodyOfObject3d.get(box) === body) bodyOfObject3d.delete(box);
         }
         placed.clear();
+        entryOfBox.clear();
+        touching.clear();
+        shapePairs.clear();
         if (!b3 || world === null) return;
         for (const entry of entries) {
             if (entry.id !== null && !entry.destroyed) b3.b3DestroyBody(entry.id);
             freeGeometryData(b3, entry);
+            for (const extra of entry.extras) freePlacedGeometry(b3, extra);
         }
         // The buffers hold WASM memory of their own and are not owned by the world, so freeing
         // the world alone would leak them once per scene change.
@@ -496,6 +613,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
             // A sensor exists only to report overlaps, so it never waits to be asked.
             wantsEvents: spec.material?.sensor === true,
             onEnter: null, onExit: null, destroyed: false, geometryData: null,
+            extras: [], serial: nextSerial++,
         };
         entries.push(entry);
         materialize(entry);        // immediate if the world is already up, else deferred
@@ -516,7 +634,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
         const ensureSignal = (which: 'onEnter' | 'onExit'): TGameSignal<TGameObject> => {
             if (!entry.wantsEvents) {
                 entry.wantsEvents = true;
-                if (b3 && entry.shape !== null) b3.b3Shape_EnableContactEvents(entry.shape, true);
+                if (b3) for (const shape of shapesOf(entry)) b3.b3Shape_EnableContactEvents(shape, true);
             }
             const existing = entry[which];
             if (existing) return existing;
@@ -561,14 +679,32 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
                 // `true` re-tests the contacts it is already in, so a body leaving a layer stops
                 // touching what it was resting on instead of waiting for the next contact.
                 if (b3 && entry.shape !== null) b3.b3Shape_SetFilter(entry.shape, filterOf(spec), true);
+                // Every shape of it moves to the new layers: they are its layers, not a shape's.
+                for (const extra of entry.extras) {
+                    extra.material = { ...extra.material, layer, collidesWith: mask };
+                    if (b3 && extra.id !== null) b3.b3Shape_SetFilter(extra.id, filterOf(spec, extra.material), true);
+                }
             },
             destroy: () => {
                 if (entry.destroyed) return;
                 entry.destroyed = true;
-                if (entry.shape !== null) byShape.delete(shapeKey(entry.shape));
+                for (const shape of shapesOf(entry)) byShape.delete(shapeKey(shape));
                 if (entry.id !== null) byBody.delete(shapeKey(entry.id));
                 if (b3 && entry.id !== null) b3.b3DestroyBody(entry.id);
                 if (b3) freeGeometryData(b3, entry);
+                for (const extra of entry.extras) {
+                    extra.removed = true;
+                    extra.id = null;
+                    if (b3) freePlacedGeometry(b3, extra);
+                }
+                // What it was touching it touches no longer.
+                for (const [shapes, touch] of [...shapePairs]) {
+                    if (touch.a === entry || touch.b === entry) shapePairs.delete(shapes);
+                }
+                for (const pair of [...touching.keys()]) {
+                    const [first, second] = pair.split(':');
+                    if (Number(first) === entry.serial || Number(second) === entry.serial) touching.delete(pair);
+                }
                 entry.id = null;
                 entry.shape = null;
                 const at = entries.indexOf(entry);
@@ -579,6 +715,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
                 if (placed.get(spec.box) === body) {
                     placed.delete(spec.box);
                 }
+                if (entryOfBox.get(spec.box) === entry) entryOfBox.delete(spec.box);
             },
         };
 
@@ -588,6 +725,7 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
         if (!spec.driven) {
             bodyOfObject3d.set(spec.box, body);
             placed.set(spec.box, body);
+            entryOfBox.set(spec.box, entry);
         }
 
         // Destroying the object takes its body out of the world. `destroy` runs an object's
@@ -623,6 +761,66 @@ export const usePhysicsWorld = (options: TPhysicsWorldOptions3d = {}): TPhysicsW
     };
 
     return {
+        addEmpty: (box, opts) => add({ kind: 'none', type: opts.type, offset: { x: 0, y: 0, z: 0 }, box, material: materialOf(opts) }),
+        addShape: (owner, box, opts) => {
+            const entry = entryOfBox.get(owner);
+            if (entry === undefined || entry.destroyed) return false;
+            // A triangle mesh has no inside to be pushed out of, so it is no shape for a body that moves.
+            if (opts.shape === 'mesh' && entry.spec.type === 'dynamic') {
+                console.warn(`[NacatamalOn] physics3d: '${box.name}' is a triangle-mesh shape on a body that moves, which cannot be: a mesh is a surface with no inside. Left out; use a hull or a primitive.`);
+                return false;
+            }
+            // In the body's own space: where the shape's object is and how it is turned, relative to the
+            // body's, and as big as it is in the world (the body's own scale is in that already).
+            const bodyPose = worldPoseOf(owner);
+            const pose = worldPoseOf(box);
+            const inverse = conjugate(bodyPose.quaternion);
+            const position = rotateBy(inverse, {
+                x: pose.position.x - bodyPose.position.x,
+                y: pose.position.y - bodyPose.position.y,
+                z: pose.position.z - bodyPose.position.z,
+            });
+            const rotation = multiply(inverse, pose.quaternion);
+            const scale = { x: Math.abs(pose.scale.x), y: Math.abs(pose.scale.y), z: Math.abs(pose.scale.z) };
+            // An analytic shape's offset is scaled and turned with it, and lands in where it is; a hull or
+            // a mesh has it baked into its points, as a body's own does.
+            const shifted = (): TVec3 => {
+                const local = scaledOffset(opts.offset, [scale.x, scale.y, scale.z]);
+                const turned = rotateBy(rotation, local);
+                return { x: position.x + turned.x, y: position.y + turned.y, z: position.z + turned.z };
+            };
+            // Only what the shape says of its own goes over the body's: a field it leaves out is the body's.
+            const own = Object.fromEntries(Object.entries(materialOf(opts) ?? {}).filter(([, value]) => value !== undefined)) as TColliderSurface3d;
+            const material = Object.keys(own).length === 0 && entry.spec.material === undefined ? undefined : { ...entry.spec.material, ...own };
+            const common = { rotation, material, id: null, geometryData: null, removed: false };
+            const extra: TPlacedShape | null =
+                opts.shape === 'box' ? { kind: 'box', half: [(opts.size[0] * scale.x) / 2, (opts.size[1] * scale.y) / 2, (opts.size[2] * scale.z) / 2], position: shifted(), ...common }
+                : opts.shape === 'sphere' ? { kind: 'sphere', radius: opts.radius * Math.max(scale.x, scale.y, scale.z), position: shifted(), ...common }
+                : opts.shape === 'capsule' ? (() => {
+                    const radius = opts.radius * Math.max(scale.x, scale.z);
+                    return { kind: 'capsule' as const, radius, halfSegment: halfSegmentOf(radius, opts.height * scale.y), position: shifted(), ...common };
+                })()
+                : opts.shape === 'hull' ? { kind: 'hull', positions: offsetPositions(opts.geometry.positions ?? EMPTY_POSITIONS, opts.offset), scale, position, ...common }
+                : { kind: 'mesh', positions: offsetPositions(opts.geometry.positions ?? EMPTY_POSITIONS, opts.offset), indices: opts.geometry.indices ?? EMPTY_INDICES, scale, position, ...common };
+            entry.extras.push(extra);
+            if (extra.material?.sensor) entry.wantsEvents = true;
+            materializeExtra(entry, extra);
+            // Its object gone, the shape goes with it, and the body weighs what is left.
+            if (box !== owner) {
+                box.cleanups.push(() => {
+                    if (extra.removed) return;
+                    extra.removed = true;
+                    if (extra.id !== null) {
+                        forgetTouchesOf(shapeKey(extra.id));
+                        byShape.delete(shapeKey(extra.id));
+                        if (b3 && !entry.destroyed) b3.b3DestroyShape(extra.id, true);
+                    }
+                    extra.id = null;
+                    if (b3) freePlacedGeometry(b3, extra);
+                });
+            }
+            return true;
+        },
         addBox: (box, opts) => {
             const [sx, sy, sz] = scaleOf(box);
             return add({
@@ -976,9 +1174,120 @@ const createShape = (
         );
     }
 
+    if (spec.kind !== 'mesh') throw new Error('[NacatamalOn] physics3d: a body with no shape of its own has none to make.');
     const mesh = b3.b3CreateMesh(spec.positions, spec.indices);
     entry.geometryData = { kind: 'mesh', handle: mesh };
     return b3.b3CreateMeshShape(id, shapeDef, mesh, toB3(spec.scale));
+};
+
+/** Whether an object, or anything it hangs under, is being destroyed. */
+const goingAway = (box: TGameObject): boolean => {
+    for (let at: TGameObject | null = box; at !== null; at = at.parent as TGameObject | null) {
+        if (at.destroyed) return true;
+    }
+    return false;
+};
+
+/** Every shape a body has in the world: its own, if it has one, and each added to it. */
+const shapesOf = (entry: TBodyEntry): TShapeId[] => {
+    const out: TShapeId[] = entry.shape === null ? [] : [entry.shape];
+    for (const extra of entry.extras) if (extra.id !== null) out.push(extra.id);
+    return out;
+};
+
+/** Turns a point by a quaternion (`[x, y, z, w]`). */
+const rotateBy = (q: readonly number[], v: TVec3): TVec3 => {
+    const [qx, qy, qz, qw] = q;
+    const tx = 2 * (qy * v.z - qz * v.y);
+    const ty = 2 * (qz * v.x - qx * v.z);
+    const tz = 2 * (qx * v.y - qy * v.x);
+    return {
+        x: v.x + qw * tx + (qy * tz - qz * ty),
+        y: v.y + qw * ty + (qz * tx - qx * tz),
+        z: v.z + qw * tz + (qx * ty - qy * tx),
+    };
+};
+
+/** The turn back of a unit quaternion. */
+const conjugate = (q: readonly number[]): TB3Quat => [-q[0], -q[1], -q[2], q[3]];
+
+/** The turn `b` made inside the turn `a`: `a · b`. */
+const multiply = (a: readonly number[], b: readonly number[]): TB3Quat => {
+    const [ax, ay, az, aw] = a;
+    const [bx, by, bz, bw] = b;
+    return [
+        aw * bx + ax * bw + ay * bz - az * by,
+        aw * by - ax * bz + ay * bw + az * bx,
+        aw * bz + ax * by - ay * bx + az * bw,
+        aw * bw - ax * bx - ay * by - az * bz,
+    ];
+};
+
+/**
+ * Makes a shape added to a body, where it sits in the body's space and turned as it is. A box is
+ * made as the hull of its eight turned corners, the same shape; a capsule by its two ends, wherever
+ * they point; a hull is turned and scaled by the backend; and a mesh, which the backend only
+ * scales, has its points moved where they go. `null` when the backend could make nothing of it (a
+ * hull of a flat shape).
+ */
+const createPlacedShape = (
+    b3: TBox3dModule,
+    id: TBodyId,
+    shapeDef: ReturnType<TBox3dModule['b3DefaultShapeDef']>,
+    extra: TPlacedShape,
+): TShapeId | null => {
+    const at = extra.position;
+    if (extra.kind === 'sphere') return b3.b3CreateSphereShape(id, shapeDef, { center: toB3(at), radius: extra.radius });
+    if (extra.kind === 'capsule') {
+        const axis = rotateBy(extra.rotation, { x: 0, y: extra.halfSegment, z: 0 });
+        return b3.b3CreateCapsuleShape(id, shapeDef, {
+            center1: [at.x - axis.x, at.y - axis.y, at.z - axis.z],
+            center2: [at.x + axis.x, at.y + axis.y, at.z + axis.z],
+            radius: extra.radius,
+        });
+    }
+    if (extra.kind === 'box') {
+        const corners = boxCorners(extra.half, { x: 0, y: 0, z: 0 });
+        for (let i = 0; i < corners.length; i += 3) {
+            const turned = rotateBy(extra.rotation, { x: corners[i], y: corners[i + 1], z: corners[i + 2] });
+            corners[i] = at.x + turned.x;
+            corners[i + 1] = at.y + turned.y;
+            corners[i + 2] = at.z + turned.z;
+        }
+        const hull = b3.b3CreateHull(corners);
+        if (hull === null) return null;
+        extra.geometryData = { kind: 'hull', handle: hull };
+        return b3.b3CreateHullShape(id, shapeDef, hull);
+    }
+    if (extra.kind === 'hull') {
+        const hull = createHullWithinLimit(b3, extra.positions);
+        if (hull === null) return null;
+        extra.geometryData = { kind: 'hull', handle: hull };
+        return b3.b3CreateTransformedHullShape(id, shapeDef, hull, { position: toB3(at), quaternion: extra.rotation }, toB3(extra.scale));
+    }
+    const moved = new Float32Array(extra.positions.length);
+    for (let i = 0; i < moved.length; i += 3) {
+        const turned = rotateBy(extra.rotation, {
+            x: extra.positions[i] * extra.scale.x,
+            y: extra.positions[i + 1] * extra.scale.y,
+            z: extra.positions[i + 2] * extra.scale.z,
+        });
+        moved[i] = at.x + turned.x;
+        moved[i + 1] = at.y + turned.y;
+        moved[i + 2] = at.z + turned.z;
+    }
+    const mesh = b3.b3CreateMesh(moved, extra.indices);
+    if (mesh === null) return null;
+    extra.geometryData = { kind: 'mesh', handle: mesh };
+    return b3.b3CreateMeshShape(id, shapeDef, mesh, [1, 1, 1]);
+};
+
+/** Frees what the backend keeps for an added shape's hull or mesh. */
+const freePlacedGeometry = (b3: TBox3dModule, extra: TPlacedShape): void => {
+    if (!extra.geometryData) return;
+    if (extra.geometryData.kind === 'hull') b3.b3DestroyHull(extra.geometryData.handle as never);
+    else b3.b3DestroyMesh(extra.geometryData.handle as never);
+    extra.geometryData = null;
 };
 
 /**

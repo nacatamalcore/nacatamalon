@@ -142,7 +142,12 @@ export type TPhysicsBody2d = {
     id: string;
     name: string;
     body: TPhysicsBodyType;
-    collider: TCollider2d;
+    /**
+     * Its shape, on the object itself. `null` when its shapes are the collision shapes of the
+     * objects under it (see {@link TCollisionShape2d}): one shape is said here, and several, or one
+     * turned or placed apart from the object, are said with those.
+     */
+    collider: TCollider2d | null;
 } & TPhysicsSurface;
 
 /**
@@ -157,7 +162,12 @@ export type TPhysicsBody3d = {
     id: string;
     name: string;
     body: TPhysicsBodyType;
-    collider: TCollider3d;
+    /**
+     * Its shape, on the object itself. `null` when its shapes are the collision shapes of the
+     * objects under it (see {@link TCollisionShape3d}): one shape is said here, and several, or one
+     * turned or placed apart from the object, are said with those.
+     */
+    collider: TCollider3d | null;
     /**
      * Where the shape sits **inside** the object, before its scale.
      *
@@ -170,6 +180,58 @@ export type TPhysicsBody3d = {
      */
     offset: [number, number, number];
 } & TPhysicsSurface;
+
+/**
+ * One more shape for a flat body, on an object of its own under the body's: what a body is made of
+ * when one shape will not do. A chair is a seat and a back, a character a body and a head, a ring a
+ * bar lying across it.
+ *
+ * The object it is on places it: where it is, how it is turned and how big it is, all relative to the
+ * body, so it is moved, turned and sized like anything else. It belongs to the nearest body above it
+ * (its own object's, if that object has one too), which moves as one with all its shapes.
+ *
+ * Its surface is the body's unless it says otherwise: a field left out is the body's, so a rubber
+ * wheel on a metal cart says only its own bounce.
+ *
+ * Placed once, when it is made: moving its object afterwards does not move the shape.
+ *
+ * @category Physics
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TCollisionShape2d = {
+    _type: 'collision-shape-2d';
+    id: string;
+    name: string;
+    collider: TCollider2d;
+} & Partial<TPhysicsSurface>;
+
+/**
+ * One more shape for a body in three dimensions, on an object of its own under the body's. See
+ * {@link TCollisionShape2d}: the same, with the shapes of space, and an `offset` like the body's for
+ * a model whose origin is not its middle.
+ *
+ * @category Physics
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TCollisionShape3d = {
+    _type: 'collision-shape-3d';
+    id: string;
+    name: string;
+    collider: TCollider3d;
+    /** Where the shape sits inside its object, before the object's scale: the body's `offset`. */
+    offset: [number, number, number];
+} & Partial<TPhysicsSurface>;
+
+/**
+ * A collision shape of either dimension, told apart by `_type`.
+ *
+ * @category Physics
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TCollisionShape = TCollisionShape2d | TCollisionShape3d;
 
 /**
  * Any kind of collider, told apart by `_type`: flat, in space, or retro (see {@link TRetroBody2d}).

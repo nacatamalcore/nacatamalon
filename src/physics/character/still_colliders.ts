@@ -1,5 +1,7 @@
 import { worldPlacementOf } from '../../box';
 import type { TBox } from '../../box/types/t_box';
+import type { TCollider2d } from '../types/t_physics';
+import { shapeOwnerOf } from '../shape_owner';
 
 /**
  * A rectangle of the world, unturned, by its edges.
@@ -21,19 +23,30 @@ export type TBlock = { left: number; top: number; right: number; bottom: number 
  */
 export const stillColliders2d = (root: TBox, except: TBox): TBlock[] => {
     const out: TBlock[] = [];
+    const block = (box: TBox, c: TCollider2d): void => {
+        const at = worldPlacementOf(box);
+        const [w, h] = c.shape === 'rect'
+            ? [c.width, c.height]
+            : c.shape === 'circle'
+                ? [c.radius * 2, c.radius * 2]
+                : [Math.max(...c.vertices.map((v) => Math.abs(v[0]))) * 2, Math.max(...c.vertices.map((v) => Math.abs(v[1]))) * 2];
+        const hw = (w * Math.abs(at.scaleX)) / 2;
+        const hh = (h * Math.abs(at.scaleY)) / 2;
+        out.push({ left: at.x - hw, top: at.y - hh, right: at.x + hw, bottom: at.y + hh });
+    };
     const visit = (box: TBox): void => {
         const body = box.physics;
-        if (box !== except && !box.destroyed && body !== null && body._type === 'physics-body-2d' && body.body === 'static' && !body.sensor) {
-            const at = worldPlacementOf(box);
-            const c = body.collider;
-            const [w, h] = c.shape === 'rect'
-                ? [c.width, c.height]
-                : c.shape === 'circle'
-                    ? [c.radius * 2, c.radius * 2]
-                    : [Math.max(...c.vertices.map((v) => Math.abs(v[0]))) * 2, Math.max(...c.vertices.map((v) => Math.abs(v[1]))) * 2];
-            const hw = (w * Math.abs(at.scaleX)) / 2;
-            const hh = (h * Math.abs(at.scaleY)) / 2;
-            out.push({ left: at.x - hw, top: at.y - hh, right: at.x + hw, bottom: at.y + hh });
+        if (box !== except && !box.destroyed && body !== null && body._type === 'physics-body-2d' && body.body === 'static' && !body.sensor && body.collider !== null) {
+            block(box, body.collider);
+        }
+        // A shape of a still body, where its own object is, unless it is a sensor of its own.
+        const shape = box.collisionShape;
+        if (shape?._type === 'collision-shape-2d' && !box.destroyed) {
+            const owner = shapeOwnerOf(box, '2d');
+            const of = owner?.physics;
+            if (owner !== null && owner !== except && of?._type === 'physics-body-2d' && of.body === 'static' && !(shape.sensor ?? of.sensor)) {
+                block(box, shape.collider);
+            }
         }
         for (const child of box.children) visit(child);
     };

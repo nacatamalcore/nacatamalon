@@ -5,7 +5,26 @@ releases are in [changelog/](./changelog/), one file each.
 
 ## Unreleased
 
+### Added
+
+- **Collision shapes: a body made of several shapes, or of one turned apart from its object.** A
+  shape can now be an object of its own under the body's, with `useCollisionShape2d` /
+  `useCollisionShape3d` (in a scene, the `collision-shape-2d` / `collision-shape-3d` components). The
+  object places it: where it is, how it is turned and how big it is, relative to the body, so it is
+  moved, turned and sized like anything else, and a capsule can lie across a ring. It belongs to the
+  nearest body above it, or on its own object, and the whole moves as one. Its surface is the body's
+  unless it says otherwise (a rubber wheel on a metal cart says only its bounce). A body's own shape
+  stays for the common case of one; `collider: null` is a body whose shapes are all under it. Two
+  bodies touching by several shapes meet once: `onEnter` when the first pair touches, `onExit` when
+  the last parts. A shape is placed once, when it is made; its object destroyed takes it away.
+
 ### Fixed
+
+- **A detailed shape as a 3D hull collider collides.** The simulation takes a hull of so many edges
+  and no more, and a round piece made in detail (a turned chess piece, a model) went over it: the body
+  was left with no shape at all and sat still, with only the simulation's own line in the console.
+  Such a shape is now wrapped by its outermost points in 44 directions, which always fits and keeps
+  its silhouette.
 
 - **A model lit at every pixel (`perPixel`) takes the fog at every pixel too.** It was still worked out
   at the corners and smeared, so a big floor of two triangles whose corners all reach past the fog's

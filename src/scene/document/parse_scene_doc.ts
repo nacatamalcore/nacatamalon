@@ -27,7 +27,7 @@ import type { TNineSliceBorders } from '../../gameobjects/nine_slice/types/t_nin
 import type { TTransform3d } from '../../gameobjects/types/t_transform_3d';
 import type { TUniformNumbers } from '../../materials/types/t_uniforms';
 import type { TScriptProps } from '../../scripts';
-import { createPhysicsBody2d, createPhysicsBody3d, createRetroBody2d } from '../../physics';
+import { createCollisionShape2d, createCollisionShape3d, createPhysicsBody2d, createPhysicsBody3d, createRetroBody2d } from '../../physics';
 import type { TCollider2d, TCollider3d, TPhysicsSurface, TRetroBody2d, TRetroCollider2d } from '../../physics';
 import type { TParticleColliderShape2d, TParticleColliderShape3d } from '../../gameobjects/particles/colliders/t_particle_collider';
 import type { TSoundCone, TSoundDuck, TSoundZone } from '../../audio';
@@ -1003,10 +1003,11 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
             };
         }
         case 'physics-body-2d': {
-            const collider = parseCollider2d(raw.collider);
+            // `null` written down: a body whose shapes are the collision shapes under it.
+            const collider = raw.collider === null ? null : parseCollider2d(raw.collider);
             // A shape nothing can make goes to the hole for what this version cannot read, so it
             // comes back out of the file untouched instead of being dropped or guessed at.
-            if (collider === null) {
+            if (collider === null && raw.collider !== null) {
                 return null;
             }
             // Completed with the same factory a scene in code goes through, so a file written
@@ -1022,8 +1023,8 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
             return { type: 'physics-body-2d', ...rest };
         }
         case 'physics-body-3d': {
-            const collider = parseCollider3d(raw.collider);
-            if (collider === null) {
+            const collider = raw.collider === null ? null : parseCollider3d(raw.collider);
+            if (collider === null && raw.collider !== null) {
                 return null;
             }
             const offset = asArray(raw.offset);
@@ -1038,6 +1039,32 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 ...parseSurface(raw),
             });
             return { type: 'physics-body-3d', ...rest };
+        }
+        case 'collision-shape-2d': {
+            const collider = parseCollider2d(raw.collider);
+            if (collider === null) {
+                return null;
+            }
+            // Only the surface it says of its own: what it leaves out is its body's.
+            const { _type, ...rest } = createCollisionShape2d({ id, name: asString(raw.name, 'Shape'), collider, ...parseSurface(raw) });
+            return { type: 'collision-shape-2d', ...rest };
+        }
+        case 'collision-shape-3d': {
+            const collider = parseCollider3d(raw.collider);
+            if (collider === null) {
+                return null;
+            }
+            const offset = asArray(raw.offset);
+            const { _type, ...rest } = createCollisionShape3d({
+                id,
+                name: asString(raw.name, 'Shape'),
+                collider,
+                ...(raw.offset !== undefined
+                    ? { offset: [asNumber(offset[0], 0), asNumber(offset[1], 0), asNumber(offset[2], 0)] as [number, number, number] }
+                    : {}),
+                ...parseSurface(raw),
+            });
+            return { type: 'collision-shape-3d', ...rest };
         }
         case 'retro-body-2d': {
             const collider = parseRetroCollider2d(raw.collider);

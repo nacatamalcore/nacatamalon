@@ -1,7 +1,7 @@
 import type { TBox } from '../box';
 import { getActiveGame } from '../store/active_game';
 import { firstTimeIn } from '../utils/first_time_in';
-import type { TPhysicsBody, TPhysicsWorld } from './types/t_physics';
+import type { TCollisionShape, TPhysicsBody, TPhysicsWorld } from './types/t_physics';
 import type { TCharacterBody2d, TCharacterShape2d } from './character/t_character_body_2d';
 import type { TDebugDraw } from '../debug/t_debug_draw';
 
@@ -31,6 +31,12 @@ export type TPhysicsProvider = {
      * and where the simulation writes back to.
      */
     createBody: (box: TBox, body: TPhysicsBody) => void;
+    /**
+     * Called for each collision shape, after the body it belongs to: `owner` is the object carrying
+     * that body, `box` the one carrying the shape, which places it. A provider ignores a shape of the
+     * other dimension, as it does a body. Optional: one without it simulates bodies' own shapes only.
+     */
+    addShape?: (owner: TBox, box: TBox, shape: TCollisionShape) => void;
     /**
      * Tells `told` from now on whenever the body of `box` starts or stops touching another, with the
      * other's box: what collisions asked by component or by tag count. Answers whether it is the one

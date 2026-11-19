@@ -5,7 +5,7 @@ import { gameOfBox } from '../../box/box_game';
 import { firstTimeIn, forgetOnPage } from '../../utils/first_time_in';
 import { registerPhysicsProvider } from '../physics_provider';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
-import type { TPhysicsBody, TPhysicsBody3d, TPhysicsWorld } from '../types/t_physics';
+import type { TCollisionShape, TCollisionShape3d, TPhysicsBody, TPhysicsBody3d, TPhysicsWorld } from '../types/t_physics';
 import type { TRuntimeStore } from '../../store';
 import type { TPhysicsProvider } from '../physics_provider';
 import { bodyOfObject3d, usePhysicsWorld } from './physics_world';
@@ -229,6 +229,13 @@ export const physics3dProvider: TPhysicsProvider = {
         worldOfBody.set(box, world);
     },
 
+    addShape: (owner: TGameObject, box: TGameObject, shape: TCollisionShape) => {
+        if (shape._type !== 'collision-shape-3d') return;
+        const world = worldOfBody.get(owner);
+        if (world === undefined) return;
+        shapeIntoWorld(world, owner, box, shape);
+    },
+
     watchContacts: (box, told) => {
         const body = bodyOfObject3d.get(box as TGameObject);
         if (body === undefined) return false;
@@ -294,6 +301,12 @@ export const bodyIntoWorld = (world: TPhysicsWorldHandle3d, box: TGameObject, re
     const collider = record.collider;
     const surface = surfaceOf(record);
 
+    // Its shapes are the collision shapes under it, each added as it is made.
+    if (collider === null) {
+        world.addEmpty(box, { type: record.body, ...surface });
+        return;
+    }
+
     switch (collider.shape) {
         case 'box':
             world.addBox(box, { type: record.body, size: collider.size, ...surface });
@@ -328,4 +341,29 @@ export const bodyIntoWorld = (world: TPhysicsWorldHandle3d, box: TGameObject, re
             return never;
         }
     }
+};
+
+/**
+ * Puts one collision shape on the body of `owner`, placed by `box`. Its surface is what it says of
+ * its own; the rest is the body's, which the world fills in. A hull or a mesh is named the way a
+ * body's own is, and one the scene never loaded is said once and left out.
+ *
+ * @internal
+ */
+export const shapeIntoWorld = (world: TPhysicsWorldHandle3d, owner: TGameObject, box: TGameObject, record: TCollisionShape3d): void => {
+    const surface = {
+        bounce: record.bounce, friction: record.friction, density: record.density, sensor: record.sensor,
+        layer: record.layer, collidesWith: record.collidesWith, offset: record.offset,
+    };
+    const collider = record.collider;
+    if (collider.shape === 'hull' || collider.shape === 'mesh') {
+        const geometry = getGeometry(collider.geometry);
+        if (geometry === null) {
+            warnMissingGeometry(box, collider.geometry);
+            return;
+        }
+        world.addShape(owner, box, { shape: collider.shape, geometry, ...surface });
+        return;
+    }
+    world.addShape(owner, box, { ...collider, ...surface });
 };

@@ -16,7 +16,8 @@ import type { TShape, TShapes } from '../gameobjects/shapes/types/t_shapes';
 import type { TLine } from '../gameobjects/lines/lines_state';
 import type { TLines } from '../gameobjects/lines/types/t_lines';
 import type { TDrawable } from '../gameobjects/types';
-import type { TPhysicsBody2d, TPhysicsBody3d } from '../physics/types/t_physics';
+import type { TCollider2d, TCollider3d } from '../physics/types/t_physics';
+import { shapeOwnerOf } from '../physics/shape_owner';
 import { isBehindSplash } from '../splash/behind_splash';
 
 /**
@@ -115,10 +116,8 @@ const colorOf = (body: { body: string; sensor: boolean }): string =>
     body.sensor ? DEBUG_COLORS.sensor : body.body === 'dynamic' ? DEBUG_COLORS.moving : body.body === 'kinematic' ? DEBUG_COLORS.driven : DEBUG_COLORS.still;
 
 /** A flat collider of the full simulation, from what the object keeps, where the object is. */
-const drawBody2d = (box: TBox, body: TPhysicsBody2d, draw: TDebugDraw): void => {
+const drawBody2d = (box: TBox, collider: TCollider2d, color: string, draw: TDebugDraw): void => {
     const at = worldPlacementOf(box);
-    const color = colorOf(body);
-    const collider = body.collider;
     if (collider.shape === 'rect') {
         draw.rect(at.x, at.y, collider.width * Math.abs(at.scaleX), collider.height * Math.abs(at.scaleY), color, at.rotation);
     } else if (collider.shape === 'circle') {
@@ -151,12 +150,11 @@ const rotate = (q: readonly [number, number, number, number], v: { x: number; y:
 };
 
 /** A collider in space, as lines: a box's edges, a ball's three rings, a capsule's rings and sides. */
-const drawBody3d = (box: TBox, body: TPhysicsBody3d, draw: TDebugDraw): void => {
+const drawBody3d = (box: TBox, collider: TCollider3d, offset: readonly [number, number, number], color: string, draw: TDebugDraw): void => {
     const pose = worldPlacement3dOf(box);
-    const color = colorOf(body);
     const s = pose.scale;
     const toWorld = (x: number, y: number, z: number) => {
-        const local = { x: (x + body.offset[0]) * s.x, y: (y + body.offset[1]) * s.y, z: (z + body.offset[2]) * s.z };
+        const local = { x: (x + offset[0]) * s.x, y: (y + offset[1]) * s.y, z: (z + offset[2]) * s.z };
         const turned = rotate(pose.quaternion, local);
         return { x: pose.position.x + turned.x, y: pose.position.y + turned.y, z: pose.position.z + turned.z };
     };
@@ -171,7 +169,6 @@ const drawBody3d = (box: TBox, body: TPhysicsBody3d, draw: TDebugDraw): void => 
             draw.line3d(at(a), at(b), color);
         }
     };
-    const collider = body.collider;
     if (collider.shape === 'box') {
         const [hx, hy, hz] = collider.size.map((size) => size / 2);
         const corners = [-1, 1].flatMap((x) => [-1, 1].flatMap((y) => [-1, 1].map((z) => [x, y, z] as const)));
@@ -230,8 +227,19 @@ const drawScene = (store: TRuntimeStore, scene: TBox, draw: TDebugDraw): void =>
     const visit = (box: TBox): void => {
         if (box.destroyed) return;
         const body = box.physics;
-        if (body !== null && body._type === 'physics-body-2d') drawBody2d(box, body, draw);
-        if (body !== null && body._type === 'physics-body-3d') drawBody3d(box, body, draw);
+        if (body?._type === 'physics-body-2d' && body.collider !== null) drawBody2d(box, body.collider, colorOf(body), draw);
+        if (body?._type === 'physics-body-3d' && body.collider !== null) drawBody3d(box, body.collider, body.offset, colorOf(body), draw);
+        // A collision shape, where its own object is, in its body's colour (a sensor of its own
+        // shows as one); one with no body is nothing, and is not drawn as if it were.
+        const shape = box.collisionShape;
+        if (shape !== null) {
+            const owner = shapeOwnerOf(box, shape._type === 'collision-shape-2d' ? '2d' : '3d')?.physics;
+            if (owner !== undefined && owner !== null && owner._type !== 'retro-body-2d') {
+                const color = colorOf({ body: owner.body, sensor: shape.sensor ?? owner.sensor });
+                if (shape._type === 'collision-shape-2d') drawBody2d(box, shape.collider, color, draw);
+                else drawBody3d(box, shape.collider, shape.offset, color, draw);
+            }
+        }
         if (box.hitboxes.length > 0) {
             for (const rect of rectsOf(box)) draw.rect(rect.cx, rect.cy, rect.hx * 2, rect.hy * 2, DEBUG_COLORS.hitbox, rect.rotation);
         }

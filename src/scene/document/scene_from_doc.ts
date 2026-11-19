@@ -22,7 +22,7 @@ import { offerSavedData, keepUnclaimedData } from '../../hooks/state/use_data';
 import { useScript } from '../../hooks/script';
 import { useAudioListener, useMusic, useSong, useSound } from '../../hooks/audio';
 import { useStoreLink } from '../../hooks/store';
-import { usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d, useRetroBody2d, useRetroWorld2d } from '../../hooks/physics';
+import { useCollisionShape2d, useCollisionShape3d, usePhysicsBody2d, usePhysicsBody3d, usePhysicsWorld2d, usePhysicsWorld3d, useRetroBody2d, useRetroWorld2d } from '../../hooks/physics';
 import { useCamera3d } from '../../hooks/camera/use_camera_3d';
 import { useFog } from '../../hooks/fog/use_fog';
 import { useSpriteAnimation } from '../../hooks/animation/use_sprite_animation';
@@ -828,6 +828,16 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
             usePhysicsBody3d(rest);
             break;
         }
+        case 'collision-shape-2d': {
+            const { type, ...rest } = component;
+            useCollisionShape2d(rest);
+            break;
+        }
+        case 'collision-shape-3d': {
+            const { type, ...rest } = component;
+            useCollisionShape3d(rest);
+            break;
+        }
         case 'particle-collider-2d':
             useParticleCollider2d({ shape: component.shape, ...(component.enabled !== undefined ? { enabled: component.enabled } : {}) }).id = component.id;
             break;
@@ -1087,8 +1097,14 @@ const buildBox = (node: TBoxNode, store: TRuntimeStore, src: string): void => {
     // What none of them asked for is kept even if one of them throws: a broken behaviour must not
     // also cost the box the state it was saved with.
     try {
+        // A collision shape after the rest, so a body on the same box is there for it to join, in
+        // whatever order the file lists the two.
+        const isShape = (type: string): boolean => type === 'collision-shape-2d' || type === 'collision-shape-3d';
         for (const component of node.components) {
-            if (component.type !== 'script') buildComponent(component, store, src);
+            if (component.type !== 'script' && !isShape(component.type)) buildComponent(component, store, src);
+        }
+        for (const component of node.components) {
+            if (isShape(component.type)) buildComponent(component, store, src);
         }
         for (const component of node.components) {
             if (component.type === 'script') buildComponent(component, store, src);

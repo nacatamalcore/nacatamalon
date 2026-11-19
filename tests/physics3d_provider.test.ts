@@ -42,6 +42,8 @@ const fakeWorld = () => {
         addCapsule: record('capsule'),
         addHull: record('hull'),
         addMesh: record('mesh'),
+        addEmpty: record('empty'),
+        addShape: (_owner: TGameObject, box: TGameObject, options: Record<string, unknown>) => { calls.push({ kind: 'shape', box, options }); return true; },
         addCharacter: () => ({} as TCharacterBody3d),
         raycast: () => null,
     } as unknown as TPhysicsWorldHandle3d;

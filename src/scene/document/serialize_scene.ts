@@ -961,6 +961,11 @@ const writeBox = (box: TBox, writing: TWriting): TBoxNode => {
         const { _type, ...rest } = box.physics;
         components.push({ type: _type, ...rest } as TComponentDoc);
     }
+    // After the body, so a shape on the same object as its body is read back after it, as it was made.
+    if (box.collisionShape !== null) {
+        const { _type, ...rest } = box.collisionShape;
+        components.push({ type: _type, ...rest } as TComponentDoc);
+    }
 
     for (const sound of box.sounds) {
         if (sound.type === 'song') {

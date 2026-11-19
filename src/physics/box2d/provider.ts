@@ -4,7 +4,7 @@ import { gameOfBox } from '../../box/box_game';
 import { firstTimeIn, forgetOnPage } from '../../utils/first_time_in';
 import { registerPhysicsProvider } from '../physics_provider';
 import type { TGameObject } from '../../hooks/spawn/use_spawn';
-import type { TPhysicsBody, TPhysicsBody2d, TPhysicsWorld } from '../types/t_physics';
+import type { TCollisionShape, TPhysicsBody, TPhysicsBody2d, TPhysicsWorld } from '../types/t_physics';
 import type { TRuntimeStore } from '../../store';
 import type { TPhysicsProvider } from '../physics_provider';
 import { bodyOfObject2d, usePhysicsWorld } from './physics_world';
@@ -215,6 +215,18 @@ export const physics2dProvider: TPhysicsProvider = {
         worldOfBody.set(box, world);
     },
 
+    addShape: (owner: TGameObject, box: TGameObject, shape: TCollisionShape) => {
+        if (shape._type !== 'collision-shape-2d') return;
+        const world = worldOfBody.get(owner);
+        if (world === undefined) return;
+        // What it says of its own surface, and nothing it leaves to its body.
+        const surface: TColliderSurface2d = {};
+        for (const key of ['bounce', 'friction', 'density', 'sensor', 'layer', 'collidesWith'] as const) {
+            if (shape[key] !== undefined) (surface as Record<string, unknown>)[key] = shape[key];
+        }
+        world.addShape(owner, box, { ...shape.collider, ...surface });
+    },
+
     watchContacts: (box, told) => {
         const body = bodyOfObject2d.get(box as TGameObject);
         if (body === undefined) return false;
@@ -278,6 +290,12 @@ export const installPhysics2d = (): void => {
 export const bodyIntoWorld = (world: TPhysicsWorldHandle2d, box: TGameObject, record: TPhysicsBody2d): void => {
     const collider = record.collider;
     const surface = surfaceOf(record);
+
+    // Its shapes are the collision shapes under it, each added as it is made.
+    if (collider === null) {
+        world.addEmpty(box, { type: record.body, ...surface });
+        return;
+    }
 
     switch (collider.shape) {
         case 'rect':

@@ -2,7 +2,7 @@ import type { TLightingLook, TStepLook } from '../../../shader_composer/surface/
 import type { TScriptProps } from '../../../scripts';
 import type { TColor } from '../../../color';
 import type { TTransform2d } from '../../../gameobjects/types/t_transform_2d';
-import type { TPhysicsBody2d, TPhysicsBody3d, TPhysicsWorld2d, TPhysicsWorld3d, TRetroBody2d, TRetroWorld2d } from '../../../physics';
+import type { TCollisionShape2d, TCollisionShape3d, TPhysicsBody2d, TPhysicsBody3d, TPhysicsWorld2d, TPhysicsWorld3d, TRetroBody2d, TRetroWorld2d } from '../../../physics';
 import type { TTransform3d } from '../../../gameobjects/types/t_transform_3d';
 import type { TTextStyle } from '../../../gameobjects/text/types/t_text_style';
 import type { TNineSliceBorders, TNineSliceMode } from '../../../gameobjects/nine_slice/types/t_nine_slice';
@@ -229,6 +229,8 @@ export type TComponentDoc =
     | TStoreComponent
     | TPhysicsBody2dComponent
     | TPhysicsBody3dComponent
+    | TCollisionShape2dComponent
+    | TCollisionShape3dComponent
     | TPhysicsWorld2dComponent
     | TPhysicsWorld3dComponent
     | TRetroBody2dComponent
@@ -1141,6 +1143,27 @@ export type TPhysicsBody2dComponent = { type: 'physics-body-2d' } & Omit<TPhysic
  * @author Francisco Pereira Alvarado
  */
 export type TPhysicsBody3dComponent = { type: 'physics-body-3d' } & Omit<TPhysicsBody3d, '_type'>;
+
+/**
+ * One more flat shape for the body above, written down on an object of its own, which places it:
+ * see `TCollisionShape2d`. Its surface fields are only there when the shape says its own; one left
+ * out is its body's.
+ *
+ * @category Scenes
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TCollisionShape2dComponent = { type: 'collision-shape-2d' } & Omit<TCollisionShape2d, '_type'>;
+
+/**
+ * One more shape in space for the body above, written down: the sibling of
+ * {@link TCollisionShape2dComponent}.
+ *
+ * @category Scenes
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TCollisionShape3dComponent = { type: 'collision-shape-3d' } & Omit<TCollisionShape3d, '_type'>;
 
 /**
  * The flat simulation's settings, written down. Lives on the scene's **root**: gravity belongs to
