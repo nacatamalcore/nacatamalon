@@ -336,6 +336,30 @@ describe('a collider made of triangles, and a ray', () => {
         expect(rock.transform!.y).toBeCloseTo(0.5, 1);
     });
 
+    it('settles a hull of a shape too detailed for the backend whole, wrapped by fewer points', async () => {
+        const { store } = createTestGame();
+        const warn = spyOn(console, 'warn');
+        const root = startTestScene(store, 'Level', () => {
+            usePhysicsWorld3d();
+            useSpawn(Floor)();
+            useSpawn(function Ball() {
+                useTransform({ y: 4 });
+                // 96 × 48: thousands of points, whose whole hull has far more faces than 255.
+                createMesh({ geometry: useSphereGeometry({ radius: 0.5, segments: 96, rings: 48, key: 'fine-ball' }), tint });
+                usePhysicsBody3d({ body: 'dynamic', collider: { shape: 'hull', geometry: 'fine-ball' } });
+            })();
+            return createScene();
+        });
+        const ball = root.children[1];
+
+        await run(root, 300);
+        // Resting on its round underside, within a hair of its true radius.
+        expect(ball.transform!.y).toBeGreaterThan(0.45);
+        expect(ball.transform!.y).toBeLessThan(0.55);
+        expect(warn.mock.calls.some((call) => String(call[0]).includes('hull'))).toBe(false);
+        warn.mockRestore();
+    });
+
     it('stops a falling box on a floor made of a mesh', async () => {
         const { store } = createTestGame();
         const root = startTestScene(store, 'Level', () => {

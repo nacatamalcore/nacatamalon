@@ -868,6 +868,64 @@ const boxCorners = (half: [number, number, number], offset: TVec3): Float32Array
 };
 
 /**
+ * The most corners a hull is made from. The backend takes a hull of at most 255 half-edges (and
+ * fails, or worse, past it), and n corners make at most 6n − 12 of them: 44 always fits.
+ */
+const HULL_CORNERS = 44;
+
+/**
+ * The points of `positions` furthest out in each of `count` directions spread evenly over a
+ * sphere: the corners a simpler hull is made of. A point that is furthest out in several
+ * directions is kept once.
+ */
+export const outermostPoints = (positions: Float32Array, count: number): Float32Array => {
+    const kept = new Set<number>();
+    const golden = Math.PI * (3 - Math.sqrt(5));
+    const points = positions.length / 3;
+    for (let d = 0; d < count; d++) {
+        const y = 1 - (2 * (d + 0.5)) / count;
+        const ring = Math.sqrt(1 - y * y);
+        const x = Math.cos(golden * d) * ring;
+        const z = Math.sin(golden * d) * ring;
+        let best = -1;
+        let furthest = -Infinity;
+        for (let p = 0; p < points; p++) {
+            const along = positions[p * 3] * x + positions[p * 3 + 1] * y + positions[p * 3 + 2] * z;
+            if (along > furthest) {
+                furthest = along;
+                best = p;
+            }
+        }
+        if (best >= 0) kept.add(best);
+    }
+    const out = new Float32Array(kept.size * 3);
+    let i = 0;
+    for (const p of kept) {
+        out[i++] = positions[p * 3];
+        out[i++] = positions[p * 3 + 1];
+        out[i++] = positions[p * 3 + 2];
+    }
+    return out;
+};
+
+/**
+ * The convex hull of `positions`, made simpler first when it could be too detailed for the backend.
+ *
+ * A hull has a ceiling on its edges, and a round shape made in detail (a turned chess piece, a
+ * model) goes over it: the backend then gives nothing, and the body would have no shape. So, as
+ * convex colliders are commonly made, a shape of more than `HULL_CORNERS` points is wrapped by its
+ * outermost points in that many directions, which keeps the silhouette and drops what lies between
+ * (a box of a thousand points keeps exactly its eight corners).
+ */
+const createHullWithinLimit = (b3: TBox3dModule, positions: Float32Array): ReturnType<TBox3dModule['b3CreateHull']> => {
+    const hull = b3.b3CreateHull(positions.length / 3 <= HULL_CORNERS ? positions : outermostPoints(positions, HULL_CORNERS));
+    if (hull === null) {
+        console.warn(`[NacatamalOn] physics: no hull could be made of a shape of ${positions.length / 3} points (flat, or all in one place), so its body has no shape. Give it a box, a sphere or a capsule.`);
+    }
+    return hull;
+};
+
+/**
  * Builds the WASM shape for one body, the single place a `TBodySpec` becomes box3d geometry.
  *
  * Split out of `materialize` when hull and mesh arrived, because those two allocate WASM data
@@ -909,7 +967,7 @@ const createShape = (
     }
 
     if (spec.kind === 'hull') {
-        const hull = b3.b3CreateHull(spec.positions);
+        const hull = createHullWithinLimit(b3, spec.positions);
         entry.geometryData = { kind: 'hull', handle: hull };
         // The transformed variant is used even with no rotation, because it is the only one that
         // takes a `scale`: a hull is scaled by box3d, not by pre-multiplying its points.
