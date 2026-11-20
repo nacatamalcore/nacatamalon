@@ -50,7 +50,6 @@ describe('3d', () => {
         expect(enters).toBe(1);
         destroy(root.children[1].children[0]); flushDestroyed(store);
         steps(root, 200);
-        console.log('3d enters', enters, 'exits', exits, 'y', root.children[1].transform!.y);
         // the own shape now rests on the floor: a new touch
         expect(root.children[1].transform!.y).toBeCloseTo(0.2, 1);
         expect(enters).toBe(2);
@@ -73,7 +72,6 @@ describe('3d', () => {
         });
         await loadBox3D(); await new Promise((r) => setTimeout(r, 0));
         steps(root, 200);
-        console.log('3d sensor body y', root.children[1].transform!.y);
         // A sensor body falls through the floor
         expect(root.children[1].transform!.y).toBeLessThan(-1);
     });
@@ -107,7 +105,6 @@ describe('2d', () => {
         expect(enters).toBe(1);
         destroy(root.children[1].children[0]); flushDestroyed(store);
         steps(root, 300);
-        console.log('2d enters', enters, 'exits', exits, 'y', root.children[1].transform!.y);
         expect(root.children[1].transform!.y).toBeCloseTo(190, 0);
         expect(enters).toBe(2);
     });

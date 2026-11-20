@@ -38,6 +38,5 @@ for (const own of [true, false]) it('a flat body put on other layers before the 
     });
     await loadBox2D(); await new Promise((r) => setTimeout(r, 0));
     steps(root, 300);
-    console.log('E y', root.children[1].transform!.y);
     expect(root.children[1].transform!.y).toBeGreaterThan(300);
 });

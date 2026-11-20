@@ -27,6 +27,5 @@ it('a shape written before the body on the same box still joins it', () => {
     const { store } = createTestGame();
     registerScene(store, doc.name, sceneFromDoc(doc));
     startScene(store, doc.name);
-    console.log(calls, JSON.stringify(doc.root.children[0].components));
     expect(calls).toContain('shape');
 });
