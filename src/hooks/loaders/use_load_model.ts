@@ -15,7 +15,7 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  */
 export type TUseLoadModelOptions = {
     /**
-     * The model file: either kind, `.gltf` or `.glb`.
+     * The model file: a glTF of either kind, `.gltf` or `.glb`, or a Wavefront `.obj`.
      */
     src: string;
     /**
@@ -43,12 +43,18 @@ export type TUseLoadModelOptions = {
 
 /**
  * Loads a model made somewhere else: something sculpted in Blender, bought in a pack, exported from
- * anywhere that writes glTF.
+ * anywhere that writes glTF or Wavefront (`.obj`).
  *
  * **Both kinds of the format are read, and you do not have to know which you have.** One is a
  * description in text with its numbers and pictures in files beside it, the other is all of it in a
  * single file, and which you were given is an accident of the button somebody pressed. The file is
  * asked, not its name.
+ *
+ * **A Wavefront file (`.obj`) is read too**, with the material files it names (`.mtl`) and their
+ * pictures, looked for beside it. Its objects and groups are the pieces, and `node` takes one by
+ * that name. It brings colour, picture, glow and see-through, and no bones or movements, which the
+ * format does not have. A piece whose facings the file did not write is shaded smooth, or flat when
+ * asked.
  *
  * You get the model back at once, still loading. Hand it to `createModel` straight away: it appears
  * by itself when the file arrives, and `useLoadProgress` counts it like any other asset.

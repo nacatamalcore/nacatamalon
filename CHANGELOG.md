@@ -17,6 +17,13 @@ releases are in [changelog/](./changelog/), one file each.
   stays for the common case of one; `collider: null` is a body whose shapes are all under it. Two
   bodies touching by several shapes meet once: `onEnter` when the first pair touches, `onExit` when
   the last parts. A shape is placed once, when it is made; its object destroyed takes it away.
+- **`useLoadModel` reads Wavefront files (`.obj`)**, with the material files they name (`.mtl`) and
+  their pictures. The model is the same one a glTF gives: `createModel`, `node`, `shading`,
+  `textures` and a scene's `mesh` work on it as they do on a glTF. Its objects and groups are its
+  pieces, and a piece painted in two materials is two parts. From the material file it takes colour,
+  picture, glow and see-through (`Kd`, `map_Kd`, `Ke`, `map_Ke`, `d`/`Tr`, and `map_d` as a
+  cut-out); no bones or movements, which the format does not have. The file is told apart from a
+  glTF by what it holds, not by its name.
 
 ### Changed
 

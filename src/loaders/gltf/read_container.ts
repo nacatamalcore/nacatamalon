@@ -119,3 +119,42 @@ export const decodeDataUri = (uri: string): ArrayBuffer => {
  * Whether an address inside the file spells out its own bytes rather than naming a neighbour.
  */
 export const isDataUri = (uri: string): boolean => uri.startsWith('data:');
+
+/**
+ * The first byte of a file that is not a space, a line end or the mark some editors put first in a
+ * text file, or `-1` when there is none.
+ */
+const firstWritten = (bytes: ArrayBuffer): number => {
+    const all = new Uint8Array(bytes);
+    for (let i = 0; i < all.length; i++) {
+        const byte = all[i];
+        if (byte !== 0x20 && byte !== 0x09 && byte !== 0x0a && byte !== 0x0d && byte !== 0xef && byte !== 0xbb && byte !== 0xbf) {
+            return byte;
+        }
+    }
+    return -1;
+};
+
+/**
+ * Whether a model file is a glTF, of either kind, rather than a Wavefront one: a binary glTF begins
+ * with its word, a text one with the brace its description opens with. A Wavefront file begins with
+ * neither, being lines of keywords. A file too short to say, or with nothing written in it, is taken
+ * as glTF, which says it is empty.
+ *
+ * **A web page is neither, and is refused here**: a server that answers a missing file with its own
+ * page and a 200 would otherwise be read as a Wavefront file holding nothing, which hides why.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const isGltfFile = (bytes: ArrayBuffer): boolean => {
+    if (bytes.byteLength < 4 || new DataView(bytes).getUint32(0, true) === MAGIC) {
+        return true;
+    }
+    const first = firstWritten(bytes);
+    if (first === 0x3c) {
+        throw new Error('the server answered with a web page, not a model: the file is probably not where it was looked for');
+    }
+    return first === 0x7b || first === -1;
+};

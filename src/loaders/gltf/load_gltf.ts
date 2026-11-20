@@ -2,7 +2,11 @@ import { bumpVersion } from '../../store/record_version';
 import { buildParts } from './build_parts';
 import { jointLookup, readSkin } from './read_skin';
 import { readAnimations } from './read_animations';
-import { decodeDataUri, isDataUri, readGltfContainer } from './read_container';
+import { decodeDataUri, isDataUri, isGltfFile, readGltfContainer } from './read_container';
+import { readObj } from '../obj/read_obj';
+import { plainSurface, readMtl } from '../obj/read_mtl';
+import type { TBuiltPart } from './build_parts';
+import type { TGltfSurface } from './read_material';
 import { findMeshNodes, meshNodeNames } from './find_mesh_nodes';
 import { newTexture } from '../texture/new_texture';
 import { loadTexture } from '../texture/load_texture';
@@ -14,7 +18,7 @@ import { uploadGeometry } from '../../geometry/upload_geometry';
 import { uploadTexture } from '../texture/upload_texture';
 import { trackLoad, whenLoaded } from '../track_load';
 import type { TGltfDoc } from './types/t_gltf_doc';
-import type { TSkeleton } from '../../animation';
+import type { TSkeletalClip, TSkeleton } from '../../animation';
 import type { TGltfModel, TGltfPart } from './types/t_gltf_model';
 import type { TRuntimeStore } from '../../store';
 import type { TShading } from './shading';
@@ -203,6 +207,98 @@ const filePicture = async (store: TRuntimeStore, model: TGltfModel, image: TGltf
 };
 
 /**
+ * What a model file was read into, whichever format it was: its pieces, the surface each wears, and
+ * the rigs and movements it came with.
+ */
+type TReadModel = {
+    doc: TGltfDoc;
+    buffers: ArrayBuffer[];
+    built: TBuiltPart[];
+    surfaceOf: (piece: number) => TGltfSurface;
+    skeletons: TSkeleton[];
+    clips: TSkeletalClip[];
+};
+
+/**
+ * Nothing can be drawn: the file is empty of pieces, or of the one asked for.
+ */
+const nothingDrawn = (node: string | undefined, has: string[]): Error => new Error(node === undefined
+    ? 'it holds nothing that can be drawn'
+    : `it holds nothing called '${node}'. What it does hold: ${has.length > 0 ? has.join(', ') : 'nothing with a name'}`);
+
+/**
+ * A glTF, either kind.
+ */
+const readGltfModel = async (bytes: ArrayBuffer, model: TGltfModel, options: TLoadGltfOptions): Promise<TReadModel> => {
+    const { doc, embedded } = readGltfContainer(bytes);
+    const buffers = await readBuffers(doc, model.src, embedded);
+
+    const nodes = findMeshNodes(doc, options.node);
+    if (nodes.length === 0) {
+        throw nothingDrawn(options.node, meshNodeNames(doc));
+    }
+
+    // The rigs first: the corners of a deformed piece name their bones by number, and putting
+    // the bones in parent-first order may renumber them.
+    const skeletons: TSkeleton[] = [];
+    const renumbers: Int32Array[] = [];
+    (doc.skins ?? []).forEach((_, index) => {
+        const read = readSkin(doc, buffers, index, `${model.key}#skeleton:${index}`);
+        skeletons.push(read.skeleton);
+        renumbers.push(read.renumber);
+    });
+
+    const built = buildParts(doc, buffers, nodes, options.shading, renumbers);
+    const clips = readAnimations(doc, buffers, jointLookup(doc, renumbers));
+    return { doc, buffers, built, surfaceOf: (piece) => readMaterial(doc, built[piece].materialIndex), skeletons, clips };
+};
+
+/**
+ * A Wavefront file (`.obj`), with the material files it names. A material file that cannot be read
+ * is said and its pieces drawn white: the shape is still worth having.
+ */
+const readObjModel = async (bytes: ArrayBuffer, model: TGltfModel, options: TLoadGltfOptions): Promise<TReadModel> => {
+    const file = readObj(new TextDecoder().decode(bytes), options.shading, options.node);
+    if (file.parts.length === 0) {
+        throw nothingDrawn(options.node, file.names.filter((name) => name !== ''));
+    }
+
+    const surfaces = new Map<string, TGltfSurface>();
+    for (const library of new Set(file.libraries)) {
+        // A path the exporter wrote from its own computer is looked for beside the model, as the
+        // pictures it names are beside their material file.
+        const written = library.replace(/\\/g, '/');
+        const local = /^[a-z]:\//i.test(written) || written.startsWith('/') ? written.slice(written.lastIndexOf('/') + 1) : written;
+        const address = resolveAssetPath(model.src, local);
+        try {
+            const text = new TextDecoder().decode(await fetchBytes(address));
+            for (const [name, surface] of readMtl(text, (picture) => resolveAssetPath(address, picture))) {
+                // The first file to describe a surface keeps it, as the order they were named says.
+                if (!surfaces.has(name)) surfaces.set(name, surface);
+            }
+        } catch (error) {
+            console.warn(`[NacatamalOn] useLoadModel: '${model.src}' names the material file '${library}', which could not be read. The pieces it describes are drawn white.`, error);
+        }
+    }
+
+    const parts = file.parts;
+    return {
+        doc: NO_DOC,
+        buffers: [],
+        built: parts,
+        surfaceOf: (piece) => surfaces.get(parts[piece].material) ?? plainSurface(parts[piece].material),
+        skeletons: [],
+        clips: [],
+    };
+};
+
+/**
+ * The glTF description a Wavefront file does not have: it keeps no pictures inside itself, so the
+ * picture code never looks in it.
+ */
+const NO_DOC: TGltfDoc = {};
+
+/**
  * Fetches a model file and fills the record in place: its pieces, their shapes and their surfaces.
  *
  * Never rejects. Anything that goes wrong ends as `'error'` with a warning, because one bad model
@@ -217,29 +313,10 @@ const filePicture = async (store: TRuntimeStore, model: TGltfModel, image: TGltf
  */
 export const loadGltf = async (store: TRuntimeStore, model: TGltfModel, options: TLoadGltfOptions): Promise<void> => {
     try {
-        const { doc, embedded } = readGltfContainer(await fetchBytes(model.src));
-        const buffers = await readBuffers(doc, model.src, embedded);
-
-        const nodes = findMeshNodes(doc, options.node);
-        if (nodes.length === 0) {
-            const has = meshNodeNames(doc);
-            throw new Error(options.node === undefined
-                ? 'it holds nothing that can be drawn'
-                : `it holds nothing called '${options.node}'. What it does hold: ${has.length > 0 ? has.join(', ') : 'nothing with a name'}`);
-        }
-
-        // The rigs first: the corners of a deformed piece name their bones by number, and putting
-        // the bones in parent-first order may renumber them.
-        const skeletons: TSkeleton[] = [];
-        const renumbers: Int32Array[] = [];
-        (doc.skins ?? []).forEach((_, index) => {
-            const read = readSkin(doc, buffers, index, `${model.key}#skeleton:${index}`);
-            skeletons.push(read.skeleton);
-            renumbers.push(read.renumber);
-        });
-
-        const built = buildParts(doc, buffers, nodes, options.shading, renumbers);
-        const clips = readAnimations(doc, buffers, jointLookup(doc, renumbers));
+        // Asked by what it holds, not by its name: a glTF of either kind, or else a Wavefront file.
+        const bytes = await fetchBytes(model.src);
+        const read = isGltfFile(bytes) ? await readGltfModel(bytes, model, options) : await readObjModel(bytes, model, options);
+        const { doc, buffers, built, skeletons, clips } = read;
 
         // The game may have ended while the file was in the air, and the renderer with it. Or the
         // game let go of this file, and then nobody wants what it holds.
@@ -253,8 +330,7 @@ export const loadGltf = async (store: TRuntimeStore, model: TGltfModel, options:
         const pictures = [];
         const seen = new Map<number, Promise<TTexture>>();
         for (let i = 0; i < built.length; i++) {
-            const piece = built[i];
-            const surface = readMaterial(doc, piece.materialIndex);
+            const surface = read.surfaceOf(i);
             // Asked for one at a time, each only if the file is still wanted: what is let go of while
             // waiting for one picture does not send for the next.
             const picture = async (image: TGltfImage | null): Promise<TTexture | null> =>
