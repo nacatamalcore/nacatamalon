@@ -18,6 +18,18 @@ releases are in [changelog/](./changelog/), one file each.
   bodies touching by several shapes meet once: `onEnter` when the first pair touches, `onExit` when
   the last parts. A shape is placed once, when it is made; its object destroyed takes it away.
 
+### Changed
+
+- **A picture's 3D camera is on its object.** The camera of a picture that looks at the world
+  (`createSpriteTexture({ sees: '3d' })` or `'world'`; the `camera-3d` on a `sprite-texture`'s box in
+  a scene) is now placed and turned by that object, as anything else on it is: its own `transform` is
+  where it is from the object, and moving or turning the object, or what holds it, takes the camera
+  along. A security camera is an object placed and aimed like any other. A picture whose object stays
+  at the world's origin, unturned, as every one written so far does, sees what it saw before; one whose
+  object was placed elsewhere now looks from there. A picture that is a world of its own (`'inside'`)
+  is as it was. A `'3d'` picture inside another picture is placed in that one's world, which starts
+  at its object; a `'world'` view films the whole scene, and is placed from the top wherever it is.
+
 ### Fixed
 
 - **A detailed shape as a 3D hull collider collides.** The simulation takes a hull of so many edges

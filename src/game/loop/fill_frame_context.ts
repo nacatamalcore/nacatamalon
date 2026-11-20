@@ -43,6 +43,7 @@ import { cutsOf, noteOver, overlayFrameOf, settleOver } from './helper/post_over
 import type { TOverlayFrame, TOverWalk } from './helper/post_over';
 import type { TCamera2d } from '../../camera';
 import { cameraAsDrawn, pixelsPerUnit } from '../../camera/camera_as_drawn';
+import { cameraOnBox } from '../../camera/camera_on_box';
 import type { TPixelSnap } from '../types/t_game_options';
 import type { TDrawView3d } from '../../render/interface/draw/t_draw_view_3d';
 import type { TDrawCamera3d } from '../../render/interface/draw/t_draw_camera_3d';
@@ -1080,7 +1081,7 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
         walk.hide = picture.hide;
         walk.only = picture.only;
         const firstView = lists.views3d.length;
-        const through: TSeenThrough = { camera2d: cameraAsDrawn(own2d, snapping), camera3d: box.camera3d ?? scene.camera3d, layers: null, ownCamera2d: own2d, worldOf: scene };
+        const through: TSeenThrough = { camera2d: cameraAsDrawn(own2d, snapping), camera3d: box.camera3d === null ? scene.camera3d : cameraOnBox(box.camera3d, box, 'world'), layers: null, ownCamera2d: own2d, worldOf: scene };
         lookedThrough = through;
         walkingView(walk, () => gatherTree(scene, lists, 0, { flat: [], deep: [] }, [], through, true, { width: picture.texture.width, height: picture.texture.height }));
         // Its own fog and its own shade, when it asked for them: it is looking at that world, and a
@@ -1097,7 +1098,8 @@ const gatherPicture = (box: TBox, seen: TWorldSeen, delta: number): void => {
         const view = lists.views3d.length;
         const lighting = seen.lighting ?? collectLighting(rootOf(box));
         // The world's fog, unless the picture asked for one of its own: it is looking at that world.
-        const seenThrough = box.camera3d ?? seen.camera;
+        // Its own camera is on its box, where the box is in that world (`cameraOnBox`).
+        const seenThrough = box.camera3d === null ? seen.camera : cameraOnBox(box.camera3d, box, '3d');
         // Through its 2D camera as the picture draws its own sprites with it, rounded the same.
         const flat = cameraAsDrawn(box.camera2d, snapping);
         lists.views3d.push({ camera: drawnThrough(seenThrough, flat), cullingCamera: skippedBy(seenThrough, flat), lights: lighting.lights, ...ambientOfPicture(ownAmbientOf(box), lighting), fog: box.fog ?? seen.fog, style: box.renderStyle ?? seen.style });

@@ -15,6 +15,7 @@ import { useCamera2d } from '../src/hooks/camera/use_camera_2d';
 import { useCamera3d } from '../src/hooks/camera/use_camera_3d';
 import { useDirectionalLight } from '../src/hooks/light/use_directional_light';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
+import { useTransform } from '../src/hooks/transform/use_transform';
 import { destroy } from '../src/destroy/destroy';
 import { flushDestroyed } from '../src/destroy/flush_destroyed';
 import { fillFrameContext } from '../src/game/loop/fill_frame_context';
@@ -694,6 +695,51 @@ describe('a picture that sees the 3D around it', () => {
         expect(passFor(ctx, feed)!.views3d![0]!.camera!.flat!.x).toBe(7);
     });
 
+    it('looks out of its box: moving or turning the box, or what holds it, moves its camera', () => {
+        const { store } = createTestGame();
+        let camera!: ReturnType<typeof useCamera3d>;
+        let feed!: TTexture;
+        let holder!: TBox;
+        startTestScene(store, 'S', () => {
+            createMesh({ geometry: useCubeGeometry() });
+            holder = useSpawn(() => {
+                useTransform({ x: 10 });
+                feed = createSpriteTexture({ width: 16, height: 16, sees: '3d' }, () => {
+                    // A quarter turn to the left, and the camera a little out in front of it.
+                    useTransform({ y: 2, rotationY: Math.PI / 2 });
+                    camera = useCamera3d({ projection: 'perspective', transform: { z: 1, rotationX: -0.4 } });
+                });
+            })();
+            return createScene();
+        });
+
+        const drawn = () => passFor(frameOf(store), feed)!.views3d![0]!.camera!;
+        let eye = drawn();
+        // Out in front of the turned box (its z is the world's x), with the box above it at x 10.
+        expect(eye.transform.x).toBeCloseTo(11, 5);
+        expect(eye.transform.y).toBeCloseTo(2, 5);
+        expect(eye.transform.z).toBeCloseTo(0, 5);
+        // Turned with the box, and said in angles, as a camera is drawn and its shadows aimed.
+        expect(eye.transform.rotationY).toBeCloseTo(Math.PI / 2, 5);
+        expect(eye.transform.rotationX).toBeCloseTo(-0.4, 5);
+        expect((eye.transform as { quaternion?: unknown }).quaternion ?? null).toBeNull();
+        // The camera keeps its own numbers: from the box.
+        expect(camera.transform.x).toBe(0);
+        expect(camera.transform.z).toBe(1);
+
+        holder.transform!.x = -4;
+        eye = drawn();
+        expect(eye.transform.x).toBeCloseTo(-3, 5);
+        // What it is told after it was made reaches it as well.
+        camera.fov = 20;
+        expect(drawn().fov).toBe(20);
+    });
+
+    it('is its own camera when its box is where the world starts', () => {
+        const { store, camera, feed } = room();
+        expect(passFor(frameOf(store), feed)!.views3d![0]!.camera).toBe(camera);
+    });
+
     it('looks through the scene\'s camera when it has none of its own', () => {
         const { store } = createTestGame();
         let scene!: ReturnType<typeof useCamera3d>;
@@ -767,6 +813,27 @@ describe('a picture in a scene document', () => {
         expect(model.material.texture).toBe(again.get('assets').textures.get('tv')!);
         expect(root.camera2d).toBeNull();
         expect(pictureBox(root).camera2d!.transform.x).toBe(9);
+    });
+
+    it('keeps a 3D camera on its box through a file: the camera from the box, the box where it was put', () => {
+        const { store } = createTestGame();
+        startTestScene(store, 'S', () => {
+            useCamera3d({ projection: 'perspective', transform: { z: 5 } });
+            createMesh({ geometry: useCubeGeometry(), texture: createSpriteTexture({ width: 8, height: 8, key: 'cctv', sees: '3d' }, () => {
+                useTransform({ x: 3, y: 1 });
+                useCamera3d({ projection: 'perspective' });
+            }) });
+            return createScene();
+        });
+        const doc = JSON.parse(JSON.stringify(serializeScene(store.get('world').scenes[0]))) as TSceneDoc;
+        const again = createTestGame().store;
+        registerScene(again, 'x', sceneFromDoc(parseSceneDoc(doc, 'x.scene')));
+        startScene(again, 'x');
+
+        const eye = passFor(frameOf(again), again.get('assets').textures.get('cctv')!)!.views3d![0]!.camera!;
+        expect(eye.transform.x).toBeCloseTo(3, 5);
+        expect(eye.transform.y).toBeCloseTo(1, 5);
+        expect(eye.transform.z).toBeCloseTo(0, 5);
     });
 
     it('sets aside a picture with no name or no size rather than guess one', () => {

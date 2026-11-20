@@ -103,10 +103,15 @@ const compose = (frame: TPose3d, local: TPose3d): TPose3d => {
  * version of this gives at length: what an object draws says where *it* is and says nothing about
  * where the things under it are.
  */
-const parentFrame = (box: TBox): TPose3d => {
+const parentFrame = (box: TBox, withinPicture = false): TPose3d => {
     const chain: TBox[] = [];
     for (let at = box.parent; at !== null; at = at.parent) {
         chain.push(at);
+        // A picture's world starts at its box: what it draws is placed from there, and nothing
+        // above it moves it.
+        if (withinPicture && at.spriteTexture !== null) {
+            break;
+        }
     }
 
     // From the top down, because a placement only means anything once its own frame is known.
@@ -139,6 +144,21 @@ const parentFrame = (box: TBox): TPose3d => {
  */
 export const worldPlacement3dOf = (box: TBox): TPose3d => {
     const frame = parentFrame(box);
+    const own = placement3dOf(box);
+    return own === null ? frame : compose(frame, poseOf(own));
+};
+
+/**
+ * Where an object is in the world it is drawn in: as `worldPlacement3dOf`, but inside a picture
+ * (`createSpriteTexture`) only as far up as the picture's own object, where that picture's world
+ * starts. Outside every picture, the two are the same.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const placement3dInView = (box: TBox): TPose3d => {
+    const frame = parentFrame(box, true);
     const own = placement3dOf(box);
     return own === null ? frame : compose(frame, poseOf(own));
 };

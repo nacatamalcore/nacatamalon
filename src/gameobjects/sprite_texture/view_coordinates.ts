@@ -2,6 +2,7 @@ import { pictureOwner } from './create_sprite_texture';
 import { ownerOfDrawable } from '../../box/drawable_owner';
 import { rootOf } from '../../box/root_of';
 import { cameraAsDrawn } from '../../camera/camera_as_drawn';
+import { cameraOnBox } from '../../camera/camera_on_box';
 import { screenToRay } from '../../camera/screen_to_ray';
 import { quadFractionAnywhere } from '../../input/pick_targets';
 import { applyView2d, unapplyView2d } from '../../render/shared/apply_view_2d';
@@ -335,7 +336,11 @@ export const worldToView = (sprite: TSprite, point: { x: number; y: number }): T
 export const viewToRay = (sprite: TSprite, point: TViewPointInput): TViewRay => {
     const { view, inside, picture } = pictureAt(sprite, point, 'viewToRay');
     const box = view.box;
-    const camera3d: TCamera3d | null = box.camera3d ?? (box.spriteTexture!.sees === 'inside' ? null : rootOf(box).camera3d);
+    const sees = box.spriteTexture!.sees;
+    // Through the camera it is drawn from: its own, on its box when it looks at the world (`cameraOnBox`).
+    const camera3d: TCamera3d | null = box.camera3d !== null
+        ? (sees === 'inside' ? box.camera3d : cameraOnBox(box.camera3d, box, sees))
+        : (sees === 'inside' ? null : rootOf(box).camera3d);
     const texture = box.spriteTexture!.texture;
     let seen: TCamera3d | null = camera3d;
     if (camera3d !== null && camera3d.follow2d === true && camera3d.projection === 'orthographic') {

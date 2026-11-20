@@ -274,7 +274,9 @@ const releasePicture = (store: TRuntimeStore, texture: TTexture): void => {
  * and leaves the scene's alone, and a lamp it holds lights only the picture.
  *
  * With `sees: '3d'` the picture also shows the models of the world around it, from the
- * component's own 3D camera: a security camera, and the monitor is whatever shows the picture.
+ * component's own 3D camera: a security camera, and the monitor is whatever shows the picture. That
+ * camera is on the picture's object, which places and turns it: move the object and the camera goes
+ * with it (see `useCamera3d`).
  *
  * With `sees: 'world'` it is a view of the whole world of its scene, through the component's own
  * cameras: a minimap, a mirror, half of a split screen. See `TSpriteTextureOptions.sees`, and

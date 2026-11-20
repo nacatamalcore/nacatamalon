@@ -1249,6 +1249,8 @@ export type TParticleCollider3dComponent = {
  * earlier in the file than the screen it shows still finds it.
  *
  * `sees` is written only when it is not `'inside'`, the way every field at its default is left out.
+ * One that looks at the world (`'3d'`, `'world'`) does it through the `camera-3d` on its box, and
+ * that camera is on the box: its `transform` is where it is from it, so the box places and aims it.
  * A document saved when `'3d'` was called `"scene"` is read as `'3d'`, and saving it writes the new
  * name.
  *

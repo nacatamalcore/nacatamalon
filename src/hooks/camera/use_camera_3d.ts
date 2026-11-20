@@ -19,7 +19,11 @@ import { outsideSceneBody } from '../../utils/outside_scene_body';
  * What comes back is the camera itself, so moving it is changing a number and it takes effect on
  * the next frame drawn. A scene has one, as it has one 2D camera; asking again gives back the one
  * it already has, and says so, rather than quietly replacing it. Inside a picture made by
- * `createSpriteTexture` it belongs to that picture instead, and the scene keeps its own.
+ * `createSpriteTexture` it belongs to that picture instead, and the scene keeps its own. In a
+ * picture that looks at the world (`sees: '3d'` or `'world'`) it is on the picture's object, as
+ * anything else on it is: its `transform` is where it is from that object, so at its defaults it
+ * looks out of the object along its -Z, and moving or turning the object, or what holds it, takes
+ * the camera along. A security camera on a wall, a camera on a car's roof.
  *
  * @param options Where it starts, how it sees, and how far it can see.
  * @returns The camera, to read and to change.

@@ -248,8 +248,9 @@ export type TBox = {
      * This is what makes a box a place and not just a list. A turret's barrel, its flash and its
      * shadow are put where the turret is, once, and turning the turret turns all three.
      *
-     * It reaches drawables and the lights beneath it. A camera reads its own placement instead,
-     * because a camera is what everything else is measured against.
+     * It reaches drawables and the lights beneath it. The scene's camera reads its own placement
+     * instead, because a camera is what everything else is measured against; the camera of a
+     * picture that looks at the world is on its box, and this places it too (`useCamera3d`).
      */
     transform: TTransform3d | null;
     /**
