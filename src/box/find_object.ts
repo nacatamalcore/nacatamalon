@@ -82,3 +82,85 @@ export const findObjects = (root: TBox, name: string): TBox[] => {
     visit(root);
     return found;
 };
+
+/**
+ * The first box inside `box`, `box` included, that `matches`, leaving out `skip` and what it holds
+ * (already looked through, one level further in) and whatever is destroyed.
+ */
+const firstInside = (box: TBox, matches: (box: TBox) => boolean, skip: TBox | null): TBox | null => {
+    if (box === skip || box.destroyed) {
+        return null;
+    }
+    if (matches(box)) {
+        return box;
+    }
+    for (const child of box.children) {
+        const found = firstInside(child, matches, skip);
+        if (found !== null) {
+            return found;
+        }
+    }
+    return null;
+};
+
+/**
+ * The nearest box to `from` that `matches`: inside `from`, then inside its parent, and so on up to
+ * the scene. Each level skips the one it came from, so nothing is looked at twice.
+ */
+const nearest = (from: TBox, matches: (box: TBox) => boolean): TBox | null => {
+    let skip: TBox | null = null;
+    for (let scope: TBox | null = from; scope !== null; skip = scope, scope = scope.parent) {
+        const found = firstInside(scope, matches, skip);
+        if (found !== null) {
+            return found;
+        }
+    }
+    return null;
+};
+
+/**
+ * The box a behaviour's `'box'` setting points at, looked for from `from` outwards: by its id, and,
+ * when nothing has that id, by its name. `null` when there is none, or the setting is empty.
+ *
+ * An editor writes the id, because a name is the first thing that changes: rename the player and
+ * every coin that looked for "Player" would stop finding it. A name still works, because that is
+ * what a person or an older scene writes by hand.
+ *
+ * **Nearest first**: the box itself and what it holds, then what its parent holds, and so on up to
+ * the scene. A copy (`objectFromDoc`, `copyObject`) gets ids of its own, and a setting naming one of
+ * its pieces by id is given the piece's new one; by name, every copy has a "Barrel", and a turret
+ * looking for the barrel of its own tank finds its own, not the first tank's. Something outside is
+ * still found, one level further out.
+ *
+ * @param from The box whose setting it is, usually `self`.
+ * @param ref The setting's value: an id or a name.
+ * @returns The box, or `null`.
+ *
+ * @example
+ * ```ts
+ * registerScript('follow', (self, props) => {
+ *     let target = findBoxRef(self, String(props.target));
+ *     useUpdate(() => {
+ *         if (target === null || target.destroyed) target = findBoxRef(self, String(props.target));
+ *     });
+ * }, [{ key: 'target', type: 'box', default: '' }]);
+ * ```
+ *
+ * @category Game objects
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const findBoxRef = (from: TBox, ref: string): TBox | null => {
+    if (ref === '') {
+        return null;
+    }
+    const byId = nearest(from, (box) => box.id === ref);
+    if (byId !== null) {
+        return byId;
+    }
+    const byName = nearest(from, (box) => box.name === ref);
+    if (byName !== null) {
+        noteFoundByName(byName, ref);
+    }
+    return byName;
+};

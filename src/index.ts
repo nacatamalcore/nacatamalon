@@ -36,7 +36,9 @@ export type { TUseScriptOptions } from './hooks';
 // Registering a behaviour is a game's own business: its entry point calls this, next to where the
 // behaviour is written. Looking INSIDE the registry is a tool's, and lives in `nacatamalon/authoring`.
 export { registerScript } from './scripts';
-export type { TScriptFn, TScriptProps, TScriptField, TScriptOptions, TScriptRequirement, TScriptAttachment } from './scripts';
+export { useRules } from './rules';
+export type { TRule, TRuleBox, TRuleWhen, TRuleCompare, TRuleCondition, TRuleStep, TUseRulesOptions } from './rules';
+export type { TScriptFn, TScriptProps, TScriptField, TScriptOptions, TScriptRequirement, TScriptReport, TScriptAction, TScriptAttachment } from './scripts';
 export type { TDataRecord, TDataSetter, TWatchDep, TStateMachine, TStateDef, TStateGoOptions, TStateMachineOptions } from './hooks';
 export {
     useUpdate, useLateUpdate, useLoadTexture, useLoadAtlas, useLoadProgress, useScene, useCleanup, useReady,
@@ -104,7 +106,7 @@ export type {
     TRetroBody2d, TRetroCollider2d, TRetroMaxSpeed, TRetroWorld2d, TRetroBounce, TRetroSides, TRetroBounds,
 } from './physics';
 // Reaching a named part of something, the turret of a tank or the wheels of a car, from a behaviour.
-export { findObject, findObjects, ownerOf, sceneOf } from './box';
+export { findObject, findObjects, findBoxRef, ownerOf, sceneOf } from './box';
 // How big something is and where: what is drawn flat, how a text is set and where its lines break,
 // and a point of the world measured on an object (where a hit landed on it), or a point of an
 // object found in the world (where a shot leaves it from).

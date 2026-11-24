@@ -501,6 +501,9 @@ A game is small pieces made with `useSpawn`, and each way they talk has one job:
 | let two behaviours on the same box talk | return an api from one, `useScriptApi(name)` in the other; `provide(word, api)` for a word several behaviours answer to |
 | find everything of a kind (every coin left) | a tag: `useTag('coin').all()` |
 | reach something you did not make (a box of a saved scene) | `findObject(sceneOf(self), 'Score')` |
+| reach the box a behaviour's `'box'` setting names | `findBoxRef(self, String(props.target))`: the editor writes the box's id, not its name, so `findObject` would not find it |
+| when one thing happens, make others happen (a coin picked adds to the score and opens a door), laid out by the person in the editor | a `rules` component on a box, or `useRules([{ id, when: { on: 'report', box: 'Coin', report: 'picked' }, do: [{ do: 'store', store: 'score', field: 'points', add: 1 }, { do: 'call', box: 'Door', script: 'door', action: 'open' }] }])`: its words are the reports and actions the behaviours declare |
+| say what a behaviour reports and can be told to do | `registerScript(name, fn, { fields, reports: [{ name: 'dead' }], actions: [{ name: 'open' }] })`: an action is a function of the api the behaviour returns |
 
 A signal is imported by both sides and every listener hears every one; a report needs nothing in
 common and reaches only the first one above that listens, so three copies of a pack's button are

@@ -17,7 +17,8 @@ export const teardownBox = (box: TBox): void => {
         teardownBox(child);
     }
 
-    for (const cleanup of box.cleanups) {
+    // A copy: a cleanup may take another out of this list as it runs (a watch let go from both ends).
+    for (const cleanup of [...box.cleanups]) {
         try {
             cleanup();
         } catch (error) {

@@ -1,5 +1,5 @@
 import type { TGameObject } from '../hooks/spawn/use_spawn';
-import type { TScriptField, TScriptFn, TScriptOptions, TScriptProps, TScriptRequirement } from './types/t_script';
+import type { TScriptAction, TScriptField, TScriptFn, TScriptOptions, TScriptProps, TScriptReport, TScriptRequirement } from './types/t_script';
 
 /**
  * Every registered behaviour, by name.
@@ -16,6 +16,8 @@ const registry = new Map<string, {
     fields: TScriptField[];
     tool: boolean;
     requires: TScriptRequirement[];
+    reports: TScriptReport[];
+    actions: TScriptAction[];
 }>();
 
 /**
@@ -26,6 +28,12 @@ const registry = new Map<string, {
  * first did not. The same rule the physics warning keeps.
  */
 const reportedMissing = new Set<string>();
+
+/**
+ * Actions already reported as missing from their behaviour's api, by behaviour and action, so a
+ * behaviour run on a hundred boxes says it once.
+ */
+const reportedActions = new Set<string>();
 
 /**
  * Registers a behaviour under `name`, so an object can attach it by that name: from scene code
@@ -86,7 +94,13 @@ export const registerScript = <TProps extends TScriptProps = TScriptProps>(
         fields: options.fields ?? [],
         tool: options.tool ?? false,
         requires: options.requires ?? [],
+        reports: options.reports ?? [],
+        actions: options.actions ?? [],
     });
+    // A behaviour registered again may have fixed its api: worth saying again if not.
+    for (const said of [...reportedActions]) {
+        if (said.startsWith(`${name}\u0000`)) reportedActions.delete(said);
+    }
 };
 
 /**
@@ -106,6 +120,7 @@ export const registerScript = <TProps extends TScriptProps = TScriptProps>(
 export const clearScripts = (): void => {
     registry.clear();
     reportedMissing.clear();
+    reportedActions.clear();
 };
 
 /**
@@ -152,6 +167,53 @@ export const getScriptFields = (name: string): TScriptField[] => registry.get(na
  * @author Francisco Pereira Alvarado
  */
 export const getScriptRequires = (name: string): TScriptRequirement[] => registry.get(name)?.requires ?? [];
+
+/**
+ * What `name` says it tells whoever listens, or an empty list.
+ *
+ * The reports a behaviour sends are calls inside its function, invisible from outside: this is the
+ * only way a tool can offer to listen to one. Read by tools, never by the engine.
+ * @param name - The behaviour's name.
+ * @returns What it reports, or an empty list.
+ *
+ * @category Scripts
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const getScriptReports = (name: string): TScriptReport[] => registry.get(name)?.reports ?? [];
+
+/**
+ * What `name` says it can be told to do, or an empty list: functions of the api it returns.
+ *
+ * Read by tools, which offer them, and by `useScript` once, to say when the api lacks one.
+ * @param name - The behaviour's name.
+ * @returns What it can be told to do, or an empty list.
+ *
+ * @category Scripts
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const getScriptActions = (name: string): TScriptAction[] => registry.get(name)?.actions ?? [];
+
+/**
+ * Says once per behaviour and action that a declared action is not a function of the api the
+ * behaviour gave back, which is where whoever calls it will look.
+ *
+ * @internal
+ */
+export const checkScriptActions = (ref: string, api: unknown): void => {
+    for (const action of getScriptActions(ref)) {
+        const fn = typeof api === 'object' && api !== null ? (api as Record<string, unknown>)[action.name] : undefined;
+        if (typeof fn === 'function') continue;
+        const key = `${ref}\u0000${action.name}`;
+        if (reportedActions.has(key)) continue;
+        reportedActions.add(key);
+        console.warn(
+            `[NacatamalOn] registerScript('${ref}'): it declares the action '${action.name}', but what it ` +
+            `returns has no function '${action.name}', so nothing can call it. Return { ${action.name}() { ... } } from the behaviour.`,
+        );
+    }
+};
 
 /**
  * What a freshly attached `name` starts with: every declared setting at its default.

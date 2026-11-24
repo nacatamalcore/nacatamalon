@@ -1,4 +1,7 @@
 import { useLight2d, useAmbientLight2d, useUnlit2d } from '../../hooks/light';
+import { builtFrom } from './built_from';
+import { useRules } from '../../rules';
+import { relinkIds } from './relink_ids';
 import { cutReflection, moveUv } from '../../materials/new_material';
 import { createMaterial } from '../../gameobjects/material';
 import { createFilter, releaseFilter } from '../../filter/create_filter';
@@ -959,6 +962,9 @@ const buildComponent = (component: TComponentDoc, store: TRuntimeStore, src: str
             useScript(component.ref, component.props, { id: component.id });
             break;
         }
+        case 'rules':
+            useRules(component.rules, { id: component.id });
+            break;
         case 'mask': {
             // Owned by the object it masks, so it goes when that object goes. Its shape is found once
             // the whole document is built.
@@ -1045,11 +1051,7 @@ const makePictures = (node: TBoxNode, store: TRuntimeStore): void => {
  * one of them: the placement has to exist before anything is created on the box, because a drawable
  * made on a box with no place would be put at the origin and stay there.
  */
-/**
- * The node of the document each box was built from, and where that document came from: what
- * `copyObject` makes another of. Weak, so a box that goes away takes its entry with it.
- */
-const builtFrom = new WeakMap<TBox, { node: TBoxNode; src: string }>();
+// The node of the document each box was built from: `built_from.ts`, where the rules read it too.
 
 const buildBox = (node: TBoxNode, store: TRuntimeStore, src: string): void => {
     const box = getActiveBox();
@@ -1101,13 +1103,17 @@ const buildBox = (node: TBoxNode, store: TRuntimeStore, src: string): void => {
         // whatever order the file lists the two.
         const isShape = (type: string): boolean => type === 'collision-shape-2d' || type === 'collision-shape-3d';
         for (const component of node.components) {
-            if (component.type !== 'script' && !isShape(component.type)) buildComponent(component, store, src);
+            if (component.type !== 'script' && component.type !== 'rules' && !isShape(component.type)) buildComponent(component, store, src);
         }
         for (const component of node.components) {
             if (isShape(component.type)) buildComponent(component, store, src);
         }
         for (const component of node.components) {
             if (component.type === 'script') buildComponent(component, store, src);
+        }
+        // Rules after the behaviours, whose words they use.
+        for (const component of node.components) {
+            if (component.type === 'rules') buildComponent(component, store, src);
         }
     } finally {
         keepUnclaimedData(box);
@@ -1245,16 +1251,9 @@ const withNewIds = (node: TBoxNode): TBoxNode => {
         box.children.forEach(renew);
     };
     renew(copy);
-    // A mask keeping to a shape inside the copy keeps to the copy's shape, not the first one's.
-    const relink = (box: TBoxNode): void => {
-        for (const component of box.components) {
-            if (component.type === 'mask' && component.by !== undefined && renewed.has(component.by)) {
-                component.by = renewed.get(component.by)!;
-            }
-        }
-        box.children.forEach(relink);
-    };
-    relink(copy);
+    // A mask keeping to a shape inside the copy keeps to the copy's shape, not the first one's; a
+    // behaviour's setting and a rule naming a piece of it, the copy's piece.
+    relinkIds(copy, renewed);
     return copy;
 };
 

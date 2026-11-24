@@ -78,8 +78,83 @@ export const connectReport = <T>(object: TBox, name: string, handler: TReportHan
 };
 
 /**
+ * What a watcher is told of each report that passes through what it watches: its name, what came
+ * with it and the object that sent it.
+ *
+ * @internal
+ */
+export type TReportWatcher = (name: string, payload: unknown, from: TBox) => void;
+
+/**
+ * Who watches what, per object.
+ */
+const watchers = new WeakMap<TBox, TReportWatcher[]>();
+
+/**
+ * Hears every report sent from `scope` or from anything inside it, made now or later, **without
+ * taking it**: the report still climbs to the first object that listens, which hears it first.
+ *
+ * What a game's rules need, which watch a whole scene for "a coin was picked" while a pack's copy
+ * still hears its own button. Listening (`connectReport`) would stop the report at the rule, and
+ * whoever placed the piece would never hear it.
+ *
+ * Lasts as long as `scope` does, and, connected while something is being built, as long as that
+ * does too. The function it returns stops it earlier.
+ *
+ * @internal
+ */
+export const watchReports = (scope: TBox, watcher: TReportWatcher): (() => void) => {
+    const list = watchers.get(scope) ?? [];
+    // Its own function, so the same watcher connected twice is let go one at a time.
+    const connection: TReportWatcher = (name, payload, from) => watcher(name, payload, from);
+    list.push(connection);
+    watchers.set(scope, list);
+    let connected = true;
+    const builder = getActiveBox();
+    const off = (): void => {
+        if (!connected) return;
+        connected = false;
+        const current = watchers.get(scope);
+        if (current !== undefined) {
+            const left = current.filter((existing) => existing !== connection);
+            if (left.length === 0) watchers.delete(scope);
+            else watchers.set(scope, left);
+        }
+        // Out of the other end's cleanups too: a scene where boxes with rules come and go all game
+        // long would otherwise keep one for each until it ends.
+        for (const end of [scope, builder]) {
+            const at = end?.cleanups.indexOf(off) ?? -1;
+            if (end && at >= 0) end.cleanups.splice(at, 1);
+        }
+    };
+    scope.cleanups.push(off);
+    if (builder !== null && builder !== scope) builder.cleanups.push(off);
+    return off;
+};
+
+/**
+ * Tells the watchers of `from` and of everything above it, whoever listens.
+ */
+const tellWatchers = (from: TBox, name: string, payload: unknown): void => {
+    for (let object: TBox | null = from; object !== null; object = object.parent) {
+        if (object.destroyed) continue;
+        const list = watchers.get(object);
+        if (list === undefined) continue;
+        for (const watcher of [...list]) {
+            try {
+                watcher(name, payload, from);
+            } catch (error) {
+                // A watcher that broke must not keep the report from the others, nor from its listener.
+                console.error(`[NacatamalOn] the report '${name}' from '${from.name}': something watching it threw, and the others still heard it. Look at the rule or tool that watches it.`, error);
+            }
+        }
+    }
+};
+
+/**
  * Sends the report `name` from `from` up the tree, to the **first** object that listens to it (`from`
- * itself included), and stops there. Answers whether anybody heard it.
+ * itself included), and stops there. Answers whether anybody heard it. What watches (`watchReports`)
+ * anywhere on the way hears it after that one, and does not stop it.
  *
  * Stopping at the first is what makes a copy a boundary: a game listens on what `createPack` gave back,
  * and a report sent from anywhere inside that copy reaches it, and goes no further. An object that is
@@ -92,6 +167,15 @@ export const connectReport = <T>(object: TBox, name: string, handler: TReportHan
  * @internal
  */
 export const sendReport = (from: TBox, name: string, payload: unknown): boolean => {
+    const heard = climb(from, name, payload);
+    // After whoever listens, so what a watcher does (a rule destroying the one that told) never keeps
+    // the report from them.
+    tellWatchers(from, name, payload);
+    return heard;
+};
+
+/** Sends it up to the first object that listens, and says whether one did. */
+const climb = (from: TBox, name: string, payload: unknown): boolean => {
     let object: TBox | null = from;
     while (object !== null) {
         // Only the connections that still hear: one whose listener was destroyed this frame is not a

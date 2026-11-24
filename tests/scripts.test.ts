@@ -3,7 +3,8 @@ import { createScene } from '../src/scene/create_scene';
 import { createSprite } from '../src/gameobjects/sprite/create_sprite';
 import { parseSceneDoc, sceneFromDoc, serializeScene } from '../src/scene/document';
 import { provide, useScriptApi } from '../src/hooks/script/use_script_api';
-import { registerScript, clearScripts, listScripts, getScriptFields, getScriptRequires, defaultScriptProps } from '../src/scripts';
+import { registerScript, clearScripts, listScripts, getScriptFields, getScriptRequires, getScriptReports, getScriptActions, defaultScriptProps } from '../src/scripts';
+import { findBoxRef, newBox } from '../src/box';
 import { registerScene } from '../src/scene/register_scene';
 import { runHookUpdates } from '../src/game/loop/runHookUpdates';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
@@ -406,5 +407,82 @@ describe('a behaviour nothing registered', () => {
         });
 
         expect(root.scripts.map((attachment) => attachment.ref)).toEqual(['ghost', 'ghost']);
+    });
+});
+
+describe('what a behaviour reports and can be told to do', () => {
+    it('is read back as declared, and as nothing for a behaviour that declares none', () => {
+        registerScript('health', () => ({}), {
+            reports: [{ name: 'dead', label: 'Out of lives' }, { name: 'hurt', payload: [{ key: 'lives', type: 'number', default: 0 }] }],
+        });
+        registerScript('door', () => ({ open: () => {} }), { actions: [{ name: 'open', label: 'Open' }] });
+        registerScript('plain', () => {});
+
+        expect(getScriptReports('health').map((r) => r.name)).toEqual(['dead', 'hurt']);
+        expect(getScriptReports('health')[1]!.payload![0]!.key).toBe('lives');
+        expect(getScriptActions('door')).toEqual([{ name: 'open', label: 'Open' }]);
+        expect(getScriptReports('plain')).toEqual([]);
+        expect(getScriptActions('nobody')).toEqual([]);
+    });
+
+    it('says once when an action is not a function of what the behaviour returns, and runs anyway', () => {
+        const said = silence();
+        let ran = 0;
+        registerScript('door', () => { ran++; return { close: () => {} }; }, { actions: [{ name: 'open' }, { name: 'close' }] });
+
+        const { store } = createTestGame();
+        startTestScene(store, 'Level', () => {
+            useSpawn(() => { useScript('door'); })();
+            useSpawn(() => { useScript('door'); })();
+            return createScene();
+        });
+
+        expect(ran).toBe(2);
+        const lines = said.mock.calls.map((call: unknown[]) => String(call[0])).filter((line: string) => line.includes("'open'"));
+        expect(lines.length).toBe(1);
+        expect(said.mock.calls.some((call: unknown[]) => String(call[0]).includes("'close'"))).toBe(false);
+    });
+});
+
+describe('findBoxRef', () => {
+    const tree = () => {
+        const scene = newBox('Level');
+        const add = (parent: TBox, name: string, id: string): TBox => {
+            const box = newBox(name);
+            box.id = id;
+            box.parent = parent;
+            parent.children.push(box);
+            return box;
+        };
+        const player = add(scene, 'Player', 'p1');
+        // Two copies of one reusable tank: the same ids inside each.
+        const tankA = add(scene, 'Tank', 'tA');
+        const barrelA = add(tankA, 'Barrel', 'barrel');
+        const turretA = add(tankA, 'Turret', 'turret');
+        const tankB = add(scene, 'Tank', 'tB');
+        const barrelB = add(tankB, 'Barrel', 'barrel');
+        const turretB = add(tankB, 'Turret', 'turret');
+        return { scene, player, barrelA, turretA, barrelB, turretB };
+    };
+
+    it('finds by id, and by name when nothing has that id', () => {
+        const { player, turretA } = tree();
+        expect(findBoxRef(turretA, 'p1')).toBe(player);
+        expect(findBoxRef(turretA, 'Player')).toBe(player);
+        expect(findBoxRef(turretA, '')).toBeNull();
+        expect(findBoxRef(turretA, 'nobody')).toBeNull();
+    });
+
+    it('looks nearest first, so each copy finds its own pieces', () => {
+        const { barrelA, turretA, barrelB, turretB } = tree();
+        expect(findBoxRef(turretA, 'barrel')).toBe(barrelA);
+        expect(findBoxRef(turretB, 'barrel')).toBe(barrelB);
+        expect(findBoxRef(turretB, 'Barrel')).toBe(barrelB);
+    });
+
+    it('passes by what is destroyed', () => {
+        const { player, turretA } = tree();
+        player.destroyed = true;
+        expect(findBoxRef(turretA, 'p1')).toBeNull();
     });
 });

@@ -30,7 +30,7 @@ export type {
 } from '../game_store';
 export { DOCUMENTS } from '../CONST';
 export type {
-    TScriptComponent, TSoundComponent, TStoreComponent, TPhysicsBody2dComponent, TPhysicsBody3dComponent, TCollisionShape2dComponent, TCollisionShape3dComponent,
+    TScriptComponent, TRulesComponent, TSoundComponent, TStoreComponent, TPhysicsBody2dComponent, TPhysicsBody3dComponent, TCollisionShape2dComponent, TCollisionShape3dComponent,
     TPhysicsWorld2dComponent, TPhysicsWorld3dComponent, TRetroBody2dComponent, TRetroWorld2dComponent,
 } from '../scene/document/types/t_component_doc';
 export type { TSceneFromDocOptions } from '../scene/document';

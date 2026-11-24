@@ -1,5 +1,5 @@
 import { getActiveBox, getActiveGame } from '../../store';
-import { defaultScriptProps, getScript, isToolScript, warnUnregisteredScript } from '../../scripts/script_registry';
+import { checkScriptActions, defaultScriptProps, getScript, isToolScript, warnUnregisteredScript } from '../../scripts/script_registry';
 import { nanoId } from '../../utils';
 import type { TScriptProps } from '../../scripts';
 import { outsideSceneBody } from '../../utils/outside_scene_body';
@@ -88,6 +88,7 @@ export const useScript = (ref: string, props?: TScriptProps, options: TUseScript
 
     // Its state is its own: saved as this attachment's, and given back to it and to no other.
     const api = withDataOwner(box, id, () => fn(box, resolved));
+    checkScriptActions(ref, api);
     if (api !== undefined) {
         box.scriptApis.set(ref, api);
     }

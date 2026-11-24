@@ -1,4 +1,5 @@
 import type { TLightingLook, TStepLook } from '../../../shader_composer/surface/types';
+import type { TRule } from '../../../rules/types/t_rule';
 import type { TScriptProps } from '../../../scripts';
 import type { TColor } from '../../../color';
 import type { TTransform2d } from '../../../gameobjects/types/t_transform_2d';
@@ -218,6 +219,7 @@ export type TComponentDoc =
     | TFogComponent
     | TLightComponent
     | TScriptComponent
+    | TRulesComponent
     | TSoundComponent
     | TMusicComponent
     | TSongComponent
@@ -766,6 +768,23 @@ export type TLightComponent = {
      * How far back the light stands to look at that square. Directional only.
      */
     shadowDistance?: number;
+};
+
+/**
+ * Rules this object carries: when something happens, if these hold, do these (`TRule`), built with
+ * `useRules`. Logic written as data, so a form shows it and an agent writes it, both the same thing.
+ *
+ * A box named in a rule is named by its id or its name, as a behaviour's `'box'` setting does: a
+ * copy of the box gives the ids of its own pieces the copy's, as it does a mask's shape.
+ *
+ * @category Scenes
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TRulesComponent = {
+    type: 'rules';
+    id: string;
+    rules: TRule[];
 };
 
 /**

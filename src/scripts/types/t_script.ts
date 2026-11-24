@@ -68,7 +68,9 @@ export type TScriptField = {
      *
      * `'box'` is a `'string'` that names another box of the scene (the one to follow, the one that
      * picks it up), for a form to offer the scene's boxes to choose from rather than a name to type
-     * and mistype. Saved exactly like a string too; the behaviour finds the box by that name.
+     * and mistype. Saved exactly like a string too: an editor writes the box's **id**, which a
+     * rename does not break, and a name written by hand works as before. The behaviour finds the
+     * box with `findBoxRef(self, value)`, which takes either.
      *
      * `'sound'` and `'song'` are `'string'`s that name a file of the game, a sound (`/sfx/hit.wav`)
      * or a `.song` (`/music/title.song`), for a form to offer the game's sounds or songs, and to
@@ -100,6 +102,57 @@ export type TScriptField = {
  * @author Francisco Pereira Alvarado
  */
 export type TScriptRequirement = string;
+
+/**
+ * Something a behaviour tells whoever listens, declared so that a tool can offer to listen to it.
+ *
+ * A behaviour sends a report with `useReport(name)`, and that call is inside a function, where
+ * nothing outside can see it: a form that wants to say "when this box is out of lives" has no way
+ * to learn that `health` sends `dead`. Declaring it is that way, in the same place the settings are
+ * declared and for the same reason.
+ *
+ * `payload` describes what comes with it (`hurt` comes with the lives left), with the same fields a
+ * setting uses, so whatever shows one can show the other; a report that brings nothing leaves it
+ * out. Like a requirement, a declaration only says: a behaviour that declares a report and never
+ * sends it, or sends one it never declared, still runs exactly as written.
+ *
+ * @category Scripts
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TScriptReport = {
+    name: string;
+    /**
+     * What a form calls it. The name itself when left out.
+     */
+    label?: string;
+    payload?: TScriptField[];
+};
+
+/**
+ * Something a behaviour can be told to do from outside, declared so that a tool can offer it.
+ *
+ * The doing is already there: whatever a behaviour returns is its api, which another behaviour on
+ * the object reaches with `useScriptApi`. An action names one function of that api (`open` on a
+ * door's) so that a form, or a rule written as data, can call it without the code of the one who
+ * calls knowing the code of the one called. `params` are what it is called with, one object with
+ * these keys, written with the same fields a setting uses.
+ *
+ * An action the api does not have as a function is said once, when the behaviour first runs, and
+ * nothing else changes.
+ *
+ * @category Scripts
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export type TScriptAction = {
+    name: string;
+    /**
+     * What a form calls it. The name itself when left out.
+     */
+    label?: string;
+    params?: TScriptField[];
+};
 
 /**
  * What a script says about itself beyond its settings.
@@ -139,6 +192,14 @@ export type TScriptOptions = {
      * mostly half built objects.
      */
     requires?: TScriptRequirement[];
+    /**
+     * What it tells whoever listens (`useReport`), so a tool can offer to listen to it.
+     */
+    reports?: TScriptReport[];
+    /**
+     * What it can be told to do: functions of the api it returns, so a tool can offer to call them.
+     */
+    actions?: TScriptAction[];
 };
 
 /**

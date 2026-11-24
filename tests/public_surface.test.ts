@@ -59,7 +59,7 @@ describe('the front door', () => {
             || name.startsWith('empty')
             || name.startsWith('list')
             || name.startsWith('clear')
-            || ['getScriptFields', 'getScriptRequires', 'defaultScriptProps', 'defaultStoreFieldValue', 'storeFieldsFromState'].includes(name)
+            || ['getScriptFields', 'getScriptRequires', 'getScriptReports', 'getScriptActions', 'defaultScriptProps', 'defaultStoreFieldValue', 'storeFieldsFromState'].includes(name)
         ));
 
         expect(toolOnly).toEqual([]);
@@ -124,7 +124,7 @@ describe('the tools door', () => {
     it('is where writing a scene down lives, and looking inside the registry', () => {
         expect(tools.sort()).toEqual([
             'clearGameStores', 'clearScripts', 'defaultScriptProps', 'defaultStoreFieldValue',
-            'editorHandleOf', 'emptyStoreDoc', 'getScriptFields', 'getScriptRequires', 'listGameStores',
+            'editorHandleOf', 'emptyStoreDoc', 'getScriptActions', 'getScriptFields', 'getScriptReports', 'getScriptRequires', 'listGameStores', 'watchRules',
             'listScripts', 'serializeScene', 'serializeStoreDoc', 'storeFieldsFromState',
             // The shader composer's palette and thumbnails: a game compiles a graph, it never lists
             // the kinds of node there are or draws a small picture of one.

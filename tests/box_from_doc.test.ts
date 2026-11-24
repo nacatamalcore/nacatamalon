@@ -65,6 +65,30 @@ describe('objectFromDoc', () => {
         expect(first.spawned).toBe(true);
     });
 
+    it('gives a setting naming a piece of the copy by its id the copy\'s piece, and leaves the rest', () => {
+        const aimed: Array<{ at: unknown; plain: unknown }> = [];
+        registerScript('test-aim', (_self, props) => { aimed.push({ at: props.at, plain: props.plain }); });
+        const doc = coin();
+        const box = doc.root.children[0]!;
+        box.components.push({ type: 'script', id: 'coin-aim', ref: 'test-aim', props: { at: 'shine', plain: 'Shine' } });
+        const { store } = createTestGame();
+        let spawn!: (doc: ReturnType<typeof coin>) => TGameObject;
+        startTestScene(store, 'Level', () => {
+            spawn = useSpawn(objectFromDoc, { parent: 'scene' });
+            return createScene();
+        });
+
+        const first = spawn(doc);
+        const second = spawn(doc);
+
+        expect(aimed).toEqual([
+            { at: first.children[0]!.id, plain: 'Shine' },
+            { at: second.children[0]!.id, plain: 'Shine' },
+        ]);
+        // The document itself is left as it was, for the next copy.
+        expect((box.components[2] as { props: Record<string, unknown> }).props.at).toBe('shine');
+    });
+
     it('says how it is meant to be used when called by itself', () => {
         expect(() => objectFromDoc(coin())).toThrow('useSpawn(objectFromDoc)(doc)');
     });

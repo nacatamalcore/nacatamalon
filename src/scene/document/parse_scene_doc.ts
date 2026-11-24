@@ -1,4 +1,5 @@
 import { UV_PROJECTIONS } from '../../geometry/build/project_uvs';
+import { parseRules } from '../../rules/parse_rules';
 import type { TGeometryUvOptions, TUvProjection } from '../../geometry/build/project_uvs';
 import { findMaterialLook } from '../../shader_composer/surface/looks';
 import type { TLook } from '../../shader_composer/surface/types';
@@ -1310,6 +1311,8 @@ const parseComponent = (value: unknown): TComponentDoc | null => {
                 ...(Object.keys(props).length > 0 ? { props } : {}),
             };
         }
+        case 'rules':
+            return { type: 'rules', id, rules: parseRules(raw.rules) };
         default:
             return null;
     }

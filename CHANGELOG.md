@@ -24,6 +24,35 @@ releases are in [changelog/](./changelog/), one file each.
   picture, glow and see-through (`Kd`, `map_Kd`, `Ke`, `map_Ke`, `d`/`Tr`, and `map_d` as a
   cut-out); no bones or movements, which the format does not have. The file is told apart from a
   glTF by what it holds, not by its name.
+- **A behaviour says what it reports and what it can be told to do.** `registerScript` takes
+  `reports` (what it sends with `useReport`: `health`'s `dead`, and `hurt` with the lives left) and
+  `actions` (functions of the api it returns: a door's `open`), each with a label and the fields
+  that come with it, written like its settings. A tool reads them with `getScriptReports` and
+  `getScriptActions` (`nacatamalon/authoring`) and can offer to listen to one or to call one. Like
+  `requires`, they only say: nothing runs differently. An action the api does not have as a function
+  is said once.
+- **Rules: when something happens, if these hold, do these, written as data.** `useRules`, and a
+  scene's `rules` component, give a box rules (`TRule`): when a box reports something (`health`'s
+  `dead`, from one box, every box of a name or every box carrying a tag, those made later too) or
+  when the scene starts; if a
+  store's field or what came with the report compares as it says; call an action a behaviour
+  declares, destroy, show or hide a box, say words on the texts a box is laid out with (`{key}` taking
+  what came with the report, the one in front in a colour if given), play a sound the box or one
+  inside it carries (by its file, its id or that box's name), set or add to a store's field,
+  report, go to another
+  scene or wait. A rule hears a report without taking it from whoever listens with `onReport`. What it
+  cannot do (a box that is not there, an action nobody has) is said once and passed by, and a
+  condition it cannot read is kept as written and never holds; rules that
+  set one another off for ever stop at 32 deep. They run when the game is played, not while a scene
+  is edited, and a copy's rules mean its own pieces. A tool sees what they do with `watchRules`
+  (`nacatamalon/authoring`): each rule in the game and waiting (`armed`), fired, held by a condition
+  (and what it read), done once already, and each step done, passed by (and why) or thrown.
+- **`findBoxRef(self, value)`: the box a `'box'` setting points at**, by its id or, failing that,
+  its name, looked for nearest first (the box and what it holds, then its parent's, up to the scene),
+  so each copy of a reusable box finds its own pieces. An editor writes the id, which a rename does
+  not break; a name written by hand works as before. A copy made while the game runs
+  (`objectFromDoc`, `copyObject`) gives a behaviour's setting that names one of its pieces by id the
+  copy's piece, as it already did a mask's shape.
 
 ### Changed
 

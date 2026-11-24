@@ -35,8 +35,12 @@ export { serializeScene } from '../scene';
 // `registerScript` itself stays on the front door, and that is the whole line: a published game's
 // entry point calls it, next to where each behaviour is written.
 export {
-    listScripts, getScriptFields, getScriptRequires, defaultScriptProps, clearScripts,
+    listScripts, getScriptFields, getScriptRequires, getScriptReports, getScriptActions, defaultScriptProps, clearScripts,
 } from '../scripts';
+
+// What the rules did while the game was played, for an editor to show: a game never watches its own.
+export { watchRules } from '../rules';
+export type { TRuleTrace } from '../rules';
 
 // The same again for the stores, which are invisible for the same reason a behaviour's settings
 // are: a store is a module singleton, so nothing enumerates it and no tool can show a project's

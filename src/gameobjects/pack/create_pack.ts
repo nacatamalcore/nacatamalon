@@ -1,4 +1,5 @@
 import { spawnBox } from '../../box/spawn_box';
+import { relinkIds } from '../../scene/document/relink_ids';
 import { whenLoaded } from '../../loaders/track_load';
 import { sceneFromDoc } from '../../scene/document/scene_from_doc';
 import { listScripts } from '../../scripts/script_registry';
@@ -49,11 +50,16 @@ const chosenDoc = (options: TPackOptions): { name: string; doc: TSceneDoc } | nu
  */
 const copyFor = (doc: TSceneDoc, props: TPackOptions['props']): TSceneDoc => {
     const copy = structuredClone(doc);
+    const renewed = new Map<string, string>();
     const renumber = (box: TBoxNode): void => {
-        box.id = `${box.id}-${nanoId(8)}`;
+        const id = `${box.id}-${nanoId(8)}`;
+        renewed.set(box.id, id);
+        box.id = id;
         box.children.forEach(renumber);
     };
     renumber(copy.root);
+    // What names a piece of the pack by its id (a mask's shape, a setting, a rule) names this copy's.
+    relinkIds(copy.root, renewed);
     if (props !== undefined) {
         for (const component of copy.root.components) {
             if (component.type === 'script') component.props = { ...component.props, ...props };

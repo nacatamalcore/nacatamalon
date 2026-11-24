@@ -1,4 +1,5 @@
 import { dataOwnerOf } from '../../hooks/state/use_data';
+import { rulesOf } from '../../rules/use_rules';
 import { pluginEntriesOf } from '../../loaders/plugin/asset_types';
 import { isDebugDrawable } from '../../debug/draw_debug';
 import { SCENE_FORMAT, SCENE_VERSION } from './types/t_scene_doc';
@@ -1050,6 +1051,11 @@ const writeBox = (box: TBox, writing: TWriting): TBoxNode => {
         components.push(hasProps
             ? { type: 'script', id: script.id, ref: script.ref, props: { ...script.props } }
             : { type: 'script', id: script.id, ref: script.ref });
+    }
+
+    // Rules after the behaviours, as they are built.
+    for (const { id, rules } of rulesOf(box)) {
+        components.push({ type: 'rules', id, rules: structuredClone([...rules]) });
     }
 
     // Whatever was read out of the file and not understood goes back where it was, so a document
