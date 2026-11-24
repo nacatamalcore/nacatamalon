@@ -82,6 +82,7 @@ export const watchContextLoss = (canvas: HTMLCanvasElement, state: TWebGL2State)
         }
         state.lost = false;
         state.gpuPasses?.restore();
+        for (const told of [...state.restored]) told();
     };
 
     canvas.addEventListener('webglcontextlost', onLost);

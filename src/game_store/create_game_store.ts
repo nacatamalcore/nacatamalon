@@ -1,7 +1,10 @@
+import { loadByItself } from './store_loads';
+import { placeOfAdapter } from './persistence/adapter_place';
 import { whenPageGoes } from './persistence/when_page_goes';
 import { bumpVersion, markWatchable } from '../store';
 import { saysMilliseconds } from '../utils/says_milliseconds';
 import { adoptProvisionalStore, registerGameStore, storeInternals } from './store_registry';
+import type { TStorePersist } from './persistence';
 import type { TGameStore, TGameStoreConfig, TStoreListener, TStoreSelector } from './types/t_game_store';
 
 const DEFAULT_THROTTLE = 0.25;
@@ -65,6 +68,11 @@ export const createGameStore = <S extends object, A = Record<string, never>>(
     const adopted = adoptProvisionalStore(key) as unknown as TGameStore<S, A> | null;
 
     const state = adopted === null ? config.state : adopted.state;
+    // What the store being adopted holds, when it was loaded or played with: put back once the code's
+    // values and the file's are in, or the player's progress would be wiped by the very code that
+    // declares it.
+    const before = adopted === null ? undefined : storeInternals.get(adopted);
+    const held = adopted !== null && before?.touched === true ? structuredClone(adopted.state) : undefined;
     if (adopted !== null) {
         // Emptied and refilled in place, so the identity of `state` survives the adoption as well.
         // The code's values are the floor; the file's land back on top when the store registers.
@@ -87,7 +95,7 @@ export const createGameStore = <S extends object, A = Record<string, never>>(
     // Taken over from the store being adopted, so that whoever was listening to the one the
     // document built is still listening to this one. Losing them would make an adoption look like
     // it worked and leave half the page deaf.
-    let subscriptions: Array<() => void> = adopted === null ? [] : storeInternals.get(adopted)?.subscriptions ?? [];
+    const subscriptions: Array<() => void> = adopted === null ? [] : storeInternals.get(adopted)?.subscriptions ?? [];
 
     /**
      * Tells everyone listening. Over a copy, for the same reasons as a signal's `emit`.
@@ -109,19 +117,45 @@ export const createGameStore = <S extends object, A = Record<string, never>>(
         }
     };
 
-    let saveTimer: ReturnType<typeof setTimeout> | null = null;
+    // Carried over by an adoption: a load of the store it was is still its load, and a save that store
+    // held is this one's to make, where this one saves.
+    const pending = before?.pending ?? { reading: null, unread: false, saveAfterLoad: false, timer: null };
+    const place = persist === null ? null : placeOfAdapter(persist.adapter);
+
+    /**
+     * Lets go of the save the throttle holds. Whether there was one.
+     */
+    const cancelSave = (): boolean => {
+        if (pending.timer === null) {
+            return false;
+        }
+        clearTimeout(pending.timer);
+        pending.timer = null;
+        return true;
+    };
 
     const save = async (): Promise<void> => {
-        if (saveTimer !== null) {
-            clearTimeout(saveTimer);
-            saveTimer = null;
-        }
+        cancelSave();
         if (persist === null) {
             return;
         }
+        // Asked for while the save is being read, it is what the game wants kept: what is read is too late.
+        const overRead = pending.reading !== null;
+        pending.reading?.drop();
+        pending.saveAfterLoad = false;
         try {
             await persist.adapter.save(key, state);
+            // Written because the game said so: what is in the save is known again.
+            pending.unread = false;
+            // Changed while it was being written, when nothing else could save it.
+            if (pending.reading === null && pending.saveAfterLoad) {
+                pending.saveAfterLoad = false;
+                saveAgain();
+            }
         } catch (error) {
+            if (overRead) {
+                pending.unread = true;
+            }
             // A lost save is bad; a game that crashes because of it is worse.
             console.warn(`[NacatamalOn] store '${key}': it could not be saved:`, error);
         }
@@ -133,11 +167,17 @@ export const createGameStore = <S extends object, A = Record<string, never>>(
      * value that changes every frame would push the save back for ever and never write.
      */
     const scheduleSave = (): void => {
-        if (persist === null || mode !== 'auto' || saveTimer !== null) {
+        // A change made while the save is being read, or when it could not be, waits: written now, it
+        // would go over that save.
+        if (pending.reading !== null || pending.unread) {
+            pending.saveAfterLoad = true;
             return;
         }
-        saveTimer = setTimeout(() => {
-            saveTimer = null;
+        if (persist === null || mode !== 'auto' || pending.timer !== null) {
+            return;
+        }
+        pending.timer = setTimeout(() => {
+            pending.timer = null;
             void save();
         }, throttle * 1000);
     };
@@ -149,13 +189,22 @@ export const createGameStore = <S extends object, A = Record<string, never>>(
     // that waits (IndexedDB, a server) may be cut off by the page going.
     if (persist !== null && mode === 'auto') {
         whenPageGoes(() => {
-            if (saveTimer !== null) {
+            // Not one it adopted into: that one sees to it.
+            if (pending.timer !== null && storeInternals.get(store)?.notify === notify) {
                 void save();
             }
         });
     }
 
+    const touch = (): void => {
+        const internals = storeInternals.get(store);
+        if (internals !== undefined) {
+            internals.touched = true;
+        }
+    };
+
     const changed = (): void => {
+        touch();
         scheduleSave();
         notify();
     };
@@ -193,30 +242,79 @@ export const createGameStore = <S extends object, A = Record<string, never>>(
         }
         subscriptions.push(run);
         return () => {
-            subscriptions = subscriptions.filter((existing) => existing !== run);
+            // In place: the list is shared with the store that may adopt this one.
+            const at = subscriptions.indexOf(run);
+            if (at !== -1) subscriptions.splice(at, 1);
         };
     }) as TGameStore<S, A>['subscribe'];
 
-    const load = async (): Promise<boolean> => {
-        if (persist === null) {
-            return false;
-        }
+    // The store's own way now, which a load of the one it adopted must use too.
+    const saveAgain = (): void => storeInternals.get(store)?.scheduleSave();
+
+    const readSave = async (from: TStorePersist<S>, reading: () => boolean): Promise<boolean> => {
         let saved: S | null;
         try {
-            saved = await persist.adapter.load(key);
+            saved = await from.adapter.load(key);
         } catch (error) {
-            console.warn(`[NacatamalOn] store '${key}': it could not be loaded:`, error);
+            if (reading()) {
+                pending.reading = null;
+                // It may be whole: what is played from here is not worth writing over it.
+                pending.unread = true;
+            }
+            console.warn(`[NacatamalOn] store '${key}': it could not be loaded, and it does not save by itself until it is, so as not to write over what is saved. Load it again with load(), or save it with save():`, error);
             return false;
         }
-        if (saved === null || typeof saved !== 'object') {
+        // The game went on without it, or another took its place: too late to put it in.
+        if (!reading()) {
             return false;
         }
-        // Over the current state and not instead of it: a field added after the game was saved keeps
-        // its default, so old saves keep loading.
-        Object.assign(state, saved);
-        // Not saved again: what was just read is what is already stored.
-        notify();
-        return true;
+        pending.reading = null;
+        pending.unread = false;
+        const found = saved !== null && typeof saved === 'object';
+        if (found) {
+            // Over the current state and not instead of it: a field added after the game was saved
+            // keeps its default, so old saves keep loading.
+            Object.assign(state, saved);
+            touch();
+        }
+        if (pending.saveAfterLoad) {
+            pending.saveAfterLoad = false;
+            saveAgain();
+        }
+        if (found) {
+            // Not saved again: what was just read is what is already stored.
+            notify();
+        }
+        return found;
+    };
+
+    const load = (): Promise<boolean> => {
+        if (persist === null) {
+            return Promise.resolve(false);
+        }
+        // One read at a time: asked for again meanwhile, it is the same one.
+        if (pending.reading !== null && pending.reading.from === persist) {
+            return pending.reading.done;
+        }
+        // A save already held would be written over what is being read.
+        if (cancelSave()) {
+            pending.saveAfterLoad = true;
+        }
+        // Another place's, when its code arrived meanwhile: nobody waits for that one any more.
+        pending.reading?.drop();
+        let dropped!: (found: boolean) => void;
+        const out = new Promise<boolean>((resolve) => { dropped = resolve; });
+        const reading: NonNullable<typeof pending.reading> = {
+            from: persist,
+            done: out,
+            drop: () => {
+                if (pending.reading === reading) pending.reading = null;
+                dropped(false);
+            },
+        };
+        pending.reading = reading;
+        reading.done = Promise.race([out, readSave(persist, () => pending.reading === reading)]);
+        return reading.done;
     };
 
     const reset = (): void => {
@@ -240,7 +338,7 @@ export const createGameStore = <S extends object, A = Record<string, never>>(
         load,
         reset,
     });
-    storeInternals.set(store, { subscriptions, notify });
+    storeInternals.set(store, { subscriptions, notify, automatic: persist !== null && mode === 'auto', touched: false, place, pending, scheduleSave });
     markWatchable(store);
 
     // After the store exists, so an action can reach `set` and `get` the moment it is called.
@@ -250,5 +348,22 @@ export const createGameStore = <S extends object, A = Record<string, never>>(
     // relation `registerScript` has to its registry. Last, so that anything reading the index finds
     // a finished store, and because this is what hands it any authored values that arrived first.
     registerGameStore(store as unknown as TGameStore<Record<string, unknown>, unknown>);
+    if (held !== undefined) {
+        Object.assign(state, held);
+        touch();
+        notify();
+    }
+    // Saved by itself from now on, or somewhere else than its file said: what it saved there another
+    // day is read before anything is written over it.
+    if (before !== undefined) {
+        const held = cancelSave();
+        if (persist !== null && mode === 'auto') {
+            if (!before.automatic || place === undefined || place !== before.place) {
+                void loadByItself(store as unknown as TGameStore<Record<string, unknown>, unknown>);
+            } else if (held) {
+                scheduleSave();
+            }
+        }
+    }
     return store;
 };

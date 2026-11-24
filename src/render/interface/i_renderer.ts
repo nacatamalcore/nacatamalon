@@ -124,13 +124,19 @@ export type IRenderer = {
      */
     destroy(): void;
     /**
-     * Settles if the browser takes the graphics card away for good (a driver reset, a GPU process
-     * crash): with the error to show, after which the renderer draws nothing and no longer touches the
-     * card, so the game goes on without errors piling up every frame. With `null` when the loss was
-     * this renderer's own `destroy()`.
+     * Settles if the graphics card is lost (a driver reset, a GPU process crash) and no other can be
+     * had: with the error to show, after which the renderer draws nothing and no longer touches the
+     * card, so the game goes on without errors piling up every frame. A card that comes back is not
+     * news: everything is made again on it and the game never hears of it. With `null` at this
+     * renderer's own `destroy()`.
      *
-     * Optional because only a backend that cannot recover by itself has it: WebGL2 gets its context
-     * back and rebuilds everything, so the game never hears of it, and leaves this out.
+     * Optional because WebGL2 leaves it out: its context comes back, or it does not, by itself.
      */
     readonly deviceLost?: Promise<Error | null>;
+    /**
+     * Calls `listener` each time the card was lost and everything was made again on it, until what it
+     * returns is called. What was drawn once into a picture and kept (a captured environment) is gone,
+     * and whoever keeps one draws it again.
+     */
+    onRestored?(listener: () => void): () => void;
 };

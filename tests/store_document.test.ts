@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test';
 import { applyStoreDocs, clearGameStores, createGameStore, emptyStoreDoc, getGameStore, listGameStores, parseStoreDoc, resetStores, serializeStoreDoc, storeFieldsFromState, defaultStoreFieldValue } from '../src/game_store';
+import { storesRead } from '../src/game_store/store_loads';
+import { localStorageAdapter } from '../src/game_store/persistence';
 import { STORE_FORMAT } from '../src/game_store';
 
 /**
@@ -251,5 +253,260 @@ describe('starting a game again', () => {
         // Not the code's floor alone, which would be "whatever was hard-coded" rather than the
         // start of a game.
         expect(pet.state as Record<string, unknown>).toEqual({ hunger: 42, happy: 50, name: 'Gammix', asleep: true });
+    });
+});
+
+describe('what a store saved, loaded with its file', () => {
+    const saves = new Map<string, string>();
+    const before = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+
+    beforeEach(() => {
+        clearGameStores();
+        saves.clear();
+        Object.defineProperty(globalThis, 'localStorage', {
+            configurable: true,
+            value: { getItem: (key: string) => saves.get(key) ?? null, setItem: (key: string, value: string) => { saves.set(key, value); } },
+        });
+    });
+    afterEach(() => {
+        clearGameStores();
+        if (before) Object.defineProperty(globalThis, 'localStorage', before);
+        else delete (globalThis as { localStorage?: unknown }).localStorage;
+    });
+
+    const kept = (mode: 'auto' | 'manual' = 'auto') => parseStoreDoc(doc({ persist: { adapter: 'localStorage', mode } }), 'stores/pet.store');
+
+    it('is there once the promise is done, over the file', async () => {
+        saves.set('pet', JSON.stringify({ hunger: 7 }));
+        await applyStoreDocs([kept()]);
+        expect(getGameStore('pet')!.state).toEqual({ hunger: 7, name: 'Gammix', asleep: true });
+    });
+
+    it('with no save, is what the file says', async () => {
+        await applyStoreDocs([kept()]);
+        expect(getGameStore('pet')!.state.hunger).toBe(42);
+    });
+
+    it('is left to the game in manual mode', async () => {
+        saves.set('pet', JSON.stringify({ hunger: 7 }));
+        await applyStoreDocs([kept('manual')]);
+        expect(getGameStore('pet')!.state.hunger).toBe(42);
+    });
+
+    it('is loaded by a store the code declared, with its own way of saving', async () => {
+        createGameStore({ key: 'pet', state: { hunger: 1 }, persist: { adapter: { load: async () => ({ hunger: 9 }), save: async () => {} } } });
+        await applyStoreDocs([parseStoreDoc(doc(), 'stores/pet.store')]);
+        expect(getGameStore('pet')!.state.hunger).toBe(9);
+    });
+
+    it('outlives the code that declares the store arriving late, progress made since included', async () => {
+        saves.set('pet', JSON.stringify({ hunger: 7 }));
+        await applyStoreDocs([kept()]);
+        const fromFile = getGameStore('pet')!;
+        fromFile.set((s) => { s.hunger = 8; });
+        // Not saved yet: what is played since the last save is kept too.
+        const store = createGameStore({ key: 'pet', state: { hunger: 1 } });
+        expect(store.state.hunger).toBe(8);
+    });
+
+    it('is read by a store whose code, arriving late, is what saves it', async () => {
+        await applyStoreDocs([parseStoreDoc(doc(), 'stores/pet.store')]);
+        const store = createGameStore({ key: 'pet', state: { hunger: 1 }, persist: { adapter: { load: async () => ({ hunger: 9 }), save: async () => {} } } });
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(store.state.hunger).toBe(9);
+    });
+
+    it('is not written over by a change saved while it is being read', async () => {
+        const disk = { coins: 99 };
+        let answer!: (saved: object) => void;
+        const store = createGameStore({ key: 'pet', state: { coins: 0 }, persist: { throttle: 0.01, adapter: {
+            load: () => new Promise<never>((resolve) => { answer = resolve as never; }), save: async (_key, state) => { Object.assign(disk, state); },
+        } } });
+        store.set((s) => { s.coins = 1; });
+        const loaded = store.load();
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        expect(disk.coins).toBe(99);
+        answer({ ...disk });
+        await loaded;
+        expect(store.state.coins).toBe(99);
+    });
+
+    it('is the code\'s, when its code saves it somewhere else than its file said', async () => {
+        saves.set('pet', JSON.stringify({ hunger: 7 }));
+        await applyStoreDocs([kept()]);
+        const store = createGameStore({ key: 'pet', state: { hunger: 1 }, persist: { adapter: { load: async () => ({ hunger: 9 }), save: async () => {} } } });
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(store.state.hunger).toBe(9);
+    });
+
+    it('keeps who listens, those gone before the code arrived included', async () => {
+        await applyStoreDocs([kept()]);
+        const fromFile = getGameStore('pet')!;
+        const heard: string[] = [];
+        const off = fromFile.subscribe(() => heard.push('first'));
+        off();
+        fromFile.subscribe(() => heard.push('second'));
+        const store = createGameStore({ key: 'pet', state: { hunger: 1 }, persist: { adapter: localStorageAdapter() } });
+        heard.length = 0;
+        store.set((s) => { s.hunger = 3; });
+        expect(heard).toEqual(['second']);
+    });
+
+    it('is waited for by a game that starts, and nothing is when nothing is being read', async () => {
+        expect(storesRead(1)).toBeNull();
+        saves.set('pet', JSON.stringify({ hunger: 7 }));
+        void applyStoreDocs([kept()]);
+        expect(getGameStore('pet')!.state.hunger).toBe(42);
+        await storesRead(1);
+        expect(getGameStore('pet')!.state.hunger).toBe(7);
+        expect(storesRead(1)).toBeNull();
+    });
+
+    it('does not hold the game when it never answers, and is neither put in late nor written over', async () => {
+        silence();
+        let answer!: (saved: object) => void;
+        const written: unknown[] = [];
+        createGameStore({ key: 'pet', state: { hunger: 1 }, persist: { throttle: 0.001, adapter: {
+            load: () => new Promise<never>((resolve) => { answer = resolve as never; }), save: async (_key, state) => { written.push(state); },
+        } } });
+        void applyStoreDocs([parseStoreDoc(doc(), 'stores/pet.store')]);
+        await storesRead(0.01);
+        const store = getGameStore('pet')!;
+        store.set((s) => { s.hunger = 2; });
+        store.set((s) => { s.hunger = 3; });
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        expect(store.state.hunger).toBe(3);
+        expect(written).toEqual([]);
+        // Read when the game asks, though the first never answered, it saves by itself again.
+        const again = store.load();
+        answer({ hunger: 99 });
+        await again;
+        expect(store.state.hunger).toBe(99);
+        store.set((s) => { s.hunger = 100; });
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        expect(written.length).toBeGreaterThan(0);
+        warn?.mockRestore();
+    });
+
+    it('that could not be read is not written over, however often it is tried, until it is read', async () => {
+        silence();
+        const answers: Array<{ resolve(saved: unknown): void; reject(error: Error): void }> = [];
+        const written: unknown[] = [];
+        const store = createGameStore({ key: 'pet', state: { coins: 0 }, persist: { throttle: 0.001, adapter: {
+            load: () => new Promise<never>((resolve, reject) => { answers.push({ resolve: resolve as never, reject }); }),
+            save: async (_key, state) => { written.push({ ...state }); },
+        } } });
+        const pause = () => new Promise((resolve) => setTimeout(resolve, 15));
+        void applyStoreDocs([parseStoreDoc(doc({ fields: [] }), 'stores/pet.store')]);
+        await storesRead(0.01);
+        const retry = store.load();
+        answers[1]!.reject(new Error('offline'));
+        expect(await retry).toBe(false);
+        store.set((s) => { s.coins = 1; });
+        answers[0]!.resolve({ coins: 99 });
+        await pause();
+        expect(store.state.coins).toBe(1);
+        expect(written).toEqual([]);
+        const good = store.load();
+        answers[2]!.resolve({ coins: 99 });
+        expect(await good).toBe(true);
+        expect(store.state.coins).toBe(99);
+        await pause();
+        expect(written.every((one) => (one as { coins: number }).coins === 99)).toBe(true);
+        warn?.mockRestore();
+    });
+
+    it('asked for by the game while it is being read is the same read', async () => {
+        let asked = 0;
+        const store = createGameStore({ key: 'pet', state: { hunger: 1 }, persist: { adapter: { load: async () => { asked++; return { hunger: 9 }; }, save: async () => {} } } });
+        void applyStoreDocs([parseStoreDoc(doc(), 'stores/pet.store')]);
+        expect(await store.load()).toBe(true);
+        expect(asked).toBe(1);
+        expect(store.state.hunger).toBe(9);
+    });
+
+    it('read again somewhere else while a game starts is waited for too', async () => {
+        saves.set('pet', JSON.stringify({ hunger: 7 }));
+        void applyStoreDocs([kept()]);
+        const start = storesRead(1);
+        const store = createGameStore({ key: 'pet', state: { hunger: 1 }, persist: { adapter: {
+            load: () => new Promise<never>((resolve) => { setTimeout(() => (resolve as (saved: unknown) => void)({ hunger: 99 }), 15); }), save: async () => {},
+        } } });
+        await start;
+        expect(store.state.hunger).toBe(99);
+    });
+
+    it('is the game\'s own save when it saves while it is being read', async () => {
+        const disk: { coins: number } = { coins: 99 };
+        let answer!: (saved: unknown) => void;
+        const store = createGameStore({ key: 'pet', state: { coins: 0 }, persist: { throttle: 0.001, adapter: {
+            load: () => new Promise<never>((resolve) => { answer = resolve as never; }), save: async (_key, state) => { Object.assign(disk, state); },
+        } } });
+        const loading = store.load();
+        store.set((s) => { s.coins = 1; });
+        await store.save();
+        answer({ coins: 99 });
+        expect(await loading).toBe(false);
+        await new Promise((resolve) => setTimeout(resolve, 15));
+        expect([store.state.coins, disk.coins]).toEqual([1, 1]);
+    });
+
+    it('that is not valid JSON is kept aside, and the store goes on saving', async () => {
+        silence();
+        saves.set('pet', '{broken');
+        await applyStoreDocs([kept()]);
+        expect(saves.get('pet.unreadable')).toBe('{broken');
+        const store = getGameStore('pet')!;
+        store.set((s) => { s.hunger = 5; });
+        await store.save();
+        expect(JSON.parse(saves.get('pet')!).hunger).toBe(5);
+        warn?.mockRestore();
+    });
+
+    it('that the browser refuses to read is not written over', async () => {
+        silence();
+        const adapter = localStorageAdapter();
+        Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: () => { throw new Error('refused'); }, setItem: (key: string, value: string) => { saves.set(key, value); } } });
+        const store = createGameStore({ key: 'pet', state: { hunger: 1 }, persist: { throttle: 0.001, adapter } });
+        expect(await store.load()).toBe(false);
+        store.set((s) => { s.hunger = 2; });
+        await new Promise((resolve) => setTimeout(resolve, 15));
+        expect(saves.size).toBe(0);
+        warn?.mockRestore();
+    });
+
+    it('saved by the game while it was being read holds nobody, and goes on saving by itself', async () => {
+        const written: number[] = [];
+        const store = createGameStore({ key: 'pet', state: { coins: 0 }, persist: { throttle: 0.001, adapter: {
+            load: () => new Promise<never>(() => {}), save: async (_key, state) => { written.push(state.coins); },
+        } } });
+        void applyStoreDocs([parseStoreDoc(doc({ fields: [] }), 'stores/pet.store')]);
+        const start = storesRead(0.5);
+        const at = performance.now();
+        await store.save();
+        await start;
+        expect(performance.now() - at).toBeLessThan(200);
+        await new Promise((resolve) => setTimeout(resolve, 520));
+        store.set((s) => { s.coins = 5; });
+        await new Promise((resolve) => setTimeout(resolve, 15));
+        expect(written.at(-1)).toBe(5);
+    });
+
+    it('changed while the game writes it over one that could not be read is saved too', async () => {
+        silence();
+        const written: number[] = [];
+        const store = createGameStore({ key: 'pet', state: { coins: 0 }, persist: { throttle: 0.001, adapter: {
+            load: async () => { throw new Error('offline'); },
+            save: async (_key, state) => { const { coins } = state; await new Promise((resolve) => setTimeout(resolve, 10)); written.push(coins); },
+        } } });
+        await store.load();
+        const saving = store.save();
+        store.set((s) => { s.coins = 2; });
+        await saving;
+        await new Promise((resolve) => setTimeout(resolve, 40));
+        expect(written).toEqual([0, 2]);
+        warn?.mockRestore();
     });
 });

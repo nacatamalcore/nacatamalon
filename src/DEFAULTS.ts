@@ -158,3 +158,13 @@ export const DEFAULT_ACTION_PRESS = 0.5;
  * @author Francisco Pereira Alvarado
  */
 export const DRAG_SLOP = { mouse: 4, pen: 4, touch: 10 } as const;
+
+/**
+ * How long a game that starts waits for what its stores saved, in seconds. Reading it takes
+ * milliseconds; a store that has not answered by then is stuck, and the game starts without it.
+ *
+ * @internal
+ * @since 1.0.0
+ * @author Francisco Pereira Alvarado
+ */
+export const STORES_READ_LIMIT = 5;

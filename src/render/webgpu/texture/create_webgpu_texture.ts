@@ -8,11 +8,15 @@ import type { ITexture } from '../../interface';
  * @internal
  */
 export type TWebGPUTexture = ITexture & {
-    readonly gpuTexture: GPUTexture;
+    /**
+     * Another one, with the same picture, after the card was lost and came back.
+     */
+    gpuTexture: GPUTexture;
 };
 
 /**
- * Uploads a decoded image as an `rgba8unorm` texture, with its chain of mipmaps when asked.
+ * Uploads a decoded image as an `rgba8unorm` texture, with its chain of mipmaps when asked. The image
+ * is left open: it is what the texture is made again from if the card is lost (`keepResources`).
  *
  * `RENDER_ATTACHMENT` is not there to draw into it: `copyExternalImageToTexture` requires it, and so
  * does drawing the mipmaps.
@@ -31,8 +35,6 @@ export const createWebGPUTexture = (device: GPUDevice, image: ImageBitmap, mipma
     });
     device.queue.copyExternalImageToTexture({ source: image }, { texture: gpuTexture }, [image.width, image.height]);
     generateWebGPUMipmaps(device, gpuTexture);
-    // The image is the renderer's now (see `IRenderer.createTexture`), and the copy is all WebGPU needs.
-    image.close();
     return { resourceType: 'texture', gpuTexture };
 };
 

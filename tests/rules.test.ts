@@ -7,6 +7,7 @@ import { clearScripts, registerScript } from '../src/scripts';
 import { clearGameStores, createGameStore } from '../src/game_store';
 import { getGameStore } from '../src/game_store/store_registry';
 import { useReport } from '../src/hooks/events/use_report';
+import { listen } from '../src/events/listen';
 import { onReport } from '../src/events/on_report';
 import { useSpawn } from '../src/hooks/spawn/use_spawn';
 import { parseRules } from '../src/rules/parse_rules';
@@ -19,6 +20,7 @@ import { createFakeCanvas, createTestGame, startTestScene } from './helpers/test
 import type { TBox } from '../src/box';
 import type { TGameObject } from '../src/hooks/spawn/use_spawn';
 import type { TRule, TRuleCondition } from '../src/rules';
+import type { TActionMap } from '../src/input';
 
 /**
  * Rules: when something happens, if these hold, do these. What is pinned is what the editor and an
@@ -469,5 +471,103 @@ describe('say and sound', () => {
     it('are read back from a file', () => {
         expect(parseRules([{ id: 'a', when: { on: 'start' }, do: [{ do: 'say', box: 'B', text: 'GO', color: '#fff' }, { do: 'sound', box: '', sound: 'cheer' }, { do: 'say', box: 'B' }] }]))
             .toEqual([{ id: 'a', when: { on: 'start' }, do: [{ do: 'say', box: 'B', text: 'GO', color: '#fff' }, { do: 'sound', box: '', sound: 'cheer' }] }]);
+    });
+});
+
+describe('rules that wait for the player', () => {
+    const box = (id: string, name: string, x: number, more: Partial<TNode> = {}): TNode => ({
+        id, name, components: [{ type: 'sprite', id: `${id}-s`, transform: { x, y: 100 }, width: 20, height: 20 }], ...more,
+    });
+    const started = (rules: unknown[], children: TNode[] = [], actions?: TActionMap) => {
+        createGameStore({ key: 'score', state: { points: 0 } });
+        const canvas = createFakeCanvas();
+        const { store } = createTestGame(actions ? { actions } : {}, canvas);
+        startTestScene(store, 'Level', sceneFromDoc(doc([...children, { id: 'r', name: 'Rules', components: [{ type: 'rules', id: 'rr', rules }] }])));
+        const ctx = createFrameContext();
+        let now = 0;
+        const frame = (): void => { const prev = now; now += 1000 / 60; tick(store, ctx, now, prev); };
+        frame();
+        const point = (type: string, x: number, pointerType = 'mouse'): void => {
+            canvas.dispatchEvent(Object.assign(new Event(type), { clientX: x, clientY: 100, button: 0, pointerId: 1, pointerType }));
+        };
+        const points = () => (getGameStore('score')!.state as { points: number }).points;
+        return { frame, point, points };
+    };
+    const add = { do: 'store', store: 'score', field: 'points', add: 1 };
+    const key = (type: string): void => { globalThis.dispatchEvent(Object.assign(new Event(type), { key: 'x' })); };
+    const JUMP: TActionMap = [{ name: 'jump', bindings: [{ type: 'key', key: 'x' }] }];
+
+    it('fires when an action goes down, once, and one that waits for its release when it comes up', () => {
+        const { frame, points } = started([
+            { id: 'down', when: { on: 'action', action: 'jump' }, do: [add] },
+            { id: 'up', when: { on: 'action', action: 'jump', phase: 'released' }, do: [add, add] },
+        ], [], JUMP);
+        key('keydown');
+        frame(); frame();
+        expect(points()).toBe(1);
+        key('keyup');
+        frame(); frame();
+        expect(points()).toBe(3);
+    });
+
+    it('says once that the game has no such action', () => {
+        warn = spyOn(console, 'warn').mockImplementation(() => {});
+        const { frame } = started([{ id: 'a', when: { on: 'action', action: 'fly' }, do: [add] }]);
+        frame(); frame();
+        expect(warn.mock.calls.filter(([m]: unknown[]) => String(m).includes("the action 'fly'"))).toHaveLength(1);
+    });
+
+    it('fires for a box clicked or touched, by its name or a tag, with a press inside it', () => {
+        const { frame, point, points } = started([
+            { id: 'play', when: { on: 'click', box: 'Play' }, do: [add] },
+            { id: 'any', when: { on: 'click', tag: 'button' }, do: [add, add, { do: 'hide', box: '@from' }] },
+        ], [{ id: 'p', name: 'Play', children: [box('l', 'Label', 50)] }, box('q', 'Quit', 100, { tags: ['button'] })]);
+        point('pointerdown', 50); point('pointerup', 50); frame();
+        expect(points()).toBe(1);
+        point('pointerdown', 100, 'touch'); frame(); point('pointerup', 100, 'touch'); frame();
+        expect(points()).toBe(3);
+    });
+
+    it('is not a click when let go somewhere else, or pressed somewhere else', () => {
+        const { frame, point, points } = started([{ id: 'play', when: { on: 'click', box: 'Play' }, do: [add] }], [box('p', 'Play', 50)]);
+        point('pointerdown', 50); point('pointerup', 200); frame();
+        point('pointerdown', 200); point('pointerup', 50); frame();
+        expect(points()).toBe(0);
+    });
+
+    it('leaves a button a button when its label is what a rule waits for, and is refused with it', () => {
+        const presses: string[] = [];
+        let open = true;
+        registerScript('btn', (self) => { listen(self, { onClick: () => { presses.push('button'); }, canClick: () => open }); });
+        const { frame, point, points } = started([{ id: 'label', when: { on: 'click', box: 'Label' }, do: [add] }],
+            [{ id: 'p', name: 'Play', components: [{ type: 'script', id: 's', ref: 'btn' }], children: [box('l', 'Label', 50)] }]);
+        point('pointerdown', 50); point('pointerup', 50); frame();
+        expect([presses.length, points()]).toEqual([1, 1]);
+        open = false;
+        point('pointerdown', 50); point('pointerup', 50); frame();
+        expect([presses.length, points()]).toEqual([1, 1]);
+    });
+
+    it('is not a click when the system takes the touch back', () => {
+        const { frame, point, points } = started([{ id: 'play', when: { on: 'click', box: 'Play' }, do: [add] }], [box('p', 'Play', 50)]);
+        point('pointerdown', 50, 'touch'); frame(); point('pointercancel', 50, 'touch'); frame();
+        expect(points()).toBe(0);
+    });
+
+    it('answers only for the box on top, whichever box carries each rule', () => {
+        const rules = (id: string, name: string, n: number) => ({ type: 'rules', id, rules: [{ id: `r${id}`, when: { on: 'click', box: name }, do: Array.from({ length: n }, () => add) }] });
+        const under = box('a', 'Under', 50);
+        const over = box('b', 'Over', 50);
+        under.components!.push(rules('ra', '', 1));
+        over.components!.push(rules('rb', '', 10));
+        const { frame, point, points } = started([], [under, over]);
+        point('pointerdown', 50); point('pointerup', 50); frame();
+        expect(points()).toBe(10);
+    });
+
+    it('is read back from a file as it was', () => {
+        for (const when of [{ on: 'action', action: 'jump' }, { on: 'action', action: 'jump', phase: 'released' }, { on: 'click', box: 'Play' }, { on: 'click', tag: 'button' }]) {
+            expect(parseRules([{ id: 'a', when, do: [] }])[0]!.when).toEqual(when as TRule['when']);
+        }
     });
 });

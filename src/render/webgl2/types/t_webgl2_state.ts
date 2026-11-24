@@ -94,6 +94,10 @@ export type TWebGL2State = {
      */
     lost: boolean;
     /**
+     * Who is told each time it comes back.
+     */
+    restored: Set<() => void>;
+    /**
      * Particles, or `null` for a game that has never had an emitter. Built on the first frame that
      * draws one, and it borrows the sprite pipeline's quad and samplers.
      */

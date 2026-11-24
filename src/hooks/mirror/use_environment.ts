@@ -203,6 +203,13 @@ export const useEnvironment = (options: TEnvironmentOptions = {}): TEnvironment 
     const live = options.live === true;
     // Frames still to draw once the scene has loaded, for a capture made once.
     let settling = SETTLE_FRAMES;
+    // The card was lost: what was captured is gone, and is drawn again. Told rather than looked at in an
+    // update, which a paused scene does not run, and a paused scene is still seen.
+    const off = store.get('screen').renderer.onRestored?.(() => {
+        settling = SETTLE_FRAMES;
+        holder.visible = true;
+    });
+    if (off !== undefined) box.cleanups.push(off);
     useLateUpdate(() => {
         if (live) {
             return;

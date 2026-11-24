@@ -10,10 +10,10 @@ import { cameraAsDrawn } from '../camera/camera_as_drawn';
 import type { TPixelSnap } from '../game/types/t_game_options';
 import { pickTargets, pickTargetsAt } from './pick_targets';
 import { ownerOfDrawable } from '../box/drawable_owner';
-import { topmostListening } from './topmost_listening';
+import { answeringPointer, topmostListening } from './topmost_listening';
 import type { TBox } from '../box';
 import type { TRuntimeStore } from '../store';
-import type { TListeningSprite, TPointerTarget } from './topmost_listening';
+import type { TClickClaim, TListeningSprite, TPointerTarget } from './topmost_listening';
 import { DRAG_SLOP } from '../DEFAULTS';
 import type { TDropZoneSpec, TPointerDragInfo, TPointerInfo, TPointerKind, TPointerListener, TPointerLockOptions, TPointerSource, TPointerType, TPointerWheelListener } from './types/t_pointer';
 import type { TSpriteEvents } from './types/t_sprite_events';
@@ -118,6 +118,20 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
      * beside them, never a field in them.
      */
     const listening = new Map<TPointerTarget, TListeningSprite>();
+    /**
+     * What waits for a click on boxes told by what they are: rules.
+     */
+    const claims = new Set<TClickClaim>();
+    /**
+     * The boxes each pointer's press went down on, from the picture's own up: a claim's click is let go
+     * on the box it went down on.
+     */
+    const pressedFrom = new Map<number, TBox[]>();
+    const chainOf = (from: TBox | null): TBox[] => {
+        const chain: TBox[] = [];
+        for (let at = from; at !== null; at = at.parent) chain.push(at);
+        return chain;
+    };
     /**
      * Where the pointer was last seen over the canvas, or `null` once it left.
      */
@@ -450,7 +464,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
      * Calls one of a sprite's own events on every connection that has it, in the order they were
      * made. Over a copy: a connection removed by an earlier one does not hear this same event.
      */
-    const fireSprite = (sprite: TPointerTarget | null, name: Exclude<keyof TSpriteEvents, 'onDragStart' | 'onDrag' | 'onDragEnd'>, screenX: number, screenY: number, button: TPointerButtonName, hits: Array<TPointerPicture>): void => {
+    const fireSprite = (sprite: TPointerTarget | null, name: Exclude<keyof TSpriteEvents, 'onDragStart' | 'onDrag' | 'onDragEnd' | 'canClick'>, screenX: number, screenY: number, button: TPointerButtonName, hits: Array<TPointerPicture>): void => {
         if (sprite === null) {
             return;
         }
@@ -625,7 +639,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
         let hits: Array<TPointerPicture> = [];
         if (lastPosition !== null && listening.size > 0) {
             hits = pickTargets(store, lastPosition.x, lastPosition.y);
-            next = topmostListening(hits, listening);
+            next = topmostListening(hits, listening, claims);
         }
 
         if (next !== hovered) {
@@ -734,6 +748,11 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
             return () => disconnect(sprite, connection, true);
         },
 
+        claimClicks: (box, claim) => {
+            claims.add(claim);
+            box.cleanups.push(() => claims.delete(claim));
+        },
+
         dispatch: (store: TRuntimeStore) => {
             snap = store.get('config').pixelSnap;
             // Taken first, so an event queued while listeners run waits for the next frame
@@ -795,7 +814,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
                 }
 
                 const listeners = registrations.filter((registration) => registration.kind === kind);
-                if (listeners.length === 0 && listening.size === 0) {
+                if (listeners.length === 0 && listening.size === 0 && claims.size === 0) {
                     continue;
                 }
 
@@ -825,11 +844,11 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
                 }
 
                 // A sprite has no wheel of its own to hear, so the wheel stops here.
-                if (listening.size === 0 || kind === 'wheel') {
+                if ((listening.size === 0 && claims.size === 0) || kind === 'wheel') {
                     continue;
                 }
 
-                const topmost = topmostListening(hits, listening);
+                const { target: topmost, from } = answeringPointer(hits, listening, claims);
 
                 if (kind === 'move') {
                     const drag = drags.get(pointerId);
@@ -858,6 +877,7 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
 
                 if (kind === 'down') {
                     pressed.set(pointerId, topmost);
+                    pressedFrom.set(pointerId, chainOf(from));
                     // Only the main button drags: the right one opens a menu, the middle one pans.
                     if (topmost !== null && button === 'main' && (listening.get(topmost)?.connections.some(draggable) ?? false)) {
                         drags.set(pointerId, { target: topmost, startX: screenX, startY: screenY, x: screenX, y: screenY, slop: slopFor(event.pointerType), started: false, over: null });
@@ -883,10 +903,25 @@ export const createPointer = (canvas: HTMLCanvasElement, options: { contextMenu?
                 // Then tell whatever is under it, and it is a click only if this same pointer's
                 // press started on that same sprite, it was not dragged, and the system did not take
                 // the press back.
+                // Read before anyone is told: what is told may destroy it, or change what it accepts.
+                const chain = chainOf(from);
+                const accepted = topmost === null || listening.get(topmost)?.connections.every((each) => each.canClick?.() !== false) !== false;
+                const downFrom = pressedFrom.get(pointerId);
+                const taken: Array<[TClickClaim, TBox]> = [];
+                // Refused by anything it is in that listens: a label inside a button under a menu.
+                if (!cancelled && drag?.started !== true && button === 'main' && downFrom !== undefined && accepted
+                    && chain.every((each) => listening.get(each)?.connections.every((one) => one.canClick?.() !== false) !== false)) {
+                    for (const claim of claims) {
+                        const box = chain.find((each) => claim.matches(each));
+                        if (box !== undefined && downFrom.includes(box)) taken.push([claim, box]);
+                    }
+                }
                 fireSprite(topmost, 'onPointerUp', screenX, screenY, button, hits);
                 if (!cancelled && drag?.started !== true && topmost !== null && topmost === pressed.get(pointerId)) {
-                    fireSprite(topmost, 'onClick', screenX, screenY, button, hits);
+                    if (accepted) fireSprite(topmost, 'onClick', screenX, screenY, button, hits);
                 }
+                for (const [claim, box] of taken) if (claims.has(claim)) claim.click(box);
+                pressedFrom.delete(pointerId);
                 pressed.delete(pointerId);
             }
             current.pointerId = MOUSE_ID;

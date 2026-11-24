@@ -7,6 +7,18 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **What a store saved is loaded when the game starts.** `applyStoreDocs` loads what each store with
+  a file saved, and `createGame` waits for it before the first scene, so a game opened again goes on
+  where it was left with nothing to await. A store in `'manual'` mode is left to the game, which loads
+  it when it says. One that cannot be read in five seconds does not hold the game: it starts without
+  it, and that save is left as it is. A store its code declares late keeps what it holds.
+- **Rules that wait for the player**: `{ on: 'action', action }` when one of the game's actions is
+  pressed (or let go, `phase: 'released'`), on whatever it is bound to, and `{ on: 'click', box }` or
+  `{ on: 'click', tag }` when a box, or anything inside it, is clicked or touched.
+- **WebGPU: a graphics card that is lost and comes back.** Another device is asked for and everything
+  is made again on it, as WebGL2 does, and the game goes on without hearing of it. `error` is told
+  only when no device can be had, or it is lost again and again. A picture that was drawn into comes
+  back empty until it is drawn again. Decoded pictures are kept in memory for it.
 - **Collision shapes: a body made of several shapes, or of one turned apart from its object.** A
   shape can now be an object of its own under the body's, with `useCollisionShape2d` /
   `useCollisionShape3d` (in a scene, the `collision-shape-2d` / `collision-shape-3d` components). The

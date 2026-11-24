@@ -38,6 +38,7 @@ const stateWithEverything = (): TWebGL2State => ({
     textures: new Set(),
     buffers: new Set(),
     lost: false,
+    restored: new Set(),
     particles: nothing() as TWebGL2State['particles'],
     lines: nothing() as TWebGL2State['lines'],
     customs: newCustomsOnGl(),

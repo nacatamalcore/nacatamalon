@@ -24,7 +24,7 @@ export const renewRuleBoxes = (rules: TRule[], renewed: ReadonlyMap<string, stri
     const box = (ref: string): string => renewed.get(ref) ?? ref;
     return rules.map((rule) => ({
         ...rule,
-        when: rule.when.on === 'report' && 'box' in rule.when ? { ...rule.when, box: box(rule.when.box) } : rule.when,
+        when: 'box' in rule.when ? { ...rule.when, box: box(rule.when.box) } : rule.when,
         do: rule.do.map((todo) => {
             if (todo.do === 'call') return { ...todo, box: box(todo.box), ...(todo.params ? { params: relinkProps(todo.params, renewed) } : {}) };
             return 'box' in todo ? { ...todo, box: box(todo.box) } : todo;

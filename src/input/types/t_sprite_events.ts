@@ -35,6 +35,11 @@ export type TSpriteEvents = {
      */
     onClick?: TPointerListener;
     /**
+     * Asked when it is clicked: `false`, and it was not, neither for `onClick` nor for a rule that
+     * waits for it. A button under an open menu.
+     */
+    canClick?: () => boolean;
+    /**
      * Pressed with the main button (or a finger) and moved far enough not to be a click: a few
      * pixels of the page, more for a finger, which shakes. Once it starts, the press is a drag and
      * not a click: letting go over it does not call `onClick`. The cursor turns into an open hand
@@ -60,4 +65,4 @@ export type TSpriteEvents = {
  *
  * @internal
  */
-export const SPRITE_EVENT_NAMES = ['onPointerOver', 'onPointerOut', 'onPointerMove', 'onPointerDown', 'onPointerUp', 'onClick', 'onDragStart', 'onDrag', 'onDragEnd'] as const;
+export const SPRITE_EVENT_NAMES = ['onPointerOver', 'onPointerOut', 'onPointerMove', 'onPointerDown', 'onPointerUp', 'onClick', 'canClick', 'onDragStart', 'onDrag', 'onDragEnd'] as const;

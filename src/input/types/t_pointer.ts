@@ -1,3 +1,4 @@
+import type { TClickClaim } from '../topmost_listening';
 import type { TBox } from '../../box';
 import type { TRuntimeStore } from '../../store';
 import type { TPointerButtonName } from '../pointer_buttons';
@@ -361,6 +362,11 @@ export type TPointerSource = {
      * skipped while its scene is paused. Returns the function that removes it earlier.
      */
     on(kind: TPointerKind, box: TBox, listener: TPointerListener | TPointerWheelListener): () => void;
+    /**
+     * Waits for clicks on the boxes `claim` matches, for as long as `box` lives: with the same press,
+     * release and covering as a sprite's `onClick`.
+     */
+    claimClicks(box: TBox, claim: TClickClaim): void;
     /**
      * Makes `sprite` react to the pointer by itself, on behalf of `box`: forgotten when the box goes
      * away. A whole object can listen too (`sprite` is then the box itself), and then answers for a

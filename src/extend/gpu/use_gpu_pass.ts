@@ -113,10 +113,10 @@ export const useGpuPass = (options: TGpuPassOptions): TGpuPassHandle => {
         const access = gpuPassAccessOf(renderer);
         if (access !== undefined) {
             host = access.state.gpuPasses ??= access.backend === 'WEBGPU'
-                ? createWebGPUPassHost(access.state.device)
+                ? createWebGPUPassHost(access.state)
                 : createWebGL2PassHost(access.state);
             // Made while the context is lost: it waits for it to come back.
-            if (access.backend === 'WEBGL2' && access.state.lost) host.reset();
+            if (access.state.lost === true) host.reset();
             attachGpuPassHost(renderer, host);
         }
     }

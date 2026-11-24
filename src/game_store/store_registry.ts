@@ -61,7 +61,46 @@ const provisional = new Set<string>();
  *
  * @internal
  */
-export const storeInternals = new WeakMap<object, { subscriptions: Array<() => void>; notify: () => void }>();
+export const storeInternals = new WeakMap<object, {
+    subscriptions: Array<() => void>;
+    notify: () => void;
+    /**
+     * Saves it when its throttle says.
+     */
+    scheduleSave: () => void;
+    /**
+     * Whether the store saves by itself (`mode: 'auto'`), and so is loaded by itself too. One in
+     * `'manual'` is loaded when the game says, as it is saved.
+     */
+    automatic: boolean;
+    /**
+     * Whether it was loaded or changed since it was made, so one adopted later keeps what it holds.
+     */
+    touched: boolean;
+    /**
+     * Where it saves: `null` when it does not, and `undefined` for an adapter of the game's own.
+     */
+    place: string | null | undefined;
+    /**
+     * What it is in the middle of, kept through an adoption. `reading`: the load not done, one at a
+     * time, and where it reads from. `unread`: the last one failed or did not answer, so what is in the
+     * save is not known and nothing is written over it by itself. `saveAfterLoad`: a change waits for
+     * either to be over. `timer`: the save its throttle holds.
+     */
+    pending: {
+        reading: { from: object; done: Promise<boolean>; drop(): void } | null;
+        unread: boolean;
+        saveAfterLoad: boolean;
+        timer: ReturnType<typeof setTimeout> | null;
+    };
+}>();
+
+/**
+ * The stores being read by themselves, each with when it is done (`store_loads.ts`).
+ *
+ * @internal
+ */
+export const storeLoads = new Map<TAnyStore, Promise<unknown>>();
 
 /**
  * Puts the authored layer over a store's live state, in place, and tells whoever is listening.
@@ -197,6 +236,7 @@ export const clearGameStores = (): void => {
     stores.clear();
     authored.clear();
     provisional.clear();
+    storeLoads.clear();
 };
 
 /**

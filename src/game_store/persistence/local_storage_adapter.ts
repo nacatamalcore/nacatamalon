@@ -1,3 +1,4 @@
+import { placeAdapter } from './adapter_place';
 import type { TStorePersistence } from './types/t_store_persistence';
 
 /**
@@ -6,8 +7,9 @@ import type { TStorePersistence } from './types/t_store_persistence';
  * Right for small state that is always on: options, a score table, a pet. `localStorage` holds a few
  * megabytes per site and every write is synchronous; for bigger saves use `indexedDbAdapter`.
  *
- * A failure (storage full, disabled by the browser, a save that is not valid JSON) is warned about and
- * never thrown: the game carries on, as if there were no save.
+ * A failure (storage full, disabled by the browser) is the store's to say: it warns, and the game
+ * carries on. A save that is not valid JSON is kept aside, under the key and `.unreadable`, and the
+ * game carries on as if there were none.
  *
  * The state's type defaults to `any` on purpose: written in place (`adapter: localStorageAdapter()`)
  * the adapter cannot know the store's state yet, and `unknown` would not fit it. The store's own
@@ -19,21 +21,23 @@ import type { TStorePersistence } from './types/t_store_persistence';
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const localStorageAdapter = <S = any>(): TStorePersistence<S> => ({
+export const localStorageAdapter = <S = any>(): TStorePersistence<S> => placeAdapter({
     load: async (key) => {
+        const raw = globalThis.localStorage.getItem(key);
+        if (raw === null) {
+            return null;
+        }
         try {
-            const raw = globalThis.localStorage.getItem(key);
-            return raw === null ? null : (JSON.parse(raw) as S);
+            return JSON.parse(raw) as S;
         } catch (error) {
-            console.warn(`[NacatamalOn] localStorageAdapter: '${key}' could not be read, so what the game declares is used.`, error);
+            // Never readable, so waiting to read it would stop the store saving for good; kept aside, so
+            // nothing is lost by going on.
+            globalThis.localStorage.setItem(`${key}.unreadable`, raw);
+            console.warn(`[NacatamalOn] localStorageAdapter: '${key}' is not valid JSON, so what the game declares is used. What there was is kept as '${key}.unreadable'.`, error);
             return null;
         }
     },
     save: async (key, state) => {
-        try {
-            globalThis.localStorage.setItem(key, JSON.stringify(state));
-        } catch (error) {
-            console.warn(`[NacatamalOn] localStorageAdapter: '${key}' could not be saved. The browser may be full or in a private window.`, error);
-        }
+        globalThis.localStorage.setItem(key, JSON.stringify(state));
     },
-});
+}, 'localStorage');

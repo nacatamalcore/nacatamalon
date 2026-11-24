@@ -9,6 +9,7 @@ import { useTimer } from '../hooks/timer/use_timer';
 import { useScene } from '../hooks/scene/use_scene';
 import { useReady } from '../hooks/scene/use_ready';
 import { useUpdate } from '../hooks/loop/use_update';
+import { useActions } from '../hooks/input/use_actions';
 import { traceRule, tracingRules } from './trace';
 import { conditionReadable } from './parse_rules';
 import type { TRuleTrace } from './trace';
@@ -387,6 +388,34 @@ export const useRules = (rules: readonly TRule[], options: TUseRulesOptions = {}
                 if (when.report !== name) continue;
                 if ('tag' in when ? sentByTagged(from, when.tag) : sentBy(from, when.box)) fire(rule, payload, from);
             }
+        });
+    }
+
+    const pressing = own.filter((rule) => rule.when.on === 'action');
+    if (pressing.length > 0) {
+        const actions = useActions();
+        useUpdate(() => {
+            for (const rule of pressing) {
+                const when = rule.when as Extract<TRule['when'], { on: 'action' }>;
+                if (when.action === '') continue;
+                if (!actions.has(when.action)) {
+                    sayOnce(self, `${rule.id}\u0000action\u0000${when.action}`, `${where(rule)}: it waits for the action '${when.action}', which the game does not have. Add it to the actions of createGame or of the project.`);
+                    continue;
+                }
+                if (when.phase === 'released' ? actions.justReleased(when.action) : actions.justPressed(when.action)) fire(rule, undefined, null);
+            }
+        });
+    }
+
+    for (const rule of own) {
+        const when = rule.when;
+        if (when.on !== 'click') continue;
+        game.get('input').pointer.claimClicks(self, {
+            // In its own scene, as a report is heard: another's "Continue" is not this one's.
+            matches: (box) => rootOf(box) === rootOf(self) && !rootOf(self).paused
+                && ('tag' in when ? when.tag !== '' && box.tags.includes(when.tag)
+                    : when.box === '' ? box === self : box.id === when.box || box.name === when.box),
+            click: (box) => fire(rule, undefined, box),
         });
     }
     useReady(() => {

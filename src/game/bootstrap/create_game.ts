@@ -1,4 +1,6 @@
 import { createCanvas } from "../../DOM/create_canvas";
+import { storesRead } from '../../game_store/store_loads';
+import { STORES_READ_LIMIT } from '../../DEFAULTS';
 import { startGameSystems, stopGameSystems } from '../../game_systems/game_systems';
 import { teardownBox } from "../../box";
 import { createRenderer } from "../../render";
@@ -301,7 +303,13 @@ export const createGame = (target: TGameTarget, game_options: TGameOptions) => {
             // returns, and a game a tool drives opens on its scene, not on a logo. And before the
             // systems start, so a sound one starts on its own waits behind the splash too.
             const withSplash = initial !== undefined && splashModule !== null && !isHostClaimed(instance) ? await splashModule : null;
-            // Destroyed while the splash was arriving: `destroy` has already taken down what there
+            // What the stores saved is in them before anything of the game runs, its systems and its
+            // first scene, so no game has to wait for it by hand.
+            const reading = storesRead(STORES_READ_LIMIT);
+            if (reading !== null) {
+                await reading;
+            }
+            // Destroyed while the splash or the stores were arriving: `destroy` has already taken down what there
             // was, so nothing starts now in a game nobody will take down again, its systems least
             // of all, whose cleanups would never run.
             if (destroyRequested) {

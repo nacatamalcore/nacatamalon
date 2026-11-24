@@ -1,3 +1,4 @@
+import { placeAdapter } from './adapter_place';
 import type { TStorePersistence } from './types/t_store_persistence';
 
 /**
@@ -31,27 +32,40 @@ export const indexedDbAdapter = <S = any>(dbName: string, storeName = 'stores'):
                     request.result.createObjectStore(storeName);
                 }
             };
-            request.onsuccess = () => resolve(request.result);
+            request.onsuccess = () => {
+                // Let go when another page deletes it or changes it, which would wait for this one.
+                request.result.onversionchange = () => request.result.close();
+                resolve(request.result);
+            };
             request.onerror = () => reject(request.error);
         });
 
-    return {
+    return placeAdapter({
         load: async (key) => {
             const db = await open();
-            return new Promise<S | null>((resolve, reject) => {
-                const request = db.transaction(storeName, 'readonly').objectStore(storeName).get(key);
-                request.onsuccess = () => resolve((request.result as S | undefined) ?? null);
-                request.onerror = () => reject(request.error);
-            });
+            try {
+                return await new Promise<S | null>((resolve, reject) => {
+                    const request = db.transaction(storeName, 'readonly').objectStore(storeName).get(key);
+                    request.onsuccess = () => resolve((request.result as S | undefined) ?? null);
+                    request.onerror = () => reject(request.error);
+                });
+            } finally {
+                db.close();
+            }
         },
         save: async (key, state) => {
             const db = await open();
-            return new Promise<void>((resolve, reject) => {
-                const transaction = db.transaction(storeName, 'readwrite');
-                transaction.objectStore(storeName).put(state, key);
-                transaction.oncomplete = () => resolve();
-                transaction.onerror = () => reject(transaction.error);
-            });
+            try {
+                await new Promise<void>((resolve, reject) => {
+                    const transaction = db.transaction(storeName, 'readwrite');
+                    transaction.objectStore(storeName).put(state, key);
+                    transaction.oncomplete = () => resolve();
+                    transaction.onerror = () => reject(transaction.error);
+                    transaction.onabort = () => reject(transaction.error);
+                });
+            } finally {
+                db.close();
+            }
         },
-    };
+    }, `indexedDb:${dbName}/${storeName}`);
 };

@@ -1,6 +1,7 @@
 import { createGameStore } from '../create_game_store';
 import { indexedDbAdapter, localStorageAdapter } from '../persistence';
-import { getGameStore, markProvisionalStore, setStoreDefaults } from '../store_registry';
+import { loadByItself } from '../store_loads';
+import { getGameStore, markProvisionalStore, setStoreDefaults, storeInternals } from '../store_registry';
 import type { TStoreDoc } from './t_store_doc';
 import type { TStorePersist } from '../persistence';
 
@@ -50,18 +51,34 @@ const persistFromDoc = (doc: TStoreDoc): TStorePersist<Record<string, unknown>> 
  * imports its stores while the modules evaluate, long before this runs, and an editor does it the
  * other way round.
  *
+ * **Then it loads what each of those stores saved**, the file's or the code's way of saving
+ * (`persist`), and `createGame` waits for them before the first scene: a game that is opened again
+ * carries on where it was left (its records, what it unlocked) instead of starting from what the
+ * files say, with nothing to await. What starts a scene at once (a headless game, a server's room)
+ * awaits the promise it hands back, done when they have all been read. A store that saves nothing is passed by, as is one in
+ * `'manual'` mode, which the game loads when it says (a "Continue" in its title); and a save
+ * that cannot be read is warned about and leaves the store as the files say.
+ *
+ * @example
+ * ```ts
+ * // src/main.ts, before createGame
+ * applyStoreDocs([parseStoreDoc(await (await fetch('stores/records.store')).json(), 'stores/records.store')]);
+ * ```
  * @param docs The files, already read with `parseStoreDoc`.
+ * @returns Done when every store the files name has loaded its save.
  *
  * @category Store
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const applyStoreDocs = (docs: readonly TStoreDoc[]): void => {
+export const applyStoreDocs = (docs: readonly TStoreDoc[]): Promise<void> => {
+    const named = new Set<string>();
     for (const doc of docs) {
         if (doc.key === '') {
             console.warn('[NacatamalOn] applyStoreDocs: a store file with no key was skipped. A store is found by its name, so a file without one can never be reached.');
             continue;
         }
+        named.add(doc.key);
         const state = stateFromDoc(doc);
         setStoreDefaults(doc.key, state);
 
@@ -79,4 +96,10 @@ export const applyStoreDocs = (docs: readonly TStoreDoc[]): void => {
         });
         markProvisionalStore(doc.key);
     }
+    // After every file has landed, so a save goes over the files and not the other way round.
+    const loads = [...named].map((key) => {
+        const store = getGameStore(key);
+        return store !== null && storeInternals.get(store)?.automatic ? loadByItself(store) : false;
+    });
+    return Promise.all(loads).then(() => undefined);
 };

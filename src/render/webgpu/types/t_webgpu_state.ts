@@ -112,6 +112,10 @@ export type TWebGPUState = {
     /** What keeps the depth of a filter holding a model, made the first time a frame has one. */
     filterDepth: TFilterDepth | null;
     /**
+     * The card is lost, and another has not been had yet: nothing is drawn.
+     */
+    lost: boolean;
+    /**
      * The passes of the game's plugins (`useGpuPass`), made with the first of them. A game that
      * makes none never has it.
      */

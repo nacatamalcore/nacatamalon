@@ -3,7 +3,7 @@ import type { TScriptProps } from '../../scripts/types/t_script';
 /**
  * Which box a rule means: its id or its name, as a behaviour's `'box'` setting holds one (`findBoxRef`
  * finds it, nearest first), the empty text for the box the rules are on, or `'@from'` for the box
- * that sent the report the rule heard.
+ * that sent the report the rule heard, or was clicked.
  *
  * A name names every box of that name where a rule listens ("when any Coin is picked"), and the
  * nearest one where it acts on one.
@@ -24,6 +24,10 @@ export type TRuleBox = string;
  *   With `tag` instead of `box`, from every box carrying that tag (`set_box_tags`, a box's `tags`):
  *   "when any coin is picked", the coins each a name of their own.
  * - `start`: once, when the box the rules are on is ready.
+ * - `action`: the player presses one of the game's actions (its input map), or lets it go
+ *   (`phase: 'released'`), on whatever it is bound to: a key, a pad, an on-screen button.
+ * - `click`: the player clicks a box, or touches it: pressed and let go on it, or on anything inside
+ *   it. With `tag` instead of `box`, any box carrying that tag. `'@from'` is then the box clicked.
  *
  * @category Rules
  * @since 1.0.0
@@ -32,7 +36,10 @@ export type TRuleBox = string;
 export type TRuleWhen =
     | { on: 'report'; box: TRuleBox; report: string }
     | { on: 'report'; tag: string; report: string }
-    | { on: 'start' };
+    | { on: 'start' }
+    | { on: 'action'; action: string; phase?: 'pressed' | 'released' }
+    | { on: 'click'; box: TRuleBox }
+    | { on: 'click'; tag: string };
 
 /**
  * How a condition compares.

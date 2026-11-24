@@ -22,6 +22,11 @@ const parseWhen = (raw: unknown): TRuleWhen | null => {
     if (when.on === 'report' && text(when.box) && text(when.report)) {
         return { on: 'report', box: when.box, report: when.report };
     }
+    if (when.on === 'action' && text(when.action)) {
+        return { on: 'action', action: when.action, ...(when.phase === 'released' ? { phase: 'released' as const } : {}) };
+    }
+    if (when.on === 'click' && text(when.tag)) return { on: 'click', tag: when.tag };
+    if (when.on === 'click' && text(when.box)) return { on: 'click', box: when.box };
     return null;
 };
 

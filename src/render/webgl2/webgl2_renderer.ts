@@ -67,6 +67,7 @@ export const createWebGL2Renderer = async (
         textures: new Set(),
         buffers: new Set(),
         lost: gl.isContextLost(),
+        restored: new Set(),
     };
     const unwatchContext = watchContextLoss(canvas, state);
 
@@ -129,6 +130,10 @@ export const createWebGL2Renderer = async (
             return texture;
         },
         readTexture: (texture) => readWebGL2Texture(gl, texture),
+        onRestored: (listener) => {
+            state.restored.add(listener);
+            return () => { state.restored.delete(listener); };
+        },
         destroyTexture: (texture) => destroyWebGL2Texture(state, texture),
         // Read again on the next frame, so it costs nothing until something is drawn.
         setSmooth: (smooth) => {

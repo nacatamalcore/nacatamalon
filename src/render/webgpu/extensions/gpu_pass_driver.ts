@@ -1,4 +1,5 @@
 import { createGpuPassHost } from '../../extensions/gpu_pass_host';
+import type { TWebGPUState } from '../types/t_webgpu_state';
 import type { TWebGPUTexture } from '../texture';
 import type { TTexture } from '../../../loaders';
 import type { TWebGpuPassContext, TGpuPassFrame } from '../../../extend/gpu/types';
@@ -12,11 +13,13 @@ import type { TWebGpuPassContext, TGpuPassFrame } from '../../../extend/gpu/type
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export const createWebGPUPassHost = (device: GPUDevice) => createGpuPassHost({
+export const createWebGPUPassHost = (state: TWebGPUState) => createGpuPassHost({
     backend: 'WEBGPU',
     // Nothing to keep safe: a WebGPU pass cannot change a pipeline or a binding of the engine's.
     guard: (callback) => callback(),
     setup: (options, records) => {
+        // The one there is now: another after the card was lost and came back.
+        const { device } = state;
         const limit = device.limits.maxTextureDimension2D;
         const outputs: GPUTexture[] = [];
         for (const record of records) {
