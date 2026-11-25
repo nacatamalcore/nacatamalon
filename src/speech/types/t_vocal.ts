@@ -77,7 +77,7 @@ export type TVocalDoc = {
      */
     start?: number;
     /**
-     * The language its lyrics are read in, by rules, when a note has no phonemes. Default `'es'`.
+     * The language its lyrics are read in, by rules, when a note has no phonemes. Default `'en'`.
      */
     language?: TSpeechLanguage;
     /**

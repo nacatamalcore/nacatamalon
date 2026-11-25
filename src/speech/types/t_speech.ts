@@ -1,14 +1,15 @@
 import type { TSampledSound } from '../../audio/types/t_sound';
 
 /**
- * The languages whose writing the speech voice can read on its own, by rules. Any other language
- * can still be spoken or sung, written as phonemes.
+ * The languages the speech voice knows: American English and Spanish, which it reads on its own, by
+ * rules, and says each its own way. Any other can still be spoken or sung, written as phonemes, in
+ * `'none'`, which says them just as they are.
  *
  * @category Speech
  * @since 1.0.0
  * @author Francisco Pereira Alvarado
  */
-export type TSpeechLanguage = 'es';
+export type TSpeechLanguage = 'en' | 'es' | 'none';
 
 /**
  * How the voice sounds, whether it speaks or sings.
@@ -53,7 +54,7 @@ export type TSpeechOptions = TSpeechVoice & {
     /**
      * Words to read, by the rules of `language`. The whole words between `<emphasis>` and
      * `</emphasis>` stand out, by `level`: `"moderate"`, the default, `"strong"`, or `"reduced"` to pass over them
-     * (`'<emphasis level="strong">Yo</emphasis> soy'`). No other tag is read: one throws.
+     * (`'<emphasis level="strong">You</emphasis> did it'`). No other tag is read: one throws.
      */
     text?: string;
     /**
@@ -63,7 +64,7 @@ export type TSpeechOptions = TSpeechVoice & {
      */
     phonemes?: string;
     /**
-     * Default `'es'`.
+     * The language of `text`, and how `phonemes` are said. Default `'en'`.
      */
     language?: TSpeechLanguage;
     /**
@@ -75,8 +76,8 @@ export type TSpeechOptions = TSpeechVoice & {
      */
     speed?: number;
     /**
-     * How much the pitch rises on a stressed syllable, in semitones, and in Spanish text how far it
-     * moves over a phrase: at `0`, the voice of a robot, by half. Default `2.5`.
+     * How much the pitch rises on a stressed syllable, in semitones, and how far it moves over a
+     * phrase: at `0`, the voice of a robot, by half. Default `2.5`.
      */
     melody?: number;
 };
@@ -135,7 +136,7 @@ export type TSingingOptions = TSpeechVoice & {
      */
     tempo?: number;
     /**
-     * The language of the notes' `lyric`. Default `'es'`.
+     * The language of the notes' `lyric`. Default `'en'`.
      */
     language?: TSpeechLanguage;
     /**

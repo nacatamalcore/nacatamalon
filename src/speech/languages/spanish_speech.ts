@@ -1,35 +1,17 @@
 import { spanishPieces } from './spanish';
 import { strongerOf } from './emphasis';
-import type { TEmphasis } from './emphasis';
+import { closes } from './said';
+import type { TAccentShape } from './melody';
+import type { TSaidToken } from './said';
 import type { TPhonemeToken } from '../parse_phonemes';
 import type { TNextSound } from '../build_phoneme';
 import type { TPhoneme } from '../phonemes';
 
 /**
  * How Spanish is said, beyond which sounds its letters are: what each sound becomes beside the ones
- * around it, how words run into each other, and how a phrase's pitch moves. Only text read aloud goes
- * through it: sounds written as phonemes are said as they are written, in whatever language.
+ * around it, how words run into each other, and how a phrase's pitch moves. Sounds
+ * written as phonemes go through it too, but for what needs to know the words.
  */
-
-/**
- * A sound of a Spanish text. `first`, the one that begins a word; `emphasis`, its word's.
- *
- * @internal
- */
-export type TSpanishSound = { name: string; stress: number; first: boolean; emphasis?: TEmphasis };
-
-/**
- * A pause of a Spanish text, and the question it is in or ends: `asksWhat` when it asks what, who or
- * how, rather than for a yes or a no, and `begins` when the question begins in the phrase it ends.
- *
- * @internal
- */
-export type TSpanishPause = { pause: number; mark: string; asks: boolean; asksWhat: boolean; begins: boolean };
-
-/**
- * @internal
- */
-export type TSpanishToken = TSpanishSound | TSpanishPause;
 
 const PAUSES: Readonly<Record<string, number>> = { ',': 0.2, ';': 0.32, '.': 0.4, '!': 0.4, '?': 0.4 };
 const VOWELS: ReadonlySet<string> = new Set(['A', 'E', 'I', 'O', 'U']);
@@ -57,9 +39,9 @@ const asksWhatFrom = (pieces: readonly { text: string }[], from: number): boolea
  *
  * @internal
  */
-export const readSpanish = (text: string): TSpanishToken[] => {
+export const readSpanish = (text: string): TSaidToken[] => {
     const pieces = spanishPieces(text);
-    const tokens: TSpanishToken[] = [];
+    const tokens: TSaidToken[] = [];
     let sentence = 0;
     let asks = false;
     let asksWhat = false;
@@ -80,7 +62,7 @@ export const readSpanish = (text: string): TSpanishToken[] => {
             }
             tokens.push({ pause: PAUSES[mark]!, mark, asks, asksWhat, begins });
             begins = false;
-            if (mark !== ',' && mark !== ';') {
+            if (closes(mark)) {
                 asks = false;
                 asksWhat = false;
                 sentence = i + 1;
@@ -100,6 +82,13 @@ export const readSpanish = (text: string): TSpanishToken[] => {
             } else tokens.push({ name, stress, first: k === 0, emphasis: piece.emphasis });
         });
     });
+    return besideOthers(tokens);
+};
+
+/**
+ * The sounds as they are beside each other.
+ */
+const besideOthers = (tokens: readonly TSaidToken[]): TSaidToken[] => {
     const nameAt = (i: number): string | undefined => {
         const token = tokens[i];
         return token && 'name' in token ? token.name : undefined;
@@ -129,12 +118,12 @@ const saidAs = (name: string, before: string | undefined, after: string | undefi
  *
  * @internal
  */
-export const isRunTogether = (tokens: readonly (TSpanishToken | TPhonemeToken)[], i: number): boolean => {
+export const isRunTogether = (tokens: readonly TSaidToken[], i: number): boolean => {
     const token = tokens[i]!;
     if (!('name' in token) || !VOWELS.has(token.name) || token.stress > 0) return false;
     const before = tokens[i - 1];
     const after = tokens[i + 1];
-    const starts = (one: TSpanishToken | TPhonemeToken): boolean => 'first' in one && one.first;
+    const starts = (one: TSaidToken): boolean => 'first' in one && one.first;
     return (after !== undefined && 'name' in after && VOWELS.has(after.name) && starts(after))
         || (before !== undefined && 'name' in before && VOWELS.has(before.name) && starts(token));
 };
@@ -156,70 +145,44 @@ export const spanishShape = (name: string, phoneme: TPhoneme, next: TNextSound):
 };
 
 /**
- * The air after an unvoiced stop, in seconds: nearly none in Spanish.
+ * The air after an unvoiced stop: nearly none in Spanish.
  *
  * @internal
  */
-export const spanishPuff = (name: string): number => (name === 'K' ? 0.01 : 0.003);
+export const spanishPuff = (name: string): { length: number; level: number } => ({ length: name === 'K' ? 0.01 : 0.003, level: 0.4 });
 
 /**
- * A stressed syllable's rise of the pitch. `fixed`, an emphasized word's: it is where it is and as
- * high as it is, wherever in its phrase.
+ * Accents come late on their syllables, the last of a sentence on it and smaller.
  *
  * @internal
  */
-export type TSpanishAccent = { at: number; width: number; height: number; fixed?: boolean };
+export const spanishAccent: TAccentShape = (accent, index, count, { mark }) => {
+    const last = index === count - 1;
+    if (!last) accent.at += accent.width * 0.35;
+    accent.height *= mark === '!' ? 1.4 : last && closes(mark) && mark !== '?' ? 0.75 : 1;
+};
 
 /**
- * A phrase, between two pauses, and how it ends.
+ * How many times as long a vowel is, by its stress.
  *
  * @internal
  */
-export type TSpanishPhrase = { start: number; end: number; mark: string; asks: boolean; asksWhat: boolean; begins: boolean };
-
-/** How far the pitch goes at the end of a phrase, in semitones, by the mark that ends it. */
-const ENDINGS: Readonly<Record<string, number>> = { ',': 2, ';': 0.6, '.': -1.8, '!': -2.4, '?': 5 };
-const ASKS_WHAT_ENDING = -2;
+export const spanishVowel = (stress: number): number => (stress === 1 ? 1.2 : stress === 2 ? 1 : 0.8);
 
 /**
- * Writes a text's pitch into `frames`, in semitones, one every `frame` seconds: it falls over a
- * sentence, its phrases each starting lower than the one before; a comma leaves it up, as what is not
- * finished; a question for a yes or a no climbs, and one that asks what begins high and falls. The
- * accents are moved and sized where they are: late on the syllable, smaller on the last of a sentence.
+ * Phonemes written as they are, said as Spanish says them. A question written so is taken to ask for
+ * a yes or a no: its words are not known.
  *
  * @internal
  */
-export const spanishMelody = (
-    frames: Float32Array,
-    frame: number,
-    phrases: readonly TSpanishPhrase[],
-    accents: TSpanishAccent[],
-    base: number,
-    melody: number,
-): void => {
-    const range = 0.5 + 0.5 * (melody / 2.5);
-    let nth = 0;
-    for (const { start, end, mark, asks, asksWhat, begins } of phrases) {
-        if (asks && begins) nth = 0;
-        const closes = mark !== ',' && mark !== ';';
-        const from = Math.max(-0.6, 1.2 - 0.6 * nth) + (mark === '!' ? 1.2 : 0);
-        const fall = closes ? -2.6 : mark === ';' ? -1.2 : -1.4;
-        const ending = mark === '?' && asksWhat ? ASKS_WHAT_ENDING : ENDINGS[mark]!;
-        const tail = Math.min(0.32, (end - start) * 0.5);
-        for (let f = Math.floor(start / frame); f * frame < end; f += 1) {
-            const time = f * frame;
-            const turned = Math.min(1, Math.max(0, (time - (end - tail)) / tail));
-            let rise = from + fall * ((time - start) / (end - start)) + ending * 0.5 * (1 - Math.cos(Math.PI * turned));
-            if (asks && asksWhat && begins) rise += 2.5 * Math.max(0, 1 - (time - start) / 0.7);
-            frames[f] = base + rise * range;
-        }
-        const inside = accents.filter((accent) => accent.at >= start && accent.at < end);
-        inside.forEach((accent, i) => {
-            if (accent.fixed) return;
-            const last = i === inside.length - 1;
-            if (!last) accent.at += accent.width * 0.35;
-            accent.height *= mark === '!' ? 1.4 : last && closes && mark !== '?' ? 0.75 : 1;
-        });
-        nth = closes ? 0 : nth + 1;
-    }
+export const saySpanish = (written: readonly TPhonemeToken[]): TSaidToken[] => {
+    let begins = true;
+    return besideOthers(written.map((token, i): TSaidToken => {
+        if ('name' in token) return { ...token, first: false };
+        const end = written.find((one, k) => k >= i && 'pause' in one && closes(one.mark));
+        const asks = end !== undefined && 'pause' in end && end.mark === '?';
+        const said = { pause: PAUSES[token.mark]!, mark: token.mark, asks, asksWhat: false, begins: asks && begins };
+        begins = closes(token.mark);
+        return said;
+    }));
 };

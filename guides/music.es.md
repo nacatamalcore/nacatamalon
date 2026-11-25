@@ -461,8 +461,8 @@ uno una lista de notas con su sílaba, y quién los canta.
 - `pitch` es un nombre (`'C4'`, `'F#5'`) o un número MIDI; sin `pitch` es un silencio; sin `lyric`
   la sílaba anterior se alarga sobre la nota. Un guion al final (`'que-'`) dice que la palabra
   sigue.
-- `language`: la letra se lee por reglas; hoy, `'es'`. Cualquier otro idioma se escribe con
-  `phonemes` en cada nota (`'D EY1'`).
+- `language`: la letra se lee por reglas, en inglés salvo que sea `'es'`. Cualquier otro idioma, y
+  una sílaba inglesa que no sea una palabra, se escriben con `phonemes` en cada nota (`'D EY1'`).
 - `singers`: cada uno con su `throat` (`1` un hombre, `1.15` una mujer, `1.3` un niño), `breath`,
   `vibrato` y `transpose` (`-12`, una octava más grave). Un verso con `who` lo cantan solo algunos.
 
@@ -502,9 +502,13 @@ Las palabras habladas y una línea cantada sueltas son sonidos como cualquier ot
 import { useSound } from 'nacatamalon';
 import { renderSinging, renderSpeech } from 'nacatamalon/speech';
 
-const hello = useSound(renderSpeech({ text: '¡Hola, mundo!' }));
+const hello = useSound(renderSpeech({ text: '¡Hola, mundo!', language: 'es' }));
 const tune = useSound(renderSinging({ notes: [{ pitch: 'C4', lyric: 'la' }, { pitch: 'E4', lyric: 'la' }], tempo: 100 }));
 ```
+
+El texto y las letras se leen en inglés, salvo que `language: 'es'` diga español. Cualquier otro
+idioma se escribe en `phonemes`, en el idioma `'none'`, que los dice tal cual. Una palabra entre
+`<emphasis>` y `</emphasis>` destaca.
 
 ---
 

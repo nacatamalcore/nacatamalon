@@ -1,55 +1,60 @@
 import { describe, expect, test } from 'bun:test';
 import { renderSinging, renderSpeech, textToPhonemes } from '../src/speech';
-import { isRunTogether, readSpanish, spanishMelody } from '../src/speech/languages/spanish_speech';
+import { phraseMelody } from '../src/speech/languages/melody';
+import { isRunTogether, readSpanish, spanishAccent } from '../src/speech/languages/spanish_speech';
+import { parsePhonemes } from '../src/speech/parse_phonemes';
+import { readEnglish, sayEnglish } from '../src/speech/languages/english_speech';
+
+const spanish = (text: string): string => textToPhonemes(text, 'es');
 
 describe('textToPhonemes, Spanish', () => {
     test('stresses the penultimate syllable of a word ending in a vowel, n or s, and the last otherwise', () => {
-        expect(textToPhonemes('casa')).toBe('K A1 S A0');
-        expect(textToPhonemes('reloj')).toBe('RR E0 L O1 X');
+        expect(spanish('casa')).toBe('K A1 S A0');
+        expect(spanish('reloj')).toBe('RR E0 L O1 X');
     });
 
     test('a written accent wins', () => {
-        expect(textToPhonemes('canción')).toBe('K A0 N S Y O1 N');
+        expect(spanish('canción')).toBe('K A0 N S Y O1 N');
     });
 
     test('an unstressed i or u beside a vowel slides into it', () => {
-        expect(textToPhonemes('bueno')).toBe('B W E1 N O0');
-        expect(textToPhonemes('ciudad')).toBe('S Y U0 D A1 D');
+        expect(spanish('bueno')).toBe('B W E1 N O0');
+        expect(spanish('ciudad')).toBe('S Y U0 D A1 D');
     });
 
     test('tells the tap from the trill, and reads gu, gü, qu, ll and ñ', () => {
-        expect(textToPhonemes('perro')).toBe('P E1 RR O0');
-        expect(textToPhonemes('caro')).toBe('K A1 DX O0');
-        expect(textToPhonemes('guitarra')).toBe('G I0 T A1 RR A0');
-        expect(textToPhonemes('pingüino')).toBe('P I0 N G W I1 N O0');
-        expect(textToPhonemes('queso llama niño')).toBe('K E1 S O0 Y A1 M A0 N I1 NY O0');
+        expect(spanish('perro')).toBe('P E1 RR O0');
+        expect(spanish('caro')).toBe('K A1 DX O0');
+        expect(spanish('guitarra')).toBe('G I0 T A1 RR A0');
+        expect(spanish('pingüino')).toBe('P I0 N G W I1 N O0');
+        expect(spanish('queso llama niño')).toBe('K E1 S O0 Y A1 M A0 N I1 NY O0');
     });
 
     test('keeps punctuation as pauses', () => {
-        expect(textToPhonemes('¿Qué hora es?')).toBe('K E1 O1 DX A0 E1 S ?');
+        expect(spanish('¿Qué hora es?')).toBe('K E1 O1 DX A0 E1 S ?');
     });
 
     test('a colon, a dash and a parenthesis pause too, but not before the first word', () => {
-        expect(textToPhonemes('pan: vino')).toBe('P A1 N ; B I1 N O0');
-        expect(textToPhonemes('—pan— (vino)')).toBe('P A1 N , B I1 N O0 ,');
+        expect(spanish('pan: vino')).toBe('P A1 N ; B I1 N O0');
+        expect(spanish('—pan— (vino)')).toBe('P A1 N , B I1 N O0 ,');
     });
 
     test('marks that come together are one pause', () => {
-        expect(textToPhonemes('ven!...')).toBe('B E1 N !');
-        expect(textToPhonemes('(ven.) ven')).toBe('B E1 N . B E1 N');
-        expect(textToPhonemes('ven...?')).toBe('B E1 N ?');
+        expect(spanish('ven!...')).toBe('B E1 N !');
+        expect(spanish('(ven.) ven')).toBe('B E1 N . B E1 N');
+        expect(spanish('ven...?')).toBe('B E1 N ?');
     });
 
     test('a c or a g that ends a word is hard, and sc is one s', () => {
-        expect(textToPhonemes('Isaac')).toBe('I0 S A0 A1 K');
-        expect(textToPhonemes('zigzag')).toBe('S I0 G S A1 G');
-        expect(textToPhonemes('discípulo')).toBe('D I0 S I1 P U0 L O0');
-        expect(textToPhonemes('cielo')).toBe('S Y E1 L O0');
-        expect(textToPhonemes('escribe')).toBe('E0 S K DX I1 B E0');
+        expect(spanish('Isaac')).toBe('I0 S A0 A1 K');
+        expect(spanish('zigzag')).toBe('S I0 G S A1 G');
+        expect(spanish('discípulo')).toBe('D I0 S I1 P U0 L O0');
+        expect(spanish('cielo')).toBe('S Y E1 L O0');
+        expect(spanish('escribe')).toBe('E0 S K DX I1 B E0');
     });
 
     test('reads accents written as a letter and a mark', () => {
-        expect(textToPhonemes('señor Jesús'.normalize('NFD'))).toBe(textToPhonemes('señor Jesús'));
+        expect(spanish('señor Jesús'.normalize('NFD'))).toBe(spanish('señor Jesús'));
     });
 });
 
@@ -100,7 +105,7 @@ describe('Spanish said as Spanish', () => {
     test('the same sound twice across words is said once, and vowels that meet are shortened', () => {
         expect(said('los cielos')).toBe('L O S Y E L O S');
         expect(said('la amiga')).toBe('L A M I GH A');
-        const seconds = (text: string) => renderSpeech({ text }).samples.length;
+        const seconds = (text: string) => renderSpeech({ text, language: 'es' }).samples.length;
         expect(seconds('me ama')).toBeLessThan(seconds('me, ama'));
         expect(isRunTogether(readSpanish('te oro'), 1)).toBe(true);
         expect(isRunTogether(readSpanish('leo'), 2)).toBe(false);
@@ -123,9 +128,9 @@ describe('Spanish said as Spanish', () => {
         const emphasized = (text: string) => readSpanish(text).flatMap((token) => ('name' in token ? [token.emphasis] : []));
         expect(emphasized('<emphasis>yo</emphasis> soy')).toEqual(['moderate', 'moderate', undefined, undefined, undefined]);
         expect(emphasized('<emphasis level="strong">yo</emphasis>')).toEqual(['strong', 'strong']);
-        expect(textToPhonemes('<emphasis>mi</emphasis> casa')).toBe('M I1 K A1 S A0');
-        expect(textToPhonemes('<emphasis level="reduced">mi</emphasis> casa')).toBe(textToPhonemes('mi casa'));
-        const length = (text: string) => renderSpeech({ text }).samples.length;
+        expect(spanish('<emphasis>mi</emphasis> casa')).toBe('M I1 K A1 S A0');
+        expect(spanish('<emphasis level="reduced">mi</emphasis> casa')).toBe(spanish('mi casa'));
+        const length = (text: string) => renderSpeech({ text, language: 'es' }).samples.length;
         const plain = length('yo soy');
         expect(length('<emphasis>yo</emphasis> soy')).toBeGreaterThan(plain);
         expect(length('<emphasis level="strong">yo</emphasis> soy')).toBeGreaterThan(length('<emphasis>yo</emphasis> soy'));
@@ -140,40 +145,40 @@ describe('Spanish said as Spanish', () => {
     });
 
     test('the small words of a phrase that stands out still lean on it', () => {
-        expect(textToPhonemes('<emphasis>el pan de la vida</emphasis>')).toBe(textToPhonemes('el pan de la vida'));
-        expect(textToPhonemes('¿<emphasis>?mi</emphasis> casa')).toBe('M I1 K A1 S A0');
-        expect(textToPhonemes('¿<emphasis>por</emphasis> 5?')).toBe(textToPhonemes('¿pór cinco?'));
+        expect(spanish('<emphasis>el pan de la vida</emphasis>')).toBe(spanish('el pan de la vida'));
+        expect(spanish('¿<emphasis>?mi</emphasis> casa')).toBe('M I1 K A1 S A0');
+        expect(spanish('¿<emphasis>por</emphasis> 5?')).toBe(spanish('¿pór cinco?'));
         const stresses = (text: string) => readSpanish(text).flatMap((token) => ('name' in token ? [token.stress] : []));
         expect(stresses('<emphasis level="reduced">nuestro</emphasis> padre')).toEqual(stresses('nuestro padre'));
     });
 
     test('an emphasis does not move with its phrase', () => {
         const accents = [{ at: 0.2, width: 0.1, height: 2 }, { at: 0.5, width: 0.1, height: 4, fixed: true }, { at: 0.9, width: 0.1, height: 2 }];
-        spanishMelody(new Float32Array(200), 0.005, [{ start: 0, end: 1, mark: '.', asks: false, asksWhat: false, begins: false }], accents, 45, 2.5);
+        phraseMelody(new Float32Array(200), 0.005, [{ start: 0, end: 1, mark: '.', asks: false, asksWhat: false, begins: false }], accents, 45, 2.5, spanishAccent);
         expect(accents[0]!.at).toBeGreaterThan(0.2);
         expect(accents[1]).toEqual({ at: 0.5, width: 0.1, height: 4, fixed: true });
     });
 
     test('says which tag it does not read, and which has no pair', () => {
-        expect(() => renderSpeech({ text: '<b>a</b>' })).toThrow('"<b>" is not a tag');
-        expect(() => renderSpeech({ text: '<emphasis level="none">a</emphasis>' })).toThrow('is not a tag');
-        expect(() => renderSpeech({ text: 'a</emphasis>' })).toThrow('has no pair');
-        expect(() => renderSpeech({ text: '<emphasis>a <emphasis>b</emphasis>' })).toThrow('has no pair');
-        expect(() => renderSpeech({ text: '<emphasis>a' })).toThrow('not closed');
-        expect(() => renderSpeech({ text: '<emphasis level="strong" yo' })).toThrow('is not a tag');
-        expect(() => renderSpeech({ text: '< emphasis>yo</emphasis>' })).toThrow('is not a tag');
-        expect(() => renderSpeech({ text: '<ñandú>' })).toThrow('is not a tag');
-        expect(() => renderSpeech({ text: '<H1>' })).toThrow('"<H1>"');
-        expect(textToPhonemes('a < b, 3 <3')).toBe(textToPhonemes('a b, 3 3'));
+        expect(() => renderSpeech({ text: '<b>a</b>', language: 'es' })).toThrow('"<b>" is not a tag');
+        expect(() => renderSpeech({ text: '<emphasis level="none">a</emphasis>', language: 'es' })).toThrow('is not a tag');
+        expect(() => renderSpeech({ text: 'a</emphasis>', language: 'es' })).toThrow('has no pair');
+        expect(() => renderSpeech({ text: '<emphasis>a <emphasis>b</emphasis>', language: 'es' })).toThrow('has no pair');
+        expect(() => renderSpeech({ text: '<emphasis>a', language: 'es' })).toThrow('not closed');
+        expect(() => renderSpeech({ text: '<emphasis level="strong" yo', language: 'es' })).toThrow('is not a tag');
+        expect(() => renderSpeech({ text: '< emphasis>yo</emphasis>', language: 'es' })).toThrow('is not a tag');
+        expect(() => renderSpeech({ text: '<ñandú>', language: 'es' })).toThrow('is not a tag');
+        expect(() => renderSpeech({ text: '<H1>', language: 'es' })).toThrow('"<H1>"');
+        expect(spanish('a < b, 3 <3')).toBe(spanish('a b, 3 3'));
     });
 
     test('reads numbers as words', () => {
-        expect(textToPhonemes('5.000 panes')).toBe(textToPhonemes('cinco mil panes'));
-        expect(textToPhonemes('21.131')).toBe(textToPhonemes('veintiún mil ciento treinta y uno'));
+        expect(spanish('5.000 panes')).toBe(spanish('cinco mil panes'));
+        expect(spanish('21.131')).toBe(spanish('veintiún mil ciento treinta y uno'));
     });
 
     test('reads decimals, zeros and numbers beside letters', () => {
-        const same = (a: string, b: string) => expect(textToPhonemes(a)).toBe(textToPhonemes(b));
+        const same = (a: string, b: string) => expect(spanish(a)).toBe(spanish(b));
         same('3,14', 'tres coma catorce');
         same('3.05', 'tres punto cero cinco');
         same('0.500', 'cero punto quinientos');
@@ -192,7 +197,7 @@ describe('Spanish said as Spanish', () => {
             const name = text.startsWith('S');
             const phrase = { start: name ? 1 : 0, end: name ? 2 : 1, mark: '?', asks: true, asksWhat: true, begins: true };
             const before = { start: 0, end: 0.9, mark: ',', asks: false, asksWhat: false, begins: false };
-            spanishMelody(frames, 0.005, name ? [before, phrase] : [phrase], [], 45, 2.5);
+            phraseMelody(frames, 0.005, name ? [before, phrase] : [phrase], [], 45, 2.5, spanishAccent);
             return frames[name ? 200 : 0]!;
         };
         expect(first('Señor, ¿dónde?')).toBeCloseTo(first('¿dónde?'), 4);
@@ -201,7 +206,7 @@ describe('Spanish said as Spanish', () => {
     test('a phrase ends by its mark: a comma up, a full stop down, a yes or no question high', () => {
         const end = (mark: string, asksWhat = false) => {
             const frames = new Float32Array(200);
-            spanishMelody(frames, 0.005, [{ start: 0, end: 1, mark, asks: mark === '?', asksWhat, begins: true }], [], 45, 2.5);
+            phraseMelody(frames, 0.005, [{ start: 0, end: 1, mark, asks: mark === '?', asksWhat, begins: true }], [], 45, 2.5, spanishAccent);
             return frames[199]!;
         };
         expect(end('.')).toBeLessThan(end(';'));
@@ -211,33 +216,178 @@ describe('Spanish said as Spanish', () => {
     });
 
     test('a word that names something every object has is read', () => {
-        expect(textToPhonemes('constructor')).toBe('K O0 N S T DX U0 K T O1 DX');
+        expect(spanish('constructor')).toBe('K O0 N S T DX U0 K T O1 DX');
     });
 
     test('an exclamation is not said as a statement', () => {
-        expect(renderSpeech({ text: 'ven!' }).samples).not.toEqual(renderSpeech({ text: 'ven.' }).samples);
+        expect(renderSpeech({ text: 'ven!', language: 'es' }).samples).not.toEqual(renderSpeech({ text: 'ven.', language: 'es' }).samples);
     });
 
     test('its sounds are not phonemes to write, and phonemes are said as written', () => {
         expect(() => renderSpeech({ phonemes: 'A1 BH A0' })).toThrow('"BH"');
-        expect(renderSpeech({ phonemes: 'A1 D A0' }).samples).not.toEqual(renderSpeech({ text: 'ada' }).samples);
+        expect(renderSpeech({ phonemes: 'A1 D A0' }).samples).not.toEqual(renderSpeech({ text: 'ada', language: 'es' }).samples);
     });
 
     test('nothing, or only marks, is silence', () => {
-        for (const text of ['', '...', '¿?']) expect(renderSpeech({ text }).samples.every((value) => value === 0)).toBe(true);
+        for (const text of ['', '...', '¿?']) expect(renderSpeech({ text, language: 'es' }).samples.every((value) => value === 0)).toBe(true);
+    });
+});
+
+describe('textToPhonemes, English', () => {
+    test('is the language when none is said', () => {
+        expect(textToPhonemes('Hello, player!')).toBe('HH AH0 L OW1 , P L EY1 ER0 !');
+        expect(textToPhonemes('hello')).toBe(textToPhonemes('hello', 'en'));
+    });
+
+    test('reads the words English does not write as it says them', () => {
+        expect(textToPhonemes('though through tough thought')).toBe('DH OW1 TH R UW1 T AH1 F TH AO1 T');
+        expect(textToPhonemes('sword knight island')).toBe('S AO1 R D N AY1 T AY1 L AH0 N D');
+    });
+
+    test('reads the rest by rules, a silent e making its vowel long', () => {
+        expect(textToPhonemes('rat rate')).toBe('R AE1 T R EY1 T');
+        expect(textToPhonemes('shield bright')).toBe('SH IY1 L D B R AY1 T');
+        expect(textToPhonemes('potion')).toBe('P OW1 SH AH0 N');
+    });
+
+    test('says an ending by the sound before it', () => {
+        expect(textToPhonemes('cats games boxes')).toBe('K AE1 T S G EY1 M Z B AA1 K S IH0 Z');
+        expect(textToPhonemes('jumped opened wanted')).toBe('JH AH1 M P T OW1 P AH0 N D W AA1 N T IH0 D');
+        expect(textToPhonemes('hopping hoping')).toBe('HH AA1 P IH0 NG HH OW1 P IH0 NG');
+        expect(textToPhonemes("the dragon's")).toBe('DH AH0 D R AE1 G AH0 N Z');
+        expect(textToPhonemes('don’t')).toBe(textToPhonemes("don't"));
+    });
+
+    test('reads what an apostrophe leaves of a word', () => {
+        expect(textToPhonemes("I'd you've we'll it'll")).toBe('AY0 D Y UW0 V W IY0 L IH0 T AH0 L');
+        expect(textToPhonemes("wasn't aren't haven't mustn't")).toBe('W AH1 Z AH0 N T AA1 R N T HH AE1 V AH0 N T M AH1 S AH0 N T');
+        expect(textToPhonemes("that'd they'd")).toBe('DH AE0 T AH0 D DH EY0 D');
+    });
+
+    test('spells a word with no vowel, and reads accents, titles and places', () => {
+        expect(textToPhonemes('HP')).toBe('EY2 CH P IY1');
+        expect(textToPhonemes('NPCs')).toBe('EH2 N P IY2 S IY1 Z');
+        expect(textToPhonemes('café')).toBe('K AE0 F EY1');
+        expect(textToPhonemes('señor')).toBe(textToPhonemes('senor'));
+        expect(textToPhonemes('1,000th')).toBe(textToPhonemes('one thousandth'));
+        expect(textToPhonemes('Mr. Fox')).toBe('M IH1 S T ER0 F AA1 K S');
+        expect(textToPhonemes('1st 22nd 30th')).toBe(textToPhonemes('first twenty second thirtieth'));
+        expect(textToPhonemes('shred bred sacred')).toBe('SH R EH1 D B R EH1 D S EY1 K R AH0 D');
+    });
+
+    test('takes no long time over a word that is not one', () => {
+        // It would take minutes, or overflow, if it looked for other words in these.
+        for (const word of [`abc${'man'.repeat(5000)}`, `a${"'s".repeat(8000)}`, 'ness'.repeat(5000)]) expect(textToPhonemes(word).length).toBeGreaterThan(0);
+    });
+
+    test('a word made of two is stressed on the first', () => {
+        expect(textToPhonemes('gameplay')).toBe('G EY1 M P L EY2');
+    });
+
+    test('reads numbers', () => {
+        const same = (a: string, b: string) => expect(textToPhonemes(a)).toBe(textToPhonemes(b));
+        same('25 coins', 'twenty five coins');
+        same('5,000', 'five thousand');
+        same('3.05', 'three point zero five');
+        same('007', 'zero zero seven');
+        same('1,2,3', 'one, two, three');
+        same('P1', 'p one');
+    });
+
+    test('reads any word there is, and nothing', () => {
+        for (const word of ['constructor', 'rhythm', 'hmm', 'xyzzy', 'q', 'aaaa', "'", 'tsk']) expect(() => renderSpeech({ text: word })).not.toThrow();
+        expect(textToPhonemes('')).toBe('');
+        expect(renderSpeech({ text: '...' }).samples.every((value) => value === 0)).toBe(true);
+    });
+});
+
+describe('English said as English', () => {
+    const names = (text: string) => readEnglish(text).map((token) => ('name' in token ? token.name : token.mark)).join(' ');
+    const asked = (text: string) => readEnglish(text).flatMap((token) => ('pause' in token ? [token.asksWhat] : []));
+
+    test('a t or a d between vowels, the second unstressed, is a tap', () => {
+        expect(names('water ready')).toBe('W AO DX ER R EH DX IY');
+        expect(names('attack')).toBe('AH T AE K');
+    });
+
+    test('a stop has air before a stressed vowel, and not after an s', () => {
+        const air = (text: string) => readEnglish(text).flatMap((token) => ('air' in token ? [token.air] : []));
+        expect(air('pin')).toEqual([true]);
+        expect(air('spin')).toEqual([false]);
+        expect(air('clean')).toEqual([true]);
+    });
+
+    test('a vowel is cut short by an unvoiced sound after it', () => {
+        const length = (text: string) => renderSpeech({ phonemes: text }).samples.length;
+        expect(length('S IY1 F')).toBeLessThan(length('S IY1 V') + (length('F') - length('V')));
+    });
+
+    test('is made of numbers, inside its volume', () => {
+        for (const text of ['Hello, player!', 'Where is the <emphasis level="strong">dragon</emphasis>?', 'HP: 25/100 — (ok)…']) {
+            for (const value of renderSpeech({ text, volume: 0.7 }).samples) if (!(Math.abs(value) <= 0.7001)) throw new Error(`${text}: ${value}`);
+        }
+    });
+
+    test('the is said thee before a vowel', () => {
+        expect(names('the door')).toBe('DH AH D AO R');
+        expect(names('the end')).toContain('DH IY');
+    });
+
+    test('knows a question that asks what from one that asks for a yes or a no', () => {
+        expect(asked('Where is it?')).toEqual([true]);
+        expect(asked('And from where, sir, are you?')).toEqual([true, true, true]);
+        expect(asked("What's that?")).toEqual([true]);
+        expect(asked('Is it you, who opened it?')).toEqual([false, false]);
+        expect(asked('Well, tell me, what is it?')).toEqual([false, false, true]);
+        const begins = readEnglish('Tell me, what is it? Come.').flatMap((token) => ('pause' in token ? [[token.asks, token.begins]] : []));
+        expect(begins).toEqual([[false, false], [true, true], [false, false]]);
+        expect(asked('Tell me, what is it?')).toEqual([false, true]);
+        expect(asked('If you find him before the night ends, what then?')).toEqual([false, false]);
+        expect(asked('Are you ready?')).toEqual([false]);
+        expect(asked('Come. Who is it?')).toEqual([false, true]);
+    });
+
+    test('an emphasized small word has its stress', () => {
+        expect(textToPhonemes('<emphasis>you</emphasis> did it')).toBe('Y UW1 D IH1 D IH0 T');
+        expect(textToPhonemes('you did it')).toBe('Y UW0 D IH1 D IH0 T');
+    });
+});
+
+describe('a language for phonemes', () => {
+    test('says them its own way, English when none is said', () => {
+        const phonemes = 'W AO1 T ER0 .';
+        const said = (language?: 'en' | 'es' | 'none') => renderSpeech({ phonemes, language }).samples;
+        expect(said()).toEqual(said('en'));
+        expect(said('none')).not.toEqual(said('en'));
+        expect(said('es')).not.toEqual(said('none'));
+    });
+
+    test('a written question asks what by how its first word sounds', () => {
+        const asks = (phonemes: string) => sayEnglish(parsePhonemes(phonemes)).flatMap((token) => ('pause' in token ? [token.asksWhat] : []));
+        expect(asks('W AH1 T IH0 Z IH0 T ?')).toEqual([true]);
+        expect(asks('W AH0 Z IH0 T ?')).toEqual([false]);
+        expect(asks('W EH1 N T ?')).toEqual([false]);
+        expect(asks('W EH1 N D IH1 D Y UW0 ?')).toEqual([true]);
+        expect(asks('HH AW1 SH UH1 D AY0 ?')).toEqual([true]);
+    });
+
+    test('none reads no text', () => {
+        expect(() => renderSpeech({ text: 'hello', language: 'none' })).toThrow('"none" reads no text');
+        expect(() => textToPhonemes('hello', 'none')).toThrow('no rules to read "none"');
+        expect(() => renderSpeech({ text: 'salut', language: 'fr' as 'en' })).toThrow('"fr"');
     });
 });
 
 describe('renderSinging', () => {
     test('lasts as long as its beats', () => {
-        const song = renderSinging({ tempo: 120, notes: [{ pitch: 'C3', beats: 2, lyric: 'la' }, { pitch: 'D3', beats: 2, lyric: 'la' }] });
+        const song = renderSinging({ language: 'es', tempo: 120, notes: [{ pitch: 'C3', beats: 2, lyric: 'la' }, { pitch: 'D3', beats: 2, lyric: 'la' }] });
         const seconds = song.samples.length / song.sampleRate;
         expect(seconds).toBeGreaterThan(2);
         expect(seconds).toBeLessThan(2.4);
     });
 
     test('a note without a syllable holds the one before, and one without a pitch is a rest', () => {
-        const song = renderSinging({ tempo: 60, notes: [{ pitch: 48, lyric: 'a' }, { pitch: 50 }, {}, { pitch: 48, lyric: 'a' }] });
+        const song = renderSinging({ language: 'es', tempo: 60, notes: [{ pitch: 48, lyric: 'a' }, { pitch: 50 }, {}, { pitch: 48, lyric: 'a' }] });
         const sampleRate = song.sampleRate;
         const loudness = (from: number) => {
             let sum = 0;
@@ -249,20 +399,20 @@ describe('renderSinging', () => {
     });
 
     test('says where the first beat lands, after the consonants that come before it', () => {
-        const plain = renderSinging({ notes: [{ pitch: 48, lyric: 'a' }] });
-        const opened = renderSinging({ notes: [{ pitch: 48, lyric: 'tra' }] });
+        const plain = renderSinging({ language: 'es', notes: [{ pitch: 48, lyric: 'a' }] });
+        const opened = renderSinging({ language: 'es', notes: [{ pitch: 48, lyric: 'tra' }] });
         expect(opened.start).toBeGreaterThan(plain.start + 0.05);
         // Everything after it is the song: the same length after the beat, whatever came before.
         expect(opened.samples.length - opened.start * opened.sampleRate).toBeCloseTo(plain.samples.length - plain.start * plain.sampleRate, -1);
     });
 
     test('with no notes, it is silence with a beat in it', () => {
-        const song = renderSinging({ notes: [] });
+        const song = renderSinging({ language: 'es', notes: [] });
         expect(song.start).toBeCloseTo(0.04, 5);
         expect(song.samples.every((value) => value === 0)).toBe(true);
     });
 
     test('says which note it cannot read', () => {
-        expect(() => renderSinging({ notes: [{ pitch: 'H2', lyric: 'a' }] })).toThrow('"H2"');
+        expect(() => renderSinging({ language: 'es', notes: [{ pitch: 'H2', lyric: 'a' }] })).toThrow('"H2"');
     });
 });

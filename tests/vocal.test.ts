@@ -35,6 +35,7 @@ const SONG: TSongDoc = {
 // Two lines, the first a word in two syllables, sung from the first beat with no rest.
 const VOCAL: TVocalDoc = {
     format: VOCAL_FORMAT,
+    language: 'es',
     lines: [
         { notes: [{ pitch: 'C4', beats: 2, lyric: 'can-' }, { pitch: 'E4', beats: 2, lyric: 'ción' }] },
         { notes: [{ pitch: 'G4', beats: 4, lyric: 'mar' }, { pitch: 'A4', beats: 4, lyric: 'sol' }] },
@@ -123,8 +124,8 @@ describe('a line several sing', () => {
 
     it('comes in at its own loudness, at the start and after a rest', () => {
         const enter = (before: number): number[] => {
-            const plan = planSinging({ tempo: 120, vibrato: 0, notes: [...(before > 0 ? [{ beats: before }] : []), { pitch: 'A3', beats: 2, lyric: 'sa', share: 0.25 }] });
-            const whole = planSinging({ tempo: 120, vibrato: 0, notes: [...(before > 0 ? [{ beats: before }] : []), { pitch: 'A3', beats: 2, lyric: 'sa' }] });
+            const plan = planSinging({ language: 'es', tempo: 120, vibrato: 0, notes: [...(before > 0 ? [{ beats: before }] : []), { pitch: 'A3', beats: 2, lyric: 'sa', share: 0.25 }] });
+            const whole = planSinging({ language: 'es', tempo: 120, vibrato: 0, notes: [...(before > 0 ? [{ beats: before }] : []), { pitch: 'A3', beats: 2, lyric: 'sa' }] });
             return [plan, whole].map((one) => {
                 const voice = createVoice(one.segments, singingPitch(one.notes, 0, 1), sungSettings(one));
                 const out = new Float32Array(voice.length);

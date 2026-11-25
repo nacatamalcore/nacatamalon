@@ -1,4 +1,3 @@
-import { spanishPuff, spanishShape } from './languages/spanish_speech';
 import { soundOf } from './phonemes';
 import type { TPhoneme } from './phonemes';
 import type { TVoiceSegment, TVoiceTarget } from './voice';
@@ -30,16 +29,23 @@ export const mouthOf = (phoneme: TPhoneme, formants: readonly [number, number, n
 export type TNextSound = { formants: readonly [number, number, number]; vowel: boolean } | undefined;
 
 /**
- * The stretches of sound one phoneme is made of, `length` seconds in all (a stop's burst and puff on
- * top). A vowel is one stretch, gliding if it is a diphthong; a stop is the mouth shut, a burst as it
- * opens and, unvoiced before a vowel, a puff of air; a trill is the tongue hitting three times.
- * `spanish`, as Spanish text read aloud is said.
+ * How a language says a phoneme: where its neighbour takes it, and the air after an unvoiced stop.
  *
  * @internal
  */
-export const buildPhoneme = (name: string, length: number, next: TNextSound, afterS = false, spanish = false): TVoiceSegment[] => {
+export type TPhonemeHow = { shape: (name: string, phoneme: TPhoneme, next: TNextSound) => TPhoneme; puff: { length: number; level: number } };
+
+/**
+ * The stretches of sound one phoneme is made of, `length` seconds in all (a stop's burst and puff on
+ * top). A vowel is one stretch, gliding if it is a diphthong; a stop is the mouth shut, a burst as it
+ * opens and, unvoiced before a vowel, a puff of air; a trill is the tongue hitting three times.
+ * `how`, as its language says it.
+ *
+ * @internal
+ */
+export const buildPhoneme = (name: string, length: number, next: TNextSound, afterS = false, how?: TPhonemeHow): TVoiceSegment[] => {
     const written = soundOf(name)!;
-    const phoneme = spanish ? spanishShape(name, written, next) : written;
+    const phoneme = how ? how.shape(name, written, next) : written;
     const mouth = mouthOf(phoneme);
     const noise = phoneme.noise?.level ?? 0;
     switch (phoneme.kind) {
@@ -67,8 +73,8 @@ export const buildPhoneme = (name: string, length: number, next: TNextSound, aft
             const open: TVoiceSegment = { length: BURST, from: { ...mouth, noise, voice: phoneme.voiced ? 0.4 : 0 }, quick: true };
             if (phoneme.voiced || afterS || !next?.vowel) return [shut, open];
             const puff: TVoiceSegment = {
-                length: spanish ? spanishPuff(name) : PUFF,
-                from: { ...mouthOf(phoneme, next.formants), aspiration: spanish ? 0.4 : 0.8 },
+                length: how?.puff.length ?? PUFF,
+                from: { ...mouthOf(phoneme, next.formants), aspiration: how?.puff.level ?? 0.8 },
             };
             return [shut, open, puff];
         }

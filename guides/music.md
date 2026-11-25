@@ -451,8 +451,8 @@ notes with a syllable each, and who sings them.
 - `start`: the beat of the song where the first line begins, counted from `0`.
 - `pitch` is a name (`'C4'`, `'F#5'`) or a MIDI number; no `pitch` is a rest; no `lyric` holds the
   syllable before over the note. A hyphen at the end (`'can-'`) says the word goes on.
-- `language`: the lyrics are read by rules; `'es'` today. Any other language is written as
-  `phonemes` on each note (`'D EY1'`).
+- `language`: the lyrics are read by rules, in English unless it is `'es'`. Any other language, and
+  a syllable that is not a word, are written as `phonemes` on each note (`'D EY1'`).
 - `singers`: each with its `throat` (`1` a man, `1.15` a woman, `1.3` a child), `breath`,
   `vibrato` and `transpose` (`-12` an octave under). A line with `who` is sung by some of them.
 
@@ -492,9 +492,13 @@ Spoken words and a sung line on their own are sounds like any other:
 import { useSound } from 'nacatamalon';
 import { renderSinging, renderSpeech } from 'nacatamalon/speech';
 
-const hello = useSound(renderSpeech({ text: '¡Hola, mundo!' }));
+const hello = useSound(renderSpeech({ text: 'Hello, world!' }));
 const tune = useSound(renderSinging({ notes: [{ pitch: 'C4', lyric: 'la' }, { pitch: 'E4', lyric: 'la' }], tempo: 100 }));
 ```
+
+Text and lyrics are read in English unless `language: 'es'` says Spanish. Any other language is
+written as `phonemes`, in language `'none'`, which says them just as they are. A word between
+`<emphasis>` and `</emphasis>` stands out.
 
 ---
 

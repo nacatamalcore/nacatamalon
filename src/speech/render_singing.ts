@@ -51,6 +51,7 @@ type TGroup = { names: string[]; notes: { pitch: number; start: number }[]; star
  *
  * const song = renderSinging({
  *     tempo: 100,
+ *     language: 'es',
  *     notes: [
  *         { pitch: 'G3', beats: 1, lyric: 'cum' }, { pitch: 'G3', lyric: 'ple' },
  *         { pitch: 'A3', beats: 2, lyric: 'a' }, { pitch: 'G3', beats: 2, lyric: 'ños' },

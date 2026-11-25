@@ -3,9 +3,9 @@
  * soft c are one sound and the ll is the y, as most of the Spanish-speaking world says them.
  */
 
-import { TAG, followEmphasis } from './emphasis';
+import { cutText, phonemesOfPieces } from './pieces';
 import { spellNumbers } from './spanish_numbers';
-import type { TEmphasis } from './emphasis';
+import type { TPiece } from './pieces';
 
 type TSound = { name: string; vowel?: 'strong' | 'weak'; accent?: boolean };
 
@@ -122,89 +122,15 @@ const phonemesOfWord = (word: string, leans: boolean): string[] => {
 };
 
 /**
- * The mark a pause is said as, for the ones the voice has no pause of its own for: a colon stops it
- * as a semicolon does, a dash or a parenthesis as a comma.
- */
-const MARKS: ReadonlyMap<string, string> = new Map([[':', ';'], ['—', ','], ['–', ','], ['(', ','], [')', ','], ['…', '.']]);
-
-/**
- * Marks by how much they say about how a phrase ends, the least first: of several together, the last
- * of these is kept.
- */
-const STRENGTH = ',;.!?';
-
-/**
- * A Spanish text cut up: its words, with their phonemes, its pauses, and where its questions begin.
+ * Cuts a Spanish text into words, pauses and where its questions begin.
  *
  * @internal
  */
-export type TSpanishPiece = { text: string; phonemes?: string[]; emphasis?: TEmphasis };
-
-/**
- * Cuts a Spanish text into words, pauses (one for marks that come together, none before the first
- * word) and the `¿` a question begins with, its numbers read as words and its tags as its words' emphasis.
- *
- * @internal
- */
-export const spanishPieces = (text: string): TSpanishPiece[] => {
-    const out: TSpanishPiece[] = [];
-    let emphasis: TEmphasis | undefined;
-    let outside: ReadonlySet<TSpanishPiece> = new Set();
-    // Cut at its tags, the odd ones are tags.
-    text.normalize('NFC').split(TAG).forEach((part, i) => {
-        if (i % 2 === 0) {
-            addPieces(out, part, emphasis);
-            return;
-        }
-        const before = emphasis;
-        emphasis = followEmphasis(part, emphasis);
-        if (before === undefined) outside = new Set(out);
-        else if (before !== 'reduced') stressAlone(out.filter((piece) => !outside.has(piece)));
-    });
-    if (emphasis !== undefined) throw new Error('[NacatamalOn] speech: an <emphasis> is not closed.');
-    return out;
-};
-
-/**
- * Small words emphasized with no other have a stress of their own: "mi" in "<emphasis>mi</emphasis>
- * casa".
- */
-const stressAlone = (pieces: readonly TSpanishPiece[]): void => {
-    if (pieces.some((piece) => piece.phonemes?.some((phoneme) => phoneme.endsWith('1')))) return;
-    for (const piece of pieces) if (piece.phonemes) piece.phonemes = phonemesOfWord(piece.text, false);
-};
-
-/**
- * Adds the pieces of a text with no tags to the ones before it.
- */
-const addPieces = (out: TSpanishPiece[], text: string, emphasis: TEmphasis | undefined): void => {
-    for (const piece of spellNumbers(text.toLowerCase()).match(/[a-záéíóúüñ]+|[¿,;.!?:—–()…]/g) ?? []) {
-        const mark = MARKS.get(piece) ?? piece;
-        if (mark === '¿') {
-            out.push({ text: mark });
-            continue;
-        }
-        if (!STRENGTH.includes(mark)) {
-            const phonemes = phonemesOfWord(mark, true);
-            if (phonemes.length > 0) out.push({ text: mark, phonemes, emphasis });
-            continue;
-        }
-        const last = out[out.length - 1];
-        if (last === undefined) continue;
-        if (last.text === '¿') {
-            // A question with nothing in it is none, and a pause just inside one is not said.
-            if (mark === '?') out.pop();
-            continue;
-        }
-        if (last.phonemes) out.push({ text: mark });
-        else if (STRENGTH.indexOf(mark) > STRENGTH.indexOf(last.text)) last.text = mark;
-    }
-};
+export const spanishPieces = (text: string): TPiece[] => cutText(text, { pattern: /[a-záéíóúüñ]+|[¿,;.!?:—–()…]/g, spell: spellNumbers, read: phonemesOfWord });
 
 /**
  * Spanish text as phonemes, a word's stress on its vowel, punctuation kept as pauses.
  *
  * @internal
  */
-export const spanishToPhonemes = (text: string): string =>
-    spanishPieces(text).flatMap((piece) => piece.phonemes ?? (piece.text === '¿' ? [] : [piece.text])).join(' ');
+export const spanishToPhonemes = (text: string): string => phonemesOfPieces(spanishPieces(text));

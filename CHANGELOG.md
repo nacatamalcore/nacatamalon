@@ -7,7 +7,10 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
-- **A word that stands out when Spanish text is read aloud**: `<emphasis>` and `</emphasis>` around it,
+- **The speech voice reads English.** `renderSpeech({ text: 'Hello, player!' })` is read by rules and
+  a list of words of our own, in an American accent, with its soft t, its unstressed vowels and its
+  questions. Words between `<emphasis>` tags stand out in it too.
+- **A word that stands out when text is read aloud**: `<emphasis>` and `</emphasis>` around it,
   with `level="strong"`, `"moderate"` (the default) or `"reduced"`. It is louder, longer and rises
   early. Any other tag in a text throws, and says which.
 - **What a store saved is loaded when the game starts.** `applyStoreDocs` loads what each store with
@@ -71,11 +74,15 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- **The speech voice's language is English unless `language` says otherwise**, for text, sung lyrics
+  and `.vocal` files: what is written in Spanish now says `language: 'es'`. `language` also tells how
+  `phonemes` are said, so those with none are said as English; `'none'` says them just as they are,
+  as they were before.
 - **Spanish text read aloud sounds like Spanish.** b, d and g are soft between vowels, p, t and k have
   almost no air after them, k and g follow their vowel, words run together, and the pitch tells a
   comma, a statement, an exclamation, and a question that asks what from one that asks for a yes or a
   no. Numbers are read. It sounds and lasts differently from before; sounds written as `phonemes`
-  are said as they were.
+  are said as they were in language `'none'`.
 - **Singing sounds more like someone singing.** Vowels keep near one loudness from low notes to high,
   a note is slid into from before it begins, vibrato goes on through a syllable held over several
   notes, and the singers of a part are each a little unlike the others instead of one voice several
