@@ -7,7 +7,9 @@ const READERS: Readonly<Record<TSpeechLanguage, (text: string) => string>> = {
 
 /**
  * Text as the phonemes the voice will say for it, by the rules of its language: what to look at
- * when a word comes out wrong, and what to copy, fix and pass as `phonemes` instead.
+ * when a word comes out wrong, and what to copy, fix and pass as `phonemes` instead. Phonemes are
+ * said as they are written: a text passed that way loses how `renderSpeech` runs Spanish words
+ * together, softens its b, d and g, and moves its pitch.
  *
  * @param text - Words, with their punctuation.
  * @param language - Default `'es'`.

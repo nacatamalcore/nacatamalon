@@ -51,7 +51,9 @@ export type TSpeechVoice = {
  */
 export type TSpeechOptions = TSpeechVoice & {
     /**
-     * Words to read, by the rules of `language`.
+     * Words to read, by the rules of `language`. The whole words between `<emphasis>` and
+     * `</emphasis>` stand out, by `level`: `"moderate"`, the default, `"strong"`, or `"reduced"` to pass over them
+     * (`'<emphasis level="strong">Yo</emphasis> soy'`). No other tag is read: one throws.
      */
     text?: string;
     /**
@@ -73,8 +75,8 @@ export type TSpeechOptions = TSpeechVoice & {
      */
     speed?: number;
     /**
-     * How much the pitch rises on a stressed syllable, in semitones. `0` is the flat voice of a
-     * robot. Default `2.5`.
+     * How much the pitch rises on a stressed syllable, in semitones, and in Spanish text how far it
+     * moves over a phrase: at `0`, the voice of a robot, by half. Default `2.5`.
      */
     melody?: number;
 };

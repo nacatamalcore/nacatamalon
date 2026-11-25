@@ -39,6 +39,9 @@ export const parseVocalDoc = (raw: unknown, src = 'vocal'): TVocalDoc => {
     if (raw.format > VOCAL_FORMAT) return fail(src, `it is format ${raw.format}, newer than this engine reads (${VOCAL_FORMAT})`);
     if (raw.start !== undefined && !(typeof raw.start === 'number' && raw.start >= 0)) return fail(src, '"start" is a beat, a number from 0');
     if (raw.singers !== undefined && !isObject(raw.singers)) return fail(src, '"singers" is an object of voices by name');
+    for (const [name, singer] of Object.entries(raw.singers ?? {})) {
+        if (!isObject(singer)) return fail(src, `singer "${name}" is not a voice, an object (it may be empty)`);
+    }
     const singers = raw.singers === undefined ? ['voice'] : Object.keys(raw.singers);
     if (!Array.isArray(raw.lines)) return fail(src, 'it has no "lines"');
     raw.lines.forEach((line: unknown, l) => {

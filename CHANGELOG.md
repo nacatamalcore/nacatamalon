@@ -7,6 +7,9 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Added
 
+- **A word that stands out when Spanish text is read aloud**: `<emphasis>` and `</emphasis>` around it,
+  with `level="strong"`, `"moderate"` (the default) or `"reduced"`. It is louder, longer and rises
+  early. Any other tag in a text throws, and says which.
 - **What a store saved is loaded when the game starts.** `applyStoreDocs` loads what each store with
   a file saved, and `createGame` waits for it before the first scene, so a game opened again goes on
   where it was left with nothing to await. A store in `'manual'` mode is left to the game, which loads
@@ -68,6 +71,16 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Changed
 
+- **Spanish text read aloud sounds like Spanish.** b, d and g are soft between vowels, p, t and k have
+  almost no air after them, k and g follow their vowel, words run together, and the pitch tells a
+  comma, a statement, an exclamation, and a question that asks what from one that asks for a yes or a
+  no. Numbers are read. It sounds and lasts differently from before; sounds written as `phonemes`
+  are said as they were.
+- **Singing sounds more like someone singing.** Vowels keep near one loudness from low notes to high,
+  a note is slid into from before it begins, vibrato goes on through a syllable held over several
+  notes, and the singers of a part are each a little unlike the others instead of one voice several
+  times over. A line several sing is as loud as one sung alone. Every sung part, `.vocal` files too,
+  sounds different from before, and one sung alone can be a little louder or softer under its song.
 - **A picture's 3D camera is on its object.** The camera of a picture that looks at the world
   (`createSpriteTexture({ sees: '3d' })` or `'world'`; the `camera-3d` on a `sprite-texture`'s box in
   a scene) is now placed and turned by that object, as anything else on it is: its own `transform` is
@@ -80,6 +93,11 @@ releases are in [changelog/](./changelog/), one file each.
 
 ### Fixed
 
+- **The speech voice reads Spanish text better**: a colon, a dash and a parenthesis pause; marks that
+  come together ("...", "!...") are one pause, and one before the first word is none; a c that ends a
+  word is hard ("Isaac") and "sc" is one s ("discípulo"); accents written as a letter and a mark are
+  read. `renderSinging` with no notes says where its beat lands, and a `.vocal` whose singer is not a
+  voice is refused when it is read.
 - **A detailed shape as a 3D hull collider collides.** The simulation takes a hull of so many edges
   and no more, and a round piece made in detail (a turned chess piece, a model) went over it: the body
   was left with no shape at all and sat still, with only the simulation's own line in the console.

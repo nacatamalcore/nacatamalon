@@ -3,6 +3,10 @@
  * soft c are one sound and the ll is the y, as most of the Spanish-speaking world says them.
  */
 
+import { TAG, followEmphasis } from './emphasis';
+import { spellNumbers } from './spanish_numbers';
+import type { TEmphasis } from './emphasis';
+
 type TSound = { name: string; vowel?: 'strong' | 'weak'; accent?: boolean };
 
 const VOWELS: Readonly<Record<string, TSound>> = {
@@ -12,14 +16,14 @@ const VOWELS: Readonly<Record<string, TSound>> = {
     í: { name: 'I', vowel: 'strong', accent: true }, ú: { name: 'U', vowel: 'strong', accent: true },
 };
 
-const FRONT = 'eiéí';
+const FRONT: ReadonlySet<string> = new Set('eiéí');
 
 /**
  * Small words said without stress of their own, leaning on the next: "el perro", "de casa".
  */
 const UNSTRESSED = new Set([
     'el', 'la', 'lo', 'los', 'las', 'un', 'una', 'unos', 'unas', 'de', 'del', 'a', 'al', 'en', 'con', 'por', 'para', 'sin', 'y', 'e', 'o', 'u',
-    'que', 'se', 'me', 'te', 'le', 'les', 'nos', 'mi', 'mis', 'tu', 'tus', 'su', 'sus', 'si', 'pero', 'como', 'cuando', 'donde',
+    'porque', 'mas', 'ni', 'sobre', 'entre', 'os', 'hasta', 'desde', 'aunque', 'pues', 'que', 'se', 'me', 'te', 'le', 'les', 'nos', 'mi', 'mis', 'tu', 'tus', 'su', 'sus', 'si', 'pero', 'como', 'cuando', 'donde',
 ]);
 
 /**
@@ -40,15 +44,17 @@ const soundsOf = (word: string): TSound[] => {
             case 'b': case 'v': sounds.push({ name: 'B' }); break;
             case 'c':
                 if (next === 'h') { sounds.push({ name: 'CH' }); i += 1; }
-                else sounds.push({ name: FRONT.includes(next) ? 'S' : 'K' });
+                else if (!FRONT.has(next)) sounds.push({ name: 'K' });
+                // After an s or an x it is the same s, said once: "discípulo", "excelente".
+                else if (!'sx'.includes(word[i - 1] ?? '-')) sounds.push({ name: 'S' });
                 break;
             case 'd': sounds.push({ name: 'D' }); break;
             case 'f': sounds.push({ name: 'F' }); break;
             case 'g':
-                if (FRONT.includes(next)) sounds.push({ name: 'X' });
+                if (FRONT.has(next)) sounds.push({ name: 'X' });
                 else {
                     sounds.push({ name: 'G' });
-                    if (next === 'u' && FRONT.includes(after)) i += 1;
+                    if (next === 'u' && FRONT.has(after)) i += 1;
                 }
                 break;
             case 'h': break;
@@ -92,9 +98,10 @@ const soundsOf = (word: string): TSound[] => {
 
 /**
  * Joins vowels into syllables: an unstressed i or u beside another vowel slides into it and becomes
- * a y or a w ("bueno", "aire"), and the word's stressed vowel is marked.
+ * a y or a w ("bueno", "aire"), and the word's stressed vowel is marked. A small word has none when
+ * it leans on the next.
  */
-const phonemesOfWord = (word: string): string[] => {
+const phonemesOfWord = (word: string, leans: boolean): string[] => {
     const sounds = soundsOf(word);
     const isVowel = (sound: TSound | undefined): boolean => sound?.vowel !== undefined;
     for (let i = 0; i < sounds.length; i += 1) {
@@ -106,7 +113,7 @@ const phonemesOfWord = (word: string): string[] => {
     }
     const nuclei = sounds.map((sound, i) => (isVowel(sound) ? i : -1)).filter((i) => i >= 0);
     let stressed = nuclei.find((i) => sounds[i]!.accent);
-    if (stressed === undefined && nuclei.length > 0 && !UNSTRESSED.has(word)) {
+    if (stressed === undefined && nuclei.length > 0 && !(leans && UNSTRESSED.has(word))) {
         const last = word[word.length - 1] ?? '';
         const penultimate = 'aeiouns'.includes(last) && nuclei.length > 1;
         stressed = nuclei[nuclei.length - (penultimate ? 2 : 1)];
@@ -115,15 +122,89 @@ const phonemesOfWord = (word: string): string[] => {
 };
 
 /**
+ * The mark a pause is said as, for the ones the voice has no pause of its own for: a colon stops it
+ * as a semicolon does, a dash or a parenthesis as a comma.
+ */
+const MARKS: ReadonlyMap<string, string> = new Map([[':', ';'], ['—', ','], ['–', ','], ['(', ','], [')', ','], ['…', '.']]);
+
+/**
+ * Marks by how much they say about how a phrase ends, the least first: of several together, the last
+ * of these is kept.
+ */
+const STRENGTH = ',;.!?';
+
+/**
+ * A Spanish text cut up: its words, with their phonemes, its pauses, and where its questions begin.
+ *
+ * @internal
+ */
+export type TSpanishPiece = { text: string; phonemes?: string[]; emphasis?: TEmphasis };
+
+/**
+ * Cuts a Spanish text into words, pauses (one for marks that come together, none before the first
+ * word) and the `¿` a question begins with, its numbers read as words and its tags as its words' emphasis.
+ *
+ * @internal
+ */
+export const spanishPieces = (text: string): TSpanishPiece[] => {
+    const out: TSpanishPiece[] = [];
+    let emphasis: TEmphasis | undefined;
+    let outside: ReadonlySet<TSpanishPiece> = new Set();
+    // Cut at its tags, the odd ones are tags.
+    text.normalize('NFC').split(TAG).forEach((part, i) => {
+        if (i % 2 === 0) {
+            addPieces(out, part, emphasis);
+            return;
+        }
+        const before = emphasis;
+        emphasis = followEmphasis(part, emphasis);
+        if (before === undefined) outside = new Set(out);
+        else if (before !== 'reduced') stressAlone(out.filter((piece) => !outside.has(piece)));
+    });
+    if (emphasis !== undefined) throw new Error('[NacatamalOn] speech: an <emphasis> is not closed.');
+    return out;
+};
+
+/**
+ * Small words emphasized with no other have a stress of their own: "mi" in "<emphasis>mi</emphasis>
+ * casa".
+ */
+const stressAlone = (pieces: readonly TSpanishPiece[]): void => {
+    if (pieces.some((piece) => piece.phonemes?.some((phoneme) => phoneme.endsWith('1')))) return;
+    for (const piece of pieces) if (piece.phonemes) piece.phonemes = phonemesOfWord(piece.text, false);
+};
+
+/**
+ * Adds the pieces of a text with no tags to the ones before it.
+ */
+const addPieces = (out: TSpanishPiece[], text: string, emphasis: TEmphasis | undefined): void => {
+    for (const piece of spellNumbers(text.toLowerCase()).match(/[a-záéíóúüñ]+|[¿,;.!?:—–()…]/g) ?? []) {
+        const mark = MARKS.get(piece) ?? piece;
+        if (mark === '¿') {
+            out.push({ text: mark });
+            continue;
+        }
+        if (!STRENGTH.includes(mark)) {
+            const phonemes = phonemesOfWord(mark, true);
+            if (phonemes.length > 0) out.push({ text: mark, phonemes, emphasis });
+            continue;
+        }
+        const last = out[out.length - 1];
+        if (last === undefined) continue;
+        if (last.text === '¿') {
+            // A question with nothing in it is none, and a pause just inside one is not said.
+            if (mark === '?') out.pop();
+            continue;
+        }
+        if (last.phonemes) out.push({ text: mark });
+        else if (STRENGTH.indexOf(mark) > STRENGTH.indexOf(last.text)) last.text = mark;
+    }
+};
+
+/**
  * Spanish text as phonemes, a word's stress on its vowel, punctuation kept as pauses.
  *
  * @internal
  */
-export const spanishToPhonemes = (text: string): string => {
-    const out: string[] = [];
-    for (const piece of text.toLowerCase().match(/[a-záéíóúüñ]+|[,;.!?]/g) ?? []) {
-        if (/^[,;.!?]$/.test(piece)) out.push(piece);
-        else out.push(...phonemesOfWord(piece));
-    }
-    return out.join(' ');
-};
+export const spanishToPhonemes = (text: string): string =>
+    spanishPieces(text).flatMap((piece) => piece.phonemes ?? (piece.text === '¿' ? [] : [piece.text])).join(' ');

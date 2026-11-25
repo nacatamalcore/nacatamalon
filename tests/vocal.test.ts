@@ -4,6 +4,9 @@ import { useSong } from '../src/hooks/audio/use_song';
 import { SONG_FORMAT } from '../src/audio/synth';
 import { createSongStream } from '../src/audio/synth/song_stream';
 import { accompany, lyricsAt, parseVocalDoc, useLoadVocal, VOCAL_FORMAT } from '../src/speech';
+import { planSinging, sungSettings } from '../src/speech/render_singing';
+import { createVoice } from '../src/speech/voice';
+import { singingPitch, vibratoWave } from '../src/speech/singing_pitch';
 import { createVocalStream } from '../src/speech/vocal_stream';
 import { createTestGame, startTestScene } from './helpers/test_game';
 import { installFakeAudio } from './helpers/test_audio';
@@ -83,6 +86,118 @@ describe('a vocal part made as it plays', () => {
             return last / SAMPLE_RATE;
         };
         expect(sungFor(60)).toBeGreaterThan(sungFor(120) * 1.7);
+    });
+});
+
+describe('a voice that sings', () => {
+    const sing = (singers: TVocalDoc['singers'], pitch: string, lyric = 'a'): Float32Array =>
+        createVocalStream({ format: VOCAL_FORMAT, language: 'es', singers, lines: [{ notes: [{ pitch, beats: 4, lyric }] }] }, HOW).render(SAMPLE_RATE * 2);
+    const decibels = (track: Float32Array): number => 20 * Math.log10(loudness(track, SAMPLE_RATE * 0.5, SAMPLE_RATE * 1.5));
+
+    it('sings its vowels near one loudness, high and low', () => {
+        const levels = ['a', 'e', 'i', 'o', 'u'].flatMap((vowel) => ['A2', 'A3', 'A4', 'G5'].map((pitch) => decibels(sing({ her: { throat: 1.15 } }, pitch, vowel))));
+        expect(Math.max(...levels) - Math.min(...levels)).toBeLessThan(8);
+    });
+
+    it('is not several of one voice when several sing, nor much louder', () => {
+        const one = sing({ ana: {} }, 'A3');
+        const four = sing({ ana: {}, eva: {}, juan: {}, luis: {} }, 'A3');
+        expect(Math.abs(decibels(four) - decibels(one))).toBeLessThan(4);
+        expect(four.reduce((most, value) => Math.max(most, Math.abs(value)), 0)).toBeLessThan(1);
+        expect(sing({ ana: {}, eva: {} }, 'A3')).toEqual(sing({ ana: {}, eva: {} }, 'A3'));
+        expect(sing({ ana: {}, eva: {} }, 'A3')).not.toEqual(sing({ ana: {}, luz: {} }, 'A3'));
+    });
+});
+
+describe('a line several sing', () => {
+    const part = (who: string | string[], singers: TVocalDoc['singers'], lyric: string, pitch = 'A3'): Float32Array =>
+        createVocalStream({ format: VOCAL_FORMAT, language: 'es', singers, lines: [{ who, notes: [{ pitch, beats: 1, lyric }, { beats: 2 }] }] }, HOW).render(SAMPLE_RATE);
+
+    it('dies away at a rest rather than growing', () => {
+        const track = part(['a', 'b', 'c', 'd'], { a: {}, b: {}, c: {}, d: {} }, 'as');
+        const step = SAMPLE_RATE * 0.005;
+        const levels = Array.from({ length: 10 }, (_, i) => loudness(track, Math.round(SAMPLE_RATE * 0.5 + i * step), Math.round(SAMPLE_RATE * 0.5 + (i + 1) * step)));
+        const sung = loudness(track, Math.round(SAMPLE_RATE * 0.45), Math.round(SAMPLE_RATE * 0.49));
+        expect(Math.max(...levels)).toBeLessThan(sung * 1.5);
+    });
+
+    it('comes in at its own loudness, at the start and after a rest', () => {
+        const enter = (before: number): number[] => {
+            const plan = planSinging({ tempo: 120, vibrato: 0, notes: [...(before > 0 ? [{ beats: before }] : []), { pitch: 'A3', beats: 2, lyric: 'sa', share: 0.25 }] });
+            const whole = planSinging({ tempo: 120, vibrato: 0, notes: [...(before > 0 ? [{ beats: before }] : []), { pitch: 'A3', beats: 2, lyric: 'sa' }] });
+            return [plan, whole].map((one) => {
+                const voice = createVoice(one.segments, singingPitch(one.notes, 0, 1), sungSettings(one));
+                const out = new Float32Array(voice.length);
+                voice.write(out, 0, out.length);
+                const from = Math.round((one.offset + before * 0.5 - 0.1) * SAMPLE_RATE);
+                return loudness(out, from, from + Math.round(0.03 * SAMPLE_RATE));
+            });
+        };
+        for (const before of [0, 2]) {
+            const [shared, alone] = enter(before);
+            expect(alone!).toBeGreaterThan(0.01);
+            expect(shared! / alone!).toBeCloseTo(0.25, 1);
+        }
+    });
+
+    it('counts each singer once', () => {
+        const singers = { a: {}, b: {} };
+        expect(part(['a', 'a'], singers, 'la')).toEqual(part('a', singers, 'la'));
+        expect(part([], singers, 'la').every((value) => value === 0)).toBe(true);
+    });
+
+    it('has no two alike, whatever their names', () => {
+        const alone = (who: string) => part(who, { Aa: {}, BB: {} }, 'la');
+        expect(alone('Aa')).not.toEqual(alone('BB'));
+    });
+
+    it('keeps the highest note of a deep throat inside its volume', () => {
+        const track = part('a', { a: { throat: 0.5, volume: 0.8 } }, 'u', 'B5');
+        expect(track.reduce((most, value) => Math.max(most, Math.abs(value)), 0)).toBeLessThanOrEqual(0.8);
+    });
+});
+
+describe('the pitch of a sung line', () => {
+    const notes = [
+        { pitch: 60, start: 0, held: 0, fresh: true },
+        { pitch: 67, start: 1, held: 0, fresh: false },
+    ];
+    const semitones = (hertz: number): number => 69 + 12 * Math.log2(hertz / 440);
+    const at = (time: number, vibrato = 0): number => semitones(singingPitch(notes, vibrato, 1)(time));
+
+    it('leaves a note before the next begins, goes a little past it and settles', () => {
+        expect(at(0.9)).toBeCloseTo(60, 5);
+        expect(at(1)).toBeGreaterThan(62);
+        expect(at(1.06)).toBeGreaterThan(67);
+        expect(at(1.06)).toBeLessThan(67.3);
+        expect(at(1.2)).toBeCloseTo(67, 5);
+    });
+
+    it('wavers in one wave through the notes a syllable is held over', () => {
+        const wave = vibratoWave(notes, 1);
+        let before = wave(0.99);
+        for (let time = 0.991; time < 1.01; time += 0.001) {
+            const now = wave(time);
+            expect(Math.abs(now - before)).toBeLessThan(0.06);
+            before = now;
+        }
+    });
+
+    it('has no steps in a fast passage', () => {
+        const fast = [60, 67, 60, 67].map((pitch, i) => ({ pitch, start: i * 0.1, held: i * 0.1, fresh: i === 0 }));
+        const pitch = singingPitch(fast, 0, 1);
+        let before = semitones(pitch(0));
+        for (let time = 0.0005; time < 0.5; time += 0.0005) {
+            const now = semitones(pitch(time));
+            expect(Math.abs(now - before)).toBeLessThan(0.11);
+            before = now;
+        }
+    });
+
+    it('is the same wherever it is asked from', () => {
+        const whole = singingPitch(notes, 0.25, 3);
+        for (let time = 0; time < 1.5; time += 0.01) whole(time);
+        expect(whole(1.5)).toBe(singingPitch(notes, 0.25, 3)(1.5));
     });
 });
 
@@ -207,6 +322,7 @@ describe('a .vocal file', () => {
 
     it('says what it cannot sing, naming the file', () => {
         expect(() => parseVocalDoc({ format: 1 }, 'a.vocal')).toThrow('"a.vocal": it has no "lines"');
+        expect(() => parseVocalDoc({ format: 1, singers: { her: null }, lines: [] })).toThrow('singer "her" is not a voice');
         expect(() => parseVocalDoc({ format: 2, lines: [] })).toThrow('newer than this engine reads');
         expect(() => parseVocalDoc({ format: 1, lines: [{ notes: [], who: 'him' }] })).toThrow('"him", who is not in "singers"');
         expect(() => parseVocalDoc({ format: 1, lines: [{ notes: [{ beats: -1 }] }] })).toThrow('line 1, note 1: "beats"');

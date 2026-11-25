@@ -12,7 +12,7 @@
  *
  * @internal
  */
-export type TPhonemeKind = 'vowel' | 'diphthong' | 'glide' | 'nasal' | 'fricative' | 'plosive' | 'affricate' | 'aspirate' | 'tap' | 'trill';
+export type TPhonemeKind = 'vowel' | 'diphthong' | 'glide' | 'nasal' | 'fricative' | 'plosive' | 'affricate' | 'aspirate' | 'tap' | 'trill' | 'approximant';
 
 /**
  * Noise shaped by the mouth: the band it rings in, and how loud it is beside the voice.
@@ -116,6 +116,25 @@ export const PHONEMES: Readonly<Record<string, TPhoneme>> = {
     DX: { kind: 'tap', formants: [400, 1600, 2600], length: 0.025, voiced: true },
     RR: { kind: 'trill', formants: [400, 1500, 2500], length: 0.09, voiced: true },
 };
+
+/**
+ * Sounds a language's reading makes out of the others, never written by name: the b, d and g of
+ * Spanish between vowels, the mouth nearly shut.
+ *
+ * @internal
+ */
+export const ALLOPHONES: Readonly<Record<string, TPhoneme>> = {
+    BH: { kind: 'approximant', formants: [380, 1050, 2200], length: 0.05, voiced: true },
+    DDH: { kind: 'approximant', formants: [380, 1500, 2600], length: 0.045, voiced: true },
+    GH: { kind: 'approximant', formants: [380, 1500, 2400], length: 0.05, voiced: true },
+};
+
+/**
+ * A sound by its name, written or made by a reading.
+ *
+ * @internal
+ */
+export const soundOf = (name: string): TPhoneme | undefined => PHONEMES[name] ?? ALLOPHONES[name];
 
 /**
  * Whether a phoneme is the heart of a syllable, which is what a sung note holds.

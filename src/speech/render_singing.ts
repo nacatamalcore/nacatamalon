@@ -2,22 +2,15 @@ import { buildPhoneme, mouthOf, nextSoundOf, pauseSegment } from './build_phonem
 import { parsePhonemes } from './parse_phonemes';
 import { PHONEMES, isVowel } from './phonemes';
 import { textToPhonemes } from './text_to_phonemes';
+import { singingPitch, vibratoWave } from './singing_pitch';
 import { renderVoice } from './voice';
+import type { TPlacedNote } from './singing_pitch';
 import type { TVoiceSettings } from './voice';
-import { hertzOf, voiceSettingsOf } from './voice_settings';
+import { voiceSettingsOf } from './voice_settings';
 import type { TSingingOptions, TSungNote, TSungSound } from './types/t_speech';
 import type { TVoiceSegment, TVoiceTarget } from './voice';
 
 const NOTE_NAMES: Readonly<Record<string, number>> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
-
-/**
- * How fast the voice slides from one note to the next, in seconds, and how vibrato comes in on a
- * held one: after a moment, then growing.
- */
-const SLIDE_TIME = 0.03;
-const VIBRATO_RATE = 5.3;
-const VIBRATO_DELAY = 0.18;
-const VIBRATO_GROW = 0.3;
 
 /**
  * The shortest a vowel is sung, however much consonant is around it.
@@ -38,7 +31,7 @@ const pitchOf = (pitch: number | string): number => {
 /**
  * One syllable and the notes it is sung over, or a rest.
  */
-type TGroup = { names: string[]; notes: { pitch: number; start: number }[]; start: number; end: number } | { rest: true; start: number; end: number };
+type TGroup = { names: string[]; notes: { pitch: number; start: number }[]; start: number; end: number; share?: number } | { rest: true; start: number; end: number };
 
 /**
  * Sings a melody with words, with the engine's synthetic voice, and hands it back as a sound.
@@ -71,7 +64,7 @@ type TGroup = { names: string[]; notes: { pitch: number; start: number }[]; star
  */
 export const renderSinging = (options: TSingingOptions): TSungSound => {
     const plan = planSinging(options);
-    const samples = renderVoice(plan.segments, singingPitch(plan.notes, plan.settings.sampleRate, plan.vibrato), plan.settings);
+    const samples = renderVoice(plan.segments, singingPitch(plan.notes, plan.vibrato, plan.settings.seed), sungSettings(plan));
     return { samples, sampleRate: plan.settings.sampleRate, key: 'singing', start: plan.offset };
 };
 
@@ -84,7 +77,7 @@ export const renderSinging = (options: TSingingOptions): TSungSound => {
  */
 export type TSingingPlan = {
     segments: TVoiceSegment[];
-    notes: { pitch: number; start: number }[];
+    notes: TPlacedNote[];
     /** Where the first beat lands, in seconds. */
     offset: number;
     settings: TVoiceSettings;
@@ -97,11 +90,34 @@ export type TSingingPlan = {
 };
 
 /**
+ * How much louder a voice gets as it wavers, up and down, at the top of its vibrato.
+ */
+const SWELL = 0.09;
+
+/**
+ * A plan's settings for the voice that sings it: it swells with its vibrato. Made anew for every
+ * voice, as it keeps its place.
+ *
+ * @internal
+ */
+export const sungSettings = (plan: TSingingPlan): TVoiceSettings => {
+    const wave = vibratoWave(plan.notes, plan.settings.seed);
+    return { ...plan.settings, swell: plan.vibrato === 0 ? () => 1 : (time) => 1 + SWELL * wave(time) };
+};
+
+/**
+ * A note of a line, and how much of its loudness is this voice's when others sing it too.
+ *
+ * @internal
+ */
+export type TSharedNote = TSungNote & { share?: number };
+
+/**
  * Works out how a line is sung, without making it.
  *
  * @internal
  */
-export const planSinging = (options: TSingingOptions): TSingingPlan => {
+export const planSinging = (options: Omit<TSingingOptions, 'notes'> & { notes: readonly TSharedNote[] }): TSingingPlan => {
     const settings = voiceSettingsOf(options);
     const beat = 60 / Math.max(1, options.tempo ?? 120);
     const vibrato = options.vibrato ?? 0.25;
@@ -120,9 +136,9 @@ export const planSinging = (options: TSingingOptions): TSingingPlan => {
     const onsetLength = onsets.map((segments) => segments.reduce((sum, segment) => sum + segment.length, 0));
     // A syllable takes its opening from the end of the one before, at most a part of it.
     const lead = groups.map((group, g) => (g === 0 || 'rest' in group ? (g === 0 ? onsetLength[0]! : 0) : Math.min(onsetLength[g]!, 0.4 * (groups[g - 1]!.end - groups[g - 1]!.start))));
-    const offset = lead[0]! + 0.04;
+    const offset = (lead[0] ?? 0) + 0.04;
 
-    const segments: TVoiceSegment[] = [pauseSegment(offset - lead[0]!, mouthOf(PHONEMES.AX!))];
+    const segments: TVoiceSegment[] = [pauseSegment(offset - (lead[0] ?? 0), mouthOf(PHONEMES.AX!))];
     const restarts = [{ segment: 0, time: 0 }];
     let mouth: TVoiceTarget = segments[0]!.from;
     groups.forEach((group, g) => {
@@ -131,12 +147,14 @@ export const planSinging = (options: TSingingOptions): TSingingPlan => {
         const span = Math.max(0.01, to - from);
         if ('rest' in group) {
             restarts.push({ segment: segments.length, time: segments.reduce((sum, segment) => sum + segment.length, 0) });
-            segments.push(pauseSegment(span, mouth));
+            const before = groups[g - 1];
+            // What is still dying away in a rest is as loud as it was sung.
+            segments.push(...shared([pauseSegment(span, mouth)], before && !('rest' in before) ? before.share : undefined));
             return;
         }
         const first = group.names.findIndex(isVowel);
         if (first < 0) {
-            segments.push(...scaled(onsets[g]!, span / Math.max(1e-6, onsetLength[g]!)));
+            segments.push(...shared(scaled(onsets[g]!, span / Math.max(1e-6, onsetLength[g]!)), group.share));
             mouth = segments[segments.length - 1]!.from;
             return;
         }
@@ -154,7 +172,7 @@ export const planSinging = (options: TSingingOptions): TSingingPlan => {
             consonants = Math.max(0.05, (span - SHORTEST_VOWEL) / Math.max(1e-6, onsetLength[g]! + codaLength));
             vowelLength = span - (onsetLength[g]! + codaLength) * consonants;
         }
-        segments.push(...scaled(onsets[g]!, consonants));
+        const syllable = scaled(onsets[g]!, consonants);
         const each = vowelLength / vowels.length;
         for (const name of vowels) {
             const phoneme = PHONEMES[name]!;
@@ -162,16 +180,23 @@ export const planSinging = (options: TSingingOptions): TSingingPlan => {
             if (phoneme.to) {
                 // A diphthong is held on its first vowel and turns to its second at the end.
                 const turn = Math.min(each * 0.3, 0.12);
-                segments.push({ length: each - turn, from: held!.from }, { length: turn, from: held!.from, to: held!.to });
-            } else segments.push(held!);
+                syllable.push({ length: each - turn, from: held!.from }, { length: turn, from: held!.from, to: held!.to });
+            } else syllable.push(held!);
         }
-        segments.push(...scaled(codaSegments, consonants));
+        syllable.push(...scaled(codaSegments, consonants));
+        segments.push(...shared(syllable, group.share));
         const end = segments[segments.length - 1]!;
         mouth = end.to ?? end.from;
     });
-    segments.push(pauseSegment(0.1, mouth));
+    const ending = groups[groups.length - 1];
+    segments.push(...shared([pauseSegment(0.1, mouth)], ending && !('rest' in ending) ? ending.share : undefined));
 
-    const notes = groups.flatMap((group) => ('rest' in group ? [] : group.notes.map((note) => ({ pitch: note.pitch, start: note.start + offset }))));
+    const notes = groups.flatMap((group, g) => {
+        if ('rest' in group) return [];
+        const before = groups[g - 1];
+        const rested = before === undefined || 'rest' in before;
+        return group.notes.map((note, k) => ({ pitch: note.pitch, start: note.start + offset, held: group.start + offset, fresh: k === 0 && rested }));
+    });
     return { segments, notes, offset, settings, vibrato, restarts };
 };
 
@@ -183,7 +208,7 @@ const spokenOf = (lyric: string): string => lyric.replace(/-$/, '');
 /**
  * The notes as syllables with the notes each is held over, and rests, placed in seconds.
  */
-const groupsOf = (notes: readonly TSungNote[], beat: number, transpose: number, phonemesOf: (note: TSungNote) => string[]): TGroup[] => {
+const groupsOf = (notes: readonly TSharedNote[], beat: number, transpose: number, phonemesOf: (note: TSungNote) => string[]): TGroup[] => {
     const groups: TGroup[] = [];
     let time = 0;
     for (const note of notes) {
@@ -196,7 +221,7 @@ const groupsOf = (notes: readonly TSungNote[], beat: number, transpose: number, 
             current.end = time + length;
         } else {
             const names = note.lyric === undefined && note.phonemes === undefined ? ['AX'] : phonemesOf(note);
-            groups.push({ names: names.length > 0 ? names : ['AX'], notes: [{ pitch: pitchOf(note.pitch) + transpose, start: time }], start: time, end: time + length });
+            groups.push({ share: note.share, names: names.length > 0 ? names : ['AX'], notes: [{ pitch: pitchOf(note.pitch) + transpose, start: time }], start: time, end: time + length });
         }
         time += length;
     }
@@ -207,23 +232,4 @@ const lastNameOf = (group: TGroup | undefined): string | undefined => (group && 
 
 const scaled = (segments: readonly TVoiceSegment[], by: number): TVoiceSegment[] => (by === 1 ? [...segments] : segments.map((segment) => ({ ...segment, length: segment.length * by })));
 
-/**
- * The pitch of a sung line over time: each note from its start, slid into from the one before, with
- * vibrato growing on a held one. Asked in order, so the slide keeps its own state.
- *
- * @internal
- */
-export const singingPitch = (notes: readonly { pitch: number; start: number }[], sampleRate: number, vibrato: number): ((time: number) => number) => {
-    let index = 0;
-    let now = notes[0]?.pitch ?? 57;
-    const slide = 1 - Math.exp(-1 / (SLIDE_TIME * sampleRate));
-    return (time) => {
-        while (index < notes.length - 1 && time >= notes[index + 1]!.start) index += 1;
-        const note = notes[index];
-        if (!note) return hertzOf(now);
-        now += (note.pitch - now) * slide;
-        const held = time - note.start - VIBRATO_DELAY;
-        const depth = held > 0 ? vibrato * Math.min(1, held / VIBRATO_GROW) : 0;
-        return hertzOf(now + depth * Math.sin(2 * Math.PI * VIBRATO_RATE * held));
-    };
-};
+const shared = (segments: readonly TVoiceSegment[], share: number | undefined): readonly TVoiceSegment[] => (share === undefined ? segments : segments.map((segment) => ({ ...segment, share })));

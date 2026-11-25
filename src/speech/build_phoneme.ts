@@ -1,4 +1,5 @@
-import { PHONEMES } from './phonemes';
+import { spanishPuff, spanishShape } from './languages/spanish_speech';
+import { soundOf } from './phonemes';
 import type { TPhoneme } from './phonemes';
 import type { TVoiceSegment, TVoiceTarget } from './voice';
 
@@ -32,17 +33,21 @@ export type TNextSound = { formants: readonly [number, number, number]; vowel: b
  * The stretches of sound one phoneme is made of, `length` seconds in all (a stop's burst and puff on
  * top). A vowel is one stretch, gliding if it is a diphthong; a stop is the mouth shut, a burst as it
  * opens and, unvoiced before a vowel, a puff of air; a trill is the tongue hitting three times.
+ * `spanish`, as Spanish text read aloud is said.
  *
  * @internal
  */
-export const buildPhoneme = (name: string, length: number, next: TNextSound, afterS = false): TVoiceSegment[] => {
-    const phoneme = PHONEMES[name]!;
+export const buildPhoneme = (name: string, length: number, next: TNextSound, afterS = false, spanish = false): TVoiceSegment[] => {
+    const written = soundOf(name)!;
+    const phoneme = spanish ? spanishShape(name, written, next) : written;
     const mouth = mouthOf(phoneme);
     const noise = phoneme.noise?.level ?? 0;
     switch (phoneme.kind) {
         case 'vowel':
         case 'diphthong':
             return [{ length, from: { ...mouth, voice: 1 }, to: phoneme.to ? { ...mouthOf(phoneme, phoneme.to), voice: 1 } : undefined }];
+        case 'approximant':
+            return [{ length, from: { ...mouth, voice: 0.45 } }];
         case 'glide':
             return [{ length, from: { ...mouth, voice: 0.8 } }];
         case 'nasal':
@@ -61,7 +66,10 @@ export const buildPhoneme = (name: string, length: number, next: TNextSound, aft
             const shut: TVoiceSegment = { length: Math.max(0.01, length - BURST), from: { ...mouth, voice: phoneme.voiced ? 0.12 : 0 } };
             const open: TVoiceSegment = { length: BURST, from: { ...mouth, noise, voice: phoneme.voiced ? 0.4 : 0 }, quick: true };
             if (phoneme.voiced || afterS || !next?.vowel) return [shut, open];
-            const puff: TVoiceSegment = { length: PUFF, from: { ...mouthOf(phoneme, next.formants), aspiration: 0.8 } };
+            const puff: TVoiceSegment = {
+                length: spanish ? spanishPuff(name) : PUFF,
+                from: { ...mouthOf(phoneme, next.formants), aspiration: spanish ? 0.4 : 0.8 },
+            };
             return [shut, open, puff];
         }
         case 'affricate':
@@ -78,7 +86,7 @@ export const buildPhoneme = (name: string, length: number, next: TNextSound, aft
  * @internal
  */
 export const nextSoundOf = (name: string | undefined): TNextSound => {
-    const phoneme = name ? PHONEMES[name] : undefined;
+    const phoneme = name ? soundOf(name) : undefined;
     if (!phoneme) return undefined;
     return { formants: phoneme.formants, vowel: phoneme.kind === 'vowel' || phoneme.kind === 'diphthong' || phoneme.kind === 'glide' };
 };

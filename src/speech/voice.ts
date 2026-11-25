@@ -12,6 +12,9 @@
  * runtime.
  */
 
+import { glottalFlow } from './glottal';
+import { sungLevel } from './sung_level';
+
 /**
  * Where the mouth is and what the throat does at one moment.
  *
@@ -38,16 +41,20 @@ export type TVoiceTarget = {
 
 /**
  * A stretch of sound: where the mouth is when it starts and, for a glide, where it goes. `quick`
- * lets the loudness jump, for the burst of a stop.
+ * lets the loudness jump, for the burst of a stop. `share`, sung with others, how much of the
+ * loudness is this voice's.
  *
  * @internal
  */
-export type TVoiceSegment = { length: number; from: TVoiceTarget; to?: TVoiceTarget; quick?: boolean };
+export type TVoiceSegment = { length: number; from: TVoiceTarget; to?: TVoiceTarget; quick?: boolean; share?: number };
 
 /**
+ * `swell`, given for a voice that sings, how much louder it is at each moment: its vowels are then
+ * brought near one loudness, high and low, and the mouth opens for a note above its first formant.
+ *
  * @internal
  */
-export type TVoiceSettings = { sampleRate: number; throat: number; breath: number; volume: number; seed: number };
+export type TVoiceSettings = { sampleRate: number; throat: number; breath: number; volume: number; seed: number; swell?: (time: number) => number };
 
 /**
  * How the voice moves between targets, in seconds: the mouth glides, loudness changes faster, and a
@@ -62,6 +69,23 @@ const BURST_TIME = 0.0012;
  */
 const HISS_GAIN = 1;
 const ASPIRATION_GAIN = 0.12;
+
+/**
+ * How a voice that sings is kept at one loudness: the level its vowels are brought towards, how much
+ * of the way, the furthest it is turned down and up, how fast, in seconds, and how often, in samples
+ * (a power of two, like how often the formants are tuned).
+ */
+const SUNG_LEVEL = 0.9;
+const SUNG_EVENNESS = 0.75;
+const SUNG_LEAST = 0.2;
+const SUNG_MOST = 5;
+const SUNG_TIME = 0.012;
+const SUNG_EVERY = 64;
+
+/**
+ * Below this, what the throat and the hiss do is not heard.
+ */
+const SILENT = 0.01;
 
 /**
  * Where the high formants sit, the colour of the voice, and the nose's resonance.
@@ -163,16 +187,6 @@ const createBand = () => {
 };
 
 /**
- * The air through the vocal folds over one vibration, `phase` from `0` to `1`: it opens slowly,
- * shuts fast and stays shut. The fast shut is what gives a voice its buzz.
- */
-const glottalFlow = (phase: number): number => {
-    if (phase < 0.4) return 0.5 * (1 - Math.cos((Math.PI * phase) / 0.4));
-    if (phase < 0.56) return Math.cos((Math.PI * (phase - 0.4)) / 0.32);
-    return 0;
-};
-
-/**
  * Noise from a seed: the same hiss every time.
  */
 const createNoise = (seed: number): (() => number) => {
@@ -261,6 +275,13 @@ export const createVoice = (
     let before = 0;
     let after = 0;
 
+    const { swell } = settings;
+    const gliding = 1 - Math.exp(-1 / (SUNG_TIME * sampleRate));
+    let gain = 1;
+    let gainTo = 1;
+    let gained = false;
+    let share = segments[first]!.share ?? 1;
+
     const sample = (): number => {
         const time = i / sampleRate;
         while (index < segments.length - 1 && time >= start + segments[index]!.length) {
@@ -268,6 +289,7 @@ export const createVoice = (
             index += 1;
         }
         const segment = segments[index]!;
+        const silent = now.voice < SILENT && now.aspiration < SILENT && now.noise < SILENT;
         const along = Math.min(1, (time - start) / Math.max(1e-6, segment.length));
         const to = segment.to ?? segment.from;
         for (const key of MOUTH_KEYS) target[key] = segment.from[key] + (to[key] - segment.from[key]) * along;
@@ -276,15 +298,31 @@ export const createVoice = (
         const step = segment.quick ? burst : loudness;
         for (const key of LOUDNESS_KEYS) now[key] += (target[key] - now[key]) * step;
 
+        const pitch = pitchAt(time);
         if ((i & 7) === 0) {
-            formants[0]!.tune(now.f1 * throat, now.b1, sampleRate);
-            formants[1]!.tune(now.f2 * throat, now.b2, sampleRate);
+            let f1 = now.f1 * throat;
+            let f2 = now.f2 * throat;
+            if (swell) {
+                f1 = Math.max(f1, Math.min(1.03 * pitch, 1000));
+                f2 = Math.max(f2, f1 * 1.25);
+                if (!gained || (i & (SUNG_EVERY - 1)) === 0) {
+                    const level = sungLevel(
+                        [[NOSE, 100], [f1, now.b1], [f2, now.b2], [now.f3 * throat, now.b3], [F4 * throat, 250], [F5 * throat, 200]],
+                        [NOSE + 180 * now.nasal, 100], pitch, sampleRate,
+                    );
+                    const even = Math.max(SUNG_LEAST, Math.min(SUNG_MOST, (SUNG_LEVEL / level) ** SUNG_EVENNESS));
+                    gainTo = even * swell(time);
+                    if (!gained) gain = gainTo;
+                    gained = true;
+                }
+            }
+            formants[0]!.tune(f1, now.b1, sampleRate);
+            formants[1]!.tune(f2, now.b2, sampleRate);
             formants[2]!.tune(now.f3 * throat, now.b3, sampleRate);
             noseZero.tune(NOSE + 180 * now.nasal, 100, sampleRate);
             band.tune(now.noiseAt * Math.sqrt(throat), now.noiseWidth, sampleRate);
         }
 
-        const pitch = pitchAt(time);
         phase += pitch / sampleRate;
         if (phase >= 1) phase -= 1;
         const flow = glottalFlow(phase);
@@ -296,7 +334,15 @@ export const createVoice = (
         let throatOut = now.voice * buzz + breathe * air * ASPIRATION_GAIN;
         throatOut = noseZero.run(nosePole.run(throatOut));
         for (const formant of formants) throatOut = formant.run(throatOut);
-        const raw = throatOut + band.run(hiss()) * now.noise * HISS_GAIN;
+        let hissOut = band.run(hiss()) * now.noise * HISS_GAIN;
+        if (swell) {
+            gain += (gainTo - gain) * gliding;
+            // A silence has no loudness to glide from.
+            share = silent ? segment.share ?? 1 : share + ((segment.share ?? 1) - share) * gliding;
+            throatOut *= gain * share;
+            hissOut *= share;
+        }
+        const raw = throatOut + hissOut;
         const value = raw - before + 0.995 * after;
         before = raw;
         after = value;
